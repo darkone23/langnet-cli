@@ -12,6 +12,10 @@ from langnet.cologne.core import SanskritCologneLexicon
 
 from langnet.engine.core import LanguageEngine
 
+from rich.pretty import pprint
+
+
+pprint("Loading core module...")
 
 class FlaskAppWiring:
 
@@ -26,6 +30,8 @@ class FlaskAppWiring:
 
     def init_flask_app(self, app: Flask):
         # do plugin init app stuff here...
+        pprint("Registering flask app...")
+
         app.wsgi_app = ProxyFix(app.wsgi_app, x_host=1)
         from .bp.api import app as api_blueprint
         from .bp.htmx import app as htmx_blueprint
@@ -39,11 +45,14 @@ class FlaskAppWiring:
 def get_wiring() -> FlaskAppWiring:
     wiring = getattr(flask_globals, "__wiring", None)
     if wiring is None:
+        pprint("Creating flask wiring...")
         wiring = flask_globals.__wiring = FlaskAppWiring()
     return wiring
 
 
 def create_flask_app():
+
+    pprint("Creating flask config...")
 
     config = FlaskAppWiring.config
     flask_kwargs = config.get_flask_kwargs(__name__)
@@ -53,4 +62,5 @@ def create_flask_app():
     with app.app_context():
         wiring = get_wiring()
         wiring.init_flask_app(app)
+        pprint("All done!")
         return app

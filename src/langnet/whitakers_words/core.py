@@ -4,6 +4,7 @@ import re
 
 from .lineparsers import FactsReducer, SensesReducer, CodesReducer
 
+
 from pydantic import BaseModel, Field
 from rich.pretty import pprint
 
@@ -57,7 +58,7 @@ def get_whitakers_proc():
     home = Path.home()
     maybe_words = home / ".local/bin/whitakers-words"
     if maybe_words.exists():
-        print("Using local whitakers")
+        pprint("Using local whitakers")
         return Command(maybe_words)
     maybe_words = Path() / "deps/whitakers-words/bin/words"
     if maybe_words.exists():

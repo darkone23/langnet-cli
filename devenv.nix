@@ -60,7 +60,7 @@
   processes.vite-dev.exec = "npm run dev --prefix=$DEVENV_ROOT/src-web";
 
   # http://localhost:888 
-  processes.diogenes.exec = "cd deps/diogenes; devenv-wrapped shell ./server/diogenes-server.pl";
+  # processes.diogenes.exec = "cd deps/diogenes; devenv-wrapped shell ./server/diogenes-server.pl";
 
   # # http://localhost:8000
   # processes.gunicorn.exec = "$HOME/.local/bin/poe serve";
@@ -74,6 +74,7 @@
   '';
 
   enterShell = ''
+    PYTHONPATH=$DEVENV_ROOT/src:$PYTHONPATH
   '';
 
   scripts.gunicorn-serve.exec = ''

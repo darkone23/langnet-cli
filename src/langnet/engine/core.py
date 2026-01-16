@@ -3,6 +3,9 @@ from langnet.whitakers_words.core import WhitakersWords
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 
+from rich.pretty import pprint
+
+pprint("Loading engine core...")
 
 class LangnetLanguageCodes:
 

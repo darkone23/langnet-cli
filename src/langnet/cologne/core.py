@@ -1,9 +1,14 @@
+from rich.pretty import pprint
+
+pprint("Loading indic transliteration")
+
 import pycdsl
 from indic_transliteration import sanscript
 from indic_transliteration.sanscript import SchemeMap, SCHEMES, transliterate
 
 from indic_transliteration.detect import detect
 
+pprint("Loading indic transliteration: OK")
 
 from pydantic import BaseModel, Field
 
@@ -32,12 +37,18 @@ class SanskritCologneLexicon:
         # TODO:
         # this blows up if you don't have an internet connection or cologne is not online...
 
-        self.CDSL: pycdsl.CDSLCorpus = pycdsl.CDSLCorpus()
-        self.CDSL.setup()
+        pprint("About to setup CDSL")
+        # self.CDSL: pycdsl.CDSLCorpus = pycdsl.CDSLCorpus()
+        # self.CDSL.setup()
+        pprint("Setup CDSL: sanskrit feature DISABLED (hangs on load when no route!)")
 
         # Sanskrit-English
-        self.mw: pycdsl.CDSLDict = self.CDSL["MW"]
-        self.ap90: pycdsl.CDSLDict = self.CDSL["AP90"]
+        # self.mw: pycdsl.CDSLDict = self.CDSL["MW"]
+        # self.ap90: pycdsl.CDSLDict = self.CDSL["AP90"]
+        # 
+        # English-Sanskrit
+        # self.mwe: pycdsl.CDSLDict = self.CDSL["MWE"]
+        # self.ae: pycdsl.CDSLDict = self.CDSL["AE"]
 
         # print()
 
@@ -48,9 +59,6 @@ class SanskritCologneLexicon:
         #     it = transliterate(k, sanscript.DEVANAGARI, sanscript.ITRANS)
         #     print(SCHEMES[sanscript.OPTITRANS].to_lay_indian(it))
 
-        # English-Sanskrit
-        self.mwe: pycdsl.CDSLDict = self.CDSL["MWE"]
-        self.ae: pycdsl.CDSLDict = self.CDSL["AE"]
 
     def transliterate(self, data):
         mode = detect(data)

@@ -1,5 +1,11 @@
 from pathlib import Path
 
+import re
+
+from rich.pretty import pprint
+pprint("Loading the CLTK module...")
+
+
 import cltk.data.fetch as cltk_fetch
 import cltk.lexicon.lat as cltk_latlex
 import cltk.alphabet.lat as cltk_latchars
@@ -13,6 +19,16 @@ from pydantic import BaseModel, Field
 from typing import List
 
 
+
+pprint("Loading the CLTK module[latin]...")
+LATIN: Language = get_lang("lat")
+pprint("Loading the CLTK module[grc]...")
+GREEK: Language = get_lang("grc")
+pprint("Loading the CLTK module[san]...")
+SANSKRIT: Language = get_lang("san")
+
+pprint("Loading the CLTK modules: OK")
+
 class LatinQueryResult(BaseModel):
     headword: str
     ipa: str
@@ -23,9 +39,9 @@ class ClassicsToolkit:
 
     # https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
 
-    LATIN: Language = get_lang("lat")
-    GREEK: Language = get_lang("grc")
-    SANSKRIT: Language = get_lang("san")
+    LATIN: Language = LATIN
+    GREEK: Language = GREEK
+    SANSKRIT: Language = SANSKRIT
 
     def __init__(self):
 
@@ -61,11 +77,21 @@ class ClassicsToolkit:
             try:
                 transcription = self.latxform.transcribe(stem)
             except Exception as e:
-                print(e)
+                # print(e)
+                pprint("Error in transcribe:")
+                pprint(e)
+                pass
         if transcription:
             transcription = transcription[1:-1]
+
+        merged_lines = " ".join(results.splitlines(keepends=False))
+        parts = re.sub(r'\s+', ' ', merged_lines)
+        l_lines = []
+        if parts:
+            l_lines = [ parts ]
+        
         return LatinQueryResult(
             headword=stem,
             ipa=transcription,
-            lewis_1890_lines=results.splitlines(keepends=False),
+            lewis_1890_lines=l_lines,
         )
