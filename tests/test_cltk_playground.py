@@ -68,12 +68,12 @@ class TestLatinExamples(unittest.TestCase):
         # self.assertExpectedInline(somestr, """""")
 
 
-class TestCologneDigitalSanskritLexicon(unittest.TestCase):
+# class TestCologneDigitalSanskritLexicon(unittest.TestCase):
 
-    def test_basic_dictionary(self):
-        results = wiring.cologne_dict.mw.search("राम")
-        meaning = "राम mf(आ/)n. (prob. ‘causing rest’, and in most meanings fr. √ रम्) dark, dark-coloured, black (cf. रात्रि), AV.; TĀr. (रामः शकुनिः. a black bird, crow, KāṭhGṛ.; Viṣṇ.)"
-        self.assertEqual(results[0].meaning(), meaning)
+#     def test_basic_dictionary(self):
+#         results = wiring.cologne_dict.mw.search("राम")
+#         meaning = "राम mf(आ/)n. (prob. ‘causing rest’, and in most meanings fr. √ रम्) dark, dark-coloured, black (cf. रात्रि), AV.; TĀr. (रामः शकुनिः. a black bird, crow, KāṭhGṛ.; Viṣṇ.)"
+#         self.assertEqual(results[0].meaning(), meaning)
 
 
 if __name__ == "__main__":

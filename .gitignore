@@ -15,4 +15,6 @@ deps/
 __pycache__
 *.pyc
 
+tmp/
+
 playing_with_aisuite/
