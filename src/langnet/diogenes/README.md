@@ -1,20 +1,112 @@
+# Diogenes Scraper
 
-Scraping the perl engine available at [d.iogen.es](https://d.iogen.es/web/)
+HTTP client and HTML parser for [diogenes](https://d.iogen.es/web/) - a Perl server providing programmatic access to Perseus classical texts and lexica.
 
-- https://github.com/pjheslin/diogenes
+## Background
 
-This app requires a diogenes server running locally to power api requests
+Diogenes is a Perl web application that wraps the Perseus Digital Library's tools:
+- **Perseus Morpheus**: Greek/Latin morphological analysis
+- **LSJ**: Liddell-Scott-Jones Greek-English Lexicon (1940)
+- **Lewis & Short**: Latin-English Dictionary (1879)
 
-Diogenes makes classic latin and greek sources available programattically:
+The server runs as a standalone Perl process, exposing HTTP endpoints for parsing words and retrieving dictionary entries.
 
-- [perseus latin and greek lexicon](https://github.com/PerseusDL/lexica/wiki)
-- leverages perseus morpheus for morphology
-- runs as a web service
+## Capabilities
 
->    The LSJ9 Perseus edition
->    Henry George Liddell. Robert Scott. A Greek-English Lexicon. revised and augmented throughout by. Sir Henry Stuart Jones. with the /assistance of. Roderick McKenzie. Oxford. Clarendon Press. 1940.
-> 
->    The Lewis and Short Latin Dictionary
->    A Latin Dictionary. Founded on Andrews' edition of Freund's Latin dictionary. revised, enlarged, and in great part rewritten by. Charlton T. Lewis, Ph.D. and. Charles Short, LL.D. Oxford. Clarendon Press. 1879.
+- **Word parsing**: GET `/Perseus.cgi?do=parse&lang=<lat|grk>&q=<word>`
+- **Dictionary lookup**: Integrated with parse results
+- **Greek betacode**: Auto-converts UTF-8 to betacode for diogenes
+- **HTML parsing**: BeautifulSoup extraction of lexicon entries
 
-While diogenes is a full reader app - we are most interested in its word parse and dictionary feature
+## Usage
+
+```python
+from langnet.diogenes.core import DiogenesScraper, DiogenesLanguages
+
+scraper = DiogenesScraper(base_url="http://localhost:8888")
+
+# Latin query
+result = scraper.parse_word("benevolens", DiogenesLanguages.LATIN)
+# DiogenesResultT(chunks=[...], dg_parsed=True)
+
+# Greek query (UTF-8 auto-converted to betacode)
+result = scraper.parse_word("οὐσία", DiogenesLanguages.GREEK)
+```
+
+## Architecture
+
+### DiogenesChunkType (Classification)
+
+The parser classifies each HTML fragment into types:
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `PerseusAnalysisHeader` | Morphology from Morpheus | "amabat: V3IAI---" |
+| `NoMatchFoundHeader` | Logeion link shown | Perseus lookup link |
+| `DiogenesMatchingReference` | Dictionary entry found | LSJ/L&S definitions |
+| `DiogenesFuzzyReference` | Partial match | Did you mean... |
+| `UnknownChunkType` | Unrecognized | Fallback |
+
+### Parsing Pipeline
+
+```
+HTTP Response (text/html)
+    ↓
+Split by <hr /> (document separators)
+    ↓
+For each document:
+    ├─ get_next_chunk(): Classify HTML via BeautifulSoup
+    │   ├─ Find <h1>Perseus an...</h1> → PerseusAnalysisHeader
+    │   ├─ Find .logeion-link → NoMatchFoundHeader
+    │   └─ Find prevEntry onclick → Reference
+    │
+    └─ process_chunk(): Extract structured data
+        ├─ handle_morphology(): Parse <li>/<p> tags
+        ├─ handle_references(): Parse #sense blocks
+        └─ Serialize to Pydantic model
+    ↓
+Aggregate chunks into DiogenesResultT
+```
+
+### handle_references() Details
+
+This function extracts dictionary entries with:
+- **Senses**: Numbered definitions (parsed from `<b>` tags)
+- **Citations**: Author/work references (`.origjump` links)
+- **Headings**: Section headers (short text with trailing period)
+- **Warnings**: Parenthesized notes (extracted and removed)
+
+Hierarchical indentation is tracked via CSS `padding-left` values, converted to n-dimensional coordinates for flat storage.
+
+## Integration Points
+
+- **Input**: Word string, language code (lat/grk)
+- **Output**: `DiogenesResultT` Pydantic model
+- **Called by**: `LanguageEngine.handle_query()` for Latin/Greek
+
+## Sidecar Process
+
+A companion process (`langnet/diogenes/cli_util.py`) runs in a loop to clean up zombie threads:
+
+```sh
+just sidecar  # Runs continuously: checks every hour, kills zombie PPIDs
+```
+
+This process:
+1. Scans for `perl <defunct>` zombie processes
+2. Finds the parent PID (PPID) of the zombie
+3. Sends SIGTERM to the parent (clean shutdown)
+4. Sleeps 1 hour before repeating
+
+## Known Issues
+
+1. **Zombie threads**: Diogenes Perl process leaks threads on certain queries. The `just sidecar` command runs continuously, checking every hour and killing orphaned parent processes.
+2. **Chunk classification brittleness**: Relies on specific HTML structure that may change
+3. **Fuzzy matching**: DiogenesFuzzyReference not properly distinguished
+4. **Duplicate senses**: Code attempts deduping but may miss edge cases
+
+## Configuration
+
+- **Default URL**: `http://localhost:8888/`
+- **Override**: Pass `base_url` to `DiogenesScraper.__init__()`
+- **Timeout**: No timeout set (relies on requests defaults)

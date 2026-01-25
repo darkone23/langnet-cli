@@ -1,57 +1,150 @@
 # langnet
 
-This project provides software for working with languages.
+A unified backend API for querying classical language data (Latin, Greek, Sanskrit) from multiple lexicon sources.
 
-It requires some dependencies:
+## Overview
 
-1. [d.iogen.es](https://d.iogen.es/web/) server running at `http://localhost:8888`
-2. [whitakers words](https://latin-words.com) installed at `~/.local/bin/whitakers-words`
-  a. optional since this does not currently work on ARM processors
-3. [Cologne Digital Sanskrit Lexicon](https://www.sanskrit-lexicon.uni-koeln.de/) installed at `~/cdsl_data/`
-4. [CLTK](https://docs.cltk.org/en/latest/about.html) classical language models at `~/cltk_data/`
+langnet aggregates several classical language resources into a single query interface:
 
-The included test suite will automate the installation of the CLTK and CDSL data but diogenes and whitakers must be installed manually.
+| Source | Latin | Greek | Sanskrit |
+|--------|-------|-------|----------|
+| Diogenes (Perseus) | lexicon + morphology | lexicon + morphology | - |
+| Whitaker's Words | morphology | - | - |
+| CLTK | lexicon | - | lemmatization |
+| CDSL (Cologne) | - | - | dictionary |
 
-## Running the software
+## Why langnet?
 
-if you have [devenv.sh](https://devenv.sh):
+Classical language resources are fragmented across many projects, each with different interfaces, data formats, and installation requirements. langnet provides:
+
+- **Unified API**: Single endpoint for querying multiple backends
+- **Response aggregation**: Results from different sources merged by language
+- **Cold start management**: API server caches loaded models (CLTK downloads are expensive)
+- **Extensible architecture**: Add new backends by implementing the scraper interface
+
+## Quick Start
 
 ```sh
+# Enter development environment
 devenv shell
-poe test # this triggers downloading and ToS approval!
-poe dev
+
+# Start API server (uvicorn-run wraps uvicorn langnet.asgi:app)
+uvicorn-run
+
+# Query examples
+curl 'localhost:8000/api/q?l=lat&s=benevolens' | jq .
+curl --data-urlencode 's=οὐσία' --data-urlencode 'l=grk' 'localhost:8000/api/q' | jq .
+curl --data-urlencode 's=sa.msk.rta' --data-urlencode 'l=san' 'localhost:8000/api/q' | jq .
 ```
 
-now you can query for some latin terms:
+## Dependencies
+
+### Required (Manual Installation)
+
+1. **diogenes** - Perl server for Perseus lexicon data
+   - Repository: https://github.com/pjheslin/diogenes
+   - Run at `http://localhost:8888`
+   - Required for Greek/Latin queries
+   - **Note**: Leaks threads; run `just sidecar` continuously to clean up
+
+2. **whitakers-words** - Latin morphological analyzer
+   - Binary: `~/.local/bin/whitakers-words`
+   - Repository: https://github.com/mk270/whitakers-words
+   - Optional: not available on ARM processors
+
+### Managed by Tests
+
+3. **CLTK models** - Classical language data for Python library
+   - Installed to `~/cltk_data/` by test suite
+   - Downloads lat_models_cltk on first run
+
+4. **CDSL data** - Cologne Sanskrit Lexicon files
+   - Installed to `~/cdsl_data/` by test suite
+   - MW (Monier-Williams) and AP90 (Apte) dictionaries
+
+## Architecture
+
+```
+                              ┌─────────────────────┐
+                              │   API Client (curl) │
+                              └──────────┬──────────┘
+                                         │
+                              ┌──────────▼──────────┐
+                              │   langnet/asgi.py   │  ← Starlette ASGI app
+                              │   /api/q endpoint   │
+                              └──────────┬──────────┘
+                                         │
+                              ┌──────────▼──────────┐
+                              │ LanguageEngine      │
+                              │ (src/langnet/engine)│  ← Query routing & aggregation
+                              └──────────┬──────────┘
+                     ┌────────────┬────┴────┬────────────┐
+                     │            │         │            │
+          ┌──────────▼───┐ ┌──────▼──┐ ┌────▼────┐ ┌─────▼──────┐
+          │ DiogenesScraper│ │Whitakers│ │Classics │ │Cologne    │
+          │ (Greek/Latin) │ │ Words   │ │Toolkit  │ │(Sanskrit) │
+          └───────────────┘ └─────────┘ └─────────┘ └───────────┘
+```
+
+## Project Structure
+
+```
+src/langnet/
+├── asgi.py                  # Starlette ASGI application entry point
+├── core.py                  # LangnetWiring (dependency injection container)
+├── engine/
+│   └── core.py              # LanguageEngine (query orchestration)
+├── diogenes/
+│   ├── core.py              # DiogenesScraper (HTTP client + HTML parsing)
+│   ├── cli_util.py          # Zombie process reaper utility
+│   └── README.md            # Diogenes integration docs
+├── whitakers_words/
+│   ├── core.py              # WhitakersWords (CLI wrapper + line parsing)
+│   ├── lineparsers/         # Modular line parsers (senses, codes, facts)
+│   └── README.md            # Whitaker's integration docs
+├── classics_toolkit/
+│   └── core.py              # ClassicsToolkit (CLTK wrapper)
+├── cologne/
+│   └── core.py              # SanskritCologneLexicon (CDSL wrapper)
+└── README.md                # This file
+```
+
+## Development
 
 ```sh
-# assuming you have diogenes available at localhost:8888
-curl 'localhost:5050/api/q?l=lat&s=benevolens' | jq .
+# Run all tests
+nose2 -s tests
 
-# compare with diogenes output:
-#   http://localhost:8888/Perseus.cgi?do=parse&lang=lat&q=benevolens
+# Run single test
+nose2 -s tests <TestClass>.<test_method>
+
+# Start API server with auto-reload
+uvicorn-run --reload
+
+# Start zombie process reaper (runs continuously in background)
+just sidecar
 ```
 
-or greek terms:
+### Code Conventions
 
-```sh
-# notice treatment of utf-8 query parameters (translated to betacode)
-curl --data-urlencode 's=οὐσία' --data-urlencode 'l=grk' --get 'http://localhost:5050/api/q' | jq .
-```
+See [AGENTS.md](AGENTS.md) for detailed coding standards including:
+- Naming conventions (snake_case functions, PascalCase classes)
+- Type hint requirements
+- Import ordering
+- Error handling patterns
+- cattrs migration roadmap
 
-or sanskrit terms:
+## Known Limitations
 
-```sh
-# supports basic transliteration 
-# https://www.ashtangayoga.info/philosophy/sanskrit-and-devanagari/transliteration-tool/#hk/devanagari/devanAgarI
-curl --data-urlencode 's=sa.msk.rta' --data-urlencode 'l=san' --get 'http://localhost:5050/api/q' | jq .
-```
+- **Diogenes reliability**: Perl server leaks threads; run `just sidecar` periodically
+- **Whitakers ARM**: Binary not available for ARM processors
+- **CDSL incomplete**: Cologne module returns placeholders; full integration pending
+- **Pydantic deprecation**: Migrating to cattrs for data models
 
-## other projects:
+## Related Projects
 
-- lute-v3 / lwt
-- lingq
-- scaife/perseus
-- wisdomlib
-- archive.org
-
+- lute-v3 / lwt - Learning with texts fork
+- lingq - Language learning platform
+- scaife/perseus - Ancient Greek/Roman texts
+- wisdomlib - Indian texts library
+- archive.org - Historical texts archive
