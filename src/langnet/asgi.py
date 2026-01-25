@@ -5,6 +5,10 @@ from starlette.routing import Route
 from starlette.responses import Response
 import orjson
 import requests
+import structlog
+
+
+logger = structlog.get_logger(__name__)
 
 from langnet.core import LangnetWiring
 
@@ -180,9 +184,15 @@ def create_app() -> Starlette:
 
     @app.on_event("startup")
     async def startup():
+        import time
+
+        start = time.perf_counter()
         try:
             app.state.wiring = LangnetWiring()
+            elapsed = time.perf_counter() - start
+            logger.info("wiring_initialized", duration_seconds=elapsed)
         except Exception as e:
+            logger.error("wiring_initialization_failed", error=str(e))
             print(f"Failed to initialize wiring at startup: {e}")
 
     return app

@@ -8,6 +8,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import cattrs
+import structlog
+
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -65,11 +69,14 @@ def get_whitakers_proc():
     home = Path.home()
     maybe_words = home / ".local/bin/whitakers-words"
     if maybe_words.exists():
+        logger.info("using_whitakers_binary", path=str(maybe_words))
         return Command(maybe_words)
     maybe_words = Path() / "deps/whitakers-words/bin/words"
     if maybe_words.exists():
+        logger.info("using_whitakers_binary", path=str(maybe_words))
         return Command(maybe_words)
     else:
+        logger.warning("whitakers_binary_not_found")
         test_cmd = Command("test")
         return test_cmd.bake("!", "-z")  # test non empty str
 
@@ -92,6 +99,9 @@ def fixup(wordlist):
                 codeline["term"] = word["terms"][0]["term"]
                 word["codeline"] = codeline
         fixed_words.append(word)
+    logger.debug(
+        "fixup_completed", input_count=len(wordlist), output_count=len(fixed_words)
+    )
     return fixed_words
 
 
@@ -127,6 +137,7 @@ class WhitakersWordsChunker:
             line_type = "term-facts"
         else:
             line_type = "unknown"
+        logger.debug("classify_line", line_preview=line[:50], line_type=line_type)
         return dict(line_txt=line, line_type=line_type)
 
     def get_next_word(
@@ -137,6 +148,7 @@ class WhitakersWordsChunker:
 
         if not last_line:
             start_new_word = True
+            logger.debug("get_next_word_first_line", start_new_word=True)
         else:
             this_line_type = line_info["line_type"]
             last_line_type = last_line["line_type"]
@@ -149,6 +161,13 @@ class WhitakersWordsChunker:
                     start_new_word = this_line_type != "sense"
             elif last_line_type == "unknown":
                 start_new_word = this_line_type.startswith("term-")
+
+            logger.debug(
+                "get_next_word_state",
+                last_line_type=last_line_type,
+                this_line_type=this_line_type,
+                start_new_word=start_new_word,
+            )
 
         if start_new_word:
             return next_word
@@ -169,6 +188,7 @@ class WhitakersWordsChunker:
                 types.append(line_type)
         entry["size"] = len(txts)
         del entry["lines"]
+        logger.debug("analyze_chunk", entry_size=entry["size"], type_count=len(types))
 
     def get_word_chunks(self):
         word_chunks = []
@@ -201,6 +221,9 @@ class WhitakersWords:
                     if v == _v:
                         pass
                     else:
+                        logger.warning(
+                            "merge_collision", key=k, src_value=v, dest_value=_v
+                        )
                         if type(v) == list and type(_v) == list:
                             dest[k] = v + _v
                         elif type(v) == list:
@@ -239,7 +262,13 @@ class WhitakersWords:
             if len(lines):
                 wordlist.append(word)
 
-        structured_wordlist = [
-            cattrs.structure(w, WhitakersWordsT) for w in fixup(wordlist)
-        ]
+        structured_wordlist = []
+        for w in fixup(wordlist):
+            try:
+                structured_wordlist.append(cattrs.structure(w, WhitakersWordsT))
+            except Exception as e:
+                logger.error("cattrs_structure_failed", word=str(w)[:100], error=str(e))
+                raise
+
+        logger.debug("whitakers_words_completed", word_count=len(structured_wordlist))
         return WhitakersWordsResult(wordlist=structured_wordlist)

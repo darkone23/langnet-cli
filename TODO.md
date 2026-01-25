@@ -50,21 +50,21 @@ Pydantic has been phased out in favor of Python's `dataclass` + `cattrs`:
 - [x] **Greek morphology** via CLTK/spacy (grc_odycy_joint_sm model loaded in ClassicsToolkit)
 
 ### Structured Logging
-- [ ] Add structured logging using structlog with logfmt output
-- [ ] Restore useful log messages that were removed:
-  - `get_whitakers_proc()`: log which whitakers binary is being used
-  - `fixup()`: log wordlist transformation statistics
-  - `WhitakersWordsChunker.smart_merge()`: log merge collisions (was `OH NO A COLLISION!`)
-  - `DiogenesScraper`: log chunk classification, duplicate sense removal
-- [ ] Define log levels:
-  - DEBUG: parsing steps, chunk classification
-  - INFO: backend selection, query initialization
-  - WARN: missing optional data, merge conflicts
-  - ERROR: failed queries, unavailable backends
+- [x] Add structured logging using structlog with logfmt output
+- [x] Restore useful log messages that were removed:
+  - [x] `get_whitakers_proc()`: log which whitakers binary is being used
+  - [x] `fixup()`: log wordlist transformation statistics
+  - [x] `WhitakersWordsChunker.smart_merge()`: log merge collisions (was `OH NO A COLLISION!`)
+  - [x] `DiogenesScraper`: log chunk classification, duplicate sense removal
+- [x] Define log levels:
+  - [x] DEBUG: parsing steps, chunk classification
+  - [x] INFO: backend selection, query initialization
+  - [x] WARN: missing optional data, merge conflicts
+  - [x] ERROR: failed queries, unavailable backends
 - [ ] Add correlation IDs for tracing requests through multiple backends
 - [x] Use `pamburus/hl` for colored logfmt output in development
   - `hl` command now available
-- [ ] Log format example: `ts=2026-01-25T10:00:00Z level=INFO msg="using whitakers binary" path=/home/user/.local/bin/whitakers-words`
+- [x] Log format example: `ts=2026-01-25T10:00:00Z level=INFO msg="using whitakers binary" path=/home/user/.local/bin/whitakers-words`
 
 ### Developer Experience
 - [ ] **CLI tool** with subcommands:

@@ -12,6 +12,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import cattrs
+import structlog
+
+
+logger = structlog.get_logger(__name__)
 
 DiogenesChunkT = dataclass
 
@@ -144,13 +148,25 @@ class DiogenesScraper:
             r"\s*\(.*?\)\s*", " ", text, flags=re.DOTALL
         ).strip()  # Remove parentheses and enclosed text
 
+        logger.debug(
+            "extract_parentheses_text",
+            original_len=len(text),
+            extracted_len=len(extracted),
+        )
         return cleaned_text, extracted
 
     def find_nd_coordinate(self, event_id: str):
         """
         translate padding indent histories into n-dimensional array coordinates
         """
-        values = list(map(int, event_id.split(":")))  # Convert to integer list
+        try:
+            values = list(map(int, event_id.split(":")))  # Convert to integer list
+        except ValueError as e:
+            logger.error(
+                "find_nd_coordinate_parse_failed", event_id=event_id, error=str(e)
+            )
+            raise
+
         unique_values = list(dict.fromkeys(values))  # Determine hierarchy
         level_counters = defaultdict(int)  # Track occurrences at each depth
         coordinates = []
@@ -173,6 +189,7 @@ class DiogenesScraper:
             stack.append(count)
             coordinates.append(tuple(stack))  # Store the computed coordinate
 
+        logger.debug("find_nd_coordinate", event_id=event_id, result=coordinates[-1])
         return coordinates[-1]  # Return the last computed coordinate
 
     def handle_morphology(self, soup: BeautifulSoup):
@@ -186,6 +203,13 @@ class DiogenesScraper:
                 maybe_morph_els.append(tag)
             else:
                 warning = tag.get_text()
+                logger.debug("handle_morphology_warning", warning_text=warning[:100])
+
+        logger.debug(
+            "handle_morphology",
+            li_count=len(maybe_morph_els),
+            p_count=len(soup.find_all("p")),
+        )
 
         for tag in maybe_morph_els:
             perseus_morph = tag.get_text()
@@ -228,6 +252,7 @@ class DiogenesScraper:
             _nothing, warning_txt = self.extract_parentheses_text(warning)
             morph_dict["warning"] = warning_txt
 
+        logger.debug("handle_morphology_completed", morph_count=len(morphs))
         return morph_dict
 
     def handle_references(self, soup):
@@ -283,6 +308,7 @@ class DiogenesScraper:
                 refs[ref_id] = ref_txt
             if len(refs.items()) > 0:
                 block["citations"] = refs
+                logger.debug("handle_references_citations", count=len(refs))
 
             senses = []
             for b in soup.select("b"):
@@ -296,6 +322,7 @@ class DiogenesScraper:
                 if initial_text.endswith(".") and len(chars - dot) <= 4:
                     block["heading"] = initial_text
                     b.decompose()
+                    logger.debug("handle_references_heading", heading=initial_text)
                 break
             for b in soup.select("b"):
                 sense_txt = b.get_text().strip().rstrip(",").rstrip(":")
@@ -306,6 +333,7 @@ class DiogenesScraper:
                 other_senses = set(senses) - set([sense])
                 for other_sense in other_senses:
                     if sense.lower() in other_sense.lower():
+                        logger.debug("duplicate_sense_removed", sense=sense)
                         senses.remove(sense)
                         break
             senses_cleaned = []
@@ -332,11 +360,14 @@ class DiogenesScraper:
         # print(len(blocks))
         # print(remaining_text)
 
+        logger.debug("handle_references_completed", block_count=len(blocks))
         return references
 
     def process_chunk(self, result, chunk):
         soup: BeautifulSoup = chunk["soup"]
         chunk_type: str = chunk["chunk_type"]
+
+        logger.debug("process_chunk", chunk_type=chunk_type)
 
         if chunk_type == DiogenesChunkType.PerseusAnalysisHeader:
             morph_dict = self.handle_morphology(soup)
@@ -365,6 +396,7 @@ class DiogenesScraper:
                 term=refs_dict.get("term", ""), blocks=blocks
             )
         else:
+            logger.debug("process_chunk_unknown_type", chunk_type=chunk_type)
             pass
 
         del chunk["soup"]
@@ -379,6 +411,7 @@ class DiogenesScraper:
             result["chunks"].append(DiogenesFuzzyReference(**chunk))
         else:
             soup_str = str(soup)
+            logger.debug("process_chunk_unknown_appending", soup_preview=soup_str[:100])
             result["chunks"].append(UnknownChunkType(soup=soup_str))
 
     def get_next_chunk(self, result, soup: BeautifulSoup):
@@ -433,6 +466,7 @@ class DiogenesScraper:
         else:
             chunk["chunk_type"] = DiogenesChunkType.UnknownChunkType
 
+        logger.debug("chunk_classified", chunk_type=chunk.get("chunk_type"))
         return chunk
 
     def parse_word(
@@ -442,18 +476,33 @@ class DiogenesScraper:
             f"Cannot parse unsupported diogenes language: [{language}]"
         )
 
+        logger.debug("parse_word", word=word, language=language)
+
         response = requests.get(self.__diogenes_parse_url(word, language))
 
         result = dict(chunks=[], dg_parsed=False)
 
         if response.status_code == 200:
+            logger.debug(
+                "parse_word_response",
+                status_code=response.status_code,
+                content_length=len(response.text),
+            )
             documents = response.text.split("<hr />")
+            logger.debug("parse_word_documents", count=len(documents))
             for doc in documents:
                 soup = BeautifulSoup(doc, "html5lib")
                 chunk = self.get_next_chunk(result, soup)
                 self.process_chunk(result, chunk)
             result["dg_parsed"] = True
         else:
-            print("no soup for you", response.status_code, response.text)
+            logger.warning(
+                "diogenes_request_failed", status_code=response.status_code, word=word
+            )
 
+        logger.debug(
+            "parse_word_completed",
+            chunks_count=len(result["chunks"]),
+            dg_parsed=result["dg_parsed"],
+        )
         return DiogenesResultT(**result)

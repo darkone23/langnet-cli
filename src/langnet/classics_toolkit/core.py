@@ -2,6 +2,10 @@ from pathlib import Path
 import re
 from typing import List, Optional, Any
 from dataclasses import dataclass, field
+import structlog
+
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -72,7 +76,7 @@ class ClassicsToolkit:
 
             self._cltk_available = True
         except ImportError as e:
-            print(f"CLTK not available: {e}")
+            logger.warning("cltk_unavailable", error=str(e))
             self._cltk_available = False
 
     def _try_import_spacy(self):
@@ -81,7 +85,7 @@ class ClassicsToolkit:
 
             self._spacy_imported = True
         except ImportError as e:
-            print(f"Spacy not available: {e}")
+            logger.warning("spacy_unavailable", error=str(e))
             self._spacy_imported = False
             self._spacy_available = False
 
@@ -92,9 +96,9 @@ class ClassicsToolkit:
 
                 self._grc_spacy_model = spacy.load(model_name)
                 self._spacy_available = True
-                print(f"Loaded spacy model: {model_name}")
+                logger.info("spacy_model_loaded", model=model_name)
             except OSError as e:
-                print(f"Spacy model '{model_name}' not available: {e}")
+                logger.warning("spacy_model_missing", model=model_name, error=str(e))
                 self._spacy_available = False
 
     def is_available(self) -> bool:
@@ -134,14 +138,14 @@ class ClassicsToolkit:
             try:
                 transcription = self._latxform.transcribe(word)
             except Exception as e:
-                print(e)
+                logger.debug("transcription_failed", word=word, error=str(e))
             if not results:
                 results = self._latdict.lookup(stem)
             if not transcription:
                 try:
                     transcription = self._latxform.transcribe(stem)
                 except Exception as e:
-                    print(f"Error in transcribe: {e}")
+                    logger.debug("stem_transcription_failed", stem=stem, error=str(e))
                     pass
             if transcription:
                 transcription = transcription[1:-1]
@@ -158,7 +162,7 @@ class ClassicsToolkit:
                 lewis_1890_lines=l_lines,
             )
         except Exception as e:
-            print(f"Error in latin_query: {e}")
+            logger.error("latin_query_failed", word=word, error=str(e))
             return LatinQueryResult(
                 headword="error",
                 ipa="",
@@ -206,7 +210,7 @@ class ClassicsToolkit:
                     morphological_features={},
                 )
         except Exception as e:
-            print(f"Error in greek_morphology_query: {e}")
+            logger.error("greek_morphology_query_failed", word=word, error=str(e))
             return GreekMorphologyResult(
                 text=word,
                 lemma="error",

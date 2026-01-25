@@ -7,6 +7,11 @@ import click
 from rich import print as rprint
 from rich.panel import Panel
 from sh import bash
+import structlog
+
+
+logger = structlog.get_logger(__name__)
+
 
 SLEEP_DURATION = 3600
 
@@ -31,7 +36,7 @@ def find_zombie_pids() -> list[int]:
                 pids.append(int(line))
         return list(set(pids))  # dedupe
     except Exception as e:
-        rprint(f"[red]Error detecting zombies: {e}[/red]")
+        logger.error("zombie_detection_failed", error=str(e))
         return []
 
 
@@ -43,23 +48,27 @@ def kill_process(pid: int):
         os.kill(pid, 15)  # 15 = SIGTERM
         rprint(f"[green]Zombie Killer: Sent SIGTERM to PID {pid}.[/green]")
     except ProcessLookupError:
+        logger.info("zombie_process_gone", pid=pid)
         rprint(f"[yellow]Zombie Killer: PID {pid} no longer exists.[/yellow]")
     except PermissionError:
+        logger.error("zombie_kill_permission_denied", pid=pid)
         rprint(f"[red]Zombie Killer: Permission denied to kill {pid}.[/red]")
     except Exception as e:
-        rprint(f"[red]Zombie Killer: Failed to kill {pid}: {e}[/red]")
+        logger.error("zombie_kill_failed", pid=pid, error=str(e))
 
 
 async def run_one_shot():
     """Run a single check and exit."""
     pids = find_zombie_pids()
     if pids:
+        logger.info("zombies_found", count=len(pids), pids=pids)
         rprint(
             f"[bold red]Zombie Killer: Found {len(pids)} perl zombie(s) with parent PIDs: {pids}[/bold red]"
         )
         for pid in pids:
             kill_process(pid)
     else:
+        logger.info("no_zombies_found")
         rprint("[green]Zombie Killer: No perl zombies found.[/green]")
 
 
@@ -67,6 +76,7 @@ async def main_loop(interval: int = 3600):
     """
     Main service loop - runs indefinitely with periodic checks.
     """
+    logger.info("zombie_killer_started", interval=interval)
     rprint(
         Panel(
             f"[bold]Zombie Killer: Service started.[/bold] Checking every {interval}s.",
@@ -77,12 +87,14 @@ async def main_loop(interval: int = 3600):
         pids = find_zombie_pids()
 
         if pids:
+            logger.info("zombies_found", count=len(pids), pids=pids)
             rprint(
                 f"[bold red]Zombie Killer: Found {len(pids)} perl zombie(s) with parent PIDs: {pids}[/bold red]"
             )
             for pid in pids:
                 kill_process(pid)
         else:
+            logger.info("no_zombies_found")
             rprint("[yellow]Zombie Killer: No perl zombies found.[/yellow]")
 
         await asyncio.sleep(interval)
@@ -128,6 +140,7 @@ def reap(once):
         else:
             asyncio.run(main_loop(3600))
     except KeyboardInterrupt:
+        logger.info("zombie_killer_shutting_down")
         rprint("[yellow]\nZombie Killer: Shutting down...[/yellow]")
 
 

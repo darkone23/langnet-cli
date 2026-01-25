@@ -5,6 +5,11 @@ from langnet.cologne.core import SanskritCologneLexicon
 import cattrs
 
 from rich.pretty import pprint
+import structlog
+
+
+logger = structlog.get_logger(__name__)
+
 
 pprint("Loading engine core...")
 
@@ -124,44 +129,59 @@ class LanguageEngine:
         lang = LangnetLanguageCodes.get_for_input(lang)
         _cattrs_converter = self._cattrs_converter
 
+        logger.debug("query_started", lang=lang, word=word)
+
         if lang == LangnetLanguageCodes.Greek:
+            logger.debug("routing_to_greek_backends", lang=lang, word=word)
             result: dict = {}
             try:
                 result["diogenes"] = _cattrs_converter.unstructure(
                     self.diogenes.parse_word(word, DiogenesLanguages.GREEK)
                 )
             except Exception as e:
+                logger.error("backend_failed", backend="diogenes", error=str(e))
                 result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
             try:
                 if self.cltk.spacy_is_available():
+                    logger.debug("spacy_available", word=word)
                     spacy_result = self.cltk.greek_morphology_query(word)
                     result["spacy"] = _cattrs_converter.unstructure(spacy_result)
+                else:
+                    logger.debug("spacy_unavailable", word=word)
             except Exception as e:
+                logger.error("backend_failed", backend="spacy", error=str(e))
                 result["spacy"] = {"error": f"Spacy unavailable: {str(e)}"}
         elif lang == LangnetLanguageCodes.Latin:
+            logger.debug("routing_to_latin_backends", lang=lang, word=word)
             tokenized = [word]
             result = {}
             try:
                 dg_result = self.diogenes.parse_word(word, DiogenesLanguages.LATIN)
                 result["diogenes"] = _cattrs_converter.unstructure(dg_result)
             except Exception as e:
+                logger.error("backend_failed", backend="diogenes", error=str(e))
                 result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
             try:
                 ww_result = self.whitakers.words(tokenized)
                 result["whitakers"] = _cattrs_converter.unstructure(ww_result)
             except Exception as e:
+                logger.error("backend_failed", backend="whitakers", error=str(e))
                 result["whitakers"] = {"error": f"Whitakers unavailable: {str(e)}"}
             try:
                 cltk_result = self.cltk.latin_query(word)
                 result["cltk"] = _cattrs_converter.unstructure(cltk_result)
             except Exception as e:
+                logger.error("backend_failed", backend="cltk", error=str(e))
                 result["cltk"] = {"error": f"CLTK unavailable: {str(e)}"}
         elif lang == LangnetLanguageCodes.Sanskrit:
+            logger.debug("routing_to_sanskrit_backends", lang=lang, word=word)
             try:
                 result = _cattrs_converter.unstructure(self.cdsl.lookup_ascii(word))
             except Exception as e:
+                logger.error("backend_failed", backend="cdsl", error=str(e))
                 result = {"error": f"CDSL unavailable: {str(e)}"}
         else:
             raise NotImplementedError(f"Do not know how to handle {lang}")
 
+        logger.debug("query_completed", lang=lang, word=word)
         return result
