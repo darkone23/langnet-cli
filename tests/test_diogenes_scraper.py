@@ -15,10 +15,7 @@ logging.getLogger("urllib3.connection").setLevel(logging.ERROR)
 
 class DiogenesWiring:
     def __init__(self):
-        self.start = time.monotonic()
-        print("Setting up diogenes wiring...")
         self.scraper = DiogenesScraper()
-        print(f"Startup time took {time.monotonic() - self.start}s")
 
 
 wiring = DiogenesWiring()

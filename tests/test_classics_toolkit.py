@@ -9,10 +9,7 @@ logging.getLogger("urllib3.connection").setLevel(logging.ERROR)
 
 class ClassicsToolkitWiring:
     def __init__(self):
-        self.start = time.monotonic()
-        print("Setting up classics toolkit wiring...")
         self.cltk = ClassicsToolkit()
-        print(f"Startup time took {time.monotonic() - self.start}s")
 
 
 wiring = ClassicsToolkitWiring()

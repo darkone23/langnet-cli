@@ -15,10 +15,7 @@ logging.getLogger("urllib3.connection").setLevel(logging.ERROR)
 
 class WhitakersWiring:
     def __init__(self):
-        self.start = time.monotonic()
-        print("Setting up whitakers wiring...")
         self.ww_proc = get_whitakers_proc()
-        print(f"Startup time took {time.monotonic() - self.start}s")
 
 
 wiring = WhitakersWiring()

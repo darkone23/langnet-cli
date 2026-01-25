@@ -1,6 +1,6 @@
 from pathlib import Path
 import re
-from typing import List, Optional
+from typing import List, Optional, Any
 from dataclasses import dataclass, field
 
 
@@ -11,19 +11,40 @@ class LatinQueryResult:
     lewis_1890_lines: List[str]
 
 
+@dataclass
+class GreekMorphologyResult:
+    text: str
+    lemma: str
+    pos: str
+    morphological_features: dict
+
+
 class ClassicsToolkit:
     LATIN = "lat"
     GREEK = "grc"
     SANSKRIT = "san"
 
+    _singleton_instance: "ClassicsToolkit | None" = None
+    _initialized: bool = False
+
     _cltk_available: bool = False
+    _spacy_available: bool = False
     _lat_corpus: Optional[object] = None
     _latdict: Optional[object] = None
     _latlemma: Optional[object] = None
     _latxform: Optional[object] = None
+    _grc_spacy_model: Optional[Any] = None
+
+    def __new__(cls):
+        if cls._singleton_instance is None:
+            cls._singleton_instance = super().__new__(cls)
+        return cls._singleton_instance
 
     def __init__(self):
-        self._try_import_cltk()
+        if not ClassicsToolkit._initialized:
+            self._try_import_cltk()
+            self._try_import_spacy()
+            ClassicsToolkit._initialized = True
 
     def _try_import_cltk(self):
         try:
@@ -54,8 +75,33 @@ class ClassicsToolkit:
             print(f"CLTK not available: {e}")
             self._cltk_available = False
 
+    def _try_import_spacy(self):
+        try:
+            import spacy
+
+            self._spacy_imported = True
+        except ImportError as e:
+            print(f"Spacy not available: {e}")
+            self._spacy_imported = False
+            self._spacy_available = False
+
+        if self._spacy_imported:
+            model_name = "grc_odycy_joint_sm"
+            try:
+                import spacy
+
+                self._grc_spacy_model = spacy.load(model_name)
+                self._spacy_available = True
+                print(f"Loaded spacy model: {model_name}")
+            except OSError as e:
+                print(f"Spacy model '{model_name}' not available: {e}")
+                self._spacy_available = False
+
     def is_available(self) -> bool:
         return self._cltk_available
+
+    def spacy_is_available(self) -> bool:
+        return self._spacy_available
 
     @property
     def latdict(self):
@@ -117,4 +163,53 @@ class ClassicsToolkit:
                 headword="error",
                 ipa="",
                 lewis_1890_lines=[f"Error: {str(e)}"],
+            )
+
+    def greek_morphology_query(self, word) -> GreekMorphologyResult:
+        if not getattr(self, "_spacy_imported", False):
+            return GreekMorphologyResult(
+                text=word,
+                lemma="spacy_unavailable",
+                pos="",
+                morphological_features={"error": "Spacy module not installed"},
+            )
+
+        if self._grc_spacy_model is None:
+            return GreekMorphologyResult(
+                text=word,
+                lemma="spacy_unavailable",
+                pos="",
+                morphological_features={"error": "Spacy model not available"},
+            )
+
+        try:
+            doc = self._grc_spacy_model(word)
+
+            if len(doc) > 0:
+                token = doc[0]
+                morphological_features = {}
+                if token.morph:
+                    for key, value in token.morph.to_dict().items():
+                        morphological_features[key] = value
+
+                return GreekMorphologyResult(
+                    text=word,
+                    lemma=token.lemma_ if token.lemma_ else word,
+                    pos=token.pos_ if token.pos_ else "",
+                    morphological_features=morphological_features,
+                )
+            else:
+                return GreekMorphologyResult(
+                    text=word,
+                    lemma=word,
+                    pos="",
+                    morphological_features={},
+                )
+        except Exception as e:
+            print(f"Error in greek_morphology_query: {e}")
+            return GreekMorphologyResult(
+                text=word,
+                lemma="error",
+                pos="",
+                morphological_features={"error": str(e)},
             )

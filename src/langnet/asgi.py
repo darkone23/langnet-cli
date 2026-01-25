@@ -60,6 +60,23 @@ class HealthChecker:
             return {"status": "missing", "message": f"CLTK module not installed: {e}"}
 
     @staticmethod
+    def spacy() -> dict:
+        try:
+            import spacy
+
+            model_name = "grc_odycy_joint_sm"
+            try:
+                nlp = spacy.load(model_name)
+                return {"status": "healthy", "model": model_name}
+            except OSError as e:
+                return {
+                    "status": "missing",
+                    "message": f"Spacy model '{model_name}' not installed: {e}",
+                }
+        except ImportError as e:
+            return {"status": "missing", "message": f"Spacy module not installed: {e}"}
+
+    @staticmethod
     def whitakers() -> dict:
         from pathlib import Path
 
@@ -82,15 +99,16 @@ class HealthChecker:
 
 async def health_check(request: Request):
     try:
+        if not hasattr(request.app.state, "wiring"):
+            request.app.state.wiring = LangnetWiring()
         wiring: LangnetWiring = request.app.state.wiring
     except Exception as e:
-        return ORJsonResponse(
-            {"error": f"Startup not complete: {str(e)}"}, status_code=503
-        )
+        return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
     try:
         health = {
             "diogenes": HealthChecker.diogenes(),
             "cltk": HealthChecker.cltk(),
+            "spacy": HealthChecker.spacy(),
             "whitakers": HealthChecker.whitakers(),
             "cdsl": HealthChecker.cdsl(),
         }
@@ -105,8 +123,13 @@ async def health_check(request: Request):
 
 
 async def query_api(request: Request):
-    lang = request.query_params.get("l")
-    word = request.query_params.get("s")
+    if request.method == "POST":
+        form_data = await request.form()
+        lang = form_data.get("l")
+        word = form_data.get("s")
+    else:
+        lang = request.query_params.get("l")
+        word = request.query_params.get("s")
 
     if not lang:
         return ORJsonResponse(
@@ -117,24 +140,28 @@ async def query_api(request: Request):
             {"error": "Missing required parameter: s (search term)"}, status_code=400
         )
 
-    valid_languages = {"lat", "grc", "san"}
+    valid_languages = {"lat", "grc", "san", "grk"}
     if lang not in valid_languages:
         return ORJsonResponse(
             {
-                "error": f"Invalid language: {lang}. Must be one of: {', '.join(valid_languages)}"
+                "error": f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
             },
             status_code=400,
         )
 
-    if not word or not word.strip():
+    if lang == "grk":
+        lang = "grc"
+
+    word = str(word).strip() if word else ""
+    if not word:
         return ORJsonResponse({"error": "Search term cannot be empty"}, status_code=400)
 
     try:
+        if not hasattr(request.app.state, "wiring"):
+            request.app.state.wiring = LangnetWiring()
         wiring: LangnetWiring = request.app.state.wiring
     except Exception as e:
-        return ORJsonResponse(
-            {"error": f"Startup not complete: {str(e)}"}, status_code=503
-        )
+        return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
     try:
         result = wiring.engine.handle_query(lang, word)
         return ORJsonResponse(result)
@@ -143,7 +170,7 @@ async def query_api(request: Request):
 
 
 routes = [
-    Route("/api/q", query_api),
+    Route("/api/q", query_api, methods=["GET", "POST"]),
     Route("/api/health", health_check),
 ]
 
@@ -151,10 +178,12 @@ routes = [
 def create_app() -> Starlette:
     app = Starlette(routes=routes)
 
+    @app.on_event("startup")
     async def startup():
-        app.state.wiring = LangnetWiring()
-
-    app.add_event_handler("startup", startup)
+        try:
+            app.state.wiring = LangnetWiring()
+        except Exception as e:
+            print(f"Failed to initialize wiring at startup: {e}")
 
     return app
 

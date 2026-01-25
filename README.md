@@ -19,7 +19,7 @@ Classical language resources are fragmented across many projects, each with diff
 
 - **Unified API**: Single endpoint for querying multiple backends
 - **Response aggregation**: Results from different sources merged by language
-- **Cold start management**: API server caches loaded models (CLTK downloads are expensive)
+- **Eager initialization**: All toolkits and ML models load at server startup (~15s for spaCy Greek model)
 - **Extensible architecture**: Add new backends by implementing the scraper interface
 
 ## Quick Start
@@ -63,6 +63,24 @@ curl --data-urlencode 's=sa.msk.rta' --data-urlencode 'l=san' 'localhost:8000/ap
 4. **CDSL data** - Cologne Sanskrit Lexicon files
    - Installed to `~/cdsl_data/` by test suite
    - MW (Monier-Williams) and AP90 (Apte) dictionaries
+
+## Startup Behavior
+
+The API server performs eager initialization at startup to ensure fast queries:
+
+1. **ClassicsToolkit**: Loads CLTK Latin models (~14s on first run) and spaCy Greek model
+2. **WhitakersWords**: Validates binary is available
+3. **DiogenesScraper**: Tests connectivity to local Perl server
+
+This means the first `uvicorn-run` will take ~15-30 seconds to start, but all subsequent queries are fast (<1s).
+
+```
+# Typical startup time breakdown
+Initializing ClassicsToolkit... ~15s (spaCy grc_odycy_joint_sm model)
+Validating Whitakers binary... ~0.1s
+Checking Diogenes connectivity... ~1s
+Total startup time... ~16s
+```
 
 ## Architecture
 

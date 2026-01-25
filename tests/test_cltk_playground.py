@@ -13,13 +13,8 @@ from langnet.classics_toolkit.core import ClassicsToolkit
 
 class ClassicsWiring:
     def __init__(self):
-        self.start = time.monotonic()
-        print("Setting up classics wiring...")
-
-        # print(self.lat_corpus.all_corpora_for_lang)
         self.cologne_dict = SanskritCologneLexicon()
         self.cltk = ClassicsToolkit()
-        print(f"Startup time took {time.monotonic() - self.start}s")
 
 
 wiring = (
@@ -68,7 +63,29 @@ class TestLatinExamples(unittest.TestCase):
 
         self.assertEqual(result, textwrap.dedent(somestr))
 
-        # self.assertExpectedInline(somestr, """""")
+        # self.assertExpectedInline(somestr, """"")
+
+
+class TestGreekSpacyMorphology(unittest.TestCase):
+    def test_spacy_is_available(self):
+        self.assertIsInstance(wiring.cltk.spacy_is_available(), bool)
+
+    def test_greek_morphology_query(self):
+        result = wiring.cltk.greek_morphology_query("λόγος")
+
+        self.assertIsInstance(result.text, str)
+        self.assertIsInstance(result.lemma, str)
+        self.assertIsInstance(result.pos, str)
+        self.assertIsInstance(result.morphological_features, dict)
+
+    def test_greek_morphology_returns_valid_result(self):
+        result = wiring.cltk.greek_morphology_query("λόγος")
+
+        self.assertEqual(result.text, "λόγος")
+        self.assertEqual(result.lemma, "λόγος")
+        self.assertEqual(result.pos, "NOUN")
+        self.assertIn("Case", result.morphological_features)
+        self.assertIn("Gender", result.morphological_features)
 
 
 # class TestCologneDigitalSanskritLexicon(unittest.TestCase):

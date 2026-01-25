@@ -8,9 +8,16 @@ Instructions for AI agents working on this codebase.
 |------|---------|-------|
 | Run all tests | `nose2 -s tests` | Runs nose2 test discovery in tests/ |
 | Run single test | `nose2 -s tests <TestClass>.<test_method>` | Full dotted path required |
+| Enter shell | `devenv shell` | Loads Python venv, sets env vars |
+
+## Operator-Only Commands
+
+These are only to be run by the human-in-the-loop and never the agent.
+
+| Task | Command | Notes |
+|------|---------|-------|
 | Start dev server | `uvicorn-run` | Wraps `uvicorn langnet.asgi:app` |
 | Start sidecar | `just sidecar` | Runs zombie diogenes reaper (see cli_util.py) |
-| Enter shell | `devenv shell` | Loads Python venv, sets env vars |
 
 ## Environment
 

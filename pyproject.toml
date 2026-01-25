@@ -32,6 +32,7 @@ spacy = "3.7.5"
 starlette = "^0.52.1"
 uvicorn = "^0.40.0"
 orjson = "^3.10.14"
+python-multipart = "^0.0.20"
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"

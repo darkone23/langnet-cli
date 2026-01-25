@@ -35,33 +35,42 @@ class CologneSanskritQueryResult:
 
 
 class SanskritCologneLexicon:
+    _singleton_instance: "SanskritCologneLexicon | None" = None
+    _initialized: bool = False
+
+    def __new__(cls):
+        if cls._singleton_instance is None:
+            cls._singleton_instance = super().__new__(cls)
+        return cls._singleton_instance
+
     def __init__(self):
-        # TODO:
-        # this blows up if you don't have an internet connection or cologne is not online...
+        if not SanskritCologneLexicon._initialized:
+            # TODO:
+            # this blows up if you don't have an internet connection or cologne is not online...
 
-        # pprint("About to setup CDSL")
-        # self.CDSL: pycdsl.CDSLCorpus = pycdsl.CDSLCorpus()
-        # self.CDSL.setup()
-        # pprint("Setup CDSL: sanskrit feature DISABLED (hangs on load when no route!)")
+            # pprint("About to setup CDSL")
+            # self.CDSL: pycdsl.CDSLCorpus = pycdsl.CDSLCorpus()
+            # self.CDSL.setup()
+            # pprint("Setup CDSL: sanskrit feature DISABLED (hangs on load when no route!)")
 
-        # Sanskrit-English
-        # self.mw: pycdsl.CDSLDict = self.CDSL["MW"]
-        # self.ap90: pycdsl.CDSLDict = self.CDSL["AP90"]
-        #
-        # English-Sanskrit
-        # self.mwe: pycdsl.CDSLDict = self.CDSL["MWE"]
-        # self.ae: pycdsl.CDSLDict = self.CDSL["AE"]
+            # Sanskrit-English
+            # self.mw: pycdsl.CDSLDict = self.CDSL["MW"]
+            # self.ap90: pycdsl.CDSLDict = self.CDSL["AP90"]
+            #
+            # English-Sanskrit
+            # self.mwe: pycdsl.CDSLDict = self.CDSL["MWE"]
+            # self.ae: pycdsl.CDSLDict = self.CDSL["AE"]
 
-        # print()
+            # print()
 
-        # top_terms = self.mw.stats(top=1024 * 8)
+            # top_terms = self.mw.stats(top=1024 * 8)
 
-        # for term in top_terms["top"]:
-        #     (k, v) = term
-        #     it = transliterate(k, sanscript.DEVANAGARI, sanscript.ITRANS)
-        #     print(SCHEMES[sanscript.OPTITRANS].to_lay_indian(it))
+            # for term in top_terms["top"]:
+            #     (k, v) = term
+            #     it = transliterate(k, sanscript.DEVANAGARI, sanscript.ITRANS)
+            #     print(SCHEMES[sanscript.OPTITRANS].to_lay_indian(it))
 
-        pass
+            SanskritCologneLexicon._initialized = True
 
     def transliterate(self, data):
         mode = detect(data)

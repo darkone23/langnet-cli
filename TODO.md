@@ -47,16 +47,7 @@ Pydantic has been phased out in favor of Python's `dataclass` + `cattrs`:
 ### Phase 2b: Reliability Improvements
 
 ### Language Coverage
-- [ ] **Greek morphology** via CLTK/spacy (currently only diogenes)
-
-### Developer Experience
-- [ ] **CLI tool** with subcommands:
-  - `langnet query lat benevolens`
-  - `langnet langs` (list supported languages)
-  - `langnet health` (check backend status)
-- [ ] **Interactive mode** for exploring results
-- [ ] **Configuration file** for backend URLs
-  - [ ] python dotenv tool
+- [x] **Greek morphology** via CLTK/spacy (grc_odycy_joint_sm model loaded in ClassicsToolkit)
 
 ### Structured Logging
 - [ ] Add structured logging using structlog with logfmt output
@@ -72,7 +63,18 @@ Pydantic has been phased out in favor of Python's `dataclass` + `cattrs`:
   - ERROR: failed queries, unavailable backends
 - [ ] Add correlation IDs for tracing requests through multiple backends
 - [x] Use `pamburus/hl` for colored logfmt output in development
+  - `hl` command now available
 - [ ] Log format example: `ts=2026-01-25T10:00:00Z level=INFO msg="using whitakers binary" path=/home/user/.local/bin/whitakers-words`
+
+### Developer Experience
+- [ ] **CLI tool** with subcommands:
+  - `langnet query lat benevolens`
+  - `langnet langs` (list supported languages)
+  - `langnet health` (check backend status)
+- [ ] **Configuration file** for backend URLs
+  - [ ] python dotenv tool
+    - [ ] able to specify diogenes endpoint
+    - [ ]
 
 #### Diogenes Zombie Process Reaper
 The Perl diogenes server leaks threads on certain queries. A sidecar process runs continuously:

@@ -125,14 +125,19 @@ class LanguageEngine:
         _cattrs_converter = self._cattrs_converter
 
         if lang == LangnetLanguageCodes.Greek:
+            result: dict = {}
             try:
-                result = dict(
-                    diogenes=_cattrs_converter.unstructure(
-                        self.diogenes.parse_word(word, DiogenesLanguages.GREEK)
-                    )
+                result["diogenes"] = _cattrs_converter.unstructure(
+                    self.diogenes.parse_word(word, DiogenesLanguages.GREEK)
                 )
             except Exception as e:
-                result = {"error": f"Diogenes unavailable: {str(e)}"}
+                result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
+            try:
+                if self.cltk.spacy_is_available():
+                    spacy_result = self.cltk.greek_morphology_query(word)
+                    result["spacy"] = _cattrs_converter.unstructure(spacy_result)
+            except Exception as e:
+                result["spacy"] = {"error": f"Spacy unavailable: {str(e)}"}
         elif lang == LangnetLanguageCodes.Latin:
             tokenized = [word]
             result = {}
