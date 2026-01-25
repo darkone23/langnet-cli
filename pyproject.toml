@@ -27,6 +27,7 @@ indic-transliteration = "^2.3.69"
 # aisuite = "^0.1.13"
 # vertexai = "^1.71.1"
 # google-cloud-translate = "^3.23.0"
+spacy = "3.7.5"
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"
