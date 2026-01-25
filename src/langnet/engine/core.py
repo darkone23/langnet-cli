@@ -118,20 +118,19 @@ class LanguageEngine:
         self.whitakers = whitakers
         self.cltk = cltk
         self.cdsl = cdsl
+        self._cattrs_converter = cattrs.Converter(omit_if_default=True)
 
     def handle_query(self, lang, word):
         lang = LangnetLanguageCodes.get_for_input(lang)
+        _cattrs_converter = self._cattrs_converter
 
         if lang == LangnetLanguageCodes.Greek:
             try:
                 result = dict(
-                    diogenes=cattrs.unstructure(
+                    diogenes=_cattrs_converter.unstructure(
                         self.diogenes.parse_word(word, DiogenesLanguages.GREEK)
                     )
                 )
-                result["diogenes"] = {
-                    k: v for k, v in result["diogenes"].items() if v is not None
-                }
             except Exception as e:
                 result = {"error": f"Diogenes unavailable: {str(e)}"}
         elif lang == LangnetLanguageCodes.Latin:
@@ -139,31 +138,22 @@ class LanguageEngine:
             result = {}
             try:
                 dg_result = self.diogenes.parse_word(word, DiogenesLanguages.LATIN)
-                result["diogenes"] = cattrs.unstructure(dg_result)
-                result["diogenes"] = {
-                    k: v for k, v in result["diogenes"].items() if v is not None
-                }
+                result["diogenes"] = _cattrs_converter.unstructure(dg_result)
             except Exception as e:
                 result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
             try:
                 ww_result = self.whitakers.words(tokenized)
-                result["whitakers"] = cattrs.unstructure(ww_result)
-                result["whitakers"] = {
-                    k: v for k, v in result["whitakers"].items() if v is not None
-                }
+                result["whitakers"] = _cattrs_converter.unstructure(ww_result)
             except Exception as e:
                 result["whitakers"] = {"error": f"Whitakers unavailable: {str(e)}"}
             try:
                 cltk_result = self.cltk.latin_query(word)
-                result["cltk"] = cattrs.unstructure(cltk_result)
-                result["cltk"] = {
-                    k: v for k, v in result["cltk"].items() if v is not None
-                }
+                result["cltk"] = _cattrs_converter.unstructure(cltk_result)
             except Exception as e:
                 result["cltk"] = {"error": f"CLTK unavailable: {str(e)}"}
         elif lang == LangnetLanguageCodes.Sanskrit:
             try:
-                result = cattrs.unstructure(self.cdsl.lookup_ascii(word))
+                result = _cattrs_converter.unstructure(self.cdsl.lookup_ascii(word))
             except Exception as e:
                 result = {"error": f"CDSL unavailable: {str(e)}"}
         else:
