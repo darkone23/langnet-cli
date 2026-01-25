@@ -1,11 +1,11 @@
 from pathlib import Path
 import re
 from typing import List, Optional
+from dataclasses import dataclass, field
 
-from pydantic import BaseModel, Field
 
-
-class LatinQueryResult(BaseModel):
+@dataclass
+class LatinQueryResult:
     headword: str
     ipa: str
     lewis_1890_lines: List[str]

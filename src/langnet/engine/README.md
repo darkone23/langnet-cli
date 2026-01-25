@@ -57,7 +57,7 @@ These map to `ClassicsToolkit` language enums for CLTK compatibility.
 ## Data Aggregation
 
 Results from multiple backends are merged:
-- Each backend returns its own Pydantic model
+- Each backend returns its own dataclass model
 - Models are dumped to dicts with `exclude_none=True`
 - Dicts are combined into single response dict
 - Keys are backend names: `diogenes`, `whitakers`, `cltk`, `cdsl`

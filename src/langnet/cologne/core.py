@@ -10,23 +10,26 @@ from indic_transliteration.detect import detect
 
 # pprint("Loading indic transliteration: OK")
 
-from pydantic import BaseModel, Field
+from dataclasses import dataclass, field
 
 
-class SanskritDictionaryEntry(BaseModel):
-    subid: str | None = Field(default=None)
+@dataclass
+class SanskritDictionaryEntry:
     id: str
     meaning: str
+    subid: str | None = field(default=None)
 
 
-class SanskritDictionaryLookup(BaseModel):
+@dataclass
+class SanskritDictionaryLookup:
     term: str
     iast: str
     hk: str
     entries: list[SanskritDictionaryEntry]
 
 
-class CologneSanskritQueryResult(BaseModel):
+@dataclass
+class CologneSanskritQueryResult:
     mw: list[SanskritDictionaryLookup]
     ap90: list[SanskritDictionaryLookup]
 

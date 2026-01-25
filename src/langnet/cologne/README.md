@@ -81,7 +81,7 @@ Top-level response container:
 ## Integration Points
 
 - **Input**: ASCII/HK transliteration string
-- **Output**: `CologneSanskritQueryResult` Pydantic model
+- **Output**: `CologneSanskritQueryResult` dataclass model
 - **Called by**: `LanguageEngine.handle_query()` for Sanskrit
 
 ## Current Status

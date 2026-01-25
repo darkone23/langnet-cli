@@ -54,7 +54,7 @@ output: LatinQueryResult(headword, ipa, lewis_1890_lines)
 ## Integration Points
 
 - **Input**: Raw Latin word (inflected or headword)
-- **Output**: `LatinQueryResult` Pydantic model
+- **Output**: `LatinQueryResult` dataclass model
 - **Called by**: `LanguageEngine.handle_query()` for Latin
 
 ## Dependencies

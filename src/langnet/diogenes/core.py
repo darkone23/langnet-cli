@@ -8,67 +8,78 @@ import betacode.conv
 
 from collections import defaultdict
 
-from pydantic import BaseModel, Field
-
+from dataclasses import dataclass, field
 from typing import Any
 
-DiogenesChunkT = BaseModel
+import cattrs
+
+DiogenesChunkT = dataclass
 
 
-class NoMatchFoundHeader(DiogenesChunkT):
-    chunk_type: str = Field(default="NoMatchFoundHeader")
+@dataclass
+class NoMatchFoundHeader:
     logeion: str
+    chunk_type: str = field(default="NoMatchFoundHeader")
 
 
-class PerseusMorphTerm(BaseModel):
-    defs: list[str] | None = Field(default=None)
+@dataclass
+class PerseusMorphTerm:
     stem: list[str]
     tags: list[str]
+    defs: list[str] | None = field(default=None)
 
 
-class PerseusMorphology(BaseModel):
-    warning: str | None = Field(default=None)
+@dataclass
+class PerseusMorphology:
     morphs: list[PerseusMorphTerm]
+    warning: str | None = field(default=None)
 
 
-class PerseusAnalysisHeader(DiogenesChunkT):
-    chunk_type: str = Field(default="NoMatchFoundHeader")
+@dataclass
+class PerseusAnalysisHeader:
     logeion: str
     morphology: PerseusMorphology
+    chunk_type: str = field(default="PerseusAnalysisHeader")
 
 
-class DiogenesDefinitionBlock(BaseModel):
-    senses: list[str] | None = Field(default=None)
-    citations: dict[str, str] | None = Field(default=None)
-    heading: str | None = Field(default=None)
-    diogenes_warning: str | None = Field(default=None)
+@dataclass
+class DiogenesDefinitionBlock:
     entry: str
     entryid: str
+    senses: list[str] | None = field(default=None)
+    citations: dict[str, str] | None = field(default=None)
+    heading: str | None = field(default=None)
+    diogenes_warning: str | None = field(default=None)
 
 
-class DiogenesDefinitionEntry(BaseModel):
+@dataclass
+class DiogenesDefinitionEntry:
     blocks: list[DiogenesDefinitionBlock]
     term: str
 
 
-class DiogenesFuzzyReference(DiogenesChunkT):
-    chunk_type: str = Field(default="DiogenesFuzzyReference")
+@dataclass
+class DiogenesFuzzyReference:
     reference_id: str
     definitions: DiogenesDefinitionEntry
+    chunk_type: str = field(default="DiogenesFuzzyReference")
 
 
-class UnknownChunkType(DiogenesChunkT):
-    chunk_type: str = Field(default="UnknownChunkType")
+@dataclass
+class UnknownChunkType:
     soup: str
+    chunk_type: str = field(default="UnknownChunkType")
 
 
-class DiogenesMatchingReference(DiogenesChunkT):
-    chunk_type: str = Field(default="DiogenesMatchingReference")
+@dataclass
+class DiogenesMatchingReference:
     reference_id: str
     definitions: DiogenesDefinitionEntry
+    chunk_type: str = field(default="DiogenesMatchingReference")
 
 
-class DiogenesResultT(BaseModel):
+@dataclass
+class DiogenesResultT:
     chunks: list[
         PerseusAnalysisHeader
         | NoMatchFoundHeader
@@ -328,21 +339,35 @@ class DiogenesScraper:
         chunk_type: str = chunk["chunk_type"]
 
         if chunk_type == DiogenesChunkType.PerseusAnalysisHeader:
-            chunk["morphology"] = self.handle_morphology(soup)
+            morph_dict = self.handle_morphology(soup)
+            chunk["morphology"] = cattrs.structure(morph_dict, PerseusMorphology)
 
         elif chunk_type == DiogenesChunkType.DiogenesMatchingReference:
-            chunk["definitions"] = self.handle_references(soup)
+            refs_dict = self.handle_references(soup)
+            blocks = [
+                b
+                if isinstance(b, DiogenesDefinitionBlock)
+                else cattrs.structure(b, DiogenesDefinitionBlock)
+                for b in refs_dict.get("blocks", [])
+            ]
+            chunk["definitions"] = DiogenesDefinitionEntry(
+                term=refs_dict.get("term", ""), blocks=blocks
+            )
         elif chunk_type == DiogenesChunkType.DiogenesFuzzyReference:
-            # todo - not properly identifying 'fuzzy' cases
-            # create some test examples to verify
-            chunk["definitions"] = self.handle_references(soup)
+            refs_dict = self.handle_references(soup)
+            blocks = [
+                b
+                if isinstance(b, DiogenesDefinitionBlock)
+                else cattrs.structure(b, DiogenesDefinitionBlock)
+                for b in refs_dict.get("blocks", [])
+            ]
+            chunk["definitions"] = DiogenesDefinitionEntry(
+                term=refs_dict.get("term", ""), blocks=blocks
+            )
         else:
             pass
 
-        # print("its chunkin time", chunk)
-        # result["chunks"].append(chunk)
-        # return
-        del chunk["soup"]  # remove the html soup from the chunk artifact
+        del chunk["soup"]
 
         if chunk_type == DiogenesChunkType.PerseusAnalysisHeader:
             result["chunks"].append(PerseusAnalysisHeader(**chunk))
@@ -353,8 +378,8 @@ class DiogenesScraper:
         elif chunk_type == DiogenesChunkType.DiogenesFuzzyReference:
             result["chunks"].append(DiogenesFuzzyReference(**chunk))
         else:
-            soup = str(soup)
-            result["chunks"].append(UnknownChunkType(**dict(soup=soup)))
+            soup_str = str(soup)
+            result["chunks"].append(UnknownChunkType(soup=soup_str))
 
     def get_next_chunk(self, result, soup: BeautifulSoup):
         chunk = dict(soup=soup)

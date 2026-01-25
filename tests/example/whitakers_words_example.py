@@ -387,8 +387,8 @@ def main():
     ]
 
     print("calculating words...")
-    words = WhitakersWords.words(latin_words)
-    for word in words:
+    result = WhitakersWords.words(latin_words)
+    for word in result.wordlist:
         pprint(word)
 
 

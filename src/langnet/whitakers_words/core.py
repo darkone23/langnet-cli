@@ -4,52 +4,60 @@ import re
 
 from .lineparsers import FactsReducer, SensesReducer, CodesReducer
 
+from dataclasses import dataclass, field
+from typing import Any
 
-from pydantic import BaseModel, Field
+import cattrs
 
 
-class CodelineName(BaseModel):
-    notes: list[str] | None = Field(default=None)
+@dataclass
+class CodelineName:
     names: list[str]
+    notes: list[str] | None = field(default=None)
 
 
-class CodelineData(BaseModel):
+@dataclass
+class CodelineData:
     term: str
-    notes: list[str] | None = Field(default=None)
-    age: str | None = Field(default=None)
-    source: str | None = Field(default=None)
-    freq: str | None = Field(default=None)
-    declension: str | None = Field(default=None)
-    pos_form: str | None = Field(default=None)
-    pos_code: str | None = Field(default=None)
+    notes: list[str] | None = field(default=None)
+    age: str | None = field(default=None)
+    source: str | None = field(default=None)
+    freq: str | None = field(default=None)
+    declension: str | None = field(default=None)
+    pos_form: str | None = field(default=None)
+    pos_code: str | None = field(default=None)
 
 
-class WhitakerWordParts(BaseModel):
+@dataclass
+class WhitakerWordParts:
     stem: str
     ending: str
 
 
-class WhitakerWordData(BaseModel):
-    declension: str | None = Field(default=None)
-    case: str | None = Field(default=None)
-    number: str | None = Field(default=None)
-    gender: str | None = Field(default=None)
-    variant: str | None = Field(default=None)
-    comparison: str | None = Field(default=None)
-    term_analysis: WhitakerWordParts | None = Field(default=None)
+@dataclass
+class WhitakerWordData:
     term: str
     part_of_speech: str
+    declension: str | None = field(default=None)
+    case: str | None = field(default=None)
+    number: str | None = field(default=None)
+    gender: str | None = field(default=None)
+    variant: str | None = field(default=None)
+    comparison: str | None = field(default=None)
+    term_analysis: WhitakerWordParts | None = field(default=None)
 
 
-class WhitakersWordsT(BaseModel):
-    unknown: list[str] | None = Field(default=None)
-    raw_lines: list[str] = Field(default=[])
-    senses: list[str] = Field(default=[])
-    terms: list[WhitakerWordData] = Field(default=[])
-    codeline: CodelineData | CodelineName | None = Field(default=None)
+@dataclass
+class WhitakersWordsT:
+    unknown: list[str] | None = field(default=None)
+    raw_lines: list[str] = field(default_factory=list)
+    senses: list[str] = field(default_factory=list)
+    terms: list[WhitakerWordData] = field(default_factory=list)
+    codeline: CodelineData | CodelineName | None = field(default=None)
 
 
-class WhitakersWordsResult(BaseModel):
+@dataclass
+class WhitakersWordsResult:
     wordlist: list[WhitakersWordsT]
 
 
@@ -230,4 +238,8 @@ class WhitakersWords:
                 del word["unknown"]
             if len(lines):
                 wordlist.append(word)
-        return WhitakersWordsResult(wordlist=fixup(wordlist))
+
+        structured_wordlist = [
+            cattrs.structure(w, WhitakersWordsT) for w in fixup(wordlist)
+        ]
+        return WhitakersWordsResult(wordlist=structured_wordlist)

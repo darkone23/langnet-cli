@@ -12,7 +12,7 @@ Whitaker's Words analyzes Latin words and returns:
 
 The original program is a standalone executable. This module:
 1. Executes the binary with word input
-2. Parses structured output into Pydantic models
+2. Parses structured output into dataclass models
 3. Provides clean Python API
 
 ## Usage
@@ -100,7 +100,7 @@ Dictionary sense information (lines with `;`):
 ## Integration Points
 
 - **Input**: List of words (executes once per batch)
-- **Output**: `WhitakersWordsResult` Pydantic model
+- **Output**: `WhitakersWordsResult` dataclass model
 - **Called by**: `LanguageEngine.handle_query()` for Latin
 
 ## Binary Discovery
@@ -114,7 +114,7 @@ The module searches for the whitakers-words binary in order:
 
 - `sh` - subprocess abstraction for executing binary
 - `re` - regex for term pattern matching
-- Pydantic models
+- cattrs for dataclass serialization
 
 ## Known Issues
 

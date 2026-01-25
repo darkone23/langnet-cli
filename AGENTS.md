@@ -45,9 +45,8 @@ Order required (this order is enforced by existing code):
 - Example: Use `HealthChecker.diogenes()` instead of `check_diogenes()`
 
 ### Data Models
-- **Current**: Pydantic `BaseModel` with `Field(default=...)` for optional fields
-- **Target**: Python `dataclass` + `cattrs` for serialization
-- See TODO.md for migration plan
+- **Current**: Python `dataclass` with `cattrs` for serialization
+- Migration from Pydantic completed in Q1 2026
 
 ### Error Handling
 - Raise `ValueError(msg)` for invalid input
@@ -73,7 +72,7 @@ The `DiogenesScraper` uses a state machine to classify HTML responses:
 1. Split response by `<hr />` (document separators)
 2. Classify each chunk via `get_next_chunk()`
 3. Process chunk via `process_chunk()`
-4. Serialize to Pydantic models
+4. Serialize to dataclass models via cattrs
 
 ### Line Parsers (Whitakers)
 Modular design: each line type has a reducer:
@@ -88,4 +87,4 @@ Modular design: each line type has a reducer:
 3. **Whitakers return type**: `get_whitakers_proc()` returns `sh.Command`, not a string
 4. **Betacode conversion**: Greek UTF-8 must convert to betacode for diogenes
 5. **BeautifulSoup types**: BeautifulSoup's `AttributeValueList` lacks string methods
-6. **Pydantic deprecation**: Models use v2 syntax (`model_dump()` not `dict()`)
+6. **Data models**: Use `dataclass` with `cattrs` for serialization

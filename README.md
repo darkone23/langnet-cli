@@ -141,7 +141,7 @@ See [AGENTS.md](AGENTS.md) for detailed coding standards including:
 - **Diogenes reliability**: Perl server leaks threads; run `just sidecar` periodically
 - **Whitakers ARM**: Build from source on ARM platforms (see Dependencies section)
 - **CDSL incomplete**: Cologne module returns placeholders; full integration pending
-- **Pydantic deprecation**: Migrating to cattrs for data models
+- **cattrs migration**: Data models use Python dataclass with cattrs serialization
 
 ## Related Projects
 

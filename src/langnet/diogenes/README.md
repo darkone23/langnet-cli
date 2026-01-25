@@ -63,7 +63,7 @@ For each document:
     └─ process_chunk(): Extract structured data
         ├─ handle_morphology(): Parse <li>/<p> tags
         ├─ handle_references(): Parse #sense blocks
-        └─ Serialize to Pydantic model
+        └─ Serialize to dataclass model via cattrs
     ↓
 Aggregate chunks into DiogenesResultT
 ```
@@ -81,7 +81,7 @@ Hierarchical indentation is tracked via CSS `padding-left` values, converted to 
 ## Integration Points
 
 - **Input**: Word string, language code (lat/grk)
-- **Output**: `DiogenesResultT` Pydantic model
+- **Output**: `DiogenesResultT` dataclass model
 - **Called by**: `LanguageEngine.handle_query()` for Latin/Greek
 
 ## Sidecar Process

@@ -11,7 +11,7 @@ The `langnet/asgi.py` is currently a stub returning "hello from langnet-api". It
 - [x] Validate word parameter (non-empty string)
 - [x] Call `LanguageEngine.handle_query(lang, word)`
 - [x] Return JSON response with proper error handling
-- [x] Use `JSONResponse` for JSON serialization (orjson used by pydantic internally)
+- [x] Use `orjson` directly for JSON serialization (cattrs uses orjson for unstructured dataclasses)
 
 #### Implement Query Endpoints by Language
 - [x] **Latin**: Aggregate diogenes (lexicon) + whitakers (morphology) + CLTK (Lewis lexicon)
@@ -22,17 +22,17 @@ The `langnet/asgi.py` is currently a stub returning "hello from langnet-api". It
 ### Phase 2: Code Style
 
 #### Migrate from Pydantic to cattrs
-Pydantic is being phased out in favor of Python's `dataclass` + `cattrs`:
+Pydantic has been phased out in favor of Python's `dataclass` + `cattrs`:
 
-- [ ] Add `cattrs` to pyproject.toml dependencies
-- [ ] Audit all Pydantic models in:
+- [x] Add `cattrs` to pyproject.toml dependencies
+- [x] Audit all Pydantic models in:
   - `langnet/engine/core.py` - 1 model (LatinQueryResult)
   - `langnet/whitakers_words/core.py` - 6 models
   - `langnet/diogenes/core.py` - 9 models
   - `langnet/cologne/core.py` - 3 models
-- [ ] Migrate in dependency order (start with leaf models)
-- [ ] Run tests after each migration
-- [ ] Update AGENTS.md when complete
+- [x] Migrate in dependency order (start with leaf models)
+- [x] Run tests after each migration
+- [x] Update AGENTS.md when complete
 
 #### Model Refactoring Strategy
 1. Replace `class X(BaseModel)` with `@dataclass class X`
@@ -47,7 +47,7 @@ Pydantic is being phased out in favor of Python's `dataclass` + `cattrs`:
 ### Phase 2b: Reliability Improvements
 
 ### Language Coverage
-- [ ] **Greek morphology** via CLTK (currently only diogenes)
+- [ ] **Greek morphology** via CLTK/spacy (currently only diogenes)
 
 ### Developer Experience
 - [ ] **CLI tool** with subcommands:

@@ -2,6 +2,7 @@ from langnet.diogenes.core import DiogenesScraper, DiogenesLanguages
 from langnet.whitakers_words.core import WhitakersWords
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
+import cattrs
 
 from rich.pretty import pprint
 
@@ -124,36 +125,45 @@ class LanguageEngine:
         if lang == LangnetLanguageCodes.Greek:
             try:
                 result = dict(
-                    diogenes=self.diogenes.parse_word(
-                        word, DiogenesLanguages.GREEK
-                    ).model_dump(exclude_none=True)
+                    diogenes=cattrs.unstructure(
+                        self.diogenes.parse_word(word, DiogenesLanguages.GREEK)
+                    )
                 )
+                result["diogenes"] = {
+                    k: v for k, v in result["diogenes"].items() if v is not None
+                }
             except Exception as e:
                 result = {"error": f"Diogenes unavailable: {str(e)}"}
         elif lang == LangnetLanguageCodes.Latin:
             tokenized = [word]
             result = {}
             try:
-                result["diogenes"] = self.diogenes.parse_word(
-                    word, DiogenesLanguages.LATIN
-                ).model_dump(exclude_none=True)
+                dg_result = self.diogenes.parse_word(word, DiogenesLanguages.LATIN)
+                result["diogenes"] = cattrs.unstructure(dg_result)
+                result["diogenes"] = {
+                    k: v for k, v in result["diogenes"].items() if v is not None
+                }
             except Exception as e:
                 result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
             try:
-                result["whitakers"] = self.whitakers.words(tokenized).model_dump(
-                    exclude_none=True
-                )
+                ww_result = self.whitakers.words(tokenized)
+                result["whitakers"] = cattrs.unstructure(ww_result)
+                result["whitakers"] = {
+                    k: v for k, v in result["whitakers"].items() if v is not None
+                }
             except Exception as e:
                 result["whitakers"] = {"error": f"Whitakers unavailable: {str(e)}"}
             try:
-                result["cltk"] = self.cltk.latin_query(word).model_dump(
-                    exclude_none=True
-                )
+                cltk_result = self.cltk.latin_query(word)
+                result["cltk"] = cattrs.unstructure(cltk_result)
+                result["cltk"] = {
+                    k: v for k, v in result["cltk"].items() if v is not None
+                }
             except Exception as e:
                 result["cltk"] = {"error": f"CLTK unavailable: {str(e)}"}
         elif lang == LangnetLanguageCodes.Sanskrit:
             try:
-                result = self.cdsl.lookup_ascii(word).model_dump(exclude_none=True)
+                result = cattrs.unstructure(self.cdsl.lookup_ascii(word))
             except Exception as e:
                 result = {"error": f"CDSL unavailable: {str(e)}"}
         else:
