@@ -28,6 +28,8 @@ indic-transliteration = "^2.3.69"
 # vertexai = "^1.71.1"
 # google-cloud-translate = "^3.23.0"
 spacy = "3.7.5"
+starlette = "^0.52.1"
+uvicorn = "^0.40.0"
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"

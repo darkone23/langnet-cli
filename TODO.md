@@ -1,3 +1,8 @@
-- replace pydantic with dataclass/cattrs
-- update svelte or move to htmx
-  - manually patched svelte5-router crypto.randomUUID
+- [ ] basic check for required dependencies
+  - [ ] diogenes endpoint running
+  - [ ] required cltk models available
+- [ ] replace pydantic with dataclass/cattrs
+- [ ] command line interface for outputting json
+  - [ ] run as server to deal with cold startup time? 
+- [ ] restore sanskrit functionality
+  - [ ] dictionary lookups from CDSL ( https://github.com/sanskrit-lexicon/csl-orig/ )

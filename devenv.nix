@@ -1,5 +1,10 @@
 { pkgs, lib, config, inputs, ... }:
-
+let
+  uvicorn-run = pkgs.writeShellScriptBin "uvicorn-run" ''
+    set -e
+    cd ${config.devenv.root} && uvicorn langnet.asgi:app "$@"
+  '';
+in
 {
   # https://devenv.sh/basics/
 
@@ -32,6 +37,8 @@
     pkgs.gcc
     # pkgs.libgcc
     pkgs.gnumake
+
+    uvicorn-run
   ];
 
   # https://devenv.sh/languages/
@@ -74,9 +81,9 @@
   # services.postgres.enable = true;
 
   # https://devenv.sh/scripts/
-  scripts.devenv-wrapped.exec = ''
-    LD_LIBRARY_PATH= devenv $@
-  '';
+  # scripts.devenv-wrapped.exec = ''
+  #   LD_LIBRARY_PATH= devenv $@
+  # '';
 
   enterShell = ''
     export TMP="${config.devenv.root}/tmp";
