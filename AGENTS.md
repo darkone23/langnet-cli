@@ -39,6 +39,11 @@ Order required (this order is enforced by existing code):
    - `from .lineparsers import FactsReducer`
    - `from langnet.diogenes.core import DiogenesScraper`
 
+### Module Organization
+- Prefer `@staticmethod` methods on classes over bare module-level functions
+- Classes prevent namespace pollution and avoid import-time side effects
+- Example: Use `HealthChecker.diogenes()` instead of `check_diogenes()`
+
 ### Data Models
 - **Current**: Pydantic `BaseModel` with `Field(default=...)` for optional fields
 - **Target**: Python `dataclass` + `cattrs` for serialization

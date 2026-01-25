@@ -25,6 +25,9 @@ in
 
     # useful language servers
     pkgs.python3Packages.python-lsp-server
+    pkgs.python3Packages.jedi-language-server
+    pkgs.python3Packages.ruff
+    pkgs.ty
     # pkgs.nodePackages.vscode-langservers-extracted
     # pkgs.nil
 
@@ -37,6 +40,9 @@ in
     pkgs.gcc
     # pkgs.libgcc
     pkgs.gnumake
+
+    pkgs.just
+    pkgs.hl-log-viewer
 
     uvicorn-run
   ];

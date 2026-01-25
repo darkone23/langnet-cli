@@ -118,7 +118,7 @@ The module searches for the whitakers-words binary in order:
 
 ## Known Issues
 
-1. **ARM not supported**: Original Ada binary only for x86_64
+1. **ARM not supported**: Prebuilt Ada binary only for x86_64. ARM users: build from source following upstream instructions.
 2. **Batch execution**: Single CLI call for all words; partial failures affect all
 3. **Line parsing brittleness**: Relies on exact output format
 4. **Unicode handling**: Assumes Latin-1 compatible output

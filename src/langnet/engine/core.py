@@ -7,11 +7,11 @@ from rich.pretty import pprint
 
 pprint("Loading engine core...")
 
-class LangnetLanguageCodes:
 
-    Greek = ClassicsToolkit.GREEK.iso_639_3_code  # grc
-    Latin = ClassicsToolkit.LATIN.iso_639_3_code  # lat
-    Sanskrit = ClassicsToolkit.SANSKRIT.iso_639_3_code  # san
+class LangnetLanguageCodes:
+    Greek = "grc"
+    Latin = "lat"
+    Sanskrit = "san"
 
     @staticmethod
     def get_for_input(lang):
@@ -106,7 +106,6 @@ class GrammarAbbreviations:
 
 
 class LanguageEngine:
-
     def __init__(
         self,
         scraper: DiogenesScraper,
@@ -120,32 +119,43 @@ class LanguageEngine:
         self.cdsl = cdsl
 
     def handle_query(self, lang, word):
-        print("got query:", word, lang)
-        # at this point word and lang are utf-8 characters as presented by the user
-
-        # add some basic 'what sort of input is this' mode checking for the word
-        # ie "does it have ascii only or not"
-
         lang = LangnetLanguageCodes.get_for_input(lang)
 
         if lang == LangnetLanguageCodes.Greek:
-            result = dict(
-                diogenes=self.diogenes.parse_word(
-                    word, DiogenesLanguages.GREEK
-                ).model_dump(exclude_none=True)
-            )
+            try:
+                result = dict(
+                    diogenes=self.diogenes.parse_word(
+                        word, DiogenesLanguages.GREEK
+                    ).model_dump(exclude_none=True)
+                )
+            except Exception as e:
+                result = {"error": f"Diogenes unavailable: {str(e)}"}
         elif lang == LangnetLanguageCodes.Latin:
             tokenized = [word]
-            result = dict(
-                diogenes=self.diogenes.parse_word(
+            result = {}
+            try:
+                result["diogenes"] = self.diogenes.parse_word(
                     word, DiogenesLanguages.LATIN
-                ).model_dump(exclude_none=True),
-                whitakers=self.whitakers.words(tokenized).model_dump(exclude_none=True),
-                cltk=self.cltk.latin_query(word).model_dump(exclude_none=True),
-            )
+                ).model_dump(exclude_none=True)
+            except Exception as e:
+                result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
+            try:
+                result["whitakers"] = self.whitakers.words(tokenized).model_dump(
+                    exclude_none=True
+                )
+            except Exception as e:
+                result["whitakers"] = {"error": f"Whitakers unavailable: {str(e)}"}
+            try:
+                result["cltk"] = self.cltk.latin_query(word).model_dump(
+                    exclude_none=True
+                )
+            except Exception as e:
+                result["cltk"] = {"error": f"CLTK unavailable: {str(e)}"}
         elif lang == LangnetLanguageCodes.Sanskrit:
-            # TODO: add basic sanskrit lexicon support via CDSL
-            result = self.cdsl.lookup_ascii(word).model_dump(exclude_none=True)
+            try:
+                result = self.cdsl.lookup_ascii(word).model_dump(exclude_none=True)
+            except Exception as e:
+                result = {"error": f"CDSL unavailable: {str(e)}"}
         else:
             raise NotImplementedError(f"Do not know how to handle {lang}")
 

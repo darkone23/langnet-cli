@@ -16,7 +16,6 @@ class PipelineExample:
 
     @staticmethod
     def main():
-
         # print("CLTK pipelines currently not functional...")
         # print("try to visit https://centre-for-humanities-computing.github.io/odyCy/getting_started.html#")
 

@@ -89,14 +89,22 @@ Hierarchical indentation is tracked via CSS `padding-left` values, converted to 
 A companion process (`langnet/diogenes/cli_util.py`) runs in a loop to clean up zombie threads:
 
 ```sh
-just sidecar  # Runs continuously: checks every hour, kills zombie PPIDs
+python3 -m langnet.diogenes.cli_util                    # loop mode (default interval: 3600s)
+python3 -m langnet.diogenes.cli_util --interval 1800    # loop mode (30s interval)
+python3 -m langnet.diogenes.cli_util reap --once        # one-shot mode
 ```
 
 This process:
 1. Scans for `perl <defunct>` zombie processes
-2. Finds the parent PID (PPID) of the zombie
-3. Sends SIGTERM to the parent (clean shutdown)
-4. Sleeps 1 hour before repeating
+2. Finds the parent PID (PPID) of each zombie
+3. Sends SIGTERM to the parent (the Diogenes Perl server)
+4. Sleeps for the configured interval before repeating
+
+### Server Termination
+
+The sidecar terminates the Diogenes server (via SIGTERM to its parent process). This is necessary because zombie processes cannot be killed directly - you must kill their parent so init can reap the zombies.
+
+**An external process manager is required** to restart the Diogenes server after it is terminated. Without one, the server will remain down until manually restarted.
 
 ## Known Issues
 

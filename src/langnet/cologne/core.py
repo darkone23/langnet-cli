@@ -1,6 +1,6 @@
 from rich.pretty import pprint
 
-pprint("Loading indic transliteration")
+# pprint("Loading indic transliteration")
 
 # import pycdsl
 from indic_transliteration import sanscript
@@ -8,7 +8,7 @@ from indic_transliteration.sanscript import SchemeMap, SCHEMES, transliterate
 
 from indic_transliteration.detect import detect
 
-pprint("Loading indic transliteration: OK")
+# pprint("Loading indic transliteration: OK")
 
 from pydantic import BaseModel, Field
 
@@ -33,7 +33,6 @@ class CologneSanskritQueryResult(BaseModel):
 
 class SanskritCologneLexicon:
     def __init__(self):
-
         # TODO:
         # this blows up if you don't have an internet connection or cologne is not online...
 
@@ -45,7 +44,7 @@ class SanskritCologneLexicon:
         # Sanskrit-English
         # self.mw: pycdsl.CDSLDict = self.CDSL["MW"]
         # self.ap90: pycdsl.CDSLDict = self.CDSL["AP90"]
-        # 
+        #
         # English-Sanskrit
         # self.mwe: pycdsl.CDSLDict = self.CDSL["MWE"]
         # self.ae: pycdsl.CDSLDict = self.CDSL["AE"]
@@ -113,9 +112,15 @@ class SanskritCologneLexicon:
 
     def lookup_ascii(self, data) -> CologneSanskritQueryResult:
         devengari = self.transliterate(data)
-        return CologneSanskritQueryResult(
-            mw = f"not implemented [ {devengari} ]",
-            ap90 = f"not implemented [ {devengari} ]"
-            # mw=self.serialize_results(self.mw.search(devengari)),
-            # ap90=self.serialize_results(self.ap90.search(devengari)),
+        placeholder = SanskritDictionaryLookup(
+            term=data,
+            iast=data,
+            hk=data,
+            entries=[
+                SanskritDictionaryEntry(
+                    id="placeholder",
+                    meaning=f"CDSL integration pending - searched for: {devengari}",
+                )
+            ],
         )
+        return CologneSanskritQueryResult(mw=[placeholder], ap90=[placeholder])

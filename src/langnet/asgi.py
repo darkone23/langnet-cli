@@ -1,7 +1,162 @@
-from starlette.responses import PlainTextResponse
+from typing import Any
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.routing import Route
+from starlette.responses import Response
+import orjson
+import requests
+
+from langnet.core import LangnetWiring
 
 
-async def app(scope, receive, send):
-    assert scope['type'] == 'http'
-    response = PlainTextResponse('hello from langnet-api')
-    await response(scope, receive, send)
+class ORJsonResponse(Response):
+    media_type = "application/json"
+
+    def __init__(
+        self,
+        content: Any,
+        status_code: int = 200,
+        headers: dict | None = None,
+        **kwargs,
+    ):
+        super().__init__(content, status_code=status_code, headers=headers, **kwargs)
+
+    def render(self, content: Any) -> bytes:
+        return orjson.dumps(content)
+
+
+class HealthChecker:
+    @staticmethod
+    def diogenes(base_url: str = "http://localhost:8888/") -> dict:
+        try:
+            from langnet.diogenes.core import DiogenesScraper
+
+            scraper = DiogenesScraper(base_url=base_url)
+            result = scraper.parse_word("lupus", "lat")
+            if result.dg_parsed and len(result.chunks) > 0:
+                return {"status": "healthy", "code": 200}
+            else:
+                return {
+                    "status": "unhealthy",
+                    "message": "Diogenes parsed but returned no valid chunks",
+                }
+        except requests.RequestException as e:
+            return {"status": "error", "message": str(e)}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def cltk() -> dict:
+        try:
+            import cltk.data.fetch as cltk_fetch
+            import cltk.lexicon.lat as cltk_latlex
+            import cltk.alphabet.lat as cltk_latchars
+            import cltk.phonology.lat.transcription as cltk_latscript
+            import cltk.lemmatize.lat as cltk_latlem
+            from cltk.languages.utils import get_lang
+
+            return {"status": "healthy"}
+        except ImportError as e:
+            return {"status": "missing", "message": f"CLTK module not installed: {e}"}
+
+    @staticmethod
+    def whitakers() -> dict:
+        from pathlib import Path
+
+        whitakers_path = Path.home() / ".local/bin/whitakers-words"
+        if whitakers_path.exists() and whitakers_path.is_file():
+            return {"status": "healthy"}
+        else:
+            return {
+                "status": "missing",
+                "message": "whitakers-words binary not found in ~/.local/bin",
+            }
+
+    @staticmethod
+    def cdsl() -> dict:
+        return {
+            "status": "healthy",
+            "message": "CDSL integration pending implementation",
+        }
+
+
+async def health_check(request: Request):
+    try:
+        wiring: LangnetWiring = request.app.state.wiring
+    except Exception as e:
+        return ORJsonResponse(
+            {"error": f"Startup not complete: {str(e)}"}, status_code=503
+        )
+    try:
+        health = {
+            "diogenes": HealthChecker.diogenes(),
+            "cltk": HealthChecker.cltk(),
+            "whitakers": HealthChecker.whitakers(),
+            "cdsl": HealthChecker.cdsl(),
+        }
+        overall = (
+            "healthy"
+            if all(h.get("status") == "healthy" for h in health.values())
+            else "degraded"
+        )
+        return ORJsonResponse({"status": overall, "components": health})
+    except Exception as e:
+        return ORJsonResponse({"error": str(e)}, status_code=500)
+
+
+async def query_api(request: Request):
+    lang = request.query_params.get("l")
+    word = request.query_params.get("s")
+
+    if not lang:
+        return ORJsonResponse(
+            {"error": "Missing required parameter: l (language)"}, status_code=400
+        )
+    if not word:
+        return ORJsonResponse(
+            {"error": "Missing required parameter: s (search term)"}, status_code=400
+        )
+
+    valid_languages = {"lat", "grc", "san"}
+    if lang not in valid_languages:
+        return ORJsonResponse(
+            {
+                "error": f"Invalid language: {lang}. Must be one of: {', '.join(valid_languages)}"
+            },
+            status_code=400,
+        )
+
+    if not word or not word.strip():
+        return ORJsonResponse({"error": "Search term cannot be empty"}, status_code=400)
+
+    try:
+        wiring: LangnetWiring = request.app.state.wiring
+    except Exception as e:
+        return ORJsonResponse(
+            {"error": f"Startup not complete: {str(e)}"}, status_code=503
+        )
+    try:
+        result = wiring.engine.handle_query(lang, word)
+        return ORJsonResponse(result)
+    except Exception as e:
+        return ORJsonResponse({"error": str(e)}, status_code=500)
+
+
+routes = [
+    Route("/api/q", query_api),
+    Route("/api/health", health_check),
+]
+
+
+def create_app() -> Starlette:
+    app = Starlette(routes=routes)
+
+    async def startup():
+        app.state.wiring = LangnetWiring()
+
+    app.add_event_handler("startup", startup)
+
+    return app
+
+
+app = create_app()

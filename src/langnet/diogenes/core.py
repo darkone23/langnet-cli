@@ -80,7 +80,6 @@ class DiogenesResultT(BaseModel):
 
 
 class DiogenesChunkType:
-
     NoMatchFoundHeader = "NoMatchFoundHeader"
 
     PerseusAnalysisHeader = "PerseusAnalysisHeader"
@@ -123,9 +122,7 @@ class DiogenesScraper:
             self.base_url += "/"
 
     def __diogenes_parse_url(self, word, lang):
-        # http://localhost:8888/Perseus.cgi?do=parse&lang=lat&q=uitia
         url = f"{self.base_url}Perseus.cgi?do=parse&lang={lang}&q={word}"
-        print("about to request", url)
         return url
 
     def extract_parentheses_text(self, text):
@@ -182,9 +179,9 @@ class DiogenesScraper:
         for tag in maybe_morph_els:
             perseus_morph = tag.get_text()
             parts = perseus_morph.split(":")
-            assert (
-                len(parts) == 2
-            ), f"Perseus morphology should split stem from tags: [{parts}]"
+            assert len(parts) == 2, (
+                f"Perseus morphology should split stem from tags: [{parts}]"
+            )
             [stems, tag_parts] = parts
 
             cleaned_defs = []
@@ -286,7 +283,6 @@ class DiogenesScraper:
                     if len(chars - dot) > 4:
                         break
                 if initial_text.endswith(".") and len(chars - dot) <= 4:
-                    print("Removing potential layout header:", initial_text)
                     block["heading"] = initial_text
                     b.decompose()
                 break
@@ -299,7 +295,6 @@ class DiogenesScraper:
                 other_senses = set(senses) - set([sense])
                 for other_sense in other_senses:
                     if sense.lower() in other_sense.lower():
-                        print("Removing potential duplicate sense:", sense)
                         senses.remove(sense)
                         break
             senses_cleaned = []
@@ -362,7 +357,6 @@ class DiogenesScraper:
             result["chunks"].append(UnknownChunkType(**dict(soup=soup)))
 
     def get_next_chunk(self, result, soup: BeautifulSoup):
-
         chunk = dict(soup=soup)
 
         looks_like_header = False
@@ -419,31 +413,22 @@ class DiogenesScraper:
     def parse_word(
         self, word, language: str = DiogenesLanguages.LATIN
     ) -> DiogenesResultT:
-
-        assert (
-            language in DiogenesLanguages.parse_langs
-        ), f"Cannot parse unsupported diogenes language: [{language}]"
-
-        # if language == DiogenesLanguages.GREEK:
-        #     # todo - maybe we got a code? unlikely
-        #     word = DiogenesLanguages.greek_to_code(word)
+        assert language in DiogenesLanguages.parse_langs, (
+            f"Cannot parse unsupported diogenes language: [{language}]"
+        )
 
         response = requests.get(self.__diogenes_parse_url(word, language))
 
-        result = dict(chunks=[])
+        result = dict(chunks=[], dg_parsed=False)
 
         if response.status_code == 200:
-            # Parse the HTML using BeautifulSoup
-            # print(response.text)
             documents = response.text.split("<hr />")
             for doc in documents:
                 soup = BeautifulSoup(doc, "html5lib")
                 chunk = self.get_next_chunk(result, soup)
-                # print("working on a document:", chunk["chunk_type"])
                 self.process_chunk(result, chunk)
+            result["dg_parsed"] = True
         else:
             print("no soup for you", response.status_code, response.text)
-
-        # print(result)
 
         return DiogenesResultT(**result)

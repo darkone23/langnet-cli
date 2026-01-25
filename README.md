@@ -46,11 +46,13 @@ curl --data-urlencode 's=sa.msk.rta' --data-urlencode 'l=san' 'localhost:8000/ap
    - Run at `http://localhost:8888`
    - Required for Greek/Latin queries
    - **Note**: Leaks threads; run `just sidecar` continuously to clean up
+   - **Note**: Instructions for installing/running Diogenes are maintained upstream and are out of scope for this project
 
 2. **whitakers-words** - Latin morphological analyzer
    - Binary: `~/.local/bin/whitakers-words`
    - Repository: https://github.com/mk270/whitakers-words
-   - Optional: not available on ARM processors
+   - Optional: Latin-only, but highly recommended for accurate morphology
+   - Prebuilt x86_64 binaries only. ARM users: build from source following upstream instructions.
 
 ### Managed by Tests
 
@@ -137,7 +139,7 @@ See [AGENTS.md](AGENTS.md) for detailed coding standards including:
 ## Known Limitations
 
 - **Diogenes reliability**: Perl server leaks threads; run `just sidecar` periodically
-- **Whitakers ARM**: Binary not available for ARM processors
+- **Whitakers ARM**: Build from source on ARM platforms (see Dependencies section)
 - **CDSL incomplete**: Cologne module returns placeholders; full integration pending
 - **Pydantic deprecation**: Migrating to cattrs for data models
 

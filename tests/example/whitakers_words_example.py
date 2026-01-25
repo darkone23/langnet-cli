@@ -3,7 +3,6 @@ from rich.pretty import pprint
 
 
 def main():
-
     latin_words = [
         # Common Nouns (1st, 2nd, 3rd, 4th, 5th declension)
         "amor",

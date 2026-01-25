@@ -15,7 +15,6 @@ sense: /[A-Za-z0-9,\/()\[\]~=>.:\-\+'"!_\? ]+/
 
 
 class SenseTransformer(Transformer):
-
     def start(self, args):
         return args[0]
 

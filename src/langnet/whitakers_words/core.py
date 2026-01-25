@@ -6,7 +6,6 @@ from .lineparsers import FactsReducer, SensesReducer, CodesReducer
 
 
 from pydantic import BaseModel, Field
-from rich.pretty import pprint
 
 
 class CodelineName(BaseModel):
@@ -58,14 +57,11 @@ def get_whitakers_proc():
     home = Path.home()
     maybe_words = home / ".local/bin/whitakers-words"
     if maybe_words.exists():
-        pprint("Using local whitakers")
         return Command(maybe_words)
     maybe_words = Path() / "deps/whitakers-words/bin/words"
     if maybe_words.exists():
-        print("Using relative whitakers")
         return Command(maybe_words)
     else:
-        print("No whitakers words found, using dummy cmd")
         test_cmd = Command("test")
         return test_cmd.bake("!", "-z")  # test non empty str
 
@@ -88,12 +84,10 @@ def fixup(wordlist):
                 codeline["term"] = word["terms"][0]["term"]
                 word["codeline"] = codeline
         fixed_words.append(word)
-    pprint(fixed_words)
     return fixed_words
 
 
 class WhitakersWordsChunker:
-
     # https://sourceforge.net/p/wwwords/wiki/wordsdoc.htm/
 
     # TODO: this is blowing up if not available
@@ -186,7 +180,6 @@ class WhitakersWordsChunker:
 
 
 class WhitakersWords:
-
     @staticmethod
     def words(search: list[str]) -> WhitakersWordsResult:
         words_chunker = WhitakersWordsChunker(search)
@@ -207,7 +200,7 @@ class WhitakersWords:
                         elif type(_v) == list:
                             dest[k] = _v + [f"{v}".strip()]
                         else:
-                            print("OH NO A COLLISION!", k, v, _v, v == _v)
+                            pass
                 else:
                     dest[k] = v
 

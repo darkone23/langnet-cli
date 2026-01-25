@@ -1,13 +1,17 @@
 import unittest
 import time
 import textwrap
+import logging
+
+cltk_logger = logging.getLogger("CLTK")
+cltk_logger.setLevel(logging.CRITICAL)
+cltk_logger.propagate = False
 
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.classics_toolkit.core import ClassicsToolkit
 
 
 class ClassicsWiring:
-
     def __init__(self):
         self.start = time.monotonic()
         print("Setting up classics wiring...")
@@ -24,7 +28,6 @@ wiring = (
 
 
 class TestLatinExamples(unittest.TestCase):
-
     # import basic latin corpus
 
     def test_replacer(self):

@@ -21,6 +21,7 @@ betacode = "^1.0"
 pygtrie = "^2.5.0"
 lark = "^1.2.2"
 rich = "^13.9.4"
+click = "^8.1.7"
 pydantic = "^2.10.6"
 indic-transliteration = "^2.3.69"
 
@@ -30,6 +31,7 @@ indic-transliteration = "^2.3.69"
 spacy = "3.7.5"
 starlette = "^0.52.1"
 uvicorn = "^0.40.0"
+orjson = "^3.10.14"
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"

@@ -59,7 +59,6 @@ notes: /[A-Za-z0-9,\/()\[\]~=>.:\-\+'"!_\? ]+/
 
 
 class FactsTransformer(Transformer):
-
     def __named_token(self, args, name):
         item = args[0]
         if type(item) == Tree:

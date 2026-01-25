@@ -2,29 +2,37 @@
 
 import asyncio
 import os
-import sys
 
+import click
+from rich import print as rprint
+from rich.panel import Panel
 from sh import bash
 
-# --- Configuration ---
-SLEEP_DURATION = 3600  # 1 hour (3600 seconds)
-# --- End Configuration ---
+SLEEP_DURATION = 3600
 
 
-def find_zombie_ppid() -> int | None:
+def find_zombie_pids() -> list[int]:
     """
-    Finds the Parent PID (PPID) of the first 'perl <defunct>' process.
+    Finds all Parent PIDs (PPIDs) of 'perl <defunct>' zombie processes.
+    Uses a more robust ps format that works across systems.
     """
-    # This command finds the PPID, STAT, and COMMAND
-    # Then awk filters for lines where STAT is 'Z' (Zombie)
-    # and COMMAND is 'perl', printing the PPID and exiting.
-    cmd = 'ps -eo ppid,stat,comm | awk \'$2=="Z" && $3=="perl" {print $1; exit}\''
-    ppid_str = bash("-c", cmd).strip()
-
-    if ppid_str.isdigit():
-        return int(ppid_str)
-
-    return None
+    cmd = (
+        "ps -eo ppid,stat,cmd --no-headers 2>/dev/null | "
+        "awk '$2 ~ /^Z/ && $3 ~ /perl/ {print $1}'"
+    )
+    try:
+        output = bash("-c", cmd).strip()
+        if not output:
+            return []
+        pids = []
+        for line in output.split("\n"):
+            line = line.strip()
+            if line.isdigit():
+                pids.append(int(line))
+        return list(set(pids))  # dedupe
+    except Exception as e:
+        rprint(f"[red]Error detecting zombies: {e}[/red]")
+        return []
 
 
 def kill_process(pid: int):
@@ -32,38 +40,96 @@ def kill_process(pid: int):
     Sends a SIGTERM signal to the given PID.
     """
     try:
-        # os.kill is a simple, direct system call.
-        # It's synchronous, but so fast it doesn't matter.
         os.kill(pid, 15)  # 15 = SIGTERM
-        print(f"Zombie Killer: Sent KILL signal to parent process {pid}.")
+        rprint(f"[green]Zombie Killer: Sent SIGTERM to PID {pid}.[/green]")
     except ProcessLookupError:
-        print(f"Zombie Killer: Process {pid} no longer exists.", file=sys.stderr)
+        rprint(f"[yellow]Zombie Killer: PID {pid} no longer exists.[/yellow]")
     except PermissionError:
-        print(f"Zombie Killer: Permission denied to kill {pid}.", file=sys.stderr)
+        rprint(f"[red]Zombie Killer: Permission denied to kill {pid}.[/red]")
     except Exception as e:
-        print(f"Zombie Killer: Failed to kill {pid}: {e}", file=sys.stderr)
+        rprint(f"[red]Zombie Killer: Failed to kill {pid}: {e}[/red]")
 
 
-async def main_loop():
+async def run_one_shot():
+    """Run a single check and exit."""
+    pids = find_zombie_pids()
+    if pids:
+        rprint(
+            f"[bold red]Zombie Killer: Found {len(pids)} perl zombie(s) with parent PIDs: {pids}[/bold red]"
+        )
+        for pid in pids:
+            kill_process(pid)
+    else:
+        rprint("[green]Zombie Killer: No perl zombies found.[/green]")
+
+
+async def main_loop(interval: int = 3600):
     """
-    Main service loop.
+    Main service loop - runs indefinitely with periodic checks.
     """
-    print(f"Zombie Killer: Service started. Will check every {SLEEP_DURATION}s.")
+    rprint(
+        Panel(
+            f"[bold]Zombie Killer: Service started.[/bold] Checking every {interval}s.",
+            expand=False,
+        )
+    )
     while True:
-        ppid = find_zombie_ppid()
+        pids = find_zombie_pids()
 
-        if ppid:
-            print(f"Zombie Killer: Found perl zombie parent at PID {ppid}.")
-            kill_process(ppid)
+        if pids:
+            rprint(
+                f"[bold red]Zombie Killer: Found {len(pids)} perl zombie(s) with parent PIDs: {pids}[/bold red]"
+            )
+            for pid in pids:
+                kill_process(pid)
         else:
-            print("Zombie Killer: No perl zombies found.")
+            rprint("[yellow]Zombie Killer: No perl zombies found.[/yellow]")
 
-        print(f"Zombie Killer: Sleeping for {SLEEP_DURATION} seconds...")
-        await asyncio.sleep(SLEEP_DURATION)
+        await asyncio.sleep(interval)
+
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+@click.option(
+    "--interval",
+    default=3600,
+    type=int,
+    help="Seconds between checks (default: 3600)",
+)
+def cli(ctx, interval):
+    """Perl zombie process reaper.
+
+    Scans for zombie perl processes, kills their parent, and waits
+    for the next check interval. The parent Diogenes server will be
+    terminated and requires an external process manager to restart it.
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["interval"] = interval
+    if ctx.invoked_subcommand is None:
+        asyncio.run(main_loop(interval))
+
+
+@cli.command()
+@click.option(
+    "--once",
+    is_flag=True,
+    help="Run a single check and exit (one-shot mode)",
+)
+def reap(once):
+    """Reap zombie perl processes.
+
+    Finds zombie (defunct) perl processes and kills their parent.
+    The Diogenes server will be terminated and requires an external
+    process manager to restart it.
+    """
+    try:
+        if once:
+            asyncio.run(run_one_shot())
+        else:
+            asyncio.run(main_loop(3600))
+    except KeyboardInterrupt:
+        rprint("[yellow]\nZombie Killer: Shutting down...[/yellow]")
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main_loop())
-    except KeyboardInterrupt:
-        print("\nZombie Killer: Shutting down...")
+    cli()
