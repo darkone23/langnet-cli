@@ -34,6 +34,7 @@ uvicorn = "^0.40.0"
 orjson = "^3.10.14"
 python-multipart = "^0.0.20"
 structlog = "^24.2.0"
+python-dotenv = "^1.2.1"
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"
@@ -51,6 +52,10 @@ PYTHONPATH = "${POE_ROOT}/src:${PYTHONPATH}"
 # test.cmd = "nose2 -s tests"
 # shell = "python3"
 # sidecar = "python3 -m langnet.diogenes.cli_util"
+
+[tool.poetry.scripts]
+langnet-cli = "langnet.cli:main"
+langnet-dg-reaper = "langnet.diogenes.cli_util:cli"
 
 [build-system]
 requires = ["poetry-core"]

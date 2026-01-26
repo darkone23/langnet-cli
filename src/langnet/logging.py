@@ -1,17 +1,57 @@
+import logging
+import os
 import structlog
 
+# store configured log level for filtering
+_log_level = logging.WARNING
 
-def setup_logging() -> None:
+
+def _get_log_level_from_env() -> int:
+    """Get log level from LANGNET_LOG_LEVEL env var, defaulting to WARNING."""
+    level_name = os.environ.get("LANGNET_LOG_LEVEL", "WARNING").upper()
+    return getattr(logging, level_name, logging.WARNING)
+
+
+def _filter_by_level(logger, method_name, event_dict):
+    """Filter log events based on configured langnet log level.
+
+    Uses method_name (e.g. 'debug', 'info') since this runs before add_log_level.
+    """
+    method_level = getattr(logging, method_name.upper(), logging.DEBUG)
+    if method_level < _log_level:
+        raise structlog.DropEvent
+    return event_dict
+
+
+def setup_logging(level: int | None = None) -> None:
+    """Configure logging for langnet package.
+
+    Only affects structlog output, not third-party libraries using stdlib logging.
+
+    Args:
+        level: Log level to use. If None, reads from LANGNET_LOG_LEVEL env var,
+               defaulting to WARNING.
+    """
+    global _log_level
+    if level is None:
+        level = _get_log_level_from_env()
+
+    _log_level = level
+
     structlog.configure(
         processors=[
+            _filter_by_level,
             structlog.stdlib.add_log_level,
-            structlog.stdlib.add_logger_name,
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.dev.ConsoleRenderer(),
         ],
-        wrapper_class=structlog.stdlib.BoundLogger,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
+        wrapper_class=structlog.make_filtering_bound_logger(_log_level),
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=False,
     )
+
+
+# auto-configure on import; only affects langnet.* loggers, not third-party
+setup_logging()

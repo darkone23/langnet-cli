@@ -10,7 +10,7 @@ reap:
     python3 -m langnet.diogenes.cli_util reap --once
 
 test:
-    nose2 -s tests
+    nose2 -s tests --config tests/nose2.cfg
 
 ruff:
     ruff format src/ tests/

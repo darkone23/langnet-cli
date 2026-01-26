@@ -14,6 +14,7 @@ from typing import Any
 import cattrs
 import structlog
 
+import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
 logger = structlog.get_logger(__name__)
 

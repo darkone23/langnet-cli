@@ -20,7 +20,7 @@ just test
 Or directly:
 
 ```bash
-nose2 -s tests
+nose2 -s tests --config tests/nose2.cfg
 ```
 
 ## Test Data

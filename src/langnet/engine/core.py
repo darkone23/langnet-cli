@@ -7,11 +7,11 @@ import cattrs
 from rich.pretty import pprint
 import structlog
 
+import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
 logger = structlog.get_logger(__name__)
 
-
-pprint("Loading engine core...")
+logger.info("loading_engine_core")
 
 
 class LangnetLanguageCodes:

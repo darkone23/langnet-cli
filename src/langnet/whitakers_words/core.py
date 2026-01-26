@@ -10,6 +10,7 @@ from typing import Any
 import cattrs
 import structlog
 
+import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
 logger = structlog.get_logger(__name__)
 
@@ -65,20 +66,30 @@ class WhitakersWordsResult:
     wordlist: list[WhitakersWordsT]
 
 
+_cached_whitakers_proc = None
+
+
 def get_whitakers_proc():
+    global _cached_whitakers_proc
+    if _cached_whitakers_proc is not None:
+        return _cached_whitakers_proc
+
     home = Path.home()
     maybe_words = home / ".local/bin/whitakers-words"
     if maybe_words.exists():
         logger.info("using_whitakers_binary", path=str(maybe_words))
-        return Command(maybe_words)
+        _cached_whitakers_proc = Command(maybe_words)
+        return _cached_whitakers_proc
     maybe_words = Path() / "deps/whitakers-words/bin/words"
     if maybe_words.exists():
         logger.info("using_whitakers_binary", path=str(maybe_words))
-        return Command(maybe_words)
+        _cached_whitakers_proc = Command(maybe_words)
+        return _cached_whitakers_proc
     else:
         logger.warning("whitakers_binary_not_found")
         test_cmd = Command("test")
-        return test_cmd.bake("!", "-z")  # test non empty str
+        _cached_whitakers_proc = test_cmd.bake("!", "-z")
+        return _cached_whitakers_proc
 
 
 # def fixlines(lines):

@@ -1,6 +1,6 @@
 # CITATIONS
 
-langnet is a derived work that synthesizes classical language resources from multiple projects and digital libraries. This document acknowledges the scholars, projects, and institutions whose work makes this software possible.
+langnet-cli is a derived work that synthesizes classical language resources from multiple projects and digital libraries. This document acknowledges the scholars, projects, and institutions whose work makes this software possible.
 
 ## Lectori Benevolo
 

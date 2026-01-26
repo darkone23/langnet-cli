@@ -61,20 +61,19 @@ Pydantic has been phased out in favor of Python's `dataclass` + `cattrs`:
   - [x] INFO: backend selection, query initialization
   - [x] WARN: missing optional data, merge conflicts
   - [x] ERROR: failed queries, unavailable backends
-- [ ] Add correlation IDs for tracing requests through multiple backends
 - [x] Use `pamburus/hl` for colored logfmt output in development
   - `hl` command now available
 - [x] Log format example: `ts=2026-01-25T10:00:00Z level=INFO msg="using whitakers binary" path=/home/user/.local/bin/whitakers-words`
 
 ### Developer Experience
-- [ ] **CLI tool** with subcommands:
-  - `langnet query lat benevolens`
-  - `langnet langs` (list supported languages)
-  - `langnet health` (check backend status)
-- [ ] **Configuration file** for backend URLs
-  - [ ] python dotenv tool
-    - [ ] able to specify diogenes endpoint
-    - [ ]
+- [x] **CLI tool** (via click) with subcommands:
+  - [x] `langnet-cli query lat benevolens`
+  - [x] `langnet-cli langs` (list supported languages)
+  - [x] `langnet-cli health` (check backend status)
+- [x] **Configuration file** for backend URLs
+  - [x] python dotenv tool
+    - [x] able to specify diogenes endpoint via DIOGENES_URL
+    - [x] able to configure log level via LOG_LEVEL
 
 #### Diogenes Zombie Process Reaper
 The Perl diogenes server leaks threads on certain queries. A sidecar process runs continuously:
@@ -85,10 +84,9 @@ The Perl diogenes server leaks threads on certain queries. A sidecar process run
 - [x] Document in README that sidecar should run alongside API server
 
 #### Error Handling Improvements
-- [ ] Add health check endpoint `/api/health`
-- [ ] Check diogenes connectivity before querying
-- [ ] Handle missing CLTK models gracefully
-- [ ] Add circuit breaker for failing backends
+- [x] Add health check endpoint `/api/health`
+- [x] Check diogenes connectivity before querying (via `--verify` flag)
+- [x] Handle missing CLTK models gracefully
 
 ### Phase 3: Sanskrit Integration
 
@@ -135,8 +133,8 @@ After core functionality is complete, add polars/duckdb for local knowledge base
 
 **Technologies**: duckdb (OLAP queries on CDSL TEI XML, CLTK data), polars (data transformation)
 
-### Performance
+### Performance / Observability
 - [ ] **Response caching** for common queries
 - [x] **Model warming** at startup (avoid cold downloads)
 - [ ] **Async backends** for parallel lexicon queries
-
+- [ ] Add correlation IDs for tracing requests through multiple backends

@@ -6,8 +6,8 @@ Instructions for AI agents working on this codebase.
 
 | Task | Command | Notes |
 |------|---------|-------|
-| Run all tests | `nose2 -s tests` | Runs nose2 test discovery in tests/ |
-| Run single test | `nose2 -s tests <TestClass>.<test_method>` | Full dotted path required |
+| Run all tests | `nose2 -s tests --config tests/nose2.cfg` | Runs nose2 test discovery in tests/ |
+| Run single test | `nose2 -s tests <TestClass>.<test_method> --config tests/nose2.cfg` | Full dotted path required |
 | Enter shell | `devenv shell` | Loads Python venv, sets env vars |
 
 ## Operator-Only Commands
@@ -23,8 +23,10 @@ These are only to be run by the human-in-the-loop and never the agent.
 
 - **PYTHONPATH**: `src:$PYTHONPATH` (set in devenv.nix enterShell)
 - **Python version**: 3.11 (specified in devenv.nix for CLTK compatibility)
-- **Package manager**: Poetry (pyproject.toml), but poetry commands disabled
+- **Package manager**: Poetry (pyproject.toml)
 - **Test framework**: nose2
+- **Type checker**: ty
+- **Code formatter**: ruff
 
 ## Code Style
 
@@ -53,7 +55,6 @@ Order required (this order is enforced by existing code):
 
 ### Data Models
 - **Current**: Python `dataclass` with `cattrs` for serialization
-- Migration from Pydantic completed in Q1 2026
 
 ### Error Handling
 - Raise `ValueError(msg)` for invalid input
@@ -90,8 +91,31 @@ Modular design: each line type has a reducer:
 ## Gotchas
 
 1. **CLTK cold download**: First query downloads ~500MB model data
-2. **Diogenes zombie threads**: Perl server leaks threads; run `just sidecar`
+2. **Diogenes zombie threads**: Perl server leaks threads; run `langnet-dg-reaper`
 3. **Whitakers return type**: `get_whitakers_proc()` returns `sh.Command`, not a string
-4. **Betacode conversion**: Greek UTF-8 must convert to betacode for diogenes
+4. **Unicode conversion**: Greek UTF-8 must convert to betacode for diogenes
 5. **BeautifulSoup types**: BeautifulSoup's `AttributeValueList` lacks string methods
 6. **Data models**: Use `dataclass` with `cattrs` for serialization
+
+### Logging Configuration
+
+Logging uses structlog with the following characteristics:
+- **Default level**: WARNING (INFO and DEBUG are suppressed by default)
+- **Environment variable**: `LANGNET_LOG_LEVEL` (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- **Scope**: Only affects `langnet.*` loggers, not third-party libraries
+- **Output format**: ISO timestamps with colored ConsoleRenderer
+- **Configuration**: Auto-configured on import via `langnet/logging.py`
+
+Example usage:
+```bash
+# Suppress all output (WARNING+ only)
+nose2 -s tests --config tests/nose2.cfg
+
+# Show INFO messages
+LANGNET_LOG_LEVEL=INFO nose2 -s tests --config tests/nose2.cfg
+
+# Show DEBUG messages
+LANGNET_LOG_LEVEL=DEBUG nose2 -s tests --config tests/nose2.cfg
+```
+
+The `tests/testconf.py` plugin ensures logging is configured before tests run via the `startTestRun` hook.

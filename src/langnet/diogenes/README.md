@@ -86,12 +86,12 @@ Hierarchical indentation is tracked via CSS `padding-left` values, converted to 
 
 ## Sidecar Process
 
-A companion process (`langnet/diogenes/cli_util.py`) runs in a loop to clean up zombie threads:
+A companion process runs in a loop to clean up zombie threads:
 
 ```sh
-python3 -m langnet.diogenes.cli_util                    # loop mode (default interval: 3600s)
-python3 -m langnet.diogenes.cli_util --interval 1800    # loop mode (30s interval)
-python3 -m langnet.diogenes.cli_util reap --once        # one-shot mode
+langnet-sidecar                    # loop mode (default interval: 3600s)
+langnet-sidecar --interval 1800    # loop mode (30s interval)
+langnet-sidecar reap --once        # one-shot mode
 ```
 
 This process:

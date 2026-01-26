@@ -9,6 +9,7 @@ from rich.panel import Panel
 from sh import bash
 import structlog
 
+import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
 logger = structlog.get_logger(__name__)
 
@@ -114,6 +115,11 @@ def cli(ctx, interval):
     Scans for zombie perl processes, kills their parent, and waits
     for the next check interval. The parent Diogenes server will be
     terminated and requires an external process manager to restart it.
+
+    Usage:
+        langnet-dg-reaper                    # loop mode (default interval: 3600s)
+        langnet-dg-reaper --interval 1800    # loop mode (30s interval)
+        langnet-dg-reaper reap --once        # one-shot mode
     """
     ctx.ensure_object(dict)
     ctx.obj["interval"] = interval

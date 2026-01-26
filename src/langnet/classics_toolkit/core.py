@@ -4,6 +4,7 @@ from typing import List, Optional, Any
 from dataclasses import dataclass, field
 import structlog
 
+import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
 logger = structlog.get_logger(__name__)
 
