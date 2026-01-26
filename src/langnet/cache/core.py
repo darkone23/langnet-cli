@@ -24,29 +24,38 @@ class QueryCache:
         self.cache_dir = Path(self.cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         for lang in SUPPORTED_LANGS:
-            self._ensure_db_exists(lang)
+            try:
+                self._ensure_db_exists(lang)
+            except Exception as e:
+                logger.warning("cache_init_failed", lang=lang, error=str(e))
         logger.debug("cache_initialized", cache_dir=str(self.cache_dir))
 
     def _ensure_db_exists(self, lang: str):
         db_path = _get_db_path(self.cache_dir, lang)
-        conn = duckdb.connect(str(db_path))
         try:
-            conn.execute(f"""
-                CREATE SEQUENCE IF NOT EXISTS cache_id_seq
-            """)
-            conn.execute(f"""
-                CREATE TABLE IF NOT EXISTS {CACHE_TABLE_NAME} (
-                    id INTEGER PRIMARY KEY DEFAULT nextval('cache_id_seq'),
-                    query VARCHAR NOT NULL,
-                    result VARCHAR NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            conn.execute(f"""
-                CREATE INDEX IF NOT EXISTS idx_query_{lang} ON {CACHE_TABLE_NAME}(query)
-            """)
-        finally:
-            conn.close()
+            conn = duckdb.connect(str(db_path))
+            try:
+                conn.execute(f"""
+                    CREATE SEQUENCE IF NOT EXISTS cache_id_seq
+                """)
+                conn.execute(f"""
+                    CREATE TABLE IF NOT EXISTS {CACHE_TABLE_NAME} (
+                        id INTEGER PRIMARY KEY DEFAULT nextval('cache_id_seq'),
+                        query VARCHAR NOT NULL,
+                        result VARCHAR NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                conn.execute(f"""
+                    CREATE INDEX IF NOT EXISTS idx_query_{lang} ON {CACHE_TABLE_NAME}(query)
+                """)
+            finally:
+                conn.close()
+        except Exception as e:
+            logger.error(
+                "cache_db_init_failed", lang=lang, db_path=str(db_path), error=str(e)
+            )
+            raise
 
     def _get_conn(self, lang: str):
         return duckdb.connect(str(_get_db_path(self.cache_dir, lang)))
@@ -95,10 +104,15 @@ class QueryCache:
         for lang in SUPPORTED_LANGS:
             conn = self._get_conn(lang)
             try:
-                conn.execute(f"TRUNCATE TABLE {CACHE_TABLE_NAME}")
+                result = conn.execute(
+                    f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
+                ).fetchone()
+                count = result[0] if result else 0
+                conn.execute(f"DELETE FROM {CACHE_TABLE_NAME}")
+                total += count
             finally:
                 conn.close()
-        logger.debug("cache_cleared")
+        logger.debug("cache_cleared", total=total)
         return total
 
     def clear_by_lang(self, lang: str) -> int:
@@ -110,7 +124,9 @@ class QueryCache:
                 f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
             ).fetchone()
             count = count_result[0] if count_result else 0
-            conn.execute(f"TRUNCATE TABLE {CACHE_TABLE_NAME}")
+            conn.execute(f"DELETE FROM {CACHE_TABLE_NAME}")
+            logger.debug("cache_cleared_lang", lang=lang, count=count)
+            return count
             logger.debug("cache_cleared_by_lang", lang=lang, count=count)
             return count
         finally:

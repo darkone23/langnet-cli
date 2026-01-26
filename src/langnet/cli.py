@@ -23,7 +23,9 @@ import click
 import orjson
 import requests
 import socket
+import os
 import sys
+from pathlib import Path
 from urllib.parse import urlparse
 from rich.console import Console
 from rich.table import Table
@@ -281,6 +283,302 @@ def cache_stats(api_url: str):
     except requests.RequestException as e:
         console.print(f"[red]Error: {e}[/]")
         sys.exit(1)
+
+
+@main.command(name="cache-clear")
+@click.option(
+    "--lang", default=None, type=str, help="Specific language to clear (lat, grc, san)"
+)
+def cache_clear(lang: str | None):
+    """Clear the response cache.
+
+    Clears cached query results to ensure fresh data is fetched.
+
+    Options:
+        --lang    Clear only specific language cache (lat, grc, san)
+
+    Examples:
+        langnet-cli cache-clear           # Clear all caches
+        langnet-cli cache-clear --lang san  # Clear only Sanskrit cache
+    """
+    from langnet.cache.core import QueryCache, get_cache_path
+
+    try:
+        cache = QueryCache(get_cache_path())
+
+        if lang:
+            count = cache.clear_by_lang(lang)
+            console.print(f"[green]Cleared {count} entries from {lang} cache[/]")
+        else:
+            cache.clear()
+            console.print("[green]Cache cleared successfully[/]")
+    except Exception as e:
+        console.print(f"[red]Error clearing cache: {e}[/]")
+        sys.exit(1)
+
+
+def get_cdsl_db_dir() -> Path:
+    from langnet.config import config
+
+    return config.cdsl_db_dir
+
+
+def get_cdsl_dict_dir() -> Path:
+    from langnet.config import config
+
+    return config.cdsl_dict_dir
+
+
+@main.group()
+def cdsl():
+    """CDSL Sanskrit dictionary tools (Cologne Digital Sanskrit Lexicon)."""
+
+
+@cdsl.command(name="build")
+@click.argument("dict_dir", type=click.Path(exists=True, file_okay=False))
+@click.argument("output_db", type=click.Path(file_okay=True, dir_okay=False))
+@click.option(
+    "--dict-id", default=None, help="Explicit dict ID (from dir name if not provided)"
+)
+@click.option(
+    "--limit", default=None, type=int, help="Limit to N entries (for testing)"
+)
+@click.option(
+    "--force", is_flag=True, default=False, help="Overwrite existing database"
+)
+@click.option(
+    "--batch-size",
+    default=None,
+    type=int,
+    help="Batch size for processing (default: auto)",
+)
+@click.option(
+    "--workers",
+    default=None,
+    type=int,
+    help="Number of parallel workers (default: CPU count)",
+)
+def build(
+    dict_dir: str,
+    output_db: str,
+    dict_id: str | None,
+    limit: int | None,
+    force: bool,
+    batch_size: int | None,
+    workers: int | None,
+):
+    """Build DuckDB index from CDSL source SQLite.
+
+    Example: langnet-cli cdsl build ~/cdsl_data/dict/MW ~/cdsl_data/db/mw.db --limit 1000
+    """
+    from langnet.cologne.core import CdslIndexBuilder
+
+    dict_path = Path(dict_dir)
+    output_path = Path(output_db)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if dict_id is None:
+        dict_id = dict_path.name.upper()
+
+    if output_path.exists() and not force:
+        console.print(f"[red]Error: Database already exists: {output_path}[/]")
+        console.print("Use --force to overwrite.")
+        sys.exit(1)
+
+    console.print(f"Building {dict_id} from {dict_path}...")
+
+    count = CdslIndexBuilder.build(
+        dict_path,
+        output_path,
+        dict_id.upper(),
+        limit=limit,
+        batch_size=batch_size,
+        num_workers=workers,
+    )
+
+    console.print(f"[green]Indexed {count} entries into {output_path}[/]")
+
+
+@cdsl.command(name="build-all")
+@click.argument(
+    "dict_root", type=click.Path(exists=True, file_okay=False), default=None
+)
+@click.argument(
+    "output_dir", type=click.Path(file_okay=False, dir_okay=True), default=None
+)
+@click.option(
+    "--limit", default=None, type=int, help="Limit each dictionary to N entries"
+)
+def build_all(dict_root: str | None, output_dir: str | None, limit: int | None):
+    """Build all dictionaries in a directory.
+
+    Example: langnet-cli cdsl build-all ~/cdsl_data/dict ~/cdsl_data/db --limit 1000
+    """
+    from langnet.cologne.core import batch_build
+
+    dict_path = Path(dict_root) if dict_root else get_cdsl_dict_dir()
+    output_path = Path(output_dir) if output_dir else get_cdsl_db_dir()
+
+    console.print(f"Building all dictionaries from {dict_path}...")
+
+    results = batch_build(dict_path, output_path, limit=limit)
+
+    for dict_id, count in sorted(results.items()):
+        if count >= 0:
+            console.print(f"  [green]{dict_id}: {count} entries[/]")
+        else:
+            console.print(f"  [red]{dict_id}: FAILED[/]")
+
+
+@cdsl.command(name="lookup")
+@click.argument("dict_id")
+@click.argument("key")
+@click.option("--output", type=click.Choice(["json", "table"]), default="table")
+def lookup(dict_id: str, key: str, output: str):
+    """Lookup headword (Devanagari or SLP1 accepted).
+
+    Example: langnet-cli cdsl lookup mw "अग्नि"
+             langnet-cli cdsl lookup mw agni
+    """
+    from langnet.cologne.core import CdslIndex
+    from rich.pretty import pprint
+
+    db_path = get_cdsl_db_dir() / f"{dict_id.lower()}.db"
+    if not db_path.exists():
+        console.print(f"[red]Error: Database not found: {db_path}[/]")
+        console.print("Run 'langnet-cli cdsl build' first to create the index.")
+        sys.exit(1)
+
+    with CdslIndex(db_path) as index:
+        results = index.lookup(dict_id.upper(), key)
+
+    if not results:
+        console.print(f"[yellow]No entries found for '{key}'[/]")
+        return
+
+    if output == "json":
+        import json
+
+        json_output = [
+            {
+                "dict_id": r.dict_id,
+                "key": r.key,
+                "lnum": r.lnum,
+                "body": r.body,
+                "page_ref": r.page_ref,
+            }
+            for r in results
+        ]
+        console.print(json.dumps(json_output, indent=2, ensure_ascii=False))
+    else:
+        from rich.table import Table
+
+        table = Table(title=f"Results for '{key}' in {dict_id.upper()}")
+        table.add_column("Key", style="cyan")
+        table.add_column("L#", justify="right")
+        table.add_column("Body", style="green")
+        table.add_column("Page", style="yellow")
+        for r in results:
+            body_preview = (
+                (r.body[:100] + "...") if r.body and len(r.body) > 100 else r.body or ""
+            )
+            table.add_row(r.key, str(r.lnum), body_preview, r.page_ref or "")
+        console.print(table)
+
+
+@cdsl.command(name="prefix")
+@click.argument("dict_id")
+@click.argument("prefix")
+@click.option("--limit", default=20, type=int, help="Max results")
+def prefix(dict_id: str, prefix: str, limit: int):
+    """Autocomplete: find headwords starting with prefix.
+
+    Example: langnet-cli cdsl prefix mw "अग्न"
+    """
+    from langnet.cologne.core import CdslIndex
+
+    db_path = get_cdsl_db_dir() / f"{dict_id.lower()}.db"
+    if not db_path.exists():
+        console.print(f"[red]Error: Database not found: {db_path}[/]")
+        sys.exit(1)
+
+    with CdslIndex(db_path) as index:
+        results = index.prefix_search(dict_id.upper(), prefix, limit=limit)
+
+    if not results:
+        console.print(f"[yellow]No matches found for '{prefix}'[/]")
+        return
+
+    console.print(f"[cyan]Matches for '{prefix}' in {dict_id.upper()}:[/]")
+    for key, lnum in results[:limit]:
+        console.print(f"  {key} [{lnum}]")
+
+
+@cdsl.command(name="list")
+def list_dicts():
+    """List indexed dictionaries.
+
+    Example: langnet-cli cdsl list
+    """
+    from langnet.cologne.core import CdslIndex
+
+    db_dir = get_cdsl_db_dir()
+    if not db_dir.exists():
+        console.print("[yellow]No indexed dictionaries found.[/]")
+        console.print("Run 'langnet-cli cdsl build' to create indexes.")
+        return
+
+    dbs = sorted(db_dir.glob("*.db"))
+    if not dbs:
+        console.print("[yellow]No .db files found.[/]")
+        return
+
+    from rich.table import Table
+
+    table = Table(title="Indexed Dictionaries")
+    table.add_column("Dictionary", style="cyan")
+    table.add_column("Entries", justify="right", style="green")
+    table.add_column("Size", style="yellow")
+
+    for db_file in dbs:
+        dict_id = db_file.stem.upper()
+        with CdslIndex(db_file) as index:
+            info = index.get_info(dict_id)
+        size_kb = info["db_size_bytes"] // 1024
+        table.add_row(dict_id, str(info["entry_count"]), f"{size_kb} KB")
+
+    console.print(table)
+
+
+@cdsl.command(name="info")
+@click.argument("dict_id")
+def info(dict_id: str):
+    """Show dictionary metadata and statistics.
+
+    Example: langnet-cli cdsl info MW
+    """
+    from langnet.cologne.core import CdslIndex
+
+    db_path = get_cdsl_db_dir() / f"{dict_id.lower()}.db"
+    if not db_path.exists():
+        console.print(f"[red]Error: Database not found: {db_path}[/]")
+        sys.exit(1)
+
+    with CdslIndex(db_path) as index:
+        info = index.get_info(dict_id.upper())
+
+    from rich.table import Table
+
+    table = Table(title=f"Dictionary: {info['dict_id']}")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Database", info["db_path"])
+    table.add_row("Entries", str(info["entry_count"]))
+    table.add_row("Headwords", str(info["headword_count"]))
+    table.add_row("Size", f"{info['db_size_bytes']} bytes")
+
+    console.print(table)
 
 
 if __name__ == "__main__":

@@ -42,6 +42,7 @@ in
     # pkgs.libgcc
     pkgs.gnumake
     pkgs.duckdb
+    pkgs.sqlite
 
     pkgs.just
     pkgs.hl-log-viewer

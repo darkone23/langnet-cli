@@ -90,26 +90,74 @@ The Perl diogenes server leaks threads on certain queries. The langnet-dg-reaper
 
 ### Phase 3: Sanskrit Integration
 
-**Status**: Blocked. The `pycdsl` library depends on Cologne's assets which are no longer available.
+#### CDSL DuckDB Indexing (COMPLETED)
 
-#### Path Forward: Build Custom CDSL Parser
+The native CDSL parser has been implemented, removing the blocked `pycdsl` dependency:
 
-Once Greek/Latin functionality is complete, implement a native Python CDSL parser:
+- [x] Parse CDSL TEI XML files directly from `~/cdsl_data/`
+- [x] Store results as duckdb database
+- [x] Support MW (Monier-Williams) and AP90 (Apte) dictionaries
+- [x] Implement entry grouping by headword ID
+- [x] Add transliteration support (IAST, HK, Devanagari)
+- [x] Wire to `SanskritCologneLexicon` and `LanguageEngine`
+- [x] Integrate into Sanskrit query endpoint (`/api/q?l=san&s=<word>`)
+- [x] Add diagnostic logging for batch processing
 
-- [ ] Parse CDSL TEI XML files directly from `~/cdsl_data/`
-- [ ] Support MW (Monier-Williams) and AP90 (Apte) dictionaries
-- [ ] Implement entry grouping by headword ID
-- [ ] Add transliteration support (IAST, HK, Devanagari)
-- [ ] Wire to `SanskritCologneLexicon` and `LanguageEngine`
-- [ ] Add Sanskrit query endpoint (`/api/q?l=san&s=<word>`)
+##### CDSL ETL Performance Observations
 
-This approach removes dependency on `pycdsl`.
+**Current Bottleneck**: The parallel XML parsing阶段 (ProcessPoolExecutor) completes nearly instantly, but the final DuckDB bulk INSERT is the bottleneck (~35 rows/second).
+
+Typical profile for MW (~70K entries):
+```
+batch_progress logs: ~2-3 seconds total for ALL batches
+indexing_bulk_insert: ~35 minutes for 70K entries (~35 rows/sec)
+```
+
+**Root Cause**: DuckDB's `executemany()` with 70K+ records is I/O-bound, not CPU-bound.
+
+##### Future Performance Optimization Opportunities
+
+1. **Batch INSERT with Transactions**
+   - Split bulk insert into smaller transactions (e.g., 10K records per COMMIT)
+   - Reduces memory pressure and enables better parallelization
+
+2. **COPY FROM for Bulk Loading**
+   - DuckDB's `COPY` command is 10-100x faster than INSERT
+   - Export parsed data to Parquet/CSV, then `COPY INTO table FROM file`
+   - Example:
+     ```python
+     # Write batch to temp Parquet
+     duckdf = pl.DataFrame(batch_data)
+     duckdf.write_parquet(f"/tmp/batch_{i}.parquet")
+     # Bulk load
+     conn.execute(f"COPY entries FROM '/tmp/batch_{i}.parquet' (FORMAT PARQUET)")
+     ```
+
+3. **Concurrent INSERT with ThreadPoolExecutor**
+   - Open multiple DuckDB connections, insert in parallel
+   - Each connection handles separate batches
+   - Requires managing transaction boundaries
+
+4. **Streaming XML Parser**
+   - Use SAX/iterparse instead of lxml.etree for memory efficiency
+   - Process entries as they are read, no full DOM in memory
+
+5. **Pre-sort by lnum**
+   - Sort entries by (dict_id, lnum) before INSERT
+   - Improves B-tree index maintenance
+
+6. **Disk-based Temporary Tables**
+   - `CREATE TEMP TABLE ... ON COMMIT PRESERVE ROWS` for staging
+   - Reduces memory footprint for large dictionaries
+
+7. **Profile with DuckDB EXPLAIN ANALYZE**
+   - Identify exact hotspots in INSERT execution plan
 
 ### Latin Lewis Dictionary Parser
 
 The CLTK `LatinLewisLexicon.lookup()` returns raw dictionary entry text. Parsing this into structured data is significant work:
 
-- [ ] Analyze Lewis entry format: headword, part of speech, etymology, definitions, citations
+- [ ] Analyze Lewis entry format: headword, part of speech, etymology, definitions, word family, citations
 - [ ] Create `LewisEntry` dataclass model
 - [ ] Implement parser with robust handling of edge cases
 - [ ] Wire parsed output to `LatinQueryResult` in `ClassicsToolkit.latin_query()`
@@ -122,19 +170,19 @@ The CLTK `LatinLewisLexicon.lookup()` returns raw dictionary entry text. Parsing
 After core functionality is complete, add polars/duckdb for local knowledge base:
 
 - [ ] **Store derived lexicon data** from CDSL, CLTK, Diogenes, Whitaker's
-- [ ] **Schema design**:
+- [ ] **generic schema design**:
   - `words`: term, language, headword, IPA, part_of_speech
   - `senses`: word_id, definition, citations, source_lemma
   - `morphology`: word_id, tags, stems, endings
   - `cognates`: word_id, related_word_id, relationship_type
-- [ ] **Cached lookups**: Query local DB before hitting external services
-- [ ] **Cross-lexicon queries**: Enable etymology research ("find Latin words with Greek cognates")
+- [x] **Cached lookups**: Query local DB before hitting external services
 - [ ] **Precomputed indexes**: IPA, lemmas, morphological tags for fast search
+- [ ] **Cross-lexicon queries**: Enable etymology research ("find Latin words with Greek cognates")
 
 **Technologies**: duckdb (OLAP queries on CDSL TEI XML, CLTK data), polars (data transformation)
 
 ### Performance / Observability
-- [ ] **Response caching** for common queries
+- [x] **Response caching** for common queries
 - [x] **Model warming** at startup (avoid cold downloads)
 - [ ] **Async backends** for parallel lexicon queries
 - [ ] Add correlation IDs for tracing requests through multiple backends

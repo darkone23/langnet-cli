@@ -32,3 +32,9 @@ See these human-readable docs:
 4. Greek UTF-8 → betacode conversion for diogenes
 5. `AttributeValueList` lacks string methods
 6. Use `dataclass` with `cattrs` for serialization
+7. **Process restart for code changes**: Server processes cache Python modules. After code changes, ask user to restart the process manager before verifying via API/curl.
+   ```bash
+   # User manages process restart
+   # Then verify with:
+   langnet-cli cache-clear && curl -s -X POST "http://localhost:8000/api/q" -d "l=san&s=agni"
+   ```
