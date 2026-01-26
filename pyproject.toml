@@ -35,6 +35,9 @@ orjson = "^3.10.14"
 python-multipart = "^0.0.20"
 structlog = "^24.2.0"
 python-dotenv = "^1.2.1"
+polars = "^1.37.1"
+duckdb = "^1.4.3"
+pyarrow = "^23.0.0"
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"

@@ -40,6 +40,7 @@ in
     pkgs.gcc
     # pkgs.libgcc
     pkgs.gnumake
+    pkgs.duckdb
 
     pkgs.just
     pkgs.hl-log-viewer
