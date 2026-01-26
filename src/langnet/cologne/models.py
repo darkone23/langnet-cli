@@ -56,6 +56,13 @@ class SanskritDictionaryEntry:
     id: str
     meaning: str
     subid: Optional[str] = None
+    pos: Optional[str] = None
+    gender: Optional[list[str]] = None
+    sanskrit_form: Optional[str] = None
+    etymology: Optional[dict] = None
+    grammar_tags: Optional[dict] = None
+    references: Optional[list[dict]] = None
+    page_ref: Optional[str] = None
 
 
 @dataclass
@@ -65,3 +72,17 @@ class SanskritDictionaryLookup:
     hk: str
     deva: str
     entries: list[SanskritDictionaryEntry] = field(default_factory=list)
+
+
+@dataclass
+class SanskritTransliteration:
+    input: str
+    iast: str
+    hk: str
+    devanagari: str
+
+
+@dataclass
+class SanskritDictionaryResponse:
+    transliteration: SanskritTransliteration
+    dictionaries: dict[str, list[SanskritDictionaryEntry]]

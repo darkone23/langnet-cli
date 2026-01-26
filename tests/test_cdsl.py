@@ -5,8 +5,18 @@ from decimal import Decimal
 from pathlib import Path
 from typing import cast
 
-from langnet.cologne.models import CdslEntry, DictMetadata, CdslQueryResult
-from langnet.cologne.parser import parse_xml_entry, extract_headwords, extract_homonyms
+from langnet.cologne.models import (
+    CdslEntry,
+    DictMetadata,
+    CdslQueryResult,
+    SanskritDictionaryEntry,
+)
+from langnet.cologne.parser import (
+    parse_xml_entry,
+    extract_headwords,
+    extract_homonyms,
+    parse_grammatical_info,
+)
 from langnet.cologne.core import (
     CdslIndex,
     CdslIndexBuilder,
@@ -175,6 +185,163 @@ class TestCdslCore(unittest.TestCase):
         with CdslIndex(self.db_path) as index:
             dicts = index.list_dicts()
             self.assertIn("MWE", dicts)
+
+
+class TestGrammaticalParser(unittest.TestCase):
+    def test_parse_pos_and_gender(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni</s>   <lex>m.</lex> fire, sacrificial fire<info lex="m"/></body>
+            <tail><L>1</L></tail>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertEqual(info["pos"], "m.")
+        self.assertEqual(info["gender"], ["masculine"])
+
+    def test_parse_pos_feminine(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agnI</s>   <lex>f.</lex> feminine form<info lex="f"/></body>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertEqual(info["pos"], "f.")
+        self.assertEqual(info["gender"], ["feminine"])
+
+    def test_parse_pos_neuter(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni</s>   <lex>n.</lex> neuter form<info lex="n"/></body>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertEqual(info["pos"], "n.")
+        self.assertEqual(info["gender"], ["neuter"])
+
+    def test_parse_pos_all_genders(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni</s>   <lex>mfn.</lex> all genders<info lex="m:n"/></body>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertEqual(info["pos"], "mfn.")
+        self.assertEqual(sorted(info["gender"]), ["feminine", "masculine", "neuter"])
+
+    def test_parse_verb_root(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni</s>   <lex>m.</lex> (√ <s>ag</s>), fire<info lex="m"/></body>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertIsNotNone(info["etymology"])
+        self.assertEqual(info["etymology"]["type"], "verb_root")
+        self.assertEqual(info["etymology"]["root"], "ag")
+
+    def test_parse_sanskrit_form(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni/</s>   <lex>m.</lex> form<info lex="m"/></body>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertEqual(info["sanskrit_form"], "agni/")
+
+    def test_parse_declension(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni</s>   <lex>mf(<s>A</s>)n.</lex> form<info lex="m:f#A:n"/></body>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertIn("grammar_tags", info)
+        self.assertEqual(info["grammar_tags"]["declension"], "A")
+
+    def test_parse_compound(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni</s>   <lex>m. <ab>comp.</ab></lex> compound word<info lex="m"/></body>
+            <tail><L>1</L></tail>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertTrue(
+            "grammar_tags" in info
+            and "compound" in info["grammar_tags"]
+            and info["grammar_tags"]["compound"] is True
+        )
+
+    def test_parse_abbreviations(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni</s>   <lex>m. <ab>Uṇ.</ab></lex> form<info lex="m"/></body>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertIn("grammar_tags", info)
+        self.assertIn("abbreviations", info["grammar_tags"])
+        # Check for both with and without dot
+        self.assertTrue(
+            "Uṇ" in info["grammar_tags"]["abbreviations"]
+            or "Uṇ." in info["grammar_tags"]["abbreviations"]
+        )
+
+    def test_parse_references(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni</s>   <lex>m.</lex> see <ls>L.</ls> and <ls>TS.</ls></body>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertGreater(len(info["references"]), 0)
+        self.assertEqual(info["references"][0]["type"], "lexicon")
+
+    def test_parse_cross_reference(self):
+        xml_data = """<H1>
+            <h><key1>agni</key1></h>
+            <body><s>agni</s>   <lex>m.</lex> see <s1>agnI</s1></body>
+        </H1>"""
+        info = parse_grammatical_info(xml_data)
+        self.assertGreater(len(info["references"]), 0)
+        cross_refs = [r for r in info["references"] if r["type"] == "cross_reference"]
+        self.assertGreater(len(cross_refs), 0)
+
+
+class TestSanskritDictionaryResponse(unittest.TestCase):
+    def test_transliteration_structure(self):
+        from langnet.cologne.models import (
+            SanskritTransliteration,
+            SanskritDictionaryResponse,
+        )
+
+        trans = SanskritTransliteration(
+            input="agni",
+            iast="agni",
+            hk="agni",
+            devanagari="अग्नि",
+        )
+
+        self.assertEqual(trans.input, "agni")
+        self.assertEqual(trans.iast, "agni")
+        self.assertEqual(trans.hk, "agni")
+        self.assertEqual(trans.devanagari, "अग्नि")
+
+    def test_dictionary_entry_grammatical_fields(self):
+        from langnet.cologne.models import SanskritDictionaryEntry
+
+        entry = SanskritDictionaryEntry(
+            id="1",
+            meaning="fire",
+            pos="m.",
+            gender=["masculine"],
+            sanskrit_form="agni/",
+            etymology={"type": "verb_root", "root": "ag"},
+            grammar_tags={"declension": "A"},
+            references=[{"source": "L.", "type": "lexicon"}],
+            page_ref="1,1",
+        )
+
+        self.assertEqual(entry.pos, "m.")
+        self.assertEqual(entry.gender, ["masculine"])
+        self.assertEqual(entry.sanskrit_form, "agni/")
+        assert entry.etymology is not None
+        self.assertEqual(entry.etymology["type"], "verb_root")
+        assert entry.grammar_tags is not None
+        self.assertEqual(entry.grammar_tags["declension"], "A")
+        assert entry.references is not None
+        self.assertEqual(len(entry.references), 1)
 
 
 if __name__ == "__main__":

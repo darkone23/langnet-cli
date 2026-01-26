@@ -13,8 +13,14 @@ from indic_transliteration import sanscript
 from indic_transliteration.detect import detect
 from indic_transliteration.sanscript import transliterate, SLP1, DEVANAGARI
 
-from .models import CdslQueryResult, SanskritDictionaryLookup, SanskritDictionaryEntry
-from .parser import parse_xml_entry, extract_headwords
+from .models import (
+    CdslQueryResult,
+    SanskritDictionaryLookup,
+    SanskritDictionaryEntry,
+    SanskritTransliteration,
+    SanskritDictionaryResponse,
+)
+from .parser import parse_xml_entry, extract_headwords, parse_grammatical_info
 
 logger = structlog.get_logger(__name__)
 
@@ -460,35 +466,64 @@ class SanskritCologneLexicon:
     def lookup_ascii(self, data: str) -> dict:
         slp1_key = to_slp1(data).lower()
 
-        mw_lookup = self._lookup_dict_formatted("MW", slp1_key, data)
-        ap90_lookup = self._lookup_dict_formatted("AP90", slp1_key, data)
+        mw_entries = self._lookup_dict_formatted("MW", slp1_key, data)
+        ap90_entries = self._lookup_dict_formatted("AP90", slp1_key, data)
+
+        # Create transliteration object
+        slp1_term = to_slp1(data)
+        try:
+            deva_term = transliterate(slp1_term, SLP1, DEVANAGARI)
+        except Exception:
+            deva_term = data
+
+        transliteration = SanskritTransliteration(
+            input=data,
+            iast=slp1_term,
+            hk=slp1_term,
+            devanagari=deva_term,
+        )
 
         return {
-            "mw": [self._serialize_lookup(l) for l in mw_lookup],
-            "ap90": [self._serialize_lookup(l) for l in ap90_lookup],
+            "transliteration": {
+                "input": transliteration.input,
+                "iast": transliteration.iast,
+                "hk": transliteration.hk,
+                "devanagari": transliteration.devanagari,
+            },
+            "dictionaries": {
+                "mw": [self._serialize_entry(e) for e in mw_entries],
+                "ap90": [self._serialize_entry(e) for e in ap90_entries],
+            },
         }
 
-    def _serialize_lookup(self, lookup: SanskritDictionaryLookup) -> dict[str, Any]:
+    def _serialize_entry(self, entry: SanskritDictionaryEntry) -> dict[str, Any]:
         result: dict[str, Any] = {
-            "term": lookup.term,
-            "iast": lookup.iast,
-            "hk": lookup.hk,
-            "deva": lookup.deva,
-            "entries": [],
+            "id": entry.id,
+            "meaning": entry.meaning,
         }
-        for e in lookup.entries:
-            entry_dict = {
-                "id": e.id,
-                "meaning": e.meaning,
-            }
-            if e.subid is not None:
-                entry_dict["subid"] = e.subid
-            result["entries"].append(entry_dict)
+
+        if entry.subid is not None:
+            result["subid"] = entry.subid
+        if entry.pos is not None:
+            result["pos"] = entry.pos
+        if entry.gender is not None:
+            result["gender"] = entry.gender
+        if entry.sanskrit_form is not None:
+            result["sanskrit_form"] = entry.sanskrit_form
+        if entry.etymology is not None:
+            result["etymology"] = entry.etymology
+        if entry.grammar_tags is not None:
+            result["grammar_tags"] = entry.grammar_tags
+        if entry.references is not None:
+            result["references"] = entry.references
+        if entry.page_ref is not None:
+            result["page_ref"] = entry.page_ref
+
         return result
 
     def _lookup_dict_formatted(
         self, dict_id: str, slp1_key: str, original_term: str
-    ) -> list[SanskritDictionaryLookup]:
+    ) -> list[SanskritDictionaryEntry]:
         dict_id_upper = dict_id.upper()
         try:
             conn = self._get_conn(dict_id_upper)
@@ -508,12 +543,6 @@ class SanskritCologneLexicon:
         if not rows:
             return []
 
-        slp1_term = to_slp1(original_term)
-        try:
-            deva_term = transliterate(slp1_term, SLP1, DEVANAGARI)
-        except Exception:
-            deva_term = original_term
-
         entries = []
         for row in rows:
             entry_id = str(int(float(row[1]))) if "." in str(row[1]) else str(row[1])
@@ -523,20 +552,22 @@ class SanskritCologneLexicon:
                 entry_id = id_parts[0]
                 subid = id_parts[1]
 
+            # Parse grammatical information from XML
+            grammatical = parse_grammatical_info(row[2])
+
             entries.append(
                 SanskritDictionaryEntry(
                     id=entry_id,
-                    meaning=row[3] or row[2][:200],
+                    meaning=grammatical.get("meaning", row[3] or row[2][:200]),
                     subid=subid,
+                    pos=grammatical.get("pos"),
+                    gender=grammatical.get("gender"),
+                    sanskrit_form=grammatical.get("sanskrit_form"),
+                    etymology=grammatical.get("etymology"),
+                    grammar_tags=grammatical.get("grammar_tags"),
+                    references=grammatical.get("references"),
+                    page_ref=row[4],
                 )
             )
 
-        return [
-            SanskritDictionaryLookup(
-                term=original_term,
-                iast=slp1_term,
-                hk=slp1_term,
-                deva=deva_term,
-                entries=entries,
-            )
-        ]
+        return entries
