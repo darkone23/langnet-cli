@@ -34,10 +34,10 @@ class ClassicsToolkit:
 
     _cltk_available: bool = False
     _spacy_available: bool = False
-    _lat_corpus: Optional[object] = None
-    _latdict: Optional[object] = None
-    _latlemma: Optional[object] = None
-    _latxform: Optional[object] = None
+    _lat_corpus: Optional[Any] = None
+    _latdict: Optional[Any] = None
+    _latlemma: Optional[Any] = None
+    _latxform: Optional[Any] = None
     _grc_spacy_model: Optional[Any] = None
 
     def __new__(cls):
@@ -68,6 +68,7 @@ class ClassicsToolkit:
             for model in required_models:
                 model_dir = Path.home() / "cltk_data/lat/model" / model
                 if not model_dir.exists():
+                    assert self._lat_corpus is not None
                     self._lat_corpus.import_corpus("lat_models_cltk")
 
             self._latdict = cltk_latlex.LatinLewisLexicon()
@@ -133,6 +134,9 @@ class ClassicsToolkit:
             )
 
         try:
+            assert self._latlemma is not None
+            assert self._latdict is not None
+            assert self._latxform is not None
             (query, stem) = self._latlemma.lemmatize([word])[0]
             results = self._latdict.lookup(word)
             transcription = ""

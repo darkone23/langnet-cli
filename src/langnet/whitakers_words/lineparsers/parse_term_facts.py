@@ -1,61 +1,11 @@
 import sys
+from pathlib import Path
 from lark import Lark, Transformer, Tree
 
-TERM_FACTS_GRAMMAR = """
-start: noun_line
-	  | verb_line
-	  | adverb_line
-	  | pronoun_line
-	  | adjective_line
-	  | conjunction_line
-	  | verb_participle_line
-	  | pack_line
-	  | preposition_line
-	  | tack_line
-	  | interj_line
-	  | num_line
-	  | card_line
-	  | suffix_line
-	  | prefix_line
-	  | supine_line
 
-noun_line: term "N" declension variant case number gender [notes]
-pronoun_line: term "PRON" declension variant case number gender [notes]
-adjective_line: term "ADJ" declension variant case number gender comparison [notes]
-verb_line: term "V" conjugation variant tense voice [mood] person number [notes]
-verb_participle_line: term "VPAR" conjugation variant case number gender tense [voice] "PPL" [notes]
-num_line: term "NUM" declension variant case number gender "ORD" [notes]
-card_line: term "NUM" declension variant case number gender "CARD" [notes]
-supine_line: term "SUPINE" declension variant case number gender [notes]
-adverb_line: term "ADV" comparison [notes]
-preposition_line: term "PREP" case [notes]
-conjunction_line: term "CONJ" [notes]
-tack_line: term "TACKON" [notes]
-interj_line: term "INTERJ" [notes]
-suffix_line: term "SUFFIX" [notes]
-prefix_line: term "PREFIX" [notes]
-pack_line: term "PACK" [notes]
-
-tense: word
-voice: word
-mood: word
-person: num
-gender: char
-case: word
-number: char
-comparison: word
-term: /[A-Za-z\.]+/
-num: /[0-9]{1}/
-word: /[A-Z]+/
-char: /[A-Z]{1}/
-declension: num
-conjugation: num
-variant: num
-notes: /[A-Za-z0-9,\/()\[\]~=>.:\-\+'"!_\? ]+/
-
-%import common.WS -> WS
-%ignore WS
-"""
+def get_term_facts_grammar():
+    grammar_path = Path(__file__).parent / "grammars" / "term_facts.ebnf"
+    return grammar_path.read_text()
 
 
 class FactsTransformer(Transformer):
@@ -173,7 +123,7 @@ class FactsTransformer(Transformer):
 
 
 class FactsReducer:
-    parser = Lark(TERM_FACTS_GRAMMAR)
+    parser = Lark(get_term_facts_grammar())
     xformer = FactsTransformer()
 
     @staticmethod

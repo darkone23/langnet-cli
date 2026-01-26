@@ -1,0 +1,8 @@
+start: sense_line
+
+sense_line: (sense [";"])*
+
+sense: /[A-Za-z0-9,\/()\[\]~=>.:\-\+'"!_\? ]+/
+
+%import common.WS -> WS
+%ignore WS

@@ -30,12 +30,12 @@ class TestLatinExamples(unittest.TestCase):
         self.assertEqual(replaced, "iusticiar")
 
     def test_transcriber(self):
-        transcribed = wiring.cltk.latxform.transcribe("iusticiar")
+        transcribed = wiring.cltk.latxform.transcribe("iusticiar")  # type: ignore
         self.assertEqual(transcribed, "[jʊs.'t̪ɪ.kɪ̣.jar]")
 
     def test_lemmatizer(self):
         lupus = ["lupi", "luporum", "lupis", "lupos", "lupi", "lupis"]
-        lemmas = wiring.cltk.latlemma.lemmatize(lupus)
+        lemmas = wiring.cltk.latlemma.lemmatize(lupus)  # type: ignore
 
         expected = [
             ("lupi", "lupus"),
@@ -48,7 +48,7 @@ class TestLatinExamples(unittest.TestCase):
         self.assertEqual(lemmas, expected)
 
     def test_lexicon(self):
-        result = wiring.cltk.latdict.lookup("saga")
+        result = wiring.cltk.latdict.lookup("saga")  # type: ignore
 
         somestr = """\
         sāga

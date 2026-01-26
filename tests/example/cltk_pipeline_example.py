@@ -60,7 +60,7 @@ class PipelineExample:
             if all([w.features for w in cltk_doc.sentences[0]]):
                 print("Printing dependency tree of first sentence ...")
                 try:
-                    a_tree = DependencyTree.to_tree(cltk_doc.sentences[0])
+                    a_tree = DependencyTree.to_tree(cltk_doc.sentences[0])  # type: ignore
                 except:
                     print(f"Dependency parsing Process not available for '{lang}'.")
                     print("")

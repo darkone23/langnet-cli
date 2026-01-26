@@ -1,17 +1,12 @@
 import sys
 import re
+from pathlib import Path
 from lark import Lark, Transformer
 
-SENSES_GRAMMAR = """
-start: sense_line
 
-sense_line: (sense [";"])*
-
-sense: /[A-Za-z0-9,\/()\[\]~=>.:\-\+'"!_\? ]+/
-
-%import common.WS -> WS
-%ignore WS
-"""
+def get_senses_grammar():
+    grammar_path = Path(__file__).parent / "grammars" / "senses.ebnf"
+    return grammar_path.read_text()
 
 
 class SenseTransformer(Transformer):
@@ -57,7 +52,7 @@ class SenseTransformer(Transformer):
 
 
 class SensesReducer:
-    parser = Lark(SENSES_GRAMMAR)
+    parser = Lark(get_senses_grammar())
     xformer = SenseTransformer()
 
     @staticmethod

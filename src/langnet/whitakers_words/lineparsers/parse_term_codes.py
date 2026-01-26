@@ -1,34 +1,12 @@
 import sys
+from pathlib import Path
 from lark import Lark, Transformer
 from lark.visitors import Discard
 
-TERM_CODES_GRAMMAR = """
-start: simple_code_line | full_code_line | basic_code_line 
 
-simple_code_line: term_info pos_code code_chunk [notes]
-full_code_line: term_info pos_code [declension] [pos_form] code_chunk [notes]
-basic_code_line: code_chunk [notes]
-
-pos_form: /[A-Z]{1,7}/
-pos_code: /[A-Z]{1,7}/
-term_txt: /[A-Za-z.]{1}[a-z., ()-\/]+/
-term_info: proper_names | term_txt
-proper_names: name ("," name)*
-name: /[A-Z][a-z]+/
-declension: "(" /[0-9]{1}[sthnrd]{2}/ ")"
-age: char
-area: char
-geo: char
-freq: char
-source: char
-code: age area geo freq source
-code_chunk: "[" code  "]"
-char: /[A-Z]{1}/
-notes: /[A-Za-z0-9,\/()\[\]~=>.:\-\+'"!_\? ]+/
-
-%import common.WS -> WS
-%ignore WS
-"""
+def get_term_codes_grammar():
+    grammar_path = Path(__file__).parent / "grammars" / "term_codes.ebnf"
+    return grammar_path.read_text()
 
 
 class CodesTransformer(Transformer):
@@ -152,7 +130,7 @@ class CodesTransformer(Transformer):
 
 
 class CodesReducer:
-    parser = Lark(TERM_CODES_GRAMMAR)
+    parser = Lark(get_term_codes_grammar())
     xformer = CodesTransformer()
 
     @staticmethod

@@ -56,7 +56,7 @@ class TestDiogenesScraper(unittest.TestCase):
                 header = chunk
                 break
         self.assertIsNotNone(header, "Should have a PerseusAnalysisHeader chunk")
-        self.assertIsInstance(header.morphology, PerseusMorphology)
+        self.assertIsInstance(header.morphology, PerseusMorphology)  # type: ignore
 
     def test_matching_reference_has_definition_instance(self):
         result = wiring.scraper.parse_word("lupus", DiogenesLanguages.LATIN)
@@ -66,9 +66,9 @@ class TestDiogenesScraper(unittest.TestCase):
                 match = chunk
                 break
         self.assertIsNotNone(match, "Should have a DiogenesMatchingReference chunk")
-        self.assertIsInstance(match.definitions, DiogenesDefinitionEntry)
-        self.assertIsNotNone(match.reference_id)
-        self.assertTrue(match.reference_id.isdigit())
+        self.assertIsInstance(match.definitions, DiogenesDefinitionEntry)  # type: ignore
+        self.assertIsNotNone(match.reference_id)  # type: ignore
+        self.assertTrue(match.reference_id.isdigit())  # type: ignore
 
     def test_lupus_has_known_sense(self):
         result = wiring.scraper.parse_word("lupus", DiogenesLanguages.LATIN)
@@ -78,12 +78,12 @@ class TestDiogenesScraper(unittest.TestCase):
                 match = chunk
                 break
         self.assertIsNotNone(match)
-        definitions = match.definitions
-        self.assertTrue(len(definitions.blocks) > 0)
-        senses = definitions.blocks[0].senses
+        definitions = match.definitions  # type: ignore
+        self.assertTrue(len(definitions.blocks) > 0)  # type: ignore
+        senses = definitions.blocks[0].senses  # type: ignore
         self.assertIsNotNone(senses)
-        self.assertTrue(len(senses) > 0)
-        self.assertTrue(any("wolf" in s.lower() for s in senses))
+        self.assertTrue(len(senses) > 0)  # type: ignore
+        self.assertTrue(any("wolf" in s.lower() for s in senses))  # type: ignore
 
     def test_perseus_morphology_has_stems(self):
         result = wiring.scraper.parse_word("lupus", DiogenesLanguages.LATIN)
@@ -93,10 +93,10 @@ class TestDiogenesScraper(unittest.TestCase):
                 header = chunk
                 break
         self.assertIsNotNone(header)
-        self.assertIsInstance(header.morphology, PerseusMorphology)
-        self.assertTrue(len(header.morphology.morphs) > 0)
-        self.assertTrue(len(header.morphology.morphs[0].stem) > 0)
-        self.assertTrue(len(header.morphology.morphs[0].tags) > 0)
+        self.assertIsInstance(header.morphology, PerseusMorphology)  # type: ignore
+        self.assertTrue(len(header.morphology.morphs) > 0)  # type: ignore
+        self.assertTrue(len(header.morphology.morphs[0].stem) > 0)  # type: ignore
+        self.assertTrue(len(header.morphology.morphs[0].tags) > 0)  # type: ignore
 
     def test_lupus_golden_master(self):
         result = wiring.scraper.parse_word("lupus", DiogenesLanguages.LATIN)
@@ -107,18 +107,18 @@ class TestDiogenesScraper(unittest.TestCase):
             for c in result.chunks
             if c.chunk_type == DiogenesChunkType.PerseusAnalysisHeader
         ][0]
-        self.assertEqual(header.logeion, "https://logeion.uchicago.edu/lupus")
-        self.assertIsInstance(header.morphology, PerseusMorphology)
-        self.assertEqual(len(header.morphology.morphs), 1)
-        self.assertEqual(header.morphology.morphs[0].stem, ["lupus"])
+        self.assertEqual(header.logeion, "https://logeion.uchicago.edu/lupus")  # type: ignore
+        self.assertIsInstance(header.morphology, PerseusMorphology)  # type: ignore
+        self.assertEqual(len(header.morphology.morphs), 1)  # type: ignore
+        self.assertEqual(header.morphology.morphs[0].stem, ["lupus"])  # type: ignore
         match = [
             c
             for c in result.chunks
             if c.chunk_type == DiogenesChunkType.DiogenesMatchingReference
-        ][0]
-        self.assertEqual(match.reference_id, "42690320")
-        self.assertEqual(match.definitions.term, "lŭpus")
-        self.assertEqual(len(match.definitions.blocks), 16)
+        ][0]  # type: ignore
+        self.assertEqual(match.reference_id, "42690320")  # type: ignore
+        self.assertEqual(match.definitions.term, "lŭpus")  # type: ignore
+        self.assertEqual(len(match.definitions.blocks), 16)  # type: ignore
 
 
 if __name__ == "__main__":

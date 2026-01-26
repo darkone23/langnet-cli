@@ -101,7 +101,7 @@ class TestWhitakersWords(unittest.TestCase):
         self.assertEqual(word.terms[0].term, "lup.us")
         self.assertEqual(word.terms[0].part_of_speech, "noun")
         self.assertIsNotNone(word.codeline)
-        self.assertEqual(word.codeline.term, "lupus, lupi")
+        self.assertEqual(word.codeline.term, "lupus, lupi")  # type: ignore
         self.assertEqual(word.senses, ["wolf", "grappling iron"])
 
 

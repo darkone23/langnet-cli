@@ -27,7 +27,7 @@ def find_zombie_pids() -> list[int]:
         "awk '$2 ~ /^Z/ && $3 ~ /perl/ {print $1}'"
     )
     try:
-        output = bash("-c", cmd).strip()
+        output = bash("-c", cmd, _encoding="utf-8").strip()  # type: ignore[call-overload]
         if not output:
             return []
         pids = []

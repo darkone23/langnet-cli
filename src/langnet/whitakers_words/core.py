@@ -130,7 +130,7 @@ class WhitakersWordsChunker:
         # we might be in a special input mode
         # need special output parsing for that case
         self.input = input
-        self.result = self.ww(*input)
+        self.result: str = self.ww(*input, _encoding="utf-8")  # type: ignore[assignment]
 
     def classify_line(self, line):
         line_type = None
@@ -153,8 +153,8 @@ class WhitakersWordsChunker:
 
     def get_next_word(
         self, current: dict | None, last_line: dict | None, line_info: dict
-    ):
-        next_word = dict(lines=[line_info])
+    ) -> dict:
+        next_word: dict = dict(lines=[line_info])
         start_new_word = False
 
         if not last_line:
@@ -183,6 +183,7 @@ class WhitakersWordsChunker:
         if start_new_word:
             return next_word
         else:
+            assert current is not None
             current["lines"].append(line_info)
             return current
 

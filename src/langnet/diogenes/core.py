@@ -247,7 +247,7 @@ class DiogenesScraper:
 
             morphs.append(morph)
 
-        morph_dict = dict(morphs=morphs)
+        morph_dict: dict[str, Any] = dict(morphs=morphs)
 
         if warning:
             _nothing, warning_txt = self.extract_parentheses_text(warning)
@@ -269,7 +269,7 @@ class DiogenesScraper:
         indent_history = [0]  # indices into an n-dimensional array
 
         def shift_cursor(block: BeautifulSoup):
-            css_text = block.attrs.get("style", "")
+            css_text: str = str(block.attrs.get("style", ""))
             css_match = re.search(r"padding-left:\s*([\d.]+)", css_text)
             indent = 0
             if css_match:
@@ -415,8 +415,8 @@ class DiogenesScraper:
             logger.debug("process_chunk_unknown_appending", soup_preview=soup_str[:100])
             result["chunks"].append(UnknownChunkType(soup=soup_str))
 
-    def get_next_chunk(self, result, soup: BeautifulSoup):
-        chunk = dict(soup=soup)
+    def get_next_chunk(self, result: dict, soup: BeautifulSoup) -> dict:
+        chunk: dict[str, Any] = {"soup": soup}
 
         looks_like_header = False
         is_perseus_analysis = False
@@ -436,14 +436,14 @@ class DiogenesScraper:
         for tag in soup.find_all(class_="logeion-link"):
             looks_like_header = True
             type_unknown = False
-            onclick = tag.attrs.get("onclick", "")
+            onclick: str = str(tag.attrs.get("onclick", ""))
             parts = onclick.split("', 'Logeion', '")
             chunk["logeion"] = parts[0][13:]  # extract url from handler
             break
 
         if type_unknown:
             for tag in soup.find_all("a"):
-                onclick = tag.attrs.get("onclick", "")
+                onclick: str = str(tag.attrs.get("onclick", ""))
                 if onclick.startswith("prevEntry"):
                     pattern = r"\((\d+)\)"
                     match = re.search(pattern, onclick)
@@ -481,7 +481,7 @@ class DiogenesScraper:
 
         response = requests.get(self.__diogenes_parse_url(word, language))
 
-        result = dict(chunks=[], dg_parsed=False)
+        result: dict[str, Any] = dict(chunks=[], dg_parsed=False)
 
         if response.status_code == 200:
             logger.debug(
