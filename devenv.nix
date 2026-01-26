@@ -22,6 +22,7 @@ in
     pkgs.git
     # pkgs.nodejs
     pkgs.difftastic
+    pkgs.opencode
 
     # useful language servers
     pkgs.python3Packages.python-lsp-server

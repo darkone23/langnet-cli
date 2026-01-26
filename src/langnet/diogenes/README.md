@@ -89,9 +89,9 @@ Hierarchical indentation is tracked via CSS `padding-left` values, converted to 
 A companion process runs in a loop to clean up zombie threads:
 
 ```sh
-langnet-sidecar                    # loop mode (default interval: 3600s)
-langnet-sidecar --interval 1800    # loop mode (30s interval)
-langnet-sidecar reap --once        # one-shot mode
+langnet-dg-reaper                    # loop mode (default interval: 3600s)
+langnet-dg-reaper --interval 1800    # loop mode (30s interval)
+langnet-dg-reaper reap --once        # one-shot mode
 ```
 
 This process:
@@ -102,13 +102,13 @@ This process:
 
 ### Server Termination
 
-The sidecar terminates the Diogenes server (via SIGTERM to its parent process). This is necessary because zombie processes cannot be killed directly - you must kill their parent so init can reap the zombies.
+The langnet-dg-reaper terminates the Diogenes server (via SIGTERM to its parent process). This is necessary because zombie processes cannot be killed directly - you must kill their parent so init can reap the zombies.
 
 **An external process manager is required** to restart the Diogenes server after it is terminated. Without one, the server will remain down until manually restarted.
 
 ## Known Issues
 
-1. **Zombie threads**: Diogenes Perl process leaks threads on certain queries. The `just sidecar` command runs continuously, checking every hour and killing orphaned parent processes.
+1. **Zombie threads**: Diogenes Perl process leaks threads on certain queries. The `just langnet-dg-reaper` command runs continuously, checking every hour and killing orphaned parent processes.
 2. **Chunk classification brittleness**: Relies on specific HTML structure that may change
 3. **Fuzzy matching**: DiogenesFuzzyReference not properly distinguished
 4. **Duplicate senses**: Code attempts deduping but may miss edge cases

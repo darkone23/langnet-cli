@@ -2,6 +2,7 @@ from langnet.diogenes.core import DiogenesScraper, DiogenesLanguages
 from langnet.whitakers_words.core import WhitakersWords
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
+from langnet.cache.core import QueryCache, NoOpCache
 import cattrs
 
 from rich.pretty import pprint
@@ -118,11 +119,13 @@ class LanguageEngine:
         whitakers: WhitakersWords,
         cltk: ClassicsToolkit,
         cdsl: SanskritCologneLexicon,
+        cache: QueryCache | NoOpCache | None = None,
     ):
         self.diogenes = scraper
         self.whitakers = whitakers
         self.cltk = cltk
         self.cdsl = cdsl
+        self.cache = cache if cache is not None else NoOpCache()
         self._cattrs_converter = cattrs.Converter(omit_if_default=True)
 
     def handle_query(self, lang, word):
@@ -130,6 +133,11 @@ class LanguageEngine:
         _cattrs_converter = self._cattrs_converter
 
         logger.debug("query_started", lang=lang, word=word)
+
+        cached_result = self.cache.get(lang, word)
+        if cached_result is not None:
+            logger.debug("query_cached", lang=lang, word=word)
+            return cached_result
 
         if lang == LangnetLanguageCodes.Greek:
             logger.debug("routing_to_greek_backends", lang=lang, word=word)
@@ -183,5 +191,6 @@ class LanguageEngine:
         else:
             raise NotImplementedError(f"Do not know how to handle {lang}")
 
+        self.cache.put(lang, word, result)
         logger.debug("query_completed", lang=lang, word=word)
         return result

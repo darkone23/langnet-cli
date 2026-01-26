@@ -76,12 +76,12 @@ Pydantic has been phased out in favor of Python's `dataclass` + `cattrs`:
     - [x] able to configure log level via LOG_LEVEL
 
 #### Diogenes Zombie Process Reaper
-The Perl diogenes server leaks threads on certain queries. A sidecar process runs continuously:
+The Perl diogenes server leaks threads on certain queries. The langnet-dg-reaper process runs continuously:
 
-- [x] `just sidecar` runs `langnet/diogenes/cli_util.py` in a loop
+- [x] `just langnet-dg-reaper` runs `langnet/diogenes/cli_util.py` in a loop
 - [x] Checks every hour for zombie perl processes
 - [x] Kills orphaned parent processes with SIGTERM
-- [x] Document in README that sidecar should run alongside API server
+- [x] Document in README that langnet-dg-reaper should run alongside API server
 
 #### Error Handling Improvements
 - [x] Add health check endpoint `/api/health`

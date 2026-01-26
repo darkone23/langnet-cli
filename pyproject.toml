@@ -54,7 +54,7 @@ PYTHONPATH = "${POE_ROOT}/src:${PYTHONPATH}"
 # dev.envfile = "${POE_GIT_DIR}/.dev-envfile"
 # test.cmd = "nose2 -s tests"
 # shell = "python3"
-# sidecar = "python3 -m langnet.diogenes.cli_util"
+# langnet-dg-reaper = "python3 -m langnet.diogenes.cli_util"
 
 [tool.poetry.scripts]
 langnet-cli = "langnet.cli:main"

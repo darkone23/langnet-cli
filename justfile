@@ -1,7 +1,7 @@
 default:
     just -l
 
-sidecar:
+langnet-dg-reaper:
     # kill zombie diogenes processes (loop mode)
     python3 -m langnet.diogenes.cli_util
 

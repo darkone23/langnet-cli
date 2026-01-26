@@ -2,15 +2,39 @@ from langnet.diogenes.core import DiogenesScraper
 from langnet.whitakers_words.core import WhitakersWords
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
+from langnet.cache.core import create_cache
+from langnet.config import config
 
 from langnet.engine.core import LanguageEngine
 
+import structlog
+
+logger = structlog.get_logger(__name__)
+
 
 class LangnetWiring:
-    def __init__(self):
+    _singleton_instance: "LangnetWiring | None" = None
+
+    def __new__(cls, cache_enabled: bool | None = None):
+        if cls._singleton_instance is None:
+            cls._singleton_instance = super().__new__(cls)
+        return cls._singleton_instance
+
+    def __init__(self, cache_enabled: bool | None = None):
+        if hasattr(self, "_initialized"):
+            return
+
+        use_cache = cache_enabled if cache_enabled is not None else config.cache_enabled
         scraper = DiogenesScraper()
         whitakers = WhitakersWords()
         cltk = ClassicsToolkit()
         cdsl = SanskritCologneLexicon()
+        cache = create_cache(use_cache)
 
-        self.engine = LanguageEngine(scraper, whitakers, cltk, cdsl)
+        if use_cache:
+            logger.info("cache_enabled", path=str(cache.cache_dir))
+        else:
+            logger.info("cache_disabled")
+
+        self.engine = LanguageEngine(scraper, whitakers, cltk, cdsl, cache)
+        self._initialized = True

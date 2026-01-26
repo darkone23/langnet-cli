@@ -2,11 +2,13 @@ import polars as pl
 import duckdb
 
 # 1. Create a Polars DataFrame (Our "Source")
-df_polars = pl.DataFrame({
-    "name": ["Alice", "Bob", "Charlie", "David"],
-    "points": [10, 45, 100, 20],
-    "status": ["Bronze", "Silver", "Gold", "Bronze"]
-})
+df_polars = pl.DataFrame(
+    {
+        "name": ["Alice", "Bob", "Charlie", "David"],
+        "points": [10, 45, 100, 20],
+        "status": ["Bronze", "Silver", "Gold", "Bronze"],
+    }
+)
 
 # 2. Use DuckDB to run SQL directly on the Polars object
 # DuckDB "sees" the df_polars variable in your local scope automatically.

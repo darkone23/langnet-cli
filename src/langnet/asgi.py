@@ -127,6 +127,20 @@ async def health_check(request: Request):
         return ORJsonResponse({"error": str(e)}, status_code=500)
 
 
+async def cache_stats_api(request: Request):
+    try:
+        if not hasattr(request.app.state, "wiring"):
+            request.app.state.wiring = LangnetWiring()
+        wiring: LangnetWiring = request.app.state.wiring
+    except Exception as e:
+        return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
+    try:
+        stats = wiring.engine.cache.get_stats()
+        return ORJsonResponse(stats)
+    except Exception as e:
+        return ORJsonResponse({"error": str(e)}, status_code=500)
+
+
 async def query_api(request: Request):
     if request.method == "POST":
         form_data = await request.form()
@@ -177,6 +191,7 @@ async def query_api(request: Request):
 routes = [
     Route("/api/q", query_api, methods=["GET", "POST"]),
     Route("/api/health", health_check),
+    Route("/api/cache/stats", cache_stats_api),
 ]
 
 

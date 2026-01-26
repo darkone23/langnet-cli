@@ -240,5 +240,48 @@ def health(api_url: str, timeout: float):
     _verify_impl(api_url, http_timeout=timeout)
 
 
+@main.command(name="cache-stats")
+@click.option(
+    "--api-url",
+    default=DEFAULT_API_URL,
+    help="Base URL of the langnet API server",
+)
+def cache_stats(api_url: str):
+    """Show cache statistics including size and entry counts by language.
+
+    Displays cache database size, total entries, and breakdown by language.
+    """
+    cache_url = f"{api_url}/api/cache/stats"
+    try:
+        response = requests.get(cache_url, timeout=30)
+        response.raise_for_status()
+        stats = response.json()
+
+        table = Table(title="Cache Statistics")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
+
+        table.add_row("Total Entries", str(stats.get("total_entries", 0)))
+        table.add_row("Database Size", stats.get("total_size_human", "0.0B"))
+
+        console.print(table)
+
+        if stats.get("languages"):
+            lang_table = Table(title="By Language")
+            lang_table.add_column("Language", style="cyan")
+            lang_table.add_column("Entries", style="green")
+            lang_table.add_column("Size", style="yellow")
+            for lang_info in sorted(stats["languages"], key=lambda x: -x["entries"]):
+                lang_table.add_row(
+                    lang_info["lang"],
+                    str(lang_info["entries"]),
+                    lang_info["size_human"],
+                )
+            console.print(lang_table)
+    except requests.RequestException as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     main()

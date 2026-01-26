@@ -14,7 +14,7 @@ from langnet.cologne.core import SanskritCologneLexicon
 
 class TestGreekSpacyIntegration(unittest.TestCase):
     def setUp(self):
-        self.wiring = LangnetWiring()
+        self.wiring = LangnetWiring(cache_enabled=False)
 
     def test_greek_query_includes_spacy_response(self):
         result = self.wiring.engine.handle_query("grc", "λόγος")
@@ -42,7 +42,7 @@ class TestGreekSpacyIntegration(unittest.TestCase):
 
 class TestLatinQueryIntegration(unittest.TestCase):
     def setUp(self):
-        self.wiring = LangnetWiring()
+        self.wiring = LangnetWiring(cache_enabled=False)
 
     def test_latin_query_aggregates_sources(self):
         result = self.wiring.engine.handle_query("lat", "lupus")
