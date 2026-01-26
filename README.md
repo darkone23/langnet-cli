@@ -1,17 +1,15 @@
 # langnet-cli
 
-A unified backend API for querying classical language data (Latin, Greek, Sanskrit) from multiple lexicon sources.
+A command-line tool for querying classical language lexicons and morphology to supplement your language study practice.
 
-## Overview
+## Language Resources
 
-langnet-cli aggregates several classical language resources into a single query interface:
-
-| Source | Latin | Greek | Sanskrit |
-|--------|-------|-------|----------|
-| Diogenes (Perseus) | lexicon + morphology | lexicon + morphology | - |
-| Whitaker's Words | morphology | - | - |
-| CLTK | lexicon | - | lemmatization |
-| CDSL (Cologne) | - | - | dictionary |
+| Source | Latin | Greek | Sanskrit | What It Provides |
+|--------|-------|-------|----------|------------------|
+| Diogenes (Perseus) | ✓ | ✓ | - | Lexicon entries + morphological analysis from Lewis & Short, Liddell & Scott |
+| Whitaker's Words | ✓ | - | - | Detailed morphological parsing for Latin words |
+| CLTK | ✓ | - | ✓ | Additional lexicons, lemmatization, and linguistic features |
+| CDSL (Cologne) | - | - | ✓ | Sanskrit dictionaries: Monier-Williams, Apte, AP90 |
 
 ## Quick Start
 
@@ -19,50 +17,51 @@ langnet-cli aggregates several classical language resources into a single query 
 # Enter development environment
 devenv shell
 
-# Start API server
+# Start the API server
 uvicorn-run
 
-# CLI usage
+# Look up a Latin word
 langnet-cli query lat lupus
-langnet-cli query grc Nike
+
+# Look up a Greek word
+langnet-cli query grc λόγος
+
+# Look up a Sanskrit word
+langnet-cli query san agni
+
+# Check which backends are available
 langnet-cli verify
-langnet-cli langs
 ```
 
-## Dependencies
+## Technical Notes
 
-### Required (Manual Installation)
+### External Dependencies
+
+This tool requires two external services to be installed separately:
 
 1. **diogenes** - Perl server for Perseus lexicon data
    - Repository: https://github.com/pjheslin/diogenes
    - Run at `http://localhost:8888`
-   - Required for Greek/Latin queries
+   - Required for Greek/Latin dictionary queries
 
 2. **whitakers-words** - Latin morphological analyzer
    - Binary: `~/.local/bin/whitakers-words`
-   - Prebuilt x86_64 binaries only
+   - Prebuilt x86_64 binaries available
 
-### Managed by Tests
+### Automatic Dependencies
 
-- **CLTK models**: Installed to `~/cltk_data/`
-- **CDSL data**: Installed to `~/cdsl_data/`
-
-## CLI Reference
-
-| Command | Description |
-|---------|-------------|
-| `langnet-cli query <lang> <word>` | Query a word |
-| `langnet-cli verify` | Check backend connectivity |
-| `langnet-cli health` | Alias for verify |
-| `langnet-cli langs` | List supported languages |
-
-## Known Limitations
-
-- Diogenes leaks threads; run `just langnet-dg-reaper` periodically
-- Whitakers ARM builds require source compilation
-- CDSL integration is incomplete
+These are downloaded/installed automatically when needed:
+- **CLTK models**: Installed to `~/cltk_data/` (~500MB on first use)
+- **CDSL data**: Sanskrit dictionaries in `~/cdsl_data/`
 
 ## Further Reading
 
 - [DEVELOPER.md](DEVELOPER.md) - Development setup and code conventions
-- [TECHNICAL.md](TECHNICAL.md) - Architecture, caching, and encoding docs
+- [AGENTS.md](AGENTS.md) - AI agent instructions and opencode skills
+- [.opencode/skills/](.opencode/skills/) - Opencode development skills for contributors
+
+## Opencode Support
+
+This project includes opencode skills for AI-assisted development. See [DEVELOPER.md](DEVELOPER.md#using-opencode) for usage instructions and [`.opencode/skills/README.md`](.opencode/skills/README.md) for available skills.
+
+For LLM provider configuration, see [LLM_PROVIDER_GUIDE.md](LLM_PROVIDER_GUIDE.md).

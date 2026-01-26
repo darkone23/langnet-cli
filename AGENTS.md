@@ -1,10 +1,22 @@
 # AI Agent Instructions
 
+## Project Context
+
+langnet-cli is a classical language education tool designed to help students and scholars study Latin, Greek, and Sanskrit. The tool provides instant access to dictionary definitions, morphological parsing, and grammatical information to supplement language learning and text comprehension.
+
+**Educational Focus**: This is not just a data processing tool—it's designed for:
+- Students reading classical texts (Homer, Virgil, Sanskrit epics)
+- Researchers studying classical literature and linguistics
+- Anyone building vocabulary and understanding grammar
+
+When making changes, consider how they affect the educational user experience.
+
+## Documentation
+
 See these human-readable docs:
 
-- [README.md](README.md) - Overview and quick start
+- [README.md](README.md) - Overview, educational use cases, and quick start
 - [DEVELOPER.md](DEVELOPER.md) - Code conventions, testing, project structure
-- [TECHNICAL.md](TECHNICAL.md) - Architecture, encoding, caching, backend details
 
 ## Critical Patterns
 
@@ -32,9 +44,31 @@ See these human-readable docs:
 4. Greek UTF-8 → betacode conversion for diogenes
 5. `AttributeValueList` lacks string methods
 6. Use `dataclass` with `cattrs` for serialization
-7. **Process restart for code changes**: Server processes cache Python modules. After code changes, ask user to restart the process manager before verifying via API/curl.
+ 7. **Process restart for code changes**: Server processes cache Python modules. After code changes, ask user to restart the process manager before verifying via API/curl.
    ```bash
    # User manages process restart
    # Then verify with:
    langnet-cli cache-clear && curl -s -X POST "http://localhost:8000/api/q" -d "l=san&s=agni"
    ```
+
+## Opencode Skills
+
+This project includes opencode skills in [`.opencode/skills/`](.opencode/skills/) for common development tasks:
+
+ | Skill | Key Commands |
+|-------|--------------|
+| [testing.md](.opencode/skills/testing.md) | Run tests: `nose2 -s tests --config tests/nose2.cfg` |
+| [backend-integration.md](.opencode/skills/backend-integration.md) | Add data providers (dictionaries/morphology tools), wire to `LanguageEngine.handle_query()` |
+| [data-models.md](.opencode/skills/data-models.md) | Use `@dataclass` + `cattrs`, NOT pydantic |
+| [api-development.md](.opencode/skills/api-development.md) | Modify `src/langnet/asgi.py`, restart server after changes |
+| [cache-management.md](.opencode/skills/cache-management.md) | `langnet-cli cache-clear` to force fresh queries |
+| [debugging.md](.opencode/skills/debugging.md) | `LANGNET_LOG_LEVEL=DEBUG`, check health endpoints |
+| [cli-development.md](.opencode/skills/cli-development.md) | Add Click commands in `src/langnet/cli.py` |
+| [code-style.md](.opencode/skills/code-style.md) | Run `just ruff`, `just typecheck`, `just test` |
+
+When performing tasks, reference the relevant skill for context and patterns.
+
+## See Also
+
+- [`.opencode/skills/README.md`](.opencode/skills/README.md) - Complete skill documentation
+- [DEVELOPER.md](DEVELOPER.md) - End-user opencode usage guide

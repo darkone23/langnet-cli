@@ -110,47 +110,125 @@ The native CDSL parser has been implemented, removing the blocked `pycdsl` depen
 Typical profile for MW (~70K entries):
 ```
 batch_progress logs: ~2-3 seconds total for ALL batches
-indexing_bulk_insert: ~35 minutes for 70K entries (~35 rows/sec)
+indexing_bulk_insert: ~90 minutes for 70K entries (~35 rows/sec)
 ```
 
 **Root Cause**: DuckDB's `executemany()` with 70K+ records is I/O-bound, not CPU-bound.
 
 ##### Future Performance Optimization Opportunities
 
-1. **Batch INSERT with Transactions**
-   - Split bulk insert into smaller transactions (e.g., 10K records per COMMIT)
-   - Reduces memory pressure and enables better parallelization
+1. **Divide and Conquer: Sharded Database Merge (RECOMMENDED)**
+
+This approach splits the workload into independent shards that can be processed in parallel, then merged at the end:
+
+**Phase 1: Partition and Build Shards**
+- Partition source data by:
+  - **Alphabet range**: Assign each worker a letter range (a-e, f-j, k-o, ...)
+  - **Hash bucket**: `hash(headword) % num_workers`
+  - **Sequential chunks**: Split rows into equal-sized batches
+- Each worker:
+  1. Receives its partition of rows
+  2. Parses XML entries
+  3. Writes to its own temporary DuckDB database (`/tmp/shard_{N}.db`)
+  4. Returns when complete
+- Benefits:
+  - No shared memory bottleneck (each process owns its DB)
+  - True parallelism (no locking/coordination during writes)
+  - Failures isolated to individual shards
+
+**Phase 2: Merge Shards**
+- After all shards complete:
+  ```python
+  # Open main DB and all shard DBs
+  main_conn = duckdb.connect(str(output_db))
+  for i in range(num_shards):
+      shard_conn = duckdb.connect(f"/tmp/shard_{i}.db")
+
+      # Copy data from shard to main
+      main_conn.execute("""
+          INSERT INTO entries
+          SELECT * FROM shard_{i}.entries
+      """)
+      main_conn.execute("""
+          INSERT INTO headwords
+          SELECT * FROM shard_{i}.headwords
+      """)
+
+      # Close and cleanup shard
+      shard_conn.close()
+      Path(f"/tmp/shard_{i}.db").unlink()
+  ```
+- Or use DuckDB's `ATTACH` and `COPY`:
+  ```python
+  main_conn.execute(f"ATTACH '/tmp/shard_{i}.db' AS shard_{i}")
+  main_conn.execute(f"""
+      COPY main.entries FROM (
+          SELECT * FROM shard_{i}.entries
+      )
+  """)
+  ```
+
+**Phase 3: Optimize and Vacuum**
+- Run `VACUUM` to reclaim space after merge
+- Rebuild indexes: `PRAGMA reindex`
+- Optimize statistics: `ANALYZE`
+
+**Implementation Steps**:
+1. Create `build_shard()` function that:
+   - Accepts: `shard_id, dict_id, rows_partition, temp_dir`
+   - Parses entries for its partition
+   - Creates shard database at `{temp_dir}/shard_{shard_id}.db`
+   - Returns shard path and entry count
+
+2. Modify `CdslIndexBuilder.build()`:
+   - Partition rows by hash/alphabet/sequence
+   - Launch workers with `ProcessPoolExecutor`
+   - Collect shard paths from workers
+   - Merge all shards into final database
+
+3. Add CLI flags:
+   - `--shards N`: Number of shards (default: CPU count)
+   - `--partition-method`: hash | alphabet | sequential
+
+**Expected Performance Improvement**:
+- Current: ~90 min for MW (70K entries) - single-threaded INSERT
+- Estimated: ~10-15 min with 8 shards - parallel writes + fast merge
+- Memory: Reduced from holding all entries in RAM to shard-sized batches
 
 2. **COPY FROM for Bulk Loading**
    - DuckDB's `COPY` command is 10-100x faster than INSERT
    - Export parsed data to Parquet/CSV, then `COPY INTO table FROM file`
    - Example:
-     ```python
-     # Write batch to temp Parquet
-     duckdf = pl.DataFrame(batch_data)
-     duckdf.write_parquet(f"/tmp/batch_{i}.parquet")
-     # Bulk load
-     conn.execute(f"COPY entries FROM '/tmp/batch_{i}.parquet' (FORMAT PARQUET)")
-     ```
+      ```python
+      # Write batch to temp Parquet
+      duckdf = pl.DataFrame(batch_data)
+      duckdf.write_parquet(f"/tmp/batch_{i}.parquet")
+      # Bulk load
+      conn.execute(f"COPY entries FROM '/tmp/batch_{i}.parquet' (FORMAT PARQUET)")
+      ```
 
-3. **Concurrent INSERT with ThreadPoolExecutor**
+3. **Batch INSERT with Transactions**
+   - Split bulk insert into smaller transactions (e.g., 10K records per COMMIT)
+   - Reduces memory pressure and enables better parallelization
+
+4. **Concurrent INSERT with ThreadPoolExecutor**
    - Open multiple DuckDB connections, insert in parallel
    - Each connection handles separate batches
    - Requires managing transaction boundaries
 
-4. **Streaming XML Parser**
+5. **Streaming XML Parser**
    - Use SAX/iterparse instead of lxml.etree for memory efficiency
    - Process entries as they are read, no full DOM in memory
 
-5. **Pre-sort by lnum**
+6. **Pre-sort by lnum**
    - Sort entries by (dict_id, lnum) before INSERT
    - Improves B-tree index maintenance
 
-6. **Disk-based Temporary Tables**
+7. **Disk-based Temporary Tables**
    - `CREATE TEMP TABLE ... ON COMMIT PRESERVE ROWS` for staging
    - Reduces memory footprint for large dictionaries
 
-7. **Profile with DuckDB EXPLAIN ANALYZE**
+8. **Profile with DuckDB EXPLAIN ANALYZE**
    - Identify exact hotspots in INSERT execution plan
 
 ### Latin Lewis Dictionary Parser

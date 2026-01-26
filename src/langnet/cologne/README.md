@@ -202,12 +202,16 @@ python -m langnet.cologne.load_cdsl DICT_ID [OPTIONS]
 
 ## Performance
 
-Benchmarks on typical hardware (8-core, SSD):
+Actual build times from production runs:
 
-| Dictionary | Entries | Build Time | DB Size | Lookup Time |
-|------------|---------|------------|---------|-------------|
-| MW | ~70K | ~2 min | ~150MB | ~1ms |
-| AP90 | ~60K | ~90s | ~120MB | ~1ms |
+| Dictionary | Entries | Headwords | Batch Time | Total Build Time | DB Size | Lookup Time |
+|------------|---------|-----------|------------|------------------|---------|-------------|
+| MW | 286,537 | 573,074 | ~90 min | ~90 min | TBD | ~1ms |
+| AP90 | 32,877 | 65,754 | ~0.6s | ~8 min | TBD | ~1ms |
+
+Notes:
+- Build time dominated by DuckDB bulk insert phase
+- Batch parsing is fast; indexing into DB is the bottleneck
 
 Optimization tips:
 - Use `--batch-size 1000-2000` for large dictionaries

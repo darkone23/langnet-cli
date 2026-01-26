@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS headwords (
     key_normalized VARCHAR(200) NOT NULL,
     lnum DECIMAL(10,2) NOT NULL,
     is_primary BOOLEAN NOT NULL DEFAULT true,
+    PRIMARY KEY (dict_id, key_normalized, lnum, is_primary),
     FOREIGN KEY (dict_id, lnum) REFERENCES entries(dict_id, lnum)
 );
 

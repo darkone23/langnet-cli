@@ -1,10 +1,22 @@
 # Developer Guide
 
+## Project Mission
+
+langnet-cli is a classical language education tool designed to help students and scholars study Latin, Greek, and Sanskrit through comprehensive linguistic analysis. The tool provides instant access to dictionary definitions, morphological parsing, and grammatical information to supplement language learning and text comprehension.
+
+**Primary Users**: Classical language students, researchers, and enthusiasts
+**Primary Use Case**: Quick reference while reading classical texts
+**Key Features**: Multi-source lexicon lookup, morphological analysis, vocabulary building
+
 ## Development Environment
 
 ```sh
 # Enter development shell (loads Python venv, sets env vars)
 devenv shell
+
+# Run bash commands inside the project context:
+just devenv-bash env
+just devenv-bash 'echo wow | cat'
 
 # Start API server with auto-reload
 uvicorn-run --reload
@@ -101,13 +113,23 @@ src/langnet/
 └── logging.py               # structlog configuration
 ```
 
-## Adding a New Backend
+## Adding a New Data Provider
 
-1. Create module in `src/langnet/<backend>/`
+When adding support for new dictionaries, morphological analyzers, or lexicon sources:
+
+1. Create module in `src/langnet/<provider>/`
 2. Implement core class with query method
-3. Wire into `LanguageEngine.handle_query()` in `engine/core.py`
-4. Add tests in `tests/`
-5. Document in module README
+3. Create dataclass models for structured output (use `@dataclass` + cattrs)
+4. Wire into `LanguageEngine.handle_query()` in `engine/core.py`
+5. Add health check in `HealthChecker` (asgi.py)
+6. Add tests in `tests/test_<provider>.py`
+7. Document in module README
+
+**Considerations for Educational Use**:
+- Keep responses focused and clear for learners
+- Include relevant grammatical information (case, number, gender, etc.)
+- Provide definitions from authoritative sources
+- Handle encoding variations (UTF-8, Betacode, SLP1, Devanagari)
 
 ## Code Style Tools
 
@@ -116,3 +138,104 @@ src/langnet/
 - **Linter**: `ruff check`
 
 See [AGENTS.md](AGENTS.md) for AI agent-specific instructions.
+
+## Using Opencode
+
+### Prerequisites
+
+Before using opencode for development, configure your opencode client:
+
+1. **Consider your LLM provider guide:**
+   - Model selection strategies for different tasks
+   - Cost optimization techniques
+   - Free-tier options for experimentation
+
+2. **Choose and configure a provider:**
+   ```bash
+   # inside of opencode run:
+   /connect 
+   ```
+
+3. **Configure model routing:**
+   - Use cheaper models for code generation
+   - Use larger models for complex planning/debugging
+   - Enable prompt caching to reduce costs
+
+### Quick Start for Contributors
+
+Once your provider is configured, leverage opencode for development tasks by referencing the available skills:
+
+```bash
+# Ask opencode to run tests
+/opencode Using the testing.md skill, run the test suite and report any failures.
+
+# Add a new backend
+/opencode Following the backend-integration.md skill, create a new backend for [language].
+
+# Debug an issue
+/opencode Using the debugging.md skill, help troubleshoot why [backend] is not responding.
+
+# Create a data model
+/opencode Following the data-models.md skill, create a dataclass model for [feature].
+
+# Add a CLI command
+/opencode Using the cli-development.md skill, add a new command [name].
+```
+
+### Available Skills
+
+Located in [`.opencode/skills/`](.opencode/skills/):
+
+| Skill | Purpose |
+|-------|---------|
+| [testing.md](.opencode/skills/testing.md) | Run tests, debug test failures |
+| [backend-integration.md](.opencode/skills/backend-integration.md) | Add new language backends |
+| [data-models.md](.opencode/skills/data-models.md) | Create dataclass models with cattrs |
+| [api-development.md](.opencode/skills/api-development.md) | Starlette ASGI API development |
+| [cache-management.md](.opencode/skills/cache-management.md) | Manage DuckDB response cache |
+| [cli-development.md](.opencode/skills/cli-development.md) | Click CLI command development |
+| [debugging.md](.opencode/skills/debugging.md) | Troubleshoot common issues |
+| [code-style.md](.opencode/skills/code-style.md) | Formatting, linting, type checking |
+
+### Opencode Workflow
+
+1. **Describe your task** with reference to the relevant skill
+2. **Review the changes** opencode proposes
+3. **Run validation** (format, typecheck, tests)
+4. **Commit** when satisfied with the results
+
+### Best Practices
+
+- Always reference the specific skill when asking opencode to perform a task
+- Review code changes carefully before accepting
+- Run `just ruff`, `just typecheck`, and `just test` after opencode makes changes
+- Use `LANGNET_LOG_LEVEL=DEBUG` for detailed logging when debugging
+- Clear cache with `langnet-cli cache-clear` when testing backend changes
+- Restart the uvicorn server after code changes (modules are cached)
+
+### Example Session
+
+```
+User: /opencode Using the backend-integration.md skill, create a new backend for Gothic language
+Opencode: I'll create a new backend for Gothic following the project patterns...
+
+[Performs file creation, adds models, wires into engine]
+
+User: /opencode Using the testing.md skill, run the test suite
+Opencode: Running nose2 -s tests --config tests/nose2.cfg...
+
+[Reports test results]
+
+User: /opencode Using the debugging.md skill, help me troubleshoot why Gothic queries fail
+Opencode: Let me check the health status and enable debug logging...
+
+[Diagnoses issue, proposes fix]
+```
+
+### Developer Skills Reference
+
+- **New contributors**: Start with [code-style.md](.opencode/skills/code-style.md), [testing.md](.opencode/skills/testing.md), [debugging.md](.opencode/skills/debugging.md)
+- **Adding backends**: Read [backend-integration.md](.opencode/skills/backend-integration.md), [data-models.md](.opencode/skills/data-models.md), [api-development.md](.opencode/skills/api-development.md)
+- **Maintenance tasks**: Read [cache-management.md](.opencode/skills/cache-management.md), [debugging.md](.opencode/skills/debugging.md), [cli-development.md](.opencode/skills/cli-development.md)
+
+See [`.opencode/skills/README.md`](.opencode/skills/README.md) for complete skill documentation.
