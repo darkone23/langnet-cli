@@ -68,13 +68,15 @@ Optimize Sanskrit dictionary indexing pipeline:
 
 Build local knowledge base for derived lexicon data:
 
-- [ ] **Schema Design**:
+- [ ] **Schema Design**: language neutral grammar representation
   - `words`: term, language, headword, IPA, part_of_speech
   - `senses`: word_id, definition, citations, source_lemma
   - `morphology`: word_id, tags, stems, endings
-  - `cognates`: word_id, related_word_id, relationship_type
+  - `cognates`: word_id, related_word_id, relationship_type, related word language
+  - should keep support for language specific grammar terms
 - [ ] **Phonetics**: searching and indexing by 'sounds-like'
 - [ ] **Fuzzy-finding**: include 'near matches' on miss
+  - [ ] Properly integrate diogenes fuzzy logic (currently some dg_matched flag for direct or fuzzy matches)
 - [ ] **Precomputed Indexes**: IPA, lemmas, morphological tags for fast search
 - [ ] **Cross-lexicon Queries**: Enable etymology research ("find Latin words with Greek cognates")
 
