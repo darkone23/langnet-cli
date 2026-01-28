@@ -1,9 +1,9 @@
 import logging
 import unittest
 
-logging.getLogger("urllib3.connection").setLevel(logging.ERROR)
-
 from langnet.core import LangnetWiring
+
+logging.getLogger("urllib3.connection").setLevel(logging.ERROR)
 
 
 class TestGreekSpacyIntegration(unittest.TestCase):

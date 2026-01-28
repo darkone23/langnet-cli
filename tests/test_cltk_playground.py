@@ -2,12 +2,12 @@ import logging
 import textwrap
 import unittest
 
+from langnet.classics_toolkit.core import ClassicsToolkit
+from langnet.cologne.core import SanskritCologneLexicon
+
 cltk_logger = logging.getLogger("CLTK")
 cltk_logger.setLevel(logging.CRITICAL)
 cltk_logger.propagate = False
-
-from langnet.classics_toolkit.core import ClassicsToolkit
-from langnet.cologne.core import SanskritCologneLexicon
 
 
 class ClassicsWiring:
@@ -89,7 +89,11 @@ class TestGreekSpacyMorphology(unittest.TestCase):
 
 #     def test_basic_dictionary(self):
 #         results = wiring.cologne_dict.mw.search("राम")
-#         meaning = "राम mf(आ/)n. (prob. ‘causing rest’, and in most meanings fr. √ रम्) dark, dark-coloured, black (cf. रात्रि), AV.; TĀr. (रामः शकुनिः. a black bird, crow, KāṭhGṛ.; Viṣṇ.)"
+#         meaning = (
+#             "राम mf(आ/)n. (prob. 'causing rest', and in most meanings fr. √ रम्) "
+#             "dark, dark-coloured, black (cf. रात्रि), AV.; TĀr. (रामः शकुनिः. a black "
+#             "bird, crow, KāṭhGṛ.; Viṣṇ.)"
+#         )
 #         self.assertEqual(results[0].meaning(), meaning)
 
 

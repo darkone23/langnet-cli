@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 import unittest
 from decimal import Decimal
@@ -14,12 +15,14 @@ from langnet.cologne.core import (
 from langnet.cologne.models import (
     CdslEntry,
     SanskritDictionaryEntry,
+    SanskritTransliteration,
 )
 from langnet.cologne.parser import (
     extract_headwords,
     parse_grammatical_info,
     parse_xml_entry,
 )
+from langnet.config import config
 
 
 class TestCdslModels(unittest.TestCase):
@@ -113,8 +116,6 @@ class TestCdslCore(unittest.TestCase):
         self.db_path = Path(self.temp_dir) / "test_mwe.db"
 
     def tearDown(self):
-        import shutil
-
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_normalize_key(self):
@@ -127,8 +128,6 @@ class TestCdslCore(unittest.TestCase):
         self.assertEqual(result, "agni")
 
     def test_build_dict(self):
-        from langnet.config import config
-
         dict_dir = config.cdsl_dict_dir
         if not (dict_dir / "MWE" / "web" / "sqlite" / "mwe.sqlite").exists():
             self.skipTest("MWE source data not available")
@@ -141,8 +140,6 @@ class TestCdslCore(unittest.TestCase):
             self.assertEqual(info["entry_count"], count)
 
     def test_lookup(self):
-        from langnet.config import config
-
         dict_dir = config.cdsl_dict_dir
         if not (dict_dir / "MWE" / "web" / "sqlite" / "mwe.sqlite").exists():
             self.skipTest("MWE source data not available")
@@ -155,8 +152,6 @@ class TestCdslCore(unittest.TestCase):
             self.assertEqual(results[0].key, "a")
 
     def test_prefix_search(self):
-        from langnet.config import config
-
         dict_dir = config.cdsl_dict_dir
         if not (dict_dir / "MWE" / "web" / "sqlite" / "mwe.sqlite").exists():
             self.skipTest("MWE source data not available")
@@ -295,10 +290,6 @@ class TestGrammaticalParser(unittest.TestCase):
 
 class TestSanskritDictionaryResponse(unittest.TestCase):
     def test_transliteration_structure(self):
-        from langnet.cologne.models import (
-            SanskritTransliteration,
-        )
-
         trans = SanskritTransliteration(
             input="agni",
             iast="agni",

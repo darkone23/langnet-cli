@@ -31,8 +31,8 @@ def find_zombie_pids() -> list[int]:
             return []
         pids = []
         for line in output.split("\n"):
-            line = line.strip()
-            if line.isdigit():
+            stripped = line.strip()
+            if stripped.isdigit():
                 pids.append(int(line))
         return list(set(pids))  # dedupe
     except Exception as e:
@@ -63,7 +63,8 @@ async def run_one_shot():
     if pids:
         logger.info("zombies_found", count=len(pids), pids=pids)
         rprint(
-            f"[bold red]Zombie Killer: Found {len(pids)} perl zombie(s) with parent PIDs: {pids}[/bold red]"
+            f"[bold red]Zombie Killer: Found {len(pids)} perl zombie(s) "
+            f"with parent PIDs: {pids}[/bold red]"
         )
         for pid in pids:
             kill_process(pid)

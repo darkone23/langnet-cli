@@ -82,13 +82,10 @@ def _verify_impl(api_url: str, socket_timeout: float = 1.0, http_timeout: float 
         table.add_column("Status", style="green")
         table.add_column("Details", style="yellow")
 
-        all_healthy = True
         for name, info in components.items():
             comp_status = info.get("status", "unknown")
             message = info.get("message", "")
             status_style = "green" if comp_status == "healthy" else "red"
-            if comp_status != "healthy":
-                all_healthy = False
             table.add_row(name.title(), f"[{status_style}]{comp_status}[/]", message)
 
         console.print(table)
@@ -182,7 +179,8 @@ def query(lang: str, word: str, api_url: str, output: str):
     valid_languages = {"lat", "grc", "san", "grk"}
     if lang not in valid_languages:
         console.print(
-            f"[red]Error: Invalid language '{lang}'. Must be one of: {', '.join(sorted(valid_languages))}[/]"
+            f"[red]Error: Invalid language '{lang}'. Must be one of: "
+            f"{', '.join(sorted(valid_languages))}[/]"
         )
         sys.exit(1)
 

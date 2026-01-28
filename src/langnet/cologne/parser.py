@@ -13,7 +13,6 @@ def parse_xml_entry(raw_data: str) -> CdslEntry | None:
         return None
 
     header = root.find("h")
-    body = root.find("body")
     tail = root.find("tail")
 
     key1_elem = header.find("key1") if header is not None else None
@@ -69,7 +68,6 @@ def extract_homonyms(entry: CdslEntry) -> list[dict]:
 
     homonyms = []
     body_lower = entry.body.lower()
-    hom_positions = []
 
     pos = 0
     while True:
@@ -103,11 +101,11 @@ def extract_homonyms(entry: CdslEntry) -> list[dict]:
 
 def iter_entries(data: str, limit: int | None = None) -> Iterator[CdslEntry]:
     count = 0
-    for line in data.split("\n"):
-        line = line.strip()
-        if not line:
+    for raw_line in data.split("\n"):
+        stripped_line = raw_line.strip()
+        if not stripped_line:
             continue
-        parts = line.split("|", 2)
+        parts = stripped_line.split("|", 2)
         if len(parts) < 3:
             continue
         key, lnum_str, xml_data = parts
@@ -157,10 +155,9 @@ def parse_grammatical_info(xml_data: str) -> dict:
             if lex_attr == "mfn" or "mfn" in lex_attr:
                 genders = ["masculine", "feminine", "neuter"]
             else:
-                for part in lex_attr.split(":"):
-                    part = part.strip()
-                    if part in GENDER_MAP:
-                        genders.append(GENDER_MAP[part])
+                genders = [
+                    GENDER_MAP[p.strip()] for p in lex_attr.split(":") if p.strip() in GENDER_MAP
+                ]
             if genders:
                 result["gender"] = genders
 
@@ -184,13 +181,10 @@ def parse_grammatical_info(xml_data: str) -> dict:
         if pos_match:
             result["pos"] = pos_match.group(1)
 
-        if "mfn" in lex_text:
-            if "gender" not in result or result["gender"] != [
-                "masculine",
-                "feminine",
-                "neuter",
-            ]:
-                result["gender"] = ["masculine", "feminine", "neuter"]
+        if "mfn" in lex_text and (
+            "gender" not in result or result["gender"] != ["masculine", "feminine", "neuter"]
+        ):
+            result["gender"] = ["masculine", "feminine", "neuter"]
 
         if "comp" in lex_text.lower():
             grammar_tags["compound"] = True
@@ -222,232 +216,11 @@ def parse_grammatical_info(xml_data: str) -> dict:
                 result["etymology"] = {"type": "verb_root", "root": child.text}
                 break
 
-    if "etymology" not in result:
-        if "√" in body_text or "radical" in body_text.lower() or "root" in body_text.lower():
-            result["etymology"] = {"type": "verb_root"}
-            root_match = re.search(r"[\u221A√]\s*([a-zA-Z]+)", body_text)
-            if root_match:
-                result["etymology"]["root"] = root_match.group(1)
-
-    sanskrit_elems = body.findall("s")
-    for s_elem in sanskrit_elems:
-        if s_elem.text and s_elem.text.strip():
-            result["sanskrit_form"] = s_elem.text.strip()
-            break
-
-    ls_elems = body.findall("ls")
-    if ls_elems:
-        references = []
-        for ls in ls_elems:
-            if ls.text:
-                references.append({"source": ls.text.strip(), "type": "lexicon"})
-        if references:
-            result["references"] = references
-
-    s1_elems = body.findall("s1")
-    if s1_elems:
-        if "references" not in result:
-            result["references"] = []
-        for s1 in s1_elems:
-            if s1.text:
-                result["references"].append({"source": s1.text.strip(), "type": "cross_reference"})
-
-    if grammar_tags:
-        result["grammar_tags"] = grammar_tags
-
-    return result
-
-    body = root.find("body")
-    if body is None:
-        return result
-
-    grammar_tags: dict = {}
-
-    info_elem = body.find("info")
-    if info_elem is not None:
-        lex_attr = info_elem.get("lex", "")
-        if lex_attr:
-            genders = []
-            if lex_attr == "mfn" or "mfn" in lex_attr:
-                genders = ["masculine", "feminine", "neuter"]
-            else:
-                for part in lex_attr.split(":"):
-                    part = part.strip()
-                    if part in GENDER_MAP:
-                        genders.append(GENDER_MAP[part])
-            if genders:
-                result["gender"] = genders
-
-            if "#" in lex_attr:
-                decl_match = re.search(r"#([A-Z])", lex_attr)
-                if decl_match:
-                    grammar_tags["declension"] = decl_match.group(1)
-
-    lex_elem = body.find("lex")
-    if lex_elem is not None:
-        lex_text = ""
-        if lex_elem.text:
-            lex_text += lex_elem.text
-        for sub in lex_elem:
-            if sub.tail:
-                lex_text += sub.tail
-
-        lex_text = lex_text.strip()
-
-        pos_match = re.match(r"^([a-z\.]+)", lex_text)
-        if pos_match:
-            result["pos"] = pos_match.group(1)
-
-        if "mfn" in lex_text:
-            if "gender" not in result or result["gender"] != [
-                "masculine",
-                "feminine",
-                "neuter",
-            ]:
-                result["gender"] = ["masculine", "feminine", "neuter"]
-
-        if "comp" in lex_text.lower():
-            grammar_tags["compound"] = True
-
-        for ab in lex_elem.findall("ab"):
-            if ab.text:
-                if "abbreviations" not in grammar_tags:
-                    grammar_tags["abbreviations"] = []
-                grammar_tags["abbreviations"].append(ab.text.strip())
-
-    body_text = ""
-    if body.text:
-        body_text += body.text
-    for child in body:
-        if child.tail:
-            body_text += child.tail
-
-    if "comp" in body_text.lower():
-        grammar_tags["compound"] = True
-
-    if "comp" in body_text.lower():
-        grammar_tags["compound"] = True
-
-    for child in body:
-        if child.tag == "s" and child.text:
-            if (
-                "√" in (child.tail or "")
-                or "radical" in (child.tail or "").lower()
-                or "root" in (child.tail or "").lower()
-            ):
-                result["etymology"] = {"type": "verb_root", "root": child.text}
-                break
-
-    if "etymology" not in result:
-        if "√" in body_text or "radical" in body_text.lower() or "root" in body_text.lower():
-            result["etymology"] = {"type": "verb_root"}
-            root_match = re.search(r"[\u221A√]\s*([a-zA-Z]+)", body_text)
-            if root_match:
-                result["etymology"]["root"] = root_match.group(1)
-
-    sanskrit_elems = body.findall("s")
-    for s_elem in sanskrit_elems:
-        if s_elem.text and s_elem.text.strip():
-            result["sanskrit_form"] = s_elem.text.strip()
-            break
-
-    ls_elems = body.findall("ls")
-    if ls_elems:
-        references = []
-        for ls in ls_elems:
-            if ls.text:
-                references.append({"source": ls.text.strip(), "type": "lexicon"})
-        if references:
-            result["references"] = references
-
-    s1_elems = body.findall("s1")
-    if s1_elems:
-        if "references" not in result:
-            result["references"] = []
-        for s1 in s1_elems:
-            if s1.text:
-                result["references"].append({"source": s1.text.strip(), "type": "cross_reference"})
-
-    if grammar_tags:
-        result["grammar_tags"] = grammar_tags
-
-    return result
-
-    body = root.find("body")
-    if body is None:
-        return result
-
-    grammar_tags: dict = {}
-
-    info_elem = body.find("info")
-    if info_elem is not None:
-        lex_attr = info_elem.get("lex", "")
-        if lex_attr:
-            genders = []
-            if lex_attr == "mfn" or "mfn" in lex_attr:
-                genders = ["masculine", "feminine", "neuter"]
-            else:
-                for part in lex_attr.split(":"):
-                    part = part.strip()
-                    if part in GENDER_MAP:
-                        genders.append(GENDER_MAP[part])
-            if genders:
-                result["gender"] = genders
-
-            if "#" in lex_attr:
-                decl_match = re.search(r"#([A-Z])", lex_attr)
-                if decl_match:
-                    grammar_tags["declension"] = decl_match.group(1)
-
-    lex_elem = body.find("lex")
-    if lex_elem is not None:
-        lex_text = ""
-        if lex_elem.text:
-            lex_text += lex_elem.text
-        for sub in lex_elem:
-            if sub.tail:
-                lex_text += sub.tail
-
-        lex_text = lex_text.strip()
-
-        pos_match = re.match(r"^([a-z\.]+)", lex_text)
-        if pos_match:
-            result["pos"] = pos_match.group(1)
-
-        if "mfn" in lex_text:
-            if "gender" not in result or result["gender"] != [
-                "masculine",
-                "feminine",
-                "neuter",
-            ]:
-                result["gender"] = ["masculine", "feminine", "neuter"]
-
-        if "comp" in lex_text.lower():
-            grammar_tags["compound"] = True
-
-        for ab in lex_elem.findall("ab"):
-            if ab.text:
-                if "abbreviations" not in grammar_tags:
-                    grammar_tags["abbreviations"] = []
-                grammar_tags["abbreviations"].append(ab.text.strip())
-
-    body_text = ""
-    if body.text:
-        body_text += body.text
-    for child in body:
-        if child.tail:
-            body_text += child.tail
-
-    if "comp" in body_text.lower():
-        grammar_tags["compound"] = True
-
-    if "\u221a" in body_text or "√" in body_text:
+    if "etymology" not in result and (
+        "√" in body_text or "radical" in body_text.lower() or "root" in body_text.lower()
+    ):
         result["etymology"] = {"type": "verb_root"}
         root_match = re.search(r"[\u221A√]\s*([a-zA-Z]+)", body_text)
-        if not root_match:
-            root_match = re.search(r"\(\s*[\u221A√]\s*<s>\s*([a-zA-Z]+)\s*</s>\s*\)", body_text)
-        if not root_match:
-            root_match = re.search(r"\(\s*[\u221A√]\s*([a-zA-Z]+)\s*\)", body_text)
         if root_match:
             result["etymology"]["root"] = root_match.group(1)
 

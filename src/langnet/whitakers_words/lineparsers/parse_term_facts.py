@@ -11,7 +11,7 @@ def get_term_facts_grammar():
 class FactsTransformer(Transformer):
     def __named_token(self, args, name):
         item = args[0]
-        if type(item) == Tree:
+        if isinstance(item, Tree):
             item = item.children[0]
         token = f"{item}".strip()
         return {name: token}

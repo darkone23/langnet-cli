@@ -1,6 +1,8 @@
 import sys
 from pathlib import Path
 
+from rich.pretty import pprint
+
 from langnet.whitakers_words.lineparsers.parse_senses import SensesReducer
 from langnet.whitakers_words.lineparsers.parse_term_codes import CodesReducer
 from langnet.whitakers_words.lineparsers.parse_term_facts import FactsReducer
@@ -14,8 +16,6 @@ def facts_reducer():
     if not input_data:
         print("⚠️ No input data received! Please check your input file.")
         sys.exit(1)
-
-    from rich.pretty import pprint
 
     for line in input_data.splitlines():
         # print("Looking at line:")
@@ -31,8 +31,6 @@ def codes_reducer():
         print("⚠️ No input data received! Please check your input file.")
         sys.exit(1)
 
-    from rich.pretty import pprint
-
     for line in input_data.splitlines():
         print(line)
         result = CodesReducer.reduce(line)
@@ -46,8 +44,6 @@ def senses_reducer():
     if not input_data:
         print("⚠️ No input data received! Please check your input file.")
         sys.exit(1)
-
-    from rich.pretty import pprint
 
     for line in input_data.splitlines():
         # print("Looking at line:")

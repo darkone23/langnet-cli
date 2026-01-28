@@ -58,7 +58,7 @@ class PipelineExample:
                 print("Printing dependency tree of first sentence ...")
                 try:
                     a_tree = DependencyTree.to_tree(cltk_doc.sentences[0])  # type: ignore
-                except:
+                except Exception:
                     print(f"Dependency parsing Process not available for '{lang}'.")
                     print("")
                     continue

@@ -1,3 +1,4 @@
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,8 +14,6 @@ class TestQueryCache(unittest.TestCase):
 
     def tearDown(self):
         self.cache.close()
-        import shutil
-
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_cache_miss_returns_none(self):
