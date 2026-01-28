@@ -1,5 +1,5 @@
 import unittest
-import json
+import orjson
 import logging
 
 logging.getLogger("urllib3.connection").setLevel(logging.ERROR)

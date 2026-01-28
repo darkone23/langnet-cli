@@ -270,7 +270,8 @@ class CdslIndex:
         self._conn: duckdb.DuckDBPyConnection | None = None
 
     def __enter__(self):
-        self._conn = duckdb.connect(str(self.db_path))
+        # Use read-only by default for safety and concurrency
+        self._conn = duckdb.connect(str(self.db_path), read_only=True)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -278,12 +279,12 @@ class CdslIndex:
             self._conn.close()
             self._conn = None
 
-    def _ensure_connection(self):
+    def _ensure_connection(self, read_only: bool = True):
         if self._conn is None:
-            self._conn = duckdb.connect(str(self.db_path))
+            self._conn = duckdb.connect(str(self.db_path), read_only=read_only)
 
     def lookup(self, dict_id: str, key: str) -> list[CdslQueryResult]:
-        self._ensure_connection()
+        self._ensure_connection(read_only=True)
         normalized = to_slp1(key).lower()
 
         rows = (

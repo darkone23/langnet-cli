@@ -25,6 +25,11 @@ See these human-readable docs:
 - Wire: `LanguageEngine.handle_query()` to `/api/q` endpoint
 - Use `ORJSONResponse` for JSON serialization
 
+### CLI Usage
+- Use `devenv shell langnet-cli -- <command>` to run CLI commands
+- Example: `devenv shell langnet-cli -- query lat lupus --output json`
+- This ensures proper environment activation and avoids dependency issues
+
 ### Diogenes Chunk Processing
 1. Split response by `<hr />`
 2. Classify via `get_next_chunk()`
@@ -61,7 +66,7 @@ This project includes opencode skills in [`.opencode/skills/`](.opencode/skills/
 | [backend-integration.md](.opencode/skills/backend-integration.md) | Add data providers (dictionaries/morphology tools), wire to `LanguageEngine.handle_query()` |
 | [data-models.md](.opencode/skills/data-models.md) | Use `@dataclass` + `cattrs`, NOT pydantic |
 | [api-development.md](.opencode/skills/api-development.md) | Modify `src/langnet/asgi.py`, restart server after changes |
-| [cache-management.md](.opencode/skills/cache-management.md) | `langnet-cli cache-clear` to force fresh queries |
+| [cache-management.md](.opencode/skills/cache-management.md) | `devenv shell langnet-cli -- cache-clear` to force fresh queries |
 | [debugging.md](.opencode/skills/debugging.md) | `LANGNET_LOG_LEVEL=DEBUG`, check health endpoints |
 | [cli-development.md](.opencode/skills/cli-development.md) | Add Click commands in `src/langnet/cli.py` |
 | [code-style.md](.opencode/skills/code-style.md) | Run `just ruff`, `just typecheck`, `just test` |

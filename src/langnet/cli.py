@@ -73,7 +73,7 @@ def _verify_impl(api_url: str, socket_timeout: float = 1.0, http_timeout: float 
     try:
         response = requests.get(health_url, timeout=http_timeout)
         response.raise_for_status()
-        health_data = response.json()
+        health_data = orjson.loads(response.text)
 
         status = health_data.get("status", "unknown")
         components = health_data.get("components", {})
@@ -122,7 +122,13 @@ def _verify_impl(api_url: str, socket_timeout: float = 1.0, http_timeout: float 
     default=30.0,
     help="Timeout for HTTP health check (seconds)",
 )
-def verify(api_url: str, socket_timeout: float, timeout: float):
+@click.option(
+    "--output",
+    type=click.Choice(["json", "table"]),
+    default="table",
+    help="Output format: json for raw output, table for formatted display",
+)
+def verify(api_url: str, socket_timeout: float, timeout: float, output: str):
     """Verify backend connectivity and health status.
 
     Performs a two-stage check:
@@ -194,7 +200,7 @@ def query(lang: str, word: str, api_url: str, output: str):
             sys.stdout.write(response.text)
             sys.stdout.flush()
         else:
-            result = response.json()
+            result = orjson.loads(response.text)
             from rich.pretty import pprint
 
             pprint(result)
@@ -257,7 +263,7 @@ def cache_stats(api_url: str):
     try:
         response = requests.get(cache_url, timeout=30)
         response.raise_for_status()
-        stats = response.json()
+        stats = orjson.loads(response.text)
 
         table = Table(title="Cache Statistics")
         table.add_column("Metric", style="cyan")
@@ -457,8 +463,6 @@ def lookup(dict_id: str, key: str, output: str):
         return
 
     if output == "json":
-        import json
-
         json_output = [
             {
                 "dict_id": r.dict_id,
@@ -469,7 +473,7 @@ def lookup(dict_id: str, key: str, output: str):
             }
             for r in results
         ]
-        console.print(json.dumps(json_output, indent=2, ensure_ascii=False))
+        console.print(orjson.dumps(json_output, option=orjson.OPT_INDENT_2).decode('utf-8'))
     else:
         from rich.table import Table
 

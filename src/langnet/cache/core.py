@@ -1,9 +1,10 @@
 import duckdb
-import json
+import orjson
 import os
 from pathlib import Path
 from dataclasses import dataclass
 import structlog
+from filelock import FileLock
 
 logger = structlog.get_logger(__name__)
 
@@ -57,13 +58,16 @@ class QueryCache:
             )
             raise
 
-    def _get_conn(self, lang: str):
+    def _get_read_conn(self, lang: str):
+        return duckdb.connect(str(_get_db_path(self.cache_dir, lang)), read_only=True)
+
+    def _get_write_conn(self, lang: str):
         return duckdb.connect(str(_get_db_path(self.cache_dir, lang)))
 
     def get(self, lang: str, query: str) -> dict | None:
         if lang not in SUPPORTED_LANGS:
             return None
-        conn = self._get_conn(lang)
+        conn = self._get_read_conn(lang)
         try:
             result = conn.execute(
                 f"""
@@ -76,7 +80,7 @@ class QueryCache:
             ).fetchone()
             if result:
                 logger.debug("cache_hit", lang=lang, query=query)
-                return json.loads(result[0])
+                return orjson.loads(result[0])
             logger.debug("cache_miss", lang=lang, query=query)
             return None
         finally:
@@ -85,71 +89,88 @@ class QueryCache:
     def put(self, lang: str, query: str, result: dict) -> None:
         if lang not in SUPPORTED_LANGS:
             return
-        conn = self._get_conn(lang)
-        try:
-            result_json = json.dumps(result)
-            conn.execute(
-                f"""
-                INSERT INTO {CACHE_TABLE_NAME} (query, result)
-                VALUES (?, ?)
-            """,
-                [query, result_json],
-            )
-            logger.debug("cache_stored", lang=lang, query=query)
-        finally:
-            conn.close()
+        
+        # Use filelock for concurrent writes
+        db_path = _get_db_path(self.cache_dir, lang)
+        lock_path = db_path.with_suffix('.lock')
+        with FileLock(lock_path, timeout=10):
+            conn = self._get_write_conn(lang)
+            try:
+                result_json = orjson.dumps(result).decode('utf-8')
+                conn.execute(
+                    f"""
+                    INSERT INTO {CACHE_TABLE_NAME} (query, result)
+                    VALUES (?, ?)
+                """,
+                    [query, result_json],
+                )
+                logger.debug("cache_stored", lang=lang, query=query)
+            finally:
+                conn.close()
 
     def clear(self) -> int:
         total = 0
         for lang in SUPPORTED_LANGS:
-            conn = self._get_conn(lang)
-            try:
-                result = conn.execute(
-                    f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
-                ).fetchone()
-                count = result[0] if result else 0
-                conn.execute(f"DELETE FROM {CACHE_TABLE_NAME}")
-                total += count
-            finally:
-                conn.close()
+            # Use filelock for concurrent writes
+            db_path = _get_db_path(self.cache_dir, lang)
+            lock_path = db_path.with_suffix('.lock')
+            with FileLock(lock_path, timeout=10):
+                conn = self._get_write_conn(lang)
+                try:
+                    result = conn.execute(
+                        f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
+                    ).fetchone()
+                    count = result[0] if result else 0
+                    conn.execute(f"DELETE FROM {CACHE_TABLE_NAME}")
+                    total += count
+                finally:
+                    conn.close()
         logger.debug("cache_cleared", total=total)
         return total
 
     def clear_by_lang(self, lang: str) -> int:
         if lang not in SUPPORTED_LANGS:
             return 0
-        conn = self._get_conn(lang)
-        try:
-            count_result = conn.execute(
-                f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
-            ).fetchone()
-            count = count_result[0] if count_result else 0
-            conn.execute(f"DELETE FROM {CACHE_TABLE_NAME}")
-            logger.debug("cache_cleared_lang", lang=lang, count=count)
-            return count
-            logger.debug("cache_cleared_by_lang", lang=lang, count=count)
-            return count
-        finally:
-            conn.close()
+        
+        # Use filelock for concurrent writes
+        db_path = _get_db_path(self.cache_dir, lang)
+        lock_path = db_path.with_suffix('.lock')
+        with FileLock(lock_path, timeout=10):
+            conn = self._get_write_conn(lang)
+            try:
+                count_result = conn.execute(
+                    f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
+                ).fetchone()
+                count = count_result[0] if count_result else 0
+                conn.execute(f"DELETE FROM {CACHE_TABLE_NAME}")
+                logger.debug("cache_cleared_lang", lang=lang, count=count)
+                return count
+            finally:
+                conn.close()
 
     def clear_by_key(self, lang: str, query: str) -> int:
         if lang not in SUPPORTED_LANGS:
             return 0
-        conn = self._get_conn(lang)
-        try:
-            count_result = conn.execute(
-                f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME} WHERE query = ?",
-                [query],
-            ).fetchone()
-            count = count_result[0] if count_result else 0
-            conn.execute(
-                f"DELETE FROM {CACHE_TABLE_NAME} WHERE query = ?",
-                [query],
-            )
-            logger.debug("cache_cleared_by_key", lang=lang, query=query, count=count)
-            return count
-        finally:
-            conn.close()
+        
+        # Use filelock for concurrent writes
+        db_path = _get_db_path(self.cache_dir, lang)
+        lock_path = db_path.with_suffix('.lock')
+        with FileLock(lock_path, timeout=10):
+            conn = self._get_write_conn(lang)
+            try:
+                count_result = conn.execute(
+                    f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME} WHERE query = ?",
+                    [query],
+                ).fetchone()
+                count = count_result[0] if count_result else 0
+                conn.execute(
+                    f"DELETE FROM {CACHE_TABLE_NAME} WHERE query = ?",
+                    [query],
+                )
+                logger.debug("cache_cleared_by_key", lang=lang, query=query, count=count)
+                return count
+            finally:
+                conn.close()
 
     def get_stats(self) -> dict:
         total = 0
@@ -157,7 +178,7 @@ class QueryCache:
         lang_details = []
         for lang in SUPPORTED_LANGS:
             db_path = _get_db_path(self.cache_dir, lang)
-            conn = self._get_conn(lang)
+            conn = self._get_read_conn(lang)
             try:
                 count_result = conn.execute(
                     f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
