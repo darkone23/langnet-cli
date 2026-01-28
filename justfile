@@ -23,8 +23,8 @@ ruff-check *args:
     ruff check {{ args }}
 
 # Type check with mypy
-typecheck:
-    ty check
+typecheck *args:
+    ty check {{ args }}
 
 # Run arbitrary command in devenv shell
 devenv-bash +ARGS:
@@ -33,3 +33,7 @@ devenv-bash +ARGS:
 # Build CDSL dictionary (dict should be AP90 or MW)
 # build_cdsl dict batch_size="1000":
 #     LANGNET_LOG_LEVEL=INFO python3 -m langnet.cologne.load_cdsl --batch-size {{ batch_size }} --force --workers 4 {{ dict }}
+
+# project level automation tool
+autobot *args:
+    python3 .justscripts/autobot.py {{ args }}

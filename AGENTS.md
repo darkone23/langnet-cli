@@ -17,6 +17,7 @@ See these human-readable docs:
 
 - [README.md](README.md) - Overview, educational use cases, and quick start
 - [DEVELOPER.md](DEVELOPER.md) - Code conventions, testing, project structure
+- [`.opencode/skills/project-tools.md`](.opencode/skills/project-tools.md) - Project automation and autobot tool usage
 
 ## Critical Patterns
 
