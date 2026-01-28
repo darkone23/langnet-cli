@@ -1,8 +1,8 @@
-import unittest
 import tempfile
-import os
+import unittest
 from pathlib import Path
-from langnet.cache.core import QueryCache, NoOpCache, create_cache, get_cache_path
+
+from langnet.cache.core import NoOpCache, QueryCache, create_cache, get_cache_path
 
 
 class TestQueryCache(unittest.TestCase):

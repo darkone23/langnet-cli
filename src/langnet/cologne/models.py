@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Optional
 
 
 @dataclass
@@ -8,12 +7,12 @@ class CdslEntry:
     dict_id: str
     key: str
     key_normalized: str
-    key2: Optional[str] = None
-    key2_normalized: Optional[str] = None
+    key2: str | None = None
+    key2_normalized: str | None = None
     lnum: Decimal = field(default_factory=Decimal)
     data: str = ""
-    body: Optional[str] = None
-    page_ref: Optional[str] = None
+    body: str | None = None
+    page_ref: str | None = None
 
 
 @dataclass
@@ -30,15 +29,15 @@ class CdslHomonym:
 class DictMetadata:
     dict_id: str
     title: str
-    short_title: Optional[str] = None
-    author: Optional[str] = None
-    publisher: Optional[str] = None
-    pub_place: Optional[str] = None
-    year: Optional[int] = None
-    description: Optional[str] = None
-    source_url: Optional[str] = None
-    encoding_date: Optional[str] = None
-    license: Optional[str] = None
+    short_title: str | None = None
+    author: str | None = None
+    publisher: str | None = None
+    pub_place: str | None = None
+    year: int | None = None
+    description: str | None = None
+    source_url: str | None = None
+    encoding_date: str | None = None
+    license: str | None = None
 
 
 @dataclass
@@ -47,22 +46,22 @@ class CdslQueryResult:
     key: str
     lnum: str
     data: str
-    body: Optional[str] = None
-    page_ref: Optional[str] = None
+    body: str | None = None
+    page_ref: str | None = None
 
 
 @dataclass
 class SanskritDictionaryEntry:
     id: str
     meaning: str
-    subid: Optional[str] = None
-    pos: Optional[str] = None
-    gender: Optional[list[str]] = None
-    sanskrit_form: Optional[str] = None
-    etymology: Optional[dict] = None
-    grammar_tags: Optional[dict] = None
-    references: Optional[list[dict]] = None
-    page_ref: Optional[str] = None
+    subid: str | None = None
+    pos: str | None = None
+    gender: list[str] | None = None
+    sanskrit_form: str | None = None
+    etymology: dict | None = None
+    grammar_tags: dict | None = None
+    references: list[dict] | None = None
+    page_ref: str | None = None
 
 
 @dataclass

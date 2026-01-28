@@ -1,9 +1,9 @@
 import sys
 from pathlib import Path
 
-from langnet.whitakers_words.lineparsers.parse_term_facts import FactsReducer
-from langnet.whitakers_words.lineparsers.parse_term_codes import CodesReducer
 from langnet.whitakers_words.lineparsers.parse_senses import SensesReducer
+from langnet.whitakers_words.lineparsers.parse_term_codes import CodesReducer
+from langnet.whitakers_words.lineparsers.parse_term_facts import FactsReducer
 
 test_data = Path() / "tests/data/whitakers-lines"
 

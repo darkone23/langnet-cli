@@ -1,6 +1,5 @@
-import unittest
-import time
 import logging
+import unittest
 
 from langnet.classics_toolkit.core import ClassicsToolkit, LatinQueryResult
 

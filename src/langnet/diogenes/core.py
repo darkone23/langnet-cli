@@ -1,18 +1,14 @@
-import requests
 import re
-from string import digits
-
-from bs4 import BeautifulSoup
-
-import betacode.conv
-
 from collections import defaultdict
-
 from dataclasses import dataclass, field
+from string import digits
 from typing import Any
 
+import betacode.conv
 import cattrs
+import requests
 import structlog
+from bs4 import BeautifulSoup
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
@@ -163,9 +159,7 @@ class DiogenesScraper:
         try:
             values = list(map(int, event_id.split(":")))  # Convert to integer list
         except ValueError as e:
-            logger.error(
-                "find_nd_coordinate_parse_failed", event_id=event_id, error=str(e)
-            )
+            logger.error("find_nd_coordinate_parse_failed", event_id=event_id, error=str(e))
             raise
 
         unique_values = list(dict.fromkeys(values))  # Determine hierarchy
@@ -181,9 +175,7 @@ class DiogenesScraper:
             stack = stack[:dimension_index]
 
             # Get the count of how many times this exact hierarchy exists
-            count = level_counters[
-                tuple(stack)
-            ]  # Count occurrences of parent structure
+            count = level_counters[tuple(stack)]  # Count occurrences of parent structure
             level_counters[tuple(stack)] += 1  # Increment count for this structure
 
             # Append new index to the coordinate
@@ -215,9 +207,7 @@ class DiogenesScraper:
         for tag in maybe_morph_els:
             perseus_morph = tag.get_text()
             parts = perseus_morph.split(":")
-            assert len(parts) == 2, (
-                f"Perseus morphology should split stem from tags: [{parts}]"
-            )
+            assert len(parts) == 2, f"Perseus morphology should split stem from tags: [{parts}]"
             [stems, tag_parts] = parts
 
             cleaned_defs = []
@@ -234,7 +224,7 @@ class DiogenesScraper:
             tag_parts = re.sub(r"[()]+", "", tag_parts)
             for t in tag_parts.replace("/", " ").split():
                 pos = t.strip()
-                if not pos in cleaned_tags:
+                if pos not in cleaned_tags:
                     cleaned_tags.append(pos)
 
             morph = dict(
@@ -242,7 +232,7 @@ class DiogenesScraper:
                 tags=cleaned_tags,
             )
 
-            if len(cleaned_defs):
+            if cleaned_defs:
                 morph["defs"] = cleaned_defs
 
             morphs.append(morph)
@@ -327,7 +317,7 @@ class DiogenesScraper:
                 break
             for b in soup.select("b"):
                 sense_txt = b.get_text().strip().rstrip(",").rstrip(":")
-                if "(" in sense_txt and not ")" in sense_txt:
+                if "(" in sense_txt and ")" not in sense_txt:
                     sense_txt += ")"
                 senses.append(sense_txt)
             for sense in senses:
@@ -374,18 +364,10 @@ class DiogenesScraper:
             morph_dict = self.handle_morphology(soup)
             chunk["morphology"] = cattrs.structure(morph_dict, PerseusMorphology)
 
-        elif chunk_type == DiogenesChunkType.DiogenesMatchingReference:
-            refs_dict = self.handle_references(soup)
-            blocks = [
-                b
-                if isinstance(b, DiogenesDefinitionBlock)
-                else cattrs.structure(b, DiogenesDefinitionBlock)
-                for b in refs_dict.get("blocks", [])
-            ]
-            chunk["definitions"] = DiogenesDefinitionEntry(
-                term=refs_dict.get("term", ""), blocks=blocks
-            )
-        elif chunk_type == DiogenesChunkType.DiogenesFuzzyReference:
+        elif (
+            chunk_type == DiogenesChunkType.DiogenesMatchingReference
+            or chunk_type == DiogenesChunkType.DiogenesFuzzyReference
+        ):
             refs_dict = self.handle_references(soup)
             blocks = [
                 b
@@ -470,9 +452,7 @@ class DiogenesScraper:
         logger.debug("chunk_classified", chunk_type=chunk.get("chunk_type"))
         return chunk
 
-    def parse_word(
-        self, word, language: str = DiogenesLanguages.LATIN
-    ) -> DiogenesResultT:
+    def parse_word(self, word, language: str = DiogenesLanguages.LATIN) -> DiogenesResultT:
         assert language in DiogenesLanguages.parse_langs, (
             f"Cannot parse unsupported diogenes language: [{language}]"
         )
@@ -497,9 +477,7 @@ class DiogenesScraper:
                 self.process_chunk(result, chunk)
             result["dg_parsed"] = True
         else:
-            logger.warning(
-                "diogenes_request_failed", status_code=response.status_code, word=word
-            )
+            logger.warning("diogenes_request_failed", status_code=response.status_code, word=word)
 
         logger.debug(
             "parse_word_completed",

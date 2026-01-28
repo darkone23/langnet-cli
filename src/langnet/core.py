@@ -1,13 +1,12 @@
-from langnet.diogenes.core import DiogenesScraper
-from langnet.whitakers_words.core import WhitakersWords
+import structlog
+
+from langnet.cache.core import create_cache
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
-from langnet.cache.core import create_cache
 from langnet.config import config
-
+from langnet.diogenes.core import DiogenesScraper
 from langnet.engine.core import LanguageEngine
-
-import structlog
+from langnet.whitakers_words.core import WhitakersWords
 
 logger = structlog.get_logger(__name__)
 

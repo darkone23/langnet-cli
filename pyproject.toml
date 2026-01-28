@@ -20,11 +20,11 @@ html5lib = "^1.1"
 betacode = "^1.0"
 pygtrie = "^2.5.0"
 lark = "^1.2.2"
-    rich = "^13.9.4"
-    click = "^8.1.7"
-    cattrs = "^24.1.2"
-    indic-transliteration = "^2.3.69"
-    lxml = "^5.2.2"
+rich = "^13.9.4"
+click = "^8.1.7"
+cattrs = "^24.1.2"
+indic-transliteration = "^2.3.69"
+lxml = "^5.2.2"
 
 # aisuite = "^0.1.13"
 # vertexai = "^1.71.1"
@@ -45,8 +45,8 @@ filelock = "^3.16.1"
 nose2 = "^0.15.1"
 # expecttest = "^0.3.0" # not currently supporting utf-8 https://github.com/pytorch/expecttest/issues/27
 
-[tool.poe.env]
-PYTHONPATH = "${POE_ROOT}/src:${PYTHONPATH}"
+# [tool.poe.env]
+# PYTHONPATH = "${POE_ROOT}/src:${PYTHONPATH}"
 # VAR2 = "BAR BAR BLACK ${FARM_ANIMAL}"
 # EXPECTTEST_ACCEPT = "1"
 
@@ -65,3 +65,28 @@ langnet-dg-reaper = "langnet.diogenes.cli_util:cli"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+ignore = [
+    "E402" # dynamic import (used for health checks)
+]
+
+[tool.ruff.lint]
+select = [
+    "F",    # Pyflakes
+    "E",    # Pycodestyle
+    "C90",  # McCabe complexity
+    "I",    # Isort
+    "UP",   # Pyupgrade (Keep your 3.11 code modern!)
+    "PL",   # Pylint
+    "SIM",  # Simplify
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-nested-blocks = 3 
+max-args = 5

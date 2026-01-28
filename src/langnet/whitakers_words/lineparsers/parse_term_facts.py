@@ -1,5 +1,5 @@
-import sys
 from pathlib import Path
+
 from lark import Lark, Transformer, Tree
 
 
@@ -56,9 +56,7 @@ class FactsTransformer(Transformer):
         term = f"{args[0]}"
         parts = term.split(".")
         if len(parts) > 1:
-            return dict(
-                term=term, term_analysis=dict(stem=parts[0], ending=".".join(parts[1:]))
-            )
+            return dict(term=term, term_analysis=dict(stem=parts[0], ending=".".join(parts[1:])))
         else:
             return dict(term=term)
 

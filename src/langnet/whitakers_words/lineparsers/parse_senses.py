@@ -1,6 +1,6 @@
-import sys
 import re
 from pathlib import Path
+
 from lark import Lark, Transformer
 
 
@@ -14,9 +14,7 @@ class SenseTransformer(Transformer):
         return args[0]
 
     def extract_parentheses_text(self, text):
-        text = (
-            text.replace("(", "{").replace(")", "}").replace("[", "(").replace("]", ")")
-        )
+        text = text.replace("(", "{").replace(")", "}").replace("[", "(").replace("]", ")")
         extracted = " ".join(
             re.findall(r"\((.*?)\)", text, re.DOTALL)
         )  # Extract text inside parentheses, including newlines

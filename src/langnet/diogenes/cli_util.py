@@ -4,10 +4,10 @@ import asyncio
 import os
 
 import click
+import structlog
 from rich import print as rprint
 from rich.panel import Panel
 from sh import bash
-import structlog
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
@@ -23,8 +23,7 @@ def find_zombie_pids() -> list[int]:
     Uses a more robust ps format that works across systems.
     """
     cmd = (
-        "ps -eo ppid,stat,cmd --no-headers 2>/dev/null | "
-        "awk '$2 ~ /^Z/ && $3 ~ /perl/ {print $1}'"
+        "ps -eo ppid,stat,cmd --no-headers 2>/dev/null | awk '$2 ~ /^Z/ && $3 ~ /perl/ {print $1}'"
     )
     try:
         output = bash("-c", cmd, _encoding="utf-8").strip()  # type: ignore[call-overload]

@@ -27,12 +27,8 @@ logger = structlog.get_logger()
 
 @click.command()
 @click.argument("dict_id", type=str)
-@click.option(
-    "--limit", default=None, type=int, help="Limit to N entries (for testing)"
-)
-@click.option(
-    "--force", is_flag=True, default=False, help="Overwrite existing database"
-)
+@click.option("--limit", default=None, type=int, help="Limit to N entries (for testing)")
+@click.option("--force", is_flag=True, default=False, help="Overwrite existing database")
 @click.option(
     "--batch-size",
     default=None,
@@ -75,9 +71,7 @@ def load_cdsl(
 
     if output_db.exists() and not force:
         logger.warning("db_exists_use_force", dict_id=dict_id, path=str(output_db))
-        raise click.ClickException(
-            f"Database exists: {output_db}. Use --force to overwrite."
-        )
+        raise click.ClickException(f"Database exists: {output_db}. Use --force to overwrite.")
 
     try:
         count = CdslIndexBuilder.build(

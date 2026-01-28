@@ -36,6 +36,10 @@ Following the backend-integration.md skill, create a new backend for Old Norse.
 Using the debugging.md skill, help me troubleshoot why the Diogenes backend is not responding.
 ```
 
+### Tool Discovery
+
+For available development commands, use `just -l` to list all available just commands and their descriptions.
+
 ## Quick Reference
 
 For new contributors:

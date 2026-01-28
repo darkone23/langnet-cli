@@ -1,26 +1,21 @@
-import os
-import structlog
-import sqlite3
-from pathlib import Path
-from decimal import Decimal
-from typing import Optional, cast, Any
-from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
+import sqlite3
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
+from typing import Any, cast
 
 import duckdb
-from indic_transliteration import sanscript
+import structlog
 from indic_transliteration.detect import detect
-from indic_transliteration.sanscript import transliterate, SLP1, DEVANAGARI
+from indic_transliteration.sanscript import DEVANAGARI, SLP1, transliterate
 
 from .models import (
     CdslQueryResult,
-    SanskritDictionaryLookup,
     SanskritDictionaryEntry,
     SanskritTransliteration,
-    SanskritDictionaryResponse,
 )
-from .parser import parse_xml_entry, extract_headwords, parse_grammatical_info
+from .parser import parse_grammatical_info, parse_xml_entry
 
 logger = structlog.get_logger(__name__)
 
@@ -56,8 +51,7 @@ def normalize_key(key: str) -> str:
 
 
 def to_slp1(text: str) -> str:
-    from indic_transliteration.detect import detect
-    from indic_transliteration.sanscript import transliterate, SLP1
+    from indic_transliteration.sanscript import SLP1, transliterate
 
     src = detect(text)
     return transliterate(text, src, SLP1).lower()
@@ -90,9 +84,7 @@ def parse_batch(args) -> tuple[list, list]:
 
             if entry.key2:
                 hw_norm2 = entry.key2_normalized or normalize_key(entry.key2)
-                headwords_data.append(
-                    (dict_id, entry.key2, hw_norm2, str(lnum_str), False)
-                )
+                headwords_data.append((dict_id, entry.key2, hw_norm2, str(lnum_str), False))
 
     return entries_data, headwords_data
 
@@ -103,9 +95,9 @@ class CdslIndexBuilder:
         dict_dir: Path,
         output_db: Path,
         dict_id: str,
-        limit: Optional[int] = None,
-        batch_size: Optional[int] = None,
-        num_workers: Optional[int] = None,
+        limit: int | None = None,
+        batch_size: int | None = None,
+        num_workers: int | None = None,
     ) -> int:
         sqlite_path = dict_dir / "web" / "sqlite" / f"{dict_id.lower()}.sqlite"
         if not sqlite_path.exists():
@@ -141,9 +133,7 @@ class CdslIndexBuilder:
             if batch_size:
                 actual_batch_size = batch_size
             else:
-                actual_batch_size = max(
-                    100, len(all_rows) // (num_workers or mp.cpu_count())
-                )
+                actual_batch_size = max(100, len(all_rows) // (num_workers or mp.cpu_count()))
 
             batches = [
                 all_rows[i : i + actual_batch_size]
@@ -237,9 +227,9 @@ class CdslIndexBuilder:
     def build_all(
         dict_root: Path,
         output_dir: Path,
-        limit: Optional[int] = None,
+        limit: int | None = None,
         skip_english: bool = True,
-        num_workers: Optional[int] = None,
+        num_workers: int | None = None,
     ) -> dict[str, int]:
         output_dir.mkdir(parents=True, exist_ok=True)
         results = {}
@@ -315,9 +305,7 @@ class CdslIndex:
             )
         return results
 
-    def prefix_search(
-        self, dict_id: str, prefix: str, limit: int = 20
-    ) -> list[tuple[str, str]]:
+    def prefix_search(self, dict_id: str, prefix: str, limit: int = 20) -> list[tuple[str, str]]:
         self._ensure_connection()
         normalized_prefix = to_slp1(prefix).lower()
 
@@ -387,8 +375,8 @@ def build_dict(
     dict_dir: Path,
     output_db: Path,
     dict_id: str,
-    limit: Optional[int] = None,
-    num_workers: Optional[int] = None,
+    limit: int | None = None,
+    num_workers: int | None = None,
 ) -> int:
     return CdslIndexBuilder.build(dict_dir, output_db, dict_id, limit, num_workers)
 
@@ -396,13 +384,11 @@ def build_dict(
 def batch_build(
     dict_root: Path,
     output_dir: Path,
-    limit: Optional[int] = None,
+    limit: int | None = None,
     skip_english: bool = True,
-    num_workers: Optional[int] = None,
+    num_workers: int | None = None,
 ) -> dict[str, int]:
-    return CdslIndexBuilder.build_all(
-        dict_root, output_dir, limit, skip_english, num_workers
-    )
+    return CdslIndexBuilder.build_all(dict_root, output_dir, limit, skip_english, num_workers)
 
 
 def get_default_db_dir() -> Path:
@@ -430,9 +416,7 @@ class SanskritCologneLexicon:
             db_path = self._db_dir / f"{dict_id.lower()}.db"
             if not db_path.exists():
                 raise FileNotFoundError(f"Dictionary not indexed: {dict_id}")
-            self._connections[dict_id_upper] = duckdb.connect(
-                str(db_path), read_only=True
-            )
+            self._connections[dict_id_upper] = duckdb.connect(str(db_path), read_only=True)
         return self._connections[dict_id_upper]
 
     def _lookup_dict(self, dict_id: str, slp1_key: str) -> list[dict]:

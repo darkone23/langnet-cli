@@ -1,6 +1,7 @@
-import unittest
-import time
 import logging
+import unittest
+
+import cattrs
 
 from langnet.whitakers_words.core import (
     WhitakersWords,
@@ -8,7 +9,6 @@ from langnet.whitakers_words.core import (
     WhitakersWordsT,
     get_whitakers_proc,
 )
-import cattrs
 
 logging.getLogger("urllib3.connection").setLevel(logging.ERROR)
 

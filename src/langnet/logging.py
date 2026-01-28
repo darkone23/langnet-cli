@@ -21,6 +21,7 @@ Environment variables:
 
 import logging
 import os
+
 import structlog
 
 _log_level = logging.WARNING

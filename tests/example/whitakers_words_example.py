@@ -1,5 +1,6 @@
-from langnet.whitakers_words.core import WhitakersWords
 from rich.pretty import pprint
+
+from langnet.whitakers_words.core import WhitakersWords
 
 
 def main():

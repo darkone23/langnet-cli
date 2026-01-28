@@ -1,15 +1,9 @@
-import unittest
-import orjson
 import logging
+import unittest
 
 logging.getLogger("urllib3.connection").setLevel(logging.ERROR)
 
 from langnet.core import LangnetWiring
-from langnet.engine.core import LanguageEngine
-from langnet.diogenes.core import DiogenesScraper, DiogenesLanguages
-from langnet.whitakers_words.core import WhitakersWords
-from langnet.classics_toolkit.core import ClassicsToolkit
-from langnet.cologne.core import SanskritCologneLexicon
 
 
 class TestGreekSpacyIntegration(unittest.TestCase):

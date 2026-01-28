@@ -1,5 +1,5 @@
 from indic_transliteration.detect import detect
-from indic_transliteration.sanscript import transliterate, SLP1
+from indic_transliteration.sanscript import SLP1, transliterate
 
 
 class CdslTranscoder:

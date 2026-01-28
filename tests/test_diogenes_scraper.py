@@ -1,13 +1,12 @@
-import unittest
-import time
 import logging
+import unittest
 
 from langnet.diogenes.core import (
-    DiogenesScraper,
     DiogenesChunkType,
-    DiogenesLanguages,
-    PerseusMorphology,
     DiogenesDefinitionEntry,
+    DiogenesLanguages,
+    DiogenesScraper,
+    PerseusMorphology,
 )
 
 logging.getLogger("urllib3.connection").setLevel(logging.ERROR)
@@ -42,9 +41,7 @@ class TestDiogenesScraper(unittest.TestCase):
             wiring.scraper.parse_word("test", "invalid_lang")
 
     def test_latin_word_no_match_header(self):
-        result = wiring.scraper.parse_word(
-            "xyznonexistentword123", DiogenesLanguages.LATIN
-        )
+        result = wiring.scraper.parse_word("xyznonexistentword123", DiogenesLanguages.LATIN)
         chunk_types = [chunk.chunk_type for chunk in result.chunks]
         self.assertIn(DiogenesChunkType.NoMatchFoundHeader, chunk_types)
 
@@ -103,18 +100,14 @@ class TestDiogenesScraper(unittest.TestCase):
         self.assertTrue(result.dg_parsed)
         self.assertEqual(len(result.chunks), 2)
         header = [
-            c
-            for c in result.chunks
-            if c.chunk_type == DiogenesChunkType.PerseusAnalysisHeader
+            c for c in result.chunks if c.chunk_type == DiogenesChunkType.PerseusAnalysisHeader
         ][0]
         self.assertEqual(header.logeion, "https://logeion.uchicago.edu/lupus")  # type: ignore
         self.assertIsInstance(header.morphology, PerseusMorphology)  # type: ignore
         self.assertEqual(len(header.morphology.morphs), 1)  # type: ignore
         self.assertEqual(header.morphology.morphs[0].stem, ["lupus"])  # type: ignore
         match = [
-            c
-            for c in result.chunks
-            if c.chunk_type == DiogenesChunkType.DiogenesMatchingReference
+            c for c in result.chunks if c.chunk_type == DiogenesChunkType.DiogenesMatchingReference
         ][0]  # type: ignore
         self.assertEqual(match.reference_id, "42690320")  # type: ignore
         self.assertEqual(match.definitions.term, "lŭpus")  # type: ignore

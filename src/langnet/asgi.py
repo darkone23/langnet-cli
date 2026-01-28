@@ -1,11 +1,12 @@
 from typing import Any
-from starlette.applications import Starlette
-from starlette.requests import Request
-from starlette.routing import Route
-from starlette.responses import Response
+
 import orjson
 import requests
 import structlog
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import Response
+from starlette.routing import Route
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
@@ -53,11 +54,11 @@ class HealthChecker:
     @staticmethod
     def cltk() -> dict:
         try:
-            import cltk.data.fetch as cltk_fetch
-            import cltk.lexicon.lat as cltk_latlex
             import cltk.alphabet.lat as cltk_latchars
-            import cltk.phonology.lat.transcription as cltk_latscript
+            import cltk.data.fetch as cltk_fetch
             import cltk.lemmatize.lat as cltk_latlem
+            import cltk.lexicon.lat as cltk_latlex
+            import cltk.phonology.lat.transcription as cltk_latscript
             from cltk.languages.utils import get_lang
 
             return {"status": "healthy"}
@@ -118,9 +119,7 @@ async def health_check(request: Request):
             "cdsl": HealthChecker.cdsl(),
         }
         overall = (
-            "healthy"
-            if all(h.get("status") == "healthy" for h in health.values())
-            else "degraded"
+            "healthy" if all(h.get("status") == "healthy" for h in health.values()) else "degraded"
         )
         return ORJsonResponse({"status": overall, "components": health})
     except Exception as e:

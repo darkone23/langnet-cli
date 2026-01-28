@@ -19,19 +19,18 @@ For detailed help on a command:
     langnet <command> --help
 """
 
-import click
-import orjson
-import requests
 import socket
-import os
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
+
+import click
+import orjson
+import requests
 from rich.console import Console
 from rich.table import Table
 
 from langnet.logging import setup_logging
-
 
 console = Console()
 DEFAULT_API_URL = "http://localhost:8000"
@@ -45,7 +44,7 @@ def is_port_open(host: str, port: int, timeout: float = 1.0) -> bool:
         sock.connect((host, port))
         sock.close()
         return True
-    except (socket.timeout, ConnectionRefusedError, OSError):
+    except (TimeoutError, ConnectionRefusedError, OSError):
         return False
 
 
@@ -292,9 +291,7 @@ def cache_stats(api_url: str):
 
 
 @main.command(name="cache-clear")
-@click.option(
-    "--lang", default=None, type=str, help="Specific language to clear (lat, grc, san)"
-)
+@click.option("--lang", default=None, type=str, help="Specific language to clear (lat, grc, san)")
 def cache_clear(lang: str | None):
     """Clear the response cache.
 
@@ -343,15 +340,9 @@ def cdsl():
 @cdsl.command(name="build")
 @click.argument("dict_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("output_db", type=click.Path(file_okay=True, dir_okay=False))
-@click.option(
-    "--dict-id", default=None, help="Explicit dict ID (from dir name if not provided)"
-)
-@click.option(
-    "--limit", default=None, type=int, help="Limit to N entries (for testing)"
-)
-@click.option(
-    "--force", is_flag=True, default=False, help="Overwrite existing database"
-)
+@click.option("--dict-id", default=None, help="Explicit dict ID (from dir name if not provided)")
+@click.option("--limit", default=None, type=int, help="Limit to N entries (for testing)")
+@click.option("--force", is_flag=True, default=False, help="Overwrite existing database")
 @click.option(
     "--batch-size",
     default=None,
@@ -406,15 +397,9 @@ def build(
 
 
 @cdsl.command(name="build-all")
-@click.argument(
-    "dict_root", type=click.Path(exists=True, file_okay=False), default=None
-)
-@click.argument(
-    "output_dir", type=click.Path(file_okay=False, dir_okay=True), default=None
-)
-@click.option(
-    "--limit", default=None, type=int, help="Limit each dictionary to N entries"
-)
+@click.argument("dict_root", type=click.Path(exists=True, file_okay=False), default=None)
+@click.argument("output_dir", type=click.Path(file_okay=False, dir_okay=True), default=None)
+@click.option("--limit", default=None, type=int, help="Limit each dictionary to N entries")
 def build_all(dict_root: str | None, output_dir: str | None, limit: int | None):
     """Build all dictionaries in a directory.
 
@@ -446,8 +431,8 @@ def lookup(dict_id: str, key: str, output: str):
     Example: langnet-cli cdsl lookup mw "अग्नि"
              langnet-cli cdsl lookup mw agni
     """
+
     from langnet.cologne.core import CdslIndex
-    from rich.pretty import pprint
 
     db_path = get_cdsl_db_dir() / f"{dict_id.lower()}.db"
     if not db_path.exists():
@@ -473,7 +458,7 @@ def lookup(dict_id: str, key: str, output: str):
             }
             for r in results
         ]
-        console.print(orjson.dumps(json_output, option=orjson.OPT_INDENT_2).decode('utf-8'))
+        console.print(orjson.dumps(json_output, option=orjson.OPT_INDENT_2).decode("utf-8"))
     else:
         from rich.table import Table
 
@@ -483,9 +468,7 @@ def lookup(dict_id: str, key: str, output: str):
         table.add_column("Body", style="green")
         table.add_column("Page", style="yellow")
         for r in results:
-            body_preview = (
-                (r.body[:100] + "...") if r.body and len(r.body) > 100 else r.body or ""
-            )
+            body_preview = (r.body[:100] + "...") if r.body and len(r.body) > 100 else r.body or ""
             table.add_row(r.key, str(r.lnum), body_preview, r.page_ref or "")
         console.print(table)
 

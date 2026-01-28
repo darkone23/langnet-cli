@@ -1,5 +1,5 @@
-import sys
 from pathlib import Path
+
 from lark import Lark, Transformer
 from lark.visitors import Discard
 

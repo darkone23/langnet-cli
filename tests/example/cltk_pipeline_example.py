@@ -2,11 +2,10 @@ import time
 
 # from packaging import version
 # import contextlib
-
 from cltk import NLP
 from cltk.dependency.tree import DependencyTree
 from cltk.languages.example_texts import get_example_text
-from cltk.languages.pipelines import GreekPipeline, LatinPipeline, SanskritPipeline
+from cltk.languages.pipelines import GreekPipeline, SanskritPipeline
 
 
 class PipelineExample:
@@ -44,9 +43,7 @@ class PipelineExample:
         }
         for lang, pipeline in iso_to_pipeline.items():
             start = time.monotonic()
-            print(
-                f"{pipeline.language.name} ('{pipeline.language.iso_639_3_code}') ..."
-            )
+            print(f"{pipeline.language.name} ('{pipeline.language.iso_639_3_code}') ...")
             text = get_example_text(lang)
             print(f"Getting text took {time.monotonic() - start}s")
             start = time.monotonic()

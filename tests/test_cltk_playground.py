@@ -1,14 +1,13 @@
-import unittest
-import time
-import textwrap
 import logging
+import textwrap
+import unittest
 
 cltk_logger = logging.getLogger("CLTK")
 cltk_logger.setLevel(logging.CRITICAL)
 cltk_logger.propagate = False
 
-from langnet.cologne.core import SanskritCologneLexicon
 from langnet.classics_toolkit.core import ClassicsToolkit
+from langnet.cologne.core import SanskritCologneLexicon
 
 
 class ClassicsWiring:
@@ -17,9 +16,7 @@ class ClassicsWiring:
         self.cltk = ClassicsToolkit()
 
 
-wiring = (
-    ClassicsWiring()
-)  # this will prompt downloading language data from universities
+wiring = ClassicsWiring()  # this will prompt downloading language data from universities
 
 
 class TestLatinExamples(unittest.TestCase):

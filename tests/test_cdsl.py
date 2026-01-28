@@ -5,24 +5,20 @@ from decimal import Decimal
 from pathlib import Path
 from typing import cast
 
-from langnet.cologne.models import (
-    CdslEntry,
-    DictMetadata,
-    CdslQueryResult,
-    SanskritDictionaryEntry,
-)
-from langnet.cologne.parser import (
-    parse_xml_entry,
-    extract_headwords,
-    extract_homonyms,
-    parse_grammatical_info,
-)
 from langnet.cologne.core import (
     CdslIndex,
-    CdslIndexBuilder,
     build_dict,
     normalize_key,
     to_slp1,
+)
+from langnet.cologne.models import (
+    CdslEntry,
+    SanskritDictionaryEntry,
+)
+from langnet.cologne.parser import (
+    extract_headwords,
+    parse_grammatical_info,
+    parse_xml_entry,
 )
 
 
@@ -174,9 +170,7 @@ class TestCdslCore(unittest.TestCase):
                 self.assertTrue(key.lower().startswith("ab"))
 
     def test_list_dicts(self):
-        dict_dir = Path(
-            os.getenv("CDSL_DICT_DIR", str(Path.home() / "cdsl_data" / "dict"))
-        )
+        dict_dir = Path(os.getenv("CDSL_DICT_DIR", str(Path.home() / "cdsl_data" / "dict")))
         if not (dict_dir / "MWE" / "web" / "sqlite" / "mwe.sqlite").exists():
             self.skipTest("MWE source data not available")
 
@@ -303,7 +297,6 @@ class TestSanskritDictionaryResponse(unittest.TestCase):
     def test_transliteration_structure(self):
         from langnet.cologne.models import (
             SanskritTransliteration,
-            SanskritDictionaryResponse,
         )
 
         trans = SanskritTransliteration(
@@ -319,8 +312,6 @@ class TestSanskritDictionaryResponse(unittest.TestCase):
         self.assertEqual(trans.devanagari, "अग्नि")
 
     def test_dictionary_entry_grammatical_fields(self):
-        from langnet.cologne.models import SanskritDictionaryEntry
-
         entry = SanskritDictionaryEntry(
             id="1",
             meaning="fire",

@@ -208,7 +208,7 @@ Located in [`.opencode/skills/`](.opencode/skills/):
 
 - Always reference the specific skill when asking opencode to perform a task
 - Review code changes carefully before accepting
-- Run `just ruff`, `just typecheck`, and `just test` after opencode makes changes
+- Run `just ruff-format`, `just ruff-check`, `just typecheck`, and `just test` after opencode makes changes
 - Use `LANGNET_LOG_LEVEL=DEBUG` for detailed logging when debugging
 - Clear cache with `langnet-cli cache-clear` when testing backend changes
 - Restart the uvicorn server after code changes (modules are cached)

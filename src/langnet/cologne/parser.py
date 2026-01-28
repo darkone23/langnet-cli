@@ -1,12 +1,12 @@
-from decimal import Decimal
-from typing import Iterator, Optional
-from xml.etree import ElementTree
 import re
+from collections.abc import Iterator
+from decimal import Decimal
+from xml.etree import ElementTree
 
 from .models import CdslEntry
 
 
-def parse_xml_entry(raw_data: str) -> Optional[CdslEntry]:
+def parse_xml_entry(raw_data: str) -> CdslEntry | None:
     try:
         root = ElementTree.fromstring(raw_data)
     except ElementTree.ParseError:
@@ -35,9 +35,7 @@ def parse_xml_entry(raw_data: str) -> Optional[CdslEntry]:
     body_elem = root.find("body")
     body_content = None
     if body_elem is not None:
-        body_content = ElementTree.tostring(
-            body_elem, encoding="unicode", method="text"
-        )
+        body_content = ElementTree.tostring(body_elem, encoding="unicode", method="text")
         body_content = body_content.strip() if body_content else None
 
     normalized_key = key1.lower() if key1 else ""
@@ -103,7 +101,7 @@ def extract_homonyms(entry: CdslEntry) -> list[dict]:
     return homonyms
 
 
-def iter_entries(data: str, limit: Optional[int] = None) -> Iterator[CdslEntry]:
+def iter_entries(data: str, limit: int | None = None) -> Iterator[CdslEntry]:
     count = 0
     for line in data.split("\n"):
         line = line.strip()
@@ -156,9 +154,7 @@ def parse_grammatical_info(xml_data: str) -> dict:
         lex_attr = info_elem.get("lex", "")
         if lex_attr:
             genders = []
-            if lex_attr == "mfn":
-                genders = ["masculine", "feminine", "neuter"]
-            elif "mfn" in lex_attr:
+            if lex_attr == "mfn" or "mfn" in lex_attr:
                 genders = ["masculine", "feminine", "neuter"]
             else:
                 for part in lex_attr.split(":"):
@@ -222,20 +218,12 @@ def parse_grammatical_info(xml_data: str) -> dict:
             if i > 0:
                 prev_elem = children[i - 1]
                 prev_tail = prev_elem.tail or ""
-            if (
-                "√" in prev_tail
-                or "radical" in prev_tail.lower()
-                or "root" in prev_tail.lower()
-            ):
+            if "√" in prev_tail or "radical" in prev_tail.lower() or "root" in prev_tail.lower():
                 result["etymology"] = {"type": "verb_root", "root": child.text}
                 break
 
     if "etymology" not in result:
-        if (
-            "√" in body_text
-            or "radical" in body_text.lower()
-            or "root" in body_text.lower()
-        ):
+        if "√" in body_text or "radical" in body_text.lower() or "root" in body_text.lower():
             result["etymology"] = {"type": "verb_root"}
             root_match = re.search(r"[\u221A√]\s*([a-zA-Z]+)", body_text)
             if root_match:
@@ -262,9 +250,7 @@ def parse_grammatical_info(xml_data: str) -> dict:
             result["references"] = []
         for s1 in s1_elems:
             if s1.text:
-                result["references"].append(
-                    {"source": s1.text.strip(), "type": "cross_reference"}
-                )
+                result["references"].append({"source": s1.text.strip(), "type": "cross_reference"})
 
     if grammar_tags:
         result["grammar_tags"] = grammar_tags
@@ -282,9 +268,7 @@ def parse_grammatical_info(xml_data: str) -> dict:
         lex_attr = info_elem.get("lex", "")
         if lex_attr:
             genders = []
-            if lex_attr == "mfn":
-                genders = ["masculine", "feminine", "neuter"]
-            elif "mfn" in lex_attr:
+            if lex_attr == "mfn" or "mfn" in lex_attr:
                 genders = ["masculine", "feminine", "neuter"]
             else:
                 for part in lex_attr.split(":"):
@@ -355,11 +339,7 @@ def parse_grammatical_info(xml_data: str) -> dict:
                 break
 
     if "etymology" not in result:
-        if (
-            "√" in body_text
-            or "radical" in body_text.lower()
-            or "root" in body_text.lower()
-        ):
+        if "√" in body_text or "radical" in body_text.lower() or "root" in body_text.lower():
             result["etymology"] = {"type": "verb_root"}
             root_match = re.search(r"[\u221A√]\s*([a-zA-Z]+)", body_text)
             if root_match:
@@ -386,9 +366,7 @@ def parse_grammatical_info(xml_data: str) -> dict:
             result["references"] = []
         for s1 in s1_elems:
             if s1.text:
-                result["references"].append(
-                    {"source": s1.text.strip(), "type": "cross_reference"}
-                )
+                result["references"].append({"source": s1.text.strip(), "type": "cross_reference"})
 
     if grammar_tags:
         result["grammar_tags"] = grammar_tags
@@ -406,9 +384,7 @@ def parse_grammatical_info(xml_data: str) -> dict:
         lex_attr = info_elem.get("lex", "")
         if lex_attr:
             genders = []
-            if lex_attr == "mfn":
-                genders = ["masculine", "feminine", "neuter"]
-            elif "mfn" in lex_attr:
+            if lex_attr == "mfn" or "mfn" in lex_attr:
                 genders = ["masculine", "feminine", "neuter"]
             else:
                 for part in lex_attr.split(":"):
@@ -469,9 +445,7 @@ def parse_grammatical_info(xml_data: str) -> dict:
         result["etymology"] = {"type": "verb_root"}
         root_match = re.search(r"[\u221A√]\s*([a-zA-Z]+)", body_text)
         if not root_match:
-            root_match = re.search(
-                r"\(\s*[\u221A√]\s*<s>\s*([a-zA-Z]+)\s*</s>\s*\)", body_text
-            )
+            root_match = re.search(r"\(\s*[\u221A√]\s*<s>\s*([a-zA-Z]+)\s*</s>\s*\)", body_text)
         if not root_match:
             root_match = re.search(r"\(\s*[\u221A√]\s*([a-zA-Z]+)\s*\)", body_text)
         if root_match:
@@ -498,9 +472,7 @@ def parse_grammatical_info(xml_data: str) -> dict:
             result["references"] = []
         for s1 in s1_elems:
             if s1.text:
-                result["references"].append(
-                    {"source": s1.text.strip(), "type": "cross_reference"}
-                )
+                result["references"].append({"source": s1.text.strip(), "type": "cross_reference"})
 
     if grammar_tags:
         result["grammar_tags"] = grammar_tags

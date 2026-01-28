@@ -69,7 +69,7 @@ This project includes opencode skills in [`.opencode/skills/`](.opencode/skills/
 | [cache-management.md](.opencode/skills/cache-management.md) | `devenv shell langnet-cli -- cache-clear` to force fresh queries |
 | [debugging.md](.opencode/skills/debugging.md) | `LANGNET_LOG_LEVEL=DEBUG`, check health endpoints |
 | [cli-development.md](.opencode/skills/cli-development.md) | Add Click commands in `src/langnet/cli.py` |
-| [code-style.md](.opencode/skills/code-style.md) | Run `just ruff`, `just typecheck`, `just test` |
+| [code-style.md](.opencode/skills/code-style.md) | Run `just ruff-format`, `just ruff-check`, `just typecheck`, `just test` |
 
 When performing tasks, reference the relevant skill for context and patterns.
 

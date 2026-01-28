@@ -1,16 +1,14 @@
-from sh import Command
-from pathlib import Path
 import re
-
-from .lineparsers import FactsReducer, SensesReducer, CodesReducer
-
 from dataclasses import dataclass, field
-from typing import Any
+from pathlib import Path
 
 import cattrs
 import structlog
+from sh import Command
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
+
+from .lineparsers import CodesReducer, FactsReducer, SensesReducer
 
 logger = structlog.get_logger(__name__)
 
@@ -110,9 +108,7 @@ def fixup(wordlist):
                 codeline["term"] = word["terms"][0]["term"]
                 word["codeline"] = codeline
         fixed_words.append(word)
-    logger.debug(
-        "fixup_completed", input_count=len(wordlist), output_count=len(fixed_words)
-    )
+    logger.debug("fixup_completed", input_count=len(wordlist), output_count=len(fixed_words))
     return fixed_words
 
 
@@ -138,9 +134,13 @@ class WhitakersWordsChunker:
             line_type = "sense"
         elif "]" in line:
             line_type = "term-code"
-        elif "RETURN/ENTER" in line or "exception in PAUSE" in line or "*" == line:
-            line_type = "ui-control"
-        elif line.startswith("Word mod") or "An internal 'b'" in line:
+        elif (
+            "RETURN/ENTER" in line
+            or "exception in PAUSE" in line
+            or line == "*"
+            or line.startswith("Word mod")
+            or "An internal 'b'" in line
+        ):
             line_type = "ui-control"
         elif line.strip() == "":
             line_type = "empty"
@@ -151,9 +151,7 @@ class WhitakersWordsChunker:
         logger.debug("classify_line", line_preview=line[:50], line_type=line_type)
         return dict(line_txt=line, line_type=line_type)
 
-    def get_next_word(
-        self, current: dict | None, last_line: dict | None, line_info: dict
-    ) -> dict:
+    def get_next_word(self, current: dict | None, last_line: dict | None, line_info: dict) -> dict:
         next_word: dict = dict(lines=[line_info])
         start_new_word = False
 
@@ -233,9 +231,7 @@ class WhitakersWords:
                     if v == _v:
                         pass
                     else:
-                        logger.warning(
-                            "merge_collision", key=k, src_value=v, dest_value=_v
-                        )
+                        logger.warning("merge_collision", key=k, src_value=v, dest_value=_v)
                         if type(v) == list and type(_v) == list:
                             dest[k] = v + _v
                         elif type(v) == list:
@@ -271,7 +267,7 @@ class WhitakersWords:
                     assert False, f"Unexpected line type! [{line_type}]"
             if len(unknown) == 0:
                 del word["unknown"]
-            if len(lines):
+            if lines:
                 wordlist.append(word)
 
         structured_wordlist = []

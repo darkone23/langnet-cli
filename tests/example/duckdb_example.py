@@ -1,5 +1,5 @@
-import polars as pl
 import duckdb
+import polars as pl
 
 # 1. Create a Polars DataFrame (Our "Source")
 df_polars = pl.DataFrame(

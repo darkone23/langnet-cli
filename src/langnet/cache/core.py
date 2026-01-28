@@ -1,8 +1,9 @@
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
 import duckdb
 import orjson
-import os
-from pathlib import Path
-from dataclasses import dataclass
 import structlog
 from filelock import FileLock
 
@@ -36,7 +37,7 @@ class QueryCache:
         try:
             conn = duckdb.connect(str(db_path))
             try:
-                conn.execute(f"""
+                conn.execute("""
                     CREATE SEQUENCE IF NOT EXISTS cache_id_seq
                 """)
                 conn.execute(f"""
@@ -53,9 +54,7 @@ class QueryCache:
             finally:
                 conn.close()
         except Exception as e:
-            logger.error(
-                "cache_db_init_failed", lang=lang, db_path=str(db_path), error=str(e)
-            )
+            logger.error("cache_db_init_failed", lang=lang, db_path=str(db_path), error=str(e))
             raise
 
     def _get_read_conn(self, lang: str):
@@ -89,14 +88,14 @@ class QueryCache:
     def put(self, lang: str, query: str, result: dict) -> None:
         if lang not in SUPPORTED_LANGS:
             return
-        
+
         # Use filelock for concurrent writes
         db_path = _get_db_path(self.cache_dir, lang)
-        lock_path = db_path.with_suffix('.lock')
+        lock_path = db_path.with_suffix(".lock")
         with FileLock(lock_path, timeout=10):
             conn = self._get_write_conn(lang)
             try:
-                result_json = orjson.dumps(result).decode('utf-8')
+                result_json = orjson.dumps(result).decode("utf-8")
                 conn.execute(
                     f"""
                     INSERT INTO {CACHE_TABLE_NAME} (query, result)
@@ -113,13 +112,11 @@ class QueryCache:
         for lang in SUPPORTED_LANGS:
             # Use filelock for concurrent writes
             db_path = _get_db_path(self.cache_dir, lang)
-            lock_path = db_path.with_suffix('.lock')
+            lock_path = db_path.with_suffix(".lock")
             with FileLock(lock_path, timeout=10):
                 conn = self._get_write_conn(lang)
                 try:
-                    result = conn.execute(
-                        f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
-                    ).fetchone()
+                    result = conn.execute(f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}").fetchone()
                     count = result[0] if result else 0
                     conn.execute(f"DELETE FROM {CACHE_TABLE_NAME}")
                     total += count
@@ -131,16 +128,14 @@ class QueryCache:
     def clear_by_lang(self, lang: str) -> int:
         if lang not in SUPPORTED_LANGS:
             return 0
-        
+
         # Use filelock for concurrent writes
         db_path = _get_db_path(self.cache_dir, lang)
-        lock_path = db_path.with_suffix('.lock')
+        lock_path = db_path.with_suffix(".lock")
         with FileLock(lock_path, timeout=10):
             conn = self._get_write_conn(lang)
             try:
-                count_result = conn.execute(
-                    f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
-                ).fetchone()
+                count_result = conn.execute(f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}").fetchone()
                 count = count_result[0] if count_result else 0
                 conn.execute(f"DELETE FROM {CACHE_TABLE_NAME}")
                 logger.debug("cache_cleared_lang", lang=lang, count=count)
@@ -151,10 +146,10 @@ class QueryCache:
     def clear_by_key(self, lang: str, query: str) -> int:
         if lang not in SUPPORTED_LANGS:
             return 0
-        
+
         # Use filelock for concurrent writes
         db_path = _get_db_path(self.cache_dir, lang)
-        lock_path = db_path.with_suffix('.lock')
+        lock_path = db_path.with_suffix(".lock")
         with FileLock(lock_path, timeout=10):
             conn = self._get_write_conn(lang)
             try:
@@ -180,9 +175,7 @@ class QueryCache:
             db_path = _get_db_path(self.cache_dir, lang)
             conn = self._get_read_conn(lang)
             try:
-                count_result = conn.execute(
-                    f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}"
-                ).fetchone()
+                count_result = conn.execute(f"SELECT COUNT(*) FROM {CACHE_TABLE_NAME}").fetchone()
                 count = count_result[0] if count_result else 0
                 by_lang[lang] = count
                 total += count
@@ -249,9 +242,7 @@ class NoOpCache:
 
 
 def get_cache_path() -> Path:
-    default_path = Path(
-        os.getenv("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
-    )
+    default_path = Path(os.getenv("XDG_DATA_HOME", str(Path.home() / ".local" / "share")))
     cache_dir = default_path / "langnet"
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir

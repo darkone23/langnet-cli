@@ -1,7 +1,8 @@
-from pathlib import Path
 import re
-from typing import List, Optional, Any
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
 import structlog
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
@@ -13,7 +14,7 @@ logger = structlog.get_logger(__name__)
 class LatinQueryResult:
     headword: str
     ipa: str
-    lewis_1890_lines: List[str]
+    lewis_1890_lines: list[str]
 
 
 @dataclass
@@ -34,11 +35,11 @@ class ClassicsToolkit:
 
     _cltk_available: bool = False
     _spacy_available: bool = False
-    _lat_corpus: Optional[Any] = None
-    _latdict: Optional[Any] = None
-    _latlemma: Optional[Any] = None
-    _latxform: Optional[Any] = None
-    _grc_spacy_model: Optional[Any] = None
+    _lat_corpus: Any | None = None
+    _latdict: Any | None = None
+    _latlemma: Any | None = None
+    _latxform: Any | None = None
+    _grc_spacy_model: Any | None = None
 
     def __new__(cls):
         if cls._singleton_instance is None:
@@ -53,11 +54,11 @@ class ClassicsToolkit:
 
     def _try_import_cltk(self):
         try:
-            import cltk.data.fetch as cltk_fetch
-            import cltk.lexicon.lat as cltk_latlex
             import cltk.alphabet.lat as cltk_latchars
-            import cltk.phonology.lat.transcription as cltk_latscript
+            import cltk.data.fetch as cltk_fetch
             import cltk.lemmatize.lat as cltk_latlem
+            import cltk.lexicon.lat as cltk_latlex
+            import cltk.phonology.lat.transcription as cltk_latscript
             from cltk.languages.utils import get_lang
 
             self._LATIN = get_lang(self.LATIN)
