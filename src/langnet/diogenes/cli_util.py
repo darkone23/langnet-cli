@@ -90,7 +90,8 @@ async def main_loop(interval: int = 3600):
         if pids:
             logger.info("zombies_found", count=len(pids), pids=pids)
             rprint(
-                f"[bold red]Zombie Killer: Found {len(pids)} perl zombie(s) with parent PIDs: {pids}[/bold red]"
+                f"[bold red]Zombie Killer: Found {len(pids)} perl zombie(s)"
+                f" with parent PIDs: {pids}[/bold red]"
             )
             for pid in pids:
                 kill_process(pid)

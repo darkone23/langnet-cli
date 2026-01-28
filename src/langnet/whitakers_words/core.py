@@ -64,13 +64,42 @@ class WhitakersWordsResult:
     wordlist: list[WhitakersWordsT]
 
 
-_cached_whitakers_proc = None
+class _WhitakersProcHolder:
+    _instance: "_WhitakersProcHolder | None" = None
+    proc: "Command | None" = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def get(self) -> "Command | None":
+        if self.proc is not None:
+            return self.proc
+
+        home = Path.home()
+        maybe_words = home / ".local/bin/whitakers-words"
+        if maybe_words.exists():
+            logger.info("using_whitakers_binary", path=str(maybe_words))
+            self.proc = Command(maybe_words)
+            return self.proc
+        maybe_words = Path() / "deps/whitakers-words/bin/words"
+        if maybe_words.exists():
+            logger.info("using_whitakers_binary", path=str(maybe_words))
+            self.proc = Command(maybe_words)
+            return self.proc
+        else:
+            logger.warning("whitakers_binary_not_found")
+            test_cmd = Command("test")
+            self.proc = test_cmd.bake("!", "-z")
+            return self.proc
 
 
-def get_whitakers_proc():
-    global _cached_whitakers_proc
-    if _cached_whitakers_proc is not None:
-        return _cached_whitakers_proc
+_holder = _WhitakersProcHolder()
+
+
+def get_whitakers_proc() -> "Command | None":
+    return _holder.get()
 
     home = Path.home()
     maybe_words = home / ".local/bin/whitakers-words"
@@ -191,7 +220,7 @@ class WhitakersWordsChunker:
         for line in entry["lines"]:
             line_type = line["line_type"]
             line_txt = line["line_txt"]
-            if line_type == "ui-control" or line_type == "empty":
+            if line_type in {"ui-control", "empty"}:
                 pass
             else:
                 txts.append(line_txt)
@@ -219,7 +248,7 @@ class WhitakersWordsChunker:
 
 class WhitakersWords:
     @staticmethod
-    def words(search: list[str]) -> WhitakersWordsResult:
+    def words(search: list[str]) -> WhitakersWordsResult:  # noqa: C901, PLR0915 - 19 complexity, 52 statements are reasonable for a multi-stage word parsing function
         words_chunker = WhitakersWordsChunker(search)
         chunks = words_chunker.get_word_chunks()
         wordlist = []
@@ -232,25 +261,20 @@ class WhitakersWords:
                         pass
                     else:
                         logger.warning("merge_collision", key=k, src_value=v, dest_value=_v)
-                        if type(v) == list and type(_v) == list:
+                        if isinstance(v, list) and isinstance(_v, list):
                             dest[k] = v + _v
-                        elif type(v) == list:
+                        elif isinstance(v, list):
                             dest[k] = v + [f"{_v}".strip()]
-                        elif type(_v) == list:
+                        elif isinstance(_v, list):
                             dest[k] = _v + [f"{v}".strip()]
                         else:
                             pass
                 else:
                     dest[k] = v
 
-        for word_chunk in chunks:
-            unknown = []
-            terms = []
-            lines = []
-            word = dict(terms=terms, raw_lines=lines, unknown=unknown)
+        def process_chunk(word_chunk: dict, word: dict, terms: list, unknown: list, lines: list):
             for i in range(word_chunk["size"]):
                 (txt, line_type) = (word_chunk["txts"][i], word_chunk["types"][i])
-                # print(line_type, txt)
                 lines.append(txt)
                 if line_type == "sense":
                     data = SensesReducer.reduce(txt)
@@ -265,6 +289,13 @@ class WhitakersWords:
                     unknown.append(txt)
                 else:
                     assert False, f"Unexpected line type! [{line_type}]"
+
+        for word_chunk in chunks:
+            unknown = []
+            terms = []
+            lines = []
+            word = dict(terms=terms, raw_lines=lines, unknown=unknown)
+            process_chunk(word_chunk, word, terms, unknown, lines)
             if len(unknown) == 0:
                 del word["unknown"]
             if lines:

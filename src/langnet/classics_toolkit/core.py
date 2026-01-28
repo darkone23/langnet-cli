@@ -54,12 +54,12 @@ class ClassicsToolkit:
 
     def _try_import_cltk(self):
         try:
-            import cltk.alphabet.lat as cltk_latchars
-            import cltk.data.fetch as cltk_fetch
-            import cltk.lemmatize.lat as cltk_latlem
-            import cltk.lexicon.lat as cltk_latlex
-            import cltk.phonology.lat.transcription as cltk_latscript
-            from cltk.languages.utils import get_lang
+            import cltk.alphabet.lat as cltk_latchars  # noqa: PLC0415
+            import cltk.data.fetch as cltk_fetch  # noqa: PLC0415
+            import cltk.lemmatize.lat as cltk_latlem  # noqa: PLC0415
+            import cltk.lexicon.lat as cltk_latlex  # noqa: PLC0415
+            import cltk.phonology.lat.transcription as cltk_latscript  # noqa: PLC0415
+            from cltk.languages.utils import get_lang  # noqa: PLC0415
 
             self._LATIN = get_lang(self.LATIN)
 
@@ -83,26 +83,21 @@ class ClassicsToolkit:
             self._cltk_available = False
 
     def _try_import_spacy(self):
+        model_name = "grc_odycy_joint_sm"
         try:
-            import spacy
+            import spacy  # noqa: PLC0415
 
             self._spacy_imported = True
+            self._grc_spacy_model = spacy.load(model_name)
+            self._spacy_available = True
+            logger.info("spacy_model_loaded", model=model_name)
+        except OSError as e:
+            logger.warning("spacy_model_missing", model=model_name, error=str(e))
+            self._spacy_available = False
         except ImportError as e:
             logger.warning("spacy_unavailable", error=str(e))
             self._spacy_imported = False
             self._spacy_available = False
-
-        if self._spacy_imported:
-            model_name = "grc_odycy_joint_sm"
-            try:
-                import spacy
-
-                self._grc_spacy_model = spacy.load(model_name)
-                self._spacy_available = True
-                logger.info("spacy_model_loaded", model=model_name)
-            except OSError as e:
-                logger.warning("spacy_model_missing", model=model_name, error=str(e))
-                self._spacy_available = False
 
     def is_available(self) -> bool:
         return self._cltk_available

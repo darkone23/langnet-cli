@@ -1,3 +1,5 @@
+import time
+from pathlib import Path
 from typing import Any
 
 import orjson
@@ -12,7 +14,8 @@ import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
 logger = structlog.get_logger(__name__)
 
-from langnet.core import LangnetWiring
+from langnet.core import LangnetWiring  # noqa: E402
+from langnet.diogenes.core import DiogenesScraper  # noqa: E402
 
 
 class ORJsonResponse(Response):
@@ -35,8 +38,6 @@ class HealthChecker:
     @staticmethod
     def diogenes(base_url: str = "http://localhost:8888/") -> dict:
         try:
-            from langnet.diogenes.core import DiogenesScraper
-
             scraper = DiogenesScraper(base_url=base_url)
             result = scraper.parse_word("lupus", "lat")
             if result.dg_parsed and len(result.chunks) > 0:
@@ -54,12 +55,12 @@ class HealthChecker:
     @staticmethod
     def cltk() -> dict:
         try:
-            import cltk.alphabet.lat as cltk_latchars
-            import cltk.data.fetch as cltk_fetch
-            import cltk.lemmatize.lat as cltk_latlem
-            import cltk.lexicon.lat as cltk_latlex
-            import cltk.phonology.lat.transcription as cltk_latscript
-            from cltk.languages.utils import get_lang
+            import cltk.alphabet.lat as cltk_latchars  # noqa: PLC0415, F401
+            import cltk.data.fetch as cltk_fetch  # noqa: PLC0415, F401
+            import cltk.lemmatize.lat as cltk_latlem  # noqa: PLC0415, F401
+            import cltk.lexicon.lat as cltk_latlex  # noqa: PLC0415, F401
+            import cltk.phonology.lat.transcription as cltk_latscript  # noqa: PLC0415, F401
+            from cltk.languages.utils import get_lang  # noqa: PLC0415, F401
 
             return {"status": "healthy"}
         except ImportError as e:
@@ -68,11 +69,11 @@ class HealthChecker:
     @staticmethod
     def spacy() -> dict:
         try:
-            import spacy
+            import spacy  # noqa: PLC0415
 
             model_name = "grc_odycy_joint_sm"
             try:
-                nlp = spacy.load(model_name)
+                spacy.load(model_name)
                 return {"status": "healthy", "model": model_name}
             except OSError as e:
                 return {
@@ -84,8 +85,6 @@ class HealthChecker:
 
     @staticmethod
     def whitakers() -> dict:
-        from pathlib import Path
-
         whitakers_path = Path.home() / ".local/bin/whitakers-words"
         if whitakers_path.exists() and whitakers_path.is_file():
             return {"status": "healthy"}
@@ -97,17 +96,13 @@ class HealthChecker:
 
     @staticmethod
     def cdsl() -> dict:
-        return {
-            "status": "healthy",
-            "message": "CDSL integration pending implementation",
-        }
+        return {"status": "healthy"}
 
 
 async def health_check(request: Request):
     try:
         if not hasattr(request.app.state, "wiring"):
             request.app.state.wiring = LangnetWiring()
-        wiring: LangnetWiring = request.app.state.wiring
     except Exception as e:
         return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
     try:
@@ -140,6 +135,22 @@ async def cache_stats_api(request: Request):
         return ORJsonResponse({"error": str(e)}, status_code=500)
 
 
+def _validate_query_params(lang, word):
+    """Validate query parameters and return error message if invalid."""
+    if not lang:
+        return "Missing required parameter: l (language)"
+    if not word:
+        return "Missing required parameter: s (search term)"
+    valid_languages = {"lat", "grc", "san", "grk"}
+    if lang not in valid_languages:
+        return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
+    if lang == "grk":
+        return None  # Will be normalized below
+    if not str(word).strip():
+        return "Search term cannot be empty"
+    return None
+
+
 async def query_api(request: Request):
     if request.method == "POST":
         form_data = await request.form()
@@ -149,30 +160,12 @@ async def query_api(request: Request):
         lang = request.query_params.get("l")
         word = request.query_params.get("s")
 
-    if not lang:
-        return ORJsonResponse(
-            {"error": "Missing required parameter: l (language)"}, status_code=400
-        )
-    if not word:
-        return ORJsonResponse(
-            {"error": "Missing required parameter: s (search term)"}, status_code=400
-        )
-
-    valid_languages = {"lat", "grc", "san", "grk"}
-    if lang not in valid_languages:
-        return ORJsonResponse(
-            {
-                "error": f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
-            },
-            status_code=400,
-        )
+    validation_error = _validate_query_params(lang, word)
+    if validation_error:
+        return ORJsonResponse({"error": validation_error}, status_code=400)
 
     if lang == "grk":
         lang = "grc"
-
-    word = str(word).strip() if word else ""
-    if not word:
-        return ORJsonResponse({"error": "Search term cannot be empty"}, status_code=400)
 
     try:
         if not hasattr(request.app.state, "wiring"):
@@ -199,8 +192,6 @@ def create_app() -> Starlette:
 
     @app.on_event("startup")
     async def startup():
-        import time
-
         start = time.perf_counter()
         try:
             app.state.wiring = LangnetWiring()

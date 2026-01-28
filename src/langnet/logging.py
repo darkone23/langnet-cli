@@ -24,7 +24,21 @@ import os
 
 import structlog
 
-_log_level = logging.WARNING
+
+class _LogLevelHolder:
+    _instance: "_LogLevelHolder | None" = None
+    level: int = logging.WARNING
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def set(self, level: int) -> None:
+        self.level = level
+
+
+_holder = _LogLevelHolder()
 
 
 def _get_log_level_from_env() -> int:
@@ -40,7 +54,7 @@ def _filter_by_level(logger, method_name, event_dict):
     This allows filtering before processors add more data to the event.
     """
     method_level = getattr(logging, method_name.upper(), logging.DEBUG)
-    if method_level < _log_level:
+    if method_level < _holder.level:
         raise structlog.DropEvent
     return event_dict
 
@@ -64,11 +78,9 @@ def setup_logging(level: int | None = None) -> None:
         >>> from langnet.logging import setup_logging
         >>> setup_logging(logging.DEBUG)  # enable debug output
     """
-    global _log_level
-    if level is None:
-        level = _get_log_level_from_env()
+    resolved_level = level if level is not None else _get_log_level_from_env()
 
-    _log_level = level
+    _holder.level = resolved_level
 
     structlog.configure(
         processors=[
@@ -79,7 +91,7 @@ def setup_logging(level: int | None = None) -> None:
             structlog.processors.format_exc_info,
             structlog.dev.ConsoleRenderer(),
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(_log_level),
+        wrapper_class=structlog.make_filtering_bound_logger(resolved_level),
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
     )

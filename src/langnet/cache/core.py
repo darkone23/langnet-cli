@@ -13,6 +13,8 @@ SUPPORTED_LANGS = {"lat", "grc", "san"}
 
 CACHE_TABLE_NAME = "query_cache"
 
+BYTE_TO_KB = 1024  # Standard byte-to-kilobyte conversion factor
+
 
 def _get_db_path(cache_dir: Path, lang: str) -> Path:
     return cache_dir / f"langnet_{lang}.duckdb"
@@ -201,9 +203,9 @@ class QueryCache:
 
     def _human_size(self, size: int) -> str:
         for unit in ["B", "KB", "MB", "GB"]:
-            if size < 1024:
+            if size < BYTE_TO_KB:
                 return f"{size:.1f}{unit}"
-            size = int(size / 1024)
+            size = int(size / BYTE_TO_KB)
         return f"{size:.1f}TB"
 
     def close(self) -> None:

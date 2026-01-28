@@ -10,6 +10,8 @@ import structlog
 from indic_transliteration.detect import detect
 from indic_transliteration.sanscript import DEVANAGARI, SLP1, transliterate
 
+from langnet.config import config
+
 from .models import (
     CdslQueryResult,
     SanskritDictionaryEntry,
@@ -19,16 +21,15 @@ from .parser import parse_grammatical_info, parse_xml_entry
 
 logger = structlog.get_logger(__name__)
 
+ENTRY_ID_SUBID_SEPARATOR = "."
+ENTRY_ID_MAX_PARTS = 2
+
 
 def get_cdsl_db_dir() -> Path:
-    from langnet.config import config
-
     return config.cdsl_db_dir
 
 
 def get_cdsl_dict_dir() -> Path:
-    from langnet.config import config
-
     return config.cdsl_dict_dir
 
 
@@ -51,8 +52,6 @@ def normalize_key(key: str) -> str:
 
 
 def to_slp1(text: str) -> str:
-    from indic_transliteration.sanscript import SLP1, transliterate
-
     src = detect(text)
     return transliterate(text, src, SLP1).lower()
 
@@ -91,7 +90,7 @@ def parse_batch(args) -> tuple[list, list]:
 
 class CdslIndexBuilder:
     @staticmethod
-    def build(
+    def build(  # noqa: PLR0913, PLR0915 - 6 params and 54 statements are appropriate for CLI-facing database indexing
         dict_dir: Path,
         output_db: Path,
         dict_id: str,
@@ -111,8 +110,8 @@ class CdslIndexBuilder:
         conn = duckdb.connect(str(output_db))
 
         try:
-            for stmt in CdslSchema.get_sql().split(";"):
-                stmt = stmt.strip()
+            for sql_stmt in CdslSchema.get_sql().split(";"):
+                stmt = sql_stmt.strip()
                 if stmt:
                     conn.execute(stmt)
 
@@ -157,16 +156,14 @@ class CdslIndexBuilder:
                     executor.submit(parse_batch, (sqlite_path, dict_id, batch)): idx
                     for idx, batch in enumerate(batches)
                 }
-                completed = 0
                 total_batches = len(batches)
                 batch_start_time = time.perf_counter()
-                for future in as_completed(futures):
+                for completed, future in enumerate(as_completed(futures), start=1):
                     batch_idx = futures[future]
                     batch_num = batch_idx + 1
                     entries, headwords = future.result()
                     all_entries.extend(entries)
                     all_headwords.extend(headwords)
-                    completed += 1
                     elapsed = time.perf_counter() - batch_start_time
                     logger.info(
                         "batch_progress",
@@ -198,7 +195,10 @@ class CdslIndexBuilder:
             if all_entries:
                 conn.executemany(
                     """
-                    INSERT OR IGNORE INTO entries (dict_id, key, key_normalized, key2, key2_normalized, lnum, data, body, page_ref)
+                    INSERT OR IGNORE INTO entries (
+                        dict_id, key, key_normalized, key2, key2_normalized,
+                        lnum, data, body, page_ref
+                    )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     all_entries,
@@ -378,7 +378,9 @@ def build_dict(
     limit: int | None = None,
     num_workers: int | None = None,
 ) -> int:
-    return CdslIndexBuilder.build(dict_dir, output_db, dict_id, limit, num_workers)
+    return CdslIndexBuilder.build(
+        dict_dir, output_db, dict_id, limit=limit, num_workers=num_workers
+    )
 
 
 def batch_build(
@@ -532,8 +534,8 @@ class SanskritCologneLexicon:
         for row in rows:
             entry_id = str(int(float(row[1]))) if "." in str(row[1]) else str(row[1])
             subid = None
-            id_parts = entry_id.split(".")
-            if len(id_parts) == 2:
+            id_parts = entry_id.split(ENTRY_ID_SUBID_SEPARATOR)
+            if len(id_parts) == ENTRY_ID_MAX_PARTS:
                 entry_id = id_parts[0]
                 subid = id_parts[1]
 

@@ -5,6 +5,8 @@ from xml.etree import ElementTree
 
 from .models import CdslEntry
 
+CDSL_ENTRY_MIN_PARTS = 3
+
 
 def parse_xml_entry(raw_data: str) -> CdslEntry | None:
     try:
@@ -105,8 +107,8 @@ def iter_entries(data: str, limit: int | None = None) -> Iterator[CdslEntry]:
         stripped_line = raw_line.strip()
         if not stripped_line:
             continue
-        parts = stripped_line.split("|", 2)
-        if len(parts) < 3:
+        parts = stripped_line.split("|", CDSL_ENTRY_MIN_PARTS - 1)
+        if len(parts) < CDSL_ENTRY_MIN_PARTS:
             continue
         key, lnum_str, xml_data = parts
         try:
@@ -133,6 +135,105 @@ GENDER_MAP = {
 }
 
 
+def _parse_gender_from_lex(lex_attr: str) -> list[str] | None:
+    if not lex_attr:
+        return None
+    if lex_attr == "mfn" or "mfn" in lex_attr:
+        return ["masculine", "feminine", "neuter"]
+    return [GENDER_MAP[p.strip()] for p in lex_attr.split(":") if p.strip() in GENDER_MAP]
+
+
+def _extract_declension(lex_attr: str) -> str | None:
+    if "#" not in lex_attr:
+        return None
+    decl_match = re.search(r"#([A-Z])", lex_attr)
+    return decl_match.group(1) if decl_match else None
+
+
+def _parse_lexicon_element(lex_elem) -> tuple[dict, dict]:
+    result = {}
+    grammar_tags = {}
+
+    lex_text = ""
+    if lex_elem.text:
+        lex_text += lex_elem.text
+    for sub in lex_elem:
+        if sub.tail:
+            lex_text += sub.tail
+    lex_text = lex_text.strip()
+
+    pos_match = re.match(r"^([a-z\.]+)", lex_text)
+    if pos_match:
+        result["pos"] = pos_match.group(1)
+
+    if "mfn" in lex_text and (
+        "gender" not in result or result.get("gender") != ["masculine", "feminine", "neuter"]
+    ):
+        result["gender"] = ["masculine", "feminine", "neuter"]
+
+    if "comp" in lex_text.lower():
+        grammar_tags["compound"] = True
+
+    for ab in lex_elem.findall("ab"):
+        if ab.text:
+            grammar_tags.setdefault("abbreviations", []).append(ab.text.strip())
+
+    return result, grammar_tags
+
+
+def _parse_etymology(body, body_text: str, result: dict):
+    children = list(body)
+    for i, child in enumerate(children):
+        if child.tag == "s" and child.text:
+            prev_tail = ""
+            if i > 0:
+                prev_elem = children[i - 1]
+                prev_tail = prev_elem.tail or ""
+            if "√" in prev_tail or "radical" in prev_tail.lower() or "root" in prev_tail.lower():
+                result["etymology"] = {"type": "verb_root", "root": child.text}
+                return
+
+    if "etymology" not in result and (
+        "√" in body_text or "radical" in body_text.lower() or "root" in body_text.lower()
+    ):
+        result["etymology"] = {"type": "verb_root"}
+        root_match = re.search(r"[\u221A√]\s*([a-zA-Z]+)", body_text)
+        if root_match:
+            result["etymology"]["root"] = root_match.group(1)
+
+
+def _parse_references(body, result: dict):
+    ls_elems = body.findall("ls")
+    if ls_elems:
+        references = [{"source": ls.text.strip(), "type": "lexicon"} for ls in ls_elems if ls.text]
+        if references:
+            result["references"] = references
+
+    s1_elems = body.findall("s1")
+    for s1 in s1_elems:
+        if s1.text:
+            result.setdefault("references", []).append(
+                {"source": s1.text.strip(), "type": "cross_reference"}
+            )
+
+
+def _find_sanskrit_form(body):
+    for s_elem in body.findall("s"):
+        if s_elem.text and s_elem.text.strip():
+            return s_elem.text.strip()
+    return None
+
+
+def _build_body_text(body) -> str:
+    body_text = ""
+    if body.text:
+        body_text += body.text
+    for child in body:
+        if child.tail:
+            body_text += child.tail
+    return body_text
+
+
 def parse_grammatical_info(xml_data: str) -> dict:
     result: dict = {}
 
@@ -150,102 +251,31 @@ def parse_grammatical_info(xml_data: str) -> dict:
     info_elem = body.find("info")
     if info_elem is not None:
         lex_attr = info_elem.get("lex", "")
-        if lex_attr:
-            genders = []
-            if lex_attr == "mfn" or "mfn" in lex_attr:
-                genders = ["masculine", "feminine", "neuter"]
-            else:
-                genders = [
-                    GENDER_MAP[p.strip()] for p in lex_attr.split(":") if p.strip() in GENDER_MAP
-                ]
-            if genders:
-                result["gender"] = genders
+        genders = _parse_gender_from_lex(lex_attr)
+        if genders:
+            result["gender"] = genders
 
-            if "#" in lex_attr:
-                decl_match = re.search(r"#([A-Z])", lex_attr)
-                if decl_match:
-                    grammar_tags["declension"] = decl_match.group(1)
+        decl = _extract_declension(lex_attr)
+        if decl:
+            grammar_tags["declension"] = decl
 
     lex_elem = body.find("lex")
     if lex_elem is not None:
-        lex_text = ""
-        if lex_elem.text:
-            lex_text += lex_elem.text
-        for sub in lex_elem:
-            if sub.tail:
-                lex_text += sub.tail
+        lex_result, lex_tags = _parse_lexicon_element(lex_elem)
+        result.update(lex_result)
+        grammar_tags.update(lex_tags)
 
-        lex_text = lex_text.strip()
-
-        pos_match = re.match(r"^([a-z\.]+)", lex_text)
-        if pos_match:
-            result["pos"] = pos_match.group(1)
-
-        if "mfn" in lex_text and (
-            "gender" not in result or result["gender"] != ["masculine", "feminine", "neuter"]
-        ):
-            result["gender"] = ["masculine", "feminine", "neuter"]
-
-        if "comp" in lex_text.lower():
-            grammar_tags["compound"] = True
-
-        for ab in lex_elem.findall("ab"):
-            if ab.text:
-                if "abbreviations" not in grammar_tags:
-                    grammar_tags["abbreviations"] = []
-                grammar_tags["abbreviations"].append(ab.text.strip())
-
-    body_text = ""
-    if body.text:
-        body_text += body.text
-    for child in body:
-        if child.tail:
-            body_text += child.tail
+    body_text = _build_body_text(body)
 
     if "comp" in body_text.lower():
         grammar_tags["compound"] = True
 
-    children = list(body)
-    for i, child in enumerate(children):
-        if child.tag == "s" and child.text:
-            prev_tail = ""
-            if i > 0:
-                prev_elem = children[i - 1]
-                prev_tail = prev_elem.tail or ""
-            if "√" in prev_tail or "radical" in prev_tail.lower() or "root" in prev_tail.lower():
-                result["etymology"] = {"type": "verb_root", "root": child.text}
-                break
+    sanskrit_form = _find_sanskrit_form(body)
+    if sanskrit_form:
+        result["sanskrit_form"] = sanskrit_form
 
-    if "etymology" not in result and (
-        "√" in body_text or "radical" in body_text.lower() or "root" in body_text.lower()
-    ):
-        result["etymology"] = {"type": "verb_root"}
-        root_match = re.search(r"[\u221A√]\s*([a-zA-Z]+)", body_text)
-        if root_match:
-            result["etymology"]["root"] = root_match.group(1)
-
-    sanskrit_elems = body.findall("s")
-    for s_elem in sanskrit_elems:
-        if s_elem.text and s_elem.text.strip():
-            result["sanskrit_form"] = s_elem.text.strip()
-            break
-
-    ls_elems = body.findall("ls")
-    if ls_elems:
-        references = []
-        for ls in ls_elems:
-            if ls.text:
-                references.append({"source": ls.text.strip(), "type": "lexicon"})
-        if references:
-            result["references"] = references
-
-    s1_elems = body.findall("s1")
-    if s1_elems:
-        if "references" not in result:
-            result["references"] = []
-        for s1 in s1_elems:
-            if s1.text:
-                result["references"].append({"source": s1.text.strip(), "type": "cross_reference"})
+    _parse_etymology(body, body_text, result)
+    _parse_references(body, result)
 
     if grammar_tags:
         result["grammar_tags"] = grammar_tags

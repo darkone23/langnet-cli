@@ -14,6 +14,10 @@ import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
 logger = structlog.get_logger(__name__)
 
+PERSEUS_MORPH_PART_COUNT = 2
+MAX_NON_DOT_CHARS = 4
+HTTP_OK_STATUS = 200
+
 DiogenesChunkT = dataclass
 
 
@@ -185,9 +189,39 @@ class DiogenesScraper:
         logger.debug("find_nd_coordinate", event_id=event_id, result=coordinates[-1])
         return coordinates[-1]  # Return the last computed coordinate
 
+    def _parse_perseus_morph(self, tag) -> dict:
+        perseus_morph = tag.get_text()
+        parts = perseus_morph.split(":")
+        assert len(parts) == PERSEUS_MORPH_PART_COUNT, (
+            f"Perseus morphology should split stem from tags: [{parts}]"
+        )
+        [stems, tag_parts] = parts
+
+        cleaned_defs = []
+        cleaned_stems = []
+        stem_part, maybe_def = self.extract_parentheses_text(stems)
+        for word_def in maybe_def.split(","):
+            cleaned_def = re.sub(r"\d+", "", word_def).strip()
+            if cleaned_def:
+                cleaned_defs.append(cleaned_def)
+        for perseus_stem in stem_part.split(","):
+            cleaned_stems.append(re.sub(r"\d+", "", perseus_stem).strip())
+
+        cleaned_tags = []
+        tag_parts = re.sub(r"[()]+", "", tag_parts)
+        for t in tag_parts.replace("/", " ").split():
+            pos = t.strip()
+            if pos not in cleaned_tags:
+                cleaned_tags.append(pos)
+
+        morph = dict(stem=cleaned_stems, tags=cleaned_tags)
+        if cleaned_defs:
+            morph["defs"] = cleaned_defs
+        return morph
+
     def handle_morphology(self, soup: BeautifulSoup):
         morphs = []
-        maybe_morph_els = []  # using a p for list of 1
+        maybe_morph_els = []
         warning = None
         for tag in soup.find_all("li"):
             maybe_morph_els.append(tag)
@@ -205,37 +239,7 @@ class DiogenesScraper:
         )
 
         for tag in maybe_morph_els:
-            perseus_morph = tag.get_text()
-            parts = perseus_morph.split(":")
-            assert len(parts) == 2, f"Perseus morphology should split stem from tags: [{parts}]"
-            [stems, tag_parts] = parts
-
-            cleaned_defs = []
-            cleaned_stems = []
-            stem_part, maybe_def = self.extract_parentheses_text(stems)
-            for word_def in maybe_def.split(","):
-                cleaned_def = re.sub(r"\d+", "", word_def).strip()
-                if cleaned_def:
-                    cleaned_defs.append(cleaned_def)
-            for perseus_stem in stem_part.split(","):
-                cleaned_stems.append(re.sub(r"\d+", "", perseus_stem).strip())
-
-            cleaned_tags = []
-            tag_parts = re.sub(r"[()]+", "", tag_parts)
-            for t in tag_parts.replace("/", " ").split():
-                pos = t.strip()
-                if pos not in cleaned_tags:
-                    cleaned_tags.append(pos)
-
-            morph = dict(
-                stem=cleaned_stems,
-                tags=cleaned_tags,
-            )
-
-            if cleaned_defs:
-                morph["defs"] = cleaned_defs
-
-            morphs.append(morph)
+            morphs.append(self._parse_perseus_morph(tag))
 
         morph_dict: dict[str, Any] = dict(morphs=morphs)
 
@@ -246,6 +250,63 @@ class DiogenesScraper:
         logger.debug("handle_morphology_completed", morph_count=len(morphs))
         return morph_dict
 
+    def _extract_heading_from_b(self, b_tag) -> tuple[str | None, bool]:
+        initial_text = b_tag.get_text().strip().rstrip(",").rstrip(":")
+        chars = set()
+        dot = set(["."])
+        for char in initial_text:
+            chars.add(char)
+            if len(chars - dot) > MAX_NON_DOT_CHARS:
+                return None, False
+        if initial_text.endswith(".") and len(chars - dot) <= MAX_NON_DOT_CHARS:
+            return initial_text, True
+        return None, False
+
+    def _collect_senses(self, soup: BeautifulSoup) -> list[str]:
+        senses = []
+        for b in soup.select("b"):
+            sense_txt = b.get_text().strip().rstrip(",").rstrip(":")
+            if "(" in sense_txt and ")" not in sense_txt:
+                sense_txt += ")"
+            senses.append(sense_txt)
+        return senses
+
+    def _deduplicate_senses(self, senses: list[str]) -> list[str]:
+        unique = []
+        for sense in senses:
+            if sense not in unique:
+                unique.append(sense)
+        return unique
+
+    def _process_block(self, block: dict, soup: BeautifulSoup, indent_history: list):
+        for p in soup.select("p"):
+            _nothing, warning = self.extract_parentheses_text(p.get_text())
+            block["diogenes_warning"] = warning.replace("\n", " ")
+            p.decompose()
+
+        refs = {}
+        for ref in soup.select(".origjump"):
+            ref_id = " ".join(ref.attrs.get("class", [])).strip("origjump ").lower()
+            ref_txt = ref.get_text()
+            refs[ref_id] = ref_txt
+        if len(refs.items()) > 0:
+            block["citations"] = refs
+            logger.debug("handle_references_citations", count=len(refs))
+
+        senses = self._collect_senses(soup)
+        senses_cleaned = self._deduplicate_senses(senses)
+        if len(senses_cleaned) > 0:
+            block["senses"] = senses_cleaned
+
+        block_txt = soup.get_text().strip().rstrip(",")
+
+        block["entry"] = f"{block_txt}"
+        coords = self.find_nd_coordinate(block["indentid"])
+
+        block["entryid"] = ":".join([str(i).zfill(2) for i in coords])
+        del block["indentid"]
+        del block["soup"]
+
     def handle_references(self, soup):
         references = dict()
 
@@ -255,8 +316,8 @@ class DiogenesScraper:
         for term in soup.select("h2"):
             term.decompose()
 
-        blocks = []  # flat graph of blocks
-        indent_history = [0]  # indices into an n-dimensional array
+        blocks = []
+        indent_history = [0]
 
         def shift_cursor(block: BeautifulSoup):
             css_text: str = str(block.attrs.get("style", ""))
@@ -279,77 +340,16 @@ class DiogenesScraper:
             for obj in next_blocks:
                 blocks.append(obj)
 
-        for block in soup.select("#sense"):  # multiple elements with same id...
+        for block in soup.select("#sense"):
             insert_block(block)
             block.decompose()
 
         insert_root_node(soup)
 
         for block in blocks:
-            soup = block["soup"]
-            for p in soup.select("p"):
-                _nothing, warning = self.extract_parentheses_text(p.get_text())
-                block["diogenes_warning"] = warning.replace("\n", " ")
-                p.decompose()
+            self._process_block(block, block["soup"], indent_history)
 
-            refs = {}
-            for ref in soup.select(".origjump"):
-                ref_id = " ".join(ref.attrs.get("class", [])).strip("origjump ").lower()
-                ref_txt = ref.get_text()
-                refs[ref_id] = ref_txt
-            if len(refs.items()) > 0:
-                block["citations"] = refs
-                logger.debug("handle_references_citations", count=len(refs))
-
-            senses = []
-            for b in soup.select("b"):
-                initial_text = b.get_text().strip().rstrip(",").rstrip(":")
-                chars = set()
-                dot = set(["."])
-                for char in initial_text:
-                    chars.add(char)
-                    if len(chars - dot) > 4:
-                        break
-                if initial_text.endswith(".") and len(chars - dot) <= 4:
-                    block["heading"] = initial_text
-                    b.decompose()
-                    logger.debug("handle_references_heading", heading=initial_text)
-                break
-            for b in soup.select("b"):
-                sense_txt = b.get_text().strip().rstrip(",").rstrip(":")
-                if "(" in sense_txt and ")" not in sense_txt:
-                    sense_txt += ")"
-                senses.append(sense_txt)
-            for sense in senses:
-                other_senses = set(senses) - set([sense])
-                for other_sense in other_senses:
-                    if sense.lower() in other_sense.lower():
-                        logger.debug("duplicate_sense_removed", sense=sense)
-                        senses.remove(sense)
-                        break
-            senses_cleaned = []
-            for sense in senses:
-                if sense not in senses_cleaned:
-                    # TODO: can skip over erroneous words like 'de, ex, ut, ab, .init.' 'Comp.'
-                    # see e.g. quaero latin for an interesting hierarchy
-                    senses_cleaned.append(sense)
-            if len(senses) > 0:
-                block["senses"] = senses_cleaned
-
-            block_txt = soup.get_text().strip().rstrip(",")
-
-            block["entry"] = f"{block_txt}"
-            coords = self.find_nd_coordinate(block["indentid"])
-
-            block["entryid"] = ":".join([str(i).zfill(2) for i in coords])
-            del block["indentid"]
-            del block["soup"]
-
-        # remaining_text = soup.get_text()
         references["blocks"] = blocks
-
-        # print(len(blocks))
-        # print(remaining_text)
 
         logger.debug("handle_references_completed", block_count=len(blocks))
         return references
@@ -364,10 +364,10 @@ class DiogenesScraper:
             morph_dict = self.handle_morphology(soup)
             chunk["morphology"] = cattrs.structure(morph_dict, PerseusMorphology)
 
-        elif (
-            chunk_type == DiogenesChunkType.DiogenesMatchingReference
-            or chunk_type == DiogenesChunkType.DiogenesFuzzyReference
-        ):
+        elif chunk_type in {
+            DiogenesChunkType.DiogenesMatchingReference,
+            DiogenesChunkType.DiogenesFuzzyReference,
+        }:
             refs_dict = self.handle_references(soup)
             blocks = [
                 b
@@ -397,6 +397,25 @@ class DiogenesScraper:
             logger.debug("process_chunk_unknown_appending", soup_preview=soup_str[:100])
             result["chunks"].append(UnknownChunkType(soup=soup_str))
 
+    def _determine_chunk_type(
+        self,
+        is_perseus_analysis: bool,
+        looks_like_header: bool,
+        looks_like_reference: bool,
+        dg_parsed: bool,
+    ) -> str:
+        if is_perseus_analysis:
+            return DiogenesChunkType.PerseusAnalysisHeader
+        if looks_like_header:
+            return DiogenesChunkType.NoMatchFoundHeader
+        if looks_like_reference:
+            return (
+                DiogenesChunkType.DiogenesMatchingReference
+                if dg_parsed
+                else DiogenesChunkType.DiogenesFuzzyReference
+            )
+        return DiogenesChunkType.UnknownChunkType
+
     def get_next_chunk(self, result: dict, soup: BeautifulSoup) -> dict:
         chunk: dict[str, Any] = {"soup": soup}
 
@@ -405,9 +424,6 @@ class DiogenesScraper:
         looks_like_reference = False
 
         type_unknown = True
-
-        # this extract code can be brittle..
-        # it relies on the diogenes soup
 
         for tag in soup.find_all("h1"):
             if tag.get_text().strip().startswith("Perseus an"):
@@ -420,7 +436,7 @@ class DiogenesScraper:
             type_unknown = False
             onclick: str = str(tag.attrs.get("onclick", ""))
             parts = onclick.split("', 'Logeion', '")
-            chunk["logeion"] = parts[0][13:]  # extract url from handler
+            chunk["logeion"] = parts[0][13:]
             break
 
         if type_unknown:
@@ -435,19 +451,14 @@ class DiogenesScraper:
                         looks_like_reference = True
                         break
 
-        if is_perseus_analysis:
-            chunk["chunk_type"] = DiogenesChunkType.PerseusAnalysisHeader
-            result["dg_parsed"] = True
-        elif looks_like_header:
-            chunk["chunk_type"] = DiogenesChunkType.NoMatchFoundHeader
-            result["dg_parsed"] = False
-        elif looks_like_reference:
-            if result.get("dg_parsed", False):
-                chunk["chunk_type"] = DiogenesChunkType.DiogenesMatchingReference
-            else:
-                chunk["chunk_type"] = DiogenesChunkType.DiogenesFuzzyReference
-        else:
-            chunk["chunk_type"] = DiogenesChunkType.UnknownChunkType
+        chunk_type = self._determine_chunk_type(
+            is_perseus_analysis,
+            looks_like_header,
+            looks_like_reference,
+            result.get("dg_parsed", False),
+        )
+        chunk["chunk_type"] = chunk_type
+        result["dg_parsed"] = chunk_type == DiogenesChunkType.PerseusAnalysisHeader
 
         logger.debug("chunk_classified", chunk_type=chunk.get("chunk_type"))
         return chunk
@@ -463,7 +474,7 @@ class DiogenesScraper:
 
         result: dict[str, Any] = dict(chunks=[], dg_parsed=False)
 
-        if response.status_code == 200:
+        if response.status_code == HTTP_OK_STATUS:
             logger.debug(
                 "parse_word_response",
                 status_code=response.status_code,

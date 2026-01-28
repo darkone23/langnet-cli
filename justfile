@@ -2,6 +2,10 @@
 default:
     just -l
 
+# run langnet-cli tool
+cli *args:
+    langnet-cli {{ args }}
+    
 # Kill zombie diogenes processes (loop mode)
 langnet-dg-reaper:
     python3 -m langnet.diogenes.cli_util

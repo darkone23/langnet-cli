@@ -28,9 +28,15 @@ import click
 import orjson
 import requests
 from rich.console import Console
+from rich.pretty import pprint
 from rich.table import Table
 
+from langnet.cache.core import QueryCache, get_cache_path
+from langnet.cologne.core import CdslIndex, CdslIndexBuilder, batch_build
+from langnet.config import config
 from langnet.logging import setup_logging
+
+BODY_PREVIEW_LENGTH = 100
 
 console = Console()
 DEFAULT_API_URL = "http://localhost:8000"
@@ -198,7 +204,6 @@ def query(lang: str, word: str, api_url: str, output: str):
             sys.stdout.flush()
         else:
             result = orjson.loads(response.text)
-            from rich.pretty import pprint
 
             pprint(result)
     except requests.RequestException as e:
@@ -302,8 +307,6 @@ def cache_clear(lang: str | None):
         langnet-cli cache-clear           # Clear all caches
         langnet-cli cache-clear --lang san  # Clear only Sanskrit cache
     """
-    from langnet.cache.core import QueryCache, get_cache_path
-
     try:
         cache = QueryCache(get_cache_path())
 
@@ -319,14 +322,10 @@ def cache_clear(lang: str | None):
 
 
 def get_cdsl_db_dir() -> Path:
-    from langnet.config import config
-
     return config.cdsl_db_dir
 
 
 def get_cdsl_dict_dir() -> Path:
-    from langnet.config import config
-
     return config.cdsl_dict_dir
 
 
@@ -353,7 +352,7 @@ def cdsl():
     type=int,
     help="Number of parallel workers (default: CPU count)",
 )
-def build(
+def build(  # noqa: PLR0913 - 7 params is reasonable for CLI builder with 4 optional options
     dict_dir: str,
     output_db: str,
     dict_id: str | None,
@@ -366,8 +365,6 @@ def build(
 
     Example: langnet-cli cdsl build ~/cdsl_data/dict/MW ~/cdsl_data/db/mw.db --limit 1000
     """
-    from langnet.cologne.core import CdslIndexBuilder
-
     dict_path = Path(dict_dir)
     output_path = Path(output_db)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -403,8 +400,6 @@ def build_all(dict_root: str | None, output_dir: str | None, limit: int | None):
 
     Example: langnet-cli cdsl build-all ~/cdsl_data/dict ~/cdsl_data/db --limit 1000
     """
-    from langnet.cologne.core import batch_build
-
     dict_path = Path(dict_root) if dict_root else get_cdsl_dict_dir()
     output_path = Path(output_dir) if output_dir else get_cdsl_db_dir()
 
@@ -429,8 +424,6 @@ def lookup(dict_id: str, key: str, output: str):
     Example: langnet-cli cdsl lookup mw "अग्नि"
              langnet-cli cdsl lookup mw agni
     """
-
-    from langnet.cologne.core import CdslIndex
 
     db_path = get_cdsl_db_dir() / f"{dict_id.lower()}.db"
     if not db_path.exists():
@@ -458,15 +451,17 @@ def lookup(dict_id: str, key: str, output: str):
         ]
         console.print(orjson.dumps(json_output, option=orjson.OPT_INDENT_2).decode("utf-8"))
     else:
-        from rich.table import Table
-
         table = Table(title=f"Results for '{key}' in {dict_id.upper()}")
         table.add_column("Key", style="cyan")
         table.add_column("L#", justify="right")
         table.add_column("Body", style="green")
         table.add_column("Page", style="yellow")
         for r in results:
-            body_preview = (r.body[:100] + "...") if r.body and len(r.body) > 100 else r.body or ""
+            body_preview = (
+                (r.body[:BODY_PREVIEW_LENGTH] + "...")
+                if r.body and len(r.body) > BODY_PREVIEW_LENGTH
+                else r.body or ""
+            )
             table.add_row(r.key, str(r.lnum), body_preview, r.page_ref or "")
         console.print(table)
 
@@ -480,8 +475,6 @@ def prefix(dict_id: str, prefix: str, limit: int):
 
     Example: langnet-cli cdsl prefix mw "अग्न"
     """
-    from langnet.cologne.core import CdslIndex
-
     db_path = get_cdsl_db_dir() / f"{dict_id.lower()}.db"
     if not db_path.exists():
         console.print(f"[red]Error: Database not found: {db_path}[/]")
@@ -505,8 +498,6 @@ def list_dicts():
 
     Example: langnet-cli cdsl list
     """
-    from langnet.cologne.core import CdslIndex
-
     db_dir = get_cdsl_db_dir()
     if not db_dir.exists():
         console.print("[yellow]No indexed dictionaries found.[/]")
@@ -517,8 +508,6 @@ def list_dicts():
     if not dbs:
         console.print("[yellow]No .db files found.[/]")
         return
-
-    from rich.table import Table
 
     table = Table(title="Indexed Dictionaries")
     table.add_column("Dictionary", style="cyan")
@@ -542,8 +531,6 @@ def info(dict_id: str):
 
     Example: langnet-cli cdsl info MW
     """
-    from langnet.cologne.core import CdslIndex
-
     db_path = get_cdsl_db_dir() / f"{dict_id.lower()}.db"
     if not db_path.exists():
         console.print(f"[red]Error: Database not found: {db_path}[/]")
@@ -551,8 +538,6 @@ def info(dict_id: str):
 
     with CdslIndex(db_path) as index:
         info = index.get_info(dict_id.upper())
-
-    from rich.table import Table
 
     table = Table(title=f"Dictionary: {info['dict_id']}")
     table.add_column("Metric", style="cyan")

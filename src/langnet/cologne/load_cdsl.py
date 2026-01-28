@@ -3,7 +3,8 @@
 CDSL Dictionary Loader
 
 Usage:
-    python -m langnet.cologne.load_cdsl <dict_id> [--limit N] [--force] [--batch-size N] [--workers N]
+    python -m langnet.cologne.load_cdsl <dict_id>
+        [--limit N] [--force] [--batch-size N] [--workers N]
 
 Examples:
     python -m langnet.cologne.load_cdsl MW           # Load full MW dictionary
@@ -17,6 +18,9 @@ from pathlib import Path
 
 import click
 import structlog
+
+from langnet.cologne.core import CdslIndexBuilder
+from langnet.config import config
 
 structlog.configure(
     wrapper_class=structlog.make_filtering_bound_logger(20),
@@ -50,9 +54,6 @@ def load_cdsl(
 ):
     """Load a CDSL dictionary into DuckDB."""
     sys.path.insert(0, str(Path(__file__).parent.parent))
-
-    from langnet.cologne.core import CdslIndexBuilder
-    from langnet.config import config
 
     dict_id = dict_id.upper()
     dict_dir = config.cdsl_dict_dir / dict_id
