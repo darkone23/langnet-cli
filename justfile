@@ -26,7 +26,7 @@ test:
 
 # Format code with ruff
 ruff-format:
-    ruff format src/ tests/
+    ruff format src/ tests/ ./.justscripts/
 
 # Lint code with ruff
 ruff-check *args:

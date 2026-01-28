@@ -15,11 +15,15 @@ sys.path.insert(0, str(current_dir))
 
 console = Console()
 
-# For type checking, we need to handle the import differently
 try:
-    from ruff_commands import ruff
+    from ruff_commands import ruff  # type: ignore[assignment,attr-defined]
 except ImportError:
-    ruff: object | None = None
+    ruff = None  # type: ignore[assignment]
+
+try:
+    from server_commands import server  # type: ignore[assignment,attr-defined]
+except ImportError:
+    server = None  # type: ignore[assignment]
 
 
 @click.group()
@@ -31,6 +35,10 @@ def autobot():
 # Add ruff group to autobot if available
 if ruff is not None:
     autobot.add_command(ruff, name="ruff")
+
+# Add server group to autobot if available
+if server is not None:
+    autobot.add_command(server, name="server")
 
 
 if __name__ == "__main__":
