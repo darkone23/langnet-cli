@@ -456,7 +456,18 @@ class SanskritCologneLexicon:
         mw_entries = self._lookup_dict_formatted("MW", slp1_key, data)
         ap90_entries = self._lookup_dict_formatted("AP90", slp1_key, data)
 
-        # Create transliteration object
+        all_entries = mw_entries + ap90_entries
+        root = None
+        for entry in all_entries:
+            if entry.etymology and entry.etymology.get("type") == "verb_root":
+                root = {
+                    "type": "verb_root",
+                    "root": entry.etymology.get("root"),
+                }
+                if entry.etymology.get("meaning"):
+                    root["meaning"] = entry.etymology.get("meaning")
+                break
+
         slp1_term = to_slp1(data)
         try:
             deva_term = transliterate(slp1_term, SLP1, DEVANAGARI)
@@ -470,7 +481,7 @@ class SanskritCologneLexicon:
             devanagari=deva_term,
         )
 
-        return {
+        result: dict = {
             "transliteration": {
                 "input": transliteration.input,
                 "iast": transliteration.iast,
@@ -482,6 +493,10 @@ class SanskritCologneLexicon:
                 "ap90": [self._serialize_entry(e) for e in ap90_entries],
             },
         }
+        if root:
+            result["root"] = root
+
+        return result
 
     def _serialize_entry(self, entry: SanskritDictionaryEntry) -> dict[str, Any]:
         result: dict[str, Any] = {

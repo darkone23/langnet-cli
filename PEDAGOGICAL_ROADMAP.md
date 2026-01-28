@@ -33,8 +33,8 @@ The goal is to transform langnet-cli into a **pedagogical engine** rather than j
 
 | Feature | Latin | Greek | Sanskrit |
 |---------|-------|-------|----------|
-| Lemmatization | CLTK ✅ | spaCy ✅ | ❌ |
-| Morphology | Whitaker's ✅ | spaCy ✅ | Partial (declension only) |
+| Lemmatization | CLTK ✅ | spaCy ✅ | CLTK ✅ |
+| Morphology | Whitaker's ✅ | spaCy ✅ | CLTK ✅ (inflection morphology via CLTK) |
 | Dictionary lookup | Lewis ✅ | Diogenes ✅ | CDSL ✅ |
 
 ### 1.1 Integrate CLTK SanskritPipeline
@@ -777,12 +777,12 @@ SEE ALSO: L., TS., Vop.
 
 ## Testing Plan
 
-### Phase 1 Tests (Sanskrit Foundation)
+### Phase 1 Tests (Sanskrit Foundation) ✅
 
-- [ ] Test CLTK Sanskrit morphology query with various words
-- [ ] Test lemmatization fallback for inflected Sanskrit forms
-- [ ] Test root display in Sanskrit output
-- [ ] Test integration with existing CDSL lookup
+- [x] Test CLTK Sanskrit morphology query with various words
+- [x] Test lemmatization fallback for inflected Sanskrit forms
+- [x] Test root display in Sanskrit output
+- [x] Test integration with existing CDSL lookup
 
 ### Phase 2 Tests (Foster Grammar)
 
@@ -821,8 +821,8 @@ SEE ALSO: L., TS., Vop.
 ## Next Steps
 
 1. ✅ **Synthesize roadmaps** (this document)
-2. Start implementation with Phase 2 (Foster mappings) — low effort, maximum pedagogical impact
-3. Implement Phase 1 (Sanskrit foundation) — critical for Sanskrit learners
+2. ✅ **Phase 1 Complete:** Sanskrit foundation - CLTK integration, lemmatization fallback, root display
+3. Start implementation with Phase 2 (Foster mappings) — low effort, maximum pedagogical impact
 4. Integrate Phases 3-4 (lemmatization + citations) — complete the pedagogical circle
 5. Add unit tests as each phase is completed
 6. Run existing test suite to ensure no regressions: `just test`

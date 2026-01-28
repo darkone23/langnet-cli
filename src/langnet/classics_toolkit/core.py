@@ -25,6 +25,13 @@ class GreekMorphologyResult:
     morphological_features: dict
 
 
+@dataclass
+class SanskritMorphologyResult:
+    lemma: str
+    pos: str
+    morphological_features: dict
+
+
 class ClassicsToolkit:
     LATIN = "lat"
     GREEK = "grc"
@@ -40,6 +47,7 @@ class ClassicsToolkit:
     _latlemma: Any | None = None
     _latxform: Any | None = None
     _grc_spacy_model: Any | None = None
+    _san_cltk_nlp: Any | None = None
 
     def __new__(cls):
         if cls._singleton_instance is None:
@@ -50,7 +58,21 @@ class ClassicsToolkit:
         if not ClassicsToolkit._initialized:
             self._try_import_cltk()
             self._try_import_spacy()
+            self._try_import_sanskrit_cltk()
             ClassicsToolkit._initialized = True
+
+    def _try_import_sanskrit_cltk(self):
+        try:
+            from cltk import NLP  # noqa: PLC0415
+
+            self._san_cltk_nlp = NLP(language="san", suppress_banner=True)
+            logger.info("sanskrit_cltk_loaded")
+        except ImportError as e:
+            logger.warning("sanskrit_cltk_unavailable", error=str(e))
+            self._san_cltk_nlp = None
+        except Exception as e:
+            logger.warning("sanskrit_cltk_init_failed", error=str(e))
+            self._san_cltk_nlp = None
 
     def _try_import_cltk(self):
         try:
@@ -214,6 +236,49 @@ class ClassicsToolkit:
             logger.error("greek_morphology_query_failed", word=word, error=str(e))
             return GreekMorphologyResult(
                 text=word,
+                lemma="error",
+                pos="",
+                morphological_features={"error": str(e)},
+            )
+
+    def sanskrit_morphology_query(self, word: str) -> SanskritMorphologyResult:
+        if self._san_cltk_nlp is None:
+            return SanskritMorphologyResult(
+                lemma="cltk_unavailable",
+                pos="",
+                morphological_features={"error": "CLTK Sanskrit model not available"},
+            )
+
+        try:
+            cltk_doc = self._san_cltk_nlp.analyze(text=word)
+
+            if cltk_doc.sentences and cltk_doc.sentences[0] and len(cltk_doc.sentences[0]) > 0:
+                token = cltk_doc.sentences[0][0]
+                morphological_features = {}
+                if hasattr(token, "morphology") and token.morphology:
+                    for key in dir(token.morphology):
+                        if not key.startswith("_"):
+                            value = getattr(token.morphology, key, None)
+                            if value is not None:
+                                morphological_features[key] = value
+
+                lemma = getattr(token, "lemma", word) or word
+                pos = getattr(token, "upos", "") or ""
+
+                return SanskritMorphologyResult(
+                    lemma=lemma,
+                    pos=pos,
+                    morphological_features=morphological_features,
+                )
+            else:
+                return SanskritMorphologyResult(
+                    lemma=word,
+                    pos="",
+                    morphological_features={},
+                )
+        except Exception as e:
+            logger.error("sanskrit_morphology_query_failed", word=word, error=str(e))
+            return SanskritMorphologyResult(
                 lemma="error",
                 pos="",
                 morphological_features={"error": str(e)},
