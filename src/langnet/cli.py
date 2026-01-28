@@ -22,6 +22,7 @@ For detailed help on a command:
 import socket
 import sys
 from pathlib import Path
+from typing import cast
 from urllib.parse import urlparse
 
 import click
@@ -34,12 +35,86 @@ from rich.table import Table
 from langnet.cache.core import QueryCache, get_cache_path
 from langnet.cologne.core import CdslIndex, CdslIndexBuilder, batch_build
 from langnet.config import config
+from langnet.foster.render import render_foster_codes
 from langnet.logging import setup_logging
 
 BODY_PREVIEW_LENGTH = 100
 
 console = Console()
 DEFAULT_API_URL = "http://localhost:8000"
+
+
+def _format_morph_with_foster(morph: dict) -> str:
+    tags = morph.get("tags", [])
+    foster_codes_raw = morph.get("foster_codes")
+    foster_codes: list[str] = foster_codes_raw if isinstance(foster_codes_raw, list) else []
+    stem = ", ".join(morph.get("stem", []))
+    defs = morph.get("defs")
+
+    parts = []
+    if stem:
+        parts.append(f"[bold]{stem}[/bold]")
+
+    for i, tag in enumerate(tags):
+        tag_display = tag
+        if i < len(foster_codes) and foster_codes[i]:
+            rendered = cast(list[str], render_foster_codes([foster_codes[i]]))
+            foster_display = rendered[0]
+            tag_display = f"{tag} ([italic]{foster_display}[/italic])"
+        parts.append(tag_display)
+
+    result = " ".join(parts)
+    if defs:
+        result += f" → {', '.join(defs)}"
+    return result
+
+
+def _format_diogenes_with_foster(result: dict) -> None:
+    diogenes = result.get("diogenes")
+    if not diogenes or "chunks" not in diogenes:
+        return
+
+    for chunk in diogenes["chunks"]:
+        morph_data = chunk.get("morphology")
+        if not morph_data or "morphs" not in morph_data:
+            continue
+
+        morphs = morph_data["morphs"]
+        formatted_morphs = [_format_morph_with_foster(m) for m in morphs]
+        morph_data["formatted"] = formatted_morphs
+
+
+def _format_cltk_with_foster(result: dict) -> None:
+    cltk = result.get("cltk")
+    if not cltk or "greek_morphology" not in cltk:
+        return
+
+    greek_morph = cltk["greek_morphology"]
+    if "foster_codes" not in greek_morph:
+        return
+
+    greek_morph["formatted_foster"] = render_foster_codes(greek_morph["foster_codes"])
+
+
+def _format_sanskrit_with_foster(result: dict) -> None:
+    dictionaries = result.get("dictionaries")
+    if not dictionaries:
+        return
+
+    for entries in dictionaries.values():
+        if not isinstance(entries, list):
+            continue
+
+        for entry in entries:
+            if isinstance(entry, dict) and "foster_codes" in entry:
+                entry["formatted_foster"] = render_foster_codes(entry["foster_codes"])
+
+
+def _format_result_with_foster(result: dict) -> dict:
+    _format_diogenes_with_foster(result)
+    _format_cltk_with_foster(result)
+    _format_sanskrit_with_foster(result)
+    return result
 
 
 def is_port_open(host: str, port: int, timeout: float = 1.0) -> bool:
@@ -204,6 +279,7 @@ def query(lang: str, word: str, api_url: str, output: str):
             sys.stdout.flush()
         else:
             result = orjson.loads(response.text)
+            result = _format_result_with_foster(result)
 
             pprint(result)
     except requests.RequestException as e:

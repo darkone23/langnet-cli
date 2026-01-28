@@ -6,6 +6,7 @@ from langnet.cache.core import NoOpCache, QueryCache
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
+from langnet.foster.apply import apply_foster_view
 from langnet.whitakers_words.core import WhitakersWords
 
 logger = structlog.get_logger(__name__)
@@ -258,5 +259,6 @@ class LanguageEngine:
             raise NotImplementedError(f"Do not know how to handle {lang}")
 
         self.cache.put(lang, word, result)
+        result = apply_foster_view(result)
         logger.debug("query_completed", lang=lang, word=word)
         return result

@@ -10,6 +10,12 @@ cli *args:
 langnet-dg-reaper:
     python3 -m langnet.diogenes.cli_util
 
+# run ruff & ty
+lint-all:
+    just ruff-format
+    just ruff-check
+    just typecheck
+
 # One-shot zombie reap
 reap:
     python3 -m langnet.diogenes.cli_util reap --once
@@ -26,13 +32,13 @@ ruff-format:
 ruff-check *args:
     ruff check {{ args }}
 
-# Type check with mypy
+# Type check with ty
 typecheck *args:
     ty check {{ args }}
 
-# Run arbitrary command in devenv shell
-devenv-bash +ARGS:
-    devenv shell bash -- -c '{{ ARGS }}'
+# # Run arbitrary command in devenv shell
+# devenv-bash +ARGS:
+#     devenv shell bash -- -c '{{ ARGS }}'
 
 # Build CDSL dictionary (dict should be AP90 or MW)
 # build_cdsl dict batch_size="1000":

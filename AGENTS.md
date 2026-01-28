@@ -78,3 +78,8 @@ When performing tasks, reference the relevant skill for context and patterns.
 
 - [`.opencode/skills/README.md`](.opencode/skills/README.md) - Complete skill documentation
 - [DEVELOPER.md](DEVELOPER.md) - End-user opencode usage guide
+
+## Important
+
+- You never download and install new tools from the internet without explicit instruction.
+- You always use `just` commands instead of running ad-hoc programs.
