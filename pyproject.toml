@@ -91,3 +91,7 @@ max-complexity = 10
 [tool.ruff.lint.pylint]
 max-nested-blocks = 3 
 max-args = 5
+
+[tool.ruff.lint.per-file-ignores]
+"src/langnet/heritage/encoding_service.py" = ["PLR0911"]
+"src/langnet/heritage/parameters.py" = ["PLR0911"]

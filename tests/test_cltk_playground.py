@@ -3,7 +3,6 @@ import textwrap
 import unittest
 
 from langnet.classics_toolkit.core import ClassicsToolkit
-from langnet.cologne.core import SanskritCologneLexicon
 
 cltk_logger = logging.getLogger("CLTK")
 cltk_logger.setLevel(logging.CRITICAL)

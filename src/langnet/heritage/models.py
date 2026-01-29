@@ -126,3 +126,9 @@ class HeritageErrorResponse:
     message: str
     details: str | None = None
     timestamp: str | None = None
+
+
+class HeritageAPIError(Exception):
+    """Exception raised for Heritage API errors"""
+
+    pass

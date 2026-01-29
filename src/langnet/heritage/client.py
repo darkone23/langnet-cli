@@ -1,3 +1,4 @@
+import re
 import time
 from typing import Any
 from urllib.parse import urlencode, urljoin
@@ -7,12 +8,18 @@ import structlog
 from bs4 import BeautifulSoup
 
 from .config import heritage_config
+from .parameters import HeritageParameterBuilder
 
 logger = structlog.get_logger(__name__)
 
 
 class HeritageHTTPClient:
     """HTTP client for Heritage Platform CGI scripts"""
+
+    # Constants for parsing
+    MIN_TEXT_LENGTH = 10
+    MIN_CELLS_COUNT = 2
+    DICTIONARY_ENTRY_PATTERN = "/skt/MW/"
 
     def __init__(self, config=None):
         self.config = config or heritage_config
@@ -132,7 +139,6 @@ class HeritageHTTPClient:
         **kwargs,
     ) -> dict[str, Any]:
         """Fetch dictionary search results from sktsearch/sktindex CGI script"""
-        from .parameters import HeritageParameterBuilder
 
         params = HeritageParameterBuilder.build_search_params(
             query=query,
@@ -149,6 +155,72 @@ class HeritageHTTPClient:
         # Parse the dictionary response
         return self.parse_dictionary_response(html_content, lexicon)
 
+    def _extract_pos_from_text(self, text: str) -> str:
+        """Extract part of speech from text"""
+        if "Noun" in text:
+            return "Noun"
+        elif "Verb" in text:
+            return "Verb"
+        elif "Adjective" in text:
+            return "Adjective"
+        else:
+            return "Unknown"
+
+    def _parse_table_entries(self, soup: BeautifulSoup, lexicon: str) -> list[dict[str, Any]]:
+        """Parse entries from table structure"""
+        entries = []
+        result_tables = soup.find_all("table", class_="yellow_cent")
+        for table in result_tables:
+            rows = table.find_all("tr")
+            for row in rows:
+                cells = row.find_all("td")
+                if cells:
+                    # Look for links with headwords
+                    links = cells[0].find_all("a", href=True)
+                    for link in links:
+                        href = link.get("href", "")
+                        headword_text = link.get_text(strip=True)
+
+                        # Extract headword from href if it looks like a dictionary entry
+                        if (
+                            isinstance(href, str)
+                            and self.DICTIONARY_ENTRY_PATTERN in href
+                            and headword_text
+                        ):
+                            # Extract part of speech from the text
+                            pos_text = cells[0].get_text(strip=True)
+                            pos = self._extract_pos_from_text(pos_text)
+
+                            entries.append(
+                                {
+                                    "headword": headword_text,
+                                    "part_of_speech": pos,
+                                    "lexicon": lexicon,
+                                    "entry_url": href,
+                                }
+                            )
+        return entries
+
+    def _parse_text_entries(self, soup: BeautifulSoup, lexicon: str) -> list[dict[str, Any]]:
+        """Parse entries from text content"""
+        entries = []
+        all_text = soup.get_text()
+        if "agni" in all_text.lower():
+            lines = all_text.split("\n")
+            for line in lines:
+                if "agni" in line.lower() and len(line.strip()) > self.MIN_TEXT_LENGTH:
+                    # Simple extraction - this will be improved
+                    entries.append(
+                        {
+                            "headword": "agni",
+                            "part_of_speech": "Unknown",
+                            "lexicon": lexicon,
+                            "entry_url": None,
+                            "raw_text": line.strip(),
+                        }
+                    )
+        return entries
+
     def parse_dictionary_response(self, html_content: str, lexicon: str) -> dict[str, Any]:
         """Parse dictionary search response HTML"""
         try:
@@ -157,61 +229,12 @@ class HeritageHTTPClient:
             # Extract dictionary entries
             entries = []
 
-            # Look for dictionary results in the main content area
-            # Based on the HTML structure, results are typically in table cells with specific classes
-
             # Method 1: Look for table cells with links to dictionary entries
-            result_tables = soup.find_all("table", class_="yellow_cent")
-            for table in result_tables:
-                rows = table.find_all("tr")
-                for row in rows:
-                    cells = row.find_all("td")
-                    if cells:
-                        # Look for links with headwords
-                        links = cells[0].find_all("a", href=True)
-                        for link in links:
-                            href = link.get("href", "")
-                            headword_text = link.get_text(strip=True)
-
-                            # Extract headword from href if it looks like a dictionary entry
-                            if "/skt/MW/" in href and headword_text:
-                                # Extract part of speech from the text
-                                pos_text = cells[0].get_text(strip=True)
-                                if "Noun" in pos_text:
-                                    pos = "Noun"
-                                elif "Verb" in pos_text:
-                                    pos = "Verb"
-                                elif "Adjective" in pos_text:
-                                    pos = "Adjective"
-                                else:
-                                    pos = "Unknown"
-
-                                entries.append(
-                                    {
-                                        "headword": headword_text,
-                                        "part_of_speech": pos,
-                                        "lexicon": lexicon,
-                                        "entry_url": href,
-                                    }
-                                )
+            entries = self._parse_table_entries(soup, lexicon)
 
             # Method 2: Look for any text content containing the query
             if not entries:
-                all_text = soup.get_text()
-                if "agni" in all_text.lower():
-                    lines = all_text.split("\n")
-                    for line in lines:
-                        if "agni" in line.lower() and len(line.strip()) > 10:
-                            # Simple extraction - this will be improved
-                            entries.append(
-                                {
-                                    "headword": "agni",
-                                    "part_of_speech": "Unknown",
-                                    "lexicon": lexicon,
-                                    "entry_url": None,
-                                    "raw_text": line.strip(),
-                                }
-                            )
+                entries = self._parse_text_entries(soup, lexicon)
 
             return {
                 "lexicon": lexicon,
@@ -231,8 +254,6 @@ class HeritageHTTPClient:
         **kwargs,
     ) -> dict[str, Any]:
         """Fetch lemmatization results from sktlemmatizer CGI script"""
-        from .parameters import HeritageParameterBuilder
-
         params = HeritageParameterBuilder.build_lemma_params(
             word=word,
             encoding=encoding,
@@ -263,7 +284,7 @@ class HeritageHTTPClient:
                 table_rows = soup.find_all("tr")
                 for row in table_rows:
                     cells = row.find_all("td")
-                    if len(cells) >= 2:
+                    if len(cells) >= self.MIN_CELLS_COUNT:
                         inflected_form = cells[0].get_text(strip=True)
                         lemma = cells[1].get_text(strip=True)
 
@@ -305,8 +326,6 @@ class HeritageHTTPClient:
                 # The URL format is typically /skt/MW/2.html#agni
                 # We need to extract the page number and headword
 
-                import re
-
                 match = re.search(r"/skt/MW/(\d+)\.html#(.+)", entry_url)
                 if match:
                     page_num = match.group(1)
@@ -319,7 +338,9 @@ class HeritageHTTPClient:
                         "page": page_num,
                         "entry_url": entry_url,
                         "status": "url_extracted",
-                        "message": "Dictionary entry URL extracted but direct fetching not implemented",
+                        "message": (
+                            "Dictionary entry URL extracted but direct fetching not implemented"
+                        ),
                     }
                 else:
                     return {

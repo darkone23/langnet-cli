@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from indic_transliteration.detect import detect
@@ -364,8 +365,6 @@ class HeritageCdslBridge:
         """Process Heritage Platform response and convert headwords for CDSL lookup"""
         try:
             # Extract headwords and POS from Heritage response
-            import re
-
             # Pattern to match: headword [ POS ] (POS is grammatical info, not headword)
             # Example: "jātu [ Ind. ]", "agni [ N. ] fire", "deva [ m. ] god"
             headword_pattern = r"([a-zA-Zāīūṛṝḹḹṃḥṅñṭḍṇṣśḻḽ]+)\s*\[([^\]]+)\]"

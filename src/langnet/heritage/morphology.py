@@ -1,7 +1,9 @@
+import re
 import time
 from typing import Any
 
 import structlog
+from bs4 import BeautifulSoup
 
 from ..cologne.core import SanskritCologneLexicon
 from .client import HeritageAPIError, HeritageHTTPClient
@@ -86,11 +88,9 @@ class HeritageDictionaryService:
     def _parse_morphology_response(self, html_content: str) -> dict[str, Any] | None:
         """Parse morphology response from Heritage Platform"""
         try:
-            from bs4 import BeautifulSoup
-
             soup = BeautifulSoup(html_content, "html.parser")
 
-            morphology_data = {
+            morphology_data: dict[str, Any] = {
                 "analyses": [],
                 "lemma": None,
                 "pos": None,
@@ -103,8 +103,6 @@ class HeritageDictionaryService:
                     cells = row.find_all("td")
                     if len(cells) >= 1:
                         cell_text = cells[0].get_text(strip=True)
-
-                        import re
 
                         pattern = r"\[([^\]]+)\]\{([^}]*)\}"
                         matches = re.findall(pattern, cell_text)

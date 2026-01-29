@@ -16,7 +16,7 @@ class SimpleHeritageParser:
         """Parse morphology analysis results"""
         soup = BeautifulSoup(html_content, "html.parser")
 
-        result = {
+        result: dict[str, Any] = {
             "solutions": [],
             "word_analyses": [],
             "total_solutions": 0,
@@ -32,7 +32,11 @@ class SimpleHeritageParser:
             result["metadata"]["total_available"] = int(solution_match.group(2))
 
         # Look for solution sections
-        solution_sections = soup.find_all("span", string=lambda text: text and "Solution" in text)
+        solution_sections = []
+        for span in soup.find_all("span"):
+            text = span.get_text()
+            if text and "Solution" in text:
+                solution_sections.append(span)
 
         for i, section in enumerate(solution_sections):
             solution = self._parse_solution_section(section, soup)
@@ -56,7 +60,7 @@ class SimpleHeritageParser:
             if not solution_num:
                 return None
 
-            solution = {
+            solution: dict[str, Any] = {
                 "type": "morphological_analysis",
                 "solution_number": int(solution_num.group(1)),
                 "analyses": [],
