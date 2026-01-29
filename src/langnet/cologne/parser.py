@@ -134,6 +134,42 @@ GENDER_MAP = {
     "n": "neuter",
 }
 
+CASE_MAP = {
+    "1": "1",
+    "nom": "1",
+    "nominative": "1",
+    "2": "2",
+    "gen": "2",
+    "genitive": "2",
+    "3": "3",
+    "inst": "3",
+    "instrumental": "3",
+    "dat": "4",
+    "dative": "4",
+    "4": "4",
+    "acc": "5",
+    "accusative": "5",
+    "5": "5",
+    "abl": "6",
+    "ablative": "6",
+    "6": "6",
+    "loc": "7",
+    "locative": "7",
+    "7": "7",
+    "voc": "8",
+    "vocative": "8",
+    "8": "8",
+}
+
+NUMBER_MAP = {
+    "sg": "sg",
+    "singular": "sg",
+    "pl": "pl",
+    "plural": "pl",
+    "du": "du",
+    "dual": "du",
+}
+
 
 def _parse_gender_from_lex(lex_attr: str) -> list[str] | None:
     if not lex_attr:
@@ -224,6 +260,58 @@ def _find_sanskrit_form(body):
     return None
 
 
+def _extract_case_from_body(body_text: str) -> str | None:
+    body_lower = body_text.lower()
+    for pattern, case_num in CASE_MAP.items():
+        if (
+            f"case {pattern}" in body_lower
+            or f" case {pattern}" in body_lower
+            or f"({pattern})" in body_lower
+            or f" {pattern}." in body_lower
+        ) and case_num in ("1", "2", "3", "4", "5", "6", "7", "8"):
+            return case_num
+    return None
+
+
+def _extract_number_from_body(body_text: str) -> str | None:
+    body_lower = body_text.lower()
+    for pattern, num_code in NUMBER_MAP.items():
+        if f" {pattern}." in body_lower or f"({pattern})" in body_lower:
+            return num_code
+    return None
+
+
+def _extract_grammar_from_info(info_elem, grammar_tags: dict, result: dict) -> None:
+    if info_elem is None:
+        return
+    lex_attr = info_elem.get("lex", "")
+    genders = _parse_gender_from_lex(lex_attr)
+    if genders:
+        result["gender"] = genders
+    decl = _extract_declension(lex_attr)
+    if decl:
+        grammar_tags["declension"] = decl
+
+
+def _extract_grammar_from_lex(lex_elem, grammar_tags: dict, result: dict) -> None:
+    if lex_elem is None:
+        return
+    lex_result, lex_tags = _parse_lexicon_element(lex_elem)
+    result.update(lex_result)
+    grammar_tags.update(lex_tags)
+
+
+def _extract_grammar_from_body(body_text: str, grammar_tags: dict) -> None:
+    if "comp" in body_text.lower():
+        grammar_tags["compound"] = True
+    extracted_case = _extract_case_from_body(body_text)
+    if extracted_case:
+        grammar_tags["case"] = extracted_case
+    extracted_number = _extract_number_from_body(body_text)
+    if extracted_number:
+        grammar_tags["number"] = extracted_number
+
+
 def _build_body_text(body) -> str:
     body_text = ""
     if body.text:
@@ -232,6 +320,11 @@ def _build_body_text(body) -> str:
         if child.tail:
             body_text += child.tail
     return body_text
+
+
+def _parse_etymology_and_references(body, body_text: str, result: dict) -> None:
+    _parse_etymology(body, body_text, result)
+    _parse_references(body, result)
 
 
 def parse_grammatical_info(xml_data: str) -> dict:
@@ -247,35 +340,20 @@ def parse_grammatical_info(xml_data: str) -> dict:
         return result
 
     grammar_tags: dict = {}
-
     info_elem = body.find("info")
-    if info_elem is not None:
-        lex_attr = info_elem.get("lex", "")
-        genders = _parse_gender_from_lex(lex_attr)
-        if genders:
-            result["gender"] = genders
-
-        decl = _extract_declension(lex_attr)
-        if decl:
-            grammar_tags["declension"] = decl
-
+    _extract_grammar_from_info(info_elem, grammar_tags, result)
     lex_elem = body.find("lex")
-    if lex_elem is not None:
-        lex_result, lex_tags = _parse_lexicon_element(lex_elem)
-        result.update(lex_result)
-        grammar_tags.update(lex_tags)
+    _extract_grammar_from_lex(lex_elem, grammar_tags, result)
 
     body_text = _build_body_text(body)
-
-    if "comp" in body_text.lower():
-        grammar_tags["compound"] = True
 
     sanskrit_form = _find_sanskrit_form(body)
     if sanskrit_form:
         result["sanskrit_form"] = sanskrit_form
 
-    _parse_etymology(body, body_text, result)
-    _parse_references(body, result)
+    _extract_grammar_from_body(body_text, grammar_tags)
+
+    _parse_etymology_and_references(body, body_text, result)
 
     if grammar_tags:
         result["grammar_tags"] = grammar_tags

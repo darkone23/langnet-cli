@@ -186,49 +186,13 @@ class LanguageEngine:
             logger.debug(
                 "sanskrit_direct_lookup_empty",
                 word=word,
-                trying_lemmatization=True,
+                note="Sanskrit lemmatization unavailable via CLTK - search headwords directly",
             )
-
-            morphology_result = self.cltk.sanskrit_morphology_query(word)
-            if morphology_result.lemma and morphology_result.lemma not in (
-                "cltk_unavailable",
-                "error",
-            ):
-                logger.debug(
-                    "sanskrit_lemmatization_success",
-                    word=word,
-                    lemma=morphology_result.lemma,
-                )
-                lemma_result = _cattrs_converter.unstructure(
-                    self.cdsl.lookup_ascii(morphology_result.lemma)
-                )
-                has_lemma_results = bool(
-                    lemma_result.get("dictionaries", {}).get("mw")
-                    or lemma_result.get("dictionaries", {}).get("ap90")
-                )
-                if has_lemma_results:
-                    lemma_result["_lemmatized_from"] = word
-                    lemma_result["_search_method"] = "lemmatized"
-                    lemma_result["_lemma"] = morphology_result.lemma
-                    logger.debug(
-                        "sanskrit_lemmatization_lookup_success",
-                        word=word,
-                        lemma=morphology_result.lemma,
-                    )
-                    return lemma_result
-
-                logger.debug(
-                    "sanskrit_lemmatization_lookup_empty",
-                    word=word,
-                    lemma=morphology_result.lemma,
-                )
-                direct_result["_lemmatized_from"] = word
-                direct_result["_lemma"] = morphology_result.lemma
-                direct_result["_search_method"] = "lemmatized_no_results"
-                return direct_result
-
-            logger.debug("sanskrit_lemmatization_failed", word=word)
-            direct_result["_search_method"] = "direct_no_results"
+            direct_result["_search_method"] = "no_results"
+            direct_result["_warning"] = (
+                "Sanskrit lemmatization unavailable. "
+                "Please search headwords directly (e.g., 'yoga' not 'योगेन')."
+            )
             return direct_result
 
         except Exception as e:

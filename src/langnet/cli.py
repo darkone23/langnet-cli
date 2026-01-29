@@ -110,10 +110,16 @@ def _format_sanskrit_with_foster(result: dict) -> None:
                 entry["formatted_foster"] = render_foster_codes(entry["foster_codes"])
 
 
+def _show_sanskrit_warning(result: dict) -> None:
+    if result.get("_warning"):
+        console.print(f"[yellow]Warning: {result['_warning']}[/]")
+
+
 def _format_result_with_foster(result: dict) -> dict:
     _format_diogenes_with_foster(result)
     _format_cltk_with_foster(result)
     _format_sanskrit_with_foster(result)
+    _show_sanskrit_warning(result)
     return result
 
 
