@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from typing import Any
+
 import cattrs
 import structlog
 
@@ -7,6 +10,8 @@ from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
 from langnet.foster.apply import apply_foster_view
+from langnet.heritage.dictionary import HeritageDictionaryService
+from langnet.heritage.morphology import HeritageMorphologyService
 from langnet.whitakers_words.core import WhitakersWords
 
 logger = structlog.get_logger(__name__)
@@ -111,20 +116,26 @@ class GrammarAbbreviations:
     }
 
 
+@dataclass(frozen=True)
+class LanguageEngineConfig:
+    scraper: DiogenesScraper
+    whitakers: WhitakersWords
+    cltk: ClassicsToolkit
+    cdsl: SanskritCologneLexicon
+    heritage_morphology: HeritageMorphologyService | None = None
+    heritage_dictionary: HeritageDictionaryService | None = None
+    cache: QueryCache | NoOpCache | None = None
+
+
 class LanguageEngine:
-    def __init__(
-        self,
-        scraper: DiogenesScraper,
-        whitakers: WhitakersWords,
-        cltk: ClassicsToolkit,
-        cdsl: SanskritCologneLexicon,
-        cache: QueryCache | NoOpCache | None = None,
-    ):
-        self.diogenes = scraper
-        self.whitakers = whitakers
-        self.cltk = cltk
-        self.cdsl = cdsl
-        self.cache = cache if cache is not None else NoOpCache()
+    def __init__(self, config: LanguageEngineConfig):
+        self.diogenes = config.scraper
+        self.whitakers = config.whitakers
+        self.cltk = config.cltk
+        self.cdsl = config.cdsl
+        self.heritage_morphology = config.heritage_morphology
+        self.heritage_dictionary = config.heritage_dictionary
+        self.cache = config.cache if config.cache is not None else NoOpCache()
         self._cattrs_converter = cattrs.Converter(omit_if_default=True)
 
     def _query_greek(self, word: str, _cattrs_converter) -> dict:
@@ -172,7 +183,42 @@ class LanguageEngine:
         return result
 
     def _query_sanskrit(self, word: str, _cattrs_converter) -> dict:
+        result = {}
+
+        heritage_result = self._query_sanskrit_heritage(word, _cattrs_converter)
+        if heritage_result:
+            result["heritage"] = heritage_result
+
+        cdsl_result = self._query_sanskrit_cdsl(word, _cattrs_converter)
+        if cdsl_result:
+            result["cdsl"] = cdsl_result
+
+        lemma_result = self._query_sanskrit_lemma_fallback(result, _cattrs_converter)
+        if lemma_result:
+            result["cdsl"] = lemma_result
+
+        return result
+
+    def _query_sanskrit_heritage(self, word: str, _cattrs_converter) -> dict | None:
+        if not self.heritage_morphology or not self.heritage_dictionary:
+            return None
+
         try:
+            logger.debug("attempting_heritage_analysis", word=word)
+            heritage_result = self._query_sanskrit_with_heritage(word, _cattrs_converter)
+            if heritage_result.get("morphology") or heritage_result.get("dictionary"):
+                logger.debug("heritage_analysis_success", word=word)
+                return heritage_result
+            else:
+                logger.debug("heritage_analysis_empty", word=word)
+                return heritage_result
+        except Exception as e:
+            logger.error("heritage_analysis_failed", word=word, error=str(e))
+            return {"error": f"Heritage analysis failed: {str(e)}"}
+
+    def _query_sanskrit_cdsl(self, word: str, _cattrs_converter) -> dict:
+        try:
+            logger.debug("attempting_cdsl_lookup", word=word)
             direct_result = _cattrs_converter.unstructure(self.cdsl.lookup_ascii(word))
             has_results = bool(
                 direct_result.get("dictionaries", {}).get("mw")
@@ -180,24 +226,95 @@ class LanguageEngine:
             )
             if has_results:
                 direct_result["_search_method"] = "direct"
-                logger.debug("sanskrit_direct_lookup", word=word)
-                return direct_result
-
-            logger.debug(
-                "sanskrit_direct_lookup_empty",
-                word=word,
-                note="Sanskrit lemmatization unavailable via CLTK - search headwords directly",
-            )
-            direct_result["_search_method"] = "no_results"
-            direct_result["_warning"] = (
-                "Sanskrit lemmatization unavailable. "
-                "Please search headwords directly (e.g., 'yoga' not 'योगेन')."
-            )
+                logger.debug("cdsl_lookup_success", word=word)
+            else:
+                direct_result["_search_method"] = "no_results"
+                direct_result["_warning"] = (
+                    "Sanskrit lemmatization unavailable. "
+                    "Please search headwords directly (e.g., 'yoga' not 'योगेन')."
+                )
+                logger.debug("cdsl_lookup_empty", word=word, note="no CDSL results")
             return direct_result
-
         except Exception as e:
-            logger.error("backend_failed", backend="cdsl", error=str(e))
+            logger.error("cdsl_lookup_failed", word=word, error=str(e))
             return {"error": f"CDSL unavailable: {str(e)}"}
+
+    def _query_sanskrit_lemma_fallback(self, result: dict, _cattrs_converter) -> dict | None:
+        if not result.get("heritage") or result.get("cdsl", {}).get("dictionaries"):
+            return None
+
+        heritage_data = result.get("heritage", {})
+        solutions = heritage_data.get("morphology", {}).get("solutions", [])
+        if not solutions:
+            return None
+
+        first_solution = solutions[0]
+        analyses = first_solution.get("analyses", [])
+        if not analyses:
+            return None
+
+        first_analysis = analyses[0]
+        lemma = first_analysis.get("lemma")
+        if not lemma:
+            return None
+
+        try:
+            logger.debug("attempting_cdsl_lemma_lookup", lemma=lemma)
+            cdsl_result = _cattrs_converter.unstructure(self.cdsl.lookup_ascii(lemma))
+            if cdsl_result.get("dictionaries"):
+                cdsl_result["_search_method"] = "lemma"
+                logger.debug("cdsl_lemma_lookup_success", lemma=lemma)
+                return cdsl_result
+        except Exception as e:
+            logger.error("cdsl_lemma_lookup_failed", lemma=lemma, error=str(e))
+        return None
+
+    def _query_sanskrit_with_heritage(self, word: str, _cattrs_converter) -> dict:
+        """Query Sanskrit using Heritage Platform for better lemmatization"""
+        result: dict[str, Any] = {
+            "morphology": None,
+            "dictionary": None,
+            "combined": None,
+        }
+
+        if not self.heritage_morphology or not self.heritage_dictionary:
+            logger.warning("heritage_services_not_available")
+            return result
+
+        # Perform morphological analysis
+        morphology_result = self.heritage_morphology.analyze_word(word)
+        if morphology_result:
+            result["morphology"] = _cattrs_converter.unstructure(morphology_result)
+
+            # If we have a lemma, look it up in the dictionary
+            if morphology_result.solutions and morphology_result.solutions[0].analyses:
+                # Extract lemma from first solution's first analysis
+                first_analysis = morphology_result.solutions[0].analyses[0]
+                lemma = first_analysis.lemma if first_analysis.lemma else None
+                if lemma:
+                    dict_result = self.heritage_dictionary.lookup_word(lemma)
+                    if dict_result and dict_result.get("entries"):
+                        result["dictionary"] = _cattrs_converter.unstructure(dict_result)
+
+                        # Create combined analysis
+                        combined = {
+                            "lemma": lemma,
+                            "pos": first_analysis.pos if first_analysis.pos else "unknown",
+                            "morphology_analyses": [
+                                {
+                                    "word": analysis.word,
+                                    "lemma": analysis.lemma,
+                                    "pos": analysis.pos,
+                                    "confidence": analysis.confidence,
+                                }
+                                for analysis in morphology_result.solutions[0].analyses
+                            ],
+                            "dictionary_entries": dict_result.get("entries", []),
+                            "transliteration": dict_result.get("transliteration", {}),
+                        }
+                        result["combined"] = combined
+
+        return result
 
     def handle_query(self, lang, word):
         lang = LangnetLanguageCodes.get_for_input(lang)

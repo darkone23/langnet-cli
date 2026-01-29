@@ -27,6 +27,7 @@ def restart():
     sh.Command("pkill")("-f", "uvicorn", _ok_code=[0, 1])
     console.print("[yellow]Sent pkill to uvicorn processes[/yellow]")
 
+    time.sleep(5)
     console.print("[cyan]Waiting for port to become available...[/cyan]")
     for i in range(30):
         try:

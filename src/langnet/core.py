@@ -3,9 +3,9 @@ import structlog
 from langnet.cache.core import create_cache
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
-from langnet.config import config
+from langnet.config import config as langnet_config
 from langnet.diogenes.core import DiogenesScraper
-from langnet.engine.core import LanguageEngine
+from langnet.engine.core import LanguageEngine, LanguageEngineConfig
 from langnet.whitakers_words.core import WhitakersWords
 
 logger = structlog.get_logger(__name__)
@@ -23,7 +23,7 @@ class LangnetWiring:
         if hasattr(self, "_initialized"):
             return
 
-        use_cache = cache_enabled if cache_enabled is not None else config.cache_enabled
+        use_cache = cache_enabled if cache_enabled is not None else langnet_config.cache_enabled
         scraper = DiogenesScraper()
         whitakers = WhitakersWords()
         cltk = ClassicsToolkit()
@@ -35,5 +35,12 @@ class LangnetWiring:
         else:
             logger.info("cache_disabled")
 
-        self.engine = LanguageEngine(scraper, whitakers, cltk, cdsl, cache)
+        config = LanguageEngineConfig(
+            scraper=scraper,
+            whitakers=whitakers,
+            cltk=cltk,
+            cdsl=cdsl,
+            cache=cache,
+        )
+        self.engine = LanguageEngine(config)
         self._initialized = True

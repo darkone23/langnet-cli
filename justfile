@@ -10,6 +10,11 @@ cli *args:
 langnet-dg-reaper:
     python3 -m langnet.diogenes.cli_util
 
+# restart uvicorn server
+restart-server:
+    just autobot server restart
+    just autobot server verify
+    
 # run ruff & ty
 lint-all:
     just ruff-format
