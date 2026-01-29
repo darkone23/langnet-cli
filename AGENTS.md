@@ -83,3 +83,4 @@ When performing tasks, reference the relevant skill for context and patterns.
 
 - You never download and install new tools from the internet without explicit instruction.
 - You always use `just` commands instead of running ad-hoc programs.
+- If you need to save local debug/verification/ad-hoc-test files put them in ./examples/debug

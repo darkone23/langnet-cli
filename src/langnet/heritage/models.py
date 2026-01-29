@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List
+from typing import Any
 
 
 @dataclass
@@ -10,16 +10,16 @@ class HeritageWordAnalysis:
     lemma: str
     root: str
     pos: str
-    case: Optional[str] = None
-    gender: Optional[str] = None
-    number: Optional[str] = None
-    person: Optional[int] = None
-    tense: Optional[str] = None
-    voice: Optional[str] = None
-    mood: Optional[str] = None
+    case: str | None = None
+    gender: str | None = None
+    number: str | None = None
+    person: int | None = None
+    tense: str | None = None
+    voice: str | None = None
+    mood: str | None = None
     stem: str = ""
-    meaning: List[str] = field(default_factory=list)
-    lexicon_refs: List[str] = field(default_factory=list)
+    meaning: list[str] = field(default_factory=list)
+    lexicon_refs: list[str] = field(default_factory=list)
     confidence: float = 0.0
 
 
@@ -28,10 +28,10 @@ class HeritageSolution:
     """Complete solution from morphological analysis"""
 
     type: str
-    analyses: List[HeritageWordAnalysis]
+    analyses: list[HeritageWordAnalysis]
     total_words: int
     score: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -40,17 +40,17 @@ class HeritageDictionaryEntry:
 
     headword: str
     lemma: str
-    definitions: List[str]
-    pos: Optional[str] = None
-    gender: Optional[str] = None
-    number: Optional[str] = None
-    case: Optional[int] = None
-    etymology: Optional[str] = None
-    stem: Optional[str] = None
-    root: Optional[str] = None
-    lexicon_refs: List[str] = field(default_factory=list)
-    frequency: Optional[int] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    definitions: list[str]
+    pos: str | None = None
+    gender: str | None = None
+    number: str | None = None
+    case: int | None = None
+    etymology: str | None = None
+    stem: str | None = None
+    root: str | None = None
+    lexicon_refs: list[str] = field(default_factory=list)
+    frequency: int | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -59,12 +59,12 @@ class HeritageSearchResult:
 
     query: str
     lexicon: str
-    entries: List[HeritageDictionaryEntry]
+    entries: list[HeritageDictionaryEntry]
     total_results: int
     page: int = 1
     has_next: bool = False
     has_prev: bool = False
-    suggestions: List[str] = field(default_factory=list)
+    suggestions: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -72,12 +72,12 @@ class HeritageMorphologyResult:
     """Complete morphology analysis result"""
 
     input_text: str
-    solutions: List[HeritageSolution]
-    word_analyses: List[Dict[str, Any]]
+    solutions: list[HeritageSolution]
+    word_analyses: list[dict[str, Any]]
     total_solutions: int
     encoding: str = "velthuis"
     processing_time: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -85,8 +85,8 @@ class HeritageLemmaResult:
     """Lemmatization result"""
 
     input_word: str
-    lemmas: List[str]
-    best_lemma: Optional[str] = None
+    lemmas: list[str]
+    best_lemma: str | None = None
     confidence: float = 0.0
     processing_time: float = 0.0
 
@@ -99,9 +99,9 @@ class HeritageDeclensionResult:
     gender: str
     case: int
     number: str
-    forms: List[str]
-    table: List[List[str]]
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    forms: list[str]
+    table: list[list[str]]
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -112,9 +112,9 @@ class HeritageConjugationResult:
     tense: str
     person: int
     number: str
-    forms: List[str]
-    table: List[List[str]]
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    forms: list[str]
+    table: list[list[str]]
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -124,5 +124,5 @@ class HeritageErrorResponse:
     error: str
     code: str
     message: str
-    details: Optional[str] = None
-    timestamp: Optional[str] = None
+    details: str | None = None
+    timestamp: str | None = None

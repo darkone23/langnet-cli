@@ -1,9 +1,12 @@
+#!/usr/bin/env python3
+"""
+Simple Heritage Platform HTML parser for morphology analysis
+"""
+
 import re
 from typing import Any
 
 from bs4 import BeautifulSoup
-
-from .client import HeritageAPIError
 
 
 class SimpleHeritageParser:
@@ -62,7 +65,7 @@ class SimpleHeritageParser:
                 "metadata": {},
             }
 
-            # Look for analysis content near this span
+            # Look for analysis content near this solution
             # Look for the next elements after this span
             next_element = section_span.next_sibling
             if next_element:
@@ -149,15 +152,40 @@ class SimpleHeritageParser:
         return solutions
 
 
-class MorphologyParser:
-    """Parser for morphological analysis responses (sktreader) - uses SimpleHeritageParser"""
+# Test the parser
+if __name__ == "__main__":
+    import os
+    import sys
 
-    def __init__(self):
-        self.simple_parser = SimpleHeritageParser()
+    # Add src to path
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-    def parse(self, html_content: str) -> dict[str, Any]:
-        """Parse morphology analysis results using simple parser"""
-        try:
-            return self.simple_parser.parse_morphology(html_content)
-        except Exception as e:
-            raise HeritageAPIError(f"Failed to parse morphology HTML: {e}")
+    from langnet.heritage.client import HeritageHTTPClient
+
+    parser = SimpleHeritageParser()
+
+    try:
+        # Test with a simple word
+        test_word = "agni"
+        print(f"Testing word: '{test_word}'")
+
+        with HeritageHTTPClient() as client:
+            params = {"text": "agni", "t": "VH", "max": "2"}
+
+            html_content = client.fetch_cgi_script("sktreader", params=params)
+            print(f"HTML length: {len(html_content)}")
+
+            result = parser.parse_morphology(html_content)
+            print(f"Parsed result: {result}")
+            print(f"Total solutions: {result['total_solutions']}")
+
+            for i, solution in enumerate(result["solutions"]):
+                print(f"Solution {i + 1}: {solution['total_words']} words")
+                for j, analysis in enumerate(solution["analyses"]):
+                    print(f"  Analysis {j + 1}: {analysis['word']} -> {analysis['lemma']}")
+
+    except Exception as e:
+        print(f"Test failed: {e}")
+        import traceback
+
+        traceback.print_exc()

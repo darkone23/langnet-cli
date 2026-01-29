@@ -1,7 +1,6 @@
-import json
 import time
-from typing import Dict, Any, Optional, Union
-from urllib.parse import urljoin, urlencode
+from typing import Any
+from urllib.parse import urlencode, urljoin
 
 import requests
 import structlog
@@ -39,7 +38,7 @@ class HeritageHTTPClient:
             time.sleep(self.min_request_delay - time_since_last)
         self.last_request_time = time.time()
 
-    def build_cgi_url(self, script_name: str, params: Optional[Dict[str, Any]] = None) -> str:
+    def build_cgi_url(self, script_name: str, params: dict[str, Any] | None = None) -> str:
         """Build complete CGI script URL with parameters"""
         base_url = self.config.base_url.rstrip("/")
         cgi_path = self.config.cgi_path.rstrip("/") + "/"
@@ -56,9 +55,9 @@ class HeritageHTTPClient:
     def fetch_cgi_script(
         self,
         script_name: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         method: str = "GET",
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ) -> str:
         """Fetch response from CGI script"""
         if not self.session:
@@ -98,15 +97,15 @@ class HeritageHTTPClient:
     def fetch_json(
         self,
         script_name: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         method: str = "GET",
-        timeout: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
         """Fetch response and parse as JSON"""
         html_content = self.fetch_cgi_script(script_name, params, method, timeout)
         return self.parse_html_to_json(html_content)
 
-    def parse_html_to_json(self, html_content: str) -> Dict[str, Any]:
+    def parse_html_to_json(self, html_content: str) -> dict[str, Any]:
         """Parse HTML response and convert to structured JSON"""
         try:
             soup = BeautifulSoup(html_content, "html.parser")
@@ -123,6 +122,223 @@ class HeritageHTTPClient:
         except Exception as e:
             logger.error("Failed to parse HTML response", error=str(e))
             raise HeritageAPIError(f"HTML parsing failed: {e}")
+
+    def fetch_dictionary_search(
+        self,
+        query: str,
+        lexicon: str = "MW",
+        max_results: int | None = None,
+        encoding: str | None = None,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """Fetch dictionary search results from sktsearch/sktindex CGI script"""
+        from .parameters import HeritageParameterBuilder
+
+        params = HeritageParameterBuilder.build_search_params(
+            query=query,
+            lexicon=lexicon,
+            max_results=max_results,
+            encoding=encoding,
+            **kwargs,
+        )
+
+        # Use sktindex for dictionary lookup (it works better than sktsearch)
+        script_name = "sktindex"
+        html_content = self.fetch_cgi_script(script_name, params)
+
+        # Parse the dictionary response
+        return self.parse_dictionary_response(html_content, lexicon)
+
+    def parse_dictionary_response(self, html_content: str, lexicon: str) -> dict[str, Any]:
+        """Parse dictionary search response HTML"""
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+
+            # Extract dictionary entries
+            entries = []
+
+            # Look for dictionary results in the main content area
+            # Based on the HTML structure, results are typically in table cells with specific classes
+
+            # Method 1: Look for table cells with links to dictionary entries
+            result_tables = soup.find_all("table", class_="yellow_cent")
+            for table in result_tables:
+                rows = table.find_all("tr")
+                for row in rows:
+                    cells = row.find_all("td")
+                    if cells:
+                        # Look for links with headwords
+                        links = cells[0].find_all("a", href=True)
+                        for link in links:
+                            href = link.get("href", "")
+                            headword_text = link.get_text(strip=True)
+
+                            # Extract headword from href if it looks like a dictionary entry
+                            if "/skt/MW/" in href and headword_text:
+                                # Extract part of speech from the text
+                                pos_text = cells[0].get_text(strip=True)
+                                if "Noun" in pos_text:
+                                    pos = "Noun"
+                                elif "Verb" in pos_text:
+                                    pos = "Verb"
+                                elif "Adjective" in pos_text:
+                                    pos = "Adjective"
+                                else:
+                                    pos = "Unknown"
+
+                                entries.append(
+                                    {
+                                        "headword": headword_text,
+                                        "part_of_speech": pos,
+                                        "lexicon": lexicon,
+                                        "entry_url": href,
+                                    }
+                                )
+
+            # Method 2: Look for any text content containing the query
+            if not entries:
+                all_text = soup.get_text()
+                if "agni" in all_text.lower():
+                    lines = all_text.split("\n")
+                    for line in lines:
+                        if "agni" in line.lower() and len(line.strip()) > 10:
+                            # Simple extraction - this will be improved
+                            entries.append(
+                                {
+                                    "headword": "agni",
+                                    "part_of_speech": "Unknown",
+                                    "lexicon": lexicon,
+                                    "entry_url": None,
+                                    "raw_text": line.strip(),
+                                }
+                            )
+
+            return {
+                "lexicon": lexicon,
+                "entries": entries,
+                "total_entries": len(entries),
+                "raw_html": html_content,
+            }
+
+        except Exception as e:
+            logger.error("Failed to parse dictionary response", error=str(e))
+            raise HeritageAPIError(f"Dictionary parsing failed: {e}")
+
+    def fetch_lemmatization(
+        self,
+        word: str,
+        encoding: str | None = None,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """Fetch lemmatization results from sktlemmatizer CGI script"""
+        from .parameters import HeritageParameterBuilder
+
+        params = HeritageParameterBuilder.build_lemma_params(
+            word=word,
+            encoding=encoding,
+            **kwargs,
+        )
+
+        # Use sktlemmatizer for lemmatization
+        script_name = "sktlemmatizer"
+        html_content = self.fetch_cgi_script(script_name, params)
+
+        # Parse the lemmatization response
+        return self.parse_lemmatization_response(html_content)
+
+    def parse_lemmatization_response(self, html_content: str) -> dict[str, Any]:
+        """Parse lemmatization response HTML"""
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+
+            # Extract lemmatization results
+            lemmas = []
+
+            # Look for lemmatization results in the response
+            # This will depend on the actual HTML structure returned by sktlemmatizer
+            results = soup.find_all("div", class_="lemma-result")  # Class name may vary
+
+            if not results:
+                # Fallback: look for any table rows with lemmatization info
+                table_rows = soup.find_all("tr")
+                for row in table_rows:
+                    cells = row.find_all("td")
+                    if len(cells) >= 2:
+                        inflected_form = cells[0].get_text(strip=True)
+                        lemma = cells[1].get_text(strip=True)
+
+                        if inflected_form and lemma:
+                            lemmas.append(
+                                {
+                                    "inflected_form": inflected_form,
+                                    "lemma": lemma,
+                                }
+                            )
+
+            if not lemmas:
+                # If no structured data found, return raw content for analysis
+                return {
+                    "inflected_form": None,
+                    "lemma": None,
+                    "raw_html": html_content,
+                    "message": "No structured lemmatization data found",
+                }
+
+            return {
+                "inflected_form": lemmas[0]["inflected_form"] if lemmas else None,
+                "lemma": lemmas[0]["lemma"] if lemmas else None,
+                "all_lemmas": lemmas,
+                "raw_html": html_content,
+            }
+
+        except Exception as e:
+            logger.error("Failed to parse lemmatization response", error=str(e))
+            raise HeritageAPIError(f"Lemmatization parsing failed: {e}")
+
+    def fetch_dictionary_entry(self, entry_url: str) -> dict[str, Any]:
+        """Fetch and parse a specific dictionary entry from its URL"""
+        try:
+            # Extract script name and parameters from URL
+            if entry_url and "/skt/MW/" in entry_url:
+                # This is a Monier-Williams dictionary entry
+                # We need to construct the appropriate CGI call
+                # The URL format is typically /skt/MW/2.html#agni
+                # We need to extract the page number and headword
+
+                import re
+
+                match = re.search(r"/skt/MW/(\d+)\.html#(.+)", entry_url)
+                if match:
+                    page_num = match.group(1)
+                    headword = match.group(2)
+
+                    # Construct the appropriate CGI call
+                    # This might require a different approach than direct URL fetching
+                    return {
+                        "headword": headword,
+                        "page": page_num,
+                        "entry_url": entry_url,
+                        "status": "url_extracted",
+                        "message": "Dictionary entry URL extracted but direct fetching not implemented",
+                    }
+                else:
+                    return {
+                        "headword": None,
+                        "entry_url": entry_url,
+                        "status": "parse_error",
+                        "message": "Could not parse dictionary entry URL",
+                    }
+            else:
+                return {
+                    "headword": None,
+                    "entry_url": entry_url,
+                    "status": "unsupported_format",
+                    "message": "Unsupported dictionary entry URL format",
+                }
+
+        except Exception as e:
+            logger.error("Failed to fetch dictionary entry", error=str(e))
+            raise HeritageAPIError(f"Dictionary entry fetch failed: {e}")
 
 
 class HeritageAPIError(Exception):

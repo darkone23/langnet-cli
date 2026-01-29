@@ -10,29 +10,24 @@ cltk_logger.setLevel(logging.CRITICAL)
 cltk_logger.propagate = False
 
 
-class ClassicsWiring:
-    def __init__(self):
-        self.cologne_dict = SanskritCologneLexicon()
+class TestLatinExamples(unittest.TestCase):
+    def setUp(self):
         self.cltk = ClassicsToolkit()
 
-
-wiring = ClassicsWiring()  # this will prompt downloading language data from universities
-
-
-class TestLatinExamples(unittest.TestCase):
-    # import basic latin corpus
-
     def test_replacer(self):
-        replaced = wiring.cltk.jvsub.replace("justiciar")
+        self.assertTrue(hasattr(self.cltk, "jvsub"))
+        replaced = self.cltk.jvsub.replace("justiciar")
         self.assertEqual(replaced, "iusticiar")
 
     def test_transcriber(self):
-        transcribed = wiring.cltk.latxform.transcribe("iusticiar")  # type: ignore
+        self.assertTrue(hasattr(self.cltk, "latxform"))
+        transcribed = self.cltk.latxform.transcribe("iusticiar")
         self.assertEqual(transcribed, "[jʊs.'t̪ɪ.kɪ̣.jar]")
 
     def test_lemmatizer(self):
+        self.assertTrue(hasattr(self.cltk, "latlemma"))
         lupus = ["lupi", "luporum", "lupis", "lupos", "lupi", "lupis"]
-        lemmas = wiring.cltk.latlemma.lemmatize(lupus)  # type: ignore
+        lemmas = self.cltk.latlemma.lemmatize(lupus)
 
         expected = [
             ("lupi", "lupus"),
@@ -45,7 +40,8 @@ class TestLatinExamples(unittest.TestCase):
         self.assertEqual(lemmas, expected)
 
     def test_lexicon(self):
-        result = wiring.cltk.latdict.lookup("saga")  # type: ignore
+        self.assertTrue(hasattr(self.cltk, "latdict"))
+        result = self.cltk.latdict.lookup("saga")
 
         somestr = """\
         sāga
@@ -60,15 +56,16 @@ class TestLatinExamples(unittest.TestCase):
 
         self.assertEqual(result, textwrap.dedent(somestr))
 
-        # self.assertExpectedInline(somestr, """"")
-
 
 class TestGreekSpacyMorphology(unittest.TestCase):
+    def setUp(self):
+        self.cltk = ClassicsToolkit()
+
     def test_spacy_is_available(self):
-        self.assertIsInstance(wiring.cltk.spacy_is_available(), bool)
+        self.assertIsInstance(self.cltk.spacy_is_available(), bool)
 
     def test_greek_morphology_query(self):
-        result = wiring.cltk.greek_morphology_query("λόγος")
+        result = self.cltk.greek_morphology_query("λόγος")
 
         self.assertIsInstance(result.text, str)
         self.assertIsInstance(result.lemma, str)
@@ -76,7 +73,7 @@ class TestGreekSpacyMorphology(unittest.TestCase):
         self.assertIsInstance(result.morphological_features, dict)
 
     def test_greek_morphology_returns_valid_result(self):
-        result = wiring.cltk.greek_morphology_query("λόγος")
+        result = self.cltk.greek_morphology_query("λόγος")
 
         self.assertEqual(result.text, "λόγος")
         self.assertEqual(result.lemma, "λόγος")

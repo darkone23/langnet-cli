@@ -69,6 +69,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+extend-exclude = ["examples"]
 # ignore = [
     # "E402" # dynamic import (used for health checks)
 # ]

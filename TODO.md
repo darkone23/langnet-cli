@@ -1,5 +1,15 @@
 # TODO
 
+## Code Quality Issues
+
+### 🔥 Critical Technical Debt
+
+- **TODO: Remove all regex-based parsing**
+  - Heritage Platform POS parsing uses regex (currently in `test_heritage_pos_parsing.py`)
+  - Whitaker's Words parsing uses regex for grammar extraction
+  - Replace with proper parser combinators or structured text parsing
+  - High priority: regex maintenance burden and brittleness
+
 ## Roadmap: Future Work
 
 ### Dictionary Entry Parsers

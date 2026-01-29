@@ -1,15 +1,21 @@
-from typing import Dict, Any, Optional, List
-import unicodedata
+from typing import Any
 
 # Import indic_transliteration library with proper error handling
 try:
-    from indic_transliteration.sanscript import DEVANAGARI, VELTHUIS, ITRANS, SLP1
-    from indic_transliteration.sanscript import transliterate
+    from indic_transliteration.sanscript import DEVANAGARI, ITRANS, SLP1, VELTHUIS, transliterate
 
     HAS_INDIC_TRANSLIT = True
+    DEVANAGARI_AVAILABLE = DEVANAGARI
+    VELTHUIS_AVAILABLE = VELTHUIS
+    ITRANS_AVAILABLE = ITRANS
+    SLP1_AVAILABLE = SLP1
 except ImportError:
     HAS_INDIC_TRANSLIT = False
-    transliterate = None
+    transliterate: Any | None = None
+    DEVANAGARI_AVAILABLE = None
+    VELTHUIS_AVAILABLE = None
+    ITRANS_AVAILABLE = None
+    SLP1_AVAILABLE = None
 
 
 class HeritageParameterBuilder:
@@ -20,26 +26,25 @@ class HeritageParameterBuilder:
         """Encode Sanskrit text using specified encoding"""
         if HAS_INDIC_TRANSLIT and transliterate is not None:
             # Use indic_transliteration library if available
-            if encoding == "velthuis":
-                return transliterate(text, DEVANAGARI, VELTHUIS)
-            elif encoding == "itrans":
-                return transliterate(text, DEVANAGARI, ITRANS)
-            elif encoding == "slp1":
-                return transliterate(text, DEVANAGARI, SLP1)
+            if encoding == "velthuis" and VELTHUIS_AVAILABLE:
+                return transliterate(text, DEVANAGARI_AVAILABLE, VELTHUIS_AVAILABLE)
+            elif encoding == "itrans" and ITRANS_AVAILABLE:
+                return transliterate(text, DEVANAGARI_AVAILABLE, ITRANS_AVAILABLE)
+            elif encoding == "slp1" and SLP1_AVAILABLE:
+                return transliterate(text, DEVANAGARI_AVAILABLE, SLP1_AVAILABLE)
             else:
                 # Return as-is for unknown encodings
                 return text
+        # Fallback to custom mappings
+        elif encoding == "velthuis":
+            return HeritageParameterBuilder._to_velthuis(text)
+        elif encoding == "itrans":
+            return HeritageParameterBuilder._to_itrans(text)
+        elif encoding == "slp1":
+            return HeritageParameterBuilder._to_slp1(text)
         else:
-            # Fallback to custom mappings
-            if encoding == "velthuis":
-                return HeritageParameterBuilder._to_velthuis(text)
-            elif encoding == "itrans":
-                return HeritageParameterBuilder._to_itrans(text)
-            elif encoding == "slp1":
-                return HeritageParameterBuilder._to_slp1(text)
-            else:
-                # Return as-is for unknown encodings
-                return text
+            # Return as-is for unknown encodings
+            return text
 
     @staticmethod
     def _to_velthuis(text: str) -> str:
@@ -291,8 +296,8 @@ class HeritageParameterBuilder:
 
     @staticmethod
     def build_morphology_params(
-        text: str, encoding: Optional[str] = None, max_solutions: Optional[int] = None, **kwargs
-    ) -> Dict[str, Any]:
+        text: str, encoding: str | None = None, max_solutions: int | None = None, **kwargs
+    ) -> dict[str, Any]:
         """Build parameters for morphological analysis (sktreader)"""
         params = {}
 
@@ -317,10 +322,10 @@ class HeritageParameterBuilder:
     def build_search_params(
         query: str,
         lexicon: str = "MW",
-        max_results: Optional[int] = None,
-        encoding: Optional[str] = None,
+        max_results: int | None = None,
+        encoding: str | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build parameters for dictionary search (sktsearch/sktindex)"""
         params = {
             "lex": lexicon,
@@ -339,7 +344,7 @@ class HeritageParameterBuilder:
         return params
 
     @staticmethod
-    def build_lemma_params(word: str, encoding: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    def build_lemma_params(word: str, encoding: str | None = None, **kwargs) -> dict[str, Any]:
         """Build parameters for lemmatization (sktlemmatizer)"""
         params = {}
 
@@ -360,9 +365,9 @@ class HeritageParameterBuilder:
         gender: str = "m",
         case: int = 1,
         number: str = "s",
-        encoding: Optional[str] = None,
+        encoding: str | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build parameters for declension generation (sktdeclin)"""
         params = {
             "lemma": lemma,
@@ -383,9 +388,9 @@ class HeritageParameterBuilder:
         tense: str = "pres",
         person: int = 3,
         number: str = "s",
-        encoding: Optional[str] = None,
+        encoding: str | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build parameters for conjugation generation (sktconjug)"""
         params = {
             "verb": lemma,
