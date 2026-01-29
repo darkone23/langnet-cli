@@ -2,6 +2,7 @@
 .venv*
 .devenv*
 devenv.local.nix
+.dev-envfile
 
 # direnv
 .direnv

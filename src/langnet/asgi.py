@@ -16,6 +16,8 @@ logger = structlog.get_logger(__name__)
 
 from langnet.core import LangnetWiring  # noqa: E402
 from langnet.diogenes.core import DiogenesScraper  # noqa: E402
+from langnet.heritage.config import HeritageConfig  # noqa: E402
+from langnet.heritage.morphology import HeritageMorphologyService  # noqa: E402
 
 
 class ORJsonResponse(Response):
@@ -98,6 +100,21 @@ class HealthChecker:
     def cdsl() -> dict:
         return {"status": "healthy"}
 
+    @staticmethod
+    def heritage() -> dict:
+        try:
+            config = HeritageConfig()
+            morphology = HeritageMorphologyService(config)
+            result = morphology.analyze("agni")
+            if result and result.total_solutions > 0:
+                return {"status": "healthy", "solutions": result.total_solutions}
+            elif result:
+                return {"status": "degraded", "message": "Heritage responding but no solutions"}
+            else:
+                return {"status": "unhealthy", "message": "No result from Heritage"}
+        except Exception as e:
+            return {"status": "unhealthy", "message": str(e)}
+
 
 async def health_check(request: Request):
     try:
@@ -112,6 +129,7 @@ async def health_check(request: Request):
             "spacy": HealthChecker.spacy(),
             "whitakers": HealthChecker.whitakers(),
             "cdsl": HealthChecker.cdsl(),
+            "heritage": HealthChecker.heritage(),
         }
         overall = (
             "healthy" if all(h.get("status") == "healthy" for h in health.values()) else "degraded"

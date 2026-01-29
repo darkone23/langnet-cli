@@ -15,6 +15,8 @@ class Config:
     cache_path: str = ""
     cdsl_dict_dir: Path = field(default_factory=lambda: Path.home() / "cdsl_data" / "dict")
     cdsl_db_dir: Path = field(default_factory=lambda: Path.home() / "cdsl_data" / "db")
+    heritage_url: str = os.getenv("HERITAGE_URL", "http://localhost:48080")
+    http_timeout: int = 30
 
     @classmethod
     def load(cls) -> "Config":
@@ -28,6 +30,8 @@ class Config:
             cache_path=cache_path if cache_path else "",
             cdsl_dict_dir=Path(cdsl_dict) if cdsl_dict else Path.home() / "cdsl_data" / "dict",
             cdsl_db_dir=Path(cdsl_db) if cdsl_db else Path.home() / "cdsl_data" / "db",
+            heritage_url=Config.heritage_url,
+            http_timeout=int(os.getenv("HTTP_TIMEOUT", "30")),
         )
 
 

@@ -6,6 +6,9 @@ from langnet.cologne.core import SanskritCologneLexicon
 from langnet.config import config as langnet_config
 from langnet.diogenes.core import DiogenesScraper
 from langnet.engine.core import LanguageEngine, LanguageEngineConfig
+from langnet.heritage.config import HeritageConfig
+from langnet.heritage.dictionary import HeritageDictionaryService
+from langnet.heritage.morphology import HeritageMorphologyService
 from langnet.whitakers_words.core import WhitakersWords
 
 logger = structlog.get_logger(__name__)
@@ -30,6 +33,13 @@ class LangnetWiring:
         cdsl = SanskritCologneLexicon()
         cache = create_cache(use_cache)
 
+        heritage_config = HeritageConfig(
+            base_url=langnet_config.heritage_url,
+            timeout=langnet_config.http_timeout,
+        )
+        heritage_morphology = HeritageMorphologyService(heritage_config)
+        heritage_dictionary = HeritageDictionaryService()
+
         if use_cache:
             logger.info("cache_enabled", path=str(cache.cache_dir))
         else:
@@ -40,6 +50,8 @@ class LangnetWiring:
             whitakers=whitakers,
             cltk=cltk,
             cdsl=cdsl,
+            heritage_morphology=heritage_morphology,
+            heritage_dictionary=heritage_dictionary,
             cache=cache,
         )
         self.engine = LanguageEngine(config)
