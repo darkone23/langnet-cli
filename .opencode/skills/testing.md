@@ -6,13 +6,12 @@ Run tests for langnet-cli project.
 
 Run all tests:
 ```bash
-devenv shell
-nose2 -s tests --config tests/nose2.cfg
+just test-all
 ```
 
 Run single test with full dotted path:
 ```bash
-nose2 -s tests tests.test_api_integration.TestGreekSpacyIntegration.test_greek_query_includes_spacy_response --config tests/nose2.cfg
+just test tests.test_api_integration.TestGreekSpacyIntegration.test_greek_query_includes_spacy_response
 ```
 
 Run tests with verbose logging:
@@ -34,5 +33,6 @@ LANGNET_LOG_LEVEL=DEBUG nose2 -s tests --config tests/nose2.cfg
 
 - Tests require `devenv shell` environment active
 - Diogenes server must be running on localhost:8888 for backend tests
+- CDSL db must be available for many tests
 - CLTK models (~500MB) download on first test run
 - Tests disable urllib3 connection logging to reduce noise

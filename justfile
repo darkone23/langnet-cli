@@ -21,8 +21,11 @@ reap:
     python3 -m langnet.diogenes.cli_util reap --once
 
 # Run the test suite
-test:
+test-all:
     nose2 -s tests --config tests/nose2.cfg
+
+test *args:
+    nose2 -s tests --config tests/nose2.cfg {{ args }}
 
 # Format code with ruff
 ruff-format:
