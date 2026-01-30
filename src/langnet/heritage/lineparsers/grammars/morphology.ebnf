@@ -1,0 +1,26 @@
+start: solution_section | pattern_section+
+
+# Solution sections marked with "Solution X :"
+solution_section: "Solution" INT solution_content
+
+# Content of each solution
+solution_content: analysis_pattern+
+
+# Standalone pattern sections (for direct table content)
+pattern_section: analysis_pattern+
+
+# Pattern like [word]{analysis}
+analysis_pattern: "[" word "]" "{" analysis "}"
+
+# Sanskrit word in any encoding
+word: /[^{\[\]]+/
+
+# Morphological analysis codes
+analysis: /[^\}]+/
+
+# Integer for solution number
+INT: /[0-9]+/
+
+# Ignore whitespace
+%import common.WS
+%ignore WS

@@ -263,8 +263,30 @@ class HeritageMorphologyService:
         """Convert solution data to structured solution"""
 
         analyses = []
-        for entry_data in solution_data.get("entries", []):
-            analysis = self._build_word_analysis(entry_data)
+        # Handle new parser format which returns HeritageWordAnalysis objects directly
+        for entry_data in solution_data.get("analyses", solution_data.get("entries", [])):
+            if hasattr(entry_data, "word"):  # HeritageWordAnalysis object
+                # Convert HeritageWordAnalysis to dict for compatibility
+                analysis_dict = {
+                    "word": entry_data.word,
+                    "lemma": entry_data.lemma,
+                    "root": entry_data.root,
+                    "pos": entry_data.pos,
+                    "case": entry_data.case,
+                    "gender": entry_data.gender,
+                    "number": entry_data.number,
+                    "person": entry_data.person,
+                    "tense": entry_data.tense,
+                    "voice": entry_data.voice,
+                    "mood": entry_data.mood,
+                    "stem": entry_data.stem,
+                    "meaning": entry_data.meaning,
+                    "lexicon_refs": entry_data.lexicon_refs,
+                    "confidence": entry_data.confidence,
+                }
+                analysis = self._build_word_analysis(analysis_dict)
+            else:  # Dictionary format (legacy)
+                analysis = self._build_word_analysis(entry_data)
             analyses.append(analysis)
 
         return HeritageSolution(

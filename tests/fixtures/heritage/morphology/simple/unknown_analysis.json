@@ -1,0 +1,28 @@
+[
+  {
+    "type": "morphological_analysis",
+    "solution_number": 1,
+    "analyses": [
+      {
+        "word": "agni",
+        "lemma": "agni",
+        "root": "",
+        "pos": "unknown",
+        "case": null,
+        "gender": null,
+        "number": null,
+        "person": null,
+        "tense": null,
+        "voice": null,
+        "mood": null,
+        "stem": "",
+        "meaning": [],
+        "lexicon_refs": [],
+        "confidence": 0.0
+      }
+    ],
+    "total_words": 1,
+    "score": 0.0,
+    "metadata": {}
+  }
+]

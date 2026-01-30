@@ -1,0 +1,28 @@
+[
+  {
+    "type": "morphological_analysis",
+    "solution_number": 1,
+    "analyses": [
+      {
+        "word": "bhavati",
+        "lemma": "bhavati",
+        "root": "",
+        "pos": "verb",
+        "case": null,
+        "gender": null,
+        "number": "singular",
+        "person": 3,
+        "tense": "present",
+        "voice": "active",
+        "mood": "indicative",
+        "stem": "",
+        "meaning": [],
+        "lexicon_refs": [],
+        "confidence": 0.0
+      }
+    ],
+    "total_words": 1,
+    "score": 0.0,
+    "metadata": {}
+  }
+]
