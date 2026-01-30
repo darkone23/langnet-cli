@@ -1,0 +1,1 @@
+word                 N      3 1 DAT P F

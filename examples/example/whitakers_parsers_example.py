@@ -7,7 +7,8 @@ from langnet.whitakers_words.lineparsers.parse_senses import SensesReducer
 from langnet.whitakers_words.lineparsers.parse_term_codes import CodesReducer
 from langnet.whitakers_words.lineparsers.parse_term_facts import FactsReducer
 
-test_data = Path() / "tests/data/whitakers-lines"
+this_dir = Path(__file__).resolve().parent
+test_data = this_dir / "data/whitakers-lines"
 
 
 def facts_reducer():

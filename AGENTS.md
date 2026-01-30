@@ -120,9 +120,9 @@ This project follows a multi-model approach using OpenRouter for AI-assisted dev
 | Persona | Task Category | Primary Model | Rationale |
 | --- | --- | --- | --- |
 | **The Architect** | System Design, Planning | `deepseek/deepseek-v3.2` | High reasoning for complex logic |
-| **The Sleuth** | Debugging, Root Cause | `zhipuai/glm-4.7` | Conservative, less likely to hallucinate |
+| **The Sleuth** | Debugging, Root Cause | `z-ai/glm-4.7` | Conservative, less likely to hallucinate |
 | **The Artisan** | Optimization, Style | `minimax/minimax-m2.1` | High throughput for large modules |
-| **The Coder** | Feature Build, Tests | `zhipuai/glm-4.5-air` | Fast execution with reliable tool-use |
+| **The Coder** | Feature Build, Tests | `z-ai/glm-4.5-air` | Fast execution with reliable tool-use |
 | **The Scribe** | Docs, Comments | `xiaomi/mimo-v2-flash` | Ultra-low cost for prose generation |
 | **The Auditor** | Code Review, Security | `openai/gpt-oss-120b` | Peak instruction following for edge cases |
 

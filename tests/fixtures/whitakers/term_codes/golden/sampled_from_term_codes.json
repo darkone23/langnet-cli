@@ -1,0 +1,508 @@
+[
+  {
+    "input": "a  PREP  ABL   [XXXAO]",
+    "expected": {
+      "term": "a",
+      "pos_code": "PREP",
+      "pos_form": "ABL",
+      "freq": "A",
+      "source": "O"
+    }
+  },
+  {
+    "input": "vulnero, vulnerare, vulneravi, vulneratus  V (1st) TRANS   [XXXBO]",
+    "expected": {
+      "term": "vulnero, vulnerare, vulneravi, vulneratus",
+      "pos_code": "V",
+      "declension": "1st",
+      "pos_form": "TRANS",
+      "freq": "B",
+      "source": "O"
+    }
+  },
+  {
+    "input": "candidatus, candidatus  N (4th) M   [XLXFS]    veryrare",
+    "expected": {
+      "term": "candidatus, candidatus",
+      "pos_code": "N",
+      "declension": "4th",
+      "pos_form": "M",
+      "area": "L",
+      "freq": "F",
+      "source": "S",
+      "notes": [
+        "veryrare"
+      ]
+    }
+  },
+  {
+    "input": "bellus, bella -um, bellior -or -us, bellissimus -a -um  ADJ   [XXXBO]",
+    "expected": {
+      "term": "bellus, bella -um, bellior -or -us, bellissimus -a -um",
+      "pos_code": "ADJ",
+      "freq": "B",
+      "source": "O"
+    }
+  },
+  {
+    "input": "meio, meere, mixi, mictus  V (3rd)   [XXXDX]    lesser",
+    "expected": {
+      "term": "meio, meere, mixi, mictus",
+      "pos_code": "V",
+      "declension": "3rd",
+      "freq": "D",
+      "notes": [
+        "lesser"
+      ]
+    }
+  },
+  {
+    "input": "ex  PREP  ABL   [XXXAX]",
+    "expected": {
+      "term": "ex",
+      "pos_code": "PREP",
+      "pos_form": "ABL",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "prope  PREP  ACC   [XXXAX]",
+    "expected": {
+      "term": "prope",
+      "pos_code": "PREP",
+      "pos_form": "ACC",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "statim  ADV   [XXXAX]",
+    "expected": {
+      "term": "statim",
+      "pos_code": "ADV",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "volo, volare, volavi, volatus  V (1st)   [XXXAX]",
+    "expected": {
+      "term": "volo, volare, volavi, volatus",
+      "pos_code": "V",
+      "declension": "1st",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "utor, uti, usus sum  V (3rd) DEP   [XXXAX]",
+    "expected": {
+      "term": "utor, uti, usus sum",
+      "pos_code": "V",
+      "declension": "3rd",
+      "pos_form": "DEP",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "sub  PREP  ABL   [XXXAX]",
+    "expected": {
+      "term": "sub",
+      "pos_code": "PREP",
+      "pos_form": "ABL",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "aura, aurae  N (1st) F   [XXXBO]",
+    "expected": {
+      "term": "aura, aurae",
+      "pos_code": "N",
+      "declension": "1st",
+      "pos_form": "F",
+      "freq": "B",
+      "source": "O"
+    }
+  },
+  {
+    "input": "vilis, vilis, vile  ADJ   [XXXAX]",
+    "expected": {
+      "term": "vilis, vilis, vile",
+      "pos_code": "ADJ",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "quo  CONJ   [XXXDX]    lesser",
+    "expected": {
+      "term": "quo",
+      "pos_code": "CONJ",
+      "freq": "D",
+      "notes": [
+        "lesser"
+      ]
+    }
+  },
+  {
+    "input": "viridis, viridis, viride  ADJ   [XXXBX]",
+    "expected": {
+      "term": "viridis, viridis, viride",
+      "pos_code": "ADJ",
+      "freq": "B"
+    }
+  },
+  {
+    "input": "ferox, (gen.), ferocis  ADJ   [XXXAX]",
+    "expected": {
+      "term": "ferox, (gen.), ferocis",
+      "pos_code": "ADJ",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "luna, lunae  N (1st) F   [XXXAX]",
+    "expected": {
+      "term": "luna, lunae",
+      "pos_code": "N",
+      "declension": "1st",
+      "pos_form": "F",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "turbo, turbonis  N (3rd) M   [XXXDO]    lesser",
+    "expected": {
+      "term": "turbo, turbonis",
+      "pos_code": "N",
+      "declension": "3rd",
+      "pos_form": "M",
+      "freq": "D",
+      "source": "O",
+      "notes": [
+        "lesser"
+      ]
+    }
+  },
+  {
+    "input": "veho, vehere, vexi, vectus  V (3rd)   [XXXBX]",
+    "expected": {
+      "term": "veho, vehere, vexi, vectus",
+      "pos_code": "V",
+      "declension": "3rd",
+      "freq": "B"
+    }
+  },
+  {
+    "input": "ibis, ibis  N (3rd) F   [XAXCO]",
+    "expected": {
+      "term": "ibis, ibis",
+      "pos_code": "N",
+      "declension": "3rd",
+      "pos_form": "F",
+      "area": "A",
+      "freq": "C",
+      "source": "O"
+    }
+  },
+  {
+    "input": "paene  ADV   [XXXAX]",
+    "expected": {
+      "term": "paene",
+      "pos_code": "ADV",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "caelus, caeli  N (2nd) M   [BSXAO]    Early",
+    "expected": {
+      "term": "caelus, caeli",
+      "pos_code": "N",
+      "declension": "2nd",
+      "pos_form": "M",
+      "age": "B",
+      "area": "S",
+      "freq": "A",
+      "source": "O",
+      "notes": [
+        "Early"
+      ]
+    }
+  },
+  {
+    "input": "trans  PREP  ACC   [XXXDX]    lesser",
+    "expected": {
+      "term": "trans",
+      "pos_code": "PREP",
+      "pos_form": "ACC",
+      "freq": "D",
+      "notes": [
+        "lesser"
+      ]
+    }
+  },
+  {
+    "input": "traho, trahere, traxi, tractus  V (3rd)   [XXXAX]",
+    "expected": {
+      "term": "traho, trahere, traxi, tractus",
+      "pos_code": "V",
+      "declension": "3rd",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "tamen  ADV   [XXXAX]",
+    "expected": {
+      "term": "tamen",
+      "pos_code": "ADV",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "agricola, agricolae  N (1st) M   [XAXBO]",
+    "expected": {
+      "term": "agricola, agricolae",
+      "pos_code": "N",
+      "declension": "1st",
+      "pos_form": "M",
+      "area": "A",
+      "freq": "B",
+      "source": "O"
+    }
+  },
+  {
+    "input": "divinus, divini  N (2nd) M   [XXXDX]    lesser",
+    "expected": {
+      "term": "divinus, divini",
+      "pos_code": "N",
+      "declension": "2nd",
+      "pos_form": "M",
+      "freq": "D",
+      "notes": [
+        "lesser"
+      ]
+    }
+  },
+  {
+    "input": "flos, floris  N (3rd) M   [XXXAX]",
+    "expected": {
+      "term": "flos, floris",
+      "pos_code": "N",
+      "declension": "3rd",
+      "pos_form": "M",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "hic, haec, hoc  PRON   [XXXAX]",
+    "expected": {
+      "term": "hic, haec, hoc",
+      "pos_code": "PRON",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "Indus, Inda, Indum  ADJ   [XXXBX]",
+    "expected": {
+      "names": [
+        "Indus",
+        "Inda",
+        "Indum"
+      ],
+      "pos_code": "ADJ",
+      "freq": "B"
+    }
+  },
+  {
+    "input": "qu  PACK   [XXXAX]",
+    "expected": {
+      "term": "qu",
+      "pos_code": "PACK",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "capio, capere, cepi, captus  V (3rd) TRANS   [XXXAO]",
+    "expected": {
+      "term": "capio, capere, cepi, captus",
+      "pos_code": "V",
+      "declension": "3rd",
+      "pos_form": "TRANS",
+      "freq": "A",
+      "source": "O"
+    }
+  },
+  {
+    "input": "imperium, imperi(i)  N (2nd) N   [XXXAX]",
+    "expected": {
+      "term": "imperium, imperi(i)",
+      "pos_code": "N",
+      "declension": "2nd",
+      "pos_form": "N",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "rudis, rudis  N (3rd) F   [XXXBO]",
+    "expected": {
+      "term": "rudis, rudis",
+      "pos_code": "N",
+      "declension": "3rd",
+      "pos_form": "F",
+      "freq": "B",
+      "source": "O"
+    }
+  },
+  {
+    "input": "nobilis, nobilis  N (3rd) M   [XXXDX]    lesser",
+    "expected": {
+      "term": "nobilis, nobilis",
+      "pos_code": "N",
+      "declension": "3rd",
+      "pos_form": "M",
+      "freq": "D",
+      "notes": [
+        "lesser"
+      ]
+    }
+  },
+  {
+    "input": "mas, (gen.), maris  ADJ   [XXXCO]",
+    "expected": {
+      "term": "mas, (gen.), maris",
+      "pos_code": "ADJ",
+      "freq": "C",
+      "source": "O"
+    }
+  },
+  {
+    "input": "fabulo, fabulare, fabulavi, fabulatus  V (1st) INTRANS   [FXXEE]    Medieval  uncommon",
+    "expected": {
+      "term": "fabulo, fabulare, fabulavi, fabulatus",
+      "pos_code": "V",
+      "declension": "1st",
+      "pos_form": "INTRANS",
+      "age": "F",
+      "freq": "E",
+      "source": "E",
+      "notes": [
+        "Medieval",
+        "uncommon"
+      ]
+    }
+  },
+  {
+    "input": "moneo, monere, monui, monitus  V (2nd)   [XXXAX]",
+    "expected": {
+      "term": "moneo, monere, monui, monitus",
+      "pos_code": "V",
+      "declension": "2nd",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "[XXXAO]",
+    "expected": {
+      "freq": "A",
+      "source": "O"
+    }
+  },
+  {
+    "input": "in  PREP  ABL   [XXXAX]",
+    "expected": {
+      "term": "in",
+      "pos_code": "PREP",
+      "pos_form": "ABL",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "turbo, turbare, turbavi, turbatus  V (1st)   [XXXAX]",
+    "expected": {
+      "term": "turbo, turbare, turbavi, turbatus",
+      "pos_code": "V",
+      "declension": "1st",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "[XXXAX]",
+    "expected": {
+      "freq": "A"
+    }
+  },
+  {
+    "input": "[XXXAO]",
+    "expected": {
+      "freq": "A",
+      "source": "O"
+    }
+  },
+  {
+    "input": "contra  PREP  ACC   [XXXAO]",
+    "expected": {
+      "term": "contra",
+      "pos_code": "PREP",
+      "pos_form": "ACC",
+      "freq": "A",
+      "source": "O"
+    }
+  },
+  {
+    "input": "ventus, venti  N (2nd) M   [XXXAX]",
+    "expected": {
+      "term": "ventus, venti",
+      "pos_code": "N",
+      "declension": "2nd",
+      "pos_form": "M",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "pulcher, pulchra -um, pulchrior -or -us, pulcherrimus -a -um  ADJ   [XXXAX]",
+    "expected": {
+      "term": "pulcher, pulchra -um, pulchrior -or -us, pulcherrimus -a -um",
+      "pos_code": "ADJ",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "orior, oriri, ortus sum  V (4th) DEP   [XXXAO]",
+    "expected": {
+      "term": "orior, oriri, ortus sum",
+      "pos_code": "V",
+      "declension": "4th",
+      "pos_form": "DEP",
+      "freq": "A",
+      "source": "O"
+    }
+  },
+  {
+    "input": "urbs, urbis  N (3rd) F   [XXXAX]",
+    "expected": {
+      "term": "urbs, urbis",
+      "pos_code": "N",
+      "declension": "3rd",
+      "pos_form": "F",
+      "freq": "A"
+    }
+  },
+  {
+    "input": "notus, noti  N (2nd) M   [XXXDX]    lesser",
+    "expected": {
+      "term": "notus, noti",
+      "pos_code": "N",
+      "declension": "2nd",
+      "pos_form": "M",
+      "freq": "D",
+      "notes": [
+        "lesser"
+      ]
+    }
+  },
+  {
+    "input": "Io  INTERJ   [XXXAO]",
+    "expected": {
+      "term": "Io",
+      "pos_code": "INTERJ",
+      "freq": "A",
+      "source": "O"
+    }
+  }
+]

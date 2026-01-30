@@ -24,6 +24,9 @@ in
     pkgs.difftastic
     pkgs.opencode
 
+    pkgs.ripgrep
+    pkgs.fzf
+
     # useful language servers
     pkgs.python3Packages.python-lsp-server
     pkgs.python3Packages.jedi-language-server

@@ -27,9 +27,9 @@ just autobot model skill testing  # Get persona for testing skill
 | Persona | Model | Best For | Example Command |
 |---------|-------|----------|-----------------|
 | **The Architect** | `deepseek/deepseek-v3.2` | System design, planning, complex logic | `@architect "Design new caching layer"` |
-| **The Sleuth** | `zhipuai/glm-4.7` | Debugging, root cause analysis | `@sleuth "Fix deadlock in parser"` |
+| **The Sleuth** | `z-ai/glm-4.7` | Debugging, root cause analysis | `@sleuth "Fix deadlock in parser"` |
 | **The Artisan** | `minimax/minimax-m2.1` | Code optimization, style improvements | `@artisan "Refactor cache for performance"` |
-| **The coder** | `zhipuai/glm-4.5-air` | Feature development, testing | `@coder "Implement new API endpoint"` |
+| **The coder** | `z-ai/glm-4.5-air` | Feature development, testing | `@coder "Implement new API endpoint"` |
 | **The Scribe** | `xiaomi/mimo-v2-flash` | Documentation, comments, prose | `@scribe "Document the new module"` |
 | **The Auditor** | `openai/gpt-oss-120b` | Code review, security analysis | `@auditor "Check for vulnerabilities"` |
 

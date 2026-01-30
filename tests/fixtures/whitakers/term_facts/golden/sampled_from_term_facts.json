@@ -1,0 +1,23 @@
+[
+  {
+    "input": "amor                 N      3 1 NOM S M",
+    "expected": {
+      "term": "amor",
+      "pos_code": "N"
+    }
+  },
+  {
+    "input": "am.or                V      1 1 PRES PASSIVE IND 1 S",
+    "expected": {
+      "term": "am.or",
+      "pos_code": "V"
+    }
+  },
+  {
+    "input": "femin.a              ADJ    1 1 NOM S F POS",
+    "expected": {
+      "term": "femin.a",
+      "pos_code": "ADJ"
+    }
+  }
+]

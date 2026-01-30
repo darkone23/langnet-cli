@@ -1,0 +1,504 @@
+[
+  {
+    "input": "high; deep/profound; shrill; lofty/noble; deep rooted; far-fetched; grown great",
+    "expected": {
+      "senses": [
+        "high",
+        "deep/profound",
+        "shrill",
+        "lofty/noble",
+        "deep rooted",
+        "far-fetched",
+        "grown great"
+      ]
+    }
+  },
+  {
+    "input": "oh! ah! alas! (an expression of dismay or pain);",
+    "expected": {
+      "senses": [
+        "oh! ah! alas! (an expression of dismay or pain)"
+      ]
+    }
+  },
+  {
+    "input": "thigh (human/animal); flat vertical band on triglyph; [~ bubulum => plant];",
+    "expected": {
+      "senses": [
+        "thigh (human/animal)",
+        "flat vertical band on triglyph"
+      ],
+      "notes": [
+        "~ bubulum => plant"
+      ]
+    }
+  },
+  {
+    "input": "heaven (eccl.); the_heavens (pl.); [regnum caelorum => kingdom of heaven];",
+    "expected": {
+      "senses": [
+        "heaven (eccl.)",
+        "the_heavens (pl.)"
+      ],
+      "notes": [
+        "regnum caelorum => kingdom of heaven"
+      ]
+    }
+  },
+  {
+    "input": "soul, spirit, vital principle; life; breathing; wind, breeze; air (element);",
+    "expected": {
+      "senses": [
+        "soul, spirit, vital principle",
+        "life",
+        "breathing",
+        "wind, breeze",
+        "air (element)"
+      ]
+    }
+  },
+  {
+    "input": "enemy (of the state); stranger, foreigner; the enemy (pl.);",
+    "expected": {
+      "senses": [
+        "enemy (of the state)",
+        "stranger, foreigner",
+        "the enemy (pl.)"
+      ]
+    }
+  },
+  {
+    "input": "lay waste, ravage, devastate;",
+    "expected": {
+      "senses": [
+        "lay waste, ravage, devastate"
+      ]
+    }
+  },
+  {
+    "input": "sink/settle down, subside; sit down; defecate; be depressed; deteriorate;",
+    "expected": {
+      "senses": [
+        "sink/settle down, subside",
+        "sit down",
+        "defecate",
+        "be depressed",
+        "deteriorate"
+      ]
+    }
+  },
+  {
+    "input": "facing, face-to-face, in the eyes; towards/up to; across; in opposite direction",
+    "expected": {
+      "senses": [
+        "facing, face-to-face, in the eyes",
+        "towards/up to",
+        "across",
+        "in opposite direction"
+      ]
+    }
+  },
+  {
+    "input": "unknown, strange; unacquainted with, ignorant of;",
+    "expected": {
+      "senses": [
+        "unknown, strange",
+        "unacquainted with, ignorant of"
+      ]
+    }
+  },
+  {
+    "input": "active, industrious;",
+    "expected": {
+      "senses": [
+        "active, industrious"
+      ]
+    }
+  },
+  {
+    "input": "one born of the earth;",
+    "expected": {
+      "senses": [
+        "one born of the earth"
+      ]
+    }
+  },
+  {
+    "input": "ante, abb. a.; [in calendar expression a. d. = ante diem => before the day];",
+    "expected": {
+      "senses": [
+        "ante, abb. a."
+      ],
+      "notes": [
+        "in calendar expression a. d. = ante diem => before the day"
+      ]
+    }
+  },
+  {
+    "input": "who/what/which?, what/which one/man/person/thing? what kind/type of?;",
+    "expected": {
+      "senses": [
+        "who/what/which?, what/which one/man/person/thing? what kind/type of?"
+      ]
+    }
+  },
+  {
+    "input": "make available, supply, provide; be the cause, occasion, produce; render;",
+    "expected": {
+      "senses": [
+        "make available, supply, provide",
+        "be the cause, occasion, produce",
+        "render"
+      ]
+    }
+  },
+  {
+    "input": "pain, anguish, grief, sorrow, suffering; resentment, indignation;",
+    "expected": {
+      "senses": [
+        "pain, anguish, grief, sorrow, suffering",
+        "resentment, indignation"
+      ]
+    }
+  },
+  {
+    "input": "rapid, swift;",
+    "expected": {
+      "senses": [
+        "rapid, swift"
+      ]
+    }
+  },
+  {
+    "input": "lend (money) to, make loans/give credit; believe/think/accept as true/be sure;",
+    "expected": {
+      "senses": [
+        "lend (money) to, make loans/give credit",
+        "believe/think/accept as true/be sure"
+      ]
+    }
+  },
+  {
+    "input": "continuous, uninterpreted; whole; perpetual, lasting; everlasting;",
+    "expected": {
+      "senses": [
+        "continuous, uninterpreted",
+        "whole",
+        "perpetual, lasting",
+        "everlasting"
+      ]
+    }
+  },
+  {
+    "input": "your (sing.);",
+    "expected": {
+      "senses": [
+        "your (sing.)"
+      ]
+    }
+  },
+  {
+    "input": "near, nearly; close by; almost;",
+    "expected": {
+      "senses": [
+        "near, nearly",
+        "close by",
+        "almost"
+      ]
+    }
+  },
+  {
+    "input": "to (+ subjunctive), in order that/to; how, as, when, while; even if;",
+    "expected": {
+      "senses": [
+        "to (+ subjunctive), in order that/to",
+        "how, as, when, while",
+        "even if"
+      ]
+    }
+  },
+  {
+    "input": "disturb, agitate, throw into confusion;",
+    "expected": {
+      "senses": [
+        "disturb, agitate, throw into confusion"
+      ]
+    }
+  },
+  {
+    "input": "Leo (name of several Popes); priests (pl.) of Persian god Mithras;",
+    "expected": {
+      "senses": [
+        "Leo (name of several Popes)",
+        "priests (pl.) of Persian god Mithras"
+      ]
+    }
+  },
+  {
+    "input": "name/call; appoint, fix/set (date); designate, declare intention of giving;",
+    "expected": {
+      "senses": [
+        "name/call",
+        "appoint, fix/set (date)",
+        "designate, declare intention of giving"
+      ]
+    }
+  },
+  {
+    "input": "friendly, dear, fond of; supporting (political), loyal, devoted; loving;",
+    "expected": {
+      "senses": [
+        "friendly, dear, fond of",
+        "supporting (political), loyal, devoted",
+        "loving"
+      ]
+    }
+  },
+  {
+    "input": "famous, celebrated; well/generally known; remarkable, noteworthy (facts);",
+    "expected": {
+      "senses": [
+        "famous, celebrated",
+        "well/generally known",
+        "remarkable, noteworthy (facts)"
+      ]
+    }
+  },
+  {
+    "input": "who; that; which, what; of which kind/degree; person/thing/time/point that;",
+    "expected": {
+      "senses": [
+        "who",
+        "that",
+        "which, what",
+        "of which kind/degree",
+        "person/thing/time/point that"
+      ]
+    }
+  },
+  {
+    "input": "come;",
+    "expected": {
+      "senses": [
+        "come"
+      ]
+    }
+  },
+  {
+    "input": "evil, mischief; disaster, misfortune, calamity, plague; punishment; harm/hurt;",
+    "expected": {
+      "senses": [
+        "evil, mischief",
+        "disaster, misfortune, calamity, plague",
+        "punishment",
+        "harm/hurt"
+      ]
+    }
+  },
+  {
+    "input": "strong, powerful, mighty, vigorous, firm, steadfast, courageous, brave, bold;",
+    "expected": {
+      "senses": [
+        "strong, powerful, mighty, vigorous, firm, steadfast, courageous, brave, bold"
+      ]
+    }
+  },
+  {
+    "input": "garden, fruit/kitchen garden; pleasure garden; park (pl.);",
+    "expected": {
+      "senses": [
+        "garden, fruit/kitchen garden",
+        "pleasure garden",
+        "park (pl.)"
+      ]
+    }
+  },
+  {
+    "input": "fist;",
+    "expected": {
+      "senses": [
+        "fist"
+      ]
+    }
+  },
+  {
+    "input": "hush!  hist!;",
+    "expected": {
+      "senses": [
+        "hush!  hist!"
+      ]
+    }
+  },
+  {
+    "input": "become acquainted with/aware of; recognize; learn, find to be; inquire/examine;",
+    "expected": {
+      "senses": [
+        "become acquainted with/aware of",
+        "recognize",
+        "learn, find to be",
+        "inquire/examine"
+      ]
+    }
+  },
+  {
+    "input": "hope for; trust; look forward to; hope;",
+    "expected": {
+      "senses": [
+        "hope for",
+        "trust",
+        "look forward to",
+        "hope"
+      ]
+    }
+  },
+  {
+    "input": "perceive, feel, experience; think, realize, see, understand;",
+    "expected": {
+      "senses": [
+        "perceive, feel, experience",
+        "think, realize, see, understand"
+      ]
+    }
+  },
+  {
+    "input": "birth/descent/origin; race/family/house/stock/ancestry; offspring/descent;",
+    "expected": {
+      "senses": [
+        "birth/descent/origin",
+        "race/family/house/stock/ancestry",
+        "offspring/descent"
+      ]
+    }
+  },
+  {
+    "input": "before, in front of; forward [prae sequor => go on before];",
+    "expected": {
+      "senses": [
+        "before, in front of",
+        "forward"
+      ],
+      "notes": [
+        "prae sequor => go on before"
+      ]
+    }
+  },
+  {
+    "input": "race course; circus in Rome, celebration of games; circle; orbit;",
+    "expected": {
+      "senses": [
+        "race course",
+        "circus in Rome, celebration of games",
+        "circle",
+        "orbit"
+      ]
+    }
+  },
+  {
+    "input": "at rest; quiet, tranquil, calm, peaceful; orderly; neutral; still; idle;",
+    "expected": {
+      "senses": [
+        "at rest",
+        "quiet, tranquil, calm, peaceful",
+        "orderly",
+        "neutral",
+        "still",
+        "idle"
+      ]
+    }
+  },
+  {
+    "input": "taste of; understand; have sense;",
+    "expected": {
+      "senses": [
+        "taste of",
+        "understand",
+        "have sense"
+      ]
+    }
+  },
+  {
+    "input": "in, on, at (space); in accordance with/regard to/the case of; within (time);",
+    "expected": {
+      "senses": [
+        "in, on, at (space)",
+        "in accordance with/regard to/the case of",
+        "within (time)"
+      ]
+    }
+  },
+  {
+    "input": "(w/-cumque) who/whatever, no matter who/what, in any time/way, however small;",
+    "expected": {
+      "senses": [
+        "(w/-cumque) who/whatever, no matter who/what, in any time/way, however small"
+      ]
+    }
+  },
+  {
+    "input": "conversation, discussion; rumor; diction; speech; talk; the word;",
+    "expected": {
+      "senses": [
+        "conversation, discussion",
+        "rumor",
+        "diction",
+        "speech",
+        "talk",
+        "the word"
+      ]
+    }
+  },
+  {
+    "input": "horse; steed;",
+    "expected": {
+      "senses": [
+        "horse",
+        "steed"
+      ]
+    }
+  },
+  {
+    "input": "eating; taking of food;",
+    "expected": {
+      "senses": [
+        "eating",
+        "taking of food"
+      ]
+    }
+  },
+  {
+    "input": "this; these (pl.); (also DEMONST);",
+    "expected": {
+      "senses": [
+        "this",
+        "these (pl.)",
+        "(also DEMONST)"
+      ]
+    }
+  },
+  {
+    "input": "head; person; life; leader; top; source/mouth (river); capital (punishment);",
+    "expected": {
+      "senses": [
+        "head",
+        "person",
+        "life",
+        "leader",
+        "top",
+        "source/mouth (river)",
+        "capital (punishment)"
+      ]
+    }
+  },
+  {
+    "input": "thigh (human/animal); flat vertical band on triglyph; [~ bubulum => plant];",
+    "expected": {
+      "senses": [
+        "thigh (human/animal)",
+        "flat vertical band on triglyph"
+      ],
+      "notes": [
+        "~ bubulum => plant"
+      ]
+    }
+  }
+]

@@ -36,8 +36,8 @@ PERSONA_MATRIX: PersonaMatrix = {
         ],
     },
     "sleuth": {
-        "model": "zhipuai/glm-4.7",
-        "openrouter_id": "zhipuai/glm-4.7",
+        "model": "z-ai/glm-4.7",
+        "openrouter_id": "z-ai/glm-4.7",
         "description": "Debugging, Root Cause - Conservative, less hallucination",
         "temperature": 0.1,
         "task_types": [
@@ -62,8 +62,8 @@ PERSONA_MATRIX: PersonaMatrix = {
         ],
     },
     "coder": {
-        "model": "zhipuai/glm-4.5-air",
-        "openrouter_id": "zhipuai/glm-4.5-air",
+        "model": "z-ai/glm-4.5-air",
+        "openrouter_id": "z-ai/glm-4.5-air",
         "description": "Feature Build, Tests - Fast execution with reliable tool-use",
         "temperature": 0.3,
         "task_types": [

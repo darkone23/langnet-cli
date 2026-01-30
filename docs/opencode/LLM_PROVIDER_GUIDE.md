@@ -17,9 +17,9 @@ This matrix defines which model "Persona" should be used for specific developmen
 | Persona | Task Category | Primary Model | Market Alternative | Rationale |
 | --- | --- | --- | --- | --- |
 | **The Architect** | System Design, Planning | `deepseek/deepseek-v3.2` | High "Chain-of-Thought" reasoning; best for complex logic. |
-| **The Sleuth** | Debugging, Root Cause | `zhipuai/glm-4.7` | "Sober" and conservative; less likely to hallucinate fixes. |
+| **The Sleuth** | Debugging, Root Cause | `z-ai/glm-4.7` | "Sober" and conservative; less likely to hallucinate fixes. |
 | **The Artisan** | Optimization, Style | `minimax/minimax-m2.1` | High throughput and 200K+ context for rewriting large modules. |
-| **The Coder** | Feature Build, Tests | `zhipuai/glm-4.5-air` | Fast execution with reliable tool-use for agentic "build" loops. |
+| **The Coder** | Feature Build, Tests | `z-ai/glm-4.5-air` | Fast execution with reliable tool-use for agentic "build" loops. |
 | **The Scribe** | Docs, Comments | `xiaomi/mimo-v2-flash` | Ultra-low cost for high-volume English prose generation. |
 | **The Auditor** | Code Review, Security | `openai/gpt-oss-120b` | Peak instruction following; identifies edge cases and security leaks. |
 
@@ -69,7 +69,7 @@ Define variants in your configuration to toggle between "thinking" modes and "ex
     },
     "detective": {
       "description": "Debugging, Root Cause - Conservative, less hallucination",
-      "model": "openrouter/zhipuai/glm-4.7",
+      "model": "openrouter/z-ai/glm-4.7",
       "options": {
         "temperature": 0.1
       }
