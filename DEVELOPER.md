@@ -239,3 +239,7 @@ Opencode: Let me check the health status and enable debug logging...
 - **Maintenance tasks**: Read [cache-management.md](.opencode/skills/cache-management.md), [debugging.md](.opencode/skills/debugging.md), [cli-development.md](.opencode/skills/cli-development.md)
 
 See [`.opencode/skills/README.md`](.opencode/skills/README.md) for complete skill documentation.
+
+# Agent usage
+
+See [`.opencode/skills/README.md`](.opencode/skills/README.md) for complete skill documentation.

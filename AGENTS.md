@@ -15,11 +15,45 @@ When making changes, consider how they affect the educational user experience.
 
 ## Documentation
 
-See these human-readable docs:
+### Plan Management Structure
+
+Project plans are organized in `docs/plans/` with three lifecycle stages:
+
+```
+docs/plans/
+├── active/                     # Currently being worked on
+│   └── <feature-name>/        # Subdirectory for feature area
+│       └── PLAN_NAME.md       # Plan files
+├── todo/                      # Planned but not started
+│   └── <feature-name>/
+│       └── PLAN_NAME.md
+└── completed/                 # Finished plans
+    └── <feature-name>/
+        └── PLAN_NAME.md
+```
+
+**Feature Areas:**
+- `skt/` - Sanskrit Heritage Platform integration
+- `whitakers/` - Whitaker's Words parsers
+- `dico/` - Bilingual dictionary features  
+- `pedagogy/` - Educational enhancements
+- `infra/` - Infrastructure and tooling
+
+**When creating new plans:**
+1. Determine feature area (skt, whitakers, dico, etc.)
+2. Place in appropriate lifecycle directory (active/todo/completed)
+3. Use clear, descriptive filenames
+4. Include @mentions for AI personas in plan phases
+
+### Human-Readable Documentation
+
+See these key documents:
 
 - [README.md](README.md) - Overview, educational use cases, and quick start
 - [DEVELOPER.md](DEVELOPER.md) - Code conventions, testing, project structure
 - [`.opencode/skills/project-tools.md`](.opencode/skills/project-tools.md) - Project automation and autobot tool usage
+- [docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md) - Educational approach and Foster grammar
+- [docs/MULTI_MODEL_GUIDE.md](docs/MULTI_MODEL_GUIDE.md) - AI-assisted development workflow
 
 ## Critical Patterns
 
@@ -125,7 +159,7 @@ Agents are configured in `.opencode/opencode.json`. Use the `@agentname` mention
 
 - [`.opencode/skills/README.md`](.opencode/skills/README.md) - Complete skill documentation
 - [DEVELOPER.md](DEVELOPER.md) - End-user opencode usage guide
-- [LLM_PROVIDER_GUIDE.md](LLM_PROVIDER_GUIDE.md) - Multi-model strategy guide
+- [./docs/opencode/LLM_PROVIDER_GUIDE.md](LLM_PROVIDER_GUIDE.md) - Multi-model strategy guide
 
 ## Important
 

@@ -16,6 +16,7 @@ langnet-cli is a classical language education tool providing instant access to d
 | Component | Status | Progress | Notes |
 |-----------|--------|----------|-------|
 | **Heritage Platform Foundation** | ✅ ACTIVE | Essential for Sanskrit | HTTP client, CGI parameter builder, HTML parser |
+| **Heritage Parser Migration** | 📋 PLANNED | Regex → Lark migration | See `HERITAGE_PARSER_LARK_MIGRATION_PLAN.md` |
 | **Heritage Morphology Analysis** | ✅ ACTIVE | Sanskrit morphology operational | sktreader integration, morphology result parsing |
 | **Heritage Dictionary/Lemmatizer** | ✅ ACTIVE | Sanskrit lemmatization working | sktindex/sktsearch integration, lemmatization |
 | **Foster Functional Grammar** | ✅ ACTIVE | **North Star achieved** | All languages (Latin, Greek, Sanskrit) |

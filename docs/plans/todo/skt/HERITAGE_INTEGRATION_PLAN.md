@@ -106,6 +106,25 @@ The Heritage Platform (`sktreader` CGI) is returning HTML, but the `SimpleHerita
 3. **Test with "agni"** - Understand why it works for this word
 4. **Verify all words** - Ensure parser extracts solutions for all Sanskrit words
 
+## Lark Parser Migration
+
+**Status**: Planned - See `HERITAGE_PARSER_LARK_MIGRATION_PLAN.md`
+
+The current regex-based parser is fragile and fails for many Sanskrit words. A Lark-based parser migration is planned to replace regex patterns with robust grammatical analysis.
+
+**Migration Timeline**: 4 weeks
+**Key Benefits**:
+- Reliable solution extraction (>95% success rate)
+- Consistent parsing across encoding formats (Devanagari, IAST, Velthuis, SLP1)
+- Maintainable grammar definitions
+- Reference implementation from Whitaker's Words parser
+
+**Implementation Phases**:
+1. Grammar development and testing
+2. Parser implementation with Lark
+3. Integration and performance testing
+4. Production migration and monitoring
+
 ## Environment Variables
 
 ```bash

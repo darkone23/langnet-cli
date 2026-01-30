@@ -64,4 +64,4 @@ These are downloaded/installed automatically when needed:
 
 This project includes opencode skills for AI-assisted development. See [DEVELOPER.md](DEVELOPER.md#using-opencode) for usage instructions and [`.opencode/skills/README.md`](.opencode/skills/README.md) for available skills.
 
-For LLM provider configuration, see [LLM_PROVIDER_GUIDE.md](LLM_PROVIDER_GUIDE.md).
+For LLM provider configuration, see [./docs/opencode/LLM_PROVIDER_GUIDE.md](LLM_PROVIDER_GUIDE.md).
