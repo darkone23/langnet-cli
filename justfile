@@ -29,6 +29,7 @@ reap:
 test-all:
     nose2 -s tests --config tests/nose2.cfg
 
+# nose2 -s tests --config tests/nose2.cfg <...>
 test *args:
     nose2 -s tests --config tests/nose2.cfg {{ args }}
 

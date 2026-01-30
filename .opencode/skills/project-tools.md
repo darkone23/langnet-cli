@@ -157,4 +157,20 @@ just autobot docs build        # Build documentation
 just autobot cache clear       # Clear application caches
 ```
 
+## Multi-Model AI Persona
+
+**Recommended Persona**: The Implementer (`openrouter/zhipuai/glm-4.5-air:implementer`)
+
+Use this persona for:
+- Adding new autobot commands
+- Extending automation functionality
+- Tool integration development
+- Script maintenance and improvement
+
+Example:
+```bash
+/model openrouter/zhipuai/glm-4.5-air:implementer
+"Add a new autobot command to generate project documentation reports"
+```
+
 This structure provides a centralized, extensible automation system that scales with the project while maintaining consistency and usability.

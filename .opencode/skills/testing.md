@@ -29,6 +29,22 @@ LANGNET_LOG_LEVEL=DEBUG nose2 -s tests --config tests/nose2.cfg
 - `tests/test_cdsl.py` - CDSL Sanskrit dictionary tests
 - `tests/test_classics_toolkit.py` - CLTK integration tests
 
+## Multi-Model AI Persona
+
+**Recommended Persona**: The Implementer (`openrouter/zhipuai/glm-4.5-air:implementer`)
+
+Use this persona for:
+- Writing new test cases
+- Debugging test failures
+- Test infrastructure improvements
+- Test coverage analysis
+
+Example:
+```bash
+/model openrouter/zhipuai/glm-4.5-air:implementer
+"Write comprehensive tests for the new Sanskrit morphology parser"
+```
+
 ## Important Notes
 
 - Tests require `devenv shell` environment active

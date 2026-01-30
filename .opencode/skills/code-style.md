@@ -12,9 +12,9 @@ Format, lint, and typecheck code following project conventions.
 
 ```bash
 # Format code
-just ruff
+just ruff-format
 # or
-ruff format src/ tests/
+ruff format src/ tests/ ./.justscripts/
 
 # Type check
 just typecheck
@@ -22,16 +22,41 @@ just typecheck
 ty check
 
 # Lint
+just ruff-check src/ tests/
+# or
 ruff check src/ tests/
+
+# Run all code style checks
+just lint-all
 ```
 
 ## Pre-commit Workflow
 
 After making changes, always run:
 ```bash
-just ruff      # Format
-just typecheck # Type check
-just test      # Run tests
+just ruff-format      # Format
+just ruff-check       # Lint
+just typecheck        # Type check
+just test             # Run tests
+
+# Or run all at once
+just lint-all && just test-all
+```
+
+## Multi-Model AI Persona
+
+**Recommended Persona**: The Refactorer (`openrouter/minimax/minimax-m2.1:refactorer`)
+
+Use this persona for:
+- Large-scale code refactoring
+- Code style optimization
+- Linting rule improvements
+- Performance optimization work
+
+Example:
+```bash
+/model openrouter/minimax/minimax-m2.1:refactorer
+"Refactor the cache module to use better type hints and improve performance"
 ```
 
 ## Code Conventions

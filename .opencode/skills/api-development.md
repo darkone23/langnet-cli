@@ -87,6 +87,22 @@ class ORJsonResponse(Response):
         return orjson.dumps(content)
 ```
 
+## Multi-Model AI Persona
+
+**Recommended Persona**: The Implementer (`openrouter/zhipuai/glm-4.5-air:implementer`)
+
+Use this persona for:
+- Implementing new API endpoints
+- Debugging API issues
+- Performance optimization of endpoints
+- Middleware development
+
+Example:
+```bash
+/model openrouter/zhipuai/glm-4.5-air:implementer
+"Implement rate limiting middleware for the API endpoints"
+```
+
 ## Wiring Pattern
 
 Dependency injection via `LangnetWiring`:

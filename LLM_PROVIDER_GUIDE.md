@@ -16,12 +16,12 @@ This matrix defines which model "Persona" should be used for specific developmen
 
 | Persona | Task Category | Primary Model | Market Alternative | Rationale |
 | --- | --- | --- | --- | --- |
-| **The Architect** | System Design, Planning | `deepseek/deepseek-v3.2-speciale` | `kimi/kimi-k2-thinking` | High "Chain-of-Thought" reasoning; best for complex logic. |
-| **The Detective** | Debugging, Root Cause | `zhipuai/glm-4.7` | `mistral/mistral-large-3` | "Sober" and conservative; less likely to hallucinate fixes. |
-| **The Refactorer** | Optimization, Style | `minimax/minimax-m2.1` | `qwen/qwen3-235b` | High throughput and 200K+ context for rewriting large modules. |
-| **The Implementer** | Feature Build, Tests | `zhipuai/glm-4.5-air` | `meta/llama-4-scout` | Fast execution with reliable tool-use for agentic "build" loops. |
-| **The Scribe** | Docs, Comments | `xiaomi/mimo-v2-flash` | `google/gemini-2.5-flash` | Ultra-low cost for high-volume English prose generation. |
-| **The Auditor** | Code Review, Security | `openai/gpt-oss-120b` | `zhipuai/glm-4.7` | Peak instruction following; identifies edge cases and security leaks. |
+| **The Architect** | System Design, Planning | `deepseek/deepseek-v3.2` | High "Chain-of-Thought" reasoning; best for complex logic. |
+| **The Sleuth** | Debugging, Root Cause | `zhipuai/glm-4.7` | "Sober" and conservative; less likely to hallucinate fixes. |
+| **The Artisan** | Optimization, Style | `minimax/minimax-m2.1` | High throughput and 200K+ context for rewriting large modules. |
+| **The Coder** | Feature Build, Tests | `zhipuai/glm-4.5-air` | Fast execution with reliable tool-use for agentic "build" loops. |
+| **The Scribe** | Docs, Comments | `xiaomi/mimo-v2-flash` | Ultra-low cost for high-volume English prose generation. |
+| **The Auditor** | Code Review, Security | `openai/gpt-oss-120b` | Peak instruction following; identifies edge cases and security leaks. |
 
 ---
 
@@ -58,16 +58,29 @@ Define variants in your configuration to toggle between "thinking" modes and "ex
 
 ```json
 {
-  "models": {
-    "deepseek/v3.2-speciale": {
-      "variants": { "architect": { "options": { "reasoningEffort": "high" } } }
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "architect": {
+      "description": "System Design, Planning - High reasoning for complex logic",
+      "model": "openrouter/deepseek/deepseek-v3.2",
+      "options": {
+        "reasoningEffort": "high"
+      }
     },
-    "zhipuai/glm-4.7": {
-      "variants": { "detective": { "options": { "temperature": 0.1 } } }
+    "detective": {
+      "description": "Debugging, Root Cause - Conservative, less hallucination",
+      "model": "openrouter/zhipuai/glm-4.7",
+      "options": {
+        "temperature": 0.1
+      }
+    }
+  },
+  "provider": {
+    "openrouter": {
+      "baseURL": "https://openrouter.ai/api/v1"
     }
   }
 }
-
 ```
 
 > Notice the `temperature` setting: higher values mean more variation in the token generation and lower values mean the output is statistically bound to the training set. Think of an essay that always repeats the same phrases (low temp) vs excessive use of a thesaurus (high temp). 
@@ -83,35 +96,29 @@ Define variants in your configuration to toggle between "thinking" modes and "ex
 **Command:**
 
 ```bash
-/model openrouter/deepseek/deepseek-v3.2-speciale:architect
-/plan "Design a refactor for the auth layer to support header based authentication."
-
+@architect "Design a refactor for the auth layer to support header based authentication."
 ```
 
 * **Goal:** Generate a high-level `implementation_plan.md` that accounts for security and scalability.
 
 ### Step B: The Building Phase
 
-**Persona:** The Implementer
+**Persona:** The Coder
 **Command:**
 
 ```bash
-/model openrouter/zhipuai/glm-4.5-air
-/build "Follow the implementation_plan.md. Create the new routers and update the User model."
-
+@coder "Follow the implementation_plan.md. Create the new routers and update the User model."
 ```
 
 * **Goal:** High-speed code generation based on a pre-validated plan.
 
 ### Step C: The Hard Debugging Phase
 
-**Persona:** The Detective
+**Persona:** The Sleuth
 **Command:**
 
 ```bash
-/model openrouter/zhipuai/glm-4.7:detective
-/improve "The new auth layer is throwing a RecursionError in the dependency injection. Find and fix it."
-
+@sleuth "The new auth layer is throwing a RecursionError in the dependency injection. Find and fix it."
 ```
 
 * **Goal:** Leverage the "sober" logic of GLM to trace complex stack traces.

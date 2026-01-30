@@ -83,6 +83,22 @@ When debugging backend issues, clear cache to ensure fresh queries:
 langnet-cli cache-clear && curl -s -X POST "http://localhost:8000/api/q" -d "l=san&s=agni"
 ```
 
+## Multi-Model AI Persona
+
+**Recommended Persona**: The Refactorer (`openrouter/minimax/minimax-m2.1:refactorer`)
+
+Use this persona for:
+- Cache performance optimization
+- Cache invalidation strategies
+- Database schema improvements
+- Memory optimization work
+
+Example:
+```bash
+/model openrouter/minimax/minimax-m2.1:refactorer
+"Optimize the DuckDB cache schema for faster lookups"
+```
+
 ## Performance Notes
 
 - Cache speeds up repeated queries significantly

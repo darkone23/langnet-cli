@@ -8,6 +8,8 @@ This directory contains opencode skills for langnet-cli development.
 - [testing.md](testing.md) - Running tests, debugging test failures
 - [data-models.md](data-models.md) - Creating dataclass models with cattrs
 - [code-style.md](code-style.md) - Formatting, linting, type checking
+- [multi-model-ai.md](multi-model-ai.md) - Multi-model AI development with OpenRouter
+- [persona-routing.md](persona-routing.md) - AI persona selection guide for different tasks
 
 ### Backend Development
 - [backend-integration.md](backend-integration.md) - Adding new language data providers

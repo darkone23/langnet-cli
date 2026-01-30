@@ -1,0 +1,71 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "architect": {
+      "description": "System Design, Planning - High reasoning for complex logic",
+      "model": "openrouter/deepseek/deepseek-v3.2",
+      "options": {
+        "reasoningEffort": "high"
+      }
+    },
+    "sleuth": {
+      "description": "Debugging, Root Cause - Conservative, less hallucination",
+      "model": "openrouter/zhipuai/glm-4.7",
+      "options": {
+        "temperature": 0.1
+      }
+    },
+    "artisan": {
+      "description": "Optimization, Style - High throughput, 200K+ context for rewriting",
+      "model": "openrouter/minimax/minimax-m2.1",
+      "options": {
+        "temperature": 0.2
+      }
+    },
+    "coder": {
+      "description": "Feature Build, Tests - Fast execution with reliable tool-use",
+      "model": "openrouter/zhipuai/glm-4.5-air",
+      "options": {
+        "temperature": 0.3
+      }
+    },
+    "scribe": {
+      "description": "Docs, Comments - Ultra-low cost for high-volume English prose",
+      "model": "openrouter/xiaomi/mimo-v2-flash",
+      "options": {
+        "temperature": 0.4
+      }
+    },
+    "auditor": {
+      "description": "Code Review, Security - Peak instruction following for edge cases",
+      "model": "openrouter/openai/gpt-oss-120b",
+      "options": {
+        "temperature": 0.1
+      }
+    }
+  },
+  "provider": {
+    "openrouter": {
+      "models": {
+        "deepseek/deepseek-v3.2": {
+          "options": {}
+        },
+        "zhipuai/glm-4.7": {
+          "options": {}
+        },
+        "minimax/minimax-m2.1": {
+          "options": {}
+        },
+        "zhipuai/glm-4.5-air": {
+          "options": {}
+        },
+        "xiaomi/mimo-v2-flash": {
+          "options": {}
+        },
+        "openai/gpt-oss-120b": {
+          "options": {}
+        }
+      }
+    }
+  }
+}

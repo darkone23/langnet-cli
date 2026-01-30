@@ -2,6 +2,22 @@
 
 Create dataclass models using Python dataclasses and cattrs for serialization.
 
+## Multi-Model AI Persona
+
+**Recommended Persona**: The Architect (`openrouter/deepseek/deepseek-v3.2:architect`)
+
+Use this persona for:
+- Designing complex data models
+- Schema design for new data types
+- Serialization/deserialization patterns
+- Type system design
+
+Example:
+```bash
+/model openrouter/deepseek/deepseek-v3.2:architect
+"Design a comprehensive data model for Sanskrit morphological analysis results"
+```
+
 ## Pattern
 
 Always use `@dataclass` decorator with cattrs, NOT pydantic.

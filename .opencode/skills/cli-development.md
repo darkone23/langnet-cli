@@ -108,6 +108,22 @@ CLI wraps the API endpoints:
 - CLI provides user-friendly formatting (tables, colors)
 - API returns raw JSON for programmatic access
 
+## Multi-Model AI Persona
+
+**Recommended Persona**: The Implementer (`openrouter/zhipuai/glm-4.5-air:implementer`)
+
+Use this persona for:
+- Implementing new CLI commands
+- User interface improvements
+- Command-line argument parsing
+- Rich console output formatting
+
+Example:
+```bash
+/model openrouter/zhipuai/glm-4.5-air:implementer
+"Add a new CLI command to export query results to Markdown format"
+```
+
 ## Dependencies
 
 Click is installed via poetry: `click = "^8.1.7"`

@@ -125,6 +125,22 @@ LANGNET_LOG_LEVEL=DEBUG langnet-cli query lat lupus | hl
 - WARN: Missing optional data, merge conflicts, degraded health
 - ERROR: Failed queries, unavailable backends, connection errors
 
+## Multi-Model AI Persona
+
+**Recommended Persona**: The Detective (`openrouter/zhipuai/glm-4.7:detective`)
+
+Use this persona for:
+- Complex bug investigation
+- Root cause analysis
+- Performance debugging
+- Concurrency issue troubleshooting
+
+Example:
+```bash
+/model openrouter/zhipuai/glm-4.7:detective
+/improve "Debug the deadlock issue in the Diogenes scraper when handling multiple simultaneous requests"
+```
+
 ## Troubleshooting Checklist
 
 1. Is server running? `curl -s "http://localhost:8000/api/health"`

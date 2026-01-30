@@ -81,6 +81,22 @@ class LanguageEngine:
                 return {"error": f"MyBackend unavailable: {str(e)}"}
 ```
 
+## Multi-Model AI Persona
+
+**Recommended Persona**: The Architect (`openrouter/deepseek/deepseek-v3.2:architect`)
+
+Use this persona for:
+- Designing new backend architecture
+- Planning data provider integration
+- Schema design for new language models
+- System-level integration planning
+
+Example:
+```bash
+/model openrouter/deepseek/deepseek-v3.2:architect
+/plan "Design an Old Norse dictionary backend with proper morphological analysis"
+```
+
 ## Examples
 
 Existing data providers demonstrating different integration patterns:

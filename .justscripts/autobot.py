@@ -25,6 +25,11 @@ try:
 except ImportError:
     server = None  # type: ignore[assignment]
 
+try:
+    from model_routing import model  # type: ignore[assignment,attr-defined]
+except ImportError:
+    model = None  # type: ignore[assignment]
+
 
 @click.group()
 def autobot():
@@ -39,6 +44,10 @@ if ruff is not None:
 # Add server group to autobot if available
 if server is not None:
     autobot.add_command(server, name="server")
+
+# Add model routing group to autobot if available
+if model is not None:
+    autobot.add_command(model, name="model")
 
 
 if __name__ == "__main__":

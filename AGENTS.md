@@ -4,6 +4,8 @@
 
 langnet-cli is a classical language education tool designed to help students and scholars study Latin, Greek, and Sanskrit. The tool provides instant access to dictionary definitions, morphological parsing, and grammatical information to supplement language learning and text comprehension.
 
+**Multi-Model AI Development**: This project uses a multi-model architecture via OpenRouter for AI-assisted development. Different AI personas are used for specific tasks: The Architect for planning, The Sleuth for debugging, The Artisan for optimization, The Coder for building, The Scribe for documentation, and the Auditor for code review.
+
 **Educational Focus**: This is not just a data processing tool—it's designed for:
 - Students reading classical texts (Homer, Virgil, Sanskrit epics)
 - Researchers studying classical literature and linguistics
@@ -50,34 +52,80 @@ See these human-readable docs:
 4. Greek UTF-8 → betacode conversion for diogenes
 5. `AttributeValueList` lacks string methods
 6. Use `dataclass` with `cattrs` for serialization
- 7. **Process restart for code changes**: Server processes cache Python modules. After code changes, ask user to restart the process manager before verifying via API/curl.
+7. **Process restart for code changes**: Server processes cache Python modules. After code changes, ask user to restart the process manager before verifying via API/curl.
    ```bash
    # User manages process restart
    # Then verify with:
    langnet-cli cache-clear && curl -s -X POST "http://localhost:8000/api/q" -d "l=san&s=agni"
    ```
 
-## Opencode Skills
+## OpenCode Skills
 
-This project includes opencode skills in [`.opencode/skills/`](.opencode/skills/) for common development tasks:
+This project includes opencode skills for AI-assisted development in [`.opencode/skills/`](.opencode/skills/):
 
- | Skill | Key Commands |
-|-------|--------------|
-| [testing.md](.opencode/skills/testing.md) | Run tests: `nose2 -s tests --config tests/nose2.cfg` |
-| [backend-integration.md](.opencode/skills/backend-integration.md) | Add data providers (dictionaries/morphology tools), wire to `LanguageEngine.handle_query()` |
-| [data-models.md](.opencode/skills/data-models.md) | Use `@dataclass` + `cattrs`, NOT pydantic |
-| [api-development.md](.opencode/skills/api-development.md) | Modify `src/langnet/asgi.py`, restart server after changes |
-| [cache-management.md](.opencode/skills/cache-management.md) | `devenv shell langnet-cli -- cache-clear` to force fresh queries |
-| [debugging.md](.opencode/skills/debugging.md) | `LANGNET_LOG_LEVEL=DEBUG`, check health endpoints |
-| [cli-development.md](.opencode/skills/cli-development.md) | Add Click commands in `src/langnet/cli.py` |
-| [code-style.md](.opencode/skills/code-style.md) | Run `just ruff-format`, `just ruff-check`, `just typecheck`, `just test` |
+| Skill | Key Commands | AI Persona |
+|-------|--------------|------------|
+| [testing.md](.opencode/skills/testing.md) | Run tests: `nose2 -s tests --config tests/nose2.cfg` | **The Coder** - Fast execution for test development |
+| [backend-integration.md](.opencode/skills/backend-integration.md) | Design new backends, system architecture | **The Architect** - High reasoning for complex logic |
+| [data-models.md](.opencode/skills/data-models.md) | Schema design, complex type systems | **The Architect** - Complex logic design |
+| [api-development.md](.opencode/skills/api-development.md) | Modify `src/langnet/asgi.py`, restart server after changes | **The Coder** - API implementation and debugging |
+| [debugging.md](.opencode/skills/debugging.md) | `LANGNET_LOG_LEVEL=DEBUG`, check health endpoints | **The Sleuth** - Root cause analysis and troubleshooting |
+| [cli-development.md](.opencode/skills/cli-development.md) | Add Click commands in `src/langnet/cli.py` | **The Coder** - CLI implementation and UX |
+| [code-style.md](.opencode/skills/code-style.md) | Run `just ruff-format`, `just ruff-check`, `just typecheck`, `just test` | **The Artisan** - Code optimization and style improvements |
+| [cache-management.md](.opencode/skills/cache-management.md) | `devenv shell langnet-cli -- cache-clear` to force fresh queries | **The Artisan** - Performance and optimization work |
+| [multi-model-ai.md](.opencode/skills/multi-model-ai.md) | Multi-model AI development with OpenRouter | **The Coder** - AI workflow implementation |
+| [persona-routing.md](.opencode/skills/persona-routing.md) | AI persona selection guide for different tasks | **The Coder** - Workflow guidance and examples |
 
-When performing tasks, reference the relevant skill for context and patterns.
+When performing tasks, reference the relevant skill for context and patterns. Each skill includes recommended AI personas for optimal results.
+
+## Multi-Model Development Strategy
+
+This project follows a multi-model approach using OpenRouter for AI-assisted development:
+
+### Expert Persona Matrix
+| Persona | Task Category | Primary Model | Rationale |
+| --- | --- | --- | --- |
+| **The Architect** | System Design, Planning | `deepseek/deepseek-v3.2` | High reasoning for complex logic |
+| **The Sleuth** | Debugging, Root Cause | `zhipuai/glm-4.7` | Conservative, less likely to hallucinate |
+| **The Artisan** | Optimization, Style | `minimax/minimax-m2.1` | High throughput for large modules |
+| **The Coder** | Feature Build, Tests | `zhipuai/glm-4.5-air` | Fast execution with reliable tool-use |
+| **The Scribe** | Docs, Comments | `xiaomi/mimo-v2-flash` | Ultra-low cost for prose generation |
+| **The Auditor** | Code Review, Security | `openai/gpt-oss-120b` | Peak instruction following for edge cases |
+
+### Using AI Personas
+
+Agents are configured in `.opencode/opencode.json`. Use the `@agentname` mention syntax to route tasks:
+
+```markdown
+@architect "Design a new caching system for the Sanskrit dictionary"
+@sleuth "Debug the memory leak in the DuckDB cache"
+@coder "Write comprehensive tests for the new module"
+@auditor "Check for security vulnerabilities"
+@artisan "Optimize the hot path in the cache module"
+@scribe "Document the new API endpoints"
+```
+
+### Model Configuration
+- Configuration: `.opencode/opencode.json`
+- Provider: OpenRouter (https://openrouter.ai)
+- Environment: Set `OPENAI_API_BASE=https://openrouter.ai/api/v1` and `OPENAI_API_KEY`
+
+### Operational Workflow
+1. **Planning Phase**: Use Architect persona for high-level design
+2. **Building Phase**: Use coder persona for code generation
+3. **Debugging Phase**: Use Sleuth persona for complex issues
+4. **Review Phase**: Use Auditor persona for security and edge cases
+
+### Cost Optimization
+- Use "Air"/"Flash" models for 90% of boilerplate
+- Reserve "Thinking"/larger models for 10% logic-heavy tasks
+- Always use different personas for building vs reviewing
 
 ## See Also
 
 - [`.opencode/skills/README.md`](.opencode/skills/README.md) - Complete skill documentation
 - [DEVELOPER.md](DEVELOPER.md) - End-user opencode usage guide
+- [LLM_PROVIDER_GUIDE.md](LLM_PROVIDER_GUIDE.md) - Multi-model strategy guide
 
 ## Important
 
