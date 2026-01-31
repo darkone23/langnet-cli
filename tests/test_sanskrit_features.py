@@ -64,11 +64,10 @@ class TestSanskritCologneRootExtraction(unittest.TestCase):
 
     def test_agni_has_verb_root(self):
         result = self.lexicon.lookup_ascii("agni")
-        root = result.get("root")
-        self.assertIsNotNone(root)
-        assert root is not None
-        self.assertEqual(root.get("type"), "verb_root")
-        self.assertEqual(root.get("root"), "ag")
+        self.assertIn("root", result)
+        root = result["root"]
+        self.assertEqual(root["type"], "verb_root")
+        self.assertEqual(root["root"], "ag")
 
     def test_lookup_ascii_returns_transliteration(self):
         result = self.lexicon.lookup_ascii("agni")
@@ -168,48 +167,61 @@ class TestSanskritIntegration(unittest.TestCase):
                     self.assertIn(key, cdsl_result)
 
 
-def test_agni_transliteration_fields(self):
-    result = self.engine.handle_query("san", "agni")
-    # Check both Heritage and CDSL results
-    trans = None
-    if "heritage" in result and result["heritage"].get("dictionary"):
-        # Heritage results have transliteration in the dictionary section
-        heritage_dict = result["heritage"]["dictionary"]
-        trans = heritage_dict.get("transliteration")
-    elif "cdsl" in result:
-        # CDSL results have transliteration at the top level of cdsl
-        trans = result["cdsl"].get("transliteration")
+class TestSanskritStandaloneFunctions(unittest.TestCase):
+    def setUp(self):
+        self.cltk = ClassicsToolkit()
+        self.cdsl = SanskritCologneLexicon()
+        self.engine = LanguageEngine(
+            LanguageEngineConfig(
+                scraper=None,  # type: ignore
+                whitakers=None,  # type: ignore
+                cltk=self.cltk,
+                cdsl=self.cdsl,
+                cache=NoOpCache(),
+            )
+        )
 
-    self.assertIsNotNone(trans)
-    self.assertIsInstance(trans, dict)
-    trans = cast(dict, trans)
-    self.assertIn("iast", trans)
-    self.assertIn("devanagari", trans)
-    self.assertEqual(trans["iast"], "agni")
-    self.assertEqual(trans["devanagari"], "अग्नि")
+    def test_agni_transliteration_fields(self):
+        result = self.engine.handle_query("san", "agni")
+        # Check both Heritage and CDSL results
+        trans = None
+        if "heritage" in result and result["heritage"].get("dictionary"):
+            # Heritage results have transliteration in the dictionary section
+            heritage_dict = result["heritage"]["dictionary"]
+            trans = heritage_dict.get("transliteration")
+        elif "cdsl" in result:
+            # CDSL results have transliteration at the top level of cdsl
+            trans = result["cdsl"].get("transliteration")
 
+        self.assertIsNotNone(trans)
+        self.assertIsInstance(trans, dict)
+        trans = cast(dict, trans)
+        self.assertIn("iast", trans)
+        self.assertIn("devanagari", trans)
+        self.assertEqual(trans["iast"], "agni")
+        self.assertEqual(trans["devanagari"], "अग्नि")
 
-def test_agni_mw_dictionary_has_entries(self):
-    result = self.engine.handle_query("san", "agni")
-    # Check both Heritage and CDSL results
-    mw_entries = None
-    if "heritage" in result and result["heritage"].get("dictionary"):
-        # Heritage results have entries in the dictionary section
-        heritage_dict = result["heritage"]["dictionary"]
-        mw_entries = heritage_dict.get("entries")
-    elif "cdsl" in result:
-        # CDSL results have dictionaries in the cdsl section
-        cdsl_result = result["cdsl"]
-        mw_entries = cdsl_result.get("dictionaries", {}).get("mw")
+    def test_agni_mw_dictionary_has_entries(self):
+        result = self.engine.handle_query("san", "agni")
+        # Check both Heritage and CDSL results
+        mw_entries = None
+        if "heritage" in result and result["heritage"].get("dictionary"):
+            # Heritage results have entries in the dictionary section
+            heritage_dict = result["heritage"]["dictionary"]
+            mw_entries = heritage_dict.get("entries")
+        elif "cdsl" in result:
+            # CDSL results have dictionaries in the cdsl section
+            cdsl_result = result["cdsl"]
+            mw_entries = cdsl_result.get("dictionaries", {}).get("mw")
 
-    self.assertIsNotNone(mw_entries)
-    self.assertIsInstance(mw_entries, list)
-    mw_entries = cast(list, mw_entries)
-    self.assertTrue(len(mw_entries) > 0)
-    first_entry = mw_entries[0]
-    self.assertIsInstance(first_entry, dict)
-    self.assertIn("meaning", first_entry)
-    self.assertIn("pos", first_entry)
+        self.assertIsNotNone(mw_entries)
+        self.assertIsInstance(mw_entries, list)
+        mw_entries = cast(list, mw_entries)
+        self.assertTrue(len(mw_entries) > 0)
+        first_entry = mw_entries[0]
+        self.assertIsInstance(first_entry, dict)
+        self.assertIn("meaning", first_entry)
+        self.assertIn("pos", first_entry)
 
 
 class TestSanskritMorphologyFeatures(unittest.TestCase):

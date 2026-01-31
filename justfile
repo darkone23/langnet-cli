@@ -5,6 +5,9 @@ default:
 # run langnet-cli tool
 cli *args:
     langnet-cli {{ args }}
+
+cache-clear:
+    just cli cache-clear
     
 # Kill zombie diogenes processes (loop mode)
 langnet-dg-reaper:

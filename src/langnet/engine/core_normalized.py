@@ -12,7 +12,7 @@ from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
 from langnet.foster.apply import apply_foster_view
 from langnet.heritage.dictionary import HeritageDictionaryService
 from langnet.heritage.morphology import HeritageMorphologyService
-from langnet.normalization import NormalizationPipeline
+from langnet.normalization import CanonicalQuery, NormalizationPipeline
 from langnet.whitakers_words.core import WhitakersWords
 
 logger = structlog.get_logger(__name__)
@@ -128,8 +128,6 @@ class LanguageEngineConfig:
     cache: QueryCache | NoOpCache | None = None
     normalization_pipeline: NormalizationPipeline | None = None
     enable_normalization: bool = True
-    normalization_pipeline: NormalizationPipeline | None = None
-    enable_normalization: bool = True
 
 
 class LanguageEngine:
@@ -145,8 +143,11 @@ class LanguageEngine:
         self.enable_normalization = config.enable_normalization
         self._cattrs_converter = cattrs.Converter(omit_if_default=True)
 
-    def _query_greek(self, word: str, _cattrs_converter) -> dict:
+    def _query_greek(self, canonical_query: "CanonicalQuery", _cattrs_converter) -> dict:
+        """Query Greek with normalized canonical query."""
+        word = canonical_query.canonical_text
         result: dict = {}
+
         try:
             result["diogenes"] = _cattrs_converter.unstructure(
                 self.diogenes.parse_word(word, DiogenesLanguages.GREEK)
@@ -154,6 +155,7 @@ class LanguageEngine:
         except Exception as e:
             logger.error("backend_failed", backend="diogenes", error=str(e))
             result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
+
         try:
             if self.cltk.spacy_is_available():
                 logger.debug("spacy_available", word=word)
@@ -164,32 +166,41 @@ class LanguageEngine:
         except Exception as e:
             logger.error("backend_failed", backend="spacy", error=str(e))
             result["spacy"] = {"error": f"Spacy unavailable: {str(e)}"}
+
         return result
 
-    def _query_latin(self, word: str, _cattrs_converter) -> dict:
+    def _query_latin(self, canonical_query: "CanonicalQuery", _cattrs_converter) -> dict:
+        """Query Latin with normalized canonical query."""
+        word = canonical_query.canonical_text
         tokenized = [word]
         result = {}
+
         try:
             dg_result = self.diogenes.parse_word(word, DiogenesLanguages.LATIN)
             result["diogenes"] = _cattrs_converter.unstructure(dg_result)
         except Exception as e:
             logger.error("backend_failed", backend="diogenes", error=str(e))
             result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
+
         try:
             ww_result = self.whitakers.words(tokenized)
             result["whitakers"] = _cattrs_converter.unstructure(ww_result)
         except Exception as e:
             logger.error("backend_failed", backend="whitakers", error=str(e))
             result["whitakers"] = {"error": f"Whitakers unavailable: {str(e)}"}
+
         try:
             cltk_result = self.cltk.latin_query(word)
             result["cltk"] = _cattrs_converter.unstructure(cltk_result)
         except Exception as e:
             logger.error("backend_failed", backend="cltk", error=str(e))
             result["cltk"] = {"error": f"CLTK unavailable: {str(e)}"}
+
         return result
 
-    def _query_sanskrit(self, word: str, _cattrs_converter) -> dict:
+    def _query_sanskrit(self, canonical_query: "CanonicalQuery", _cattrs_converter) -> dict:
+        """Query Sanskrit with normalized canonical query."""
+        word = canonical_query.canonical_text
         result = {}
 
         heritage_result = self._query_sanskrit_heritage(word, _cattrs_converter)
@@ -324,29 +335,92 @@ class LanguageEngine:
         return result
 
     def handle_query(self, lang, word):
+        """
+        Handle a query with optional normalization.
+
+        Args:
+            lang: Language code ("grc", "lat", "san")
+            word: The word to query
+
+        Returns:
+            Query result with normalization metadata if enabled
+        """
         lang = LangnetLanguageCodes.get_for_input(lang)
         _cattrs_converter = self._cattrs_converter
 
         logger.debug("query_started", lang=lang, word=word)
 
-        cached_result = self.cache.get(lang, word)
+        # Apply normalization if enabled and pipeline is available
+        canonical_query = None
+        if self.enable_normalization and self.normalization_pipeline:
+            try:
+                canonical_query = self.normalization_pipeline.normalize_query(lang, word)
+                logger.debug(
+                    "query_normalized",
+                    original=canonical_query.original_query,
+                    canonical=canonical_query.canonical_text,
+                    confidence=canonical_query.confidence,
+                )
+            except Exception as e:
+                logger.error("normalization_failed", lang=lang, word=word, error=str(e))
+                # Fall back to original word
+                canonical_query = None
+
+        # Use canonical query if available, otherwise use original word
+        query_word = canonical_query.canonical_text if canonical_query else word
+
+        # Check cache with canonical form if available
+        cache_key = query_word if canonical_query else word
+        cached_result = self.cache.get(lang, cache_key)
         if cached_result is not None:
-            logger.debug("query_cached", lang=lang, word=word)
+            logger.debug("query_cached", lang=lang, word=cache_key)
+            # Add normalization metadata if available
+            if canonical_query:
+                cached_result["_normalization"] = {
+                    "original": canonical_query.original_query,
+                    "canonical": canonical_query.canonical_text,
+                    "confidence": canonical_query.confidence,
+                    "detected_encoding": canonical_query.detected_encoding.value,
+                    "normalization_notes": canonical_query.normalization_notes,
+                }
             return cached_result
 
+        # Route to language-specific handler
         if lang == LangnetLanguageCodes.Greek:
-            logger.debug("routing_to_greek_backends", lang=lang, word=word)
-            result = self._query_greek(word, _cattrs_converter)
+            logger.debug("routing_to_greek_backends", lang=lang, word=query_word)
+            result = self._query_greek(
+                canonical_query or type("obj", (object,), {"canonical_text": query_word})(),
+                _cattrs_converter,
+            )
         elif lang == LangnetLanguageCodes.Latin:
-            logger.debug("routing_to_latin_backends", lang=lang, word=word)
-            result = self._query_latin(word, _cattrs_converter)
+            logger.debug("routing_to_latin_backends", lang=lang, word=query_word)
+            result = self._query_latin(
+                canonical_query or type("obj", (object,), {"canonical_text": query_word})(),
+                _cattrs_converter,
+            )
         elif lang == LangnetLanguageCodes.Sanskrit:
-            logger.debug("routing_to_sanskrit_backends", lang=lang, word=word)
-            result = self._query_sanskrit(word, _cattrs_converter)
+            logger.debug("routing_to_sanskrit_backends", lang=lang, word=query_word)
+            result = self._query_sanskrit(
+                canonical_query or type("obj", (object,), {"canonical_text": query_word})(),
+                _cattrs_converter,
+            )
         else:
             raise NotImplementedError(f"Do not know how to handle {lang}")
 
-        self.cache.put(lang, word, result)
+        # Cache with canonical form if available
+        self.cache.put(lang, cache_key, result)
+
+        # Add normalization metadata to result
+        if canonical_query:
+            result["_normalization"] = {
+                "original": canonical_query.original_query,
+                "canonical": canonical_query.canonical_text,
+                "confidence": canonical_query.confidence,
+                "detected_encoding": canonical_query.detected_encoding.value,
+                "normalization_notes": canonical_query.normalization_notes,
+                "alternate_forms": canonical_query.alternate_forms,
+            }
+
         result = apply_foster_view(result)
         logger.debug("query_completed", lang=lang, word=word)
         return result

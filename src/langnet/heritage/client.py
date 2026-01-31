@@ -6,6 +6,7 @@ from urllib.parse import urlencode, urljoin
 import requests
 import structlog
 from bs4 import BeautifulSoup
+from indic_transliteration.sanscript import DEVANAGARI, IAST, transliterate
 
 from .config import heritage_config
 from .parameters import HeritageParameterBuilder
@@ -315,6 +316,55 @@ class HeritageHTTPClient:
         except Exception as e:
             logger.error("Failed to parse lemmatization response", error=str(e))
             raise HeritageAPIError(f"Lemmatization parsing failed: {e}")
+
+    def fetch_canonical_sanskrit(
+        self,
+        query: str,
+        lexicon: str = "MW",
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
+        """Fetch canonical Sanskrit form from sktsearch.
+
+        Uses Heritage's sktsearch CGI to get the canonical Devanagari
+        representation of a term, which handles encoding robustly.
+        """
+        bare_query = re.sub(r"[^a-z]", "", query.lower())
+
+        params = {
+            "q": bare_query,
+            "lex": lexicon,
+            "t": "VH",
+        }
+
+        html_content = self.fetch_cgi_script("sktsearch", params=params, timeout=timeout)
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        for link in soup.find_all("a", href=True):
+            href = link.get("href")
+            if not isinstance(href, str):
+                continue
+            if f"/skt/{lexicon}/" in href:
+                link_text = link.get_text(strip=True)
+                try:
+                    potential_devanagari = transliterate(link_text, IAST, DEVANAGARI)
+                    return {
+                        "original_query": query,
+                        "bare_query": bare_query,
+                        "canonical_sanskrit": potential_devanagari,
+                        "match_method": "sktsearch",
+                        "entry_url": href,
+                        "lexicon": lexicon,
+                    }
+                except Exception:
+                    pass
+
+        return {
+            "original_query": query,
+            "bare_query": bare_query,
+            "canonical_sanskrit": None,
+            "match_method": "not_found",
+            "lexicon": lexicon,
+        }
 
     def fetch_dictionary_entry(self, entry_url: str) -> dict[str, Any]:
         """Fetch and parse a specific dictionary entry from its URL"""
