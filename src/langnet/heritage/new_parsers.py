@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from bs4 import BeautifulSoup
+
 from .client import HeritageAPIError
 from .html_extractor import HeritageHTMLExtractor
 from .lineparsers.parse_morphology import MorphologyReducer
@@ -39,7 +40,9 @@ class NewMorphologyParser:
                 "metadata": self.html_extractor.extract_metadata(html_content),
             }
 
-            logger.info("Successfully parsed morphology with Lark parser", solutions=len(solutions))
+            logger.info(
+                "Successfully parsed morphology with Lark parser (%d solutions)", len(solutions)
+            )
 
             return result
 

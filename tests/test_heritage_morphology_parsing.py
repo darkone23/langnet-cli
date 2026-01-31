@@ -7,8 +7,9 @@ import json
 import unittest
 from pathlib import Path
 
-from langnet.heritage.parsers import MorphologyParser
 from langnet.heritage.html_extractor import HeritageHTMLExtractor
+from langnet.heritage.lineparsers.parse_morphology import MorphologyReducer
+from langnet.heritage.parsers import MorphologyParser
 
 
 class TestHeritageMorphologyParser(unittest.TestCase):
@@ -126,15 +127,11 @@ class TestMorphologyReducer(unittest.TestCase):
 
     def test_reducer_initialization(self):
         """Test reducer is properly initialized"""
-        from langnet.heritage.lineparsers.parse_morphology import MorphologyReducer
-
         reducer = MorphologyReducer()
         self.assertIsNotNone(reducer.parser)
 
     def test_reduce_simple_pattern(self):
         """Test reducing a simple [word]{analysis} pattern"""
-        from langnet.heritage.lineparsers.parse_morphology import MorphologyReducer
-
         reducer = MorphologyReducer()
         result = reducer.reduce("[yoga]{m. sg. voc.}")
 

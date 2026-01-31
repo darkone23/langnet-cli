@@ -2,10 +2,81 @@
 Lark parser implementation for Heritage Platform morphology responses
 """
 
+import logging
 from pathlib import Path
+
 from lark import Lark, Transformer
 
 from ..models import HeritageWordAnalysis
+
+GENDER_MAP = {
+    "m": "masculine",
+    "masc": "masculine",
+    "m.": "masculine",
+    "f": "feminine",
+    "fem": "feminine",
+    "f.": "feminine",
+    "n": "neuter",
+    "neut": "neuter",
+    "n.": "neuter",
+}
+NUMBER_MAP = {
+    "sg": "singular",
+    "sg.": "singular",
+    "s": "singular",
+    "du": "dual",
+    "d": "dual",
+    "pl": "plural",
+    "pl.": "plural",
+    "p": "plural",
+}
+CASE_MAP = {
+    "nom": "nominative",
+    "n": "nominative",
+    "voc": "vocative",
+    "v": "vocative",
+    "acc": "accusative",
+    "a": "accusative",
+    "instr": "instrumental",
+    "i": "instrumental",
+    "dat": "dative",
+    "d": "dative",
+    "abl": "ablative",
+    "gen": "genitive",
+    "g": "genitive",
+    "loc": "locative",
+    "l": "locative",
+}
+PERSON_MAP = {"1": 1, "2": 2, "3": 3}
+TENSE_MAP = {
+    "pres": "present",
+    "impf": "imperfect",
+    "fut": "future",
+    "perf": "perfect",
+    "plup": "pluperfect",
+}
+MOOD_MAP = {
+    "ind": "indicative",
+    "imp": "imperative",
+    "opt": "optative",
+    "subj": "subjunctive",
+}
+VOICE_MAP = {"act": "active", "mid": "middle", "pass": "passive"}
+POS_MAP = {
+    "noun": "noun",
+    "n": "noun",
+    "verb": "verb",
+    "v": "verb",
+    "adj": "adjective",
+    "adjective": "adjective",
+    "pron": "pronoun",
+    "adv": "adverb",
+    "part": "participle",
+}
+
+CASE_CODE_INDEX = 1
+GENDER_CODE_INDEX = 2
+NUMBER_CODE_INDEX = 3
 
 
 class MorphologyTransformer(Transformer):
@@ -127,120 +198,68 @@ class MorphologyTransformer(Transformer):
         """Parse text-based morphological description like 'm. sg. voc.'"""
         parts = code.lower().replace(".", "").replace(",", "").split()
 
-        gender_map = {
-            "m": "masculine",
-            "masc": "masculine",
-            "m.": "masculine",
-            "f": "feminine",
-            "fem": "feminine",
-            "f.": "feminine",
-            "n": "neuter",
-            "neut": "neuter",
-            "n.": "neuter",
-        }
-        number_map = {
-            "sg": "singular",
-            "sg.": "singular",
-            "s": "singular",
-            "du": "dual",
-            "d": "dual",
-            "pl": "plural",
-            "pl.": "plural",
-            "p": "plural",
-        }
-        case_map = {
-            "nom": "nominative",
-            "n": "nominative",
-            "voc": "vocative",
-            "v": "vocative",
-            "acc": "accusative",
-            "a": "accusative",
-            "instr": "instrumental",
-            "i": "instrumental",
-            "dat": "dative",
-            "d": "dative",
-            "abl": "ablative",
-            "abl": "ablative",
-            "gen": "genitive",
-            "g": "genitive",
-            "loc": "locative",
-            "l": "locative",
-        }
-        person_map = {"1": 1, "2": 2, "3": 3}
-        tense_map = {
-            "pres": "present",
-            "impf": "imperfect",
-            "fut": "future",
-            "perf": "perfect",
-            "plup": "pluperfect",
-        }
-        mood_map = {
-            "ind": "indicative",
-            "imp": "imperative",
-            "opt": "optative",
-            "subj": "subjunctive",
-        }
-        voice_map = {"act": "active", "mid": "middle", "pass": "passive"}
-        pos_map = {
-            "noun": "noun",
-            "n": "noun",
-            "verb": "verb",
-            "v": "verb",
-            "adj": "adjective",
-            "adjective": "adjective",
-            "pron": "pronoun",
-            "adv": "adverb",
-            "part": "participle",
-        }
-
         pos_indicators = []
 
         for part in parts:
-            part = part.strip()
-            if not part:
+            stripped_part = part.strip()
+            if not stripped_part:
                 continue
-            # Handle ordinal numbers like "3rd", "1st", "2nd"
-            if part.endswith(("st", "nd", "rd", "th")):
-                num_part = part[:-2]
-                if num_part in person_map:
-                    features["person"] = person_map[num_part]
-                    pos_indicators.append("verb")
-                    continue
-            if part in gender_map:
-                features["gender"] = gender_map[part]
-                pos_indicators.append("noun")
-            elif part in number_map:
-                features["number"] = number_map[part]
-            elif part in case_map:
-                features["case"] = case_map[part]
-                pos_indicators.append("noun")
-            elif part in person_map:
-                features["person"] = person_map[part]
-                pos_indicators.append("verb")
-            elif part in tense_map:
-                features["tense"] = tense_map[part]
-                pos_indicators.append("verb")
-            elif part in mood_map:
-                features["mood"] = mood_map[part]
-                pos_indicators.append("verb")
-            elif part in voice_map:
-                features["voice"] = voice_map[part]
-                pos_indicators.append("verb")
-            elif part in pos_map:
-                features["pos"] = pos_map[part]
-            elif part.startswith("verb") or part == "v":
-                features["pos"] = "verb"
-            elif part.startswith("noun") or part == "n":
-                features["pos"] = "noun"
+            self._map_part_to_feature(stripped_part, features, pos_indicators)
 
-        # Infer POS from grammatical features if not explicitly set
         if features["pos"] == "unknown":
-            if "verb" in pos_indicators and not "noun" in pos_indicators:
-                features["pos"] = "verb"
-            elif "noun" in pos_indicators:
-                features["pos"] = "noun"
+            features["pos"] = self._infer_pos(pos_indicators)
 
         return features
+
+    def _is_ordinal(self, part):
+        """Check if part is an ordinal number"""
+        return part.endswith(("st", "nd", "rd", "th"))
+
+    def _get_ordinal_person(self, part):
+        """Get person from ordinal number"""
+        num_part = part[:-2]
+        return PERSON_MAP.get(num_part)
+
+    def _map_part_to_feature(self, part, features, pos_indicators):
+        """Map a part to its grammatical feature"""
+        if self._is_ordinal(part):
+            person = self._get_ordinal_person(part)
+            if person:
+                features["person"] = person
+                pos_indicators.append("verb")
+                return
+
+        mappings = [
+            (GENDER_MAP, "gender", "noun"),
+            (NUMBER_MAP, "number", None),
+            (CASE_MAP, "case", "noun"),
+            (PERSON_MAP, "person", "verb"),
+            (TENSE_MAP, "tense", "verb"),
+            (MOOD_MAP, "mood", "verb"),
+            (VOICE_MAP, "voice", "verb"),
+        ]
+
+        for mapping, feature_name, pos_indicator in mappings:
+            if part in mapping:
+                features[feature_name] = mapping[part]
+                if pos_indicator:
+                    pos_indicators.append(pos_indicator)
+                return
+
+        if part in POS_MAP:
+            features["pos"] = POS_MAP[part]
+        elif part.startswith("verb") or part == "v":
+            features["pos"] = "verb"
+        elif part.startswith("noun") or part == "n":
+            features["pos"] = "noun"
+
+    def _infer_pos(self, pos_indicators):
+        """Infer part of speech from grammatical indicators"""
+        if "verb" in pos_indicators and "noun" not in pos_indicators:
+            return "verb"
+        elif "noun" in pos_indicators:
+            return "noun"
+        return "unknown"
 
     def _parse_compact_code(self, code, features):
         """Parse compact Heritage code format (e.g., 'N1msn')"""
@@ -257,12 +276,9 @@ class MorphologyTransformer(Transformer):
 
         if code:
             pos_code = code[0]
-            if pos_code in pos_mapping:
-                features["pos"] = pos_mapping[pos_code]
-            else:
-                features["pos"] = f"unknown({pos_code})"
+            features["pos"] = pos_mapping.get(pos_code, f"unknown({pos_code})")
 
-        if len(code) > 1 and code[1].isdigit():
+        if len(code) > CASE_CODE_INDEX and code[CASE_CODE_INDEX].isdigit():
             case_num = code[1]
             case_mapping = {
                 "1": "nominative",
@@ -276,7 +292,7 @@ class MorphologyTransformer(Transformer):
             }
             features["case"] = case_mapping.get(case_num, f"case_{case_num}")
 
-        if len(code) > 2 and code[2] in "mfn":
+        if len(code) > GENDER_CODE_INDEX and code[GENDER_CODE_INDEX] in "mfn":
             gender_mapping = {
                 "m": "masculine",
                 "f": "feminine",
@@ -284,7 +300,7 @@ class MorphologyTransformer(Transformer):
             }
             features["gender"] = gender_mapping.get(code[2], code[2])
 
-        if len(code) > 3 and code[3] in "sdp":
+        if len(code) > NUMBER_CODE_INDEX and code[NUMBER_CODE_INDEX] in "sdp":
             number_mapping = {
                 "s": "singular",
                 "d": "dual",
@@ -335,9 +351,6 @@ class MorphologyReducer:
             else:
                 return []
         except Exception as e:
-            # Log error and return empty list for robustness
-            import logging
-
             logging.error(f"Failed to parse morphology: {e}")
             return []
 

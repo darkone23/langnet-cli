@@ -3,7 +3,8 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
-from .client import HeritageAPIError
+from .html_extractor import HeritageHTMLExtractor
+from .lineparsers.parse_morphology import MorphologyReducer
 
 
 class SimpleHeritageParser:
@@ -157,28 +158,17 @@ class MorphologyParser:
     """Parser for morphological analysis responses (sktreader) - uses new Lark-based parser"""
 
     def __init__(self):
-        try:
-            from .html_extractor import HeritageHTMLExtractor
-            from .lineparsers.parse_morphology import MorphologyReducer
-
-            self.html_extractor = HeritageHTMLExtractor()
-            self.morphology_reducer = MorphologyReducer()
-            self.use_new_parser = True
-        except ImportError:
-            self.use_new_parser = False
-            self.simple_parser = SimpleHeritageParser()
+        self.html_extractor = HeritageHTMLExtractor()
+        self.morphology_reducer = MorphologyReducer()
+        self.use_new_parser = True
+        self.simple_parser = SimpleHeritageParser()
 
     def parse(self, html_content: str) -> dict[str, Any]:
         """Parse morphology analysis results using new Lark-based parser with fallback"""
         if self.use_new_parser:
             try:
-                # Extract plain text from HTML
                 plain_text = self.html_extractor.extract_plain_text(html_content)
-
-                # Parse with Lark parser
                 solutions = self.morphology_reducer.reduce(plain_text)
-
-                # Convert to expected format
                 result = {
                     "solutions": solutions,
                     "word_analyses": [],
@@ -186,15 +176,8 @@ class MorphologyParser:
                     "encoding": "velthuis",
                     "metadata": self.html_extractor.extract_metadata(html_content),
                 }
-
                 return result
-
-            except Exception as e:
-                # Fall back to simple parser
-                print(f"New parser failed, falling back to simple parser: {e}")
+            except Exception:
                 return self.simple_parser.parse_morphology(html_content)
         else:
-            try:
-                return self.simple_parser.parse_morphology(html_content)
-            except Exception as e:
-                raise HeritageAPIError(f"Failed to parse morphology HTML: {e}")
+            return self.simple_parser.parse_morphology(html_content)

@@ -4,8 +4,9 @@ Extracts structured text content for Lark parsing
 """
 
 import re
+from typing import Any
+
 from bs4 import BeautifulSoup
-from typing import List, Dict, Any, Optional
 
 
 class HeritageHTMLExtractor:
@@ -14,7 +15,7 @@ class HeritageHTMLExtractor:
     def __init__(self):
         self.pattern = r"\[([^\]]+)\]\{([^}]+)\}"
 
-    def extract_solutions(self, html_content: str) -> List[Dict[str, Any]]:
+    def extract_solutions(self, html_content: str) -> list[dict[str, Any]]:
         """Extract solution data from HTML content"""
         soup = BeautifulSoup(html_content, "html.parser")
 
@@ -34,7 +35,7 @@ class HeritageHTMLExtractor:
 
         return solutions
 
-    def _extract_solution(self, solution_span, soup) -> Optional[Dict[str, Any]]:
+    def _extract_solution(self, solution_span, soup) -> dict[str, Any] | None:
         """Extract a single solution from a solution span"""
         try:
             # Get solution number
@@ -70,7 +71,7 @@ class HeritageHTMLExtractor:
         except Exception:
             return None
 
-    def _extract_from_tables(self, soup) -> List[Dict[str, Any]]:
+    def _extract_from_tables(self, soup) -> list[dict[str, Any]]:
         """Extract solutions from table elements"""
         solutions = []
 
@@ -109,7 +110,7 @@ class HeritageHTMLExtractor:
         else:
             return str(element)
 
-    def extract_metadata(self, html_content: str) -> Dict[str, Any]:
+    def extract_metadata(self, html_content: str) -> dict[str, Any]:
         """Extract metadata from HTML content"""
         soup = BeautifulSoup(html_content, "html.parser")
         all_text = soup.get_text()
@@ -129,51 +130,52 @@ class HeritageHTMLExtractor:
 
         return metadata
 
-    def extract_plain_text(self, html_content: str) -> str:
-        """Extract plain text from HTML content for Lark parsing"""
-        soup = BeautifulSoup(html_content, "html.parser")
+    def _is_pattern_table(self, table) -> bool:
+        """Check if a table is a pattern table by class"""
+        classes = table.get("class") or []
+        return any(c in classes for c in ["grey_back", "lawngreen_back"])
 
-        solution_sections = []
+    def _extract_pattern_from_element(self, element) -> str | None:
+        """Extract [word]{analysis} pattern from an element's text"""
+        text = element.get_text(strip=True)
+        match = re.search(r"\[[^\]]+\]\{[^}]+\}", text)
+        return match.group(0) if match else None
 
-        # Find all tables with pattern classes (grey_back, lawngreen_back, etc.)
+    def _get_innermost_pattern_tables(self, soup):
+        """Find innermost pattern tables (those without nested pattern tables)"""
         pattern_tables = soup.find_all("table", class_="grey_back")
         pattern_tables.extend(soup.find_all("table", class_="lawngreen_back"))
 
-        # Filter to only innermost tables (those that don't contain other pattern tables)
-        innermost_tables = []
+        innermost = []
         for table in pattern_tables:
-            has_nested_pattern_table = False
+            has_nested = False
             for nested in table.find_all("table", recursive=False):
-                classes = nested.get("class") or []
-                if any(c in classes for c in ["grey_back", "lawngreen_back"]):
-                    has_nested_pattern_table = True
+                if self._is_pattern_table(nested):
+                    has_nested = True
                     break
-            if not has_nested_pattern_table:
-                innermost_tables.append(table)
+            if not has_nested:
+                innermost.append(table)
+        return innermost
 
-        # Extract text from innermost tables only
+    def extract_plain_text(self, html_content: str) -> str:
+        """Extract plain text from HTML content for Lark parsing"""
+        soup = BeautifulSoup(html_content, "html.parser")
+        solution_sections = []
         seen_texts = set()
+
+        innermost_tables = self._get_innermost_pattern_tables(soup)
         for table in innermost_tables:
-            table_text = table.get_text(strip=True)
-            # Extract just the [word]{analysis} pattern part
-            pattern_match = re.search(r"\[[^\]]+\]\{[^}]+\}", table_text)
-            if pattern_match:
-                text = pattern_match.group(0)
-                if text not in seen_texts:
+            text = self._extract_pattern_from_element(table)
+            if text and text not in seen_texts:
+                seen_texts.add(text)
+                solution_sections.append(text)
+
+        if not solution_sections:
+            for span in soup.find_all("span", class_="latin12"):
+                text = self._extract_pattern_from_element(span)
+                if text and text not in seen_texts:
                     seen_texts.add(text)
                     solution_sections.append(text)
-
-        # Fallback: extract patterns directly from spans
-        if not solution_sections:
-            pattern_spans = []
-            for span in soup.find_all("span", class_="latin12"):
-                span_text = span.get_text()
-                pattern_match = re.search(r"\[[^\]]+\]\{[^}]+\}", span_text)
-                if pattern_match:
-                    text = pattern_match.group(0)
-                    if text not in seen_texts:
-                        seen_texts.add(text)
-                        solution_sections.append(text)
 
         return "\n".join(solution_sections)
 
@@ -201,7 +203,7 @@ def extract_heritage_text(html_content: str) -> str:
     return extractor.extract_plain_text(html_content)
 
 
-def extract_heritage_solutions(html_content: str) -> List[Dict[str, Any]]:
+def extract_heritage_solutions(html_content: str) -> list[dict[str, Any]]:
     """Extract structured solutions from Heritage HTML"""
     extractor = HeritageHTMLExtractor()
     return extractor.extract_solutions(html_content)
