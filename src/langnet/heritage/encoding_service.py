@@ -1,7 +1,6 @@
 import re
 from typing import Any
 
-from indic_transliteration.detect import detect
 from indic_transliteration.sanscript import (
     DEVANAGARI,
     HK,
@@ -35,17 +34,91 @@ except ImportError:
 class EncodingService:
     """Service for handling Sanskrit text encoding conversions"""
 
+    # Constants for encoding detection
+    MIN_SPECIFIC_CONSONANTS_FOR_SLP1 = 2
+
     @staticmethod
     def detect_encoding(text: str) -> str:
-        """Detect the encoding of input text"""
-        if not HAS_INDIC_TRANSLIT:
-            return "unknown"
+        """Detect the encoding of input text by analyzing its attributes."""
+        if not text:
+            return "ascii"
 
-        try:
-            detected = detect(text)
-            return detected
-        except Exception:
-            return "unknown"
+        # Analyze text attributes
+        attributes = {
+            "has_devanagari": any("\u0900" <= c <= "\u097f" for c in text),
+            "has_iast": any(c in "āīūṛṝḹḹṃḥṅñṭḍṇṣśḻḽ" for c in text),
+            "has_uppercase": any(c.isupper() for c in text),
+            "has_retroflex_upper": any(c in "RTDNS" for c in text),
+            "has_macrons": any(c in "āīūṛṝḹḹ" for c in text),
+            "is_all_alpha": text.isalpha(),
+            "is_all_uppercase": text.isupper(),
+        }
+
+        # Clear detection based on attributes
+        if attributes["has_devanagari"]:
+            return "devanagari"
+
+        if attributes["has_iast"]:
+            return "iast"
+
+        # SLP1 detection: must have multiple SLP1-specific consonants AND mixed case
+        # OR look like typical SLP1 with specific patterns
+        slp1_specific_consonants = "CFGJKQWX"  # These are exclusively SLP1
+        retroflex_consonants = "RTDNS"  # Retroflex consonants that appear in both SLP1 and Velthuis
+
+        specific_consonants_found = [c for c in text if c in slp1_specific_consonants]
+        retroflex_found = [c for c in text if c in retroflex_consonants]
+
+        # Check if text contains SLP1-specific patterns
+        slp1_pattern_match = any(
+            c in "aAiIuUfFxXEeOoKkKGgGHhjJYcCwWqQrRNdzZbBpPmMtTdDsSnNlLvvyYsSz" for c in text
+        )
+
+        # Only detect SLP1 if:
+        # 1. Multiple specific consonants AND mixed case, OR
+        # 2. Has at least two specific consonants (regardless of case)
+        # Don't detect SLP1 based on single specific consonant + mixed case,
+        # as that conflicts with Velthuis detection
+        min_consonants = EncodingService.MIN_SPECIFIC_CONSONANTS_FOR_SLP1
+        is_slp1 = (
+            (
+                len(specific_consonants_found) >= min_consonants
+                and not attributes["is_all_uppercase"]
+            )
+            or (len(specific_consonants_found) >= min_consonants)
+        ) and slp1_pattern_match
+
+        if is_slp1:
+            return "slp1"
+
+        # Velthuis detection: must have retroflex uppercase AND mixed case.
+        # Velthuis can have some chars also in SLP1, but pattern should be Velthuis-like.
+        is_velthuis = (
+            attributes["has_retroflex_upper"]
+            and attributes["has_uppercase"]
+            and not attributes["is_all_uppercase"]
+            and (
+                # No SLP1-specific consonants, OR
+                len(specific_consonants_found) == 0
+                # OR if it has SLP1-specific consonants but the pattern suggests Velthuis
+                or (
+                    len(specific_consonants_found) == 1
+                    and len(retroflex_found) >= 1
+                    and not attributes["is_all_uppercase"]
+                )
+            )
+        )
+
+        if is_velthuis:
+            return "velthuis"
+
+        if attributes["has_macrons"]:
+            return "hk"
+
+        if attributes["is_all_alpha"]:
+            return "ascii"
+
+        return "ascii"
 
     @staticmethod
     def to_velthuis(text: str, source_encoding: str | None = None) -> str:

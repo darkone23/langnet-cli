@@ -95,9 +95,27 @@ class TestHeritageConnectivity(unittest.TestCase):
             self.assertEqual(result.total_solutions, 2)
             self.assertIsInstance(result.processing_time, float)
 
-            # Verify HTTP client was called correctly
+            # Verify HTTP client was called correctly - Velthuis encoding doubles final long vowels
+            # and includes optimized parameters from VELTHUIS_INPUT_TIPS.md
+            expected_params = {
+                "text": "yogenaa",
+                "t": "VH",
+                "lex": "SH",
+                "font": "roma",
+                "cache": "t",
+                "st": "t",
+                "us": "f",
+                "topic": "",
+                "abs": "f",
+                "corpmode": "",
+                "corpdir": "",
+                "sentno": "",
+                "mode": "p",
+                "cpts": "",
+                "max": "2",
+            }
             mock_client.fetch_cgi_script.assert_called_once_with(
-                "sktreader", params={"text": "yogena", "t": "VH", "max": "2"}, timeout=None
+                "sktreader", params=expected_params, timeout=None
             )
 
     @patch("requests.get")

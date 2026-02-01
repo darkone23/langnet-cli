@@ -10,6 +10,9 @@ from .lineparsers.parse_morphology import MorphologyReducer
 class SimpleHeritageParser:
     """Simple parser for Heritage Platform morphology responses"""
 
+    # Constants for table parsing
+    MIN_CELLS_COUNT = 2
+
     def parse_morphology(self, html_content: str) -> dict[str, Any]:
         """Parse morphology analysis results"""
         soup = BeautifulSoup(html_content, "html.parser")
@@ -133,23 +136,82 @@ class SimpleHeritageParser:
             return None
 
     def _parse_tables(self, soup) -> list[dict[str, Any]]:
-        """Parse all tables for analysis data"""
-        solutions = []
+        """Parse all tables for analysis data, handling pattern tables and generic tables."""
+        solutions: list[dict[str, Any]] = []
 
-        tables = soup.find_all("table", class_="grey_back")
-
-        for i, table in enumerate(tables):
+        # First, handle tables that directly contain patterns like [word]{analysis}
+        pattern_tables = soup.find_all("table", class_="grey_back")
+        for i, table in enumerate(pattern_tables, start=1):
             analysis = self._parse_analysis_table(table)
             if analysis:
-                solution = {
-                    "type": "morphological_analysis",
-                    "solution_number": i + 1,
-                    "analyses": [analysis],
-                    "total_words": 1,
-                    "score": 0.0,
-                    "metadata": {},
-                }
-                solutions.append(solution)
+                solutions.append(
+                    {
+                        "type": "morphological_analysis",
+                        "solution_number": i,
+                        "analyses": [analysis],
+                        "total_words": 1,
+                        "score": 0.0,
+                        "metadata": {},
+                    }
+                )
+
+        # Next, handle generic tables with word in first column, analysis in second column
+        all_tables = soup.find_all("table")
+        for table in all_tables:
+            if table in pattern_tables:
+                continue
+            rows = table.find_all("tr")
+            for row in rows:
+                cells = row.find_all("td")
+                if len(cells) >= self.MIN_CELLS_COUNT:
+                    word = cells[0].get_text(strip=True)
+                    analysis_code = cells[1].get_text(strip=True)
+                    # Build pattern string for MorphologyReducer
+                    pattern = f"[{word}]{{{analysis_code}}}"
+                    try:
+                        reducer = MorphologyReducer()
+                        parsed = reducer.reduce(pattern)
+                        if parsed:
+                            # Extract analyses from first solution
+                            first = parsed[0]
+                            solutions.append(
+                                {
+                                    "type": "morphological_analysis",
+                                    "solution_number": len(solutions) + 1,
+                                    "analyses": first.get("analyses", []),
+                                    "total_words": first.get("total_words", 1),
+                                    "score": 0.0,
+                                    "metadata": {},
+                                }
+                            )
+                    except Exception:
+                        # Fallback: create a minimal analysis entry
+                        analysis = {
+                            "word": word,
+                            "lemma": word,
+                            "pos": "unknown",
+                            "case": None,
+                            "gender": None,
+                            "number": None,
+                            "person": None,
+                            "tense": None,
+                            "voice": None,
+                            "mood": None,
+                            "stem": "",
+                            "meaning": [],
+                            "lexicon_refs": [],
+                            "confidence": 0.0,
+                        }
+                        solutions.append(
+                            {
+                                "type": "morphological_analysis",
+                                "solution_number": len(solutions) + 1,
+                                "analyses": [analysis],
+                                "total_words": 1,
+                                "score": 0.0,
+                                "metadata": {},
+                            }
+                        )
 
         return solutions
 
@@ -166,18 +228,23 @@ class MorphologyParser:
     def parse(self, html_content: str) -> dict[str, Any]:
         """Parse morphology analysis results using new Lark-based parser with fallback"""
         if self.use_new_parser:
-            try:
-                plain_text = self.html_extractor.extract_plain_text(html_content)
-                solutions = self.morphology_reducer.reduce(plain_text)
-                result = {
-                    "solutions": solutions,
-                    "word_analyses": [],
-                    "total_solutions": len(solutions),
-                    "encoding": "velthuis",
-                    "metadata": self.html_extractor.extract_metadata(html_content),
-                }
-                return result
-            except Exception:
+            plain_text = self.html_extractor.extract_plain_text(html_content)
+            if plain_text.strip():
+                try:
+                    solutions = self.morphology_reducer.reduce(plain_text)
+                    result = {
+                        "solutions": solutions,
+                        "word_analyses": [],
+                        "total_solutions": len(solutions),
+                        "encoding": "velthuis",
+                        "metadata": self.html_extractor.extract_metadata(html_content),
+                    }
+                    return result
+                except Exception:
+                    # If Lark parsing fails, fall back to simple parser
+                    return self.simple_parser.parse_morphology(html_content)
+            else:
+                # No plain text extracted; use simple parser as fallback
                 return self.simple_parser.parse_morphology(html_content)
         else:
             return self.simple_parser.parse_morphology(html_content)

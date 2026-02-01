@@ -145,9 +145,9 @@ class TestSanskritNormalizer(unittest.TestCase):
         test_cases = [
             ("अग्नि", Encoding.DEVANAGARI),
             ("krsna", Encoding.ASCII),
-            ("agni", Encoding.SLP1),
-            ("aGNa", Encoding.VELTHUIS),
-            ("aGNa", Encoding.VELTHUIS),
+            ("agni", Encoding.ASCII),  # Simple ASCII should be detected as ASCII
+            ("aGNa", Encoding.VELTHUIS),  # Velthuis with retroflex consonant
+            ("aGNa", Encoding.VELTHUIS),  # Velthuis with retroflex consonant
             ("ānanda", Encoding.IAST),
         ]
 

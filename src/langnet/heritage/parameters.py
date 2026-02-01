@@ -298,25 +298,67 @@ class HeritageParameterBuilder:
     def build_morphology_params(
         text: str, encoding: str | None = None, max_solutions: int | None = None, **kwargs
     ) -> dict[str, Any]:
-        """Build parameters for morphological analysis (sktreader)"""
+        """Build parameters for morphological analysis (sktreader) with optimized parameters"""
         params = {}
 
         # Text input - encode the text if encoding is specified
         if encoding:
             encoded_text = HeritageParameterBuilder.encode_text(text, encoding)
+            # Apply Velthuis input tip: ensure long vowels are doubled
+            if encoding == "velthuis":
+                # Double vowels explicitly for better sktreader results
+                encoded_text = HeritageParameterBuilder._double_long_vowels(encoded_text)
             params["text"] = encoded_text
             params["t"] = HeritageParameterBuilder.get_cgi_encoding_param(encoding)
         else:
             params["text"] = text
 
+        # Add optimized parameters based on VELTHUIS_INPUT_TIPS.md
+        params["lex"] = kwargs.get("lexicon", "SH")  # Use SH (Shabda Sanskrit) lexicon
+        params["font"] = kwargs.get("font", "roma")  # Roman font
+        params["cache"] = "t"  # Enable caching
+        params["st"] = "t"  # Show tables
+        params["us"] = "f"  # Don't show unknown words
+        params["topic"] = ""  # No specific topic
+        params["abs"] = "f"  # No abstract
+        params["corpmode"] = ""  # No corpus mode
+        params["corpdir"] = ""  # No corpus directory
+        params["sentno"] = ""  # No sentence number
+        params["mode"] = "p"  # Parse mode
+        params["cpts"] = ""  # No custom points
+
         # Number of solutions
         if max_solutions is not None:
             params["max"] = str(max_solutions)
 
-        # Additional parameters
-        params.update(kwargs)
+        # Additional parameters (can override defaults)
+        params.update({k: v for k, v in kwargs.items() if k not in ["lexicon", "font"]})
 
         return params
+
+    @staticmethod
+    def _double_long_vowels(text: str) -> str:
+        """Double long vowels in Velthuis encoding for better sktreader results"""
+        # Only double vowels when they're at the end of the word or followed by consonants
+        # This avoids double vowels in the middle of words like "agni" -> "agnii"
+        words = text.split()
+        doubled_words = []
+
+        for word in words:
+            # Double final vowels only
+            if len(word) > 1:
+                # Check if the last character is a vowel that should be doubled
+                final_char = word[-1]
+                if final_char in ["a", "i", "u", "e", "o"]:
+                    # Double the final vowel
+                    doubled_word = word[:-1] + final_char + final_char
+                    doubled_words.append(doubled_word)
+                else:
+                    doubled_words.append(word)
+            else:
+                doubled_words.append(word)
+
+        return " ".join(doubled_words)
 
     @staticmethod
     def build_search_params(

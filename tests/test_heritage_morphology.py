@@ -30,7 +30,7 @@ class TestHeritageParameterBuilder(unittest.TestCase):
             text="agni", encoding="velthuis", max_solutions=5
         )
 
-        self.assertEqual(params["text"], "agni")
+        self.assertEqual(params["text"], "agnii")  # Should double final vowels in Velthuis
         self.assertEqual(params["t"], "VH")
         self.assertEqual(params["max"], "5")
 
@@ -176,9 +176,27 @@ class TestHeritageMorphologyService(unittest.TestCase):
         self.assertEqual(len(result.solutions[0].analyses), 1)
         self.assertEqual(result.solutions[0].analyses[0].word, "agni")
 
-        # Verify correct parameters were passed
+        # Verify correct parameters were passed - Velthuis encoding doubles final long vowels
+        # and includes optimized parameters from VELTHUIS_INPUT_TIPS.md
+        expected_params = {
+            "text": "agnii",
+            "t": "VH",
+            "lex": "SH",
+            "font": "roma",
+            "cache": "t",
+            "st": "t",
+            "us": "f",
+            "topic": "",
+            "abs": "f",
+            "corpmode": "",
+            "corpdir": "",
+            "sentno": "",
+            "mode": "p",
+            "cpts": "",
+            "max": "2",
+        }
         mock_client_instance.fetch_cgi_script.assert_called_once_with(
-            "sktreader", params={"text": "agni", "t": "VH", "max": "2"}, timeout=None
+            "sktreader", params=expected_params, timeout=None
         )
 
     @patch("langnet.heritage.morphology.HeritageHTTPClient")
@@ -210,15 +228,15 @@ class TestHeritageIntegration(unittest.TestCase):
             text="agni", encoding="velthuis", max_solutions=3
         )
 
-        # Verify expected parameters
-        self.assertEqual(params["text"], "agni")
+        # Verify expected parameters - Velthuis encoding doubles final long vowels
+        self.assertEqual(params["text"], "agnii")
         self.assertEqual(params["t"], "VH")
         self.assertEqual(params["max"], "3")
 
-        # Test URL construction
-        expected_url = f"{heritage_config.base_url}/cgi-bin/skt/sktreader?text=agni&t=VH&max=3"
+        # Test URL construction - expect doubled vowel
+        expected_url = f"{heritage_config.base_url}/cgi-bin/skt/sktreader?text=agnii&t=VH&max=3"
         self.assertEqual(
-            expected_url, "http://localhost:48080/cgi-bin/skt/sktreader?text=agni&t=VH&max=3"
+            expected_url, "http://localhost:48080/cgi-bin/skt/sktreader?text=agnii&t=VH&max=3"
         )
 
     def test_multiple_encodings_support(self):

@@ -1,0 +1,14 @@
+{
+  "identifier": "raama",
+  "params": {
+    "q": "raama",
+    "t": "VH",
+    "lex": "SH",
+    "font": "roma"
+  },
+  "content_length": 1920,
+  "content_type": "text/html",
+  "fetch_date": "2025-01-31",
+  "notes": "Real response from localhost:48080",
+  "extra_info": null
+}

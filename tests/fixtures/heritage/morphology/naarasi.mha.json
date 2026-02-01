@@ -1,0 +1,16 @@
+{
+  "identifier": "naarasi.mha",
+  "params": {
+    "q": "naarasi.mha",
+    "t": "VH",
+    "lex": "SH",
+    "font": "roma"
+  },
+  "content_length": 1937,
+  "content_type": "text/html",
+  "fetch_date": "2025-01-31",
+  "notes": "Real response from localhost:48080, canonical=True",
+  "extra_info": null,
+  "canonical_used": false,
+  "original_term": "naarasi.mha"
+}

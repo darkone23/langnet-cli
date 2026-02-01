@@ -1,0 +1,14 @@
+{
+  "identifier": "mahadeva",
+  "params": {
+    "q": "mahadeva",
+    "t": "VH",
+    "lex": "SH",
+    "font": "roma"
+  },
+  "content_length": 2007,
+  "content_type": "text/html",
+  "fetch_date": "2025-01-31",
+  "notes": "Real response from localhost:48080",
+  "extra_info": null
+}

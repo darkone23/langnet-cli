@@ -1,17 +1,17 @@
+import logging
 import re
 import time
 from typing import Any
-from urllib.parse import urlencode, urljoin
+from urllib.parse import urljoin
 
 import requests
-import structlog
 from bs4 import BeautifulSoup
 from indic_transliteration.sanscript import DEVANAGARI, IAST, transliterate
 
 from .config import heritage_config
 from .parameters import HeritageParameterBuilder
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class HeritageHTTPClient:
@@ -47,7 +47,7 @@ class HeritageHTTPClient:
         self.last_request_time = time.time()
 
     def build_cgi_url(self, script_name: str, params: dict[str, Any] | None = None) -> str:
-        """Build complete CGI script URL with parameters"""
+        """Build complete CGI script URL with semicolon-separated parameters"""
         base_url = self.config.base_url.rstrip("/")
         cgi_path = self.config.cgi_path.rstrip("/") + "/"
         url = urljoin(base_url, cgi_path + script_name)
@@ -56,7 +56,9 @@ class HeritageHTTPClient:
             # Filter out None values
             filtered_params = {k: v for k, v in params.items() if v is not None}
             if filtered_params:
-                url += "?" + urlencode(filtered_params)
+                # Use semicolon separation instead of ampersand for Heritage CGI
+                param_string = ";".join([f"{k}={v}" for k, v in filtered_params.items()])
+                url += "?" + param_string
 
         return url
 
@@ -75,7 +77,9 @@ class HeritageHTTPClient:
         request_timeout = timeout or self.config.timeout
 
         if self.config.verbose:
-            logger.info("Fetching CGI script", script=script_name, url=url, params=params)
+            logger.info(
+                f"Fetching CGI script - script: {script_name}, url: {url}, params: {params}"
+            )
 
         self._rate_limit()
 
@@ -85,21 +89,23 @@ class HeritageHTTPClient:
             content = response.text
 
             if self.config.verbose:
+                status = response.status_code
+                content_len = len(content)
                 logger.info(
-                    "CGI script response",
-                    script=script_name,
-                    status=response.status_code,
-                    length=len(content),
+                    f"CGI script response - script: {script_name}, "
+                    f"status: {status}, length: {content_len}"
                 )
 
             return content
 
         except requests.RequestException as e:
-            logger.error("HTTP request failed", script=script_name, error=str(e))
+            logger.error(f"HTTP request failed - script: {script_name}, error: {str(e)}")
             raise HeritageAPIError(f"HTTP request failed for {script_name}: {e}")
 
         except Exception as e:
-            logger.error("Unexpected error fetching CGI script", script=script_name, error=str(e))
+            logger.error(
+                f"Unexpected error fetching CGI script - script: {script_name}, error: {str(e)}"
+            )
             raise HeritageAPIError(f"Unexpected error for {script_name}: {e}")
 
     def fetch_json(
@@ -128,7 +134,7 @@ class HeritageHTTPClient:
             return result
 
         except Exception as e:
-            logger.error("Failed to parse HTML response", error=str(e))
+            logger.error(f"Failed to parse HTML response - error: {str(e)}")
             raise HeritageAPIError(f"HTML parsing failed: {e}")
 
     def fetch_dictionary_search(
@@ -245,7 +251,7 @@ class HeritageHTTPClient:
             }
 
         except Exception as e:
-            logger.error("Failed to parse dictionary response", error=str(e))
+            logger.error(f"Failed to parse dictionary response - error: {str(e)}")
             raise HeritageAPIError(f"Dictionary parsing failed: {e}")
 
     def fetch_lemmatization(
@@ -314,8 +320,73 @@ class HeritageHTTPClient:
             }
 
         except Exception as e:
-            logger.error("Failed to parse lemmatization response", error=str(e))
+            logger.error(f"Failed to parse lemmatization response - error: {str(e)}")
             raise HeritageAPIError(f"Lemmatization parsing failed: {e}")
+
+    def fetch_canonical_via_sktsearch(self, query: str, lexicon: str = "MW") -> dict[str, Any]:
+        """Fetch canonical Sanskrit form via sktsearch for better morphology accuracy.
+
+        Uses Heritage's sktsearch CGI to find the canonical entry page, then extracts
+        the correct Velthuis-encoded term from the URL fragment.
+
+        Args:
+            query: The user's input query
+            lexicon: Target lexicon (MW, DICO, etc.)
+
+        Returns dict with canonical form and entry URL.
+        """
+        bare_query = re.sub(r"[^a-z]", "", query.lower())
+
+        params = {
+            "q": bare_query,
+            "lex": lexicon,
+            "t": "VH",
+        }
+
+        html_content = self.fetch_cgi_script("sktsearch", params=params)
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # Extract the best matching link and get the fragment-encoded term
+        best_match = None
+        for link in soup.find_all("a", href=True):
+            href = link.get("href", "")
+            if not isinstance(href, str):
+                continue
+
+            # Look for links with fragments containing the encoded term
+            if (f"/skt/{lexicon}/" in href or "/skt/" in href) and "#" in href:
+                fragment = href.split("#", 1)[1]
+                # The fragment usually contains H_{term} format
+                if fragment.startswith("H_"):
+                    velthuis_term = fragment[2:]  # Remove H_ prefix
+                    link_text = link.get_text(strip=True)
+
+                    best_match = {
+                        "original_query": query,
+                        "bare_query": bare_query,
+                        "canonical_text": velthuis_term,  # Use the fragment-encoded term
+                        "display_text": link_text,  # Use the display text for fallback
+                        "entry_url": href,
+                        "lexicon": lexicon,
+                        "match_method": "sktsearch_fragment",
+                    }
+
+                    # If we found the requested lexicon, break immediately
+                    if f"/skt/{lexicon}/" in href:
+                        break
+
+        if best_match:
+            return best_match
+        else:
+            return {
+                "original_query": query,
+                "bare_query": bare_query,
+                "canonical_text": None,
+                "display_text": None,
+                "entry_url": None,
+                "lexicon": lexicon,
+                "match_method": "not_found",
+            }
 
     def fetch_canonical_sanskrit(
         self,
@@ -408,7 +479,7 @@ class HeritageHTTPClient:
                 }
 
         except Exception as e:
-            logger.error("Failed to fetch dictionary entry", error=str(e))
+            logger.error(f"Failed to fetch dictionary entry - error: {str(e)}")
             raise HeritageAPIError(f"Dictionary entry fetch failed: {e}")
 
 

@@ -7,6 +7,9 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from langnet.heritage.client import HeritageHTTPClient
+from langnet.heritage.encoding_service import EncodingService
+
 from .core import LanguageNormalizer
 from .models import CanonicalQuery, Encoding, Language
 
@@ -84,6 +87,8 @@ MAX_QUERY_LENGTH = 20
 MAX_ASCII_CODE = 127
 DEVANAGARI_START = 0x0900
 DEVANAGARI_END = 0x097F
+MAX_SIMPLE_WORD_LENGTH = 10
+SIMPLE_ENCODINGS = {Encoding.ASCII.value, Encoding.SLP1.value}
 
 
 class SanskritNormalizer(LanguageNormalizer):
@@ -116,22 +121,21 @@ class SanskritNormalizer(LanguageNormalizer):
         return None
 
     def detect_encoding(self, text: str) -> str:
-        """Detect the encoding of Sanskrit text."""
-        indic_encoding = self._detect_indic_encodings(text)
-        if indic_encoding:
-            return indic_encoding
+        """Detect the encoding of Sanskrit text using improved Heritage encoding service."""
+        # Use the improved encoding detection from Heritage service
+        detected = EncodingService.detect_encoding(text)
 
-        # Check for Velthuis patterns
-        if text.isalpha() and re.match(r"^[a-z][A-Z]{2}[a-z]$", text):
-            return Encoding.VELTHUIS.value
-        if self._looks_like_velthuis(text):
-            return Encoding.VELTHUIS.value
+        # Map Heritage encoding names to standard encoding enum values
+        encoding_mapping = {
+            "devanagari": Encoding.DEVANAGARI.value,
+            "iast": Encoding.IAST.value,
+            "velthuis": Encoding.VELTHUIS.value,
+            "hk": Encoding.HK.value,
+            "slp1": Encoding.SLP1.value,
+            "ascii": Encoding.ASCII.value,
+        }
 
-        # Check for SLP1 (ASCII with specific character set or matches known SLP1 patterns)
-        if re.match(r"^[a-zA-Z]+$", text) and self._is_slp1_compatible(text):
-            return Encoding.SLP1.value
-
-        return Encoding.ASCII.value
+        return encoding_mapping.get(detected, Encoding.ASCII.value)
 
     def _looks_like_velthuis(self, text: str) -> bool:
         """Check if text looks like Velthuis encoding."""
@@ -169,10 +173,42 @@ class SanskritNormalizer(LanguageNormalizer):
         return False
 
     def to_canonical(self, text: str, source_encoding: str) -> str:
-        """Convert Sanskrit text to SLP1 canonical form."""
-        # For now, we'll implement basic conversion logic
-        # In a real implementation, this would use indic_transliteration library
+        """Convert Sanskrit text to canonical form using Heritage Platform lookup."""
+        try:
+            # For simple cases that don't need canonical lookup, use basic conversion
+            if (
+                source_encoding in SIMPLE_ENCODINGS
+                and text.isalpha()
+                and text.islower()
+                and len(text) <= MAX_SIMPLE_WORD_LENGTH
+            ):  # Simple words don't need canonical lookup
+                logger.debug(f"Using basic conversion for simple {source_encoding} word: '{text}'")
+                return self._basic_to_canonical(text, source_encoding)
 
+            # First try to get canonical form via sktsearch
+            with HeritageHTTPClient() as client:
+                # Use sktsearch to find the canonical form
+                canonical_result = client.fetch_canonical_via_sktsearch(text)
+
+                if canonical_result["canonical_text"]:
+                    # Use the canonical form from sktsearch (already in proper encoding)
+                    return canonical_result["canonical_text"]
+
+                # Fallback: try fetch_canonical_sanskrit for MW entries
+                fallback_result = client.fetch_canonical_sanskrit(text)
+                if fallback_result["canonical_sanskrit"]:
+                    return fallback_result["canonical_sanskrit"]
+
+            # If Heritage lookup fails, use basic conversion logic
+            logger.debug(f"Heritage lookup failed for '{text}', using basic conversion")
+            return self._basic_to_canonical(text, source_encoding)
+
+        except Exception as e:
+            logger.warning(f"Canonical lookup failed for '{text}': {e}, using basic conversion")
+            return self._basic_to_canonical(text, source_encoding)
+
+    def _basic_to_canonical(self, text: str, source_encoding: str) -> str:
+        """Basic canonical conversion when Heritage lookup fails."""
         if source_encoding == Encoding.SLP1.value:
             return text.lower()
 
@@ -388,27 +424,61 @@ class SanskritNormalizer(LanguageNormalizer):
         return sanskrit_score >= MIN_SANSKRIT_CONFIDENCE
 
     def _enrich_with_heritage(self, query: str) -> dict[str, Any] | None:
-        """Enrich a bare ASCII query using Heritage Platform."""
+        """Enrich a bare ASCII query using Heritage Platform canonical lookup."""
         try:
-            # This would call the actual Heritage API
-            # For now, return a mock response structure
-            enrichment = {
-                "source": "heritage_platform",
-                "original_query": query,
-                "enrichment_type": "ascii_to_sanskrit",
-                "confidence": 0.8,
-                "suggestions": [
-                    {
-                        "term": query,
-                        "form": query,
-                        "encoding": "ascii",
-                        "confidence": 0.8,
-                    }
-                ],
-            }
+            with HeritageHTTPClient() as client:
+                # Use sktsearch to find canonical forms
+                canonical_result = client.fetch_canonical_via_sktsearch(query)
 
-            logger.debug(f"Heritage enrichment result: {enrichment}")
-            return enrichment
+                if canonical_result["canonical_text"]:
+                    enrichment = {
+                        "source": "heritage_sktsearch",
+                        "original_query": query,
+                        "enrichment_type": "ascii_to_sanskrit",
+                        "confidence": 0.9,
+                        "canonical_form": canonical_result["canonical_text"],
+                        "entry_url": canonical_result["entry_url"],
+                        "lexicon": canonical_result["lexicon"],
+                        "suggestions": [
+                            {
+                                "term": canonical_result["canonical_text"],
+                                "form": canonical_result["canonical_text"],
+                                "encoding": "velthuis",
+                                "confidence": 0.9,
+                                "entry_url": canonical_result["entry_url"],
+                            }
+                        ],
+                    }
+                    logger.debug(f"Heritage enrichment result: {enrichment}")
+                    return enrichment
+
+                # Fallback: try MW dictionary lookup
+                mw_result = client.fetch_canonical_sanskrit(query, lexicon="MW")
+                if mw_result["canonical_sanskrit"]:
+                    enrichment = {
+                        "source": "heritage_mw",
+                        "original_query": query,
+                        "enrichment_type": "ascii_to_sanskrit",
+                        "confidence": 0.8,
+                        "canonical_form": mw_result["canonical_sanskrit"],
+                        "entry_url": mw_result["entry_url"],
+                        "lexicon": mw_result["lexicon"],
+                        "suggestions": [
+                            {
+                                "term": mw_result["canonical_sanskrit"],
+                                "form": mw_result["canonical_sanskrit"],
+                                "encoding": "devanagari",
+                                "confidence": 0.8,
+                                "entry_url": mw_result["entry_url"],
+                            }
+                        ],
+                    }
+                    logger.debug(f"Heritage fallback enrichment result: {enrichment}")
+                    return enrichment
+
+                # If no enrichment found
+                logger.debug(f"No Heritage enrichment found for: {query}")
+                return None
 
         except Exception as e:
             logger.error(f"Heritage enrichment failed: {e}")

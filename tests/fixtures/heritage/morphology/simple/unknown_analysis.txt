@@ -1,30 +1,8 @@
-<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<title>Sanskrit Reader Companion</title>
-</head>
-<body class="chamois_back">
-<h1 class="title">The Sanskrit Reader Companion</h1>
-<table class="chamois_back" border="0" cellpadding="0%" cellspacing="15pt" width="100%">
-<tr><td>
-<p align="center">
-<div class="latin16"><a class="green" href="#">&#x2713;</a> Show Summary of Solutions
-</p>
-Input:
-<span class="roma16o">agni</span><hr>
-<br>
-Sentence: 
-<span class="deva16" lang="sa">&#x0905;&#x0917;&#x094D;&#x0928;&#x093F;</span><br>
-may be analysed as:</div><br>
-<hr>
-<span class="blue">Solution 1 : <a class="green" href="#">&#x2713;</a></span><br>
-[ <span class="blue" title="0"><b>agni</b></span><table class="grey_back">
-<tr><th><span class="latin12"><th><table class="grey_back">
-<tr><th><span class="latin12">[agni]{?}</span></th></tr></table></th></span></th></tr></table>&lang;&rang;]
-<br>
-<br>
-<hr>
-<span class="magenta">1</span><span class="blue"> solution kept among </span><span class="magenta">1</span><br>
-</td></tr></table>
-</body>
-</html>
+<div>
+  <table>
+    <tr>
+      <td>agni</td>
+      <td>?</td>
+    </tr>
+  </table>
+</div>
