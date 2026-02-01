@@ -128,8 +128,6 @@ class LanguageEngineConfig:
     cache: QueryCache | NoOpCache | None = None
     normalization_pipeline: NormalizationPipeline | None = None
     enable_normalization: bool = True
-    normalization_pipeline: NormalizationPipeline | None = None
-    enable_normalization: bool = True
 
 
 class LanguageEngine:

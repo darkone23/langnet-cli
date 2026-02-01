@@ -13,6 +13,7 @@ from langnet.foster.apply import apply_foster_view
 from langnet.heritage.dictionary import HeritageDictionaryService
 from langnet.heritage.morphology import HeritageMorphologyService
 from langnet.normalization import CanonicalQuery, NormalizationPipeline
+from langnet.normalization.models import Language
 from langnet.whitakers_words.core import WhitakersWords
 
 logger = structlog.get_logger(__name__)
@@ -389,19 +390,40 @@ class LanguageEngine:
         if lang == LangnetLanguageCodes.Greek:
             logger.debug("routing_to_greek_backends", lang=lang, word=query_word)
             result = self._query_greek(
-                canonical_query or type("obj", (object,), {"canonical_text": query_word})(),
+                canonical_query
+                or CanonicalQuery(
+                    original_query=word,
+                    canonical_text=query_word,
+                    language=Language(lang),
+                    confidence=0.0,
+                    normalization_notes=["raw"],
+                ),
                 _cattrs_converter,
             )
         elif lang == LangnetLanguageCodes.Latin:
             logger.debug("routing_to_latin_backends", lang=lang, word=query_word)
             result = self._query_latin(
-                canonical_query or type("obj", (object,), {"canonical_text": query_word})(),
+                canonical_query
+                or CanonicalQuery(
+                    original_query=word,
+                    canonical_text=query_word,
+                    language=Language(lang),
+                    confidence=0.0,
+                    normalization_notes=["raw"],
+                ),
                 _cattrs_converter,
             )
         elif lang == LangnetLanguageCodes.Sanskrit:
             logger.debug("routing_to_sanskrit_backends", lang=lang, word=query_word)
             result = self._query_sanskrit(
-                canonical_query or type("obj", (object,), {"canonical_text": query_word})(),
+                canonical_query
+                or CanonicalQuery(
+                    original_query=word,
+                    canonical_text=query_word,
+                    language=Language(lang),
+                    confidence=0.0,
+                    normalization_notes=["raw"],
+                ),
                 _cattrs_converter,
             )
         else:
