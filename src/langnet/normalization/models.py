@@ -4,7 +4,14 @@ Canonical Query models for normalization system.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, List
+
+# Import citation models
+try:
+    from ..citation.models import Citation
+except ImportError:
+    # Fallback for when citation module is not available
+    Citation = None
 
 
 class Language(str, Enum):
@@ -45,6 +52,9 @@ class CanonicalQuery:
     canonical_text: str
     alternate_forms: list[str] = field(default_factory=list)
 
+    # Citations and references
+    citations: List[Any] = field(default_factory=list)
+
     # Metadata
     detected_encoding: Encoding = Encoding.UNKNOWN
     confidence: float = 0.0
@@ -78,6 +88,10 @@ class CanonicalQuery:
             "language": self.language.value,
             "canonical_text": self.canonical_text,
             "alternate_forms": self.alternate_forms,
+            "citations": [
+                citation.to_dict() if hasattr(citation, "to_dict") else citation
+                for citation in self.citations
+            ],
             "detected_encoding": self.detected_encoding.value,
             "confidence": self.confidence,
             "normalization_notes": self.normalization_notes,
@@ -92,6 +106,7 @@ class CanonicalQuery:
             language=Language(data["language"]),
             canonical_text=data["canonical_text"],
             alternate_forms=data.get("alternate_forms", []),
+            citations=data.get("citations", []),
             detected_encoding=Encoding(data.get("detected_encoding", "unknown")),
             confidence=data.get("confidence", 0.0),
             normalization_notes=data.get("normalization_notes", []),

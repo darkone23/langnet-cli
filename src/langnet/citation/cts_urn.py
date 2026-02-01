@@ -1,0 +1,611 @@
+"""
+CTS URN Mapping for Citation System.
+
+This module provides functionality to map classical text references to CTS URNs
+(Canonical Text Service Uniform Resource Names) for standardized referencing.
+
+CTS URN Format:
+    cts:namespace.work.section.subdivision
+
+Example mappings:
+    "Hom. Il. 1.1" -> "urn:cts:greekLit:tlg0012.tlg001:1.1"
+    "Verg. A. 1.1" -> "urn:cts:latinLit:phi1290.phi004:1.1"
+    "perseus:abo:tlg,0011,001:911" -> "urn:cts:greekLit:tlg0011.tlg001:911"
+
+The mapper uses the DuckDB CTS URN indexer database for authoritative mappings.
+"""
+
+import os
+import re
+from typing import Dict, Optional, List, Tuple
+from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class CTSUrnMapper:
+    """Maps classical text references to CTS URNs."""
+
+    AUTHOR_TO_NAMESPACE: Dict[str, str] = {
+        "hom": "greekLit",
+        "homer": "greekLit",
+        "verg": "latinLit",
+        "virgil": "latinLit",
+        "cic": "latinLit",
+        "cicero": "latinLit",
+        "plaut": "latinLit",
+        "plautus": "latinLit",
+        "ter": "latinLit",
+        "terence": "latinLit",
+        "hor": "latinLit",
+        "horace": "latinLit",
+        "ov": "latinLit",
+        "ovid": "latinLit",
+        "liv": "latinLit",
+        "livy": "latinLit",
+        "pliny": "latinLit",
+        "quint": "latinLit",
+        "quintilian": "latinLit",
+        "suet": "latinLit",
+        "suetonius": "latinLit",
+        "mart": "latinLit",
+        "martial": "latinLit",
+        "stat": "latinLit",
+        "statius": "latinLit",
+    }
+
+    WORK_TO_CTS_ID: Dict[str, str] = {
+        "il": "tlg0012.tlg001",
+        "od": "tlg0012.tlg002",
+        "aen": "phi1290.phi004",
+        "a": "phi1290.phi004",
+        "georg": "phi1290.phi005",
+        "ecl": "phi1290.phi006",
+        "fin": "phi0473.phi005",
+        "att": "phi0473.phi001",
+        "phil": "phi0473.phi019",
+        "tusc": "phi0473.phi004",
+        "de orat": "phi0473.phi002",
+        "catil": "phi0473.phi010",
+        "verr": "phi0473.phi006",
+        "c": "phi1290.phi008",
+        "s": "phi1290.phi009",
+        "epod": "phi1290.phi007",
+        "ars": "phi1290.phi010",
+        "aa": "phi1290.phi006",
+        "tr": "phi1290.phi001",
+        "met": "phi1290.phi002",
+        "fast": "phi1290.phi003",
+        "ab urbe condita": "phi1291.phi001",
+        "nh": "phi1290.phi002",
+        "inst": "phi1290.phi003",
+        "epigr": "phi1290.phi011",
+        "ach": "phi1290.phi012",
+        "vit": "phi1290.phi013",
+        # Add common full work titles
+        "aeneid": "phi1290.phi004",
+        "metamorphoses": "phi1290.phi002",
+        "odyssey": "tlg0012.tlg002",
+        "iliad": "tlg0012.tlg001",
+    }
+
+    AUTHOR_NAME_VARIANTS: Dict[str, str] = {
+        "vergil": "p.vergiliusmaro",
+        "virgil": "p.vergiliusmaro",
+        "cicero": "m.tulliuscicero",
+        "homer": "homerus",
+        "plato": "plato",
+        "verg": "p.vergiliusmaro",
+        "cic": "m.tulliuscicero",
+    }
+
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = db_path
+        self._db_conn = None
+        self._author_cache: Optional[Dict[str, Tuple[str, str]]] = None
+        self._work_cache: Optional[Dict[str, Tuple[str, str, str]]] = None
+
+        self.namespace_to_language = {
+            "greekLit": "grc",
+            "latinLit": "lat",
+            "tlg": "grc",
+            "phi": "lat",
+        }
+
+    def _get_db_path(self) -> Optional[str]:
+        """Get the database path, checking common locations."""
+        if self.db_path:
+            return self.db_path
+
+        candidates = [
+            os.path.expanduser("~/.local/share/langnet/cts_urn.duckdb"),
+            "/home/nixos/.local/share/langnet/cts_urn.duckdb",
+            "/tmp/classical_refs.db",
+        ]
+
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+
+        return None
+
+    def _get_connection(self):
+        """Get database connection, lazy-loading."""
+        if self._db_conn:
+            return self._db_conn
+
+        db_path = self._get_db_path()
+        if db_path and os.path.exists(db_path):
+            try:
+                import duckdb
+
+                self._db_conn = duckdb.connect(db_path)
+                return self._db_conn
+            except Exception as e:
+                logger.debug(f"Could not connect to DuckDB: {e}")
+
+        return None
+
+    def _load_author_cache(self) -> Dict[str, Tuple[str, str]]:
+        """Load author mappings from database into cache."""
+        if self._author_cache is not None:
+            return self._author_cache
+
+        self._author_cache = {}
+
+        conn = self._get_connection()
+        if not conn:
+            return self._author_cache
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT author_id, author_name, namespace
+                FROM author_index
+                ORDER BY LENGTH(author_id), author_id
+            """)
+            for row in cursor.fetchall():
+                author_id, author_name, namespace = row
+                normalized = author_name.lower().replace(" ", "")
+
+                self._author_cache[normalized] = (author_id, namespace)
+
+                if len(author_name) > 3:
+                    short = author_name.split()[-1][:4].lower()
+                    if short and short not in self._author_cache:
+                        self._author_cache[short] = (author_id, namespace)
+
+        except Exception as e:
+            logger.debug(f"Error loading author cache: {e}")
+
+        return self._author_cache
+
+    def _load_work_cache(self) -> Dict[str, Tuple[str, str, str]]:
+        """Load work mappings from database into cache."""
+        if self._work_cache is not None:
+            return self._work_cache
+
+        self._work_cache = {}
+
+        conn = self._get_connection()
+        if not conn:
+            return self._work_cache
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT cts_urn, work_title, author_id FROM works WHERE cts_urn IS NOT NULL"
+            )
+            for row in cursor.fetchall():
+                cts_urn, work_title, author_id = row
+
+                if cts_urn and "urn:cts:" in cts_urn:
+                    parts = cts_urn.replace("urn:cts:", "").split(":")
+                    if len(parts) >= 2:
+                        work_id = parts[1]
+                        namespace = parts[0]
+
+                        normalized_title = work_title.lower().replace(" ", "").replace(".", "")
+                        self._work_cache[normalized_title] = (work_id, author_id, namespace)
+
+                        words = normalized_title.split()
+                        if words:
+                            abbrev = "".join(w[:2] for w in words if w)
+                            if abbrev and len(abbrev) >= 2:
+                                self._work_cache[abbrev] = (work_id, author_id, namespace)
+
+        except Exception as e:
+            logger.debug(f"Error loading work cache: {e}")
+
+        return self._work_cache
+
+    def _normalize_abbreviation(self, abbreviation: str) -> str:
+        """Normalize an abbreviation by converting to lowercase and removing periods and spaces."""
+        return abbreviation.lower().replace(".", "").replace(" ", "").strip()
+
+    def _get_namespace_from_work(self, work: str) -> Optional[str]:
+        """Get namespace based on work abbreviation."""
+        normalized_work = self._normalize_abbreviation(work)
+
+        greek_works = {"il", "od"}
+        if normalized_work in greek_works:
+            return "greekLit"
+
+        latin_works = {
+            "aen",
+            "georg",
+            "ecl",
+            "fin",
+            "att",
+            "phil",
+            "c",
+            "s",
+            "nh",
+            "inst",
+            "tib",
+            "epigr",
+            "ach",
+        }
+        if normalized_work in latin_works:
+            return "latinLit"
+
+        return None
+
+    def map_citation_to_urn(self, citation) -> Optional[str]:
+        """
+        Map a Citation to a CTS URN.
+
+        Args:
+            citation: Citation object with text reference information, or string citation
+
+        Returns:
+            CTS URN string or None if mapping not possible
+        """
+        from langnet.citation.models import Citation, TextReference, CitationType
+
+        if isinstance(citation, str):
+            text_ref = TextReference(type=CitationType.LINE_REFERENCE, text=citation)
+            citation = Citation(references=[text_ref])
+
+        if not citation.references:
+            return None
+
+        text_ref = citation.references[0]
+
+        author = self._normalize_abbreviation(text_ref.author or "")
+        work = self._normalize_abbreviation(text_ref.work or "")
+
+        location_parts = []
+        if text_ref.book:
+            location_parts.append(text_ref.book)
+        if text_ref.line:
+            location_parts.append(text_ref.line)
+        location = ".".join(location_parts)
+
+        urn = self._map_text_to_urn_from_database(author, work, location)
+        if urn:
+            return urn
+
+        namespace = self.AUTHOR_TO_NAMESPACE.get(author)
+        if not namespace:
+            namespace = self._get_namespace_from_work(work)
+
+        if not namespace:
+            return None
+
+        work_id = self.WORK_TO_CTS_ID.get(work)
+        if not work_id:
+            return None
+
+        if location:
+            return f"urn:cts:{namespace}:{work_id}:{location}"
+        else:
+            return f"urn:cts:{namespace}:{work_id}"
+
+    def map_text_to_urn(self, text: str) -> Optional[str]:
+        """
+        Map a text reference to CTS URN.
+
+        Handles multiple formats:
+        1. Perseus format: "perseus:abo:tlg,0011,001:911" → "urn:cts:greekLit:tlg0011.tlg001:911"
+        2. Text reference: "Hom. Il. 1.1" or "Cic. Fin. 2, 24" → "urn:cts:..."
+
+        Args:
+            text: Citation text to map
+
+        Returns:
+            CTS URN string or None if mapping not possible
+        """
+        if not text:
+            return None
+
+        if text.startswith("perseus:abo:"):
+            return self._map_perseus_to_urn(text)
+
+        parts = text.replace(",", " ").split()
+        if len(parts) < 2:
+            return None
+
+        author = self._normalize_abbreviation(parts[0])
+
+        location_parts = []
+        work_parts = []
+
+        for i, part in enumerate(parts[1:], 1):
+            if part.isdigit() or (part.replace(".", "", 1).isdigit() and "." in part):
+                location_parts = parts[i:]
+                work_parts = parts[1:i]
+                break
+        else:
+            work_parts = parts[1:]
+            location_parts = []
+
+        work = self._normalize_abbreviation(" ".join(work_parts))
+        original_work_text = " ".join(work_parts)  # Keep original for lookup
+        location = ".".join(location_parts) if location_parts else ""
+
+        urn = self._map_text_to_urn_from_database(author, work, location)
+        if urn:
+            return urn
+
+        namespace = self.AUTHOR_TO_NAMESPACE.get(author)
+        if not namespace:
+            namespace = self._get_namespace_from_work(work)
+
+        if not namespace:
+            return None
+
+        # Try both normalized and original work text for lookup
+        work_id = self.WORK_TO_CTS_ID.get(work) or self.WORK_TO_CTS_ID.get(original_work_text)
+        if not work_id:
+            return None
+
+        if location:
+            return f"urn:cts:{namespace}:{work_id}:{location}"
+        else:
+            return f"urn:cts:{namespace}:{work_id}"
+
+    def _map_perseus_to_urn(self, perseus_ref: str) -> Optional[str]:
+        """
+        Map Perseus canonical reference to CTS URN.
+
+        Format: perseus:abo:{collection},{author_id},{work_id}:{location}
+        Examples:
+            perseus:abo:tlg,0011,001:911      → urn:cts:greekLit:tlg0011.tlg001:911
+            perseus:abo:phi,0690,003:1:2      → urn:cts:latinLit:phi0690.phi003:1.2
+            perseus:abo:phi,0474,043:2:3:6    → urn:cts:latinLit:phi0474.phi043:2.3.6
+
+        Args:
+            perseus_ref: Perseus canonical reference string
+
+        Returns:
+            CTS URN string or None if parsing fails
+        """
+        try:
+            prefix = "perseus:abo:"
+            if not perseus_ref.startswith(prefix):
+                return None
+
+            core = perseus_ref[len(prefix) :]
+
+            if ":" in core:
+                location_part = core.split(":")[-1]
+                work_part = core.rsplit(":", 1)[0]
+            else:
+                location_part = ""
+                work_part = core
+
+            parts = work_part.split(",")
+            if len(parts) != 3:
+                return None
+
+            collection, author_id, work_id = parts
+
+            if collection == "tlg":
+                namespace = "greekLit"
+                prefix_type = "tlg"
+            elif collection == "phi":
+                namespace = "latinLit"
+                prefix_type = "phi"
+            else:
+                return None
+
+            author_num = author_id.zfill(4)
+            work_num = work_id.zfill(3)
+
+            if location_part:
+                return f"urn:cts:{namespace}:{prefix_type}{author_num}.{prefix_type}{work_num}:{location_part}"
+            else:
+                return f"urn:cts:{namespace}:{prefix_type}{author_num}.{prefix_type}{work_num}"
+
+        except Exception:
+            return None
+
+    def _map_text_to_urn_from_database(
+        self, author: str, work: str, location: str
+    ) -> Optional[str]:
+        """Try to map author/work to CTS URN using database."""
+        conn = self._get_connection()
+        if not conn:
+            return None
+
+        try:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT author_id, namespace
+                FROM author_index
+                WHERE LOWER(REPLACE(author_name, ' ', '')) = ?
+                OR LOWER(author_id) = ?
+                ORDER BY LENGTH(author_id), author_id
+                LIMIT 1
+            """,
+                (author.lower(), author.lower()),
+            )
+
+            author_result = cursor.fetchone()
+
+            if not author_result:
+                cursor.execute(
+                    """
+                    SELECT author_id, namespace
+                    FROM author_index
+                    WHERE REPLACE(LOWER(author_name), ' ', '') LIKE ?
+                    OR LOWER(author_id) LIKE ?
+                    ORDER BY 
+                        CASE WHEN namespace = 'greekLit' THEN 0 ELSE 1 END,
+                        LENGTH(author_id), 
+                        author_id
+                    LIMIT 1
+                    """,
+                    (f"{author.lower()}%", f"{author.lower()}%"),
+                )
+                author_result = cursor.fetchone()
+
+            if not author_result:
+                return None
+
+            author_id, cts_namespace = author_result
+
+            normalized_work = work.lower().replace(" ", "").replace(".", "")
+
+            cursor.execute(
+                """
+                SELECT cts_urn, work_title
+                FROM works
+                WHERE author_id = ?
+                AND (
+                    LOWER(REPLACE(work_title, ' ', '')) = ?
+                    OR LOWER(REPLACE(work_title, ' ', '')) LIKE ? || '%'
+                )
+                ORDER BY work_reference
+                LIMIT 1
+            """,
+                (author_id, normalized_work, normalized_work),
+            )
+
+            work_result = cursor.fetchone()
+            if not work_result:
+                return None
+
+            cts_urn = work_result[0]
+
+            if location and cts_urn and not cts_urn.endswith(f":{location}"):
+                return f"{cts_urn}:{location}"
+
+            return cts_urn
+
+        except Exception as e:
+            logger.debug(f"Database lookup error: {e}")
+            return None
+
+    def add_urns_to_citations(self, citations):
+        """
+        Add CTS URNs to a list of citations.
+
+        Args:
+            citations: List of Citation objects
+
+        Returns:
+            List of Citation objects with URNs added
+        """
+        from langnet.citation.models import Citation
+
+        for citation in citations:
+            if citation.references:
+                urn = self.map_citation_to_urn(citation)
+                if urn and not citation.references[0].cts_urn:
+                    citation.references[0].cts_urn = urn
+        return citations
+
+    def extract_author_work_from_citation(self, citation) -> tuple:
+        """
+        Extract author and work from a citation.
+
+        Args:
+            citation: Citation object
+
+        Returns:
+            Tuple of (author, work) strings
+        """
+        if not citation.references:
+            return "", ""
+
+        text_ref = citation.references[0]
+
+        text = text_ref.text or ""
+        parts = text.replace(",", " ").split()
+
+        if len(parts) >= 2:
+            author = parts[0]
+            work = parts[1]
+            return author, work
+
+        return "", ""
+
+
+def get_perseus_to_cts_mapping() -> Dict[str, Optional[str]]:
+    """
+    Get common Perseus to CTS URN mappings.
+
+    Returns:
+        Dictionary mapping Perseus keys to CTS URNs (or None if unmapped)
+    """
+    mapper = CTSUrnMapper()
+
+    return {
+        "perseus:abo:phi,0119,001": mapper.map_text_to_urn("Hom. Il. 1"),
+        "perseus:abo:phi,0119,001:1.1": mapper.map_text_to_urn("Hom. Il. 1.1"),
+        "perseus:abo:phi,0120,001": mapper.map_text_to_urn("Hom. Od. 1"),
+        "perseus:abo:phi,0690,003": mapper.map_text_to_urn("Verg. A. 1"),
+        "perseus:abo:phi,0690,003:1.1": mapper.map_text_to_urn("Verg. A. 1.1"),
+        "perseus:abo:phi,0956,005": mapper.map_text_to_urn("Cic. Fin. 2"),
+        "perseus:abo:phi,0893,002": mapper.map_text_to_urn("Hor. C. 1"),
+    }
+
+
+def resolve_cts_urn(urn: str) -> Optional[str]:
+    """
+    Get the CTS API URL for a given URN.
+
+    Args:
+        urn: CTS URN string
+
+    Returns:
+        URL to resolve the URN or None if invalid
+    """
+    if not urn.startswith("urn:cts:"):
+        return None
+
+    path = urn.replace("urn:cts:", "")
+
+    cts_api_base = "https://cts.perseids.org/api/cts/"
+
+    return f"{cts_api_base}{path}"
+
+
+if __name__ == "__main__":
+    mapper = CTSUrnMapper()
+
+    test_citations = [
+        "Hom. Il. 1.1",
+        "Verg. A. 1.1",
+        "Cic. Fin. 2 24",
+        "Hor. C. 1 17 9",
+        "perseus:abo:tlg,0011,001:911",
+        "perseus:abo:phi,0690,003:1:2",
+        "perseus:abo:phi,0474,043:2:3:6",
+    ]
+
+    print("CTS URN Mapping Examples:")
+    print("-" * 60)
+
+    for citation_text in test_citations:
+        urn = mapper.map_text_to_urn(citation_text)
+        if urn:
+            print(f"{citation_text:35} -> {urn}")
+        else:
+            print(f"{citation_text:35} -> No URN mapping available")
+    print()

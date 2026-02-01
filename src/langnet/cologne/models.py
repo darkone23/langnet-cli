@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from decimal import Decimal
 
+from langnet.citation.models import Citation, CitationCollection, CitationType
+
 
 @dataclass
 class CdslEntry:
@@ -60,7 +62,7 @@ class SanskritDictionaryEntry:
     sanskrit_form: str | None = None
     etymology: dict | None = None
     grammar_tags: dict | None = None
-    references: list[dict] | None = None
+    references: CitationCollection | None = None
     page_ref: str | None = None
 
 

@@ -17,6 +17,7 @@ langnet-dg-reaper:
 restart-server:
     just autobot server restart
     just autobot server verify
+    just cli cache-clear
     
 # run ruff & ty
 lint-all:

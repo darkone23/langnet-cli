@@ -4,26 +4,30 @@ Welcome to the comprehensive documentation for **langnet-cli** - a classical lan
 
 ## 📚 Documentation Structure
 
-This directory contains the complete documentation for langnet-cli. Navigate to the section that best fits your needs:
+This directory contains the complete documentation for langnet-cli, organized by audience and purpose.
 
-### 🚀 Getting Started
+### 🚀 Quick Start
+- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Installation and first steps
 - **[README.md](../README.md)** - Project overview and quick start guide
-- **[PEDAGOGICAL_PHILOSOPHY.md](PEDAGOGICAL_PHILOSOPHY.md)** - Core educational approach and Foster functional grammar
-- **[PEDAGOGY.md](PEDAGOGY.md)** - Pedagogical goals and priorities
+- **[examples/](../examples/)** - Usage examples
 
 ### 👨‍💻 Development
-- **[DEVELOPER.md](DEVELOPER.md)** - Development setup, conventions, and AI-assisted workflow
-- **[REFERENCE.md](REFERENCE.md)** - Technical reference, architecture, and implementation details
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development setup, conventions, and AI workflow
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical reference and system design
+- **[skills/](skills/)** - Development patterns and best practices
 
-### 📋 Project Planning
-- **[plans/README.md](plans/README.md)** - Overview of project plans (active, completed, todo)
-- **[plans/ACTIVE_WORK_SUMMARY.md](plans/ACTIVE_WORK_SUMMARY.md)** - Current implementation status
-- **[TODO.md](TODO.md)** - Current roadmap and active development priorities
+### 📊 Project Status
+- **[ROADMAP.md](ROADMAP.md)** - Current implementation status and roadmap
+- **[plans/](plans/)** - Active, completed, and future development plans
 
-### 🤖 AI & Development
-- **[opencode/](opencode/)** - AI-assisted development guides and skills
-  - **[LLM_PROVIDER_GUIDE.md](opencode/LLM_PROVIDER_GUIDE.md)** - Multi-model AI strategy
-  - **[MULTI_MODEL_GUIDE.md](opencode/MULTI_MODEL_GUIDE.md)** - AI persona system
+### 🎓 Educational Approach
+- **[PEDAGOGY.md](PEDAGOGY.md)** - Educational philosophy and Foster functional grammar
+- **[CITATIONS.md](CITATIONS.md)** - Sources, dependencies, and citations
+
+### 🔧 Reference & Support
+- **[API.md](API.md)** - Complete API reference
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+- **[component-readmes/](component-readmes/)** - Module-specific documentation
 
 ## 🌟 Key Features
 
@@ -68,21 +72,25 @@ langnet-cli verify
 
 ## 📖 Documentation Navigation
 
-### For Users
-- Start with the main **[README.md](../README.md)** for installation and basic usage
-- Read **[PEDAGOGICAL_PHILOSOPHY.md](PEDAGOGICAL_PHILOSOPHY.md)** to understand the educational approach
-- Check **[TODO.md](TODO.md)** for upcoming features and roadmap
+### For New Users
+- Start with **[GETTING_STARTED.md](GETTING_STARTED.md)** for installation and basic usage
+- Read **[README.md](../README.md)** for project overview
+- Explore **[examples/](../examples/)** for practical usage examples
 
 ### For Developers
-- **[DEVELOPER.md](DEVELOPER.md)** - Complete development guide with AI workflow
-- **[REFERENCE.md](REFERENCE.md)** - Technical implementation details
-- **[plans/](plans/)** - Current and planned development work
-- **[.opencode/skills/](../.opencode/skills/)** - AI-assisted development skills
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Complete development guide with AI workflow
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical implementation details
+- **[skills/](skills/)** - AI-assisted development patterns
+- **[plans/](plans/)** - Current development plans and status
 
 ### For Researchers & Educators
 - **[PEDAGOGY.md](PEDAGOGY.md)** - Educational philosophy and goals
-- **[REFERENCE.md](REFERENCE.md)** - Technical architecture and data models
-- **[plans/ACTIVE_WORK_SUMMARY.md](plans/ACTIVE_WORK_SUMMARY.md)** - Current implementation status
+- **[CITATIONS.md](CITATIONS.md)** - Sources and dependencies
+- **[component-readmes/](component-readmes/)** - Detailed module information
+
+### For API Users
+- **[API.md](API.md)** - Complete API reference
+- **[examples/](../examples/)** - API usage examples
 
 ## 🛠️ External Dependencies
 
@@ -118,23 +126,23 @@ This project uses a sophisticated multi-model AI development system:
 - **Opencode Skills**: 11 specialized development skills
 - **Automated Testing**: Comprehensive test coverage with AI assistance
 
-See **[.opencode/skills/README.md](../.opencode/skills/README.md)** for complete AI development documentation.
+See **[AGENTS.md](../AGENTS.md)** and **[skills/](skills/)** for complete AI development documentation.
 
 ## 📊 Project Status
 
-- **Implementation**: ~75% complete
+- **Implementation**: ~85% complete (citation system fully functional)
 - **Code Quality**: Excellent (all ruff/typecheck checks pass)
-- **Test Coverage**: 381 tests passing
+- **Test Coverage**: 381+ tests passing
 - **Documentation**: Comprehensive and well-organized
 - **Architecture**: Well-designed modular system
 
 ## 🆘 Getting Help
 
-1. **Documentation Issues**: Check the relevant sections above
-2. **Development Setup**: Follow **[DEVELOPER.md](DEVELOPER.md)**
-3. **Technical Problems**: See **[REFERENCE.md](REFERENCE.md)** for debugging
-4. **AI Development**: Use the opencode skills system
-5. **Bugs**: Check existing issues or create new ones
+1. **Installation Issues**: Follow [GETTING_STARTED.md](GETTING_STARTED.md)
+2. **Development Setup**: Follow [DEVELOPMENT.md](DEVELOPMENT.md)
+3. **Technical Problems**: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md)
+4. **API Usage**: See [API.md](API.md)
+5. **AI Development**: Use the skills system in [skills/](skills/)
 
 ## 📄 License
 
@@ -142,5 +150,5 @@ This project is licensed under the MIT License. See **[../LICENSE](../LICENSE)**
 
 ---
 
-*Last Updated: January 29, 2026*  
-*For the latest updates and roadmap, see **[TODO.md](TODO.md)** and **[plans/ACTIVE_WORK_SUMMARY.md](plans/ACTIVE_WORK_SUMMARY.md)**
+*Last Updated: February 2, 2026*  
+*For the latest updates and roadmap, see [ROADMAP.md](ROADMAP.md) and [plans/](/)*

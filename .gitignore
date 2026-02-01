@@ -4,6 +4,10 @@
 devenv.local.nix
 .dev-envfile
 
+*.db
+*.sqlite
+*.sqlite3
+
 # direnv
 .direnv
 

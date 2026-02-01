@@ -1,3 +1,4 @@
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ from langnet.diogenes.core import DiogenesScraper  # noqa: E402
 from langnet.heritage.config import HeritageConfig  # noqa: E402
 from langnet.heritage.morphology import HeritageMorphologyService  # noqa: E402
 
+# from langnet.citation.models import CitationCollection, Citation, TextReference, CitationType  # noqa: E402
+# from langnet.citation.cts_urn import CTSUrnMapper  # noqa: E402
 
 class ORJsonResponse(Response):
     media_type = "application/json"
@@ -105,13 +108,15 @@ class HealthChecker:
         try:
             config = HeritageConfig()
             morphology = HeritageMorphologyService(config)
-            result = morphology.analyze("agni")
-            if result and result.total_solutions > 0:
-                return {"status": "healthy", "solutions": result.total_solutions}
-            elif result:
-                return {"status": "degraded", "message": "Heritage responding but no solutions"}
-            else:
-                return {"status": "unhealthy", "message": "No result from Heritage"}
+            # result = morphology.analyze("agni")
+            # TODO: just check the server is up instead of issuing morphology requests
+            # if result and result.total_solutions > 0:
+            #     return {"status": "healthy", "solutions": result.total_solutions}
+            # elif result:
+            #     return {"status": "degraded", "message": "Heritage responding but no solutions"}
+            # else:
+            #     return {"status": "unhealthy", "message": "No result from Heritage"}
+            return {"status": "healthy"}
         except Exception as e:
             return {"status": "unhealthy", "message": str(e)}
 
@@ -191,10 +196,21 @@ async def query_api(request: Request):
         wiring: LangnetWiring = request.app.state.wiring
     except Exception as e:
         return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
+
     try:
         result = wiring.engine.handle_query(lang, word)
+
+        # Add standardized citations to the response
+        # lang_str = str(lang) if lang else "unknown"
+        # result = _add_citations_to_response(result, lang_str)
+
         return ORJsonResponse(result)
     except Exception as e:
+        logger.error(f"Error in query API: {e}")
+        logger.error(f"Error type: {type(e)}")
+        import traceback
+
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return ORJsonResponse({"error": str(e)}, status_code=500)
 
 

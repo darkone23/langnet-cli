@@ -11,6 +11,7 @@ import structlog
 from bs4 import BeautifulSoup
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
+# from langnet.citation.models import Citation, CitationCollection, CitationType
 
 logger = structlog.get_logger(__name__)
 
@@ -52,7 +53,7 @@ class DiogenesDefinitionBlock:
     entry: str
     entryid: str
     senses: list[str] | None = field(default=None)
-    citations: dict[str, str] | None = field(default=None)
+    citations: dict | None = field(default=None)
     heading: str | None = field(default=None)
     diogenes_warning: str | None = field(default=None)
 
@@ -290,7 +291,11 @@ class DiogenesScraper:
             ref_txt = ref.get_text()
             refs[ref_id] = ref_txt
         if len(refs.items()) > 0:
+
+            # converted_citations = []
+            # for urn, citation_text in refs.items():
             block["citations"] = refs
+            # CitationCollection(citations=converted_citations)
             logger.debug("handle_references_citations", count=len(refs))
 
         senses = self._collect_senses(soup)
@@ -369,12 +374,46 @@ class DiogenesScraper:
             DiogenesChunkType.DiogenesFuzzyReference,
         }:
             refs_dict = self.handle_references(soup)
-            blocks = [
-                b
-                if isinstance(b, DiogenesDefinitionBlock)
-                else cattrs.structure(b, DiogenesDefinitionBlock)
-                for b in refs_dict.get("blocks", [])
-            ]
+            blocks = []
+            for b in refs_dict.get("blocks", []):
+                if isinstance(b, DiogenesDefinitionBlock):
+                    blocks.append(b)
+                elif (
+                    isinstance(b, dict)
+                ):
+                    blocks.append(
+                        DiogenesDefinitionBlock(
+                            entry=b.get("entry", ""),
+                            entryid=b.get("entryid", ""),
+                            citations=b.get("citations"),
+                            senses=b.get("senses"),
+                            heading=b.get("heading"),
+                            diogenes_warning=b.get("diogenes_warning"),
+                        )
+                    )
+                else:
+                    try:
+                        block_obj = cattrs.structure(b, DiogenesDefinitionBlock)
+                        blocks.append(block_obj)
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to structure block",
+                            error=str(e),
+                            block_keys=list(b.keys()) if isinstance(b, dict) else "not_dict",
+                        )
+                        # Create a basic block with available data
+                        basic_block = DiogenesDefinitionBlock(
+                            entry=b.get("entry", "") if isinstance(b, dict) else "",
+                            entryid=b.get("entryid", "") if isinstance(b, dict) else "",
+                            senses=b.get("senses") if isinstance(b, dict) else None,
+                            citations=b.get("citations") if isinstance(b, dict) else None,
+                            heading=b.get("heading") if isinstance(b, dict) else None,
+                            diogenes_warning=b.get("diogenes_warning")
+                            if isinstance(b, dict)
+                            else None,
+                        )
+                        blocks.append(basic_block)
+
             chunk["definitions"] = DiogenesDefinitionEntry(
                 term=refs_dict.get("term", ""), blocks=blocks
             )

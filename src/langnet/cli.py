@@ -22,7 +22,7 @@ For detailed help on a command:
 import socket
 import sys
 from pathlib import Path
-from typing import cast
+from typing import cast, Optional, Dict, Any, List, Union
 from urllib.parse import urlparse
 
 import click
@@ -633,5 +633,424 @@ def info(dict_id: str):
     console.print(table)
 
 
+@main.group()
+def citation():
+    """Citation utilities for classical language texts."""
+    pass
+
+
+@citation.command(name="explain")
+@click.argument("abbreviation")
+@click.option(
+    "--api-url",
+    default=DEFAULT_API_URL,
+    help="Base URL of the langnet API server",
+)
+def explain_citation(abbreviation: str, api_url: str):
+    """Explain a citation abbreviation or reference.
+
+    Provides detailed information about classical text citations,
+    including abbreviations, cross-references, and source details.
+
+    Examples:
+        langnet-cli citation explain "Hom. Il. 1.1"
+        langnet-cli citation explain "L&S"
+        langnet-cli citation explain "M-W 127"
+    """
+    # Simple lookup for common citation abbreviations
+    citation_db = {
+        # Diogenes/Perseus style - include both short and full forms
+        "hom": {"full_name": "Homer", "work": "epic poet", "type": "author"},
+        "hom.": {"full_name": "Homer", "work": "epic poet", "type": "author"},
+        "il": {"full_name": "Iliad", "work": "epic poem", "type": "work"},
+        "il.": {"full_name": "Iliad", "work": "epic poem", "type": "work"},
+        "od": {"full_name": "Odyssey", "work": "epic poem", "type": "work"},
+        "od.": {"full_name": "Odyssey", "work": "epic poem", "type": "work"},
+        "verg": {"full_name": "Vergil", "work": "Roman poet", "type": "author"},
+        "verg.": {"full_name": "Vergil", "work": "Roman poet", "type": "author"},
+        "aen": {"full_name": "Aeneid", "work": "epic poem", "type": "work"},
+        "aen.": {"full_name": "Aeneid", "work": "epic poem", "type": "work"},
+        "georg": {"full_name": "Georgics", "work": "didactic poem", "type": "work"},
+        "georg.": {"full_name": "Georgics", "work": "didactic poem", "type": "work"},
+        "ecl": {"full_name": "Eclogues", "work": "pastoral poems", "type": "work"},
+        "ecl.": {"full_name": "Eclogues", "work": "pastoral poems", "type": "work"},
+        "cic": {"full_name": "Cicero", "work": "Roman statesman", "type": "author"},
+        "cic.": {"full_name": "Cicero", "work": "Roman statesman", "type": "author"},
+        "fin": {"full_name": "Tusculan Disputations", "work": "philosophical work", "type": "work"},
+        "fin.": {
+            "full_name": "Tusculan Disputations",
+            "work": "philosophical work",
+            "type": "work",
+        },
+        "plaut": {"full_name": "Plautus", "work": "Roman playwright", "type": "author"},
+        "plaut.": {"full_name": "Plautus", "work": "Roman playwright", "type": "author"},
+        "cas": {"full_name": "Casina", "work": "comedy", "type": "work"},
+        "cas.": {"full_name": "Casina", "work": "comedy", "type": "work"},
+        # Dictionary abbreviations
+        "l&s": {
+            "full_name": "Lewis and Short Latin Dictionary",
+            "work": "Latin lexicon",
+            "type": "dictionary",
+        },
+        "lsj": {
+            "full_name": "Liddell-Scott-Jones Greek Lexicon",
+            "work": "Greek lexicon",
+            "type": "dictionary",
+        },
+        "mw": {
+            "full_name": "Monier-Williams Sanskrit-English Dictionary",
+            "work": "Sanskrit lexicon",
+            "type": "dictionary",
+        },
+        "m-w": {
+            "full_name": "Monier-Williams Sanskrit-English Dictionary",
+            "work": "Sanskrit lexicon",
+            "type": "dictionary",
+        },
+        "apte": {
+            "full_name": "The Practical Sanskrit-English Dictionary",
+            "work": "Sanskrit lexicon",
+            "type": "dictionary",
+        },
+    }
+
+    # Normalize the abbreviation - try multiple approaches
+    variations = [
+        abbreviation,
+        abbreviation.lower(),
+        abbreviation.replace(".", ""),
+        abbreviation.replace(" ", ""),
+        abbreviation.lower().replace(".", ""),
+        abbreviation.lower().replace(" ", ""),
+    ]
+
+    found = False
+    for variation in variations:
+        if variation in citation_db:
+            info = citation_db[variation]
+            table = Table(title="Citation Explanation")
+            table.add_column("Field", style="cyan")
+            table.add_column("Value", style="green")
+
+            table.add_row("Abbreviation", abbreviation)
+            table.add_row("Full Name", info["full_name"])
+            table.add_row("Work/Type", info["work"])
+            table.add_row("Category", info["type"].title())
+
+            console.print(table)
+            found = True
+            break
+
+    if not found:
+        console.print(f"[yellow]No detailed information found for '{abbreviation}'[/]")
+        console.print("[yellow]Try querying the word directly to see associated citations.[/]")
+
+
+@citation.command(name="list")
+@click.argument("lang")
+@click.argument("word")
+@click.option(
+    "--api-url",
+    default=DEFAULT_API_URL,
+    help="Base URL of the langnet API server",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["json", "table"]),
+    default="table",
+    help="Output format: json for raw output, table for formatted display",
+)
+def list_citations(lang: str, word: str, api_url: str, output: str):
+    """List all citations for a word query.
+
+    Shows all citations found when looking up a word in the classical language.
+    Helps students understand what references and sources are associated with
+    a particular term.
+
+    Arguments:
+        lang: Language code (lat, grc, san, or grk as alias for grc)
+        word: Word to look up and find citations for
+
+    Examples:
+        langnet-cli citation list lat lupus
+        langnet-cli citation list grc Nike
+        langnet-cli citation list san agni
+    """
+    valid_languages = {"lat", "grc", "san", "grk"}
+    if lang not in valid_languages:
+        console.print(
+            f"[red]Error: Invalid language '{lang}'. Must be one of: "
+            f"{', '.join(sorted(valid_languages))}[/]"
+        )
+        sys.exit(1)
+
+    if lang == "grk":
+        lang = "grc"
+
+    url = f"{api_url}/api/q"
+
+    try:
+        response = requests.post(url, data={"l": lang, "s": word}, timeout=30)
+        response.raise_for_status()
+
+        result = orjson.loads(response.text)
+
+        # Extract citations from the result
+        citations = []
+
+        # Check Diogenes results
+        if result.get("diogenes") and result["diogenes"].get("dg_parsed"):
+            for chunk in result["diogenes"].get("chunks", []):
+                if hasattr(chunk, "definitions") and chunk.definitions:
+                    for block in chunk.definitions.blocks:
+                        if hasattr(block, "citations") and block.citations:
+                            citations.extend(block.citations.citations)
+
+        # Check CDSL results
+        if result.get("cdsl"):
+            for dict_entries in result["cdsl"].get("dictionaries", {}).values():
+                for entry in dict_entries:
+                    if hasattr(entry, "references") and entry.references:
+                        citations.extend(entry.references.citations)
+
+        if not citations:
+            console.print(f"[yellow]No citations found for '{word}' in {lang}[/]")
+            return
+
+        if output == "json":
+            json_output = [citation.to_dict() for citation in citations]
+            console.print(orjson.dumps(json_output, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        else:
+            table = Table(title=f"Citations for '{word}' ({lang})")
+            table.add_column("#", style="cyan")
+            table.add_column("Text", style="green")
+            table.add_column("Type", style="yellow")
+            table.add_column("Work", style="blue")
+            table.add_column("Author", style="magenta")
+            table.add_column("Source", style="cyan")
+
+            for i, citation in enumerate(citations, 1):
+                primary_ref = citation.references[0] if citation.references else None
+                table.add_row(
+                    str(i),
+                    primary_ref.text if primary_ref else "N/A",
+                    primary_ref.type.value if primary_ref else "N/A",
+                    primary_ref.work if primary_ref else "N/A",
+                    primary_ref.author if primary_ref else "N/A",
+                    citation.abbreviation or "N/A",
+                )
+
+            console.print(table)
+
+    except requests.RequestException as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     main()
+
+# Import and add indexer commands
+from langnet.indexer.cli import indexer
+from langnet.indexer.cts_urn_indexer import CtsUrnIndexer
+from langnet.indexer.core import IndexType
+from langnet.indexer.utils import get_index_manager
+from pathlib import Path
+
+
+@main.group()
+def indexer():
+    """Indexer tools for building and managing search indexes."""
+    pass
+
+
+@indexer.command("build-cts")
+@click.option(
+    "--source",
+    "-s",
+    type=click.Path(exists=True),
+    default="/home/nixos/langnet-tools/diogenes/Classics-Data",
+    help="Source data directory",
+)
+@click.option("--output", "-o", type=click.Path(), help="Output database path")
+@click.option("--overwrite", is_flag=True, default=False, help="Overwrite existing index file")
+@click.option("--force", is_flag=True, help="Force rebuild even if index exists")
+@click.option("--config-dir", type=click.Path(), help="Configuration directory")
+def build_cts_index(
+    source: str, output: Optional[str], overwrite: bool, force: bool, config_dir: Optional[str]
+):
+    """Build CTS URN reference index."""
+    source_path = Path(source)
+    output_path = (
+        Path(output) if output else Path.home() / ".local" / "share" / "langnet" / "cts_urn.duckdb"
+    )
+
+    # Create output directory if needed
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Overwrite if requested
+    if output_path.exists():
+        if overwrite:
+            output_path.unlink()
+            click.echo(f"Deleted existing index file {output_path}")
+        else:
+            click.echo(f"Index already exists at {output_path}. Use --overwrite to replace.")
+            return 1
+
+    click.echo(f"Building CTS URN index...")
+    click.echo(f"Source: {source_path}")
+    click.echo(f"Output: {output_path}")
+
+    # Build indexer
+    config = {"source_dir": str(source_path), "force_rebuild": force}
+
+    indexer_obj = CtsUrnIndexer(output_path, config)
+
+    try:
+        success = indexer_obj.build()
+        if success:
+            click.echo("✅ CTS URN index built successfully!")
+
+            # Register the index
+            manager = get_index_manager()
+            manager.register_index(
+                name="cts_urn", index_type=IndexType.CTS_URN, path=output_path, config=config
+            )
+
+            # Show stats
+            stats = indexer_obj.get_stats()
+            click.echo(
+                f"📊 Stats: {stats.get('work_count', 'N/A')} works, {stats.get('size_mb', 0):.2f} MB"
+            )
+        else:
+            click.echo("❌ Failed to build CTS URN index")
+            return 1
+    except Exception as e:
+        click.echo(f"❌ Error building index: {e}")
+        return 1
+    finally:
+        indexer_obj.cleanup()
+
+    return 0
+
+
+@indexer.command("stats-cts")
+@click.option("--name", "-n", default="cts_urn", help="Index name")
+def stats_cts(name: str):
+    """Show CTS URN index statistics."""
+    from langnet.indexer.utils import IndexManager
+
+    manager = IndexManager()
+    stats = manager.get_index_stats(name)
+
+    if not stats:
+        click.echo(f"❌ Index '{name}' not found")
+        return 1
+
+    click.echo(f"📊 {name} Index Statistics:")
+    click.echo(f"  Type: {stats.index_type.value}")
+    click.echo(f"  Status: {stats.status.value}")
+    click.echo(f"  Size: {stats.size_mb:.2f} MB")
+    click.echo(f"  Entries: {stats.entry_count}")
+    click.echo(f"  Built: {stats.build_date}")
+
+    return 0
+
+
+@indexer.command("list-indexes")
+def list_indexes():
+    """List all registered indexes."""
+    from langnet.indexer.utils import IndexManager
+
+    manager = IndexManager()
+    indexes = manager.list_indexes()
+
+    if not indexes:
+        click.echo("No indexes registered")
+        return 0
+
+    click.echo("📋 Registered Indexes:")
+    for idx in indexes:
+        click.echo(f"  {idx['type']:12} {idx['path']}")
+
+    return 0
+
+
+@indexer.command("query-cts")
+@click.argument("abbrev")
+@click.option("--language", "-l", default="lat", help="Language code")
+def query_cts(abbrev: str, language: str):
+    """Query CTS URN index for abbreviation matches."""
+    from langnet.indexer.utils import IndexManager
+
+    manager = IndexManager()
+    config = manager.get_index_config("cts_urn")
+
+    if not config:
+        click.echo("❌ CTS URN index not found. Run 'langnet-cli indexer build-cts' first.")
+        return 1
+
+    output_path = Path(config["path"])
+    if not output_path.exists():
+        click.echo("❌ CTS URN index file not found")
+        return 1
+
+    # Query the index
+    indexer_obj = CtsUrnIndexer(output_path, config)
+    try:
+        results = indexer_obj.query_abbreviation(abbrev, language)
+
+        if not results:
+            click.echo(f"❌ No matches found for '{abbrev}'")
+        else:
+            click.echo(f"🔍 Results for '{abbrev}':")
+            for result in results:
+                click.echo(f"  {result}")
+
+    except Exception as e:
+        click.echo(f"❌ Query error: {e}")
+        return 1
+    finally:
+        indexer_obj.cleanup()
+
+    return 0
+
+
+@indexer.command("validate-cts")
+@click.option("--fix", is_flag=True, help="Attempt to fix issues")
+def validate_cts(fix: bool):
+    """Validate CTS URN index integrity."""
+    from langnet.indexer.utils import IndexManager
+
+    manager = IndexManager()
+    config = manager.get_index_config("cts-urn")
+
+    if not config:
+        click.echo("❌ CTS URN index not found")
+        return 1
+
+    output_path = Path(config["path"])
+    if not output_path.exists():
+        click.echo("❌ CTS URN index file not found")
+        return 1
+
+    # Validate the index
+    indexer_obj = CtsUrnIndexer(output_path, config)
+    try:
+        is_valid = indexer_obj.validate()
+
+        if is_valid:
+            click.echo("✅ Index validation passed")
+        else:
+            click.echo("❌ Index validation failed")
+            if fix:
+                click.echo("💡 Fix mode not implemented yet")
+            return 1
+
+    except Exception as e:
+        click.echo(f"❌ Validation error: {e}")
+        return 1
+    finally:
+        indexer_obj.cleanup()
+
+    return 0

@@ -208,26 +208,6 @@ class HeritageHTTPClient:
                             )
         return entries
 
-    def _parse_text_entries(self, soup: BeautifulSoup, lexicon: str) -> list[dict[str, Any]]:
-        """Parse entries from text content"""
-        entries = []
-        all_text = soup.get_text()
-        if "agni" in all_text.lower():
-            lines = all_text.split("\n")
-            for line in lines:
-                if "agni" in line.lower() and len(line.strip()) > self.MIN_TEXT_LENGTH:
-                    # Simple extraction - this will be improved
-                    entries.append(
-                        {
-                            "headword": "agni",
-                            "part_of_speech": "Unknown",
-                            "lexicon": lexicon,
-                            "entry_url": None,
-                            "raw_text": line.strip(),
-                        }
-                    )
-        return entries
-
     def parse_dictionary_response(self, html_content: str, lexicon: str) -> dict[str, Any]:
         """Parse dictionary search response HTML"""
         try:
@@ -238,10 +218,6 @@ class HeritageHTTPClient:
 
             # Method 1: Look for table cells with links to dictionary entries
             entries = self._parse_table_entries(soup, lexicon)
-
-            # Method 2: Look for any text content containing the query
-            if not entries:
-                entries = self._parse_text_entries(soup, lexicon)
 
             return {
                 "lexicon": lexicon,
