@@ -110,6 +110,20 @@ src/langnet/
 │   └── core.py              # CLTK wrapper
 ├── cologne/
 │   └── core.py              # CDSL wrapper
+├── heritage/
+│   ├── core.py              # Sanskrit Heritage Platform integration
+│   ├── lineparsers/         # Lark-based parsers
+│   └── README.md            # Heritage integration docs
+├── normalization/
+│   ├── core.py              # Canonical query normalization
+│   ├── sanskrit.py          # Sanskrit-specific normalization
+│   ├── latin.py              # Latin-specific normalization
+│   └── greek.py              # Greek-specific normalization
+├── foster/
+│   ├── core.py              # Foster functional grammar implementation
+│   ├── latin.py              # Latin Foster functions
+│   ├── greek.py              # Greek Foster functions
+│   └── sanskrit.py          # Sanskrit Foster functions
 └── logging.py               # structlog configuration
 ```
 
@@ -137,7 +151,42 @@ When adding support for new dictionaries, morphological analyzers, or lexicon so
 - **Type checker**: `ty check`
 - **Linter**: `ruff check`
 
-See [AGENTS.md](AGENTS.md) for AI agent-specific instructions.
+See [docs/TODO.md](docs/TODO.md) for detailed roadmap and current priorities.
+
+## Code Style Tools
+
+- **Formatter**: `ruff format`
+- **Type checker**: `ty check`
+- **Linter**: `ruff check`
+
+## AI-Assisted Development
+
+This project uses a sophisticated multi-model AI development system with 6 specialized personas:
+
+- **The Architect**: System design and planning (deepseek/deepseek-v3.2)
+- **The Sleuth**: Debugging and root cause analysis (z-ai/glm-4.7)
+- **The Artisan**: Optimization and style improvements (minimax/minimax-m2.1)
+- **The Coder**: Feature building and testing (z-ai/glm-4.5-air)
+- **The Scribe**: Documentation and comments (xiaomi/mimo-v2-flash)
+- **The Auditor**: Code review and security (openai/gpt-oss-120b)
+
+### Using AI Personas
+
+Use the `@agentname` mention syntax to route tasks:
+
+```markdown
+@architect "Design a new caching system for the Sanskrit dictionary"
+@sleuth "Debug the memory leak in the DuckDB cache"
+@coder "Write comprehensive tests for the new module"
+@auditor "Check for security vulnerabilities"
+@artisan "Optimize the hot path in the cache module"
+@scribe "Document the new API endpoints"
+```
+
+For complete AI development documentation, see:
+- [docs/opencode/MULTI_MODEL_GUIDE.md](docs/opencode/MULTI_MODEL_GUIDE.md)
+- [docs/opencode/LLM_PROVIDER_GUIDE.md](docs/opencode/LLM_PROVIDER_GUIDE.md)
+- [`.opencode/skills/README.md`](../.opencode/skills/README.md)
 
 ## Using Opencode
 
@@ -149,6 +198,7 @@ Before using opencode for development, configure your opencode client:
    - Model selection strategies for different tasks
    - Cost optimization techniques
    - Free-tier options for experimentation
+   - See [docs/opencode/LLM_PROVIDER_GUIDE.md](docs/opencode/LLM_PROVIDER_GUIDE.md)
 
 2. **Choose and configure a provider:**
    ```bash
@@ -184,18 +234,18 @@ Once your provider is configured, leverage opencode for development tasks by ref
 
 ### Available Skills
 
-Located in [`.opencode/skills/`](.opencode/skills/):
+Located in [`.opencode/skills/`](../.opencode/skills/):
 
 | Skill | Purpose |
 |-------|---------|
-| [testing.md](.opencode/skills/testing.md) | Run tests, debug test failures |
-| [backend-integration.md](.opencode/skills/backend-integration.md) | Add new language backends |
-| [data-models.md](.opencode/skills/data-models.md) | Create dataclass models with cattrs |
-| [api-development.md](.opencode/skills/api-development.md) | Starlette ASGI API development |
-| [cache-management.md](.opencode/skills/cache-management.md) | Manage DuckDB response cache |
-| [cli-development.md](.opencode/skills/cli-development.md) | Click CLI command development |
-| [debugging.md](.opencode/skills/debugging.md) | Troubleshoot common issues |
-| [code-style.md](.opencode/skills/code-style.md) | Formatting, linting, type checking |
+| [testing.md](../.opencode/skills/testing.md) | Run tests, debug test failures |
+| [backend-integration.md](../.opencode/skills/backend-integration.md) | Add new language backends |
+| [data-models.md](../.opencode/skills/data-models.md) | Create dataclass models with cattrs |
+| [api-development.md](../.opencode/skills/api-development.md) | Starlette ASGI API development |
+| [cache-management.md](../.opencode/skills/cache-management.md) | Manage DuckDB response cache |
+| [cli-development.md](../.opencode/skills/cli-development.md) | Click CLI command development |
+| [debugging.md](../.opencode/skills/debugging.md) | Troubleshoot common issues |
+| [code-style.md](../.opencode/skills/code-style.md) | Formatting, linting, type checking |
 
 ### Opencode Workflow
 
@@ -234,12 +284,8 @@ Opencode: Let me check the health status and enable debug logging...
 
 ### Developer Skills Reference
 
-- **New contributors**: Start with [code-style.md](.opencode/skills/code-style.md), [testing.md](.opencode/skills/testing.md), [debugging.md](.opencode/skills/debugging.md)
-- **Adding backends**: Read [backend-integration.md](.opencode/skills/backend-integration.md), [data-models.md](.opencode/skills/data-models.md), [api-development.md](.opencode/skills/api-development.md)
-- **Maintenance tasks**: Read [cache-management.md](.opencode/skills/cache-management.md), [debugging.md](.opencode/skills/debugging.md), [cli-development.md](.opencode/skills/cli-development.md)
+- **New contributors**: Start with [code-style.md](../.opencode/skills/code-style.md), [testing.md](../.opencode/skills/testing.md), [debugging.md](../.opencode/skills/debugging.md)
+- **Adding backends**: Read [backend-integration.md](../.opencode/skills/backend-integration.md), [data-models.md](../.opencode/skills/data-models.md), [api-development.md](../.opencode/skills/api-development.md)
+- **Maintenance tasks**: Read [cache-management.md](../.opencode/skills/cache-management.md), [debugging.md](../.opencode/skills/debugging.md), [cli-development.md](../.opencode/skills/cli-development.md)
 
-See [`.opencode/skills/README.md`](.opencode/skills/README.md) for complete skill documentation.
-
-# Agent usage
-
-See [`.opencode/skills/README.md`](.opencode/skills/README.md) for complete skill documentation.
+See [`.opencode/skills/README.md`](../.opencode/skills/README.md) for complete skill documentation.
