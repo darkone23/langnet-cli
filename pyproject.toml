@@ -40,6 +40,7 @@ polars = "^1.37.1"
 duckdb = "^1.4.3"
 pyarrow = "^23.0.0"
 filelock = "^3.16.1"
+aisuite = {extras = ["openai"], version = "^0.1.14"}
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"
