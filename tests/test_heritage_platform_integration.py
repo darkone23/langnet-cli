@@ -40,12 +40,15 @@ class TestHeritagePlatformIntegration(unittest.TestCase):
     def test_service_health_check(self):
         """Test that Heritage Platform service is available."""
         try:
-            response = requests.get(f"{self.base_url}/health", timeout=10)
-            if response.status_code == HTTP_OK:
+            # Use actual working endpoint instead of /health
+            response = requests.get(f"{self.base_url}/cgi-bin/sktsearch?q=agni&lex=MW", timeout=10)
+            if response.status_code == HTTP_OK and len(response.text) > MIN_HTML_SIZE:
                 logger.info("Heritage Platform service is available")
                 return True
             else:
-                logger.warning("Service returned status: %d", response.status_code)
+                logger.warning(
+                    "Service returned status: %d or response too small", response.status_code
+                )
                 return False
         except requests.exceptions.ConnectionError:
             logger.error("Heritage Platform service not available on localhost:48080")

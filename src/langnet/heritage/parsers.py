@@ -6,6 +6,179 @@ from bs4 import BeautifulSoup
 from .html_extractor import HeritageHTMLExtractor
 from .lineparsers.parse_morphology import MorphologyReducer
 
+# Grammatical abbreviations (copied from abbreviations.py to avoid import issues)
+GRAMMATICAL_ABBREVIATIONS = {
+    # Case and number
+    "a.": "adjective",
+    "abl.": "ablative",
+    "abs.": "absolutive",
+    "acc.": "accusative",
+    "ac.": "active",
+    "act.": "action",
+    "adr.": "term of address",
+    "adv.": "adverb",
+    "agt.": "agent",
+    "all.": "German",
+    "ang.": "English",
+    "ant.": "before the common era",
+    "aor.": "aorist",
+    "approx.": "approximately",
+    "arch.": "architecture",
+    "astr.": "astronomy",
+    "av.": "with",
+    "bd.": "Buddhism",
+    "bén.": "benedictive",
+    "bio.": "biology",
+    "ca.": "causative",
+    "c.-à-d.": "that is to say / i.e.",
+    "cf.": "compare / see",
+    "cél.": "celebrative",
+    "comp.": "comparative",
+    "cond.": "conditional",
+    "conf.": "confer / compare",
+    "conj.": "conjunction",
+    "cons.": "consonant",
+    "contr.": "contraction",
+    "cop.": "copulative",
+    "cor.": "correlative",
+    "désid.": "desiderative",
+    "désin.": "desinential",
+    "dét.": "determinative",
+    "dir.": "direct",
+    "dist.": "distributive",
+    "dr.": "doctor",
+    "dur.": "durative",
+    "écon.": "economic",
+    "ép.": "epic",
+    "équ.": "equative",
+    "err.": "error",
+    "excl.": "exclamatory",
+    "f.": "feminine",
+    "fam.": "familial",
+    "fig.": "figurative",
+    "fut.": "future",
+    "géom.": "geometry",
+    "ger.": "gerund",
+    "gér.": "causative",
+    "gr.": "Greek",
+    "hébr.": "Hebrew",
+    "hist.": "historical",
+    "i.": "intransitive",
+    "imp.": "imperative",
+    "impf.": "imperfect",
+    "ind.": "indicative",
+    "infin.": "infinitive",
+    "intens.": "intensive",
+    "intr.": "intransitive",
+    "irr.": "irregular",
+    "it.": "Italian",
+    "lat.": "Latin",
+    "law.": "law",
+    "lit.": "literally",
+    "loc.": "locative",
+    "log.": "logic",
+    "m.": "masculine",
+    "math.": "mathematics",
+    "med.": "medical",
+    "méd.": "medial",
+    "mét.": "metal",
+    "métaph.": "metaphorical",
+    "mil.": "military",
+    "modal.": "modal",
+    "mood.": "mood",
+    "morf.": "morphological",
+    "mor.": "moral",
+    "msc.": "miscellaneous",
+    "n.": "neuter",
+    "nom.": "nominative",
+    "nucl.": "nuclear",
+    "num.": "numeral",
+    "obj.": "objective",
+    "obl.": "oblique",
+    "opt.": "optative (potential)",
+    "ord.": "ordinal",
+    "part.": "particle",
+    "patr.": "patronymic",
+    "péj.": "pejorative",
+    "péri.": "periphrastic",
+    "pers.": "person",
+    "pf.": "prefix",
+    "pft.": "perfect",
+    "phil.": "philosophy",
+    "phon.": "phonetics",
+    "pl.": "plural",
+    "poss.": "possessive",
+    "pfut.": "future participle",
+    "pfp.": "future passive participle",
+    "pp.": "past passive participle",
+    "ppa.": "past active participle",
+    "ppft.": "perfect participle",
+    "ppr.": "present participle",
+    "pr.": "present",
+    "prép.": "preposition",
+    "priv.": "privative",
+    "prk.": "Prakrit",
+    "pron.": "pronoun",
+    "ps.": "passive",
+    "pt.": "Portuguese",
+    "qqc.": "something",
+    "qqf.": "sometimes",
+    "qqn.": "someone",
+    "red.": "reduplication",
+    "refl.": "reflexive",
+    "rel.": "relative",
+    "rét.": "retroflex",
+    "s.": "singular",
+    "sc.": "science",
+    "schol.": "scholarly",
+    "sec.": "secondary",
+    "sem.": "semantic",
+    "sg.": "singular",
+    "socio.": "sociological",
+    "spéc.": "specific",
+    "subj.": "subjunctive",
+    "subord.": "subordinating",
+    "superl.": "superlative",
+    "syn.": "synonymous",
+    "syntax.": "syntactic",
+    "t.": "transitive",
+    "tech.": "technical",
+    "temp.": "temporal",
+    "théol.": "theological",
+    "topo.": "topography",
+    "top.": "topic",
+    "tr.": "transitive",
+    "un.": "union",
+    "univ.": "universal",
+    "v.": "verb",
+    "véd.": "Vedic",
+    "voc.": "vocative",
+    "vol.": "volitional",
+    "vr.": "vṛddhi",
+    "ZOO.": "zoology",
+}
+
+COMPOUND_INDICATORS = {
+    "ic.": "in composition",
+    "ifc.": "at the end of a compound",
+    "iic.": "at the beginning of a compound",
+    "iiv.": "at the beginning of a verb",
+}
+
+
+def expand_abbreviation(abbr: str, context: str = "") -> str:
+    """Expand a French abbreviation to English with optional context."""
+    abbr = abbr.strip().lower()
+
+    # Check all abbreviation dictionaries
+    if abbr in GRAMMATICAL_ABBREVIATIONS:
+        return GRAMMATICAL_ABBREVIATIONS[abbr]
+    elif abbr in COMPOUND_INDICATORS:
+        return COMPOUND_INDICATORS[abbr]
+
+    # Return original if not found
+    return abbr
+
 
 class SimpleHeritageParser:
     """Simple parser for Heritage Platform morphology responses"""
@@ -116,6 +289,9 @@ class SimpleHeritageParser:
             if pattern_match:
                 analysis["word"] = pattern_match.group(1)
                 analysis["analysis"] = pattern_match.group(2)
+                # Expand abbreviations in the analysis
+                expanded_analysis = expand_abbreviation(analysis["analysis"])
+                analysis["expanded_analysis"] = expanded_analysis
 
             # Look for bold elements (might contain the word)
             bold_elements = table.find_all("b")
@@ -157,7 +333,7 @@ class SimpleHeritageParser:
 
         # Next, handle generic tables with word in first column, analysis in second column
         all_tables = soup.find_all("table")
-        for table in all_tables:
+        for i, table in enumerate(all_tables, start=1):
             if table in pattern_tables:
                 continue
             rows = table.find_all("tr")
@@ -174,44 +350,42 @@ class SimpleHeritageParser:
                         if parsed:
                             # Extract analyses from first solution
                             first = parsed[0]
-                            solutions.append(
-                                {
-                                    "type": "morphological_analysis",
-                                    "solution_number": len(solutions) + 1,
-                                    "analyses": first.get("analyses", []),
-                                    "total_words": first.get("total_words", 1),
-                                    "score": 0.0,
-                                    "metadata": {},
-                                }
-                            )
+                            # MorphologyReducer returns dict, so access directly
+                            if isinstance(first, dict):
+                                solution = first
+                                solutions.append(solution)
                     except Exception:
-                        # Fallback: create a minimal analysis entry
-                        analysis = {
-                            "word": word,
-                            "lemma": word,
-                            "pos": "unknown",
-                            "case": None,
-                            "gender": None,
-                            "number": None,
-                            "person": None,
-                            "tense": None,
-                            "voice": None,
-                            "mood": None,
-                            "stem": "",
-                            "meaning": [],
-                            "lexicon_refs": [],
-                            "confidence": 0.0,
+                        # If parsing fails, create basic solution
+                        solution = {
+                            "type": "morphological_analysis",
+                            "solution_number": i,
+                            "analyses": [
+                                {
+                                    "word": word,
+                                    "lemma": word,
+                                    "root": "",
+                                    "pos": "unknown",
+                                    "case": None,
+                                    "gender": None,
+                                    "number": None,
+                                    "person": None,
+                                    "tense": None,
+                                    "voice": None,
+                                    "mood": None,
+                                    "stem": "",
+                                    "meaning": [],
+                                    "lexicon_refs": [],
+                                    "confidence": 0.0,
+                                    "analysis": analysis_code,
+                                    # Expand abbreviations in the analysis
+                                    "expanded_analysis": expand_abbreviation(analysis_code),
+                                }
+                            ],
+                            "total_words": 1,
+                            "score": 0.0,
+                            "metadata": {},
                         }
-                        solutions.append(
-                            {
-                                "type": "morphological_analysis",
-                                "solution_number": len(solutions) + 1,
-                                "analyses": [analysis],
-                                "total_words": 1,
-                                "score": 0.0,
-                                "metadata": {},
-                            }
-                        )
+                        solutions.append(solution)
 
         return solutions
 

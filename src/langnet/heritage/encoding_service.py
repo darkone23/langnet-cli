@@ -383,6 +383,88 @@ class EncodingService:
         return result.lower()
 
 
+class SmartVelthuisNormalizer:
+    """Smart normalization for Velthuis input variations."""
+
+    # Common Sanskrit vowel patterns
+    VOWEL_PATTERNS = {
+        r"\ba([^a]|$)": "a",  # Short a at word beginning or before consonant
+        r"aa\b": "aa",  # Long aa at word end
+        r"\bi([^i]|$)": "i",  # Short i
+        r"ii\b": "ii",  # Long ii at word end
+        r"\bu([^u]|$)": "u",  # Short u
+        r"uu\b": "uu",  # Long uu at word end
+    }
+
+    # Common word endings that should be long
+    LONG_ENDING_PATTERNS = [
+        ("a$", "aa"),  # Final a often should be aa
+        ("i$", "ii"),  # Final i often should be ii
+        ("u$", "uu"),  # Final u often should be uu
+    ]
+
+    @classmethod
+    def normalize(cls, text: str, aggressive: bool = False) -> list[str]:
+        """Generate normalized Velthuis variants for a given input.
+
+        Returns list of variants to try, ordered by likelihood.
+        """
+        variants = [text]  # Original first
+
+        # Apply common corrections
+        corrected = cls._apply_common_corrections(text)
+        if corrected != text:
+            variants.append(corrected)
+
+        # Try long vowel variants for word endings
+        if aggressive:
+            long_variants = cls._generate_long_vowel_variants(text)
+            variants.extend(long_variants)
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_variants = []
+        for v in variants:
+            if v not in seen:
+                seen.add(v)
+                unique_variants.append(v)
+
+        return unique_variants
+
+    @classmethod
+    def _apply_common_corrections(cls, text: str) -> str:
+        """Apply common Velthuis corrections."""
+        corrections = [
+            ("sh", "z"),  # sha → za
+            ("Sh", "S"),  # Sha → Sa (retroflex)
+            (".a", ".a"),  # Preserve avagraha
+            ("RR", "RR"),  # Preserve vowel r
+            ("LL", "LL"),  # Preserve vowel l
+        ]
+
+        result = text
+        for wrong, right in corrections:
+            result = result.replace(wrong, right)
+
+        return result
+
+    @classmethod
+    def _generate_long_vowel_variants(cls, text: str) -> list[str]:
+        """Generate variants with long vowel endings."""
+        variants = []
+
+        for pattern, replacement in cls.LONG_ENDING_PATTERNS:
+            if re.search(pattern, text):
+                long_version = re.sub(pattern, replacement, text)
+                variants.append(long_version)
+
+        # Also try adding H (visarga) for nouns
+        if text and text[-1].isalpha():
+            variants.append(text + "H")
+
+        return variants
+
+
 class HeritageCdslBridge:
     """Bridge between Heritage Platform and CDSL using proper encoding conversion"""
 

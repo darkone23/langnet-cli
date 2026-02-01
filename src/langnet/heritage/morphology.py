@@ -1,5 +1,4 @@
 import re
-import time
 from typing import Any
 
 import structlog
@@ -170,7 +169,7 @@ class HeritageMorphologyService:
 
     def __init__(self, config=None):
         self.config = config
-        self.client = None
+        self.client: HeritageHTTPClient | None = None
         self.parser = MorphologyParser()
 
     def __enter__(self):
@@ -190,6 +189,7 @@ class HeritageMorphologyService:
         encoding: str | None = None,
         max_solutions: int | None = None,
         timeout: int | None = None,
+        use_fallback: bool = True,
     ) -> HeritageMorphologyResult:
         """
         Perform morphological analysis on Sanskrit text
@@ -199,29 +199,26 @@ class HeritageMorphologyService:
             encoding: Text encoding (velthuis, itrans, slp1). Default: velthuis
             max_solutions: Maximum number of solutions to return
             timeout: Request timeout in seconds
+            use_fallback: Whether to try long vowel variants if initial query fails
 
         Returns:
             HeritageMorphologyResult with structured analysis
         """
-        start_time = time.time()
-
         try:
             if self.client is None:
                 self.client = HeritageHTTPClient(self.config)
                 self.client.__enter__()
 
-            params = HeritageParameterBuilder.build_morphology_params(
+            # Type assertion: client is now guaranteed to be initialized
+            assert self.client is not None
+
+            # Try original query first
+            result = self._analyze_with_fallback(
                 text=text,
                 encoding=encoding or self.config.default_encoding if self.config else "velthuis",
                 max_solutions=max_solutions or (self.config.max_solutions if self.config else 10),
-            )
-
-            html_content = self.client.fetch_cgi_script("sktreader", params=params, timeout=timeout)
-
-            parsed_data = self.parser.parse(html_content)
-
-            result = self._build_morphology_result(
-                text=text, parsed_data=parsed_data, processing_time=time.time() - start_time
+                timeout=timeout,
+                use_fallback=use_fallback,
             )
 
             logger.info(
@@ -229,6 +226,7 @@ class HeritageMorphologyService:
                 input_text=text,
                 total_solutions=result.total_solutions,
                 processing_time=round(result.processing_time, 3),
+                fallback_used=getattr(result.metadata, "fallback_used", False),
             )
 
             return result
@@ -236,6 +234,95 @@ class HeritageMorphologyService:
         except Exception as e:
             logger.error("Morphology analysis failed", text=text, error=str(e))
             raise HeritageAPIError(f"Morphology analysis failed: {e}")
+
+    def _analyze_with_fallback(
+        self,
+        text: str,
+        encoding: str,
+        max_solutions: int,
+        timeout: int | None,
+        use_fallback: bool,
+    ) -> HeritageMorphologyResult:
+        """Try original query, with fallback to long vowel variants if needed."""
+
+        # Client is guaranteed to be initialized by calling method
+        assert self.client is not None, (
+            "Client must be initialized before calling _analyze_with_fallback"
+        )
+
+        # Try original query
+        params = HeritageParameterBuilder.build_morphology_params(
+            text=text,
+            encoding=encoding,
+            max_solutions=max_solutions,
+        )
+        html_content = self.client.fetch_cgi_script("sktreader", params=params, timeout=timeout)
+
+        # Check if result indicates unknown/error
+        if use_fallback and self._is_unknown_result(html_content):
+            # Generate long vowel variants and try them
+            variants = self._generate_long_vowel_variants(text)
+            for variant in variants:
+                try:
+                    fallback_params = HeritageParameterBuilder.build_morphology_params(
+                        text=variant,
+                        encoding=encoding,
+                        max_solutions=max_solutions,
+                    )
+                    fallback_params = HeritageParameterBuilder.build_morphology_params(
+                        text=variant,
+                        encoding=encoding,
+                        max_solutions=max_solutions,
+                    )
+                    fallback_html = self.client.fetch_cgi_script(
+                        "sktreader", params=fallback_params, timeout=timeout
+                    )
+
+                    if not self._is_unknown_result(fallback_html):
+                        # Fallback worked, parse and return with metadata
+                        parsed_data = self.parser.parse(fallback_html)
+                        result = self._build_morphology_result(
+                            text=text, parsed_data=parsed_data, processing_time=0.0
+                        )
+                        # Add fallback metadata
+                        if not result.metadata:
+                            result.metadata = {}
+                        result.metadata.update(
+                            {
+                                "fallback_used": True,
+                                "original_input": text,
+                                "suggested_input": variant,
+                            }
+                        )
+                        return result
+
+                except Exception:
+                    continue
+
+        # If no fallback or fallback didn't work, parse original result
+        parsed_data = self.parser.parse(html_content)
+        result = self._build_morphology_result(
+            text=text, parsed_data=parsed_data, processing_time=0.0
+        )
+        return result
+
+    def _is_unknown_result(self, html_content: str) -> bool:
+        """Check if HTML result indicates unknown/error analysis."""
+        return "{?}" in html_content or "grey_back" in html_content
+
+    def _generate_long_vowel_variants(self, text: str) -> list[str]:
+        """Generate common long vowel variants for fallback."""
+        variants = []
+
+        # Common Sanskrit word endings that often need long vowels
+        if text.endswith("i") and len(text) > 1:
+            variants.append(text + "i")  # agni → agnii
+        if text.endswith("a") and len(text) > 1:
+            variants.append(text + "a")  # sita → siitaa
+        if text.endswith("u") and len(text) > 1:
+            variants.append(text + "u")  # guru → guruu
+
+        return variants
 
     def _build_morphology_result(
         self, text: str, parsed_data: dict[str, Any], processing_time: float

@@ -87,7 +87,7 @@ MAX_QUERY_LENGTH = 20
 MAX_ASCII_CODE = 127
 DEVANAGARI_START = 0x0900
 DEVANAGARI_END = 0x097F
-MAX_SIMPLE_WORD_LENGTH = 10
+MAX_SIMPLE_WORD_LENGTH = 6  # Reduced from 10 to ensure common words use sktsearch
 SIMPLE_ENCODINGS = {Encoding.ASCII.value, Encoding.SLP1.value}
 
 
