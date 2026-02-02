@@ -22,7 +22,7 @@ For detailed help on a command:
 import socket
 import sys
 from pathlib import Path
-from typing import cast, Optional, Dict, Any, List, Union
+from typing import cast
 from urllib.parse import urlparse
 
 import click
@@ -36,6 +36,9 @@ from langnet.cache.core import QueryCache, get_cache_path
 from langnet.cologne.core import CdslIndex, CdslIndexBuilder, batch_build
 from langnet.config import config
 from langnet.foster.render import render_foster_codes
+from langnet.indexer.core import IndexType
+from langnet.indexer.cts_urn_indexer import CtsUrnIndexer
+from langnet.indexer.utils import get_index_manager
 from langnet.logging import setup_logging
 
 BODY_PREVIEW_LENGTH = 100
@@ -760,7 +763,7 @@ def explain_citation(abbreviation: str, api_url: str):
     default="table",
     help="Output format: json for raw output, table for formatted display",
 )
-def list_citations(lang: str, word: str, api_url: str, output: str):
+def list_citations(lang: str, word: str, api_url: str, output: str):  # noqa: C901, PLR0912
     """List all citations for a word query.
 
     Shows all citations found when looking up a word in the classical language.
@@ -850,13 +853,6 @@ def list_citations(lang: str, word: str, api_url: str, output: str):
 if __name__ == "__main__":
     main()
 
-# Import and add indexer commands
-from langnet.indexer.cli import indexer
-from langnet.indexer.cts_urn_indexer import CtsUrnIndexer
-from langnet.indexer.core import IndexType
-from langnet.indexer.utils import get_index_manager
-from pathlib import Path
-
 
 @main.group()
 def indexer():
@@ -877,7 +873,7 @@ def indexer():
 @click.option("--force", is_flag=True, help="Force rebuild even if index exists")
 @click.option("--config-dir", type=click.Path(), help="Configuration directory")
 def build_cts_index(
-    source: str, output: Optional[str], overwrite: bool, force: bool, config_dir: Optional[str]
+    source: str, output: str | None, overwrite: bool, force: bool, config_dir: str | None
 ):
     """Build CTS URN reference index."""
     source_path = Path(source)
@@ -897,7 +893,7 @@ def build_cts_index(
             click.echo(f"Index already exists at {output_path}. Use --overwrite to replace.")
             return 1
 
-    click.echo(f"Building CTS URN index...")
+    click.echo("Building CTS URN index...")
     click.echo(f"Source: {source_path}")
     click.echo(f"Output: {output_path}")
 
@@ -919,9 +915,9 @@ def build_cts_index(
 
             # Show stats
             stats = indexer_obj.get_stats()
-            click.echo(
-                f"📊 Stats: {stats.get('work_count', 'N/A')} works, {stats.get('size_mb', 0):.2f} MB"
-            )
+            work_count = stats.get("work_count", "N/A")
+            size_mb = stats.get("size_mb", 0)
+            click.echo(f"📊 Stats: {work_count} works, {size_mb:.2f} MB")
         else:
             click.echo("❌ Failed to build CTS URN index")
             return 1
@@ -938,7 +934,7 @@ def build_cts_index(
 @click.option("--name", "-n", default="cts_urn", help="Index name")
 def stats_cts(name: str):
     """Show CTS URN index statistics."""
-    from langnet.indexer.utils import IndexManager
+    from langnet.indexer.utils import IndexManager  # noqa: PLC0415
 
     manager = IndexManager()
     stats = manager.get_index_stats(name)
@@ -960,7 +956,7 @@ def stats_cts(name: str):
 @indexer.command("list-indexes")
 def list_indexes():
     """List all registered indexes."""
-    from langnet.indexer.utils import IndexManager
+    from langnet.indexer.utils import IndexManager  # noqa: PLC0415
 
     manager = IndexManager()
     indexes = manager.list_indexes()
@@ -981,7 +977,7 @@ def list_indexes():
 @click.option("--language", "-l", default="lat", help="Language code")
 def query_cts(abbrev: str, language: str):
     """Query CTS URN index for abbreviation matches."""
-    from langnet.indexer.utils import IndexManager
+    from langnet.indexer.utils import IndexManager  # noqa: PLC0415
 
     manager = IndexManager()
     config = manager.get_index_config("cts_urn")
@@ -1020,7 +1016,7 @@ def query_cts(abbrev: str, language: str):
 @click.option("--fix", is_flag=True, help="Attempt to fix issues")
 def validate_cts(fix: bool):
     """Validate CTS URN index integrity."""
-    from langnet.indexer.utils import IndexManager
+    from langnet.indexer.utils import IndexManager  # noqa: PLC0415
 
     manager = IndexManager()
     config = manager.get_index_config("cts-urn")

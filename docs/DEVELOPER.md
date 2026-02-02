@@ -151,7 +151,7 @@ When adding support for new dictionaries, morphological analyzers, or lexicon so
 - **Type checker**: `ty check`
 - **Linter**: `ruff check`
 
-See [docs/TODO.md](docs/TODO.md) for detailed roadmap and current priorities.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed roadmap and current priorities.
 
 ## Code Style Tools
 
@@ -161,32 +161,11 @@ See [docs/TODO.md](docs/TODO.md) for detailed roadmap and current priorities.
 
 ## AI-Assisted Development
 
-This project uses a sophisticated multi-model AI development system with 6 specialized personas:
-
-- **The Architect**: System design and planning (deepseek/deepseek-v3.2)
-- **The Sleuth**: Debugging and root cause analysis (z-ai/glm-4.7)
-- **The Artisan**: Optimization and style improvements (minimax/minimax-m2.1)
-- **The Coder**: Feature building and testing (z-ai/glm-4.5-air)
-- **The Scribe**: Documentation and comments (xiaomi/mimo-v2-flash)
-- **The Auditor**: Code review and security (openai/gpt-oss-120b)
-
-### Using AI Personas
-
-Use the `@agentname` mention syntax to route tasks:
-
-```markdown
-@architect "Design a new caching system for the Sanskrit dictionary"
-@sleuth "Debug the memory leak in the DuckDB cache"
-@coder "Write comprehensive tests for the new module"
-@auditor "Check for security vulnerabilities"
-@artisan "Optimize the hot path in the cache module"
-@scribe "Document the new API endpoints"
-```
-
-For complete AI development documentation, see:
-- [docs/opencode/MULTI_MODEL_GUIDE.md](docs/opencode/MULTI_MODEL_GUIDE.md)
-- [docs/opencode/LLM_PROVIDER_GUIDE.md](docs/opencode/LLM_PROVIDER_GUIDE.md)
-- [`.opencode/skills/README.md`](../.opencode/skills/README.md)
+This project uses a sophisticated multi-model AI development system. For complete AI development documentation, see:
+- [AGENTS.md](../AGENTS.md) - AI persona instructions and workflows
+- [docs/opencode/MULTI_MODEL_GUIDE.md](docs/opencode/MULTI_MODEL_GUIDE.md) - AI-assisted development workflow
+- [docs/opencode/LLM_PROVIDER_GUIDE.md](docs/opencode/LLM_PROVIDER_GUIDE.md) - Model selection strategies
+- [`.opencode/skills/README.md`](../.opencode/skills/README.md) - Skill documentation
 
 ## Using Opencode
 

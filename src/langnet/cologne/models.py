@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from langnet.citation.models import Citation, CitationCollection, CitationType
+from langnet.citation.models import CitationCollection
 
 
 @dataclass

@@ -4,14 +4,14 @@ Canonical Query models for normalization system.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, List
+from typing import Any
 
 # Import citation models
 try:
     from ..citation.models import Citation
 except ImportError:
     # Fallback for when citation module is not available
-    Citation = None
+    Citation: type = None  # type: ignore[assignment]
 
 
 class Language(str, Enum):
@@ -53,7 +53,7 @@ class CanonicalQuery:
     alternate_forms: list[str] = field(default_factory=list)
 
     # Citations and references
-    citations: List[Any] = field(default_factory=list)
+    citations: list[Any] = field(default_factory=list)
 
     # Metadata
     detected_encoding: Encoding = Encoding.UNKNOWN

@@ -3,13 +3,14 @@ Indexer utilities and common functionality.
 """
 
 import json
-import duckdb
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, asdict
 import logging
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
 
-from .core import IndexType, IndexStatus
+import duckdb
+
+from .core import IndexStatus, IndexType
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +25,9 @@ class IndexStats:
     entry_count: int
     build_date: str
     status: IndexStatus
-    last_accessed: Optional[str] = None
+    last_accessed: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)
 
@@ -38,14 +39,14 @@ class IndexManager:
         self.config_dir = config_dir
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.indexes_file = config_dir / "indexes.json"
-        self._indexes: Dict[str, Dict[str, Any]] = {}
+        self._indexes: dict[str, dict[str, Any]] = {}
         self._load_indexes()
 
     def _load_indexes(self) -> None:
         """Load index configurations from disk."""
         try:
             if self.indexes_file.exists():
-                with open(self.indexes_file, "r") as f:
+                with open(self.indexes_file) as f:
                     self._indexes = json.load(f)
                 logger.info(f"Loaded {len(self._indexes)} index configurations")
         except Exception as e:
@@ -62,7 +63,7 @@ class IndexManager:
             logger.error(f"Error saving indexes: {e}")
 
     def register_index(
-        self, name: str, index_type: IndexType, path: Path, config: Optional[Dict[str, Any]] = None
+        self, name: str, index_type: IndexType, path: Path, config: dict[str, Any] | None = None
     ) -> None:
         """Register a new index."""
         self._indexes[name] = {
@@ -75,7 +76,7 @@ class IndexManager:
         self._save_indexes()
         logger.info(f"Registered index: {name}")
 
-    def get_index_config(self, name: str) -> Optional[Dict[str, Any]]:
+    def get_index_config(self, name: str) -> dict[str, Any] | None:
         """Get index configuration."""
         if name in self._indexes:
             self._indexes[name]["last_accessed"] = str(Path().cwd())
@@ -83,11 +84,11 @@ class IndexManager:
             return self._indexes[name]
         return None
 
-    def list_indexes(self) -> List[Dict[str, Any]]:
+    def list_indexes(self) -> list[dict[str, Any]]:
         """List all registered indexes."""
         return list(self._indexes.values())
 
-    def get_index_stats(self, name: str) -> Optional[IndexStats]:
+    def get_index_stats(self, name: str) -> IndexStats | None:
         """Get statistics for a specific index."""
         config = self.get_index_config(name)
         if not config:

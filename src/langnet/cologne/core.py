@@ -90,7 +90,7 @@ def parse_batch(args) -> tuple[list, list]:
 
 class CdslIndexBuilder:
     @staticmethod
-    def build(  # noqa: PLR0913, PLR0915 - 6 params and 54 statements are appropriate for CLI-facing database indexing
+    def build(
         dict_dir: Path,
         output_db: Path,
         dict_id: str,

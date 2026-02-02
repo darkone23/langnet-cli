@@ -2,16 +2,20 @@
 CTS URN Indexer for classical text reference resolution.
 """
 
-import duckdb
-import re
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, field
 import logging
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import duckdb
 
 from .core import IndexerBase, IndexStatus
 
 logger = logging.getLogger(__name__)
+
+ENTRY_TYPE_MARKER = 0x10
+MIN_TITLE_LENGTH = 4
 
 
 def _clean_author_name(raw_name: str) -> str:
@@ -56,7 +60,7 @@ class AuthorWorkEntry:
 
 
 class CtsUrnIndexer(IndexerBase):
-    def __init__(self, output_path: Path, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, output_path: Path, config: dict[str, Any] | None = None):
         super().__init__(output_path, config)
         self.source_dir = (
             Path(config.get("source_dir", "/home/nixos/Classics-Data"))
@@ -65,8 +69,8 @@ class CtsUrnIndexer(IndexerBase):
         )
         self.force_rebuild = config.get("force_rebuild", False) if config else False
         self.batch_size = config.get("batch_size", 1000) if config else 1000
-        self._entries: List[AuthorWorkEntry] = []
-        self._connection: Optional[duckdb.DuckDBPyConnection] = None
+        self._entries: list[AuthorWorkEntry] = []
+        self._connection: duckdb.DuckDBPyConnection | None = None
 
     def build(self) -> bool:
         try:
@@ -113,9 +117,9 @@ class CtsUrnIndexer(IndexerBase):
 
         logger.info(f"Parsed {len(self._entries)} author-work entries total")
 
-    def _scan_idt_directory(self, data_dir: Path, is_greek: bool) -> List[AuthorWorkEntry]:
+    def _scan_idt_directory(self, data_dir: Path, is_greek: bool) -> list[AuthorWorkEntry]:
         """Scan directory for .idt files and parse them."""
-        works: List[AuthorWorkEntry] = []
+        works: list[AuthorWorkEntry] = []
 
         for idt_path in sorted(data_dir.glob("*.idt")):
             try:
@@ -169,7 +173,7 @@ class CtsUrnIndexer(IndexerBase):
 
         return works
 
-    def _parse_auth_file(self, auth_file: Path) -> Dict[str, Any]:
+    def _parse_auth_file(self, auth_file: Path) -> dict[str, Any]:
         authors = {}
         try:
             with open(auth_file, "rb") as f:
@@ -188,11 +192,10 @@ class CtsUrnIndexer(IndexerBase):
                 logger.error(f"Unknown data format in {auth_file}")
                 return authors
             matches = re.findall(pattern, data)
-            for num, name, topic in matches:
+            for num, raw_name, raw_topic in matches:
                 author_id = f"{prefix}{num.decode('ascii')}"
-                name = name.decode("latin-1").strip()
-                topic = topic.decode("latin-1").strip()
-                # Clean the author name
+                name = raw_name.decode("latin-1").strip()
+                topic = raw_topic.decode("latin-1").strip()
                 clean_name = _clean_author_name(name)
                 authors[author_id] = {
                     "name": clean_name,
@@ -206,8 +209,8 @@ class CtsUrnIndexer(IndexerBase):
         logger.info(f"Parsed {len(authors)} authors from {auth_file}")
         return authors
 
-    def _parse_idt_files(self, auth_file: Path, authors: Dict[str, Any]) -> List[Dict[str, Any]]:
-        works: List[Dict[str, Any]] = []
+    def _parse_idt_files(self, auth_file: Path, authors: dict[str, Any]) -> list[dict[str, Any]]:
+        works: list[dict[str, Any]] = []
         data_dir = auth_file.parent
         is_greek = "tlg" in str(data_dir).lower()
         for idt_path in data_dir.glob("*.idt"):
@@ -268,14 +271,14 @@ class CtsUrnIndexer(IndexerBase):
             if i + 8 >= len(data):
                 break
 
-            if data[i] == 0x10:
+            if data[i] == ENTRY_TYPE_MARKER:
                 entry_type = data[i + 1] if i + 1 < len(data) else 0
                 title_len = data[i + 2] if i + 2 < len(data) else 0
 
                 if i + 3 + title_len <= len(data):
                     title_bytes = data[i + 3 : i + 3 + title_len]
                     title = title_bytes.decode("latin-1", errors="ignore").strip()
-                    if title and len(title) >= 4:
+                    if title and len(title) >= MIN_TITLE_LENGTH:
                         if entry_type == 0:
                             # Clean author name from idt file
                             author_name = _clean_author_name(title)
@@ -303,7 +306,8 @@ class CtsUrnIndexer(IndexerBase):
         self._batch_insert_duckdb()
         self._create_indexes_duckdb()
         self._connection.execute(
-            "INSERT INTO indexer_config (key, value) VALUES ('format', 'duckdb'), ('build_date', CURRENT_TIMESTAMP), ('entry_count', ?)",
+            "INSERT INTO indexer_config (key, value) VALUES "
+            "('format', 'duckdb'), ('build_date', CURRENT_TIMESTAMP), ('entry_count', ?)",
             [len(self._entries)],
         )
         logger.info("DuckDB index built successfully")
@@ -312,16 +316,20 @@ class CtsUrnIndexer(IndexerBase):
         if not self._connection:
             return
         self._connection.execute(
-            """CREATE TABLE author_index (author_id TEXT PRIMARY KEY, author_name TEXT NOT NULL, language TEXT, namespace TEXT)"""
+            "CREATE TABLE author_index (author_id TEXT PRIMARY KEY, "
+            "author_name TEXT NOT NULL, language TEXT, namespace TEXT)"
         )
         self._connection.execute(
-            """CREATE TABLE works (canon_id TEXT, author_id TEXT, work_title TEXT, work_reference TEXT, cts_urn TEXT, FOREIGN KEY (author_id) REFERENCES author_index(author_id))"""
+            "CREATE TABLE works (canon_id TEXT, author_id TEXT, work_title TEXT, "
+            "work_reference TEXT, cts_urn TEXT, "
+            "FOREIGN KEY (author_id) REFERENCES author_index(author_id))"
         )
+        self._connection.execute("CREATE TABLE indexer_config (key TEXT PRIMARY KEY, value TEXT)")
         self._connection.execute(
-            """CREATE TABLE indexer_config (key TEXT PRIMARY KEY, value TEXT)"""
-        )
-        self._connection.execute(
-            """CREATE INDEX idx_works_author ON works(author_id); CREATE INDEX idx_works_reference ON works(work_reference); CREATE INDEX idx_works_title ON works(work_title); CREATE INDEX idx_works_urn ON works(cts_urn);"""
+            "CREATE INDEX idx_works_author ON works(author_id); "
+            "CREATE INDEX idx_works_reference ON works(work_reference); "
+            "CREATE INDEX idx_works_title ON works(work_title); "
+            "CREATE INDEX idx_works_urn ON works(cts_urn);"
         )
 
     def _batch_insert_duckdb(self) -> None:
@@ -377,7 +385,7 @@ class CtsUrnIndexer(IndexerBase):
         logger.info(f"Validation passed: {author_count} authors, {work_count} works")
         return True
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         stats = {
             "type": "cts_urn",
             "format": "duckdb",
@@ -405,16 +413,17 @@ class CtsUrnIndexer(IndexerBase):
 
     def _log_stats(self) -> None:
         stats = self.get_stats()
-        logger.info(
-            f"CTS URN Index Stats: Authors={stats.get('author_count')}, Works={stats.get('work_count')}, Size={stats['size_mb']:.2f} MB"
-        )
+        authors = stats.get("author_count")
+        works = stats.get("work_count")
+        size = stats["size_mb"]
+        logger.info(f"CTS URN Index Stats: Authors={authors}, Works={works}, Size={size:.2f} MB")
 
     def cleanup(self) -> None:
         if self._connection:
             self._connection.close()
             self._connection = None
 
-    def query_abbreviation(self, abbrev: str, language: str = "lat") -> List[str]:
+    def query_abbreviation(self, abbrev: str, language: str = "lat") -> list[str]:
         if not self.is_built():
             return []
         try:

@@ -2,11 +2,13 @@
 Core indexer classes and interfaces.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Any, Optional, List
-import logging
+from typing import Any
+
+import duckdb
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +34,11 @@ class IndexStatus(Enum):
 class IndexerBase(ABC):
     """Base class for all indexers."""
 
-    def __init__(self, output_path: Path, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, output_path: Path, config: dict[str, Any] | None = None):
         self.output_path = Path(output_path)
         self.config = config or {}
         self.status = IndexStatus.NOT_BUILT
-        self._stats: Dict[str, Any] = {}
+        self._stats: dict[str, Any] = {}
 
     @abstractmethod
     def build(self) -> bool:
@@ -49,7 +51,7 @@ class IndexerBase(ABC):
         pass
 
     @abstractmethod
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get index statistics."""
         pass
 
@@ -71,8 +73,6 @@ class IndexerBase(ABC):
         if not self.output_path.exists():
             return False
         try:
-            import duckdb
-
             conn = duckdb.connect(str(self.output_path))
             result = conn.execute("SELECT COUNT(*) FROM author_index").fetchone()
             conn.close()

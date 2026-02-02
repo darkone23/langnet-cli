@@ -15,23 +15,27 @@ Example mappings:
 The mapper uses the DuckDB CTS URN indexer database for authoritative mappings.
 """
 
-import os
-import re
-from typing import Dict, Optional, List, Tuple
-from pathlib import Path
 import logging
+import os
+
+import duckdb
 
 logger = logging.getLogger(__name__)
+
+MIN_AUTHOR_NAME_LENGTH = 3
+MIN_WORK_TITLE_LENGTH = 4
+MIN_ABBREV_LENGTH = 2
+PERSEUS_PART_COUNT = 3
 
 
 class CTSUrnMapper:
     """Maps classical text references to CTS URNs."""
-    def __init__(self, db_path: Optional[str] = None):
 
+    def __init__(self, db_path: str | None = None):
         self.db_path = db_path
         self._db_conn = None
-        self._author_cache: Optional[Dict[str, Tuple[str, str]]] = None
-        self._work_cache: Optional[Dict[str, Tuple[str, str, str]]] = None
+        self._author_cache: dict[str, tuple[str, str]] | None = None
+        self._work_cache: dict[str, tuple[str, str, str]] | None = None
 
         self.namespace_to_language = {
             "greekLit": "grc",
@@ -40,7 +44,7 @@ class CTSUrnMapper:
             "phi": "lat",
         }
 
-    def _get_db_path(self) -> Optional[str]:
+    def _get_db_path(self) -> str | None:
         """Get the database path, checking common locations."""
         if self.db_path:
             return self.db_path
@@ -65,8 +69,6 @@ class CTSUrnMapper:
         db_path = self._get_db_path()
         if db_path and os.path.exists(db_path):
             try:
-                import duckdb
-
                 self._db_conn = duckdb.connect(db_path)
                 return self._db_conn
             except Exception as e:
@@ -74,7 +76,7 @@ class CTSUrnMapper:
 
         return None
 
-    def _load_author_cache(self) -> Dict[str, Tuple[str, str]]:
+    def _load_author_cache(self) -> dict[str, tuple[str, str]]:
         """Load author mappings from database into cache."""
         if self._author_cache is not None:
             return self._author_cache
@@ -98,7 +100,7 @@ class CTSUrnMapper:
 
                 self._author_cache[normalized] = (author_id, namespace)
 
-                if len(author_name) > 3:
+                if len(author_name) > MIN_AUTHOR_NAME_LENGTH:
                     short = author_name.split()[-1][:4].lower()
                     if short and short not in self._author_cache:
                         self._author_cache[short] = (author_id, namespace)
@@ -108,7 +110,7 @@ class CTSUrnMapper:
 
         return self._author_cache
 
-    def _load_work_cache(self) -> Dict[str, Tuple[str, str, str]]:
+    def _load_work_cache(self) -> dict[str, tuple[str, str, str]]:
         """Load work mappings from database into cache."""
         if self._work_cache is not None:
             return self._work_cache
@@ -122,7 +124,8 @@ class CTSUrnMapper:
         try:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT canon_id, work_title, author_id, namespace FROM works WHERE cts_urn IS NOT NULL"
+                "SELECT canon_id, work_title, author_id, namespace "
+                "FROM works WHERE cts_urn IS NOT NULL"
             )
             for row in cursor.fetchall():
                 canon_id, work_title, author_id, namespace = row
@@ -134,7 +137,7 @@ class CTSUrnMapper:
                     words = normalized_title.split()
                     if words:
                         abbrev = "".join(w[:2] for w in words if w)
-                        if abbrev and len(abbrev) >= 2:
+                        if abbrev and len(abbrev) >= MIN_ABBREV_LENGTH:
                             self._work_cache[abbrev] = (canon_id, author_id, namespace)
 
         except Exception as e:
@@ -147,7 +150,7 @@ class CTSUrnMapper:
         # return abbreviation.lower().replace(".", "").replace(" ", "").strip()
         return abbreviation
 
-    def map_citation_to_urn(self, citation) -> Optional[str]:
+    def map_citation_to_urn(self, citation) -> str | None:
         """
         Map a Citation to a CTS URN.
 
@@ -157,7 +160,7 @@ class CTSUrnMapper:
         Returns:
             CTS URN string or None if mapping not possible
         """
-        from langnet.citation.models import Citation, TextReference, CitationType
+        from langnet.citation.models import Citation, CitationType, TextReference  # noqa: PLC0415
 
         if isinstance(citation, str):
             text_ref = TextReference(type=CitationType.LINE_REFERENCE, text=citation)
@@ -179,24 +182,9 @@ class CTSUrnMapper:
         location = ".".join(location_parts)
 
         urn = self._map_text_to_urn_from_database(author, work, location)
-        if urn:
-            return urn
+        return urn
 
-        namespace = self.AUTHOR_TO_NAMESPACE.get(author)
-
-        if not namespace:
-            return None
-
-        work_id = self.WORK_TO_CTS_ID.get(work)
-        if not work_id:
-            return None
-
-        if location:
-            return f"urn:cts:{namespace}:{work_id}:{location}"
-        else:
-            return f"urn:cts:{namespace}:{work_id}"
-
-    def map_text_to_urn(self, text: str) -> Optional[str]:
+    def map_text_to_urn(self, text: str) -> str | None:
         """
         Map a text reference to CTS URN.
 
@@ -217,9 +205,8 @@ class CTSUrnMapper:
             return self._map_perseus_to_urn(text)
 
         return None
-        
-    def _map_perseus_to_urn(self, perseus_ref: str) -> Optional[str]:
-        
+
+    def _map_perseus_to_urn(self, perseus_ref: str) -> str | None:
         """
         Map Perseus canonical reference to CTS URN.
 
@@ -250,7 +237,7 @@ class CTSUrnMapper:
                 work_part = core
 
             parts = work_part.split(",")
-            if len(parts) != 3:
+            if len(parts) != PERSEUS_PART_COUNT:
                 return None
 
             collection, author_id, work_id = parts
@@ -268,16 +255,16 @@ class CTSUrnMapper:
             work_num = work_id.zfill(3)
 
             if location_part:
-                return f"urn:cts:{namespace}:{prefix_type}{author_num}.{prefix_type}{work_num}:{location_part}"
+                work_urn = f"{prefix_type}{author_num}.{prefix_type}{work_num}"
+                urn = f"urn:cts:{namespace}:{work_urn}:{location_part}"
+                return urn
             else:
                 return f"urn:cts:{namespace}:{prefix_type}{author_num}.{prefix_type}{work_num}"
 
         except Exception:
             return None
 
-    def _map_text_to_urn_from_database(
-        self, author: str, work: str, location: str
-    ) -> Optional[str]:
+    def _map_text_to_urn_from_database(self, author: str, work: str, location: str) -> str | None:
         """Try to map author/work to CTS URN using database."""
         conn = self._get_connection()
         if not conn:
@@ -364,7 +351,6 @@ class CTSUrnMapper:
         Returns:
             List of Citation objects with URNs added
         """
-        from langnet.citation.models import Citation
 
         for citation in citations:
             if citation.references:
@@ -391,10 +377,9 @@ class CTSUrnMapper:
         text = text_ref.text or ""
         parts = text.replace(",", " ").split()
 
-        if len(parts) >= 2:
+        if len(parts) >= MIN_ABBREV_LENGTH:
             author = parts[0]
             work = parts[1]
             return author, work
 
         return "", ""
-

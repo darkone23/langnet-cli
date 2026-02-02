@@ -5,8 +5,8 @@ These tests verify basic functionality of CTS URN mapper
 with real database, focusing on database connectivity and caching.
 """
 
-import unittest
 import sys
+import unittest
 from pathlib import Path
 
 # Add src to path for imports

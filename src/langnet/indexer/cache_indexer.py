@@ -6,7 +6,7 @@ This indexer builds search indexes for optimizing query caches.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 from .core import IndexerBase, IndexStatus
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class CacheIndexer(IndexerBase):
     """Query cache optimization indexer."""
 
-    def __init__(self, output_path: Path, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, output_path: Path, config: dict[str, Any] | None = None):
         super().__init__(output_path, config)
         self.source_dir = (
             Path(config.get("source_dir", "/path/to/cache/data"))
@@ -36,7 +36,7 @@ class CacheIndexer(IndexerBase):
         logger.info("Cache indexer validation not yet implemented")
         return False
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache index statistics."""
         return {
             "type": "cache",

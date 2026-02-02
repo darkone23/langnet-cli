@@ -33,18 +33,13 @@ This repository organises its design and implementation plans under `docs/plans/
 
 ## 🚧 Active Plans (Status: In Progress)
 
-### 1. Citation System (🔄 CRITICAL - API Integration Gap)
-- **Files**: `docs/CITATION_SYSTEM.md`
-- **Status**: 90% complete but critical API integration gap identified
+### 1. Citation System (✅ COMPLETE)
+- **Files**: `docs/plans/active/citation-system/CTS_URN_PLAN.md`
+- **Status**: ✅ COMPLETE - Core functionality implemented
 - **Goal**: Foster's "see the word in the wild" approach with CTS URN support
-- **Priority**: **HIGH** - 1-2 hours to fix API integration
-- **Issue**: `/api/q` endpoint extracts citations but missing `cts_urn` field
-
-### 2. CTS URN System (🔄 IN PROGRESS)
-- **Files**: `docs/CTS_URN_SYSTEM.md`
-- **Status**: Core functionality complete, API integration pending
-- **Goal**: Canonical Text Standard reference system
-- **Priority**: HIGH - Required for citation system completion
+- **Implementation**: `src/langnet/citation/` with models, cts_urn parser, indexer
+- **Tests**: `tests/test_cts_urn_basic.py` passes all tests
+- **API**: Fully integrated with `/api/q` endpoint
 
 ### 3. DICO Scholarship Translation (⏳ PENDING)
 - **Files**: `DICO_SCHOLARSHIP_TRANSLATION.md`
@@ -93,19 +88,15 @@ This repository organises its design and implementation plans under `docs/plans/
 
 ### 🔄 Partially Implemented
 - **ASCII Enrichment**: Sanskrit only, Latin/Greek pending
-- **Citation Display**: Basic integration, needs enhancement (CRITICAL GAP)
 - **Universal Schema**: Design complete, implementation pending
 
 ### ⏳ Not Started
 - **Fuzzy Search**: Critical for user experience
 - **DICO Integration**: French-Sanskrit dictionary
-- **CTS URN System**: Scholarly text references (needs API fix)
 - **Cross-Lexicon Etymology**: Advanced research feature
 
 ### 🚨 Critical Technical Issues
-1. **Citation System API Gap** - MUST fix immediately (1-2 hours)
-2. **Duplicate Fields in LanguageEngineConfig** - Must fix immediately
-3. **Documentation Cleanup** - ✅ COMPLETED
+1. **Documentation Cleanup** - ✅ COMPLETED
 
 ### 🏗️ Core Dependencies
 - **Sanskrit Heritage Platform**: Required dependency (localhost:48080)
@@ -126,10 +117,8 @@ For detailed roadmap and current priorities, see [docs/ROADMAP.md](../ROADMAP.md
 6. **Archive deprecated plans** - Move to `docs/ARCHIVES/` rather than deleting.
 
 ### 📚 Related Documentation
-- **[docs/CITATION_SYSTEM.md](../CITATION_SYSTEM.md)** - Comprehensive citation system documentation
-- **[docs/CTS_URN_SYSTEM.md](../CTS_URN_SYSTEM.md)** - CTS URN system documentation
-- **[docs/ROADMAP.md](../ROADMAP.md)** - Current roadmap and priorities (consolidated from TODO.md)
-- **[docs/ACTIVE_WORK_SUMMARY.md](ACTIVE_WORK_SUMMARY.md)** - Detailed implementation status
+- **[docs/plans/active/citation-system/CTS_URN_PLAN.md](citation-system/CTS_URN_PLAN.md)** - Citation system documentation
+- **[docs/ROADMAP.md](../ROADMAP.md)** - Current roadmap and priorities
 - **[docs/ARCHIVES/](../ARCHIVES/)** - Historical and deprecated documentation
 
 *Last Updated: February 2, 2026*

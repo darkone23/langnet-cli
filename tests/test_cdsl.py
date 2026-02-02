@@ -6,6 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import cast
 
+from langnet.citation.models import Citation, CitationCollection, CitationType, TextReference
 from langnet.cologne.core import (
     CdslIndex,
     build_dict,
@@ -303,6 +304,16 @@ class TestSanskritDictionaryResponse(unittest.TestCase):
         self.assertEqual(trans.devanagari, "अग्नि")
 
     def test_dictionary_entry_grammatical_fields(self):
+        citation = Citation(
+            references=[
+                TextReference(
+                    type=CitationType.DICTIONARY_ABBREVIATION,
+                    text="L.",
+                    work="MW",
+                    page="1",
+                )
+            ]
+        )
         entry = SanskritDictionaryEntry(
             id="1",
             meaning="fire",
@@ -311,7 +322,7 @@ class TestSanskritDictionaryResponse(unittest.TestCase):
             sanskrit_form="agni/",
             etymology={"type": "verb_root", "root": "ag"},
             grammar_tags={"declension": "A"},
-            references=[{"source": "L.", "type": "lexicon"}],
+            references=CitationCollection(citations=[citation]),
             page_ref="1,1",
         )
 

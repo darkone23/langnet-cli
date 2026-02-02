@@ -248,7 +248,7 @@ class WhitakersWordsChunker:
 
 class WhitakersWords:
     @staticmethod
-    def words(search: list[str]) -> WhitakersWordsResult:  # noqa: C901, PLR0915 - 19 complexity, 52 statements are reasonable for a multi-stage word parsing function
+    def words(search: list[str]) -> WhitakersWordsResult:
         words_chunker = WhitakersWordsChunker(search)
         chunks = words_chunker.get_word_chunks()
         wordlist = []

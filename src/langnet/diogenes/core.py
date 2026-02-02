@@ -11,6 +11,7 @@ import structlog
 from bs4 import BeautifulSoup
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
+
 # from langnet.citation.models import Citation, CitationCollection, CitationType
 
 logger = structlog.get_logger(__name__)
@@ -291,7 +292,6 @@ class DiogenesScraper:
             ref_txt = ref.get_text()
             refs[ref_id] = ref_txt
         if len(refs.items()) > 0:
-
             # converted_citations = []
             # for urn, citation_text in refs.items():
             block["citations"] = refs
@@ -378,9 +378,7 @@ class DiogenesScraper:
             for b in refs_dict.get("blocks", []):
                 if isinstance(b, DiogenesDefinitionBlock):
                     blocks.append(b)
-                elif (
-                    isinstance(b, dict)
-                ):
+                elif isinstance(b, dict):
                     blocks.append(
                         DiogenesDefinitionBlock(
                             entry=b.get("entry", ""),

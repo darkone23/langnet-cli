@@ -5,10 +5,10 @@ This module provides a standardized way to represent citations and references
 across all language backends (Diogenes, CDSL, Heritage Platform, Whitaker's Words).
 """
 
-from enum import Enum
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from enum import Enum
+from typing import Any
 
 
 class CitationType(str, Enum):
@@ -67,34 +67,34 @@ class TextReference:
     text: str  # Original citation text
 
     # Hierarchical text structure
-    work: Optional[str] = None  # Work title (e.g., "Iliad", "Aeneid")
-    author: Optional[str] = None  # Author (e.g., "Homer", "Vergil")
+    work: str | None = None  # Work title (e.g., "Iliad", "Aeneid")
+    author: str | None = None  # Author (e.g., "Homer", "Vergil")
 
     # Location within text
-    book: Optional[str] = None  # Book number (e.g., "1")
-    chapter: Optional[str] = None  # Chapter number (e.g., "3")
-    section: Optional[str] = None  # Section number
-    line: Optional[str] = None  # Line number (e.g., "23")
-    verse: Optional[str] = None  # Verse number
-    page: Optional[str] = None  # Page number (e.g., "127")
-    stanza: Optional[str] = None  # Stanza number
-    canto: Optional[str] = None  # Canto number
+    book: str | None = None  # Book number (e.g., "1")
+    chapter: str | None = None  # Chapter number (e.g., "3")
+    section: str | None = None  # Section number
+    line: str | None = None  # Line number (e.g., "23")
+    verse: str | None = None  # Verse number
+    page: str | None = None  # Page number (e.g., "127")
+    stanza: str | None = None  # Stanza number
+    canto: str | None = None  # Canto number
 
     # Metadata
     numbering_system: NumberingSystem = NumberingSystem.STANDARD
-    edition: Optional[str] = None  # Edition identifier
-    version: Optional[str] = None  # Version/textual variant
-    language: Optional[str] = None  # Language of referenced text
+    edition: str | None = None  # Edition identifier
+    version: str | None = None  # Version/textual variant
+    language: str | None = None  # Language of referenced text
 
     # Resolution
-    url: Optional[str] = None  # Resolvable URL
-    cts_urn: Optional[str] = None  # Canonical Text Service URN
-    doi: Optional[str] = None  # Digital Object Identifier
+    url: str | None = None  # Resolvable URL
+    cts_urn: str | None = None  # Canonical Text Service URN
+    doi: str | None = None  # Digital Object Identifier
 
     # Educational value
-    explanation: Optional[str] = None  # Human-readable explanation
-    context: Optional[str] = None  # Context of reference
-    significance: Optional[str] = None  # Why this reference is important
+    explanation: str | None = None  # Human-readable explanation
+    context: str | None = None  # Context of reference
+    significance: str | None = None  # Why this reference is important
 
     def to_standardized_string(self) -> str:
         """Convert to standardized string format based on type"""
@@ -104,14 +104,13 @@ class TextReference:
             elif self.work and self.book and self.line:
                 return f"{self.work} {self.book}.{self.line}"
 
-        elif self.type == CitationType.DICTIONARY_ABBREVIATION:
-            if self.work and self.page:
-                return f"{self.work} p. {self.page}"
+        elif self.type == CitationType.DICTIONARY_ABBREVIATION and self.work and self.page:
+            return f"{self.work} p. {self.page}"
 
         # Fallback to original text
         return self.text
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization"""
         return {
             "type": self.type.value,
@@ -139,7 +138,7 @@ class TextReference:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "TextReference":
+    def from_dict(cls, data: dict[str, Any]) -> "TextReference":
         """Create from dictionary for deserialization"""
         return cls(
             type=CitationType(data["type"]),
@@ -171,43 +170,43 @@ class TextReference:
 class Citation:
     """Complete citation with metadata about the source"""
 
-    references: List[TextReference] = field(default_factory=list)
+    references: list[TextReference] = field(default_factory=list)
 
     # Source identification
-    abbreviation: Optional[str] = None  # Short form (e.g., "L&S", "GEL")
-    full_name: Optional[str] = None  # Full name (e.g., "Lewis and Short")
-    short_title: Optional[str] = None  # Short title for display
+    abbreviation: str | None = None  # Short form (e.g., "L&S", "GEL")
+    full_name: str | None = None  # Full name (e.g., "Lewis and Short")
+    short_title: str | None = None  # Short title for display
 
     # Source metadata
-    description: Optional[str] = None  # Description of source
-    date: Optional[str] = None  # Publication date (e.g., "1879")
-    publisher: Optional[str] = None  # Publisher
-    place: Optional[str] = None  # Place of publication
-    author: Optional[str] = None  # Author/editor of source
-    editor: Optional[str] = None  # Editor if different from author
+    description: str | None = None  # Description of source
+    date: str | None = None  # Publication date (e.g., "1879")
+    publisher: str | None = None  # Publisher
+    place: str | None = None  # Place of publication
+    author: str | None = None  # Author/editor of source
+    editor: str | None = None  # Editor if different from author
 
     # Language information
-    source_language: Optional[str] = None  # Language of source
-    target_language: Optional[str] = None  # Language of translation/gloss
+    source_language: str | None = None  # Language of source
+    target_language: str | None = None  # Language of translation/gloss
 
     # Context and relationship
-    relationship: Optional[str] = None  # "cf.", "see", "vid.", "compare"
+    relationship: str | None = None  # "cf.", "see", "vid.", "compare"
     confidence: float = 1.0  # Confidence score (0-1)
-    importance: Optional[str] = None  # "primary", "secondary", "cross-reference"
+    importance: str | None = None  # "primary", "secondary", "cross-reference"
 
     # Timestamps
     created_at: datetime = field(default_factory=datetime.now)
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     def add_reference(self, reference: TextReference) -> None:
         """Add a text reference to this citation"""
         self.references.append(reference)
 
-    def get_primary_reference(self) -> Optional[TextReference]:
+    def get_primary_reference(self) -> TextReference | None:
         """Get the primary text reference (first one)"""
         return self.references[0] if self.references else None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization"""
         return {
             "references": [ref.to_dict() for ref in self.references],
@@ -230,7 +229,7 @@ class Citation:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Citation":
+    def from_dict(cls, data: dict[str, Any]) -> "Citation":
         """Create from dictionary for deserialization"""
         references = [TextReference.from_dict(ref) for ref in data.get("references", [])]
 
@@ -280,10 +279,10 @@ class Citation:
 class CitationCollection:
     """Collection of citations with metadata"""
 
-    citations: List[Citation] = field(default_factory=list)
-    query: Optional[str] = None  # Original query that generated these
-    language: Optional[str] = None  # Language of query
-    source: Optional[str] = None  # Which backend provided these
+    citations: list[Citation] = field(default_factory=list)
+    query: str | None = None  # Original query that generated these
+    language: str | None = None  # Language of query
+    source: str | None = None  # Which backend provided these
 
     def add_citation(self, citation: Citation) -> None:
         """Add a citation to the collection"""
@@ -293,7 +292,7 @@ class CitationCollection:
         """Return number of citations in collection"""
         return len(self.citations)
 
-    def filter_by_type(self, citation_type: CitationType) -> List[Citation]:
+    def filter_by_type(self, citation_type: CitationType) -> list[Citation]:
         """Filter citations by type of their primary reference"""
         return [
             citation
@@ -301,11 +300,11 @@ class CitationCollection:
             if citation.references and citation.references[0].type == citation_type
         ]
 
-    def get_dictionary_citations(self) -> List[Citation]:
+    def get_dictionary_citations(self) -> list[Citation]:
         """Get all dictionary abbreviation citations"""
         return self.filter_by_type(CitationType.DICTIONARY_ABBREVIATION)
 
-    def get_text_citations(self) -> List[Citation]:
+    def get_text_citations(self) -> list[Citation]:
         """Get all text reference citations"""
         text_types = [
             CitationType.LINE_REFERENCE,

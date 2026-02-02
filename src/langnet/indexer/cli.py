@@ -4,11 +4,11 @@ Indexer CLI commands for langnet-cli.
 This module provides command-line interface for building and managing search indexes.
 """
 
-import click
-from pathlib import Path
-from typing import Optional
 import logging
 import sys
+from pathlib import Path
+
+import click
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 try:
     from langnet.indexer.core import IndexType
     from langnet.indexer.cts_urn_indexer import CtsUrnIndexer
-    from langnet.indexer.utils import get_index_manager
+    from langnet.indexer.utils import IndexManager, get_index_manager
 except ImportError as e:
     print(f"Import error: {e}")
     print("Please ensure the indexer modules are properly installed")
@@ -24,21 +24,23 @@ except ImportError as e:
 
 logger = logging.getLogger(__name__)
 
+index_manager: IndexManager | None = None  # Global index manager instance
+
 
 # Indexer group - will be added to main CLI
 @click.group()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
 @click.option("--config-dir", type=click.Path(), help="Configuration directory")
-def indexer(verbose: bool, config_dir: Optional[str]):
+def indexer(verbose: bool, config_dir: str | None):
     """Indexer tools for building and managing search indexes."""
     if verbose:
         logging.basicConfig(level=logging.INFO)
 
     # Initialize index manager
     if config_dir:
-        from .utils import IndexManager
+        from .utils import IndexManager  # noqa: PLC0415
 
-        global index_manager
+        global index_manager  # noqa: PLW0603
         index_manager = IndexManager(Path(config_dir))
     else:
         index_manager = get_index_manager()
@@ -68,7 +70,7 @@ def build():
 @click.option("--force", is_flag=True, help="Force rebuild even if index exists")
 @click.option("--config-dir", type=click.Path(), help="Configuration directory")
 def build_cts_urn(
-    source: str, output: Optional[str], overwrite: bool, force: bool, config_dir: Optional[str]
+    source: str, output: str | None, overwrite: bool, force: bool, config_dir: str | None
 ):
     """Build CTS URN reference index."""
     source_path = Path(source)
@@ -88,7 +90,7 @@ def build_cts_urn(
             click.echo(f"Index already exists at {output_path}. Use --overwrite to replace.")
             return 1
 
-    click.echo(f"Building CTS URN index...")
+    click.echo("Building CTS URN index...")
     click.echo(f"Source: {source_path}")
     click.echo(f"Output: {output_path}")
 
@@ -103,15 +105,16 @@ def build_cts_urn(
             click.echo("✅ CTS URN index built successfully!")
 
             # Register the index
+            assert index_manager is not None
             index_manager.register_index(
                 name="cts_urn", index_type=IndexType.CTS_URN, path=output_path, config=config
             )
 
             # Show stats
             stats = indexer.get_stats()
-            click.echo(
-                f"📊 Stats: {stats.get('work_count', 'N/A')} works, {stats.get('size_mb', 0):.2f} MB"
-            )
+            work_count = stats.get("work_count", "N/A")
+            size_mb = stats.get("size_mb", 0)
+            click.echo(f"📊 Stats: {work_count} works, {size_mb:.2f} MB")
         else:
             click.echo("❌ Failed to build CTS URN index")
             return 1
@@ -134,7 +137,7 @@ def stats():
 @click.option("--name", "-n", default="cts_urn", help="Index name")
 def stats_cts_urn(name: str):
     """Show CTS URN index statistics."""
-    from .utils import IndexManager
+    from .utils import IndexManager  # noqa: PLC0415
 
     manager = IndexManager()
     stats = manager.get_index_stats(name)
@@ -156,7 +159,7 @@ def stats_cts_urn(name: str):
 @indexer.command("list")
 def list_indexes():
     """List all registered indexes."""
-    from .utils import IndexManager
+    from .utils import IndexManager  # noqa: PLC0415
 
     manager = IndexManager()
     indexes = manager.list_indexes()
@@ -183,7 +186,7 @@ def query(abbrev: str, type: str, language: str):
         return 1
 
     # Load CTS URN index
-    from .utils import IndexManager
+    from .utils import IndexManager  # noqa: PLC0415
 
     manager = IndexManager()
     config = manager.get_index_config("cts_urn")
@@ -228,7 +231,7 @@ def validate(type: str, fix: bool):
         return 1
 
     # Load CTS URN index
-    from .utils import IndexManager
+    from .utils import IndexManager  # noqa: PLC0415
 
     manager = IndexManager()
     config = manager.get_index_config("cts-urn")
