@@ -4,6 +4,8 @@ Extracted from docs/plans/active/skt/HERITAGE_ABBR.md
 """
 
 GRAMMATICAL_ABBREVIATIONS = {
+    # incomplete compared to the proper pdf document of abbreviations
+    # we lost the corpus names
     "S.": "substantive / noun",
     "SOC.": "society",
     "V.": "verb",

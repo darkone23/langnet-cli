@@ -26,81 +26,8 @@ logger = logging.getLogger(__name__)
 
 class CTSUrnMapper:
     """Maps classical text references to CTS URNs."""
-
-    AUTHOR_TO_NAMESPACE: Dict[str, str] = {
-        "hom": "greekLit",
-        "homer": "greekLit",
-        "verg": "latinLit",
-        "virgil": "latinLit",
-        "cic": "latinLit",
-        "cicero": "latinLit",
-        "plaut": "latinLit",
-        "plautus": "latinLit",
-        "ter": "latinLit",
-        "terence": "latinLit",
-        "hor": "latinLit",
-        "horace": "latinLit",
-        "ov": "latinLit",
-        "ovid": "latinLit",
-        "liv": "latinLit",
-        "livy": "latinLit",
-        "pliny": "latinLit",
-        "quint": "latinLit",
-        "quintilian": "latinLit",
-        "suet": "latinLit",
-        "suetonius": "latinLit",
-        "mart": "latinLit",
-        "martial": "latinLit",
-        "stat": "latinLit",
-        "statius": "latinLit",
-    }
-
-    WORK_TO_CTS_ID: Dict[str, str] = {
-        "il": "tlg0012.tlg001",
-        "od": "tlg0012.tlg002",
-        "aen": "phi1290.phi004",
-        "a": "phi1290.phi004",
-        "georg": "phi1290.phi005",
-        "ecl": "phi1290.phi006",
-        "fin": "phi0473.phi005",
-        "att": "phi0473.phi001",
-        "phil": "phi0473.phi019",
-        "tusc": "phi0473.phi004",
-        "de orat": "phi0473.phi002",
-        "catil": "phi0473.phi010",
-        "verr": "phi0473.phi006",
-        "c": "phi1290.phi008",
-        "s": "phi1290.phi009",
-        "epod": "phi1290.phi007",
-        "ars": "phi1290.phi010",
-        "aa": "phi1290.phi006",
-        "tr": "phi1290.phi001",
-        "met": "phi1290.phi002",
-        "fast": "phi1290.phi003",
-        "ab urbe condita": "phi1291.phi001",
-        "nh": "phi1290.phi002",
-        "inst": "phi1290.phi003",
-        "epigr": "phi1290.phi011",
-        "ach": "phi1290.phi012",
-        "vit": "phi1290.phi013",
-        # Add common full work titles
-        "aeneid": "phi1290.phi004",
-        "metamorphoses": "phi1290.phi002",
-        "odyssey": "tlg0012.tlg002",
-        "iliad": "tlg0012.tlg001",
-    }
-
-    AUTHOR_NAME_VARIANTS: Dict[str, str] = {
-        "vergil": "p.vergiliusmaro",
-        "virgil": "p.vergiliusmaro",
-        "cicero": "m.tulliuscicero",
-        "homer": "homerus",
-        "plato": "plato",
-        "verg": "p.vergiliusmaro",
-        "cic": "m.tulliuscicero",
-    }
-
     def __init__(self, db_path: Optional[str] = None):
+
         self.db_path = db_path
         self._db_conn = None
         self._author_cache: Optional[Dict[str, Tuple[str, str]]] = None
@@ -195,25 +122,20 @@ class CTSUrnMapper:
         try:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT cts_urn, work_title, author_id FROM works WHERE cts_urn IS NOT NULL"
+                "SELECT canon_id, work_title, author_id, namespace FROM works WHERE cts_urn IS NOT NULL"
             )
             for row in cursor.fetchall():
-                cts_urn, work_title, author_id = row
+                canon_id, work_title, author_id, namespace = row
 
-                if cts_urn and "urn:cts:" in cts_urn:
-                    parts = cts_urn.replace("urn:cts:", "").split(":")
-                    if len(parts) >= 2:
-                        work_id = parts[1]
-                        namespace = parts[0]
+                if canon_id:
+                    normalized_title = work_title.lower().replace(" ", "").replace(".", "")
+                    self._work_cache[normalized_title] = (canon_id, author_id, namespace)
 
-                        normalized_title = work_title.lower().replace(" ", "").replace(".", "")
-                        self._work_cache[normalized_title] = (work_id, author_id, namespace)
-
-                        words = normalized_title.split()
-                        if words:
-                            abbrev = "".join(w[:2] for w in words if w)
-                            if abbrev and len(abbrev) >= 2:
-                                self._work_cache[abbrev] = (work_id, author_id, namespace)
+                    words = normalized_title.split()
+                    if words:
+                        abbrev = "".join(w[:2] for w in words if w)
+                        if abbrev and len(abbrev) >= 2:
+                            self._work_cache[abbrev] = (canon_id, author_id, namespace)
 
         except Exception as e:
             logger.debug(f"Error loading work cache: {e}")
@@ -222,35 +144,8 @@ class CTSUrnMapper:
 
     def _normalize_abbreviation(self, abbreviation: str) -> str:
         """Normalize an abbreviation by converting to lowercase and removing periods and spaces."""
-        return abbreviation.lower().replace(".", "").replace(" ", "").strip()
-
-    def _get_namespace_from_work(self, work: str) -> Optional[str]:
-        """Get namespace based on work abbreviation."""
-        normalized_work = self._normalize_abbreviation(work)
-
-        greek_works = {"il", "od"}
-        if normalized_work in greek_works:
-            return "greekLit"
-
-        latin_works = {
-            "aen",
-            "georg",
-            "ecl",
-            "fin",
-            "att",
-            "phil",
-            "c",
-            "s",
-            "nh",
-            "inst",
-            "tib",
-            "epigr",
-            "ach",
-        }
-        if normalized_work in latin_works:
-            return "latinLit"
-
-        return None
+        # return abbreviation.lower().replace(".", "").replace(" ", "").strip()
+        return abbreviation
 
     def map_citation_to_urn(self, citation) -> Optional[str]:
         """
@@ -288,8 +183,6 @@ class CTSUrnMapper:
             return urn
 
         namespace = self.AUTHOR_TO_NAMESPACE.get(author)
-        if not namespace:
-            namespace = self._get_namespace_from_work(work)
 
         if not namespace:
             return None
@@ -309,7 +202,6 @@ class CTSUrnMapper:
 
         Handles multiple formats:
         1. Perseus format: "perseus:abo:tlg,0011,001:911" → "urn:cts:greekLit:tlg0011.tlg001:911"
-        2. Text reference: "Hom. Il. 1.1" or "Cic. Fin. 2, 24" → "urn:cts:..."
 
         Args:
             text: Citation text to map
@@ -321,52 +213,13 @@ class CTSUrnMapper:
             return None
 
         if text.startswith("perseus:abo:"):
+            # diogenes response mapping
             return self._map_perseus_to_urn(text)
 
-        parts = text.replace(",", " ").split()
-        if len(parts) < 2:
-            return None
-
-        author = self._normalize_abbreviation(parts[0])
-
-        location_parts = []
-        work_parts = []
-
-        for i, part in enumerate(parts[1:], 1):
-            if part.isdigit() or (part.replace(".", "", 1).isdigit() and "." in part):
-                location_parts = parts[i:]
-                work_parts = parts[1:i]
-                break
-        else:
-            work_parts = parts[1:]
-            location_parts = []
-
-        work = self._normalize_abbreviation(" ".join(work_parts))
-        original_work_text = " ".join(work_parts)  # Keep original for lookup
-        location = ".".join(location_parts) if location_parts else ""
-
-        urn = self._map_text_to_urn_from_database(author, work, location)
-        if urn:
-            return urn
-
-        namespace = self.AUTHOR_TO_NAMESPACE.get(author)
-        if not namespace:
-            namespace = self._get_namespace_from_work(work)
-
-        if not namespace:
-            return None
-
-        # Try both normalized and original work text for lookup
-        work_id = self.WORK_TO_CTS_ID.get(work) or self.WORK_TO_CTS_ID.get(original_work_text)
-        if not work_id:
-            return None
-
-        if location:
-            return f"urn:cts:{namespace}:{work_id}:{location}"
-        else:
-            return f"urn:cts:{namespace}:{work_id}"
-
+        return None
+        
     def _map_perseus_to_urn(self, perseus_ref: str) -> Optional[str]:
+        
         """
         Map Perseus canonical reference to CTS URN.
 
@@ -545,67 +398,3 @@ class CTSUrnMapper:
 
         return "", ""
 
-
-def get_perseus_to_cts_mapping() -> Dict[str, Optional[str]]:
-    """
-    Get common Perseus to CTS URN mappings.
-
-    Returns:
-        Dictionary mapping Perseus keys to CTS URNs (or None if unmapped)
-    """
-    mapper = CTSUrnMapper()
-
-    return {
-        "perseus:abo:phi,0119,001": mapper.map_text_to_urn("Hom. Il. 1"),
-        "perseus:abo:phi,0119,001:1.1": mapper.map_text_to_urn("Hom. Il. 1.1"),
-        "perseus:abo:phi,0120,001": mapper.map_text_to_urn("Hom. Od. 1"),
-        "perseus:abo:phi,0690,003": mapper.map_text_to_urn("Verg. A. 1"),
-        "perseus:abo:phi,0690,003:1.1": mapper.map_text_to_urn("Verg. A. 1.1"),
-        "perseus:abo:phi,0956,005": mapper.map_text_to_urn("Cic. Fin. 2"),
-        "perseus:abo:phi,0893,002": mapper.map_text_to_urn("Hor. C. 1"),
-    }
-
-
-def resolve_cts_urn(urn: str) -> Optional[str]:
-    """
-    Get the CTS API URL for a given URN.
-
-    Args:
-        urn: CTS URN string
-
-    Returns:
-        URL to resolve the URN or None if invalid
-    """
-    if not urn.startswith("urn:cts:"):
-        return None
-
-    path = urn.replace("urn:cts:", "")
-
-    cts_api_base = "https://cts.perseids.org/api/cts/"
-
-    return f"{cts_api_base}{path}"
-
-
-if __name__ == "__main__":
-    mapper = CTSUrnMapper()
-
-    test_citations = [
-        "Hom. Il. 1.1",
-        "Verg. A. 1.1",
-        "Cic. Fin. 2 24",
-        "Hor. C. 1 17 9",
-        "perseus:abo:tlg,0011,001:911",
-        "perseus:abo:phi,0690,003:1:2",
-        "perseus:abo:phi,0474,043:2:3:6",
-    ]
-
-    print("CTS URN Mapping Examples:")
-    print("-" * 60)
-
-    for citation_text in test_citations:
-        urn = mapper.map_text_to_urn(citation_text)
-        if urn:
-            print(f"{citation_text:35} -> {urn}")
-        else:
-            print(f"{citation_text:35} -> No URN mapping available")
-    print()
