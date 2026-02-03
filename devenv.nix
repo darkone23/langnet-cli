@@ -26,6 +26,7 @@ in
 
     pkgs.ripgrep
     pkgs.fzf
+    pkgs.jq # for the chatbots
 
     # useful language servers
     pkgs.python3Packages.python-lsp-server
