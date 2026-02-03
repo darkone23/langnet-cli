@@ -345,7 +345,9 @@ class LanguageEngine:
                 adapter_registry = LanguageAdapterRegistry()
                 adapter = adapter_registry.get_adapter(lang)
                 unified_result = adapter.adapt(cached_result, lang, word)
-                self.cache.put(lang, word, unified_result)  # Update with structured format
+                # Cache structured entries (convert to dict format for storage)
+                unified_result_dict = self._cattrs_converter.unstructure(unified_result)
+                self.cache.put(lang, word, unified_result_dict)  # Update with structured format
                 return unified_result
             # If cached result is a list of dicts (old format), convert it
             elif (
@@ -356,7 +358,9 @@ class LanguageEngine:
                 adapter_registry = LanguageAdapterRegistry()
                 adapter = adapter_registry.get_adapter(lang)
                 unified_result = adapter.adapt(cached_result, lang, word)
-                self.cache.put(lang, word, unified_result)  # Update with structured format
+                # Cache structured entries (convert to dict format for storage)
+                unified_result_dict = self._cattrs_converter.unstructure(unified_result)
+                self.cache.put(lang, word, unified_result_dict)  # Update with structured format
                 return unified_result
 
         # Get raw backend results
@@ -379,7 +383,173 @@ class LanguageEngine:
         adapter = adapter_registry.get_adapter(lang)
         unified_result = adapter.adapt(raw_result, lang, word)
 
-        # Cache structured entries
-        self.cache.put(lang, word, unified_result)
+        # Cache structured entries (convert to dict format for storage)
+        unified_result_dict = self._cattrs_converter.unstructure(unified_result)
+        self.cache.put(lang, word, unified_result_dict)
         logger.debug("universal_query_completed", lang=lang, word=word, entries=len(unified_result))
         return unified_result
+
+    def get_tool_data(
+        self,
+        tool: str,
+        action: str,
+        lang: str | None = None,
+        query: str | None = None,
+        dict_name: str | None = None,
+    ) -> dict:
+        """Get raw tool data for debugging and schema evolution."""
+        from langnet.diogenes.core import DiogenesLanguages
+
+        logger.debug(
+            "tool_data_request",
+            tool=tool,
+            action=action,
+            lang=lang,
+            query=query,
+            dict_name=dict_name,
+        )
+
+        # Validate tool and action
+        valid_tools = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
+        valid_actions = {"search", "parse", "analyze", "morphology", "dictionary", "lookup"}
+
+        if tool not in valid_tools:
+            raise ValueError(
+                f"Invalid tool: {tool}. Must be one of: {', '.join(sorted(valid_tools))}"
+            )
+
+        if action not in valid_actions:
+            raise ValueError(
+                f"Invalid action: {action}. Must be one of: {', '.join(sorted(valid_actions))}"
+            )
+
+        # Tool-specific parameter validation
+        if tool == "diogenes":
+            if not lang:
+                raise ValueError("Missing required parameter: lang for diogenes tool")
+            if not query:
+                raise ValueError("Missing required parameter: query for diogenes tool")
+            valid_languages = {"lat", "grc", "san", "grk"}
+            if lang not in valid_languages:
+                raise ValueError(
+                    f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
+                )
+        elif tool == "whitakers":
+            if not query:
+                raise ValueError("Missing required parameter: query for whitakers tool")
+        elif tool == "heritage":
+            if not query:
+                raise ValueError("Missing required parameter: query for heritage tool")
+        elif tool == "cdsl":
+            if not query:
+                raise ValueError("Missing required parameter: query for cdsl tool")
+        elif tool == "cltk":
+            if not lang:
+                raise ValueError("Missing required parameter: lang for cltk tool")
+            if not query:
+                raise ValueError("Missing required parameter: query for cltk tool")
+            valid_languages = {"lat", "grc", "san"}
+            if lang not in valid_languages:
+                raise ValueError(
+                    f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
+                )
+
+        # Call tool-specific methods
+        try:
+            if tool == "diogenes":
+                return self._get_diogenes_raw(lang or "", query or "")
+            elif tool == "whitakers":
+                return self._get_whitakers_raw(query or "")
+            elif tool == "heritage":
+                return self._get_heritage_raw(query or "", action, dict_name)
+            elif tool == "cdsl":
+                return self._get_cdsl_raw(query or "", dict_name)
+            elif tool == "cltk":
+                return self._get_cltk_raw(lang or "", query or "", action)
+            else:
+                raise ValueError(f"Unknown tool: {tool}")
+        except Exception as e:
+            logger.error(f"Tool data retrieval failed", tool=tool, action=action, error=str(e))
+            raise ValueError(f"Failed to retrieve data from {tool} tool: {str(e)}")
+
+    def _get_diogenes_raw(self, lang: str, query: str) -> dict:
+        """Get raw data from Diogenes backend."""
+        from langnet.diogenes.core import DiogenesLanguages
+
+        # Normalize language code
+        if lang == "grk":
+            lang = "grc"
+
+        # Diogenes only supports Latin and Greek
+        if lang not in ["lat", "grc"]:
+            raise ValueError(f"Diogenes does not support language: {lang}")
+
+        diogenes_lang = {
+            "lat": DiogenesLanguages.LATIN,
+            "grc": DiogenesLanguages.GREEK,
+        }[lang]
+
+        result = self.diogenes.parse_word(query, diogenes_lang)
+        return self._cattrs_converter.unstructure(result)
+
+    def _get_whitakers_raw(self, query: str) -> dict:
+        """Get raw data from Whitaker's Words backend."""
+        tokenized = [query]
+        result = self.whitakers.words(tokenized)
+        return self._cattrs_converter.unstructure(result)
+
+    def _get_heritage_raw(self, query: str, action: str, dict_name: str | None = None) -> dict:
+        """Get raw data from Heritage Platform backend."""
+        if not self.heritage_morphology or not self.heritage_dictionary:
+            raise ValueError("Heritage services not available")
+
+        result = {}
+
+        if action in ["morphology", "analyze"]:
+            morphology_result = self.heritage_morphology.analyze_word(query)
+            if morphology_result:
+                result["morphology"] = self._cattrs_converter.unstructure(morphology_result)
+
+        if action in ["dictionary", "lookup"]:
+            if dict_name:
+                dict_result = self.heritage_dictionary.lookup_word(query, dict_name)
+            else:
+                dict_result = self.heritage_dictionary.lookup_word(query)
+
+            if dict_result and dict_result.get("entries"):
+                result["dictionary"] = self._cattrs_converter.unstructure(dict_result)
+
+        if action == "analyze" and result:
+            # For analyze action, try to get combined results
+            combined = self._query_sanskrit_with_heritage(query, self._cattrs_converter)
+            result.update(combined)
+
+        return result
+
+    def _get_cdsl_raw(self, query: str, dict_name: str | None = None) -> dict:
+        """Get raw data from CDSL backend."""
+        # CDSL only supports ASCII lookup currently
+        result = self.cdsl.lookup_ascii(query)
+
+        return self._cattrs_converter.unstructure(result)
+
+    def _get_cltk_raw(self, lang: str, query: str, action: str) -> dict:
+        """Get raw data from CLTK backend."""
+        result = {}
+
+        if lang == "lat" and action in ["morphology", "parse"]:
+            cltk_result = self.cltk.latin_query(query)
+            result["latin_morphology"] = self._cattrs_converter.unstructure(cltk_result)
+        elif lang == "grc" and action in ["morphology", "parse"]:
+            cltk_result = self.cltk.greek_morphology_query(query)
+            result["greek_morphology"] = self._cattrs_converter.unstructure(cltk_result)
+        elif lang == "san" and action in ["morphology", "parse"]:
+            cltk_result = self.cltk.sanskrit_morphology_query(query)
+            result["sanskrit_morphology"] = self._cattrs_converter.unstructure(cltk_result)
+        elif action == "dictionary":
+            if lang == "lat":
+                cltk_result = self.cltk.latin_query(query)
+                result["latin_dictionary"] = self._cattrs_converter.unstructure(cltk_result)
+            # Add other language dictionary queries as needed
+
+        return result

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CLTK Backend Output",
+  "description": "Raw output from CLTK backend for classical languages",
+  "type": "object",
+  "properties": {
+    "latin_morphology": {
+      "type": "object",
+      "properties": {
+        "lemmata": {"type": "array", "items": {"type": "string"}},
+        "pos": {"type": "array", "items": {"type": "string"}},
+        "analysis": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "greek_morphology": {
+      "type": "object",
+      "properties": {
+        "lemmata": {"type": "array", "items": {"type": "string"}},
+        "pos": {"type": "array", "items": {"type": "string"}},
+        "analysis": {"type": "array", "items": {"type": "string"}},
+        "foster_codes": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "sanskrit_morphology": {
+      "type": "object",
+      "properties": {
+        "lemmata": {"type": "array", "items": {"type": "string"}},
+        "pos": {"type": "array", "items": {"type": "string"}},
+        "analysis": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "latin_dictionary": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "headword": {"type": "string"},
+              "definition": {"type": "string"},
+              "lemma": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "error": {"type": "string"}
+  }
+}

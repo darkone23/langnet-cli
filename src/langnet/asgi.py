@@ -205,10 +205,93 @@ async def query_api(request: Request):
         return ORJsonResponse({"error": str(e)}, status_code=500)
 
 
+def _validate_tool_params(
+    tool: str | None,
+    action: str | None,
+    lang: str | None = None,
+    query: str | None = None,
+    dict_name: str | None = None,
+) -> str | None:
+    """Validate tool-specific parameters and return error message if invalid."""
+    valid_tools = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
+    valid_actions = {"search", "parse", "analyze", "morphology", "dictionary", "lookup"}
+
+    if tool not in valid_tools:
+        return f"Invalid tool: {tool}. Must be one of: {', '.join(sorted(valid_tools))}"
+
+    if action not in valid_actions:
+        return f"Invalid action: {action}. Must be one of: {', '.join(sorted(valid_actions))}"
+
+    # Tool-specific parameter validation
+    if tool == "diogenes":
+        if not lang:
+            return "Missing required parameter: lang for diogenes tool"
+        if not query:
+            return "Missing required parameter: query for diogenes tool"
+        valid_languages = {"lat", "grc", "san", "grk"}
+        if lang not in valid_languages:
+            return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
+    elif tool == "whitakers":
+        if not query:
+            return "Missing required parameter: query for whitakers tool"
+    elif tool == "heritage":
+        if not query:
+            return "Missing required parameter: query for heritage tool"
+    elif tool == "cdsl":
+        if not query:
+            return "Missing required parameter: query for cdsl tool"
+    elif tool == "cltk":
+        if not lang:
+            return "Missing required parameter: lang for cltk tool"
+        if not query:
+            return "Missing required parameter: query for cltk tool"
+        valid_languages = {"lat", "grc", "san"}
+        if lang not in valid_languages:
+            return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
+
+    return None
+
+
+async def tool_api(request: Request):
+    """API endpoint for tool-specific debugging and raw data access."""
+    tool = request.path_params.get("tool")
+    action = request.path_params.get("action")
+    lang = request.query_params.get("lang")
+    query = request.query_params.get("query")
+    dict_name = request.query_params.get("dict")
+
+    # Validate parameters
+    validation_error = _validate_tool_params(tool, action, lang, query, dict_name)
+    if validation_error:
+        return ORJsonResponse({"error": validation_error}, status_code=400)
+
+    try:
+        if not hasattr(request.app.state, "wiring"):
+            request.app.state.wiring = LangnetWiring()
+        wiring: LangnetWiring = request.app.state.wiring
+    except Exception as e:
+        return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
+
+    try:
+        result = wiring.engine.get_tool_data(
+            tool or "", action or "", lang or "", query or "", dict_name or ""
+        )
+        return ORJsonResponse(result)
+    except ValueError as e:
+        logger.error(f"Tool API parameter error: {e}")
+        return ORJsonResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        logger.error(f"Error in tool API: {e}")
+        logger.error(f"Error type: {type(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return ORJsonResponse({"error": f"Internal server error: {str(e)}"}, status_code=500)
+
+
 routes = [
     Route("/api/q", query_api, methods=["GET", "POST"]),
     Route("/api/health", health_check),
     Route("/api/cache/stats", cache_stats_api),
+    Route("/api/tool/{tool}/{action}", tool_api, methods=["GET"]),
 ]
 
 

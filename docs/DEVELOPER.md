@@ -47,6 +47,287 @@ LANGNET_LOG_LEVEL=DEBUG nose2 -s tests --config tests/nose2.cfg
 | `LANGNET_LOG_LEVEL` | Logging level (DEBUG/INFO/WARNING/ERROR) | `WARNING` |
 | `LANGNET_CACHE_ENABLED` | Enable response caching | `true` |
 | `LANGNET_CACHE_PATH` | Custom cache database path | auto |
+| `RAW_TEST_MODE` | Enable raw backend testing | `false` |
+| `LANGNET_API_URL` | Custom API server URL | `http://localhost:8000` |
+
+## Debugging Infrastructure
+
+The project now includes comprehensive debugging tools for backend integration and schema evolution:
+
+### Tool-Specific Debug Endpoints
+
+Access individual backend tools directly via API endpoints:
+
+```bash
+# Diogenes (Latin/Greek)
+curl "http://localhost:8000/api/tool/diogenes/search?lang=lat&query=lupus"
+curl "http://localhost:8000/api/tool/diogenes/parse?lang=grc&query=logos"
+
+# Whitaker's Words (Latin)
+curl "http://localhost:8000/api/tool/whitakers/analyze?query=lupus"
+
+# Heritage Platform (Sanskrit)
+curl "http://localhost:8000/api/tool/heritage/morphology?query=agni"
+curl "http://localhost:8000/api/tool/heritage/dictionary?query=yoga&dict=mw"
+
+# CDSL (Sanskrit)
+curl "http://localhost:8000/api/tool/cdsl/lookup?dict=mw&query=agni"
+
+# CLTK (Multi-language)
+curl "http://localhost:8000/api/tool/cltk/morphology?lang=lat&query=lupus"
+```
+
+### CLI Debug Commands
+
+Use `langnet-cli tool` for command-line debugging:
+
+```bash
+# Tool-specific commands
+langnet-cli tool diogenes search --lang lat --query lupus --save
+langnet-cli tool heritage morphology --query agni --output pretty
+langnet-cli tool cdsl lookup --dict mw --query yoga --save
+
+# Generic query interface
+langnet-cli tool query --tool whitakers --action analyze --query lupus
+
+# Output formats: json (default), pretty, yaml
+langnet-cli tool diogenes search --lang lat --query lupus --output pretty
+```
+
+### Fuzz Testing and Validation
+
+Automated testing for backend tools:
+
+```bash
+# Generate fixtures for multiple words
+python -m tests.fuzz_tool_outputs \
+  --tool diogenes \
+  --action search \
+  --words "lupus,arma,vir" \
+  --validate
+
+# Validate existing fixtures
+python -m tests.fuzz_tool_outputs \
+  --tool heritage \
+  --action morphology \
+  --validate
+
+# Compare raw vs unified outputs
+python -m tests.fuzz_tool_outputs \
+  --tool cdsl \
+  --action lookup \
+  --compare
+```
+
+### Fixtures Management
+
+Raw backend outputs are stored as fixtures:
+
+```
+tests/fixtures/raw_tool_outputs/
+├── diogenes/          # Diogenes backend outputs
+├── whitakers/         # Whitaker's Words outputs
+├── heritage/          # Heritage Platform outputs
+├── cdsl/             # CDSL outputs
+└── cltk/             # CLTK outputs
+```
+
+Generate fixtures with `--save` flag or manually:
+
+```bash
+# Auto-generate fixture
+langnet-cli tool diogenes search --lang lat --query lupus --save
+
+# Manual fixture creation
+curl "http://localhost:8000/api/tool/diogenes/search?lang=lat&query=lupus" \
+  | jq . > tests/fixtures/raw_tool_outputs/diogenes/search_lat_lupus.json
+```
+
+### Schema Evolution
+
+Monitor and manage schema changes:
+
+```bash
+# Compare raw vs unified outputs
+python tools/compare_tool_outputs.py \
+  --tool diogenes \
+  --action search \
+  --word lupus \
+  --generate-fixes
+
+# Detect schema drift
+python tools/compare_tool_outputs.py \
+  --tool heritage \
+  --action morphology \
+  --generate-fixes
+
+# Save comparison results
+python tools/compare_tool_outputs.py \
+  --tool cdsl \
+  --action lookup \
+  --word agni \
+  --output comparison_results.json
+```
+
+### Test Integration
+
+Use the `ToolFixtureMixin` in tests:
+
+```python
+from tests.helpers.tool_fixtures import ToolFixtureMixin
+
+class TestMyFeature(ToolFixtureMixin):
+    def test_raw_data_access(self):
+        # Skip if no fixture available
+        self.skip_if_no_fixture("diogenes", "search", "lat", "lupus")
+        
+        # Load fixture
+        data = self.load_tool_fixture("diogenes", "search", "lat", "lupus")
+        
+        # Validate schema
+        self.assert_tool_schema(data)
+        
+        # Compare with adapter output
+        comparison = self.compare_adapter_output(raw_data, unified_data)
+        
+        # Generate live fixture
+        live_data = self.generate_fixture_from_live(
+            "heritage", "morphology", "san", "agni"
+        )
+```
+
+## Testing Strategy
+
+### 1. Unit Testing
+
+Test individual components in isolation:
+
+```bash
+# Test specific modules
+python -m pytest tests/test_heritage_integration.py -v
+python -m pytest tests/test_cdsl.py -v
+python -m pytest tests/test_api_integration.py -v
+
+# Run with raw test mode
+RAW_TEST_MODE=true python -m pytest tests/test_heritage_integration.py -v
+```
+
+### 2. Integration Testing
+
+Test tool-specific endpoints and CLI commands:
+
+```bash
+# Test API endpoints
+curl "http://localhost:8000/api/tool/diogenes/search?lang=lat&query=lupus"
+curl "http://localhost:8000/api/tool/heritage/morphology?query=agni"
+
+# Test CLI commands
+langnet-cli tool diogenes search --lang lat --query lupus
+langnet-cli tool heritage morphology --query agni
+```
+
+### 3. Fuzz Testing
+
+Comprehensive automated testing:
+
+```bash
+# Test all tools with default word lists
+python -m tests.fuzz_tool_outputs --validate --compare
+
+# Test specific scenarios
+python -m tests.fuzz_tool_outputs \
+  --tool diogenes \
+  --action search \
+  --words "lupus,arma,vir,rosa,amicus" \
+  --validate
+
+# Generate test coverage report
+python -m tests.fuzz_tool_outputs \
+  --tool diogenes \
+  --action search \
+  --validate \
+  --generate-report
+```
+
+### 4. Schema Validation
+
+Ensure fixtures and outputs match expected schemas:
+
+```bash
+# Validate individual fixtures
+python -c "
+import json, jsonschema
+with open('tests/fixtures/raw_tool_outputs/diogenes/schema_diogenes.json') as f:
+    schema = json.load(f)
+with open('tests/fixtures/raw_tool_outputs/diogenes/search_lat_lupus.json') as f:
+    data = json.load(f)
+jsonschema.validate(data, schema)
+print('✓ Schema validation passed')
+"
+
+# Batch validation
+python -m tests.fuzz_tool_outputs --validate
+```
+
+## Development Workflow
+
+### 1. Adding New Backend Tools
+
+1. **Implement backend integration** in `src/langnet/backend_adapter.py`
+2. **Add tool methods** to `LanguageEngine` in `src/langnet/engine/core.py`
+3. **Create API endpoint** in `src/langnet/asgi.py`
+4. **Add CLI commands** in `src/langnet/cli.py`
+5. **Create schema file** in `tests/fixtures/raw_tool_outputs/{tool}/schema_{tool}.json`
+6. **Generate fixtures** using CLI commands
+7. **Write tests** using `ToolFixtureMixin`
+
+### 2. Debugging Adapter Issues
+
+1. **Access raw data** via API endpoints or CLI
+2. **Compare with unified output** using comparison tool
+3. **Identify missing fields** or conversion errors
+4. **Update adapter logic** in backend adapter
+5. **Regenerate fixtures** and revalidate
+
+### 3. Schema Evolution
+
+1. **Monitor schema drift** with comparison tools
+2. **Update schemas** when backends change
+3. **Generate adapter fixes** for breaking changes
+4. **Update tests** to use new schema
+5. **Validate compatibility** with existing consumers
+
+## Performance Considerations
+
+- **Tool endpoints** may be slower than unified API due to direct backend calls
+- **Large fixtures** should not be committed to version control
+- **Schema validation** adds overhead during testing
+- **Cache responses** when testing the same queries repeatedly
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Backend not responding**: Check `/api/health` endpoint
+2. **Wrong parameters**: Use CLI help to validate required parameters
+3. **Schema validation failures**: Update schema definitions
+4. **Adapter conversion issues**: Use comparison tool to identify problems
+
+### Debug Commands
+
+```bash
+# Check backend health
+curl http://localhost:8000/api/health
+
+# Test individual tools
+langnet-cli tool diogenes search --lang lat --query lupus --output pretty
+
+# Validate all fixtures
+python -m tests.fuzz_tool_outputs --validate
+
+# Compare outputs
+python tools/compare_tool_outputs.py --tool diogenes --action search --word lupus
+```
 
 ## Code Conventions
 

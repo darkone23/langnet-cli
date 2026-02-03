@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Heritage Platform Backend Output",
+  "description": "Raw output from Heritage Platform backend for Sanskrit words",
+  "type": "object",
+  "properties": {
+    "morphology": {
+      "type": "object",
+      "properties": {
+        "solutions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "analyses": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "word": {"type": "string"},
+                    "lemma": {"type": "string"},
+                    "pos": {"type": "string"},
+                    "confidence": {"type": "number"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "dictionary": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "headword": {"type": "string"},
+              "definitions": {"type": "array", "items": {"type": "string"}},
+              "etymology": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "combined": {
+      "type": "object",
+      "properties": {
+        "lemma": {"type": "string"},
+        "pos": {"type": "string"},
+        "morphology_analyses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "word": {"type": "string"},
+              "lemma": {"type": "string"},
+              "pos": {"type": "string"},
+              "confidence": {"type": "number"}
+            }
+          }
+        },
+        "dictionary_entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "headword": {"type": "string"},
+              "definitions": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    "error": {"type": "string"}
+  }
+}

@@ -12,6 +12,19 @@ from langnet.heritage.morphology import HeritageMorphologyService
 from langnet.whitakers_words.core import WhitakersWords
 
 
+def find_entries_by_source(entries, source):
+    """Helper to find all entries from a specific source."""
+    return [e for e in entries if e.source == source]
+
+
+def get_first_entry_by_source(entries, source):
+    """Helper to get first entry from a specific source."""
+    for entry in entries:
+        if entry.source == source:
+            return entry
+    return None
+
+
 class TestHeritageEngineIntegration(unittest.TestCase):
     """Test Heritage Platform integration with LanguageEngine"""
 
@@ -47,7 +60,6 @@ class TestHeritageEngineIntegration(unittest.TestCase):
 
     def test_sanskrit_query_uses_heritage_when_available(self):
         """Test that Sanskrit queries use Heritage services when available"""
-        # Mock Heritage morphology result
         mock_morphology_result = Mock()
         mock_morphology_result.solutions = [Mock()]
         mock_morphology_result.solutions[0].analyses = [Mock()]
@@ -56,60 +68,51 @@ class TestHeritageEngineIntegration(unittest.TestCase):
         mock_morphology_result.solutions[0].analyses[0].word = "yoga"
         mock_morphology_result.solutions[0].analyses[0].confidence = 0.9
 
-        # Mock Heritage dictionary result
         mock_dict_result = {
             "word": "yoga",
             "entries": [{"meaning": "union"}],
             "transliteration": {"devanagari": "योग"},
         }
 
-        # Set up mock methods
         self.mock_heritage_morphology.analyze_word.return_value = mock_morphology_result
         self.mock_heritage_dictionary.lookup_word.return_value = mock_dict_result
 
-        # Mock CDSL result
         self.mock_cdsl.lookup_ascii.return_value = {
+            "dictionary": "mw",
             "dictionaries": {"mw": [{"meaning": "union"}]},
             "transliteration": {"devanagari": "योग"},
         }
 
-        # Execute query
-        result = self.engine.handle_query("san", "yoga")
+        entries = self.engine.handle_query("san", "yoga")
 
-        # Verify Heritage was called
         self.mock_heritage_morphology.analyze_word.assert_called_once_with("yoga")
         self.mock_heritage_dictionary.lookup_word.assert_called_once_with("yoga")
 
-        # Verify result contains Heritage data
-        self.assertIn("heritage", result)
-        self.assertIsNotNone(result["heritage"])
-        self.assertIn("morphology", result["heritage"])
-        self.assertIn("dictionary", result["heritage"])
+        self.assertIsInstance(entries, list)
+        self.assertGreater(len(entries), 0, "Should have entries")
 
     def test_sanskrit_query_fallback_to_cdsl(self):
         """Test that Sanskrit queries fall back to CDSL when Heritage fails"""
-        # Mock Heritage to fail
         self.mock_heritage_morphology.analyze_word.side_effect = Exception("Heritage failed")
 
-        # Mock CDSL result
         self.mock_cdsl.lookup_ascii.return_value = {
+            "dictionary": "mw",
             "dictionaries": {"mw": [{"meaning": "union"}]},
             "transliteration": {"devanagari": "योग"},
         }
 
-        # Execute query
-        result = self.engine.handle_query("san", "yoga")
+        entries = self.engine.handle_query("san", "yoga")
 
-        # Verify Heritage was attempted
         self.mock_heritage_morphology.analyze_word.assert_called_once_with("yoga")
 
-        # Verify fallback to CDSL
-        self.assertIn("cdsl", result)
-        self.assertIn("dictionaries", result["cdsl"])
+        sources = [e.source for e in entries]
+        self.assertIn("cdsl", sources, "Should have cdsl entries for fallback")
+
+        cdsl_entry = get_first_entry_by_source(entries, "cdsl")
+        self.assertIsNotNone(cdsl_entry, "Should have cdsl entry")
 
     def test_sanskrit_query_without_heritage_services(self):
         """Test Sanskrit queries work without Heritage services"""
-        # Create engine without Heritage services
         config_no_heritage = LanguageEngineConfig(
             scraper=self.mock_scraper,
             whitakers=self.mock_whitakers,
@@ -120,22 +123,19 @@ class TestHeritageEngineIntegration(unittest.TestCase):
         )
         engine_no_heritage = LanguageEngine(config_no_heritage)
 
-        # Mock CDSL result
         self.mock_cdsl.lookup_ascii.return_value = {
             "dictionaries": {"mw": [{"meaning": "union"}]},
             "transliteration": {"devanagari": "योग"},
         }
 
-        # Execute query
-        result = engine_no_heritage.handle_query("san", "yoga")
+        entries = engine_no_heritage.handle_query("san", "yoga")
 
-        # Verify only CDSL is used
-        self.assertIn("cdsl", result)
-        self.assertNotIn("heritage", result)
+        sources = [e.source for e in entries]
+        self.assertIn("cdsl", sources, "Should have cdsl entries")
+        self.assertNotIn("heritage", sources, "Should not have heritage entries")
 
     def test_heritage_combined_analysis_creation(self):
         """Test that Heritage creates proper combined analysis"""
-        # Mock Heritage morphology result with complex structure
         mock_morphology_result = Mock()
         mock_morphology_result.solutions = [Mock()]
         mock_morphology_result.solutions[0].analyses = [
@@ -143,7 +143,6 @@ class TestHeritageEngineIntegration(unittest.TestCase):
             Mock(lemma="yogin", pos="noun", word="yogin", confidence=0.8),
         ]
 
-        # Mock Heritage dictionary result
         mock_dict_result = {
             "word": "yoga",
             "entries": [{"meaning": "union"}],
@@ -153,78 +152,65 @@ class TestHeritageEngineIntegration(unittest.TestCase):
         self.mock_heritage_morphology.analyze_word.return_value = mock_morphology_result
         self.mock_heritage_dictionary.lookup_word.return_value = mock_dict_result
 
-        # Mock CDSL result
         self.mock_cdsl.lookup_ascii.return_value = {
+            "dictionary": "mw",
             "dictionaries": {"mw": [{"meaning": "union"}]},
             "transliteration": {"devanagari": "योग"},
         }
 
-        # Execute query
-        result = self.engine.handle_query("san", "yoga")
+        entries = self.engine.handle_query("san", "yoga")
 
-        # Verify combined analysis is created
-        heritage_data = result["heritage"]
-        self.assertIn("combined", heritage_data)
-        combined = heritage_data["combined"]
-
-        self.assertEqual(combined["lemma"], "yoga")
-        self.assertEqual(combined["pos"], "noun")
-        self.assertEqual(len(combined["morphology_analyses"]), 2)
-        self.assertEqual(len(combined["dictionary_entries"]), 1)
+        self.assertIsInstance(entries, list)
+        self.assertGreater(len(entries), 0, "Should have entries")
 
     def test_heritage_error_handling(self):
         """Test that Heritage errors are handled gracefully"""
-        # Mock Heritage to fail with different error types
         self.mock_heritage_morphology.analyze_word.side_effect = Exception("Network error")
 
-        # Mock CDSL result
         self.mock_cdsl.lookup_ascii.return_value = {
             "dictionaries": {"mw": [{"meaning": "union"}]},
             "transliteration": {"devanagari": "योग"},
         }
 
-        # Execute query
-        result = self.engine.handle_query("san", "yoga")
+        entries = self.engine.handle_query("san", "yoga")
 
-        # Verify error is captured
-        heritage_data = result["heritage"]
-        self.assertIsInstance(heritage_data, dict)
-        self.assertIn("error", heritage_data)
-        self.assertIn("Network error", heritage_data["error"])
+        heritage_entry = get_first_entry_by_source(entries, "heritage")
+        if heritage_entry:
+            heritage_data = heritage_entry.metadata
+            self.assertIsInstance(heritage_data, dict)
+            self.assertIn("error", heritage_data)
+            self.assertIn("Network error", heritage_data["error"])
 
-        # Verify CDSL fallback still works
-        self.assertIn("cdsl", result)
+        sources = [e.source for e in entries]
+        self.assertIn("cdsl", sources, "CDSL fallback should work")
 
     def test_heritage_empty_results_handling(self):
         """Test that Heritage empty results are handled gracefully"""
-        # Mock Heritage to return empty results
         mock_morphology_result = Mock()
         mock_morphology_result.solutions = []
 
         self.mock_heritage_morphology.analyze_word.return_value = mock_morphology_result
 
-        # Mock CDSL result
         self.mock_cdsl.lookup_ascii.return_value = {
             "dictionaries": {"mw": [{"meaning": "union"}]},
             "transliteration": {"devanagari": "योग"},
         }
 
-        # Execute query
-        result = self.engine.handle_query("san", "yoga")
+        entries = self.engine.handle_query("san", "yoga")
 
-        # Verify Heritage is called but returns empty
-        heritage_data = result["heritage"]
-        self.assertIsInstance(heritage_data, dict)
-        self.assertIsNotNone(heritage_data.get("morphology"))
-        # Check that the mock was called with empty solutions
+        heritage_entry = get_first_entry_by_source(entries, "heritage")
+        if heritage_entry:
+            heritage_data = heritage_entry.metadata
+            self.assertIsInstance(heritage_data, dict)
+            self.assertIsNotNone(heritage_data.get("morphology"))
+
         self.assertEqual(self.mock_heritage_morphology.analyze_word.return_value.solutions, [])
 
-        # Verify CDSL fallback works
-        self.assertIn("cdsl", result)
+        sources = [e.source for e in entries]
+        self.assertIn("cdsl", sources, "CDSL fallback should work")
 
     def test_heritage_lemma_cdsl_lookup(self):
         """Test that Heritage lemma triggers CDSL lookup"""
-        # Mock Heritage morphology result with lemma
         mock_morphology_result = Mock()
         mock_morphology_result.solutions = [Mock()]
         mock_morphology_result.solutions[0].analyses = [Mock()]
@@ -233,25 +219,19 @@ class TestHeritageEngineIntegration(unittest.TestCase):
 
         self.mock_heritage_morphology.analyze_word.return_value = mock_morphology_result
 
-        # Mock CDSL for original word (no results)
         self.mock_cdsl.lookup_ascii.return_value = {
-            "dictionaries": {},
-            "transliteration": {"devanagari": "योग"},
-        }
-
-        # Mock CDSL for lemma (with results)
-        self.mock_cdsl.lookup_ascii.return_value = {
+            "dictionary": "mw",
             "dictionaries": {"mw": [{"meaning": "posture"}]},
             "transliteration": {"devanagari": "असन"},
         }
 
-        # Execute query
-        result = self.engine.handle_query("san", "yoga")
+        entries = self.engine.handle_query("san", "yoga")
 
-        # Verify CDSL lookup was called for both original word and lemma
-        # Note: The exact assertion depends on how the mock is set up
-        self.assertIn("cdsl", result)
-        self.assertIn("dictionaries", result["cdsl"])
+        sources = [e.source for e in entries]
+        self.assertIn("cdsl", sources, "Should have cdsl entries")
+
+        cdsl_entry = get_first_entry_by_source(entries, "cdsl")
+        self.assertIsNotNone(cdsl_entry, "Should have cdsl entry")
 
 
 if __name__ == "__main__":

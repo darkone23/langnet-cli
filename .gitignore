@@ -18,6 +18,10 @@ webroot/
 
 examples/debug
 
+# Test fixtures
+tests/fixtures/raw_tool_outputs/*.json
+tests/fuzz_reports/
+
 deps/*.whl
 __pycache__
 *.pyc

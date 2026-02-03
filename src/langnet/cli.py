@@ -963,13 +963,254 @@ def list_indexes():
 
     if not indexes:
         click.echo("No indexes registered")
-        return 0
-
-    click.echo("📋 Registered Indexes:")
-    for idx in indexes:
-        click.echo(f"  {idx['type']:12} {idx['path']}")
+    else:
+        for index in indexes:
+            click.echo(f"  {index['type']} ({index.get('path', 'unknown')})")
 
     return 0
+
+
+@main.group()
+def tool():
+    """Debug individual backend tools and access raw data."""
+    pass
+
+
+@tool.group()
+def diogenes():
+    """Diogenes backend tools for Latin and Greek."""
+    pass
+
+
+@diogenes.command("search")
+@click.option("--lang", required=True, help="Language code (lat, grc, grk)")
+@click.option("--query", required=True, help="Word to search")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def diogenes_search(lang: str, query: str, output: str, save: str):
+    """Search for a word using Diogenes backend."""
+    _tool_query("diogenes", "search", lang=lang, query=query, output=output, save=save)
+
+
+@diogenes.command("parse")
+@click.option("--lang", required=True, help="Language code (lat, grc, grk)")
+@click.option("--query", required=True, help="Word to parse")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def diogenes_parse(lang: str, query: str, output: str, save: str):
+    """Parse a word using Diogenes backend."""
+    _tool_query("diogenes", "parse", lang=lang, query=query, output=output, save=save)
+
+
+@tool.group()
+def whitakers():
+    """Whitaker's Words backend tools for Latin."""
+    pass
+
+
+@whitakers.command("analyze")
+@click.option("--query", required=True, help="Word to analyze")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def whitakers_analyze(query: str, output: str, save: str):
+    """Analyze a word using Whitaker's Words backend."""
+    _tool_query("whitakers", "analyze", query=query, output=output, save=save)
+
+
+@tool.group()
+def heritage():
+    """Heritage Platform backend tools for Sanskrit."""
+    pass
+
+
+@heritage.command("morphology")
+@click.option("--query", required=True, help="Word to analyze")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def heritage_morphology(query: str, output: str, save: str):
+    """Get morphological analysis using Heritage Platform backend."""
+    _tool_query("heritage", "morphology", query=query, output=output, save=save)
+
+
+@heritage.command("dictionary")
+@click.option("--query", required=True, help="Word to lookup")
+@click.option("--dict", "dict_name", help="Dictionary ID (default: MW)")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def heritage_dictionary(query: str, dict_name: str, output: str, save: str):
+    """Dictionary lookup using Heritage Platform backend."""
+    _tool_query(
+        "heritage", "dictionary", query=query, dict_name=dict_name, output=output, save=save
+    )
+
+
+@heritage.command("analyze")
+@click.option("--query", required=True, help="Word to analyze")
+@click.option("--dict", "dict_name", help="Dictionary ID (default: MW)")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def heritage_analyze(query: str, dict_name: str, output: str, save: str):
+    """Comprehensive analysis using Heritage Platform backend."""
+    _tool_query("heritage", "analyze", query=query, dict_name=dict_name, output=output, save=save)
+
+
+@tool.group()
+def cdsl_tool():
+    """CDSL backend tools for Sanskrit."""
+    pass
+
+
+@click.option("--query", required=True, help="Word to lookup")
+@click.option("--dict", "dict_name", help="Dictionary ID (default: mw)")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def cdsl_lookup(query: str, dict_name: str, output: str, save: str):
+    """Lookup a word using CDSL backend."""
+    _tool_query("cdsl", "lookup", query=query, dict_name=dict_name, output=output, save=save)
+
+
+@tool.group()
+def cltk():
+    """CLTK backend tools for classical languages."""
+    pass
+
+
+@cltk.command("morphology")
+@click.option("--lang", required=True, help="Language code (lat, grc, san)")
+@click.option("--query", required=True, help="Word to analyze")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def cltk_morphology(lang: str, query: str, output: str, save: str):
+    """Get morphological analysis using CLTK backend."""
+    _tool_query("cltk", "morphology", lang=lang, query=query, output=output, save=save)
+
+
+@cltk.command("parse")
+@click.option("--lang", required=True, help="Language code (lat, grc, san)")
+@click.option("--query", required=True, help="Word to parse")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def cltk_parse(lang: str, query: str, output: str, save: str):
+    """Parse a word using CLTK backend."""
+    _tool_query("cltk", "parse", lang=lang, query=query, output=output, save=save)
+
+
+@tool.command("query")
+@click.option(
+    "--tool",
+    required=True,
+    type=click.Choice(["diogenes", "whitakers", "heritage", "cdsl", "cltk"]),
+    help="Backend tool",
+)
+@click.option(
+    "--action",
+    required=True,
+    type=click.Choice(["search", "parse", "analyze", "morphology", "dictionary", "lookup"]),
+    help="Action to perform",
+)
+@click.option("--lang", help="Language code (required for diogenes/cltk)")
+@click.option("--query", required=True, help="Word to query")
+@click.option("--dict", "dict_name", help="Dictionary ID (for heritage/cdsl)")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def tool_query(
+    tool: str, action: str, lang: str, query: str, dict_name: str, output: str, save: str
+):
+    """Generic tool query interface for all backend tools."""
+    _tool_query(tool, action, lang=lang, query=query, dict_name=dict_name, output=output, save=save)
+
+
+def _tool_query(
+    tool: str,
+    action: str,
+    lang: str | None = None,
+    query: str | None = None,
+    dict_name: str | None = None,
+    output: str = "json",
+    save: str | None = None,
+):
+    """Generic tool query implementation."""
+    import json
+    from pathlib import Path
+
+    url = f"{DEFAULT_API_URL}/api/tool/{tool}/{action}"
+    params = {}
+
+    if lang:
+        params["lang"] = lang
+    if query:
+        params["query"] = query
+    if dict_name:
+        params["dict"] = dict_name
+
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+
+        result = orjson.loads(response.text)
+
+        # Format output
+        if output == "pretty":
+            console.print("[bold]Tool Query Result:[/]")
+            console.print(f"[cyan]Tool:[/] {tool}")
+            console.print(f"[cyan]Action:[/] {action}")
+            if lang:
+                console.print(f"[cyan]Language:[/] {lang}")
+            console.print(f"[cyan]Query:[/] {query}")
+            if dict_name:
+                console.print(f"[cyan]Dictionary:[/] {dict_name}")
+            console.print()
+            pprint(result)
+        elif output == "yaml":
+            import yaml
+
+            console.print(yaml.dump(result, default_flow_style=False))
+        else:  # json
+            console.print(json.dumps(result, indent=2))
+
+        # Save to fixture if requested
+        if save:
+            fixture_dir = Path("tests/fixtures/raw_tool_outputs")
+            fixture_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create filename based on tool, action, and query
+            safe_query = "".join(c for c in (query or "") if c.isalnum() or c in ("-", "_")).lower()
+            filename = f"{tool}_{action}"
+            if lang:
+                filename += f"_{lang}"
+            filename += f"_{safe_query}.json"
+
+            fixture_path = fixture_dir / filename
+            with open(fixture_path, "w", encoding="utf-8") as f:
+                json.dump(result, f, indent=2, ensure_ascii=False)
+
+            console.print(f"\n[green]Fixture saved to: {fixture_path}[/]")
+    except requests.RequestException as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
 
 
 @indexer.command("query-cts")
