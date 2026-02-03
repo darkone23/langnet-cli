@@ -557,6 +557,32 @@ class SanskritCologneLexicon:
             # Parse grammatical information from XML
             grammatical = parse_grammatical_info(row[2])
 
+            # Convert references to CitationCollection
+            references = None
+            raw_refs = grammatical.get("references")
+            if raw_refs and isinstance(raw_refs, list):
+                from langnet.citation.models import Citation, CitationType, TextReference
+
+                citations = []
+                for ref_dict in raw_refs if isinstance(raw_refs, list) else []:
+                    if isinstance(ref_dict, dict):
+                        text_ref = TextReference(
+                            type=CitationType.DICTIONARY_ABBREVIATION,
+                            text=ref_dict.get("source", ""),
+                            work=ref_dict.get("source", ""),
+                        )
+                        citation = Citation(
+                            references=[text_ref],
+                            abbreviation=ref_dict.get("source", ""),
+                            relationship="see" if ref_dict.get("type") == "lexicon" else None,
+                        )
+                        citations.append(citation)
+
+                if citations:
+                    from langnet.citation.models import CitationCollection
+
+                    references = CitationCollection(citations=citations)
+
             entries.append(
                 SanskritDictionaryEntry(
                     id=entry_id,
@@ -567,7 +593,7 @@ class SanskritCologneLexicon:
                     sanskrit_form=grammatical.get("sanskrit_form"),
                     etymology=grammatical.get("etymology"),
                     grammar_tags=grammatical.get("grammar_tags"),
-                    references=grammatical.get("references"),
+                    references=references,
                     page_ref=row[4],
                 )
             )

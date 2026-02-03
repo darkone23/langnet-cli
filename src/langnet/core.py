@@ -4,6 +4,7 @@ from langnet.cache.core import create_cache
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.config import config as langnet_config
+from langnet.backend_adapter import LanguageAdapterRegistry
 from langnet.diogenes.core import DiogenesScraper
 from langnet.engine.core import LanguageEngine, LanguageEngineConfig
 from langnet.heritage.config import HeritageConfig

@@ -27,7 +27,8 @@ class LangnetLanguageCodes:
 
     @staticmethod
     def get_for_input(lang):
-        if lang == LangnetLanguageCodes.Greek:
+        # Support aliases: grk -> grc
+        if lang in (LangnetLanguageCodes.Greek, "grk"):
             return LangnetLanguageCodes.Greek
         elif lang == LangnetLanguageCodes.Latin:
             return LangnetLanguageCodes.Latin
@@ -322,29 +323,63 @@ class LanguageEngine:
         return result
 
     def handle_query(self, lang, word):
+        """Handle queries using the universal schema with structured DictionaryEntry objects."""
+        from langnet.backend_adapter import LanguageAdapterRegistry
+
         lang = LangnetLanguageCodes.get_for_input(lang)
-        _cattrs_converter = self._cattrs_converter
+        logger.debug("universal_query_started", lang=lang, word=word)
 
-        logger.debug("query_started", lang=lang, word=word)
-
+        # Check cache for structured entries
         cached_result = self.cache.get(lang, word)
         if cached_result is not None:
-            logger.debug("query_cached", lang=lang, word=word)
-            return cached_result
+            logger.debug("query_cached_universal", lang=lang, word=word)
+            # If cached result is already DictionaryEntry objects, return them
+            if (
+                isinstance(cached_result, list)
+                and cached_result
+                and hasattr(cached_result[0], "word")
+            ):
+                return cached_result
+            # If cached result is a dict (old format), convert it
+            elif isinstance(cached_result, dict):
+                adapter_registry = LanguageAdapterRegistry()
+                adapter = adapter_registry.get_adapter(lang)
+                unified_result = adapter.adapt(cached_result, lang, word)
+                self.cache.put(lang, word, unified_result)  # Update with structured format
+                return unified_result
+            # If cached result is a list of dicts (old format), convert it
+            elif (
+                isinstance(cached_result, list)
+                and cached_result
+                and isinstance(cached_result[0], dict)
+            ):
+                adapter_registry = LanguageAdapterRegistry()
+                adapter = adapter_registry.get_adapter(lang)
+                unified_result = adapter.adapt(cached_result, lang, word)
+                self.cache.put(lang, word, unified_result)  # Update with structured format
+                return unified_result
+
+        # Get raw backend results
+        _cattrs_converter = self._cattrs_converter
 
         if lang == LangnetLanguageCodes.Greek:
             logger.debug("routing_to_greek_backends", lang=lang, word=word)
-            result = self._query_greek(word, _cattrs_converter)
+            raw_result = self._query_greek(word, _cattrs_converter)
         elif lang == LangnetLanguageCodes.Latin:
             logger.debug("routing_to_latin_backends", lang=lang, word=word)
-            result = self._query_latin(word, _cattrs_converter)
+            raw_result = self._query_latin(word, _cattrs_converter)
         elif lang == LangnetLanguageCodes.Sanskrit:
             logger.debug("routing_to_sanskrit_backends", lang=lang, word=word)
-            result = self._query_sanskrit(word, _cattrs_converter)
+            raw_result = self._query_sanskrit(word, _cattrs_converter)
         else:
             raise NotImplementedError(f"Do not know how to handle {lang}")
 
-        self.cache.put(lang, word, result)
-        result = apply_foster_view(result)
-        logger.debug("query_completed", lang=lang, word=word)
-        return result
+        # Convert to universal schema
+        adapter_registry = LanguageAdapterRegistry()
+        adapter = adapter_registry.get_adapter(lang)
+        unified_result = adapter.adapt(raw_result, lang, word)
+
+        # Cache structured entries
+        self.cache.put(lang, word, unified_result)
+        logger.debug("universal_query_completed", lang=lang, word=word, entries=len(unified_result))
+        return unified_result
