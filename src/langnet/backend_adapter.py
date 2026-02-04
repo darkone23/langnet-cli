@@ -5,10 +5,8 @@ This module provides adapters that convert raw backend outputs
 to standardized DictionaryEntry objects with proper citations.
 """
 
-import structlog
-from typing import Any, List
-
 import cattrs
+import structlog
 
 from langnet.schema import Citation, DictionaryEntry, MorphologyInfo, Sense
 
@@ -24,7 +22,7 @@ def create_backend_converter() -> cattrs.Converter:
 class BaseBackendAdapter:
     """Base class for backend-specific adapters."""
 
-    def adapt(self, data: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         """Convert raw backend data to standardized DictionaryEntry objects."""
         raise NotImplementedError
 
@@ -92,11 +90,29 @@ class BaseBackendAdapter:
 class DiogenesBackendAdapter(BaseBackendAdapter):
     """Adapter for Diogenes web scraper."""
 
-    def adapt(self, data: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries = []
 
-        # Diogenes returns chunks with morphology and definitions
-        if not data.get("dg_parsed"):
+        # Handle None or invalid input
+        if data is None:
+            return entries
+
+        # Check if Diogenes returned any chunks with actual data
+        chunks = data.get("chunks", [])
+        has_valid_diogenes_data = False
+        for chunk in chunks:
+            definitions_blocks = chunk.get("definitions", {}).get("blocks", [])
+            if definitions_blocks and len(definitions_blocks) > 0:
+                has_valid_diogenes_data = True
+                break
+            # Also check for morphology data
+            if "morphology" in chunk:
+                morphs = chunk.get("morphology", {}).get("morphs", [])
+                if morphs and len(morphs) > 0:
+                    has_valid_diogenes_data = True
+                    break
+
+        if not has_valid_diogenes_data:
             return entries
 
         chunks = data.get("chunks", [])
@@ -201,8 +217,12 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
 class WhitakersBackendAdapter(BaseBackendAdapter):
     """Adapter for Whitaker's Words."""
 
-    def adapt(self, data: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries = []
+
+        # Handle None or invalid input
+        if data is None:
+            return entries
 
         # Whitaker's returns wordlist with terms and senses
         wordlist = data.get("wordlist", [])
@@ -255,8 +275,12 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
 class CLTKBackendAdapter(BaseBackendAdapter):
     """Adapter for Classical Language Toolkit."""
 
-    def adapt(self, data: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries = []
+
+        # Handle None or invalid input
+        if data is None:
+            return entries
 
         # Check if CLTK is enabled
         if data.get("error"):
@@ -310,8 +334,12 @@ class CLTKBackendAdapter(BaseBackendAdapter):
 class HeritageBackendAdapter(BaseBackendAdapter):
     """Adapter for Sanskrit Heritage Platform."""
 
-    def adapt(self, data: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries = []
+
+        # Handle None or invalid input
+        if data is None:
+            return entries
 
         # Heritage returns morphology and dictionary separately
         morphology_data = data.get("morphology")
@@ -414,8 +442,12 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                 citations.append(schema_citation)
         return citations
 
-    def adapt(self, data: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries = []
+
+        # Handle None or invalid input
+        if data is None:
+            return entries
 
         # CDSL returns dictionaries MW and Apte
         dictionaries = data.get("dictionaries", {})
@@ -542,7 +574,7 @@ class BaseLanguageAdapter:
             "cdsl": CDSLBackendAdapter(),
         }
 
-    def adapt(self, raw_backends_result: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, raw_backends_result: dict, language: str, word: str) -> list[DictionaryEntry]:
         """Compose results from multiple backends into unified DictionaryEntry objects."""
         raise NotImplementedError
 
@@ -550,7 +582,7 @@ class BaseLanguageAdapter:
 class GreekAdapter(BaseLanguageAdapter):
     """Greek language adapter combining Diogenes and CLTK (spacy)."""
 
-    def adapt(self, raw_backends_result: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, raw_backends_result: dict, language: str, word: str) -> list[DictionaryEntry]:
         all_entries = []
 
         # Process Diogenes (primary dictionary source)
@@ -581,7 +613,7 @@ class GreekAdapter(BaseLanguageAdapter):
 class LatinAdapter(BaseLanguageAdapter):
     """Latin language adapter combining Diogenes, Whitaker's, and CLTK."""
 
-    def adapt(self, raw_backends_result: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, raw_backends_result: dict, language: str, word: str) -> list[DictionaryEntry]:
         all_entries = []
 
         # Process Whitaker's Words (primary morphological analyzer)
@@ -621,7 +653,7 @@ class LatinAdapter(BaseLanguageAdapter):
 class SanskritAdapter(BaseLanguageAdapter):
     """Sanskrit language adapter combining Heritage Platform and CDSL."""
 
-    def adapt(self, raw_backends_result: dict, language: str, word: str) -> List[DictionaryEntry]:
+    def adapt(self, raw_backends_result: dict, language: str, word: str) -> list[DictionaryEntry]:
         all_entries = []
 
         # Process CDSL dictionaries (Monier-Williams, Apte)

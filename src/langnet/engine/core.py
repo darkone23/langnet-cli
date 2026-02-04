@@ -9,7 +9,6 @@ from langnet.cache.core import NoOpCache, QueryCache
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
-from langnet.foster.apply import apply_foster_view
 from langnet.heritage.dictionary import HeritageDictionaryService
 from langnet.heritage.morphology import HeritageMorphologyService
 from langnet.normalization import NormalizationPipeline
@@ -355,13 +354,19 @@ class LanguageEngine:
                 and cached_result
                 and isinstance(cached_result[0], dict)
             ):
-                adapter_registry = LanguageAdapterRegistry()
-                adapter = adapter_registry.get_adapter(lang)
-                unified_result = adapter.adapt(cached_result, lang, word)
-                # Cache structured entries (convert to dict format for storage)
-                unified_result_dict = self._cattrs_converter.unstructure(unified_result)
-                self.cache.put(lang, word, unified_result_dict)  # Update with structured format
-                return unified_result
+                # Check if this is already in the new format (list of DictionaryEntry objects)
+                if hasattr(cached_result[0], "word"):
+                    # Already in correct format, return as-is
+                    return cached_result
+                else:
+                    # Old format, need to convert through adapter
+                    adapter_registry = LanguageAdapterRegistry()
+                    adapter = adapter_registry.get_adapter(lang)
+                    unified_result = adapter.adapt({"cached_data": cached_result}, lang, word)
+                    # Cache structured entries (convert to dict format for storage)
+                    unified_result_dict = self._cattrs_converter.unstructure(unified_result)
+                    self.cache.put(lang, word, unified_result_dict)  # Update with structured format
+                    return unified_result
 
         # Get raw backend results
         _cattrs_converter = self._cattrs_converter
@@ -398,7 +403,6 @@ class LanguageEngine:
         dict_name: str | None = None,
     ) -> dict:
         """Get raw tool data for debugging and schema evolution."""
-        from langnet.diogenes.core import DiogenesLanguages
 
         logger.debug(
             "tool_data_request",
@@ -469,7 +473,7 @@ class LanguageEngine:
             else:
                 raise ValueError(f"Unknown tool: {tool}")
         except Exception as e:
-            logger.error(f"Tool data retrieval failed", tool=tool, action=action, error=str(e))
+            logger.error("Tool data retrieval failed", tool=tool, action=action, error=str(e))
             raise ValueError(f"Failed to retrieve data from {tool} tool: {str(e)}")
 
     def _get_diogenes_raw(self, lang: str, query: str) -> dict:

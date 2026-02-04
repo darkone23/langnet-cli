@@ -264,10 +264,32 @@ class DiogenesScraper:
             return initial_text, True
         return None, False
 
+    def _normalize_text_for_comparison(self, text: str) -> str:
+        normalized = text.strip()
+        if normalized.endswith("."):
+            normalized = normalized[:-1]
+        return normalized.rstrip(",").rstrip(":")
+
     def _collect_senses(self, soup: BeautifulSoup) -> list[str]:
+        b_tags = soup.select("b")
+        heading_texts = set()
+
+        for b in b_tags:
+            heading, is_heading = self._extract_heading_from_b(b)
+            if is_heading and heading:
+                heading_texts.add(self._normalize_text_for_comparison(b.get_text()))
+
+        non_heading_tags = [
+            b
+            for b in b_tags
+            if self._normalize_text_for_comparison(b.get_text()) not in heading_texts
+        ]
+
         senses = []
-        for b in soup.select("b"):
-            sense_txt = b.get_text().strip().rstrip(",").rstrip(":")
+        for b in non_heading_tags:
+            raw_text = b.get_text()
+            sense_txt = self._normalize_text_for_comparison(raw_text)
+
             if "(" in sense_txt and ")" not in sense_txt:
                 sense_txt += ")"
             senses.append(sense_txt)
@@ -495,7 +517,6 @@ class DiogenesScraper:
             result.get("dg_parsed", False),
         )
         chunk["chunk_type"] = chunk_type
-        result["dg_parsed"] = chunk_type == DiogenesChunkType.PerseusAnalysisHeader
 
         logger.debug("chunk_classified", chunk_type=chunk.get("chunk_type"))
         return chunk

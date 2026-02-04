@@ -463,6 +463,12 @@ def compare_tool_outputs(tool: str, action: str, word: str, generate_fixes: bool
             for suggestion in suggestions:
                 click.echo(f"  {suggestion}")
 
+        # Save results to file if requested
+        if output:
+            with open(output, "w", encoding="utf-8") as f:
+                json.dump(result, f, indent=2, ensure_ascii=False)
+            click.echo(f"[green]Results saved to: {output}[/]")
+
     else:
         # Detect schema drift for tool/action
         drift = comparator.detect_schema_drift(tool, action)
@@ -480,15 +486,8 @@ def compare_tool_outputs(tool: str, action: str, word: str, generate_fixes: bool
             for fix in fixes:
                 click.echo(f"  {fix}")
 
-
-if output:
-    if word:
-        if "error" not in result:
-            with open(output, "w", encoding="utf-8") as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
-            click.echo(f"[green]Results saved to: {output}[/]")
-    else:
-        if "error" not in drift:
+        # Save results to file if requested
+        if output:
             with open(output, "w", encoding="utf-8") as f:
                 json.dump(drift, f, indent=2, ensure_ascii=False)
             click.echo(f"[green]Results saved to: {output}[/]")

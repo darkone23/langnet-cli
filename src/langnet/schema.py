@@ -7,18 +7,18 @@ in this format for consistent API responses.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
 class Citation:
     """Source reference for a dictionary entry or sense."""
 
-    url: Optional[str] = None
-    title: Optional[str] = None
-    author: Optional[str] = None
-    page: Optional[str] = None
-    excerpt: Optional[str] = None
+    url: str | None = None
+    title: str | None = None
+    author: str | None = None
+    page: str | None = None
+    excerpt: str | None = None
 
 
 @dataclass
@@ -49,6 +49,6 @@ class DictionaryEntry:
     word: str  # The queried word
     language: str  # Language identifier ('la', 'grc', 'san', etc.)
     senses: list[Sense] = field(default_factory=list)  # Meanings and citations
-    morphology: Optional[MorphologyInfo] = None
+    morphology: MorphologyInfo | None = None
     source: str = ""  # Backend name ('heritage', 'cdsl', 'whitakers', etc.)
     metadata: dict[str, Any] = field(default_factory=dict)

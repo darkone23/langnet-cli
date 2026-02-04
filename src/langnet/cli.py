@@ -1150,8 +1150,8 @@ def _tool_query(
     save: str | None = None,
 ):
     """Generic tool query implementation."""
-    import json
-    from pathlib import Path
+    # import json
+    # from pathlib import Path
 
     url = f"{DEFAULT_API_URL}/api/tool/{tool}/{action}"
     params = {}
@@ -1167,44 +1167,20 @@ def _tool_query(
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
 
-        result = orjson.loads(response.text)
+        # result = orjson.loads(response.text)
 
         # Format output
         if output == "pretty":
-            console.print("[bold]Tool Query Result:[/]")
-            console.print(f"[cyan]Tool:[/] {tool}")
-            console.print(f"[cyan]Action:[/] {action}")
-            if lang:
-                console.print(f"[cyan]Language:[/] {lang}")
-            console.print(f"[cyan]Query:[/] {query}")
-            if dict_name:
-                console.print(f"[cyan]Dictionary:[/] {dict_name}")
-            console.print()
-            pprint(result)
+            raise NotImplementedError("Only JSON passthrough supported")
         elif output == "yaml":
-            import yaml
-
-            console.print(yaml.dump(result, default_flow_style=False))
+            raise NotImplementedError("Only JSON passthrough supported")
         else:  # json
-            console.print(json.dumps(result, indent=2))
+            print(response.text)
+            # console.print(response.text)
 
         # Save to fixture if requested
         if save:
-            fixture_dir = Path("tests/fixtures/raw_tool_outputs")
-            fixture_dir.mkdir(parents=True, exist_ok=True)
-
-            # Create filename based on tool, action, and query
-            safe_query = "".join(c for c in (query or "") if c.isalnum() or c in ("-", "_")).lower()
-            filename = f"{tool}_{action}"
-            if lang:
-                filename += f"_{lang}"
-            filename += f"_{safe_query}.json"
-
-            fixture_path = fixture_dir / filename
-            with open(fixture_path, "w", encoding="utf-8") as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
-
-            console.print(f"\n[green]Fixture saved to: {fixture_path}[/]")
+            raise NotImplementedError("Only JSON passthrough supported")
     except requests.RequestException as e:
         console.print(f"[red]Error: {e}[/]")
         sys.exit(1)
