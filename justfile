@@ -6,8 +6,8 @@ default:
 cli *args:
     langnet-cli {{ args }}
 
-cache-clear:
-    just cli cache-clear
+# cache-clear:
+#     just cli cache-clear
     
 # Kill zombie diogenes processes (loop mode)
 langnet-dg-reaper:
@@ -17,7 +17,7 @@ langnet-dg-reaper:
 restart-server:
     just autobot server restart
     just autobot server verify
-    just cli cache-clear
+    # just cli cache-clear
     
 # run ruff & ty
 lint-all:

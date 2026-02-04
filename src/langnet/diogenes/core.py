@@ -95,6 +95,7 @@ class DiogenesResultT:
         | UnknownChunkType
     ]
     dg_parsed: bool
+    chunk_types: list[str]
 
 
 class DiogenesChunkType:
@@ -443,6 +444,9 @@ class DiogenesScraper:
 
         del chunk["soup"]
 
+        # Remove is_fuzzy_match key if present (used for classification only)
+        chunk.pop("is_fuzzy_match", None)
+
         if chunk_type == DiogenesChunkType.PerseusAnalysisHeader:
             result["chunks"].append(PerseusAnalysisHeader(**chunk))
         elif chunk_type == DiogenesChunkType.NoMatchFoundHeader:
@@ -462,12 +466,15 @@ class DiogenesScraper:
         looks_like_header: bool,
         looks_like_reference: bool,
         dg_parsed: bool,
+        is_fuzzy_match: bool = False,
     ) -> str:
         if is_perseus_analysis:
             return DiogenesChunkType.PerseusAnalysisHeader
         if looks_like_header:
             return DiogenesChunkType.NoMatchFoundHeader
         if looks_like_reference:
+            if is_fuzzy_match:
+                return DiogenesChunkType.DiogenesFuzzyReference
             return (
                 DiogenesChunkType.DiogenesMatchingReference
                 if dg_parsed
@@ -508,6 +515,8 @@ class DiogenesScraper:
                         extracted_id = match.group(1)
                         chunk["reference_id"] = extracted_id
                         looks_like_reference = True
+                        # Check if this is a fuzzy match (nearest entry)
+                        chunk["is_fuzzy_match"] = result.get("is_fuzzy_overall", False)
                         break
 
         chunk_type = self._determine_chunk_type(
@@ -515,6 +524,7 @@ class DiogenesScraper:
             looks_like_header,
             looks_like_reference,
             result.get("dg_parsed", False),
+            chunk.get("is_fuzzy_match", False),
         )
         chunk["chunk_type"] = chunk_type
 
@@ -538,15 +548,27 @@ class DiogenesScraper:
                 status_code=response.status_code,
                 content_length=len(response.text),
             )
+            result["dg_parsed"] = True  # Set dg_parsed early so chunk classification works
+            # Check if this is a fuzzy match overall
+            response_text_lower = response.text.lower()
+            result["is_fuzzy_overall"] = (
+                "could not find dictionary headword" in response_text_lower
+                or "showing nearest entry" in response_text_lower
+            )
             documents = response.text.split("<hr />")
             logger.debug("parse_word_documents", count=len(documents))
+            chunk_types = []
             for doc in documents:
                 soup = BeautifulSoup(doc, "html5lib")
                 chunk = self.get_next_chunk(result, soup)
+                chunk_types.append(chunk["chunk_type"])
                 self.process_chunk(result, chunk)
-            result["dg_parsed"] = True
+            result["chunk_types"] = chunk_types
         else:
             logger.warning("diogenes_request_failed", status_code=response.status_code, word=word)
+
+        # Clean up temporary keys before creating result object
+        result.pop("is_fuzzy_overall", None)
 
         logger.debug(
             "parse_word_completed",

@@ -1,6 +1,6 @@
 import structlog
 
-from langnet.cache.core import create_cache
+
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.config import config as langnet_config
@@ -26,12 +26,10 @@ class LangnetWiring:
         if hasattr(self, "_initialized"):
             return
 
-        use_cache = cache_enabled if cache_enabled is not None else langnet_config.cache_enabled
         scraper = DiogenesScraper()
         whitakers = WhitakersWords()
         cltk = ClassicsToolkit()
         cdsl = SanskritCologneLexicon()
-        cache = create_cache(use_cache)
 
         heritage_config = HeritageConfig(
             base_url=langnet_config.heritage_url,
@@ -40,11 +38,6 @@ class LangnetWiring:
         heritage_morphology = HeritageMorphologyService(heritage_config)
         heritage_dictionary = HeritageDictionaryService()
 
-        if use_cache:
-            logger.info("cache_enabled", path=str(cache.cache_dir))
-        else:
-            logger.info("cache_disabled")
-
         config = LanguageEngineConfig(
             scraper=scraper,
             whitakers=whitakers,
@@ -52,7 +45,6 @@ class LangnetWiring:
             cdsl=cdsl,
             heritage_morphology=heritage_morphology,
             heritage_dictionary=heritage_dictionary,
-            cache=cache,
         )
         self.engine = LanguageEngine(config)
         self._initialized = True

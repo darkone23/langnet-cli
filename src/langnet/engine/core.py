@@ -5,7 +5,7 @@ import cattrs
 import structlog
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
-from langnet.cache.core import NoOpCache, QueryCache
+
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
@@ -125,7 +125,6 @@ class LanguageEngineConfig:
     cdsl: SanskritCologneLexicon
     heritage_morphology: HeritageMorphologyService | None = None
     heritage_dictionary: HeritageDictionaryService | None = None
-    cache: QueryCache | NoOpCache | None = None
     normalization_pipeline: NormalizationPipeline | None = None
     enable_normalization: bool = True
 
@@ -138,7 +137,6 @@ class LanguageEngine:
         self.cdsl = config.cdsl
         self.heritage_morphology = config.heritage_morphology
         self.heritage_dictionary = config.heritage_dictionary
-        self.cache = config.cache if config.cache is not None else NoOpCache()
         self.normalization_pipeline = config.normalization_pipeline
         self.enable_normalization = config.enable_normalization
         self._cattrs_converter = cattrs.Converter(omit_if_default=True)
@@ -328,46 +326,6 @@ class LanguageEngine:
         lang = LangnetLanguageCodes.get_for_input(lang)
         logger.debug("universal_query_started", lang=lang, word=word)
 
-        # Check cache for structured entries
-        cached_result = self.cache.get(lang, word)
-        if cached_result is not None:
-            logger.debug("query_cached_universal", lang=lang, word=word)
-            # If cached result is already DictionaryEntry objects, return them
-            if (
-                isinstance(cached_result, list)
-                and cached_result
-                and hasattr(cached_result[0], "word")
-            ):
-                return cached_result
-            # If cached result is a dict (old format), convert it
-            elif isinstance(cached_result, dict):
-                adapter_registry = LanguageAdapterRegistry()
-                adapter = adapter_registry.get_adapter(lang)
-                unified_result = adapter.adapt(cached_result, lang, word)
-                # Cache structured entries (convert to dict format for storage)
-                unified_result_dict = self._cattrs_converter.unstructure(unified_result)
-                self.cache.put(lang, word, unified_result_dict)  # Update with structured format
-                return unified_result
-            # If cached result is a list of dicts (old format), convert it
-            elif (
-                isinstance(cached_result, list)
-                and cached_result
-                and isinstance(cached_result[0], dict)
-            ):
-                # Check if this is already in the new format (list of DictionaryEntry objects)
-                if hasattr(cached_result[0], "word"):
-                    # Already in correct format, return as-is
-                    return cached_result
-                else:
-                    # Old format, need to convert through adapter
-                    adapter_registry = LanguageAdapterRegistry()
-                    adapter = adapter_registry.get_adapter(lang)
-                    unified_result = adapter.adapt({"cached_data": cached_result}, lang, word)
-                    # Cache structured entries (convert to dict format for storage)
-                    unified_result_dict = self._cattrs_converter.unstructure(unified_result)
-                    self.cache.put(lang, word, unified_result_dict)  # Update with structured format
-                    return unified_result
-
         # Get raw backend results
         _cattrs_converter = self._cattrs_converter
 
@@ -388,9 +346,6 @@ class LanguageEngine:
         adapter = adapter_registry.get_adapter(lang)
         unified_result = adapter.adapt(raw_result, lang, word)
 
-        # Cache structured entries (convert to dict format for storage)
-        unified_result_dict = self._cattrs_converter.unstructure(unified_result)
-        self.cache.put(lang, word, unified_result_dict)
         logger.debug("universal_query_completed", lang=lang, word=word, entries=len(unified_result))
         return unified_result
 

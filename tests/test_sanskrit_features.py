@@ -3,7 +3,6 @@ from typing import cast
 
 import cattrs
 
-from langnet.cache.core import NoOpCache
 from langnet.classics_toolkit.core import (
     ClassicsToolkit,
     SanskritMorphologyResult,
@@ -106,7 +105,6 @@ class TestSanskritEngineLemmatizationFallback(unittest.TestCase):
                 whitakers=None,  # type: ignore
                 cltk=self.cltk,
                 cdsl=self.cdsl,
-                cache=NoOpCache(),
             )
         )
 
@@ -144,7 +142,6 @@ class TestSanskritIntegration(unittest.TestCase):
                 whitakers=None,  # type: ignore
                 cltk=self.cltk,
                 cdsl=self.cdsl,
-                cache=NoOpCache(),
             )
         )
 
@@ -178,7 +175,6 @@ class TestSanskritStandaloneFunctions(unittest.TestCase):
                 whitakers=None,  # type: ignore
                 cltk=self.cltk,
                 cdsl=self.cdsl,
-                cache=NoOpCache(),
             )
         )
 

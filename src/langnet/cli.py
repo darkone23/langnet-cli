@@ -32,7 +32,7 @@ from rich.console import Console
 from rich.pretty import pprint
 from rich.table import Table
 
-from langnet.cache.core import QueryCache, get_cache_path
+
 from langnet.cologne.core import CdslIndex, CdslIndexBuilder, batch_build
 from langnet.config import config
 from langnet.foster.render import render_foster_codes
@@ -72,7 +72,10 @@ def _format_morph_with_foster(morph: dict) -> str:
     return result
 
 
-def _format_diogenes_with_foster(result: dict) -> None:
+def _format_diogenes_with_foster(result: dict | list) -> None:
+    if isinstance(result, list):
+        return
+
     diogenes = result.get("diogenes")
     if not diogenes or "chunks" not in diogenes:
         return
@@ -87,7 +90,10 @@ def _format_diogenes_with_foster(result: dict) -> None:
         morph_data["formatted"] = formatted_morphs
 
 
-def _format_cltk_with_foster(result: dict) -> None:
+def _format_cltk_with_foster(result: dict | list) -> None:
+    if isinstance(result, list):
+        return
+
     cltk = result.get("cltk")
     if not cltk or "greek_morphology" not in cltk:
         return
@@ -99,7 +105,10 @@ def _format_cltk_with_foster(result: dict) -> None:
     greek_morph["formatted_foster"] = render_foster_codes(greek_morph["foster_codes"])
 
 
-def _format_sanskrit_with_foster(result: dict) -> None:
+def _format_sanskrit_with_foster(result: dict | list) -> None:
+    if isinstance(result, list):
+        return
+
     dictionaries = result.get("dictionaries")
     if not dictionaries:
         return
@@ -113,12 +122,20 @@ def _format_sanskrit_with_foster(result: dict) -> None:
                 entry["formatted_foster"] = render_foster_codes(entry["foster_codes"])
 
 
-def _show_sanskrit_warning(result: dict) -> None:
+def _show_sanskrit_warning(result: dict | list) -> None:
+    if isinstance(result, list):
+        if result and isinstance(result[0], dict) and result[0].get("_warning"):
+            console.print(f"[yellow]Warning: {result[0]['_warning']}[/]")
+        return
+
     if result.get("_warning"):
         console.print(f"[yellow]Warning: {result['_warning']}[/]")
 
 
-def _format_result_with_foster(result: dict) -> dict:
+def _format_result_with_foster(result: dict | list) -> dict | list:
+    if isinstance(result, list):
+        return result
+
     _format_diogenes_with_foster(result)
     _format_cltk_with_foster(result)
     _format_sanskrit_with_foster(result)
@@ -333,77 +350,6 @@ def health(api_url: str, timeout: float):
     Deprecated: Use 'langnet verify' instead.
     """
     _verify_impl(api_url, http_timeout=timeout)
-
-
-@main.command(name="cache-stats")
-@click.option(
-    "--api-url",
-    default=DEFAULT_API_URL,
-    help="Base URL of the langnet API server",
-)
-def cache_stats(api_url: str):
-    """Show cache statistics including size and entry counts by language.
-
-    Displays cache database size, total entries, and breakdown by language.
-    """
-    cache_url = f"{api_url}/api/cache/stats"
-    try:
-        response = requests.get(cache_url, timeout=30)
-        response.raise_for_status()
-        stats = orjson.loads(response.text)
-
-        table = Table(title="Cache Statistics")
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="green")
-
-        table.add_row("Total Entries", str(stats.get("total_entries", 0)))
-        table.add_row("Database Size", stats.get("total_size_human", "0.0B"))
-
-        console.print(table)
-
-        if stats.get("languages"):
-            lang_table = Table(title="By Language")
-            lang_table.add_column("Language", style="cyan")
-            lang_table.add_column("Entries", style="green")
-            lang_table.add_column("Size", style="yellow")
-            for lang_info in sorted(stats["languages"], key=lambda x: -x["entries"]):
-                lang_table.add_row(
-                    lang_info["lang"],
-                    str(lang_info["entries"]),
-                    lang_info["size_human"],
-                )
-            console.print(lang_table)
-    except requests.RequestException as e:
-        console.print(f"[red]Error: {e}[/]")
-        sys.exit(1)
-
-
-@main.command(name="cache-clear")
-@click.option("--lang", default=None, type=str, help="Specific language to clear (lat, grc, san)")
-def cache_clear(lang: str | None):
-    """Clear the response cache.
-
-    Clears cached query results to ensure fresh data is fetched.
-
-    Options:
-        --lang    Clear only specific language cache (lat, grc, san)
-
-    Examples:
-        langnet-cli cache-clear           # Clear all caches
-        langnet-cli cache-clear --lang san  # Clear only Sanskrit cache
-    """
-    try:
-        cache = QueryCache(get_cache_path())
-
-        if lang:
-            count = cache.clear_by_lang(lang)
-            console.print(f"[green]Cleared {count} entries from {lang} cache[/]")
-        else:
-            cache.clear()
-            console.print("[green]Cache cleared successfully[/]")
-    except Exception as e:
-        console.print(f"[red]Error clearing cache: {e}[/]")
-        sys.exit(1)
 
 
 def get_cdsl_db_dir() -> Path:
