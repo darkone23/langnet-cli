@@ -5,7 +5,7 @@ import cattrs
 import structlog
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
-
+from langnet.backend_adapter import LanguageAdapterRegistry
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
@@ -15,8 +15,6 @@ from langnet.normalization import NormalizationPipeline
 from langnet.whitakers_words.core import WhitakersWords
 
 logger = structlog.get_logger(__name__)
-
-logger.info("loading_engine_core")
 
 
 class LangnetLanguageCodes:
@@ -321,8 +319,6 @@ class LanguageEngine:
 
     def handle_query(self, lang, word):
         """Handle queries using the universal schema with structured DictionaryEntry objects."""
-        from langnet.backend_adapter import LanguageAdapterRegistry
-
         lang = LangnetLanguageCodes.get_for_input(lang)
         logger.debug("universal_query_started", lang=lang, word=word)
 
@@ -369,6 +365,16 @@ class LanguageEngine:
         )
 
         # Validate tool and action
+        self._validate_tool_and_action(tool, action)
+
+        # Validate tool-specific parameters
+        self._validate_tool_parameters(tool, lang, query, dict_name)
+
+        # Call tool-specific methods
+        return self._execute_tool(tool, action, lang, query, dict_name)
+
+    def _validate_tool_and_action(self, tool: str, action: str):
+        """Validate tool and action parameters."""
         valid_tools = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
         valid_actions = {"search", "parse", "analyze", "morphology", "dictionary", "lookup"}
 
@@ -382,38 +388,64 @@ class LanguageEngine:
                 f"Invalid action: {action}. Must be one of: {', '.join(sorted(valid_actions))}"
             )
 
-        # Tool-specific parameter validation
+    def _validate_tool_parameters(
+        self, tool: str, lang: str | None, query: str | None, dict_name: str | None
+    ):
+        """Validate tool-specific parameters."""
         if tool == "diogenes":
-            if not lang:
-                raise ValueError("Missing required parameter: lang for diogenes tool")
-            if not query:
-                raise ValueError("Missing required parameter: query for diogenes tool")
-            valid_languages = {"lat", "grc", "san", "grk"}
-            if lang not in valid_languages:
-                raise ValueError(
-                    f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
-                )
+            self._validate_diogenes_params(lang, query)
         elif tool == "whitakers":
-            if not query:
-                raise ValueError("Missing required parameter: query for whitakers tool")
+            self._validate_whitakers_params(query)
         elif tool == "heritage":
-            if not query:
-                raise ValueError("Missing required parameter: query for heritage tool")
+            self._validate_heritage_params(query)
         elif tool == "cdsl":
-            if not query:
-                raise ValueError("Missing required parameter: query for cdsl tool")
+            self._validate_cdsl_params(query)
         elif tool == "cltk":
-            if not lang:
-                raise ValueError("Missing required parameter: lang for cltk tool")
-            if not query:
-                raise ValueError("Missing required parameter: query for cltk tool")
-            valid_languages = {"lat", "grc", "san"}
-            if lang not in valid_languages:
-                raise ValueError(
-                    f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
-                )
+            self._validate_cltk_params(lang, query)
 
-        # Call tool-specific methods
+    def _validate_diogenes_params(self, lang: str | None, query: str | None):
+        """Validate Diogenes-specific parameters."""
+        if not lang:
+            raise ValueError("Missing required parameter: lang for diogenes tool")
+        if not query:
+            raise ValueError("Missing required parameter: query for diogenes tool")
+        valid_languages = {"lat", "grc", "san", "grk"}
+        if lang not in valid_languages:
+            raise ValueError(
+                f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
+            )
+
+    def _validate_whitakers_params(self, query: str | None):
+        """Validate Whitaker's Words-specific parameters."""
+        if not query:
+            raise ValueError("Missing required parameter: query for whitakers tool")
+
+    def _validate_heritage_params(self, query: str | None):
+        """Validate Heritage-specific parameters."""
+        if not query:
+            raise ValueError("Missing required parameter: query for heritage tool")
+
+    def _validate_cdsl_params(self, query: str | None):
+        """Validate CDSL-specific parameters."""
+        if not query:
+            raise ValueError("Missing required parameter: query for cdsl tool")
+
+    def _validate_cltk_params(self, lang: str | None, query: str | None):
+        """Validate CLTK-specific parameters."""
+        if not lang:
+            raise ValueError("Missing required parameter: lang for cltk tool")
+        if not query:
+            raise ValueError("Missing required parameter: query for cltk tool")
+        valid_languages = {"lat", "grc", "san"}
+        if lang not in valid_languages:
+            raise ValueError(
+                f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
+            )
+
+    def _execute_tool(
+        self, tool: str, action: str, lang: str | None, query: str | None, dict_name: str | None
+    ):
+        """Execute the specific tool and return results."""
         try:
             if tool == "diogenes":
                 return self._get_diogenes_raw(lang or "", query or "")
@@ -433,8 +465,6 @@ class LanguageEngine:
 
     def _get_diogenes_raw(self, lang: str, query: str) -> dict:
         """Get raw data from Diogenes backend."""
-        from langnet.diogenes.core import DiogenesLanguages
-
         # Normalize language code
         if lang == "grk":
             lang = "grc"

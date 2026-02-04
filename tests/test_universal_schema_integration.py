@@ -12,9 +12,10 @@ Run with: just test-universal-schema
 """
 
 import json
-import os
+import time
 import unittest
-from typing import Any
+
+import orjson
 
 from langnet.backend_adapter import (
     CDSLBackendAdapter,
@@ -174,8 +175,6 @@ class TestUniversalSchemaComprehensive(unittest.TestCase):
 
     def test_json_serialization_all_languages(self):
         """Test that all languages can be serialized to JSON."""
-        import orjson
-
         test_words = [("lat", "lupus"), ("grc", "λόγος"), ("san", "agni")]
 
         for language, word in test_words:
@@ -273,8 +272,6 @@ class TestUniversalSchemaComprehensive(unittest.TestCase):
 
     def test_performance_baseline(self):
         """Test that performance is reasonable for a cached query."""
-        import time
-
         # Warmup - first query triggers initialization
         self.wiring.engine.handle_query("lat", "sum")
 

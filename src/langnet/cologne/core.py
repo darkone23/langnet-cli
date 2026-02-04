@@ -10,6 +10,7 @@ import structlog
 from indic_transliteration.detect import detect
 from indic_transliteration.sanscript import DEVANAGARI, SLP1, transliterate
 
+from langnet.citation.models import Citation, CitationCollection, CitationType, TextReference
 from langnet.config import config
 
 from .models import (
@@ -88,9 +89,29 @@ def parse_batch(args) -> tuple[list, list]:
     return entries_data, headwords_data
 
 
+class CdslIndexBuildConfig:
+    """Configuration for CDSL index building."""
+
+    def __init__(  # noqa: PLR0913
+        self,
+        dict_dir: Path,
+        output_db: Path,
+        dict_id: str,
+        limit: int | None = None,
+        batch_size: int | None = None,
+        num_workers: int | None = None,
+    ):
+        self.dict_dir = dict_dir
+        self.output_db = output_db
+        self.dict_id = dict_id
+        self.limit = limit
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+
 class CdslIndexBuilder:
     @staticmethod
-    def build(
+    def build(  # noqa: PLR0913
         dict_dir: Path,
         output_db: Path,
         dict_id: str,
@@ -98,16 +119,29 @@ class CdslIndexBuilder:
         batch_size: int | None = None,
         num_workers: int | None = None,
     ) -> int:
-        sqlite_path = dict_dir / "web" / "sqlite" / f"{dict_id.lower()}.sqlite"
+        config = CdslIndexBuildConfig(
+            dict_dir=dict_dir,
+            output_db=output_db,
+            dict_id=dict_id,
+            limit=limit,
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )
+        return CdslIndexBuilder._build_with_config(config)
+
+    @staticmethod
+    def _build_with_config(config: CdslIndexBuildConfig) -> int:  # noqa: PLR0915
+        """Build index with configuration."""
+        sqlite_path = config.dict_dir / "web" / "sqlite" / f"{config.dict_id.lower()}.sqlite"
         if not sqlite_path.exists():
             raise FileNotFoundError(f"SQLite file not found: {sqlite_path}")
 
-        output_db.parent.mkdir(parents=True, exist_ok=True)
+        config.output_db.parent.mkdir(parents=True, exist_ok=True)
 
-        if output_db.exists():
-            output_db.unlink()
+        if config.output_db.exists():
+            config.output_db.unlink()
 
-        conn = duckdb.connect(str(output_db))
+        conn = duckdb.connect(str(config.output_db))
 
         try:
             for sql_stmt in CdslSchema.get_sql().split(";"):
@@ -115,34 +149,36 @@ class CdslIndexBuilder:
                 if stmt:
                     conn.execute(stmt)
 
-            logger.info("indexing_start", dict_id=dict_id, limit=limit)
+            logger.info("indexing_start", dict_id=config.dict_id, limit=config.limit)
 
             sqlite_conn = sqlite3.connect(str(sqlite_path))
             try:
-                cursor = sqlite_conn.execute(f"SELECT key, lnum, data FROM {dict_id}")
+                cursor = sqlite_conn.execute(f"SELECT key, lnum, data FROM {config.dict_id}")
                 all_rows = list(cursor)
             finally:
                 sqlite_conn.close()
 
-            if limit:
-                all_rows = all_rows[:limit]
+            if config.limit:
+                all_rows = all_rows[: config.limit]
 
-            logger.info("rows_loaded", dict_id=dict_id, total=len(all_rows))
+            logger.info("rows_loaded", dict_id=config.dict_id, total=len(all_rows))
 
-            if batch_size:
-                actual_batch_size = batch_size
+            if config.batch_size:
+                actual_batch_size = config.batch_size
             else:
-                actual_batch_size = max(100, len(all_rows) // (num_workers or mp.cpu_count()))
+                actual_batch_size = max(
+                    100, len(all_rows) // (config.num_workers or mp.cpu_count())
+                )
 
             batches = [
                 all_rows[i : i + actual_batch_size]
                 for i in range(0, len(all_rows), actual_batch_size)
             ]
 
-            num_workers = num_workers or mp.cpu_count()
+            num_workers = config.num_workers or mp.cpu_count()
             logger.info(
                 "processing_batches",
-                dict_id=dict_id,
+                dict_id=config.dict_id,
                 batches=len(batches),
                 workers=num_workers,
                 batch_size=actual_batch_size,
@@ -153,7 +189,7 @@ class CdslIndexBuilder:
 
             with ProcessPoolExecutor(max_workers=num_workers) as executor:
                 futures = {
-                    executor.submit(parse_batch, (sqlite_path, dict_id, batch)): idx
+                    executor.submit(parse_batch, (sqlite_path, config.dict_id, batch)): idx
                     for idx, batch in enumerate(batches)
                 }
                 total_batches = len(batches)
@@ -167,7 +203,7 @@ class CdslIndexBuilder:
                     elapsed = time.perf_counter() - batch_start_time
                     logger.info(
                         "batch_progress",
-                        dict_id=dict_id,
+                        dict_id=config.dict_id,
                         batch=batch_num,
                         total=total_batches,
                         entries=len(entries),
@@ -178,7 +214,7 @@ class CdslIndexBuilder:
                     )
                 logger.info(
                     "all_batches_complete",
-                    dict_id=dict_id,
+                    dict_id=config.dict_id,
                     total_batches=total_batches,
                     total_entries=len(all_entries),
                     total_headwords=len(all_headwords),
@@ -187,7 +223,7 @@ class CdslIndexBuilder:
 
             logger.info(
                 "indexing_bulk_insert",
-                dict_id=dict_id,
+                dict_id=config.dict_id,
                 entries=len(all_entries),
                 headwords=len(all_headwords),
             )
@@ -215,7 +251,7 @@ class CdslIndexBuilder:
 
             logger.info(
                 "indexing_complete",
-                dict_id=dict_id,
+                dict_id=config.dict_id,
                 entries=len(all_entries),
                 headwords=len(all_headwords),
             )
@@ -561,8 +597,6 @@ class SanskritCologneLexicon:
             references = None
             raw_refs = grammatical.get("references")
             if raw_refs and isinstance(raw_refs, list):
-                from langnet.citation.models import Citation, CitationType, TextReference
-
                 citations = []
                 for ref_dict in raw_refs if isinstance(raw_refs, list) else []:
                     if isinstance(ref_dict, dict):
@@ -579,8 +613,6 @@ class SanskritCologneLexicon:
                         citations.append(citation)
 
                 if citations:
-                    from langnet.citation.models import CitationCollection
-
                     references = CitationCollection(citations=citations)
 
             entries.append(

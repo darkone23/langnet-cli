@@ -248,58 +248,65 @@ class WhitakersWordsChunker:
 
 class WhitakersWords:
     @staticmethod
+    def smart_merge(src: dict, dest: dict):
+        for k, v in src.items():
+            if k in dest:
+                _v = dest[k]
+                if v == _v:
+                    pass
+                else:
+                    logger.warning("merge_collision", key=k, src_value=v, dest_value=_v)
+                    if isinstance(v, list) and isinstance(_v, list):
+                        dest[k] = v + _v
+                    elif isinstance(v, list):
+                        dest[k] = v + [f"{_v}".strip()]
+                    elif isinstance(_v, list):
+                        dest[k] = _v + [f"{v}".strip()]
+                    else:
+                        pass
+            else:
+                dest[k] = v
+
+    @staticmethod
+    def process_chunk(word_chunk: dict, word: dict, terms: list, unknown: list, lines: list):
+        for i in range(word_chunk["size"]):
+            (txt, line_type) = (word_chunk["txts"][i], word_chunk["types"][i])
+            lines.append(txt)
+            if line_type == "sense":
+                data = SensesReducer.reduce(txt)
+                WhitakersWords.smart_merge(data, word)
+            elif line_type == "term-facts":
+                data = FactsReducer.reduce(txt)
+                terms.append(data)
+            elif line_type == "term-code":
+                data = CodesReducer.reduce(txt)
+                WhitakersWords.smart_merge(dict(codeline=data), word)
+            elif line_type == "unknown":
+                unknown.append(txt)
+            else:
+                assert False, f"Unexpected line type! [{line_type}]"
+
+    @staticmethod
+    def create_word_structure(word_chunk: dict) -> dict | None:
+        unknown = []
+        terms = []
+        lines = []
+        word = dict(terms=terms, raw_lines=lines, unknown=unknown)
+        WhitakersWords.process_chunk(word_chunk, word, terms, unknown, lines)
+        if len(unknown) == 0:
+            del word["unknown"]
+        return word if lines else None
+
+    @staticmethod
     def words(search: list[str]) -> WhitakersWordsResult:
         words_chunker = WhitakersWordsChunker(search)
         chunks = words_chunker.get_word_chunks()
         wordlist = []
 
-        def smart_merge(src: dict, dest: dict):
-            for k, v in src.items():
-                if k in dest:
-                    _v = dest[k]
-                    if v == _v:
-                        pass
-                    else:
-                        logger.warning("merge_collision", key=k, src_value=v, dest_value=_v)
-                        if isinstance(v, list) and isinstance(_v, list):
-                            dest[k] = v + _v
-                        elif isinstance(v, list):
-                            dest[k] = v + [f"{_v}".strip()]
-                        elif isinstance(_v, list):
-                            dest[k] = _v + [f"{v}".strip()]
-                        else:
-                            pass
-                else:
-                    dest[k] = v
-
-        def process_chunk(word_chunk: dict, word: dict, terms: list, unknown: list, lines: list):
-            for i in range(word_chunk["size"]):
-                (txt, line_type) = (word_chunk["txts"][i], word_chunk["types"][i])
-                lines.append(txt)
-                if line_type == "sense":
-                    data = SensesReducer.reduce(txt)
-                    smart_merge(data, word)
-                elif line_type == "term-facts":
-                    data = FactsReducer.reduce(txt)
-                    terms.append(data)
-                elif line_type == "term-code":
-                    data = CodesReducer.reduce(txt)
-                    smart_merge(dict(codeline=data), word)
-                elif line_type == "unknown":
-                    unknown.append(txt)
-                else:
-                    assert False, f"Unexpected line type! [{line_type}]"
-
         for word_chunk in chunks:
-            unknown = []
-            terms = []
-            lines = []
-            word = dict(terms=terms, raw_lines=lines, unknown=unknown)
-            process_chunk(word_chunk, word, terms, unknown, lines)
-            if len(unknown) == 0:
-                del word["unknown"]
-            if lines:
-                wordlist.append(word)
+            word_structure = WhitakersWords.create_word_structure(word_chunk)
+            if word_structure:
+                wordlist.append(word_structure)
 
         structured_wordlist = []
         for w in fixup(wordlist):

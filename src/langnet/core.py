@@ -1,6 +1,5 @@
 import structlog
 
-
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.config import config as langnet_config

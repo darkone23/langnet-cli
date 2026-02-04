@@ -6,17 +6,14 @@ including fixture generation, schema validation, and comparison with unified out
 """
 
 import json
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import jsonschema
 import requests
 import structlog
 from rich.console import Console
-from rich.progress import Progress, BarColumn, TextColumn
-
-from langnet.logging import setup_logging
+from rich.progress import BarColumn, Progress, TextColumn
 
 logger = structlog.get_logger(__name__)
 console = Console()
@@ -34,10 +31,10 @@ class ToolFuzzer:
         self,
         tool: str,
         action: str,
-        word_list: List[str],
-        lang: Optional[str] = None,
-        dict_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        word_list: list[str],
+        lang: str | None = None,
+        dict_name: str | None = None,
+    ) -> dict[str, Any]:
         """Generate fixtures for a tool with given word list.
 
         Args:
@@ -50,7 +47,7 @@ class ToolFuzzer:
         Returns:
             Dictionary with results and statistics
         """
-        results = {
+        results: dict[str, Any] = {
             "tool": tool,
             "action": action,
             "total_words": len(word_list),
@@ -85,7 +82,11 @@ class ToolFuzzer:
                         console.print(f"[green]✓ {word}[/]")
                     else:
                         results["failed"] += 1
-                        error_msg = fixture_data.get("error", "Unknown error")
+                        error_msg = (
+                            fixture_data.get("error", "Unknown error")
+                            if fixture_data
+                            else "Unknown error"
+                        )
                         results["errors"].append({"word": word, "error": error_msg})
                         console.print(f"[red]✗ {word}: {error_msg}[/]")
 
@@ -101,7 +102,7 @@ class ToolFuzzer:
         with open(summary_path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
 
-        console.print(f"\n[bold]Results:[/]")
+        console.print("\n[bold]Results:[/]")
         console.print(f"  Total: {results['total_words']}")
         console.print(f"  Successful: {results['successful']}")
         console.print(f"  Failed: {results['failed']}")
@@ -114,9 +115,9 @@ class ToolFuzzer:
         tool: str,
         action: str,
         word: str,
-        lang: Optional[str] = None,
-        dict_name: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        lang: str | None = None,
+        dict_name: str | None = None,
+    ) -> dict[str, Any] | None:
         """Generate a single fixture for a word."""
         try:
             # Build API URL
@@ -152,7 +153,7 @@ class ToolFuzzer:
             return {"error": f"Generation failed: {str(e)}"}
 
     def _save_fixture(
-        self, tool: str, action: str, lang: Optional[str], word: str, data: Dict[str, Any]
+        self, tool: str, action: str, lang: str | None, word: str, data: dict[str, Any]
     ):
         """Save fixture data to file."""
         # Create filename
@@ -170,7 +171,7 @@ class ToolFuzzer:
 
         logger.debug("fixture_saved", path=str(fixture_path))
 
-    def validate_fixtures(self, tool: str, action: str) -> Dict[str, Any]:
+    def validate_fixtures(self, tool: str, action: str) -> dict[str, Any]:
         """Validate all fixtures for a tool against its schema.
 
         Args:
@@ -185,14 +186,14 @@ class ToolFuzzer:
             raise FileNotFoundError(f"Schema not found: {schema_path}")
 
         # Load schema
-        with open(schema_path, "r", encoding="utf-8") as f:
+        with open(schema_path, encoding="utf-8") as f:
             schema = json.load(f)
 
         # Find all fixtures for this tool/action
         tool_dir = self.fixture_dir / tool
         fixture_files = list(tool_dir.glob(f"*_{action}*.json"))
 
-        results = {
+        results: dict[str, Any] = {
             "tool": tool,
             "action": action,
             "total_fixtures": len(fixture_files),
@@ -206,7 +207,7 @@ class ToolFuzzer:
         for fixture_path in fixture_files:
             try:
                 # Load fixture
-                with open(fixture_path, "r", encoding="utf-8") as f:
+                with open(fixture_path, encoding="utf-8") as f:
                     fixture_data = json.load(f)
 
                 # Validate against schema
@@ -236,7 +237,7 @@ class ToolFuzzer:
         with open(validation_path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
 
-        console.print(f"\n[bold]Validation Results:[/]")
+        console.print("\n[bold]Validation Results:[/]")
         console.print(f"  Total fixtures: {results['total_fixtures']}")
         console.print(f"  Valid: {results['valid']}")
         console.print(f"  Invalid: {results['invalid']}")
@@ -245,7 +246,7 @@ class ToolFuzzer:
 
         return results
 
-    def compare_with_schema(self, tool: str, action: str) -> Dict[str, Any]:
+    def compare_with_schema(self, tool: str, action: str) -> dict[str, Any]:
         """Compare raw tool outputs with unified schema outputs.
 
         Args:
@@ -266,7 +267,7 @@ class ToolFuzzer:
 
         # Use first fixture for comparison
         sample_fixture = fixture_files[0]
-        with open(sample_fixture, "r", encoding="utf-8") as f:
+        with open(sample_fixture, encoding="utf-8") as f:
             raw_data = json.load(f)
 
         # Extract query from filename
@@ -278,7 +279,7 @@ class ToolFuzzer:
             unified_params = {"l": "lat", "s": word}  # Default to Latin
             if tool == "diogenes" and "grc" in sample_fixture.name:
                 unified_params["l"] = "grc"
-            elif tool == "heritage" or tool == "cdsl":
+            elif tool in {"heritage", "cdsl"}:
                 unified_params["l"] = "san"
 
             response = requests.get(unified_url, params=unified_params, timeout=30)
@@ -307,7 +308,7 @@ class ToolFuzzer:
 
         return comparison
 
-    def _analyze_structure(self, data: Any) -> Dict[str, Any]:
+    def _analyze_structure(self, data: Any) -> dict[str, Any]:
         """Analyze the structure of JSON data."""
         if isinstance(data, dict):
             return {
@@ -326,11 +327,11 @@ class ToolFuzzer:
 
     def _find_differences(
         self, raw_data: Any, unified_data: Any, path: str = ""
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Find differences between raw and unified data structures."""
         differences = []
 
-        if type(raw_data) != type(unified_data):
+        if type(raw_data) is not type(unified_data):
             differences.append(
                 {
                     "path": path,
@@ -394,7 +395,7 @@ class ToolFuzzer:
         return differences
 
 
-def get_test_word_lists() -> Dict[str, List[str]]:
+def get_test_word_lists() -> dict[str, list[str]]:
     """Get predefined test word lists for each language."""
     return {
         "latin": ["lupus", "arma", "vir", "rosa", "amicus"],
@@ -403,10 +404,10 @@ def get_test_word_lists() -> Dict[str, List[str]]:
     }
 
 
-def run_fuzz_testing(
-    tool: str = None,
-    action: str = None,
-    words: List[str] = None,
+def run_fuzz_testing(  # noqa: PLR0913
+    tool: str | None = None,
+    action: str | None = None,
+    words: list[str] | None = None,
     validate: bool = False,
     compare: bool = False,
     base_url: str = "http://localhost:8000",
@@ -424,12 +425,7 @@ def run_fuzz_testing(
     fuzzer = ToolFuzzer(base_url)
     word_lists = get_test_word_lists()
 
-    if words:
-        # Use provided words
-        test_words = {None: words}  # None key for unspecified language
-    else:
-        # Use default word lists
-        test_words = word_lists
+    test_words = {None: words} if words else word_lists
 
     # Test each tool/action combination
     test_matrix = [
@@ -444,13 +440,15 @@ def run_fuzz_testing(
     ]
 
     if tool:
-        test_matrix = [(t, a, l) for t, a, l in test_matrix if t == tool]
+        test_matrix = [(t, a, lang) for t, a, lang in test_matrix if t == tool]
     if action:
-        test_matrix = [(t, a, l) for t, a, l in test_matrix if a == action]
+        test_matrix = [(t, a, lang) for t, a, lang in test_matrix if a == action]
 
     for tool_name, action_name, lang in test_matrix:
         if tool_name in test_words:
-            words_to_test = test_words[tool_name] if tool_name in test_words else test_words[None]
+            words_to_test = test_words[tool_name]
+        else:
+            words_to_test = []
 
             # Generate fixtures
             fuzzer.generate_fixtures(
@@ -458,7 +456,7 @@ def run_fuzz_testing(
                 action=action_name,
                 word_list=words_to_test,
                 lang=lang,
-                dict_name="mw" if tool_name == "heritage" or tool_name == "cdsl" else None,
+                dict_name="mw" if tool_name in {"heritage", "cdsl"} else None,
             )
 
             # Validate fixtures

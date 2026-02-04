@@ -12,6 +12,30 @@ from langnet.schema import Citation, DictionaryEntry, MorphologyInfo, Sense
 
 logger = structlog.get_logger(__name__)
 
+# Constants for POS indicators
+NOUN_INDICATORS = ["n", "noun", "m.", "f.", "n.", "substantive"]
+VERB_INDICATORS = ["v", "verb", "ω"]
+ADJECTIVE_INDICATORS = ["adj", "adjective"]
+PRONOUN_INDICATORS = ["pron", "pronoun"]
+
+# Constants for morphology POS mapping
+MORPH_POS_MAPPING = {
+    "V": "verb",
+    "ADJ": "adjective",
+    "ADJS": "adjective",
+    "ADJP": "adjective",
+    "ADV": "adverb",
+    "ADVB": "adverb",
+    "PRON": "pronoun",
+    "PRN": "pronoun",
+    "CONJ": "conjunction",
+    "CNJ": "conjunction",
+    "PREP": "preposition",
+}
+
+# Constants for URL parsing
+MIN_URL_PARTS = 3
+
 
 def create_backend_converter() -> cattrs.Converter:
     """Create and configure a cattrs converter for backend data."""
@@ -31,32 +55,23 @@ class BaseBackendAdapter:
         if not entry_text:
             return "unknown"
 
-        # Look for POS indicators in entry text
         entry_text = entry_text.lower()
 
-        # Noun indicators
-        if any(
-            indicator in entry_text for indicator in ["n", "noun", "m.", "f.", "n.", "substantive"]
-        ):
-            return "noun"
-        # Verb indicators
-        if any(indicator in entry_text for indicator in ["v", "verb", "ω"]):
-            return "verb"
-        # Adjective indicators
-        if any(indicator in entry_text for indicator in ["adj", "adjective"]):
-            return "adjective"
-        # Pronoun indicators
-        if any(indicator in entry_text for indicator in ["pron", "pronoun"]):
-            return "pronoun"
-        # Adverb indicators
-        if any(indicator in entry_text for indicator in ["adv", "adverb"]):
-            return "adverb"
-        # Conjunction indicators
-        if any(indicator in entry_text for indicator in ["conj", "conjunction"]):
-            return "conjunction"
-        # Preposition indicators
-        if any(indicator in entry_text for indicator in ["prep", "preposition"]):
-            return "preposition"
+        # Define POS indicators
+        pos_indicators = {
+            "noun": NOUN_INDICATORS,
+            "verb": VERB_INDICATORS,
+            "adjective": ADJECTIVE_INDICATORS,
+            "pronoun": PRONOUN_INDICATORS,
+            "adverb": ["adv", "adverb"],
+            "conjunction": ["conj", "conjunction"],
+            "preposition": ["prep", "preposition"],
+        }
+
+        # Check each POS category
+        for pos, indicators in pos_indicators.items():
+            if any(indicator in entry_text for indicator in indicators):
+                return pos
 
         return "unknown"
 
@@ -70,11 +85,11 @@ class BaseBackendAdapter:
         elif logeion_url.startswith("perseus:"):
             # Format: perseus:abo:phi,author_id,work:book:line
             parts = logeion_url.split(":")
-            if len(parts) >= 3:
+            if len(parts) >= MIN_URL_PARTS:
                 return Citation(
                     url=logeion_url,
                     title=f"Perseus {parts[2]}",
-                    page=parts[-1] if len(parts) > 3 else None,
+                    page=parts[-1] if len(parts) > MIN_URL_PARTS else None,
                 )
 
         return Citation(url=logeion_url)
@@ -90,6 +105,96 @@ class BaseBackendAdapter:
 class DiogenesBackendAdapter(BaseBackendAdapter):
     """Adapter for Diogenes web scraper."""
 
+    def _has_valid_data(self, chunks: list) -> bool:
+        """Check if any chunks contain valid data."""
+        for chunk in chunks:
+            definitions_blocks = chunk.get("definitions", {}).get("blocks", [])
+            if definitions_blocks and len(definitions_blocks) > 0:
+                return True
+            if "morphology" in chunk:
+                morphs = chunk.get("morphology", {}).get("morphs", [])
+                if morphs and len(morphs) > 0:
+                    return True
+        return False
+
+    def _process_definition_blocks(
+        self, chunks: list, word: str, language: str
+    ) -> list[DictionaryEntry]:
+        """Process definition blocks from chunks."""
+        entries = []
+        for chunk in chunks:
+            definitions_blocks = chunk.get("definitions", {}).get("blocks", [])
+            for block in definitions_blocks:
+                entry = self._create_entry_from_block(block, word, language)
+                if entry:
+                    entries.append(entry)
+        return entries
+
+    def _create_entry_from_block(
+        self, block: dict, word: str, language: str
+    ) -> DictionaryEntry | None:
+        """Create a DictionaryEntry from a definition block."""
+        headword = block.get("entry", "")
+        if not headword or "," not in headword:
+            return None
+
+        senses_list = block.get("senses", [])
+        citations_list = block.get("citations", {})
+        pos = self._extract_pos_from_entry(headword)
+        senses = self._create_senses_with_citations(
+            senses_list, citations_list, pos, headword, word
+        )
+
+        return DictionaryEntry(
+            word=word,
+            language=language,
+            senses=senses,
+            morphology=None,
+            source="diogenes",
+            metadata=block,
+        )
+
+    def _process_morphology_chunks(
+        self, chunks: list, word: str, language: str
+    ) -> list[DictionaryEntry]:
+        """Process morphology chunks and return morphology entries."""
+        entries = []
+        for chunk in chunks:
+            if "morphology" in chunk:
+                morph_data = chunk.get("morphology", {})
+                morphs = morph_data.get("morphs", [])
+                for morph in morphs:
+                    entry = self._create_morphology_entry(morph, chunk, word, language)
+                    if entry:
+                        entries.append(entry)
+        return entries
+
+    def _create_morphology_entry(
+        self, morph: dict, chunk: dict, word: str, language: str
+    ) -> DictionaryEntry:
+        """Create a morphology-only DictionaryEntry."""
+        tags = morph.get("tags", [])
+        lemma = morph.get("stem", [""])[0] if morph.get("stem") else word
+        pos = self._map_morph_tags_to_pos(tags)
+
+        morph_info = MorphologyInfo(lemma=lemma, pos=pos, features={"tags": tags}, confidence=1.0)
+
+        return DictionaryEntry(
+            word=word,
+            language=language,
+            senses=[],
+            morphology=morph_info,
+            source="diogenes",
+            metadata={"morphology": morph, "logeion": chunk.get("logeion")},
+        )
+
+    def _map_morph_tags_to_pos(self, tags: list) -> str:
+        """Map morphology tags to POS."""
+        for tag in tags:
+            if tag in MORPH_POS_MAPPING:
+                return MORPH_POS_MAPPING[tag]
+        return "noun"
+
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries = []
 
@@ -99,119 +204,48 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
 
         # Check if Diogenes returned any chunks with actual data
         chunks = data.get("chunks", [])
-        has_valid_diogenes_data = False
-        for chunk in chunks:
-            definitions_blocks = chunk.get("definitions", {}).get("blocks", [])
-            if definitions_blocks and len(definitions_blocks) > 0:
-                has_valid_diogenes_data = True
-                break
-            # Also check for morphology data
-            if "morphology" in chunk:
-                morphs = chunk.get("morphology", {}).get("morphs", [])
-                if morphs and len(morphs) > 0:
-                    has_valid_diogenes_data = True
-                    break
-
-        if not has_valid_diogenes_data:
+        if not self._has_valid_data(chunks):
             return entries
 
-        chunks = data.get("chunks", [])
-        for chunk in chunks:
-            definitions_blocks = chunk.get("definitions", {}).get("blocks", [])
-
-            for block in definitions_blocks:
-                # Headword and primary definition
-                headword = block.get("entry", "")
-                if not headword or "," not in headword:
-                    continue
-
-                # Parse definitions
-                senses = []
-                senses_list = block.get("senses", [])
-                citations_list = block.get("citations", {})
-
-                # Extract POS from entry text
-                pos = self._extract_pos_from_entry(headword)
-
-                # Assign citations to senses based on proximity in text
-                # Citations are stored as {perseus_url: citation_text} mappings
-                sense_citations = []
-                for i, sense_text in enumerate(senses_list):
-                    citations = []
-
-                    # Try to find citations associated with this sense
-                    # This is a heuristic approach - citations may not be perfectly mapped
-                    for citation_ref, citation_text in citations_list.items():
-                        # If citation contains words from this sense, associate it
-                        if (
-                            citation_text
-                            and sense_text
-                            and any(
-                                word.lower() in citation_text.lower()
-                                for word in sense_text.split()[:3]  # First few words
-                            )
-                        ):
-                            citations.append(self._create_citation_from_logeion(citation_ref))
-
-                    sense = Sense(
-                        pos=pos,
-                        definition=sense_text,
-                        citations=citations,
-                        examples=[],
-                        metadata={"source_block": headword, "sense_index": i},
-                    )
-                    senses.append(sense)
-
-                entry = DictionaryEntry(
-                    word=word,
-                    language=language,
-                    senses=senses,
-                    morphology=None,  # Morphology in separate chunks
-                    source="diogenes",
-                    metadata=block,
-                )
-                entries.append(entry)
+        # Process definition blocks
+        entries.extend(self._process_definition_blocks(chunks, word, language))
 
         # Add morphology entries if we have morphology data
-        for chunk in chunks:
-            if "morphology" in chunk:
-                # Extract lemma and POS from morphology
-                morph_data = chunk.get("morphology", {})
-                morphs = morph_data.get("morphs", [])
-                for morph in morphs:
-                    tags = morph.get("tags", [])
-                    lemma = morph.get("stem", [""])[0] if morph.get("stem") else word
-
-                    # Convert tags to POS with better mapping
-                    pos = "noun"
-                    if "V" in tags:
-                        pos = "verb"
-                    elif any(tag in tags for tag in ["ADJ", "ADJS", "ADJP"]):
-                        pos = "adjective"
-                    elif any(tag in tags for tag in ["ADV", "ADVB"]):
-                        pos = "adverb"
-                    elif any(tag in tags for tag in ["PRON", "PRN"]):
-                        pos = "pronoun"
-                    elif any(tag in tags for tag in ["CONJ", "CNJ"]):
-                        pos = "conjunction"
-                    elif any(tag in tags for tag in ["PREP", "PREP"]):
-                        pos = "preposition"
-
-                    morph_info = MorphologyInfo(
-                        lemma=lemma, pos=pos, features={"tags": tags}, confidence=1.0
-                    )
-
-                    entry = DictionaryEntry(
-                        word=word,
-                        language=language,
-                        senses=[],  # Morphology-only entry
-                        morphology=morph_info,
-                        source="diogenes",
-                        metadata={"morphology": morph, "logeion": chunk.get("logeion")},
-                    )
-                    entries.append(entry)
+        entries.extend(self._process_morphology_chunks(chunks, word, language))
 
         return entries
+
+    def _create_senses_with_citations(
+        self, senses_list: list, citations_list: dict, pos: str, headword: str, word: str
+    ) -> list:
+        """Create senses with proper citations."""
+        senses = []
+        for i, sense_text in enumerate(senses_list):
+            citations = []
+
+            # Try to find citations associated with this sense
+            # This is a heuristic approach - citations may not be perfectly mapped
+            for citation_ref, citation_text in citations_list.items():
+                # If citation contains words from this sense, associate it
+                if (
+                    citation_text
+                    and sense_text
+                    and any(
+                        word.lower() in citation_text.lower()
+                        for word in sense_text.split()[:3]  # First few words
+                    )
+                ):
+                    citations.append(self._create_citation_from_logeion(citation_ref))
+
+            sense = Sense(
+                pos=pos,
+                definition=sense_text,
+                citations=citations,
+                examples=[],
+                metadata={"source_block": headword, "sense_index": i},
+            )
+            senses.append(sense)
+        return senses
 
 
 class WhitakersBackendAdapter(BaseBackendAdapter):
@@ -270,6 +304,38 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
                 senses = []
 
         return entries
+
+    def _create_senses_with_citations(
+        self, senses_list: list, citations_list: dict, pos: str, headword: str, word: str
+    ) -> list:
+        """Create senses with proper citations."""
+        senses = []
+        for i, sense_text in enumerate(senses_list):
+            citations = []
+
+            # Try to find citations associated with this sense
+            # This is a heuristic approach - citations may not be perfectly mapped
+            for citation_ref, citation_text in citations_list.items():
+                # If citation contains words from this sense, associate it
+                if (
+                    citation_text
+                    and sense_text
+                    and any(
+                        word.lower() in citation_text.lower()
+                        for word in sense_text.split()[:3]  # First few words
+                    )
+                ):
+                    citations.append(self._create_citation_from_logeion(citation_ref))
+
+            sense = Sense(
+                pos=pos,
+                definition=sense_text,
+                citations=citations,
+                examples=[],
+                metadata={"source_block": headword, "sense_index": i},
+            )
+            senses.append(sense)
+        return senses
 
 
 class CLTKBackendAdapter(BaseBackendAdapter):
@@ -330,92 +396,167 @@ class CLTKBackendAdapter(BaseBackendAdapter):
 
         return entries
 
+    def _create_senses_with_citations(
+        self, senses_list: list, citations_list: dict, pos: str, headword: str, word: str
+    ) -> list:
+        """Create senses with proper citations."""
+        senses = []
+        for i, sense_text in enumerate(senses_list):
+            citations = []
+
+            # Try to find citations associated with this sense
+            # This is a heuristic approach - citations may not be perfectly mapped
+            for citation_ref, citation_text in citations_list.items():
+                # If citation contains words from this sense, associate it
+                if (
+                    citation_text
+                    and sense_text
+                    and any(
+                        word.lower() in citation_text.lower()
+                        for word in sense_text.split()[:3]  # First few words
+                    )
+                ):
+                    citations.append(self._create_citation_from_logeion(citation_ref))
+
+            sense = Sense(
+                pos=pos,
+                definition=sense_text,
+                citations=citations,
+                examples=[],
+                metadata={"source_block": headword, "sense_index": i},
+            )
+            senses.append(sense)
+        return senses
+
 
 class HeritageBackendAdapter(BaseBackendAdapter):
     """Adapter for Sanskrit Heritage Platform."""
 
-    def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
+    def _has_morphology_data(self, data: dict) -> bool:
+        """Check if morphology data exists."""
+        if not data:
+            return False
+        morphology_data = data.get("morphology")
+        if not morphology_data:
+            return False
+        return "solutions" in morphology_data
+
+    def _process_morphology_solutions(
+        self, data: dict, language: str, word: str
+    ) -> list[DictionaryEntry]:
+        """Process morphology solutions and create entries."""
         entries = []
-
-        # Handle None or invalid input
-        if data is None:
-            return entries
-
-        # Heritage returns morphology and dictionary separately
         morphology_data = data.get("morphology")
 
-        # Convert morphologies to MorphologyInfo
-        if morphology_data and "solutions" in morphology_data:
-            for solution in morphology_data["solutions"]:
-                for analysis in solution.get("analyses", []):
-                    morph_info = MorphologyInfo(
-                        lemma=analysis.get("lemma", ""),
-                        pos=analysis.get("pos", ""),
-                        features={},  # Heritage analysis features
-                        confidence=analysis.get("confidence", 1.0),
+        if not morphology_data:
+            return entries
+
+        for solution in morphology_data["solutions"]:
+            for analysis in solution.get("analyses", []):
+                morph_info = MorphologyInfo(
+                    lemma=analysis.get("lemma", ""),
+                    pos=analysis.get("pos", ""),
+                    features={},  # Heritage analysis features
+                    confidence=analysis.get("confidence", 1.0),
+                )
+
+                senses = self._extract_senses_from_combined(data, analysis)
+                morphology = morph_info if not senses else morph_info
+
+                entry = DictionaryEntry(
+                    word=word,
+                    language=language,
+                    senses=senses,
+                    morphology=morphology,
+                    source="heritage",
+                    metadata={"analysis": analysis, "combined": data.get("combined", {})},
+                )
+                entries.append(entry)
+
+        return entries
+
+    def _extract_senses_from_combined(self, data: dict, analysis: dict) -> list:
+        """Extract senses from combined dictionary data."""
+        senses = []
+        dict_data = data.get("combined", {}) if data.get("combined") else {}
+
+        if dict_data.get("dictionary_entries"):
+            for dict_entry in dict_data["dictionary_entries"]:
+                sense = Sense(
+                    pos=dict_data.get("pos", "unknown"),
+                    definition=str(dict_entry),
+                    citations=[],  # Would need HTML parsing for citations
+                    examples=[],
+                    metadata=dict_entry,
+                )
+                senses.append(sense)
+
+        return senses
+
+    def _process_dictionary_entries(
+        self, data: dict, language: str, word: str
+    ) -> list[DictionaryEntry]:
+        """Process separate dictionary entries."""
+        entries = []
+        dictionary_data = data.get("dictionary")
+
+        if dictionary_data and "entries" in dictionary_data:
+            for dict_entry in dictionary_data["entries"]:
+                senses = self._create_senses_from_entry(dict_entry)
+                entry = DictionaryEntry(
+                    word=word,
+                    language=language,
+                    senses=senses,
+                    morphology=None,
+                    source="heritage",
+                    metadata=dictionary_data,
+                )
+                entries.append(entry)
+
+        return entries
+
+    def _create_senses_from_entry(self, dict_entry: dict) -> list:
+        """Create senses from a dictionary entry."""
+        senses = []
+
+        if isinstance(dict_entry, dict):
+            if "definitions" in dict_entry:
+                for definition in dict_entry["definitions"]:
+                    sense = Sense(
+                        pos=dict_entry.get("pos", "unknown"),
+                        definition=str(definition),
+                        citations=[],  # Extract from dictionary_data if possible
+                        examples=dict_entry.get("examples", []),
+                        metadata=dict_entry,
                     )
+                    senses.append(sense)
+            else:
+                sense = Sense(
+                    pos=dict_entry.get("pos", "unknown"),
+                    definition=str(dict_entry.get("definition", "")),
+                    citations=[],  # Extract from dictionary_data if possible
+                    examples=dict_entry.get("examples", []),
+                    metadata=dict_entry,
+                )
+                senses.append(sense)
 
-                    # Combine with dictionary if available
-                    senses = []
-                    dict_data = data.get("combined", {}) if data.get("combined") else {}
-                    if dict_data.get("dictionary_entries"):
-                        for dict_entry in dict_data["dictionary_entries"]:
-                            sense = Sense(
-                                pos=dict_data.get("pos", "unknown"),
-                                definition=str(dict_entry),
-                                citations=[],  # Would need HTML parsing for citations
-                                examples=[],
-                                metadata=dict_entry,
-                            )
-                            senses.append(sense)
+        return senses
 
-                    entry = DictionaryEntry(
-                        word=word,
-                        language=language,
-                        senses=senses,
-                        morphology=morph_info if not senses else morph_info,
-                        source="heritage",
-                        metadata={"analysis": analysis, "combined": dict_data},
-                    )
-                    entries.append(entry)
+    def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
+        """Convert Heritage Platform data to DictionaryEntry objects."""
+        # Handle None or invalid input
+        if data is None:
+            return []
 
-        # Convert dictionary entries (if separate)
+        entries = []
+
+        # Process morphology solutions if available
+        if self._has_morphology_data(data):
+            entries.extend(self._process_morphology_solutions(data, language, word))
+
+        # If no entries with senses, try dictionary entries
         if not entries or not any(e.senses for e in entries):
-            dictionary_data = data.get("dictionary")
-            if dictionary_data and "entries" in dictionary_data:
-                for dict_entry in dictionary_data["entries"]:
-                    senses = []
-                    if isinstance(dict_entry, dict):
-                        # Convert dictionary entry to senses
-                        if "definitions" in dict_entry:
-                            for definition in dict_entry["definitions"]:
-                                sense = Sense(
-                                    pos=dict_entry.get("pos", "unknown"),
-                                    definition=str(definition),
-                                    citations=[],  # Extract from dictionary_data if possible
-                                    examples=dict_entry.get("examples", []),
-                                    metadata=dict_entry,
-                                )
-                                senses.append(sense)
-                        else:
-                            sense = Sense(
-                                pos=dict_entry.get("pos", "unknown"),
-                                definition=str(dict_entry.get("definition", "")),
-                                citations=[],  # Extract from dictionary_data if possible
-                                examples=dict_entry.get("examples", []),
-                                metadata=dict_entry,
-                            )
-                            senses.append(sense)
-
-                        entry = DictionaryEntry(
-                            word=word,
-                            language=language,
-                            senses=senses,
-                            morphology=None,
-                            source="heritage",
-                            metadata=dictionary_data,
-                        )
-                        entries.append(entry)
+            entries.extend(self._process_dictionary_entries(data, language, word))
 
         return entries
 
@@ -443,106 +584,125 @@ class CDSLBackendAdapter(BaseBackendAdapter):
         return citations
 
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
-        entries = []
-
+        """Convert CDSL data to DictionaryEntry objects."""
         # Handle None or invalid input
         if data is None:
-            return entries
+            return []
 
-        # CDSL returns dictionaries MW and Apte
+        entries = []
+
+        # Process dictionary entries
         dictionaries = data.get("dictionaries", {})
         for dict_name, dict_data in dictionaries.items():
-            if not dict_data:
-                continue
+            if dict_data:
+                entries.extend(
+                    self._process_dictionary_entries(dict_data, dict_name, word, language)
+                )
 
-            # Each dictionary has entries with definitions
-            for entry_data in dict_data:
-                if isinstance(entry_data, dict):
-                    senses = []
-
-                    # Extract citations from references if available
-                    citations = []
-                    references = entry_data.get("references", [])
-                    for ref in references:
-                        if isinstance(ref, dict):
-                            # Handle structured references
-                            source = ref.get("source")
-                            page_ref = ref.get("page_ref")
-
-                            # If we have nested citations (like from CDSL), extract from the nested structure
-                            if "citations" in ref and ref["citations"]:
-                                for citation_data in ref["citations"]:
-                                    if citation_data.get("references"):
-                                        for nested_ref in citation_data["references"]:
-                                            citations.append(
-                                                Citation(
-                                                    title=nested_ref.get("work", source),
-                                                    page=page_ref,
-                                                    excerpt=nested_ref.get("text", ""),
-                                                )
-                                            )
-                            else:
-                                # Handle simple references
-                                citations.append(
-                                    Citation(
-                                        title=source, page=page_ref, excerpt=ref.get("type", "")
-                                    )
-                                )
-                        elif isinstance(ref, str):
-                            # Handle string references like "Sūryas."
-                            citations.append(Citation(title=str(ref), excerpt=f"Reference: {ref}"))
-
-                    # Create a sense with the entry data
-                    sense = Sense(
-                        pos=entry_data.get("pos", "unknown"),
-                        definition=entry_data.get("meaning", ""),
-                        citations=citations,
-                        examples=entry_data.get("examples", []),
-                        metadata=entry_data,
-                    )
-                    senses.append(sense)
-
-                    if senses:
-                        entry = DictionaryEntry(
-                            word=word,
-                            language=language,
-                            senses=senses,
-                            morphology=None,
-                            source="cdsl",
-                            metadata={"dictionary": dict_name},
-                        )
-                        entries.append(entry)
-
-        # If no structured data, check for search method info
+        # If no structured data, create fallback entry
         if not entries:
-            if data.get("error"):
-                sense = Sense(
-                    pos="unknown",
-                    definition=f"Error: {data['error']}",
-                    citations=[],
-                    examples=[],
-                    metadata=data,
-                )
-            else:
-                sense = Sense(
-                    pos="unknown",
-                    definition=data.get("warning", "No specific entries found"),
-                    citations=[],
-                    examples=[],
-                    metadata=data,
-                )
-
-            entry = DictionaryEntry(
-                word=word,
-                language=language,
-                senses=[sense],
-                morphology=None,
-                source="cdsl",
-                metadata=data,
-            )
-            entries.append(entry)
+            entries.append(self._create_fallback_entry(data, word, language))
 
         return entries
+
+    def _process_dictionary_entries(
+        self, dict_data: list, dict_name: str, word: str, language: str
+    ) -> list[DictionaryEntry]:
+        """Process entries from a specific dictionary."""
+        entries = []
+
+        for entry_data in dict_data:
+            if isinstance(entry_data, dict):
+                senses = []
+                citations = self._extract_citations_from_references(
+                    entry_data.get("references", [])
+                )
+
+                sense = Sense(
+                    pos=entry_data.get("pos", "unknown"),
+                    definition=entry_data.get("meaning", ""),
+                    citations=citations,
+                    examples=entry_data.get("examples", []),
+                    metadata=entry_data,
+                )
+                senses.append(sense)
+
+                if senses:
+                    entry = DictionaryEntry(
+                        word=word,
+                        language=language,
+                        senses=senses,
+                        morphology=None,
+                        source="cdsl",
+                        metadata={"dictionary": dict_name},
+                    )
+                    entries.append(entry)
+
+        return entries
+
+    def _extract_citations_from_references(self, references: list) -> list:
+        """Extract citations from reference list."""
+        citations = []
+
+        for ref in references:
+            if isinstance(ref, dict):
+                citations.extend(self._process_dict_reference(ref))
+            elif isinstance(ref, str):
+                citations.append(Citation(title=str(ref), excerpt=f"Reference: {ref}"))
+
+        return citations
+
+    def _process_dict_reference(self, ref: dict) -> list:
+        """Process a dictionary reference and return citations."""
+        citations = []
+        source = ref.get("source")
+        page_ref = ref.get("page_ref")
+
+        # Handle nested citations
+        if "citations" in ref and ref["citations"]:
+            for citation_data in ref["citations"]:
+                if citation_data.get("references"):
+                    for nested_ref in citation_data["references"]:
+                        citations.append(
+                            Citation(
+                                title=nested_ref.get("work", source),
+                                page=page_ref,
+                                excerpt=nested_ref.get("text", ""),
+                            )
+                        )
+        else:
+            # Handle simple references
+            citations.append(Citation(title=source, page=page_ref, excerpt=ref.get("type", "")))
+
+        return citations
+
+    def _create_fallback_entry(self, data: dict, word: str, language: str) -> DictionaryEntry:
+        """Create a fallback entry when no structured data is available."""
+        if data.get("error"):
+            sense = Sense(
+                pos="unknown",
+                definition=f"Error: {data['error']}",
+                citations=[],
+                examples=[],
+                metadata=data,
+            )
+        else:
+            sense = Sense(
+                pos="unknown",
+                definition=data.get("warning", "No specific entries found"),
+                citations=[],
+                examples=[],
+                metadata=data,
+            )
+
+        return DictionaryEntry(
+            word=word,
+            language=language,
+            senses=[sense],
+            morphology=None,
+            source="cdsl",
+            metadata=data,
+        )
 
 
 class LanguageAdapterRegistry:

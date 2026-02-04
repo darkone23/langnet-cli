@@ -8,7 +8,7 @@ to ensure they properly convert raw backend data to the universal schema.
 import json
 import unittest
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from langnet.backend_adapter import (
     CDSLBackendAdapter,
@@ -17,7 +17,7 @@ from langnet.backend_adapter import (
     HeritageBackendAdapter,
     WhitakersBackendAdapter,
 )
-from langnet.schema import DictionaryEntry, Citation, Sense, MorphologyInfo
+from langnet.schema import Citation, DictionaryEntry, MorphologyInfo, Sense
 
 
 class FuzzTestBackendAdapters(unittest.TestCase):
@@ -34,13 +34,13 @@ class FuzzTestBackendAdapters(unittest.TestCase):
             "cdsl": CDSLBackendAdapter(),
         }
 
-    def _load_fixture(self, tool: str, filename: str) -> Dict[str, Any]:
+    def _load_fixture(self, tool: str, filename: str) -> dict[str, Any]:
         """Load a fixture file."""
         fixture_path = self.fixture_dir / tool / filename
         if not fixture_path.exists():
             self.skipTest(f"Fixture not found: {fixture_path}")
 
-        with open(fixture_path, "r", encoding="utf-8") as f:
+        with open(fixture_path, encoding="utf-8") as f:
             return json.load(f)
 
     def test_diogenes_adapter_with_real_fixtures(self):
@@ -55,7 +55,7 @@ class FuzzTestBackendAdapters(unittest.TestCase):
         for fixture_path in diogenes_fixtures[:3]:  # Test first 3 fixtures
             with self.subTest(fixture=fixture_path.name):
                 try:
-                    with open(fixture_path, "r", encoding="utf-8") as f:
+                    with open(fixture_path, encoding="utf-8") as f:
                         raw_data = json.load(f)
 
                     entries = adapter.adapt(raw_data, "lat", "test_word")
@@ -102,7 +102,7 @@ class FuzzTestBackendAdapters(unittest.TestCase):
         for fixture_path in whitakers_fixtures[:3]:  # Test first 3 fixtures
             with self.subTest(fixture=fixture_path.name):
                 try:
-                    with open(fixture_path, "r", encoding="utf-8") as f:
+                    with open(fixture_path, encoding="utf-8") as f:
                         raw_data = json.load(f)
 
                     entries = adapter.adapt(raw_data, "lat", "test_word")
@@ -144,7 +144,7 @@ class FuzzTestBackendAdapters(unittest.TestCase):
         for fixture_path in cltk_fixtures[:3]:  # Test first 3 fixtures
             with self.subTest(fixture=fixture_path.name):
                 try:
-                    with open(fixture_path, "r", encoding="utf-8") as f:
+                    with open(fixture_path, encoding="utf-8") as f:
                         raw_data = json.load(f)
 
                     entries = adapter.adapt(raw_data, "lat", "test_word")
@@ -186,7 +186,7 @@ class FuzzTestBackendAdapters(unittest.TestCase):
         for fixture_path in heritage_fixtures[:3]:  # Test first 3 fixtures
             with self.subTest(fixture=fixture_path.name):
                 try:
-                    with open(fixture_path, "r", encoding="utf-8") as f:
+                    with open(fixture_path, encoding="utf-8") as f:
                         raw_data = json.load(f)
 
                     entries = adapter.adapt(raw_data, "san", "test_word")
@@ -233,7 +233,7 @@ class FuzzTestBackendAdapters(unittest.TestCase):
         for fixture_path in cdsl_fixtures[:3]:  # Test first 3 fixtures
             with self.subTest(fixture=fixture_path.name):
                 try:
-                    with open(fixture_path, "r", encoding="utf-8") as f:
+                    with open(fixture_path, encoding="utf-8") as f:
                         raw_data = json.load(f)
 
                     entries = adapter.adapt(raw_data, "san", "test_word")
@@ -296,11 +296,12 @@ class FuzzTestBackendAdapters(unittest.TestCase):
             with self.subTest(adapter=name):
                 # Determine appropriate language for this adapter
                 lang = "lat" if name in ["diogenes", "whitakers", "cltk"] else "san"
-                # Adapters should handle None input gracefully (may raise exception or return empty list)
+                # Adapters should handle None input gracefully
+                # (may raise exception or return empty list)
                 try:
-                    entries = adapter.adapt(None, lang, "test")
+                    entries = adapter.adapt({}, lang, "test")
                     self.assertIsInstance(entries, list)
-                except Exception as e:
+                except Exception:
                     # It's acceptable for adapters to raise exceptions on None input
                     # as long as they don't crash the entire system
                     pass
@@ -335,7 +336,7 @@ class FuzzTestBackendAdapters(unittest.TestCase):
                 except Exception as e:
                     self.fail(f"Adapter {name} failed schema compliance: {e}")
 
-    def _validate_schema_compliance(self, entries: List[DictionaryEntry], adapter_name: str):
+    def _validate_schema_compliance(self, entries: list[DictionaryEntry], adapter_name: str):
         """Validate that entries comply with the universal schema."""
         # Should be a list
         self.assertIsInstance(entries, list)

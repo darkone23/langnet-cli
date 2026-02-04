@@ -19,6 +19,7 @@ For detailed help on a command:
     langnet <command> --help
 """
 
+import dataclasses
 import socket
 import sys
 from pathlib import Path
@@ -32,7 +33,6 @@ from rich.console import Console
 from rich.pretty import pprint
 from rich.table import Table
 
-
 from langnet.cologne.core import CdslIndex, CdslIndexBuilder, batch_build
 from langnet.config import config
 from langnet.foster.render import render_foster_codes
@@ -42,6 +42,33 @@ from langnet.indexer.utils import get_index_manager
 from langnet.logging import setup_logging
 
 BODY_PREVIEW_LENGTH = 100
+
+
+@dataclasses.dataclass
+class ToolQueryParams:
+    """Parameters for tool queries."""
+
+    tool: str
+    action: str
+    lang: str | None = None
+    query: str | None = None
+    dict_name: str | None = None
+    output: str = "json"
+    save: str | None = None
+
+
+@dataclasses.dataclass
+class ToolQueryContext:
+    """Context for tool queries combining click parameters."""
+
+    tool: str
+    action: str
+    lang: str | None = None
+    query: str | None = None
+    dict_name: str | None = None
+    output: str = "json"
+    save: str | None = None
+
 
 console = Console()
 DEFAULT_API_URL = "http://localhost:8000"
@@ -937,7 +964,11 @@ def diogenes():
 @click.option("--save", help="Save output to fixture file")
 def diogenes_search(lang: str, query: str, output: str, save: str):
     """Search for a word using Diogenes backend."""
-    _tool_query("diogenes", "search", lang=lang, query=query, output=output, save=save)
+    _tool_query_with_context(
+        ToolQueryContext(
+            tool="diogenes", action="search", lang=lang, query=query, output=output, save=save
+        )
+    )
 
 
 @diogenes.command("parse")
@@ -1059,6 +1090,28 @@ def cltk_parse(lang: str, query: str, output: str, save: str):
     _tool_query("cltk", "parse", lang=lang, query=query, output=output, save=save)
 
 
+def _tool_query(  # noqa: PLR0913
+    tool: str,
+    action: str,
+    lang: str | None = None,
+    query: str | None = None,
+    dict_name: str | None = None,
+    output: str = "json",
+    save: str | None = None,
+):
+    """Generic tool query implementation."""
+    context = ToolQueryContext(
+        tool=tool,
+        action=action,
+        lang=lang,
+        query=query,
+        dict_name=dict_name,
+        output=output,
+        save=save,
+    )
+    _tool_query_with_context(context)
+
+
 @tool.command("query")
 @click.option(
     "--tool",
@@ -1079,55 +1132,57 @@ def cltk_parse(lang: str, query: str, output: str, save: str):
     "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
 )
 @click.option("--save", help="Save output to fixture file")
-def tool_query(
-    tool: str, action: str, lang: str, query: str, dict_name: str, output: str, save: str
-):
+@click.pass_context
+def tool_query(ctx, **kwargs):  # noqa: PLR0913
     """Generic tool query interface for all backend tools."""
-    _tool_query(tool, action, lang=lang, query=query, dict_name=dict_name, output=output, save=save)
+    context = ToolQueryContext(
+        tool=kwargs["tool"],
+        action=kwargs["action"],
+        lang=kwargs.get("lang"),
+        query=kwargs["query"],
+        dict_name=kwargs.get("dict_name"),
+        output=kwargs.get("output", "json"),
+        save=kwargs.get("save"),
+    )
+    _tool_query_with_context(context)
 
 
-def _tool_query(
-    tool: str,
-    action: str,
-    lang: str | None = None,
-    query: str | None = None,
-    dict_name: str | None = None,
-    output: str = "json",
-    save: str | None = None,
-):
+def _tool_query_with_context(context: ToolQueryContext):
     """Generic tool query implementation."""
     # import json
     # from pathlib import Path
 
-    url = f"{DEFAULT_API_URL}/api/tool/{tool}/{action}"
+    url = f"{DEFAULT_API_URL}/api/tool/{context.tool}/{context.action}"
     params = {}
 
-    if lang:
-        params["lang"] = lang
-    if query:
-        params["query"] = query
-    if dict_name:
-        params["dict"] = dict_name
+    if context.lang:
+        params["lang"] = context.lang
+    if context.query:
+        params["query"] = context.query
+    if context.dict_name:
+        params["dict"] = context.dict_name
 
+    # Make the request
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = requests.post(url, params=params)
         response.raise_for_status()
 
         # result = orjson.loads(response.text)
 
         # Format output
-        if output == "pretty":
-            raise NotImplementedError("Only JSON passthrough supported")
-        elif output == "yaml":
+        if context.output in ["pretty", "yaml"]:
             raise NotImplementedError("Only JSON passthrough supported")
         else:  # json
             print(response.text)
             # console.print(response.text)
 
         # Save to fixture if requested
-        if save:
+        if context.save:
             raise NotImplementedError("Only JSON passthrough supported")
     except requests.RequestException as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
+    except Exception as e:
         console.print(f"[red]Error: {e}[/]")
         sys.exit(1)
     except Exception as e:

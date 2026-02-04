@@ -389,76 +389,100 @@ class DiogenesScraper:
         logger.debug("process_chunk", chunk_type=chunk_type)
 
         if chunk_type == DiogenesChunkType.PerseusAnalysisHeader:
-            morph_dict = self.handle_morphology(soup)
-            chunk["morphology"] = cattrs.structure(morph_dict, PerseusMorphology)
-
-        elif chunk_type in {
-            DiogenesChunkType.DiogenesMatchingReference,
-            DiogenesChunkType.DiogenesFuzzyReference,
-        }:
-            refs_dict = self.handle_references(soup)
-            blocks = []
-            for b in refs_dict.get("blocks", []):
-                if isinstance(b, DiogenesDefinitionBlock):
-                    blocks.append(b)
-                elif isinstance(b, dict):
-                    blocks.append(
-                        DiogenesDefinitionBlock(
-                            entry=b.get("entry", ""),
-                            entryid=b.get("entryid", ""),
-                            citations=b.get("citations"),
-                            senses=b.get("senses"),
-                            heading=b.get("heading"),
-                            diogenes_warning=b.get("diogenes_warning"),
-                        )
-                    )
-                else:
-                    try:
-                        block_obj = cattrs.structure(b, DiogenesDefinitionBlock)
-                        blocks.append(block_obj)
-                    except Exception as e:
-                        logger.warning(
-                            "Failed to structure block",
-                            error=str(e),
-                            block_keys=list(b.keys()) if isinstance(b, dict) else "not_dict",
-                        )
-                        # Create a basic block with available data
-                        basic_block = DiogenesDefinitionBlock(
-                            entry=b.get("entry", "") if isinstance(b, dict) else "",
-                            entryid=b.get("entryid", "") if isinstance(b, dict) else "",
-                            senses=b.get("senses") if isinstance(b, dict) else None,
-                            citations=b.get("citations") if isinstance(b, dict) else None,
-                            heading=b.get("heading") if isinstance(b, dict) else None,
-                            diogenes_warning=b.get("diogenes_warning")
-                            if isinstance(b, dict)
-                            else None,
-                        )
-                        blocks.append(basic_block)
-
-            chunk["definitions"] = DiogenesDefinitionEntry(
-                term=refs_dict.get("term", ""), blocks=blocks
+            self._process_morphology_chunk(chunk, soup)
+            result["chunks"].append(
+                PerseusAnalysisHeader(
+                    logeion=chunk.get("logeion", ""), morphology=chunk.get("morphology")
+                )
+            )
+        elif chunk_type == DiogenesChunkType.NoMatchFoundHeader:
+            result["chunks"].append(NoMatchFoundHeader(logeion=chunk.get("logeion", "")))
+        elif chunk_type == DiogenesChunkType.DiogenesMatchingReference:
+            self._process_reference_chunk(chunk, soup)
+            result["chunks"].append(
+                DiogenesMatchingReference(
+                    reference_id=chunk.get("reference_id", ""), definitions=chunk.get("definitions")
+                )
+            )
+        elif chunk_type == DiogenesChunkType.DiogenesFuzzyReference:
+            self._process_reference_chunk(chunk, soup)
+            result["chunks"].append(
+                DiogenesFuzzyReference(
+                    reference_id=chunk.get("reference_id", ""), definitions=chunk.get("definitions")
+                )
             )
         else:
             logger.debug("process_chunk_unknown_type", chunk_type=chunk_type)
-            pass
-
-        del chunk["soup"]
-
-        # Remove is_fuzzy_match key if present (used for classification only)
-        chunk.pop("is_fuzzy_match", None)
-
-        if chunk_type == DiogenesChunkType.PerseusAnalysisHeader:
-            result["chunks"].append(PerseusAnalysisHeader(**chunk))
-        elif chunk_type == DiogenesChunkType.NoMatchFoundHeader:
-            result["chunks"].append(NoMatchFoundHeader(**chunk))
-        elif chunk_type == DiogenesChunkType.DiogenesMatchingReference:
-            result["chunks"].append(DiogenesMatchingReference(**chunk))
-        elif chunk_type == DiogenesChunkType.DiogenesFuzzyReference:
-            result["chunks"].append(DiogenesFuzzyReference(**chunk))
-        else:
-            soup_str = str(soup)
-            logger.debug("process_chunk_unknown_appending", soup_preview=soup_str[:100])
+            soup_str = str(soup) if soup else ""
             result["chunks"].append(UnknownChunkType(soup=soup_str))
+
+        # Clean up temporary keys
+        chunk.pop("soup", None)
+        chunk.pop("is_fuzzy_match", None)
+        chunk.pop("logeion", None)
+        chunk.pop("reference_id", None)
+        chunk.pop("morphology", None)
+        chunk.pop("definitions", None)
+        chunk.pop("logeion", None)
+        chunk.pop("reference_id", None)
+        chunk.pop("morphology", None)
+        chunk.pop("definitions", None)
+
+    def _process_morphology_chunk(self, chunk, soup):
+        """Process morphology chunk."""
+        morph_dict = self.handle_morphology(soup)
+        chunk["morphology"] = cattrs.structure(morph_dict, PerseusMorphology)
+
+    def _process_reference_chunk(self, chunk, soup):
+        """Process reference chunk with definitions."""
+        refs_dict = self.handle_references(soup)
+        blocks = self._process_definition_blocks(refs_dict.get("blocks", []))
+        chunk["definitions"] = DiogenesDefinitionEntry(
+            term=refs_dict.get("term", ""), blocks=blocks
+        )
+
+    def _process_definition_blocks(self, blocks_data):
+        """Process definition blocks from reference data."""
+        blocks = []
+        for b in blocks_data:
+            if isinstance(b, DiogenesDefinitionBlock):
+                blocks.append(b)
+            elif isinstance(b, dict):
+                blocks.append(self._create_definition_block_from_dict(b))
+            else:
+                try:
+                    block_obj = cattrs.structure(b, DiogenesDefinitionBlock)
+                    blocks.append(block_obj)
+                except Exception as e:
+                    logger.warning(
+                        "Failed to structure block",
+                        error=str(e),
+                        block_keys=list(b.keys()) if isinstance(b, dict) else "not_dict",
+                    )
+                    blocks.append(self._create_basic_block(b))
+        return blocks
+
+    def _create_definition_block_from_dict(self, b):
+        """Create definition block from dictionary data."""
+        return DiogenesDefinitionBlock(
+            entry=b.get("entry", ""),
+            entryid=b.get("entryid", ""),
+            citations=b.get("citations"),
+            senses=b.get("senses"),
+            heading=b.get("heading"),
+            diogenes_warning=b.get("diogenes_warning"),
+        )
+
+    def _create_basic_block(self, b):
+        """Create basic definition block from fallback data."""
+        return DiogenesDefinitionBlock(
+            entry=b.get("entry", "") if isinstance(b, dict) else "",
+            entryid=b.get("entryid", "") if isinstance(b, dict) else "",
+            senses=b.get("senses") if isinstance(b, dict) else None,
+            citations=b.get("citations") if isinstance(b, dict) else None,
+            heading=b.get("heading") if isinstance(b, dict) else None,
+            diogenes_warning=b.get("diogenes_warning") if isinstance(b, dict) else None,
+        )
 
     def _determine_chunk_type(
         self,

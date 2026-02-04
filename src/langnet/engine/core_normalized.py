@@ -5,7 +5,6 @@ import cattrs
 import structlog
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
-from langnet.cache.core import NoOpCache, QueryCache
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
@@ -126,7 +125,6 @@ class LanguageEngineConfig:
     cdsl: SanskritCologneLexicon
     heritage_morphology: HeritageMorphologyService | None = None
     heritage_dictionary: HeritageDictionaryService | None = None
-    cache: QueryCache | NoOpCache | None = None
     normalization_pipeline: NormalizationPipeline | None = None
     enable_normalization: bool = True
 
@@ -139,7 +137,6 @@ class LanguageEngine:
         self.cdsl = config.cdsl
         self.heritage_morphology = config.heritage_morphology
         self.heritage_dictionary = config.heritage_dictionary
-        self.cache = config.cache if config.cache is not None else NoOpCache()
         self.normalization_pipeline = config.normalization_pipeline
         self.enable_normalization = config.enable_normalization
         self._cattrs_converter = cattrs.Converter(omit_if_default=True)
@@ -372,19 +369,21 @@ class LanguageEngine:
 
         # Check cache with canonical form if available
         cache_key = query_word if canonical_query else word
-        cached_result = self.cache.get(lang, cache_key)
-        if cached_result is not None:
-            logger.debug("query_cached", lang=lang, word=cache_key)
-            # Add normalization metadata if available
-            if canonical_query:
-                cached_result["_normalization"] = {
-                    "original": canonical_query.original_query,
-                    "canonical": canonical_query.canonical_text,
-                    "confidence": canonical_query.confidence,
-                    "detected_encoding": canonical_query.detected_encoding.value,
-                    "normalization_notes": canonical_query.normalization_notes,
-                }
-            return cached_result
+        # Cache functionality removed - always process fresh queries
+        if False:  # Cache disabled
+            cached_result = None
+            if cached_result is not None:
+                logger.debug("query_cached", lang=lang, word=cache_key)
+                # Add normalization metadata if available
+                if canonical_query:
+                    cached_result["_normalization"] = {
+                        "original": canonical_query.original_query,
+                        "canonical": canonical_query.canonical_text,
+                        "confidence": canonical_query.confidence,
+                        "detected_encoding": canonical_query.detected_encoding.value,
+                        "normalization_notes": canonical_query.normalization_notes,
+                    }
+                return cached_result
 
         # Route to language-specific handler
         if lang == LangnetLanguageCodes.Greek:
@@ -429,8 +428,9 @@ class LanguageEngine:
         else:
             raise NotImplementedError(f"Do not know how to handle {lang}")
 
-        # Cache with canonical form if available
-        self.cache.put(lang, cache_key, result)
+        # Cache functionality removed - always process fresh queries
+        # if self.cache:
+        #     self.cache.put(lang, cache_key, result)
 
         # Add normalization metadata to result
         if canonical_query:

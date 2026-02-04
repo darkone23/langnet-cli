@@ -6,10 +6,11 @@ a variety of real words across all supported languages and backends.
 """
 
 import unittest
-from typing import List
+
+import orjson
 
 from langnet.core import LangnetWiring
-from langnet.schema import DictionaryEntry
+from langnet.schema import DictionaryEntry, MorphologyInfo
 
 
 class FuzzTestUniversalSchema(unittest.TestCase):
@@ -252,7 +253,7 @@ class FuzzTestUniversalSchema(unittest.TestCase):
                         self.assertIn(
                             entry.source, ["whitakers", "diogenes", "cltk", "heritage", "cdsl"]
                         )
-                except Exception as e:
+                except Exception:
                     # Some edge cases may raise exceptions, which is acceptable
                     # but we want to know about them
                     pass
@@ -320,8 +321,6 @@ class FuzzTestUniversalSchema(unittest.TestCase):
                     if entry.morphology:
                         morphology_count += 1
                         # Morphology should be a MorphologyInfo object
-                        from langnet.schema import MorphologyInfo
-
                         self.assertIsInstance(entry.morphology, MorphologyInfo)
                         # Check that it has the expected fields
                         self.assertTrue(hasattr(entry.morphology, "lemma"))
@@ -334,7 +333,6 @@ class FuzzTestUniversalSchema(unittest.TestCase):
 
     def test_json_serialization(self):
         """Test that DictionaryEntry objects can be serialized to JSON."""
-        import orjson
 
         # Test words from all languages
         test_words = [

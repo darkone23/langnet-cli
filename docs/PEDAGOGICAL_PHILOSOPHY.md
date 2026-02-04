@@ -1,7 +1,6 @@
 # Pedagogical Philosophy
 
-**Last Updated:** January 29, 2026  
-**Status:** Core pedagogical transformation **ACTIVE** - Our north star guiding further development
+Open access pedagogy is our polestar which guides all of our development.
 
 ## Foster Functional Grammar Approach
 
@@ -10,13 +9,6 @@ Always show what words *do* in sentences, not just technical categories. This ap
 
 ### Display Format
 **Technical Term + Foster Function** (e.g., "Nominative (Naming Function)")
-
-### Current Status: ✅ ACTIVE
-- All Latin cases, tenses, genders, numbers mapped to Foster functions
-- All Greek cases, tenses, genders, numbers, moods, voices mapped  
-- All Sanskrit cases (1-8), genders, numbers mapped
-- Automatically applied to all query results
-- **North Star achieved:** langnet-cli now functions as a pedagogical engine
 
 ## The "Bang for the Buck" Matrix (Updated)
 
@@ -56,7 +48,7 @@ Always show what words *do* in sentences, not just technical categories. This ap
 
 ## Latin & Greek Pedagogy
 
-### Foster Function Implementation Now Active ✅
+### Foster Function
 
 **Latin Examples:**
 - `nom` → "Naming Function"
@@ -127,10 +119,6 @@ Morphology:
   - Nominative (Naming Function)
   - Singular (Single Function)
 ```
-
-## Future Pedagogical Development
-
-See [FUTURE_WORK.md](FUTURE_WORK.md) for prioritized features that will further enhance the learning experience.
 
 ### High-Impact Future Features
 1. **Enhanced Citation Display** - Foster's "see the word in the wild"

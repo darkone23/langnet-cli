@@ -16,9 +16,16 @@ import langnet.logging  # noqa: F401 - ensures logging is configured before use
 logger = structlog.get_logger(__name__)
 
 from langnet.core import LangnetWiring  # noqa: E402
-from langnet.diogenes.core import DiogenesScraper  # noqa: E402
 from langnet.heritage.config import HeritageConfig  # noqa: E402
 from langnet.heritage.morphology import HeritageMorphologyService  # noqa: E402
+
+VALID_LANGUAGES = {"lat", "grc", "san", "grk"}
+VALID_TOOLS = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
+VALID_ACTIONS = {"search", "parse", "analyze", "morphology", "dictionary", "lookup"}
+
+VALID_LANGUAGES = {"lat", "grc", "san", "grk"}
+VALID_TOOLS = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
+VALID_ACTIONS = {"search", "parse", "analyze", "morphology", "dictionary", "lookup"}
 
 # from langnet.citation.models import CitationCollection, Citation, TextReference, CitationType
 # from langnet.citation.cts_urn import CTSUrnMapper
@@ -44,7 +51,7 @@ class HealthChecker:
     @staticmethod
     def diogenes(base_url: str = "http://localhost:8888/") -> dict:
         try:
-            scraper = DiogenesScraper(base_url=base_url)
+            # DiogenesScraper(base_url=base_url)
             # result = scraper.parse_word("lupus", "lat")
             # if result.dg_parsed and len(result.chunks) > 0:
             # TODO: we don't want to actually issue queries for this check
@@ -140,13 +147,9 @@ async def health_check(request: Request):
 
 async def cache_stats_api(request: Request):
     try:
-        if not hasattr(request.app.state, "wiring"):
-            request.app.state.wiring = LangnetWiring()
-        wiring: LangnetWiring = request.app.state.wiring
-    except Exception as e:
-        return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
-    try:
-        stats = wiring.engine.cache.get_stats()
+        # TODO: Add cache support when available
+        # stats = request.app.state.wiring.engine.cache.get_stats()
+        stats = {"message": "Cache stats not implemented yet"}
         return ORJsonResponse(stats)
     except Exception as e:
         return ORJsonResponse({"error": str(e)}, status_code=500)
@@ -158,9 +161,8 @@ def _validate_query_params(lang, word):
         return "Missing required parameter: l (language)"
     if not word:
         return "Missing required parameter: s (search term)"
-    valid_languages = {"lat", "grc", "san", "grk"}
-    if lang not in valid_languages:
-        return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
+    if lang not in VALID_LANGUAGES:
+        return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(VALID_LANGUAGES))}"
     if lang == "grk":
         return None  # Will be normalized below
     if not str(word).strip():
@@ -206,6 +208,28 @@ async def query_api(request: Request):
         return ORJsonResponse({"error": str(e)}, status_code=500)
 
 
+def _validate_diogenes_params(lang: str | None, query: str | None) -> str | None:
+    """Validate Diogenes-specific parameters."""
+    if not lang:
+        return "Missing required parameter: lang for diogenes tool"
+    if lang not in VALID_LANGUAGES:
+        return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(VALID_LANGUAGES))}"
+    if not query:
+        return "Missing required parameter: query for diogenes tool"
+    return None
+
+
+def _validate_cltk_params(lang: str | None, query: str | None) -> str | None:
+    """Validate CLTK-specific parameters."""
+    if not lang:
+        return "Missing required parameter: lang for cltk tool"
+    if lang not in {"lat", "grc", "san"}:
+        return f"Invalid language: {lang}. Must be one of: lat, grc, san"
+    if not query:
+        return "Missing required parameter: query for cltk tool"
+    return None
+
+
 def _validate_tool_params(
     tool: str | None,
     action: str | None,
@@ -214,43 +238,26 @@ def _validate_tool_params(
     dict_name: str | None = None,
 ) -> str | None:
     """Validate tool-specific parameters and return error message if invalid."""
-    valid_tools = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
-    valid_actions = {"search", "parse", "analyze", "morphology", "dictionary", "lookup"}
+    if tool not in VALID_TOOLS:
+        return f"Invalid tool: {tool}. Must be one of: {', '.join(sorted(VALID_TOOLS))}"
 
-    if tool not in valid_tools:
-        return f"Invalid tool: {tool}. Must be one of: {', '.join(sorted(valid_tools))}"
-
-    if action not in valid_actions:
-        return f"Invalid action: {action}. Must be one of: {', '.join(sorted(valid_actions))}"
+    if action not in VALID_ACTIONS:
+        return f"Invalid action: {action}. Must be one of: {', '.join(sorted(VALID_ACTIONS))}"
 
     # Tool-specific parameter validation
-    if tool == "diogenes":
-        if not lang:
-            return "Missing required parameter: lang for diogenes tool"
-        if not query:
-            return "Missing required parameter: query for diogenes tool"
-        valid_languages = {"lat", "grc", "san", "grk"}
-        if lang not in valid_languages:
-            return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
-    elif tool == "whitakers":
-        if not query:
-            return "Missing required parameter: query for whitakers tool"
-    elif tool == "heritage":
-        if not query:
-            return "Missing required parameter: query for heritage tool"
-    elif tool == "cdsl":
-        if not query:
-            return "Missing required parameter: query for cdsl tool"
-    elif tool == "cltk":
-        if not lang:
-            return "Missing required parameter: lang for cltk tool"
-        if not query:
-            return "Missing required parameter: query for cltk tool"
-        valid_languages = {"lat", "grc", "san"}
-        if lang not in valid_languages:
-            return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
+    tool_validators = {
+        "diogenes": lambda: _validate_diogenes_params(lang, query),
+        "whitakers": lambda: None
+        if query
+        else "Missing required parameter: query for whitakers tool",
+        "heritage": lambda: None
+        if query
+        else "Missing required parameter: query for heritage tool",
+        "cdsl": lambda: None if query else "Missing required parameter: query for cdsl tool",
+        "cltk": lambda: _validate_cltk_params(lang, query),
+    }
 
-    return None
+    return tool_validators.get(tool, lambda: None)()
 
 
 async def tool_api(request: Request):

@@ -400,7 +400,7 @@ class ToolOutputComparator:
 
     def _assess_adapter_impact(self, old: Any, new: Any) -> Dict[str, Any]:
         """Assess the impact of changes on existing adapters."""
-        impact = {
+        impact: Dict[str, Any] = {
             "high_impact": False,
             "medium_impact": False,
             "low_impact": False,
