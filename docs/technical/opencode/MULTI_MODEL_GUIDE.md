@@ -279,6 +279,6 @@ just autobot model suggest "feature implementation"
 ## See Also
 
 - `.opencode/opencode.json` - Model configurations
-- `.opencode/skills/persona-routing.md` - Detailed workflows
+- `AGENTS.md` - Persona routing and detailed workflows
 - `just autobot model --help` - All available commands
 - OpenRouter pricing: https://openrouter.ai/pricing

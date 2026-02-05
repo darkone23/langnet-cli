@@ -48,7 +48,7 @@ Automatic dependencies (download on first use):
 
 ## Development
 
-This project uses multi-model AI-assisted development via OpenRouter. See `.opencode/skills/` for specialized agents:
+This project uses multi-model AI-assisted development via OpenRouter. See `AGENTS.md` for specialized agent usage:
 - **@architect** - System design and planning
 - **@sleuth** - Debugging and root cause analysis  
 - **@coder** - Feature implementation and testing

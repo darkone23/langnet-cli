@@ -5,7 +5,6 @@ This directory contains README files for individual components within the langne
 ## Available Components
 
 ### Language Processing Backends
-- **[classics-toolkit-README.md](classics-toolkit-README.md)** - CLTK wrapper for Latin, Greek, and Sanskrit computational linguistics
 - **[cologne-README.md](cologne-README.md)** - Cologne Digital Sanskrit Dictionary interface
 - **[diogenes-README.md](diogenes-README.md)** - Diogenes Perseus interface for classical texts
 - **[engine-README.md](engine-README.md)** - Core language processing engine
@@ -61,14 +60,14 @@ The langnet-cli system processes queries through a multi-backend pipeline:
 ## Related Documentation
 
 - **[README.md](../README.md)** - Main project documentation hub
-- **[ARCHITECTURE.md](../ARCHITECTURE.md)** - System architecture and component relationships
-- **[DEVELOPER.md](../DEVELOPER.md)** - Developer guide and setup instructions
-- **[GETTING_STARTED.md](../GETTING_STARTED.md)** - Getting started guide
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and component relationships
+- **[../DEVELOPER.md](../DEVELOPER.md)** - Developer guide and setup instructions
+- **[../GETTING_STARTED.md](../GETTING_STARTED.md)** - Getting started guide
 
 ## Quick Reference
 
 For developers working with components:
-- **Backend Integration**: See [backend-integration.md](../skills/backend-integration.md)
-- **Data Models**: See [data-models.md](../skills/data-models.md)
-- **Testing**: See [testing.md](../skills/testing.md)
-- **API Development**: See [api-development.md](../skills/api-development.md)
+- **Backend Integration**: See [DEVELOPER.md](../DEVELOPER.md) section on adding new backends
+- **Data Models**: Check `src/langnet/schema.py` for core dataclasses
+- **Testing**: See [../tests/README.md](../tests/README.md) for test structure
+- **API Development**: See [ARCHITECTURE.md](ARCHITECTURE.md) for API design

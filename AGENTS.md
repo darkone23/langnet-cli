@@ -50,10 +50,9 @@ docs/plans/
 See these key documents:
 
 - [README.md](README.md) - Overview, educational use cases, and quick start
-- [DEVELOPER.md](DEVELOPER.md) - Code conventions, testing, project structure
-- [`.opencode/skills/project-tools.md`](.opencode/skills/project-tools.md) - Project automation and autobot tool usage
+- [docs/DEVELOPER.md](docs/DEVELOPER.md) - Code conventions, testing, project structure
 - [docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md) - Educational approach and Foster grammar
-- [docs/MULTI_MODEL_GUIDE.md](docs/MULTI_MODEL_GUIDE.md) - AI-assisted development workflow
+- [docs/reference/opencode/MULTI_MODEL_GUIDE.md](docs/reference/opencode/MULTI_MODEL_GUIDE.md) - AI-assisted development workflow
 
 ## Critical Patterns
 
@@ -93,24 +92,20 @@ See these key documents:
    langnet-cli cache-clear && curl -s -X POST "http://localhost:8000/api/q" -d "l=san&s=agni"
    ```
 
-## OpenCode Skills
+## OpenCode Configuration
 
-This project includes opencode skills for AI-assisted development in [`.opencode/skills/`](.opencode/skills/):
+This project uses OpenRouter for multi-model AI development with 6 specialized personas configured in `.opencode/opencode.json`:
 
-| Skill | Key Commands | AI Persona |
-|-------|--------------|------------|
-| [testing.md](.opencode/skills/testing.md) | Run tests: `nose2 -s tests --config tests/nose2.cfg` | **The Coder** - Fast execution for test development |
-| [backend-integration.md](.opencode/skills/backend-integration.md) | Design new backends, system architecture | **The Architect** - High reasoning for complex logic |
-| [data-models.md](.opencode/skills/data-models.md) | Schema design, complex type systems | **The Architect** - Complex logic design |
-| [api-development.md](.opencode/skills/api-development.md) | Modify `src/langnet/asgi.py`, restart server after changes | **The Coder** - API implementation and debugging |
-| [debugging.md](.opencode/skills/debugging.md) | `LANGNET_LOG_LEVEL=DEBUG`, check health endpoints | **The Sleuth** - Root cause analysis and troubleshooting |
-| [cli-development.md](.opencode/skills/cli-development.md) | Add Click commands in `src/langnet/cli.py` | **The Coder** - CLI implementation and UX |
-| [code-style.md](.opencode/skills/code-style.md) | Run `just ruff-format`, `just ruff-check`, `just typecheck`, `just test` | **The Artisan** - Code optimization and style improvements |
-| [cache-management.md](.opencode/skills/cache-management.md) | `devenv shell langnet-cli -- cache-clear` to force fresh queries | **The Artisan** - Performance and optimization work |
-| [multi-model-ai.md](.opencode/skills/multi-model-ai.md) | Multi-model AI development with OpenRouter | **The Coder** - AI workflow implementation |
-| [persona-routing.md](.opencode/skills/persona-routing.md) | AI persona selection guide for different tasks | **The Coder** - Workflow guidance and examples |
+| Persona | Primary Task Areas | Key Commands |
+|---------|-------------------|--------------|
+| **The Architect** | System design, planning, complex logic | High-level design, architecture planning |
+| **The Sleuth** | Debugging, root cause analysis | `LANGNET_LOG_LEVEL=DEBUG`, troubleshooting |
+| **The Artisan** | Code optimization, style improvements | `just ruff-format`, `just ruff-check`, `just typecheck` |
+| **The Coder** | Feature implementation, testing | `just test`, API development, CLI commands |
+| **The Scribe** | Documentation, comments | Documentation updates, code comments |
+| **The Auditor** | Code review, security, edge cases | Security review, quality assurance |
 
-When performing tasks, reference the relevant skill for context and patterns. Each skill includes recommended AI personas for optimal results.
+When performing tasks, reference the appropriate AI persona using `@agentname` syntax for optimal results.
 
 ## Multi-Model Development Strategy
 
@@ -157,9 +152,8 @@ Agents are configured in `.opencode/opencode.json`. Use the `@agentname` mention
 
 ## See Also
 
-- [`.opencode/skills/README.md`](.opencode/skills/README.md) - Complete skill documentation
-- [DEVELOPER.md](DEVELOPER.md) - End-user opencode usage guide
-- [./docs/opencode/LLM_PROVIDER_GUIDE.md](LLM_PROVIDER_GUIDE.md) - Multi-model strategy guide
+- [docs/DEVELOPER.md](docs/DEVELOPER.md) - End-user opencode usage guide
+- [docs/reference/opencode/LLM_PROVIDER_GUIDE.md](docs/reference/opencode/LLM_PROVIDER_GUIDE.md) - Multi-model strategy guide
 
 ## Important
 

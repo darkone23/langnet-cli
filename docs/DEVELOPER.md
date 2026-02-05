@@ -432,7 +432,7 @@ When adding support for new dictionaries, morphological analyzers, or lexicon so
 - **Type checker**: `ty check`
 - **Linter**: `ruff check`
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed roadmap and current priorities.
+See [ROADMAP.md](../ROADMAP.md) for detailed roadmap and current priorities.
 
 ## Code Style Tools
 
@@ -444,9 +444,8 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed roadmap and current prioriti
 
 This project uses a sophisticated multi-model AI development system. For complete AI development documentation, see:
 - [AGENTS.md](../AGENTS.md) - AI persona instructions and workflows
-- [docs/opencode/MULTI_MODEL_GUIDE.md](docs/opencode/MULTI_MODEL_GUIDE.md) - AI-assisted development workflow
-- [docs/opencode/LLM_PROVIDER_GUIDE.md](docs/opencode/LLM_PROVIDER_GUIDE.md) - Model selection strategies
-- [`.opencode/skills/README.md`](../.opencode/skills/README.md) - Skill documentation
+- [technical/opencode/MULTI_MODEL_GUIDE.md](technical/opencode/MULTI_MODEL_GUIDE.md) - AI-assisted development workflow
+- [technical/opencode/LLM_PROVIDER_GUIDE.md](technical/opencode/LLM_PROVIDER_GUIDE.md) - Model selection strategies
 
 ## Using Opencode
 
@@ -458,7 +457,7 @@ Before using opencode for development, configure your opencode client:
    - Model selection strategies for different tasks
    - Cost optimization techniques
    - Free-tier options for experimentation
-   - See [docs/opencode/LLM_PROVIDER_GUIDE.md](docs/opencode/LLM_PROVIDER_GUIDE.md)
+   - See [technical/opencode/LLM_PROVIDER_GUIDE.md](technical/opencode/LLM_PROVIDER_GUIDE.md)
 
 2. **Choose and configure a provider:**
    ```bash
@@ -492,20 +491,18 @@ Once your provider is configured, leverage opencode for development tasks by ref
 /opencode Using the cli-development.md skill, add a new command [name].
 ```
 
-### Available Skills
+### Available AI Personas
 
-Located in [`.opencode/skills/`](../.opencode/skills/):
+Configured in `.opencode/opencode.json`:
 
-| Skill | Purpose |
-|-------|---------|
-| [testing.md](../.opencode/skills/testing.md) | Run tests, debug test failures |
-| [backend-integration.md](../.opencode/skills/backend-integration.md) | Add new language backends |
-| [data-models.md](../.opencode/skills/data-models.md) | Create dataclass models with cattrs |
-| [api-development.md](../.opencode/skills/api-development.md) | Starlette ASGI API development |
-| [cache-management.md](../.opencode/skills/cache-management.md) | Manage DuckDB response cache |
-| [cli-development.md](../.opencode/skills/cli-development.md) | Click CLI command development |
-| [debugging.md](../.opencode/skills/debugging.md) | Troubleshoot common issues |
-| [code-style.md](../.opencode/skills/code-style.md) | Formatting, linting, type checking |
+| Persona | Task Category | Primary Model | Use For |
+|---------|--------------|--------------|---------|
+| **The Architect** | System Design, Planning | `deepseek/deepseek-v3.2` | High-level design, complex logic |
+| **The Sleuth** | Debugging, Root Cause | `z-ai/glm-4.7` | Troubleshooting, problem analysis |
+| **The Artisan** | Optimization, Style | `minimax/minimax-m2.1` | Code refinement, performance tuning |
+| **The Coder** | Feature Build, Tests | `z-ai/glm-4.5-air` | Implementation, testing |
+| **The Scribe** | Docs, Comments | `xiaomi/mimo-v2-flash` | Documentation, code comments |
+| **The Auditor** | Code Review, Security | `openai/gpt-oss-120b` | Quality assurance, edge cases |
 
 ### Opencode Workflow
 
@@ -542,10 +539,10 @@ Opencode: Let me check the health status and enable debug logging...
 [Diagnoses issue, proposes fix]
 ```
 
-### Developer Skills Reference
+### Persona Usage Reference
 
-- **New contributors**: Start with [code-style.md](../.opencode/skills/code-style.md), [testing.md](../.opencode/skills/testing.md), [debugging.md](../.opencode/skills/debugging.md)
-- **Adding backends**: Read [backend-integration.md](../.opencode/skills/backend-integration.md), [data-models.md](../.opencode/skills/data-models.md), [api-development.md](../.opencode/skills/api-development.md)
-- **Maintenance tasks**: Read [cache-management.md](../.opencode/skills/cache-management.md), [debugging.md](../.opencode/skills/debugging.md), [cli-development.md](../.opencode/skills/cli-development.md)
-
-See [`.opencode/skills/README.md`](../.opencode/skills/README.md) for complete skill documentation.
+- **New contributors**: Use @coder for implementation, @artisan for code style
+- **Adding backends**: Use @architect for design, @coder for implementation
+- **Debugging issues**: Use @sleuth for root cause analysis
+- **Documentation**: Use @scribe for documentation tasks
+- **Code review**: Use @auditor for quality assurance

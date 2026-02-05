@@ -341,5 +341,5 @@ logger.error("Backend timeout", backend="diogenes", error=error)
 
 ---
 
-*For development setup and workflow, see [DEVELOPMENT.md](DEVELOPMENT.md)*  
-*For current status and roadmap, see [ROADMAP.md](ROADMAP.md)*
+*For development setup and workflow, see [DEVELOPER.md](../DEVELOPER.md)*  
+*For current status and roadmap, see [ROADMAP.md](../ROADMAP.md)*

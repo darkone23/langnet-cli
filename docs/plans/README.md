@@ -1,40 +1,36 @@
 # Project Plans Overview
 
-This repository organises its design and implementation plans under `docs/plans/` using three clear lifecycle categories:
+This repository organises its design and implementation plans under `docs/plans/` using clear lifecycle categories:
 
 | Category | Directory | What it contains |
 |----------|-----------|------------------|
-| **Completed** | `docs/ARCHIVES/COMPLETED_PLANS/` | Plans whose work has been fully implemented and verified by tests. |
 | **Active** | `docs/plans/active/` | Plans that are currently being worked on. They may have partially‑implemented code, ongoing tests, or upcoming milestones. |
 | **Todo** | `docs/plans/todo/` | High‑level ideas, future work, or plans that have not yet started. |
-
-**Archived Plans**: Historical and deprecated plans are kept in `docs/ARCHIVES/` for reference but are no longer active.
+| **Completed** | `docs/plans/` | Plans whose work has been fully implemented and verified by tests. (Note: Currently implemented features are tracked in this README rather than separate files)
 
 ---
 
-## ✅ Completed Plans (in `docs/ARCHIVES/COMPLETED_PLANS/`)
+## ✅ Completed Features (Implemented & Tested)
 
-### Core Infrastructure (Fully Implemented)
-- **whitakers_test_coverage.md** - Whitaker's Words parser testing
-- **WHITAKERS_PARSER_TESTING_PLAN.md** - Whitaker's Words testing strategy
-- **heritage_parser_migration.md** - Heritage Platform Lark parser migration
-- **VELTHUIS_IMPLEMENTATION_SUMMARY.md** - Velthuis encoding system
+### Core Infrastructure
+- **Whitaker's Words Parser**: Complete line parsing for senses, codes, facts
+- **Heritage Platform Integration**: Full Lark parser migration with encoding support
+- **Velthuis Encoding System**: Comprehensive Sanskrit encoding support
+- **Normalization Pipeline**: 381+ tests passing with robust validation
 
-### Sanskrit Integration (Fully Implemented)
-- **sanskit_heritage_integration.md** - Complete Heritage Platform integration
-- **sanskrit/normalization** - Sanskrit-specific normalization and encoding
+### Sanskrit Integration  
+- **Sanskrit Heritage Platform**: Complete integration with Devanagari, IAST, Velthuis, SLP1, HK, ASCII support
+- **CDSL Integration**: Cologne Digital Sanskrit Dictionary lookup
+- **Encoding Bridge**: Multi-format conversion and normalization
 
-### Educational Features (Fully Implemented)
-- **Foster Functional Grammar** - All Latin, Greek, Sanskrit cases/tenses mapped to functions
-- **Normalization Pipeline** - 381 tests passing, robust validation
-- **Lemmatization** - Inflected forms → dictionary headwords
-
-> **Cleanup Completed**: Archive directory created, duplicate files eliminated, structure simplified.
+### Educational Features
+- **Foster Functional Grammar**: All Latin, Greek, Sanskrit cases/tenses mapped to functions
+- **Lemmatization Pipeline**: Inflected forms → dictionary headwords
+- **Citation System**: CTS URN support with "see the word in the wild" approach
 
 ## 🚧 Active Plans (Status: In Progress)
 
 ### 1. Citation System (✅ COMPLETE)
-- **Files**: `docs/plans/active/citation-system/CTS_URN_PLAN.md`
 - **Status**: ✅ COMPLETE - Core functionality implemented
 - **Goal**: Foster's "see the word in the wild" approach with CTS URN support
 - **Implementation**: `src/langnet/citation/` with models, cts_urn parser, indexer
@@ -109,16 +105,15 @@ For detailed roadmap and current priorities, see [docs/ROADMAP.md](../ROADMAP.md
 
 ### Maintenance Guidelines
 
-1. **When a plan moves from active to completed** – move its markdown file to `docs/ARCHIVES/COMPLETED_PLANS/` and update this README.
+1. **When a plan moves from active to completed** – move its markdown file to `docs/plans/completed/` and update this README.
 2. **When a new high‑level idea appears** – add a markdown file under `docs/plans/todo/`.
 3. **Avoid duplicate files** – each plan should live in only one of the three directories.
 4. **Review implementation status** - Check if "active" plans are actually complete before updating.
-5. **Keep structure clean** - Remove redundant files and directories, archive historical content.
-6. **Archive deprecated plans** - Move to `docs/ARCHIVES/` rather than deleting.
+5. **Keep structure clean** - Remove redundant files and directories.
+6. **Track progress** - Update status markers (✅ COMPLETE, 🔄 IN PROGRESS, ⏳ PENDING) as work progresses.
 
 ### 📚 Related Documentation
-- **[docs/plans/active/citation-system/CTS_URN_PLAN.md](citation-system/CTS_URN_PLAN.md)** - Citation system documentation
 - **[docs/ROADMAP.md](../ROADMAP.md)** - Current roadmap and priorities
-- **[docs/ARCHIVES/](../ARCHIVES/)** - Historical and deprecated documentation
+- **[docs/DEVELOPER.md](../DEVELOPER.md)** - Development workflow and AI integration
 
 *Last Updated: February 2, 2026*
