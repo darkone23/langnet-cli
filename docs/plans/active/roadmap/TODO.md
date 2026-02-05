@@ -10,7 +10,7 @@ This roadmap prioritizes TODO items based on **pedagogical impact** vs **impleme
 
 | Priority | Issue | Pedagogical Impact | Implementation Complexity | Status | Affected Modules |
 |----------|-------|-------------------|--------------------------|--------|------------------|
-| **P0** | **CTS URN Citation System** | **Huge** - Core to "see the word in the wild" learning | Medium - citation parsing/enrichment | Broken | `src/langnet/citation/models.py`, `src/langnet/diogenes/core.py:300-323` |
+| **P0** | **CTS URN Citation System** | **Huge** - Core to "see the word in the wild" learning | Medium - citation parsing/enrichment | Broken | `src/langnet/citation/models.py` |
 | **P0** | **Sanskrit Canonical Form Integration** | **Huge** - Essential for Sanskrit learners using inflected forms | Medium - wire sktsearch into pipeline | Partial | `src/langnet/normalization/core.py`, `src/langnet/engine/core_normalized.py` |
 | **P1** | **Diogenes Sense Extraction Fix** | High - affects Latin/Greek dictionary accuracy | Low-Medium - parser logic improvements | Broken | `src/langnet/diogenes/core.py:274-297` |
 | **P1** | **Heritage Citation Abbreviations** | High - citations lack proper corpus abbreviations | Low - integrate existing abbreviation list | Partial | `docs/upstream-docs/skt-heritage/ABBR.md`, `src/langnet/heritage/*` |

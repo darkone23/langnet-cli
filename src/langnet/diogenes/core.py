@@ -11,6 +11,7 @@ import structlog
 from bs4 import BeautifulSoup
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
+from langnet.citation.cts_urn import CTSUrnMapper
 
 # from langnet.citation.models import Citation, CitationCollection, CitationType
 
@@ -312,8 +313,13 @@ class DiogenesScraper:
         refs = {}
         for ref in soup.select(".origjump"):
             ref_id = " ".join(ref.attrs.get("class", [])).strip("origjump ").lower()
+            # ref_id = CTSUrnMapper.map_perseus_to_urn(ref_id)
             ref_txt = ref.get_text()
-            refs[ref_id] = ref_txt
+            canon_name = CTSUrnMapper.map_perseus_to_urn(ref_id)
+            if canon_name:
+                refs[canon_name] = ref_txt
+            else:
+                refs[ref_id] = ref_txt
         if len(refs.items()) > 0:
             # converted_citations = []
             # for urn, citation_text in refs.items():

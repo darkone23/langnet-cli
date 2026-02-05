@@ -191,12 +191,12 @@ class Citation:
 
     # Context and relationship
     relationship: str | None = None  # "cf.", "see", "vid.", "compare"
-    confidence: float = 1.0  # Confidence score (0-1)
+    # confidence: float = 1.0  # Confidence score (0-1)
     importance: str | None = None  # "primary", "secondary", "cross-reference"
 
     # Timestamps
-    created_at: datetime = field(default_factory=datetime.now)
-    updated_at: datetime | None = None
+    # created_at: datetime = field(default_factory=datetime.now)
+    # updated_at: datetime | None = None
 
     def add_reference(self, reference: TextReference) -> None:
         """Add a text reference to this citation"""
@@ -222,10 +222,10 @@ class Citation:
             "source_language": self.source_language,
             "target_language": self.target_language,
             "relationship": self.relationship,
-            "confidence": self.confidence,
+            # "confidence": self.confidence,
             "importance": self.importance,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            # "created_at": self.created_at.isoformat(),
+            # "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
     @classmethod
@@ -233,8 +233,8 @@ class Citation:
         """Create from dictionary for deserialization"""
         references = [TextReference.from_dict(ref) for ref in data.get("references", [])]
 
-        created_at_str = data.get("created_at")
-        created_at = datetime.fromisoformat(created_at_str) if created_at_str else datetime.now()
+        # created_at_str = data.get("created_at")
+        # created_at = datetime.fromisoformat(created_at_str) if created_at_str else datetime.now()
 
         updated_at_str = data.get("updated_at")
         updated_at = datetime.fromisoformat(updated_at_str) if updated_at_str else None
@@ -253,10 +253,10 @@ class Citation:
             source_language=data.get("source_language"),
             target_language=data.get("target_language"),
             relationship=data.get("relationship"),
-            confidence=data.get("confidence", 1.0),
+            # confidence=data.get("confidence", 1.0),
             importance=data.get("importance"),
-            created_at=created_at,
-            updated_at=updated_at,
+            # created_at=created_at,
+            # updated_at=updated_at,
         )
 
     def __str__(self) -> str:

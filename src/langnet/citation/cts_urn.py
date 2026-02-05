@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 MIN_AUTHOR_NAME_LENGTH = 3
 MIN_WORK_TITLE_LENGTH = 4
 MIN_ABBREV_LENGTH = 2
-PERSEUS_PART_COUNT = 3
 
 
 class CTSUrnMapper:
@@ -202,11 +201,12 @@ class CTSUrnMapper:
 
         if text.startswith("perseus:abo:"):
             # diogenes response mapping
-            return self._map_perseus_to_urn(text)
+            return self.map_perseus_to_urn(text)
 
         return None
 
-    def _map_perseus_to_urn(self, perseus_ref: str) -> str | None:
+    @staticmethod
+    def map_perseus_to_urn(perseus_ref: str) -> str | None:
         """
         Map Perseus canonical reference to CTS URN.
 
@@ -237,8 +237,6 @@ class CTSUrnMapper:
                 work_part = core
 
             parts = work_part.split(",")
-            if len(parts) != PERSEUS_PART_COUNT:
-                return None
 
             collection, author_id, work_id = parts
 
@@ -248,12 +246,19 @@ class CTSUrnMapper:
             elif collection == "phi":
                 namespace = "latinLit"
                 prefix_type = "phi"
+            elif collection == "stoa":
+                namespace = "latinLit"
+                prefix_type = "stoa"
             else:
                 return None
 
             author_num = author_id.zfill(4)
             work_num = work_id.zfill(3)
 
+            # TODO; better stoa mappings
+            # if prefix_type == "stoa":
+            #     work_num += ".opp-lat1"
+            
             if location_part:
                 work_urn = f"{prefix_type}{author_num}.{prefix_type}{work_num}"
                 urn = f"urn:cts:{namespace}:{work_urn}:{location_part}"
