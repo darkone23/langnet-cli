@@ -989,15 +989,15 @@ def whitakers():
     pass
 
 
-@whitakers.command("analyze")
+@whitakers.command("search")
 @click.option("--query", required=True, help="Word to analyze")
 @click.option(
     "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
 )
 @click.option("--save", help="Save output to fixture file")
-def whitakers_analyze(query: str, output: str, save: str):
+def whitakers_search(query: str, output: str, save: str):
     """Analyze a word using Whitaker's Words backend."""
-    _tool_query("whitakers", "analyze", query=query, output=output, save=save)
+    _tool_query("whitakers", "search", lang="lat", query=query, output=output, save=save)
 
 
 @tool.group()

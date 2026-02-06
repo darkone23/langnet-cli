@@ -299,7 +299,7 @@ routes = [
     Route("/api/q", query_api, methods=["GET", "POST"]),
     Route("/api/health", health_check),
     Route("/api/cache/stats", cache_stats_api),
-    Route("/api/tool/{tool}/{action}", tool_api, methods=["GET"]),
+    Route("/api/tool/{tool}/{action}", tool_api, methods=["GET", "POST"]),
 ]
 
 

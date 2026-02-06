@@ -1,12 +1,15 @@
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, asdict, field
 from pathlib import Path
 
 import cattrs
 import structlog
 from sh import Command
 
+from enum import Enum, auto
+
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
+
 
 from .lineparsers import CodesReducer, FactsReducer, SensesReducer
 
@@ -23,13 +26,169 @@ class CodelineName:
 class CodelineData:
     term: str
     notes: list[str] | None = field(default=None)
-    age: str | None = field(default=None)
-    source: str | None = field(default=None)
-    freq: str | None = field(default=None)
+    age: str | None = field(default="X")
+    source: str | None = field(default="X")
+    freq: str | None = field(default="X")
     declension: str | None = field(default=None)
     pos_form: str | None = field(default=None)
     pos_code: str | None = field(default=None)
 
+
+class Frequency(Enum):
+    VERY_FREQUENT = "A"  # Top 10%
+    FREQUENT = "B"       # Top 10-20%
+    COMMON = "C"         # Top 20-40%
+    LESSER = "D"         # Top 40-50%
+    UNCOMMON = "E"       # Bottom 50%
+    RARE = "F"           # Very rare
+    OBSCURE = "M"        # Graffiti/Slang/Obscure
+    INSCRIPTION = "I"    # Only found in inscriptions
+    UNKNOWN = "X"
+    
+    @staticmethod
+    def from_code(cls, code: str):
+        # Handle cases where code might be None or whitespace
+        if not code or code.strip() == "": return cls.UNKNOWN
+        for member in cls:
+            if member.value == code.upper(): return member
+        return cls.UNKNOWN
+
+class LatinAge(Enum):
+    ARCHAIC = "A"      # Pre-200 BC (Plautus, Terence)
+    EARLY = "B"        # 200-100 BC
+    CLASSICAL = "C"    # 100 BC - 14 AD (Cicero, Caesar, Augustus)
+    SILVER = "D"       # 14-200 AD (Tacitus, Seneca)
+    LATE = "E"         # 200-600 AD (Jerome, Augustine)
+    MEDIEVAL = "F"     # 600-1600 AD
+    MODERN = "G"       # 1600-Present (Scientific)
+    GENERAL = "X"      # Used throughout ages
+    UNKNOWN = "UNKNOWN"
+
+    @staticmethod
+    def from_code(cls, code: str):
+        if not code: return cls.UNKNOWN
+        for member in cls:
+            if member.value == code.upper(): return member
+        return cls.UNKNOWN
+
+class PartOfSpeech(Enum):
+    NOUN = "N"
+    VERB = "V"
+    ADJECTIVE = "ADJ"
+    ADVERB = "ADV"
+    PREPOSITION = "PREP"
+    CONJUNCTION = "CONJ"
+    INTERJECTION = "INTERJ"
+    NUMERAL = "NUM"
+    PRONOUN = "PRON"
+    UNKNOWN = "UNKNOWN"
+
+    @staticmethod
+    def from_code(cls, code: str):
+        if not code: return cls.UNKNOWN
+        # Whitaker's sometimes outputs "ADJ" and sometimes "AD".
+        # This handles simple matching.
+        clean_code = code.upper().strip()
+        for member in cls:
+            if member.value == clean_code: return member
+        return cls.UNKNOWN
+
+FREQ_MAP = {
+    "A": "Very Frequent (top 10%)",
+    "B": "Frequent (top 20%)",
+    "C": "Common",
+    "D": "Less Common",
+    "E": "Uncommon",
+    "F": "Rare",
+    "I": "Inscription Only",
+    "M": "Obscure/Graffiti",
+    "X": "Unknown Frequency"
+}
+
+AGE_MAP = {
+    "A": "Archaic (Pre-200 BC)",
+    "B": "Early (200-100 BC)",
+    "C": "Classical (100 BC - 14 AD)",
+    "D": "Silver (14-200 AD)",
+    "E": "Late (200-600 AD)",
+    "F": "Medieval (600+ AD)",
+    "G": "Modern/Scientific",
+    "X": "General/All Ages"
+}
+
+POS_MAP = {
+    "N": "Noun",
+    "V": "Verb",
+    "ADJ": "Adjective",
+    "ADV": "Adverb",
+    "PRON": "Pronoun",
+    "CONJ": "Conjunction",
+    "PREP": "Preposition",
+    "NUM": "Numeral",
+    "INTERJ": "Interjection"
+}
+
+GENDER_MAP = {'M': 'Masculine', 'F': 'Feminine', 'N': 'Neuter', 'C': 'Common'}
+
+def enrich_codeline_data(data: dict) -> dict:
+    """
+    Returns a NEW CodelineData object with readable English strings 
+    substituted for the raw Whitaker's codes.
+    """
+    # Create a shallow copy so we don't mutate the original object in place
+    # (Good practice to avoid side effects)
+    # new_data = dataclasses.replace(data)
+    new_data = data.copy()
+    # asdict(data)
+
+    # print("before xform")
+    # print(new_data)
+
+    raw_freq = new_data.get("freq", "").strip().upper()
+    # 1. Enrich Frequency
+    if raw_freq:
+        # Check the first char just in case strict formatting is loose
+        code = Frequency.from_code(Frequency, raw_freq)
+        if isinstance(code, Frequency):
+            new_data["freq"] = FREQ_MAP.get(code.value, f"Unknown Frequency: {raw_freq}")
+
+    # 2. Enrich Age
+    raw_age = new_data.get("age", "").strip().upper()
+    if raw_age:
+        code = LatinAge.from_code(LatinAge, raw_age)
+        # Some Whitaker's implementations might pass longer strings, handle generic fallback
+        if isinstance(code, LatinAge):
+            new_data["age"] = AGE_MAP.get(code.value, f"Unknown Age: {raw_age}")
+
+    # 3. Enrich Part of Speech (POS)
+    # We need to remember the RAW code for step 4 (contextual parsing)
+    raw_pos_code = new_data.get("pos_code", "").strip().upper()
+ 
+    if raw_pos_code:
+        code =  PartOfSpeech.from_code(PartOfSpeech, raw_pos_code)
+        if isinstance(code, PartOfSpeech):
+            new_data["pos_code"] = POS_MAP.get(code.value, raw_pos_code)
+
+    # 4. Enrich 'pos_form' based on what the POS was
+    # Whitaker's reuses this field (Gender for Nouns, Conjugation for Verbs)
+    raw_pos_form = new_data.get("pos_form", "").strip().upper()
+    
+    if raw_pos_form and raw_pos_code:
+        form = raw_pos_form
+
+        if raw_pos_code == "N": # Noun - Form is GENDEr
+            new_data["pos_form"] = GENDER_MAP.get(form, form)
+        
+        elif raw_pos_code == "V": # Verb - Form is CONJUGATION
+            new_data["pos_form"] = f"{form} Conjugation"
+            
+        elif raw_pos_code == "ADJ": # Adjective - Form is DECLENSION
+            new_data["pos_form"] = f"{form} Declension"
+
+    # print("wow")
+    # print(new_data)
+
+    return new_data
 
 @dataclass
 class WhitakerWordParts:
@@ -131,11 +290,15 @@ def fixup(wordlist):
     fixed_words = []
     for word in wordlist:
         codeline = word.get("codeline", None)
+        # print("hihi", enrich_codeline_data(codeline))
         if codeline is not None:
-            maybe_term = codeline.get("term", None)
-            if maybe_term is None:
-                codeline["term"] = word["terms"][0]["term"]
-                word["codeline"] = codeline
+            codeline = enrich_codeline_data(codeline)
+            word["codeline"] = codeline
+            # word["codeline"] = codeline
+            # maybe_term = codeline.get("term", None)
+            # if maybe_term is None:
+            #     codeline["term"] = word["terms"][0]["term"]
+            #     word["codeline"] = enrich_codeline_data(codeline)
         fixed_words.append(word)
     logger.debug("fixup_completed", input_count=len(wordlist), output_count=len(fixed_words))
     return fixed_words
@@ -309,6 +472,7 @@ class WhitakersWords:
                 wordlist.append(word_structure)
 
         structured_wordlist = []
+        print("in words fn")
         for w in fixup(wordlist):
             try:
                 structured_wordlist.append(cattrs.structure(w, WhitakersWordsT))
