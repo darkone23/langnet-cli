@@ -553,11 +553,55 @@ class SanskritCologneLexicon:
         if entry.grammar_tags is not None:
             result["grammar_tags"] = entry.grammar_tags
         if entry.references is not None:
-            result["references"] = entry.references
-        if entry.page_ref is not None:
-            result["page_ref"] = entry.page_ref
+            # Simplify references to avoid noise
+            result["references"] = self._simplify_references(entry.references)
+        # Omit page_ref as requested - not useful for educational/analysis purposes
+        # if entry.page_ref is not None:
+        #     result["page_ref"] = entry.page_ref
 
         return result
+
+    def _simplify_references(self, references) -> list[str] | dict:
+        """Simplify references to avoid noise in CDSL tool output."""
+        if not references:
+            return []
+
+        abbreviations = []
+
+        # Case 1: references is a CitationCollection object
+        if hasattr(references, "citations"):
+            for citation in references.citations:
+                if citation.abbreviation:
+                    abbreviations.append(citation.abbreviation)
+                elif hasattr(citation, "references") and citation.references:
+                    for ref in citation.references:
+                        if hasattr(ref, "work") and ref.work:
+                            abbreviations.append(ref.work)
+
+        # Case 2: references is already a dict (from dataclasses.asdict)
+        elif isinstance(references, dict) and "citations" in references:
+            for citation in references.get("citations", []):
+                if isinstance(citation, dict):
+                    # Get abbreviation from dict
+                    if citation.get("abbreviation"):
+                        abbreviations.append(citation["abbreviation"])
+                    # Or get work from nested references
+                    elif citation.get("references"):
+                        for ref in citation["references"]:
+                            if isinstance(ref, dict) and ref.get("work"):
+                                abbreviations.append(ref["work"])
+
+        # Case 3: references is already a simple list (what we create in _lookup_dict_formatted)
+        elif isinstance(references, list):
+            # Already simplified, just return it
+            return references
+
+        # Return simplified list if we found anything
+        if abbreviations:
+            return sorted(list(set(abbreviations)))
+
+        # Fallback: return empty list
+        return []
 
     def _lookup_dict_formatted(
         self, dict_id: str, slp1_key: str, original_term: str
@@ -593,27 +637,26 @@ class SanskritCologneLexicon:
             # Parse grammatical information from XML
             grammatical = parse_grammatical_info(row[2])
 
-            # Convert references to CitationCollection
+            # Extract simple references/abbreviations for tool output
             references = None
             raw_refs = grammatical.get("references")
             if raw_refs and isinstance(raw_refs, list):
-                citations = []
+                # For tool output, just store as simple list of abbreviations
+                abbreviations = []
                 for ref_dict in raw_refs if isinstance(raw_refs, list) else []:
-                    if isinstance(ref_dict, dict):
-                        text_ref = TextReference(
-                            type=CitationType.DICTIONARY_ABBREVIATION,
-                            text=ref_dict.get("source", ""),
-                            work=ref_dict.get("source", ""),
-                        )
-                        citation = Citation(
-                            references=[text_ref],
-                            abbreviation=ref_dict.get("source", ""),
-                            relationship="see" if ref_dict.get("type") == "lexicon" else None,
-                        )
-                        citations.append(citation)
+                    if isinstance(ref_dict, dict) and "source" in ref_dict:
+                        abbreviations.append(ref_dict["source"])
 
-                if citations:
-                    references = CitationCollection(citations=citations)
+                if abbreviations:
+                    # Store as simple list for tool output - preserve original order
+                    # Deduplicate while preserving first occurrence order
+                    seen = set()
+                    dedup_abbreviations = []
+                    for abbr in abbreviations:
+                        if abbr not in seen:
+                            seen.add(abbr)
+                            dedup_abbreviations.append(abbr)
+                    references = dedup_abbreviations
 
             entries.append(
                 SanskritDictionaryEntry(

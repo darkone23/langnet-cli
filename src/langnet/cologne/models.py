@@ -62,7 +62,7 @@ class SanskritDictionaryEntry:
     sanskrit_form: str | None = None
     etymology: dict | None = None
     grammar_tags: dict | None = None
-    references: CitationCollection | None = None
+    references: CitationCollection | list[str] | None = None
     page_ref: str | None = None
 
 

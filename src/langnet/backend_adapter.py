@@ -199,9 +199,60 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
         # Whitaker's returns wordlist with terms and senses
         wordlist = data.get("wordlist", [])
         for word_data in wordlist:
+            # Process senses - deduplicate by definition text
             senses = []
+            seen_definitions = set()
+            senses_list = word_data.get("senses", [])
+            for sense_text in senses_list:
+                if sense_text not in seen_definitions:
+                    sense = Sense(
+                        pos=word_data.get("part_of_speech", "unknown"),
+                        definition=sense_text,
+                        citations=[],  # Whitaker's doesn't provide citations
+                        examples=[],
+                        metadata=word_data,
+                    )
+                    senses.append(sense)
+                    seen_definitions.add(sense_text)
 
+            # Extract primary morphology (first term) or None if no terms
+            terms = word_data.get("terms", [])
+            morphology = None
+            if terms:
+                first_term = terms[0]
+                morphology = MorphologyInfo(
+                    lemma=first_term.get("term_analysis", {}).get("stem", word),
+                    pos=first_term.get("part_of_speech", "unknown"),
+                    features={
+                        "case": first_term.get("case"),
+                        "number": first_term.get("number"),
+                        "gender": first_term.get("gender"),
+                        "variant": first_term.get("variant"),
+                    },
+                    confidence=1.0,
+                )
+
+            # Create ONE entry per word_data with all terms in metadata
+            entry = DictionaryEntry(
+                word=word,
+                language=language,
+                senses=senses,
+                morphology=morphology,
+                source="whitakers",
+                metadata={
+                    "word_data": word_data,  # Include all original data
+                    "terms": terms,  # Keep all terms accessible
+                },
+            )
+            entries.append(entry)
+
+        return entries
+
+        # Whitaker's returns wordlist with terms and senses
+        wordlist = data.get("wordlist", [])
+        for word_data in wordlist:
             # Process senses
+            senses = []
             senses_list = word_data.get("senses", [])
             for sense_text in senses_list:
                 sense = Sense(
@@ -213,33 +264,36 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
                 )
                 senses.append(sense)
 
-            # Extract morphology from terms
+            # Extract primary morphology (first term) or None if no terms
             terms = word_data.get("terms", [])
-            for term in terms:
-                morph_info = MorphologyInfo(
-                    lemma=term.get("term_analysis", {}).get("stem", word),
-                    pos=term.get("part_of_speech", "unknown"),
+            morphology = None
+            if terms:
+                first_term = terms[0]
+                morphology = MorphologyInfo(
+                    lemma=first_term.get("term_analysis", {}).get("stem", word),
+                    pos=first_term.get("part_of_speech", "unknown"),
                     features={
-                        "case": term.get("case"),
-                        "number": term.get("number"),
-                        "gender": term.get("gender"),
-                        "variant": term.get("variant"),
+                        "case": first_term.get("case"),
+                        "number": first_term.get("number"),
+                        "gender": first_term.get("gender"),
+                        "variant": first_term.get("variant"),
                     },
                     confidence=1.0,
                 )
 
-                entry = DictionaryEntry(
-                    word=word,
-                    language=language,
-                    senses=senses if senses else [],  # Attach senses to first morphology entry
-                    morphology=morph_info if not senses else None,
-                    source="whitakers",
-                    metadata=term,
-                )
-                entries.append(entry)
-
-                # Only attach senses once
-                senses = []
+            # Create ONE entry per word_data with all terms in metadata
+            entry = DictionaryEntry(
+                word=word,
+                language=language,
+                senses=senses,
+                morphology=morphology,
+                source="whitakers",
+                metadata={
+                    "word_data": word_data,  # Include all original data
+                    "terms": terms,  # Keep all terms accessible
+                },
+            )
+            entries.append(entry)
 
         return entries
 
@@ -325,31 +379,42 @@ class HeritageBackendAdapter(BaseBackendAdapter):
         if not morphology_data:
             return entries
 
-        for solution in morphology_data["solutions"]:
+        # Collect all morphology analyses
+        all_analyses = []
+        for solution in morphology_data.get("solutions", []):
             for analysis in solution.get("analyses", []):
-                morph_info = MorphologyInfo(
-                    lemma=analysis.get("lemma", ""),
-                    pos=analysis.get("pos", ""),
-                    features={},  # Heritage analysis features
-                    confidence=analysis.get("confidence", 1.0),
-                )
+                all_analyses.append(analysis)
 
-                senses = self._extract_senses_from_combined(data, analysis)
-                morphology = morph_info if not senses else morph_info
+        # Extract senses from combined dictionary data
+        senses = self._extract_senses_from_combined(data)
 
-                entry = DictionaryEntry(
-                    word=word,
-                    language=language,
-                    senses=senses,
-                    morphology=morphology,
-                    source="heritage",
-                    metadata={"analysis": analysis, "combined": data.get("combined", {})},
-                )
-                entries.append(entry)
+        # Create ONE entry with primary morphology (first analysis) or None
+        morphology = None
+        if all_analyses:
+            first_analysis = all_analyses[0]
+            morphology = MorphologyInfo(
+                lemma=first_analysis.get("lemma", ""),
+                pos=first_analysis.get("pos", ""),
+                features={},
+                confidence=first_analysis.get("confidence", 1.0),
+            )
+
+        entry = DictionaryEntry(
+            word=word,
+            language=language,
+            senses=senses,
+            morphology=morphology,
+            source="heritage",
+            metadata={
+                "all_analyses": all_analyses,
+                "combined": data.get("combined", {}),
+            },
+        )
+        entries.append(entry)
 
         return entries
 
-    def _extract_senses_from_combined(self, data: dict, analysis: dict) -> list:
+    def _extract_senses_from_combined(self, data: dict) -> list:
         """Extract senses from combined dictionary data."""
         senses = []
         dict_data = data.get("combined", {}) if data.get("combined") else {}
@@ -485,32 +550,75 @@ class CDSLBackendAdapter(BaseBackendAdapter):
         """Process entries from a specific dictionary."""
         entries = []
 
-        for entry_data in dict_data:
-            if isinstance(entry_data, dict):
-                senses = []
-                citations = self._extract_citations_from_references(
-                    entry_data.get("references", [])
-                )
+        # Group entries by dictionary to avoid explosion
+        if dict_name in ["mw", "ap90", "apte"]:  # Sanskrit dictionaries that can have many entries
+            senses = []
+            original_entries = []
 
-                sense = Sense(
-                    pos=entry_data.get("pos", "unknown"),
-                    definition=entry_data.get("meaning", ""),
-                    citations=citations,
-                    examples=entry_data.get("examples", []),
-                    metadata=entry_data,
-                )
-                senses.append(sense)
-
-                if senses:
-                    entry = DictionaryEntry(
-                        word=word,
-                        language=language,
-                        senses=senses,
-                        morphology=None,
-                        source="cdsl",
-                        metadata={"dictionary": dict_name},
+            for entry_data in dict_data:
+                if isinstance(entry_data, dict):
+                    citations = self._extract_citations_from_references(
+                        entry_data.get("references", [])
                     )
-                    entries.append(entry)
+
+                    sense = Sense(
+                        pos=entry_data.get("pos", "unknown"),
+                        definition=entry_data.get("meaning", ""),
+                        citations=citations,
+                        examples=entry_data.get("examples", []),
+                        metadata=entry_data,
+                    )
+                    senses.append(sense)
+                    original_entries.append(
+                        {
+                            "id": entry_data.get("id"),
+                            "meaning": entry_data.get("meaning", ""),
+                            "page_ref": entry_data.get("page_ref"),
+                        }
+                    )
+
+            if senses:
+                entry = DictionaryEntry(
+                    word=word,
+                    language=language,
+                    senses=senses,
+                    morphology=None,
+                    source="cdsl",
+                    metadata={
+                        "dictionary": dict_name,
+                        "original_entry_count": len(original_entries),
+                        "original_entries": original_entries,
+                    },
+                )
+                entries.append(entry)
+        else:
+            # Process other dictionaries normally
+            for entry_data in dict_data:
+                if isinstance(entry_data, dict):
+                    senses = []
+                    citations = self._extract_citations_from_references(
+                        entry_data.get("references", [])
+                    )
+
+                    sense = Sense(
+                        pos=entry_data.get("pos", "unknown"),
+                        definition=entry_data.get("meaning", ""),
+                        citations=citations,
+                        examples=entry_data.get("examples", []),
+                        metadata=entry_data,
+                    )
+                    senses.append(sense)
+
+                    if senses:
+                        entry = DictionaryEntry(
+                            word=word,
+                            language=language,
+                            senses=senses,
+                            morphology=None,
+                            source="cdsl",
+                            metadata={"dictionary": dict_name},
+                        )
+                        entries.append(entry)
 
         return entries
 

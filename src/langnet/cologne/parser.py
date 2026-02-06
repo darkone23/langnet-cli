@@ -239,18 +239,33 @@ def _parse_etymology(body, body_text: str, result: dict):
 
 
 def _parse_references(body, result: dict):
-    ls_elems = body.findall("ls")
-    if ls_elems:
-        references = [{"source": ls.text.strip(), "type": "lexicon"} for ls in ls_elems if ls.text]
-        if references:
-            result["references"] = references
+    references = []
 
+    # Parse ls elements (lexicon source citations)
+    ls_elems = body.findall("ls")
+    for ls in ls_elems:
+        source_text = ls.text.strip() if ls.text else ""
+
+        # Handle n="..." attribute (implied continuation from previous reference)
+        if "n" in ls.attrib and ls.attrib["n"]:
+            implied_prefix = ls.attrib["n"].strip()
+            if source_text:
+                # Combine: "RV." + "ii, 41, 16" = "RV. ii, 41, 16"
+                source_text = f"{implied_prefix} {source_text}"
+            else:
+                source_text = implied_prefix
+
+        if source_text:
+            references.append({"source": source_text, "type": "lexicon"})
+
+    # Parse s1 elements (cross-references)
     s1_elems = body.findall("s1")
     for s1 in s1_elems:
         if s1.text:
-            result.setdefault("references", []).append(
-                {"source": s1.text.strip(), "type": "cross_reference"}
-            )
+            references.append({"source": s1.text.strip(), "type": "cross_reference"})
+
+    if references:
+        result["references"] = references
 
 
 def _find_sanskrit_form(body):
@@ -346,16 +361,31 @@ def parse_grammatical_info(xml_data: str) -> dict:
     _extract_grammar_from_lex(lex_elem, grammar_tags, result)
 
     body_text = _build_body_text(body)
-
-    sanskrit_form = _find_sanskrit_form(body)
-    if sanskrit_form:
-        result["sanskrit_form"] = sanskrit_form
-
-    _extract_grammar_from_body(body_text, grammar_tags)
-
     _parse_etymology_and_references(body, body_text, result)
 
-    if grammar_tags:
-        result["grammar_tags"] = grammar_tags
+    # Extract sanskrit_form from header key2 if available (usually has SLP1 diacritics)
+    # Fallback to key1, then to body extraction
+    header = root.find("h")
+    if header is not None:
+        # Try key2 first (often has SLP1 diacritics like '/' for Udatta)
+        key2_elem = header.find("key2")
+        if key2_elem is not None and key2_elem.text and key2_elem.text.strip():
+            sanskrit_form = key2_elem.text.strip()
+            if sanskrit_form:
+                result["sanskrit_form"] = sanskrit_form
+
+        # Fallback to key1 if key2 not available or empty
+        if "sanskrit_form" not in result:
+            key1_elem = header.find("key1")
+            if key1_elem is not None and key1_elem.text:
+                sanskrit_form = key1_elem.text.strip()
+                if sanskrit_form:
+                    result["sanskrit_form"] = sanskrit_form
+
+    # Final fallback: try body extraction if header doesn't have suitable key
+    if "sanskrit_form" not in result:
+        sanskrit_form = _find_sanskrit_form(body)
+        if sanskrit_form:
+            result["sanskrit_form"] = sanskrit_form
 
     return result

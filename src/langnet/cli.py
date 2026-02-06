@@ -1049,6 +1049,7 @@ def cdsl_tool():
     pass
 
 
+@cdsl_tool.command("lookup")
 @click.option("--query", required=True, help="Word to lookup")
 @click.option("--dict", "dict_name", help="Dictionary ID (default: mw)")
 @click.option(
@@ -1180,9 +1181,6 @@ def _tool_query_with_context(context: ToolQueryContext):
         if context.save:
             raise NotImplementedError("Only JSON passthrough supported")
     except requests.RequestException as e:
-        console.print(f"[red]Error: {e}[/]")
-        sys.exit(1)
-    except Exception as e:
         console.print(f"[red]Error: {e}[/]")
         sys.exit(1)
     except Exception as e:
