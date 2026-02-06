@@ -26,7 +26,7 @@ from langnet.backend_adapter import (
 )
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.core import LangnetWiring
-from langnet.schema import Citation, DictionaryEntry, MorphologyInfo, Sense
+from langnet.schema import Citation, DictionaryDefinition, DictionaryEntry, MorphologyInfo
 
 
 def preload_dependencies():
@@ -75,7 +75,7 @@ class TestUniversalSchemaComprehensive(unittest.TestCase):
         self.assertIsInstance(entry.word, str)
         self.assertIsInstance(entry.language, str)
         self.assertIsInstance(entry.source, str)
-        self.assertIsInstance(entry.senses, list)
+        self.assertIsInstance(entry.definitions, list)
         self.assertIsInstance(entry.metadata, dict)
 
         # Content validation
@@ -84,16 +84,16 @@ class TestUniversalSchemaComprehensive(unittest.TestCase):
         self.assertTrue(entry.source.strip(), "Source should not be empty")
 
         # Validate senses
-        for sense in entry.senses:
-            self.assertIsInstance(sense, Sense)
-            self.assertIsInstance(sense.pos, str)
-            self.assertIsInstance(sense.definition, str)
-            self.assertIsInstance(sense.citations, list)
-            self.assertIsInstance(sense.examples, list)
-            self.assertIsInstance(sense.metadata, dict)
+        for definition in entry.definitions:
+            self.assertIsInstance(definition, DictionaryDefinition)
+            self.assertIsInstance(definition.pos, str)
+            self.assertIsInstance(definition.definition, str)
+            self.assertIsInstance(definition.citations, list)
+            self.assertIsInstance(definition.examples, list)
+            self.assertIsInstance(definition.metadata, dict)
 
             # Citations validation
-            for citation in sense.citations:
+            for citation in definition.citations:
                 if citation is not None:
                     self.assertIsInstance(citation, Citation)
                     if citation.url:
@@ -250,8 +250,8 @@ class TestUniversalSchemaComprehensive(unittest.TestCase):
 
         total_citations = 0
         for entry in entries:
-            for sense in entry.senses:
-                for citation in sense.citations:
+            for definition in entry.definitions:
+                for citation in definition.citations:
                     if citation:
                         total_citations += 1
                         # Should have at least one of: url, title, author, page, excerpt

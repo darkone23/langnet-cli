@@ -3,6 +3,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+import cattrs
 import orjson
 import requests
 import structlog
@@ -18,6 +19,9 @@ logger = structlog.get_logger(__name__)
 from langnet.core import LangnetWiring  # noqa: E402
 from langnet.heritage.config import HeritageConfig  # noqa: E402
 from langnet.heritage.morphology import HeritageMorphologyService  # noqa: E402
+
+# Configure cattrs for JSON serialization with omit_if_default
+json_converter = cattrs.Converter(omit_if_default=True)
 
 VALID_LANGUAGES = {"lat", "grc", "san", "grk"}
 VALID_TOOLS = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
@@ -196,11 +200,10 @@ async def query_api(request: Request):
     try:
         result = wiring.engine.handle_query(lang, word)
 
-        # Add standardized citations to the response
-        # lang_str = str(lang) if lang else "unknown"
-        # result = _add_citations_to_response(result, lang_str)
+        # Unstructure DictionaryEntry objects to dicts (omits None fields)
+        result_dict = [json_converter.unstructure(entry) for entry in result]
 
-        return ORJsonResponse(result)
+        return ORJsonResponse(result_dict)
     except Exception as e:
         logger.error(f"Error in query API: {e}")
         logger.error(f"Error type: {type(e)}")

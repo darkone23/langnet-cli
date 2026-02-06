@@ -8,7 +8,13 @@ to standardized DictionaryEntry objects with proper citations.
 import cattrs
 import structlog
 
-from langnet.schema import Citation, DictionaryBlock, DictionaryEntry, MorphologyInfo, Sense
+from langnet.schema import (
+    Citation,
+    DictionaryBlock,
+    DictionaryDefinition,
+    DictionaryEntry,
+    MorphologyInfo,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -173,7 +179,7 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         entry = DictionaryEntry(
             word=word,
             language=language,
-            senses=[],  # No sense extraction - use dictionary_blocks instead
+            definitions=[],  # No definition extraction - use dictionary_blocks instead
             morphology=morphology,
             source="diogenes",
             dictionary_blocks=dictionary_blocks,
@@ -200,19 +206,34 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
         wordlist = data.get("wordlist", [])
         for word_data in wordlist:
             # Process senses - deduplicate by definition text
-            senses = []
+            definitions = []
             seen_definitions = set()
-            senses_list = word_data.get("senses", [])
-            for sense_text in senses_list:
+            definitions_list = word_data.get("senses", [])
+            for sense_text in definitions_list:
                 if sense_text not in seen_definitions:
-                    sense = Sense(
-                        pos=word_data.get("part_of_speech", "unknown"),
-                        definition=sense_text,
-                        citations=[],  # Whitaker's doesn't provide citations
-                        examples=[],
-                        metadata=word_data,
-                    )
-                    senses.append(sense)
+                    # Extract gender from codeline if available
+                    codeline = word_data.get("codeline", {})
+                    gender = codeline.get("pos_form")
+                    if gender and "masculine" in gender.lower():
+                        gender = "masculine"
+                    elif gender and "feminine" in gender.lower():
+                        gender = "feminine"
+                    elif gender and "neuter" in gender.lower():
+                        gender = "neuter"
+                    else:
+                        gender = None
+
+                    sense_kwargs = {
+                        "pos": word_data.get("part_of_speech", "unknown"),
+                        "definition": sense_text,
+                        "citations": [],  # Whitaker's doesn't provide citations
+                        "examples": [],
+                        "metadata": word_data,
+                    }
+                    if gender:
+                        sense_kwargs["gender"] = gender
+                    sense = DictionaryDefinition(**sense_kwargs)
+                    definitions.append(sense)
                     seen_definitions.add(sense_text)
 
             # Extract primary morphology (first term) or None if no terms
@@ -220,72 +241,91 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
             morphology = None
             if terms:
                 first_term = terms[0]
-                morphology = MorphologyInfo(
-                    lemma=first_term.get("term_analysis", {}).get("stem", word),
-                    pos=first_term.get("part_of_speech", "unknown"),
-                    features={
-                        "case": first_term.get("case"),
-                        "number": first_term.get("number"),
-                        "gender": first_term.get("gender"),
-                        "variant": first_term.get("variant"),
-                    },
-                    confidence=1.0,
+                declension = first_term.get("declension")
+                declension_str = (
+                    f"{declension}st"
+                    if declension == "1"
+                    else f"{declension}nd"
+                    if declension == "2"
+                    else f"{declension}rd"
+                    if declension == "3"
+                    else f"{declension}th"
+                    if declension and declension.isdigit()
+                    else declension
                 )
+
+                # Extract verb-specific morphology
+                pos = first_term.get("part_of_speech", "unknown")
+                conjugation = first_term.get("conjugation")
+                conjugation_str = (
+                    f"{conjugation}st"
+                    if conjugation == "1"
+                    else f"{conjugation}nd"
+                    if conjugation == "2"
+                    else f"{conjugation}rd"
+                    if conjugation == "3"
+                    else f"{conjugation}th"
+                    if conjugation and conjugation.isdigit()
+                    else conjugation
+                )
+                tense = first_term.get("tense")
+                mood = first_term.get("mood")
+                voice = first_term.get("voice")
+                person = first_term.get("person")
+                number = first_term.get("number")
+
+                # Build morphology with only non-None fields
+                morphology_kwargs = {
+                    "lemma": first_term.get("term_analysis", {}).get("stem", word),
+                    "pos": pos,
+                    "confidence": 1.0,
+                }
+                
+                # Build features dict with only non-None values
+                features_kwargs = {}
+                case_val = first_term.get("case")
+                if case_val:
+                    features_kwargs["case"] = case_val
+                if number:
+                    features_kwargs["number"] = number
+                gender_val = first_term.get("gender")
+                if gender_val:
+                    features_kwargs["gender"] = gender_val
+                variant_val = first_term.get("variant")
+                if variant_val:
+                    features_kwargs["variant"] = variant_val
+                if features_kwargs:
+                    morphology_kwargs["features"] = features_kwargs
+
+                # Only add optional fields if they're not None
+                if declension_str:
+                    morphology_kwargs["declension"] = declension_str
+                if conjugation_str:
+                    morphology_kwargs["conjugation"] = conjugation_str
+                if tense:
+                    morphology_kwargs["tense"] = tense
+                if mood:
+                    morphology_kwargs["mood"] = mood
+                if voice:
+                    morphology_kwargs["voice"] = voice
+                if person:
+                    morphology_kwargs["person"] = person
+                if number:
+                    morphology_kwargs["number"] = number
+                case_val = first_term.get("case")
+                if case_val:
+                    morphology_kwargs["case"] = case_val
+                gender_val = first_term.get("gender")
+                if gender_val:
+                    morphology_kwargs["gender"] = gender_val
+
+                morphology = MorphologyInfo(**morphology_kwargs)
 
             # Create ONE entry per word_data with all terms in metadata
             entry = DictionaryEntry(
                 word=word,
                 language=language,
-                senses=senses,
-                morphology=morphology,
-                source="whitakers",
-                metadata={
-                    "word_data": word_data,  # Include all original data
-                    "terms": terms,  # Keep all terms accessible
-                },
-            )
-            entries.append(entry)
-
-        return entries
-
-        # Whitaker's returns wordlist with terms and senses
-        wordlist = data.get("wordlist", [])
-        for word_data in wordlist:
-            # Process senses
-            senses = []
-            senses_list = word_data.get("senses", [])
-            for sense_text in senses_list:
-                sense = Sense(
-                    pos=word_data.get("part_of_speech", "unknown"),
-                    definition=sense_text,
-                    citations=[],  # Whitaker's doesn't provide citations
-                    examples=[],
-                    metadata=word_data,
-                )
-                senses.append(sense)
-
-            # Extract primary morphology (first term) or None if no terms
-            terms = word_data.get("terms", [])
-            morphology = None
-            if terms:
-                first_term = terms[0]
-                morphology = MorphologyInfo(
-                    lemma=first_term.get("term_analysis", {}).get("stem", word),
-                    pos=first_term.get("part_of_speech", "unknown"),
-                    features={
-                        "case": first_term.get("case"),
-                        "number": first_term.get("number"),
-                        "gender": first_term.get("gender"),
-                        "variant": first_term.get("variant"),
-                    },
-                    confidence=1.0,
-                )
-
-            # Create ONE entry per word_data with all terms in metadata
-            entry = DictionaryEntry(
-                word=word,
-                language=language,
-                senses=senses,
+                definitions=definitions,  # Note: definitions variable contains DictionaryDefinition objects
                 morphology=morphology,
                 source="whitakers",
                 metadata={
@@ -319,35 +359,35 @@ class CLTKBackendAdapter(BaseBackendAdapter):
 
         # Parse Lewis & Short lines (if present)
         lewis_lines = data.get("lewis_1890_lines", [])
-        senses = []
+        definitions = []
 
         for line in lewis_lines:
             if ":" in line:
                 definition = line.split(":", 1)[1].strip()
-                sense = Sense(
+                sense = DictionaryDefinition(
                     pos="unknown",  # CLTK doesn't parse POS reliably
                     definition=definition,
                     citations=[],  # Could extract references from definitions
                     examples=[],
                     metadata={"lewis_line": line},
                 )
-                senses.append(sense)
+                definitions.append(sense)
 
         # If no dictionary data, still provide headword info
-        if not senses:
-            sense = Sense(
+        if not definitions:
+            sense = DictionaryDefinition(
                 pos="unknown",
                 definition=f"Latin headword: {headword}",
                 citations=[],
                 examples=[],
                 metadata=data,
             )
-            senses.append(sense)
+            definitions.append(sense)
 
         entry = DictionaryEntry(
             word=headword,
             language=language,
-            senses=senses,
+            definitions=definitions,
             morphology=None,
             source="cltk",
             metadata=data,
@@ -385,24 +425,64 @@ class HeritageBackendAdapter(BaseBackendAdapter):
             for analysis in solution.get("analyses", []):
                 all_analyses.append(analysis)
 
-        # Extract senses from combined dictionary data
-        senses = self._extract_senses_from_combined(data)
+        # Extract definitions from combined dictionary data
+        definitions = self._extract_definitions_from_combined(data)
 
         # Create ONE entry with primary morphology (first analysis) or None
         morphology = None
         if all_analyses:
             first_analysis = all_analyses[0]
-            morphology = MorphologyInfo(
-                lemma=first_analysis.get("lemma", ""),
-                pos=first_analysis.get("pos", ""),
-                features={},
-                confidence=first_analysis.get("confidence", 1.0),
-            )
+            # Extract morphology from Heritage analysis
+            lemma = first_analysis.get("lemma", word)
+            pos = first_analysis.get("pos", "unknown")
+            features = first_analysis.get("features", {})
+
+            # Build morphology with only non-None fields
+            morphology_kwargs = {
+                "lemma": lemma,
+                "pos": pos,
+                "features": features,
+                "confidence": 1.0,
+                "stem_type": "heritage",
+            }
+
+            # Only add optional fields if they're not None
+            # Extract case and gender from features if available
+            case_val = features.get("case") if isinstance(features, dict) else None
+            if case_val:
+                morphology_kwargs["case"] = case_val
+
+            gender_val = features.get("gender") if isinstance(features, dict) else None
+            if gender_val:
+                morphology_kwargs["gender"] = gender_val
+
+            number_val = features.get("number") if isinstance(features, dict) else None
+            if number_val:
+                morphology_kwargs["number"] = number_val
+
+            # Extract verb-specific features
+            tense_val = features.get("tense") if isinstance(features, dict) else None
+            if tense_val:
+                morphology_kwargs["tense"] = tense_val
+
+            mood_val = features.get("mood") if isinstance(features, dict) else None
+            if mood_val:
+                morphology_kwargs["mood"] = mood_val
+
+            voice_val = features.get("voice") if isinstance(features, dict) else None
+            if voice_val:
+                morphology_kwargs["voice"] = voice_val
+
+            person_val = features.get("person") if isinstance(features, dict) else None
+            if person_val:
+                morphology_kwargs["person"] = person_val
+
+            morphology = MorphologyInfo(**morphology_kwargs)
 
         entry = DictionaryEntry(
             word=word,
             language=language,
-            senses=senses,
+            definitions=definitions,
             morphology=morphology,
             source="heritage",
             metadata={
@@ -414,23 +494,23 @@ class HeritageBackendAdapter(BaseBackendAdapter):
 
         return entries
 
-    def _extract_senses_from_combined(self, data: dict) -> list:
+    def _extract_definitions_from_combined(self, data: dict) -> list:
         """Extract senses from combined dictionary data."""
-        senses = []
+        definitions = []
         dict_data = data.get("combined", {}) if data.get("combined") else {}
 
         if dict_data.get("dictionary_entries"):
             for dict_entry in dict_data["dictionary_entries"]:
-                sense = Sense(
+                sense = DictionaryDefinition(
                     pos=dict_data.get("pos", "unknown"),
                     definition=str(dict_entry),
                     citations=[],  # Would need HTML parsing for citations
                     examples=[],
                     metadata=dict_entry,
                 )
-                senses.append(sense)
+                definitions.append(sense)
 
-        return senses
+        return definitions
 
     def _process_dictionary_entries(
         self, data: dict, language: str, word: str
@@ -441,11 +521,11 @@ class HeritageBackendAdapter(BaseBackendAdapter):
 
         if dictionary_data and "entries" in dictionary_data:
             for dict_entry in dictionary_data["entries"]:
-                senses = self._create_senses_from_entry(dict_entry)
+                definitions = self._create_senses_from_entry(dict_entry)
                 entry = DictionaryEntry(
                     word=word,
                     language=language,
-                    senses=senses,
+                    definitions=definitions,
                     morphology=None,
                     source="heritage",
                     metadata=dictionary_data,
@@ -456,30 +536,30 @@ class HeritageBackendAdapter(BaseBackendAdapter):
 
     def _create_senses_from_entry(self, dict_entry: dict) -> list:
         """Create senses from a dictionary entry."""
-        senses = []
+        definitions = []
 
         if isinstance(dict_entry, dict):
             if "definitions" in dict_entry:
                 for definition in dict_entry["definitions"]:
-                    sense = Sense(
+                    sense = DictionaryDefinition(
                         pos=dict_entry.get("pos", "unknown"),
                         definition=str(definition),
                         citations=[],  # Extract from dictionary_data if possible
                         examples=dict_entry.get("examples", []),
                         metadata=dict_entry,
                     )
-                    senses.append(sense)
+                    definitions.append(sense)
             else:
-                sense = Sense(
+                sense = DictionaryDefinition(
                     pos=dict_entry.get("pos", "unknown"),
                     definition=str(dict_entry.get("definition", "")),
                     citations=[],  # Extract from dictionary_data if possible
                     examples=dict_entry.get("examples", []),
                     metadata=dict_entry,
                 )
-                senses.append(sense)
+                definitions.append(sense)
 
-        return senses
+        return definitions
 
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         """Convert Heritage Platform data to DictionaryEntry objects."""
@@ -493,8 +573,8 @@ class HeritageBackendAdapter(BaseBackendAdapter):
         if self._has_morphology_data(data):
             entries.extend(self._process_morphology_solutions(data, language, word))
 
-        # If no entries with senses, try dictionary entries
-        if not entries or not any(e.senses for e in entries):
+        # If no entries with definitions, try dictionary entries
+        if not entries or not any(e.definitions for e in entries):
             entries.extend(self._process_dictionary_entries(data, language, word))
 
         return entries
@@ -512,14 +592,19 @@ class CDSLBackendAdapter(BaseBackendAdapter):
         for citation in citation_collection.citations:
             primary_ref = citation.get_primary_reference()
             if primary_ref:
-                schema_citation = Citation(
-                    url=primary_ref.url,
-                    title=citation.abbreviation or primary_ref.work or primary_ref.text,
-                    author=citation.author,
-                    page=primary_ref.page,
-                    excerpt=primary_ref.text,
-                )
-                citations.append(schema_citation)
+                citation_kwargs = {}
+                title = citation.abbreviation or primary_ref.work or primary_ref.text
+                if title:
+                    citation_kwargs['title'] = title
+                if primary_ref.url:
+                    citation_kwargs['url'] = primary_ref.url
+                if citation.author:
+                    citation_kwargs['author'] = citation.author
+                if primary_ref.page:
+                    citation_kwargs['page'] = primary_ref.page
+                if primary_ref.text:
+                    citation_kwargs['excerpt'] = primary_ref.text
+                citations.append(Citation(**citation_kwargs))
         return citations
 
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
@@ -552,7 +637,7 @@ class CDSLBackendAdapter(BaseBackendAdapter):
 
         # Group entries by dictionary to avoid explosion
         if dict_name in ["mw", "ap90", "apte"]:  # Sanskrit dictionaries that can have many entries
-            senses = []
+            definitions = []
             original_entries = []
 
             for entry_data in dict_data:
@@ -561,14 +646,26 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                         entry_data.get("references", [])
                     )
 
-                    sense = Sense(
+                    # Extract pedagogical data from CDSL metadata
+                    gender_list = entry_data.get("gender", [])
+                    gender = gender_list[0] if gender_list else None
+                    etymology_data = entry_data.get("etymology", {})
+                    etymology_text = None
+                    if etymology_data:
+                        etype = etymology_data.get("type", "")
+                        eroot = etymology_data.get("root", "")
+                        etymology_text = f"{etype} {eroot}".strip()
+
+                    sense = DictionaryDefinition(
                         pos=entry_data.get("pos", "unknown"),
                         definition=entry_data.get("meaning", ""),
                         citations=citations,
                         examples=entry_data.get("examples", []),
                         metadata=entry_data,
+                        gender=gender,
+                        etymology=etymology_text,
                     )
-                    senses.append(sense)
+                    definitions.append(sense)
                     original_entries.append(
                         {
                             "id": entry_data.get("id"),
@@ -577,11 +674,12 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                         }
                     )
 
-            if senses:
+
+            if definitions:
                 entry = DictionaryEntry(
                     word=word,
                     language=language,
-                    senses=senses,
+                    definitions=definitions,
                     morphology=None,
                     source="cdsl",
                     metadata={
@@ -595,25 +693,37 @@ class CDSLBackendAdapter(BaseBackendAdapter):
             # Process other dictionaries normally
             for entry_data in dict_data:
                 if isinstance(entry_data, dict):
-                    senses = []
+                    definitions = []
                     citations = self._extract_citations_from_references(
                         entry_data.get("references", [])
                     )
 
-                    sense = Sense(
+                    # Extract pedagogical data from CDSL metadata
+                    gender_list = entry_data.get("gender", [])
+                    gender = gender_list[0] if gender_list else None
+                    etymology_data = entry_data.get("etymology", {})
+                    etymology_text = None
+                    if etymology_data:
+                        etype = etymology_data.get("type", "")
+                        eroot = etymology_data.get("root", "")
+                        etymology_text = f"{etype} {eroot}".strip()
+
+                    sense = DictionaryDefinition(
                         pos=entry_data.get("pos", "unknown"),
                         definition=entry_data.get("meaning", ""),
                         citations=citations,
                         examples=entry_data.get("examples", []),
                         metadata=entry_data,
+                        gender=gender,
+                        etymology=etymology_text,
                     )
-                    senses.append(sense)
+                    definitions.append(sense)
 
-                    if senses:
+                    if definitions:
                         entry = DictionaryEntry(
                             word=word,
                             language=language,
-                            senses=senses,
+                            definitions=definitions,
                             morphology=None,
                             source="cdsl",
                             metadata={"dictionary": dict_name},
@@ -645,23 +755,29 @@ class CDSLBackendAdapter(BaseBackendAdapter):
             for citation_data in ref["citations"]:
                 if citation_data.get("references"):
                     for nested_ref in citation_data["references"]:
-                        citations.append(
-                            Citation(
-                                title=nested_ref.get("work", source),
-                                page=page_ref,
-                                excerpt=nested_ref.get("text", ""),
-                            )
-                        )
+                        citation_kwargs = {"title": nested_ref.get("work", source)}
+                        if page_ref:
+                            citation_kwargs["page"] = page_ref
+                        text = nested_ref.get("text", "")
+                        if text:
+                            citation_kwargs["excerpt"] = text
+                        citations.append(Citation(**citation_kwargs))
         else:
             # Handle simple references
-            citations.append(Citation(title=source, page=page_ref, excerpt=ref.get("type", "")))
+            citation_kwargs = {"title": source}
+            if page_ref:
+                citation_kwargs["page"] = page_ref
+            ref_type = ref.get("type", "")
+            if ref_type:
+                citation_kwargs["excerpt"] = ref_type
+            citations.append(Citation(**citation_kwargs))
 
         return citations
 
     def _create_fallback_entry(self, data: dict, word: str, language: str) -> DictionaryEntry:
         """Create a fallback entry when no structured data is available."""
         if data.get("error"):
-            sense = Sense(
+            sense = DictionaryDefinition(
                 pos="unknown",
                 definition=f"Error: {data['error']}",
                 citations=[],
@@ -669,7 +785,7 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                 metadata=data,
             )
         else:
-            sense = Sense(
+            sense = DictionaryDefinition(
                 pos="unknown",
                 definition=data.get("warning", "No specific entries found"),
                 citations=[],
@@ -680,7 +796,7 @@ class CDSLBackendAdapter(BaseBackendAdapter):
         return DictionaryEntry(
             word=word,
             language=language,
-            senses=[sense],
+            definitions=[sense],
             morphology=None,
             source="cdsl",
             metadata=data,

@@ -22,14 +22,16 @@ class Citation:
 
 
 @dataclass
-class Sense:
-    """A specific meaning of a word."""
+class DictionaryDefinition:
+    """A concrete dictionary entry or definition."""
 
-    pos: str  # Part of speech
-    definition: str  # Definition text
-    examples: list[str] = field(default_factory=list)  # Example sentences
+    definition: str  # The dictionary definition text
+    pos: str  # Part of speech (noun, verb, adjective, etc.)
+    gender: str | None = None  # Gender for nouns/adjectives (m., f., n., c.)
+    etymology: str | None = None  # Etymology information (√root, from X, etc.)
+    examples: list[str] = field(default_factory=list)  # Example usages
     citations: list[Citation] = field(default_factory=list)  # Source references
-    metadata: dict[str, Any] = field(default_factory=dict)  # Additional backend-specific data
+    metadata: dict[str, Any] = field(default_factory=dict)  # Backend-specific raw data
 
 
 @dataclass
@@ -49,6 +51,18 @@ class MorphologyInfo:
     pos: str
     features: dict[str, str]  # Morphological features (case, tense, etc.)
     confidence: float = 1.0
+    declension: str | None = None  # Noun/adjective declension (1st, 2nd, 3rd, etc.)
+    conjugation: str | None = None  # Verb conjugation (1st, 2nd, 3rd, 4th, etc.)
+    stem_type: str | None = None  # Type of stem (thematic/athematic, strong/weak, etc.)
+    # Verb-specific morphology
+    tense: str | None = None  # Present, imperfect, perfect, future, etc.
+    mood: str | None = None  # Indicative, subjunctive, imperative, optative, etc.
+    voice: str | None = None  # Active, passive, middle, medio-passive
+    person: str | None = None  # 1st, 2nd, 3rd person
+    number: str | None = None  # Singular, plural, dual
+    # Noun/adjective-specific morphology
+    case: str | None = None  # Nominative, accusative, genitive, dative, etc.
+    gender: str | None = None  # Masculine, feminine, neuter
 
 
 @dataclass
@@ -57,9 +71,8 @@ class DictionaryEntry:
 
     word: str  # The queried word
     language: str  # Language identifier ('la', 'grc', 'san', etc.)
-    senses: list[Sense] = field(default_factory=list)  # Meanings and citations
+    definitions: list[DictionaryDefinition] = field(default_factory=list)  # Dictionary definitions
     morphology: MorphologyInfo | None = None
     source: str = ""  # Backend name ('heritage', 'cdsl', 'whitakers', etc.)
     metadata: dict[str, Any] = field(default_factory=dict)
-    dictionary_blocks: list[DictionaryBlock] = field(default_factory=list)  # Raw dictionary blocks
     dictionary_blocks: list[DictionaryBlock] = field(default_factory=list)  # Raw dictionary blocks
