@@ -10,25 +10,183 @@ from enum import Enum, auto
 
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
 
+from langnet.whitakers_words.enums import (
+    Tense as WWTense,
+    Voice as WWVoice,
+    Mood as WWMood,
+    Gender as WWGender,
+    Number as WWNumber,
+    Case as WWCase,
+    Degree as WWDegree,
+    Person as WWPerson,
+    Age as WWAge,
+    Area as WWArea,
+    Geography as WWGeography,
+    Frequency as WWFrequency,
+    Source as WWSource,
+)
+
 
 from .lineparsers import CodesReducer, FactsReducer, SensesReducer
 
 logger = structlog.get_logger(__name__)
 
 
-@dataclass
-class CodelineName:
-    names: list[str]
-    notes: list[str] | None = field(default=None)
+def _load_external_enums():
+    # """Load enums from whitakers_words library for cross-integration."""
+    # try:
+    #     import sys
+    #     from pathlib import Path
+    #     # Try multiple possible locations for whitakers_words
+    #     # 1. As a module in the current project (git submodule)
+    #     # 2. In the Python path
+
+    #     # Path from current file to project root
+    #     current_dir = Path(__file__).parent
+    #     # Go up: src/langnet/whitakers_words -> src/langnet -> src -> project root
+    #     proj_root = current_dir.parent.parent.parent
+
+    #     # Check for whitakers_words in project root
+    #     whitakers_words_path = proj_root / "whitakers_words" / "whitakers_words"
+    #     if whitakers_words_path.exists():
+    #         if str(whitakers_words_path.parent) not in sys.path:
+    #             sys.path.insert(0, str(whitakers_words_path.parent))
+
+    return {
+        "Tense": WWTense,
+        "Voice": WWVoice,
+        "Mood": WWMood,
+        "Gender": WWGender,
+        "Number": WWNumber,
+        "Case": WWCase,
+        "Degree": WWDegree,
+        "Person": WWPerson,
+        "Age": WWAge,
+        "Area": WWArea,
+        "Geography": WWGeography,
+        "Frequency": WWFrequency,
+        "Source": WWSource,
+    }
+    # except ImportError:
+    #     logger.warning("external_enums_not_found", package="whitakers_words")
+    #     return None
+
+
+_external_enums = _load_external_enums()
+
+
+def _create_tense_map():
+    return {
+        "PRES": "Praesens (Present)",
+        "IMP": "Imperfectum (Imperfect)",
+        "IMPF": "Imperfectum (Imperfect)",
+        "IMPFF": "Imperfectum (Imperfect)",
+        "PERF": "Perfectum (Perfect)",
+        "FUT": "Futurum Simplex (Future Simple)",
+        "FUTP": "Futurum Exactum (Future Perfect)",
+        "PLUP": "Plusquamperfectum (Pluperfect)",
+        "X": "Unknown",
+    }
+
+
+def _create_voice_map():
+    return {"ACTIVE": "Active", "PASSIVE": "Passive", "X": "Unknown"}
+
+
+def _create_mood_map():
+    return {
+        "IND": "Indicative",
+        "SUB": "Subjunctive",
+        "IMP": "Imperative",
+        "INF": "Infinitive",
+        "PPL": "Participle",
+        "X": "Unknown",
+    }
+
+
+def _create_person_map():
+    return {"0": "0", "1": "1", "2": "2", "3": "3", "X": "Unknown"}
+
+
+def _create_number_map():
+    return {"S": "Singular", "P": "Plural", "X": "Unknown"}
+
+
+def _create_case_map():
+    return {
+        "NOM": "Nominative",
+        "VOC": "Vocative",
+        "GEN": "Genitive",
+        "DAT": "Dative",
+        "ACC": "Accusative",
+        "ABL": "Ablative",
+        "LOC": "Locative",
+        "X": "Unknown",
+    }
+
+
+def _create_gender_map():
+    return {"M": "Masculine", "F": "Feminine", "N": "Neuter", "C": "Common", "X": "Unknown"}
+
+
+def _create_degree_map():
+    return {"POS": "Positive", "COMP": "Comparative", "SUPER": "Superlative", "X": "Unknown"}
+
+
+def _create_pronoun_type_map():
+    return {
+        "PERS": "Personal",
+        "REFLEX": "Reflexive",
+        "DEMONS": "Demonstrative",
+        "INDEF": "Indefinite",
+        "INTERR": "Interrogative",
+        "REL": "Relative",
+        "ADJECT": "Adjectival",
+        "X": "Unknown",
+    }
+
+
+def _create_numeral_type_map():
+    return {
+        "CARD": "Cardinal",
+        "ORD": "Ordinal",
+        "DIST": "Distributive",
+        "ADVERB": "Adverbial",
+        "X": "Unknown",
+    }
+
+
+TENSE_MAP = _create_tense_map()
+VOICE_MAP = _create_voice_map()
+MOOD_MAP = _create_mood_map()
+PERSON_MAP = _create_person_map()
+NUMBER_MAP = _create_number_map()
+CASE_MAP = _create_case_map()
+GENDER_MAP = _create_gender_map()
+DEGREE_MAP = _create_degree_map()
+PRONOUN_TYPE_MAP = _create_pronoun_type_map()
+NUMERAL_TYPE_MAP = _create_numeral_type_map()
 
 
 @dataclass
 class CodelineData:
-    term: str
+    term: str | None = field(default=None)
     notes: list[str] | None = field(default=None)
-    age: str | None = field(default="X")
-    source: str | None = field(default="X")
-    freq: str | None = field(default="X")
+    age: str | None = field(default=None)
+    source: str | None = field(default=None)
+    freq: str | None = field(default=None)
+    declension: str | None = field(default=None)
+    pos_form: str | None = field(default=None)
+    pos_code: str | None = field(default=None)
+
+
+@dataclass
+class CodelineName:
+    names: list[str]
+    notes: list[str] | None = field(default=None)
+    age: str | None = field(default=None)
+    source: str | None = field(default=None)
+    freq: str | None = field(default=None)
     declension: str | None = field(default=None)
     pos_form: str | None = field(default=None)
     pos_code: str | None = field(default=None)
@@ -36,40 +194,46 @@ class CodelineData:
 
 class Frequency(Enum):
     VERY_FREQUENT = "A"  # Top 10%
-    FREQUENT = "B"       # Top 10-20%
-    COMMON = "C"         # Top 20-40%
-    LESSER = "D"         # Top 40-50%
-    UNCOMMON = "E"       # Bottom 50%
-    RARE = "F"           # Very rare
-    OBSCURE = "M"        # Graffiti/Slang/Obscure
-    INSCRIPTION = "I"    # Only found in inscriptions
+    FREQUENT = "B"  # Top 10-20%
+    COMMON = "C"  # Top 20-40%
+    LESSER = "D"  # Top 40-50%
+    UNCOMMON = "E"  # Bottom 50%
+    RARE = "F"  # Very rare
+    OBSCURE = "M"  # Graffiti/Slang/Obscure
+    INSCRIPTION = "I"  # Only found in inscriptions
     UNKNOWN = "X"
-    
+
     @staticmethod
     def from_code(cls, code: str):
         # Handle cases where code might be None or whitespace
-        if not code or code.strip() == "": return cls.UNKNOWN
+        if not code or code.strip() == "":
+            return cls.UNKNOWN
         for member in cls:
-            if member.value == code.upper(): return member
+            if member.value == code.upper():
+                return member
         return cls.UNKNOWN
 
+
 class LatinAge(Enum):
-    ARCHAIC = "A"      # Pre-200 BC (Plautus, Terence)
-    EARLY = "B"        # 200-100 BC
-    CLASSICAL = "C"    # 100 BC - 14 AD (Cicero, Caesar, Augustus)
-    SILVER = "D"       # 14-200 AD (Tacitus, Seneca)
-    LATE = "E"         # 200-600 AD (Jerome, Augustine)
-    MEDIEVAL = "F"     # 600-1600 AD
-    MODERN = "G"       # 1600-Present (Scientific)
-    GENERAL = "X"      # Used throughout ages
+    ARCHAIC = "A"  # Pre-200 BC (Plautus, Terence)
+    EARLY = "B"  # 200-100 BC
+    CLASSICAL = "C"  # 100 BC - 14 AD (Cicero, Caesar, Augustus)
+    SILVER = "D"  # 14-200 AD (Tacitus, Seneca)
+    LATE = "E"  # 200-600 AD (Jerome, Augustine)
+    MEDIEVAL = "F"  # 600-1600 AD
+    MODERN = "G"  # 1600-Present (Scientific)
+    GENERAL = "X"  # Used throughout ages
     UNKNOWN = "UNKNOWN"
 
     @staticmethod
     def from_code(cls, code: str):
-        if not code: return cls.UNKNOWN
+        if not code:
+            return cls.UNKNOWN
         for member in cls:
-            if member.value == code.upper(): return member
+            if member.value == code.upper():
+                return member
         return cls.UNKNOWN
+
 
 class PartOfSpeech(Enum):
     NOUN = "N"
@@ -85,13 +249,16 @@ class PartOfSpeech(Enum):
 
     @staticmethod
     def from_code(cls, code: str):
-        if not code: return cls.UNKNOWN
+        if not code:
+            return cls.UNKNOWN
         # Whitaker's sometimes outputs "ADJ" and sometimes "AD".
         # This handles simple matching.
         clean_code = code.upper().strip()
         for member in cls:
-            if member.value == clean_code: return member
+            if member.value == clean_code:
+                return member
         return cls.UNKNOWN
+
 
 FREQ_MAP = {
     "A": "Very Frequent (top 10%)",
@@ -102,7 +269,7 @@ FREQ_MAP = {
     "F": "Rare",
     "I": "Inscription Only",
     "M": "Obscure/Graffiti",
-    "X": "Unknown Frequency"
+    "X": "Unknown Frequency",
 }
 
 AGE_MAP = {
@@ -113,7 +280,7 @@ AGE_MAP = {
     "E": "Late (200-600 AD)",
     "F": "Medieval (600+ AD)",
     "G": "Modern/Scientific",
-    "X": "General/All Ages"
+    "X": "General/All Ages",
 }
 
 POS_MAP = {
@@ -125,14 +292,15 @@ POS_MAP = {
     "CONJ": "Conjunction",
     "PREP": "Preposition",
     "NUM": "Numeral",
-    "INTERJ": "Interjection"
+    "INTERJ": "Interjection",
 }
 
-GENDER_MAP = {'M': 'Masculine', 'F': 'Feminine', 'N': 'Neuter', 'C': 'Common'}
+# GENDER_MAP is already defined above line 141 - removing duplicate assignment
+
 
 def enrich_codeline_data(data: dict) -> dict:
     """
-    Returns a NEW CodelineData object with readable English strings 
+    Returns a NEW CodelineData object with readable English strings
     substituted for the raw Whitaker's codes.
     """
     # Create a shallow copy so we don't mutate the original object in place
@@ -144,51 +312,215 @@ def enrich_codeline_data(data: dict) -> dict:
     # print("before xform")
     # print(new_data)
 
-    raw_freq = new_data.get("freq", "").strip().upper()
     # 1. Enrich Frequency
-    if raw_freq:
-        # Check the first char just in case strict formatting is loose
-        code = Frequency.from_code(Frequency, raw_freq)
-        if isinstance(code, Frequency):
-            new_data["freq"] = FREQ_MAP.get(code.value, f"Unknown Frequency: {raw_freq}")
+    raw_freq = new_data.get("freq", "").strip().upper()
+    if raw_freq and _external_enums and "Frequency" in _external_enums:
+        try:
+            freq_enum = _external_enums["Frequency"]
+            freq_value = freq_enum[raw_freq]
+            new_data["freq"] = freq_value.value
+        except KeyError:
+            # If code not in enum, keep original
+            pass
+    elif raw_freq:
+        # Fallback mapping
+        FREQ_MAP_FALLBACK = {
+            "A": "Very Frequent",
+            "B": "Frequent",
+            "C": "Common",
+            "D": "Uncommon",
+            "E": "Rare",
+            "F": "Very Rare",
+            "I": "Inscription",
+            "M": "Graffiti",
+            "N": "Plinius",
+        }
+        new_data["freq"] = FREQ_MAP_FALLBACK.get(raw_freq, raw_freq)
 
     # 2. Enrich Age
     raw_age = new_data.get("age", "").strip().upper()
-    if raw_age:
-        code = LatinAge.from_code(LatinAge, raw_age)
-        # Some Whitaker's implementations might pass longer strings, handle generic fallback
-        if isinstance(code, LatinAge):
-            new_data["age"] = AGE_MAP.get(code.value, f"Unknown Age: {raw_age}")
+    if raw_age and _external_enums and "Age" in _external_enums:
+        try:
+            age_enum = _external_enums["Age"]
+            age_value = age_enum[raw_age]
+            new_data["age"] = age_value.value
+        except KeyError:
+            # If code not in enum, keep original
+            pass
+    elif raw_age:
+        # Fallback mapping
+        AGE_MAP_FALLBACK = {
+            "A": "Archaic",
+            "B": "Early",
+            "C": "Classical",
+            "D": "Late",
+            "E": "Later",
+            "F": "Medieval",
+            "G": "Scholar",
+            "H": "Modern",
+            "X": "DEFAULT",
+        }
+        new_data["age"] = AGE_MAP_FALLBACK.get(raw_age, raw_age)
 
-    # 3. Enrich Part of Speech (POS)
-    # We need to remember the RAW code for step 4 (contextual parsing)
+    # 3. Enrich Source
+    raw_source = new_data.get("source", "").strip().upper()
+    if raw_source and _external_enums and "Source" in _external_enums:
+        try:
+            source_enum = _external_enums["Source"]
+            source_value = source_enum[raw_source]
+            new_data["source"] = source_value.value
+        except KeyError:
+            # If code not in enum, keep original
+            pass
+    elif raw_source:
+        # Create fallback mapping if external enums not available
+        SOURCE_MAP_FALLBACK = {
+            "A": "Unused 1",
+            "B": "C.H.Beeson, A Primer of Medieval Latin, 1925 (Bee)",
+            "C": "Charles Beard, Cassell's Latin Dictionary 1892 (CAS)",
+            "D": "J.N.Adams, Latin Sexual Vocabulary, 1982 (Sex)",
+            "E": "L.F.Stelten, Dictionary of Eccles. Latin, 1995 (Ecc)",
+            "F": "Roy J. Deferrari, Dictionary of St. Thomas Aquinas, 1960 (DeF)",
+            "G": "Gildersleeve + Lodge, Latin Grammar 1895 (G+L)",
+            "H": "Collatinus Dictionary by Yves Ouvrard",
+            "I": "Leverett, F.P., Lexicon of the Latin Language, Boston 1845",
+            "J": "Unused 2",
+            "K": "Calepinus Novus, modern Latin, by Guy Licoppe (Cal)",
+            "L": "Lewis, C.S., Elementary Latin Dictionary 1891",
+            "M": "Latham, Revised Medieval Word List, 1980",
+            "N": "Lynn Nelson, Wordlist",
+            "O": "Oxford Latin Dictionary, 1982 (OLD)",
+            "P": "Souter, A Glossary of Later Latin to 600 A.D., Oxford 1949",
+            "Q": "Other, cited or unspecified dictionaries",
+            "R": "Plater & White, A Grammar of the Vulgate, Oxford 1926",
+            "S": "Lewis and Short, A Latin Dictionary, 1879 (L+S)",
+            "T": "Found in a translation -- no dictionary reference",
+            "U": "Du Cange",
+            "V": "Vademecum in opus Saxonis - Franz Blatt (Saxo)",
+            "W": "My personal guess",
+            "X": "General or unknown or too common to say",
+            "Y": "Temp special code",
+            "Z": "Sent by user",
+        }
+        new_data["source"] = SOURCE_MAP_FALLBACK.get(raw_source, raw_source)
+
+    # 4. Enrich Part of Speech (POS)
+    # We need to remember the RAW code for contextual parsing
     raw_pos_code = new_data.get("pos_code", "").strip().upper()
- 
-    if raw_pos_code:
-        code =  PartOfSpeech.from_code(PartOfSpeech, raw_pos_code)
-        if isinstance(code, PartOfSpeech):
-            new_data["pos_code"] = POS_MAP.get(code.value, raw_pos_code)
+    enriched_pos_code = None
 
-    # 4. Enrich 'pos_form' based on what the POS was
-    # Whitaker's reuses this field (Gender for Nouns, Conjugation for Verbs)
+    if raw_pos_code:
+        code = PartOfSpeech.from_code(PartOfSpeech, raw_pos_code)
+        if isinstance(code, PartOfSpeech):
+            enriched_pos_code = POS_MAP.get(code.value, raw_pos_code)
+            new_data["pos_code"] = enriched_pos_code
+
+    # 5. Enrich 'pos_form' based on what the POS was
+    # Whitaker's reuses this field (Gender for Nouns, Conjugation for Verbs, Case for Prepositions)
     raw_pos_form = new_data.get("pos_form", "").strip().upper()
-    
+
     if raw_pos_form and raw_pos_code:
         form = raw_pos_form
 
-        if raw_pos_code == "N": # Noun - Form is GENDEr
+        if raw_pos_code == "N":  # Noun - Form is GENDER
             new_data["pos_form"] = GENDER_MAP.get(form, form)
-        
-        elif raw_pos_code == "V": # Verb - Form is CONJUGATION
-            new_data["pos_form"] = f"{form} Conjugation"
-            
-        elif raw_pos_code == "ADJ": # Adjective - Form is DECLENSION
-            new_data["pos_form"] = f"{form} Declension"
 
-    # print("wow")
-    # print(new_data)
+        elif raw_pos_code == "V":  # Verb - Form is CONJUGATION
+            new_data["pos_form"] = f"{form} Conjugation"
+
+        elif raw_pos_code == "ADJ":  # Adjective - Form could be DECLENSION or COMPARISON
+            # Check if form is a comparison degree (COMP/SUPER/POS)
+            if form in DEGREE_MAP:
+                new_data["pos_form"] = DEGREE_MAP.get(form, form)
+            else:
+                # Otherwise it's a declension number
+                new_data["pos_form"] = f"{form} Declension"
+
+        elif raw_pos_code == "ADV":  # Adverb - Form is COMPARISON
+            # ADJ, ADV, and some others use comparison codes
+            new_data["pos_form"] = DEGREE_MAP.get(form, form)
+
+        elif raw_pos_code == "PREP":  # Preposition - Form is CASE
+            new_data["pos_form"] = CASE_MAP.get(form, form)
+
+        elif raw_pos_code == "PRON":  # Pronoun - Form could be TYPE or DECLENSION
+            # Check if form is a pronoun type (PERS, REFLEX, DEMONS, etc.)
+            if form in PRONOUN_TYPE_MAP:
+                new_data["pos_form"] = PRONOUN_TYPE_MAP.get(form, form)
+            else:
+                # Otherwise it's a declension number
+                new_data["pos_form"] = f"{form} Declension"
+
+        elif raw_pos_code == "NUM":  # Numeral - Form could be TYPE or DECLENSION
+            # Check if form is a numeral type (CARD, ORD, DIST, ADVERB)
+            if form in NUMERAL_TYPE_MAP:
+                new_data["pos_form"] = NUMERAL_TYPE_MAP.get(form, form)
+            else:
+                # Otherwise it's a declension number
+                new_data["pos_form"] = f"{form} Declension"
+
+        elif raw_pos_code == "CONJ":  # Conjunction - Usually no form
+            new_data["pos_form"] = None
+
+        elif raw_pos_code == "INTERJ":  # Interjection - Usually no form
+            new_data["pos_form"] = None
 
     return new_data
+
+
+def _enrich_term_data(data: dict) -> dict:
+    """
+    Enrich term data with readable morphology information from external enums.
+    Translates raw codes (PRES, ACTIVE, IND, etc.) into human-readable strings.
+    """
+    new_data = data.copy()
+
+    # Enrich Tense
+    if new_data.get("tense"):
+        tense_code = new_data["tense"].strip().upper()
+        new_data["tense"] = TENSE_MAP.get(tense_code, tense_code)
+
+    if new_data.get("part_of_speech"):
+        part_of_speech_code = new_data["part_of_speech"].strip().capitalize()
+        new_data["part_of_speech"] = part_of_speech_code
+
+    # Enrich Voice
+    if new_data.get("voice"):
+        voice_code = new_data["voice"].strip().upper()
+        new_data["voice"] = VOICE_MAP.get(voice_code, voice_code)
+
+    # Enrich Mood
+    if new_data.get("mood"):
+        mood_code = new_data["mood"].strip().upper()
+        new_data["mood"] = MOOD_MAP.get(mood_code, mood_code)
+
+    # Enrich Person
+    if new_data.get("person"):
+        person_code = new_data["person"].strip()
+        new_data["person"] = PERSON_MAP.get(person_code, person_code)
+
+    # Enrich Number
+    if new_data.get("number"):
+        number_code = new_data["number"].strip().upper()
+        new_data["number"] = NUMBER_MAP.get(number_code, number_code)
+
+    # Enrich Case
+    if new_data.get("case"):
+        case_code = new_data["case"].strip().upper()
+        new_data["case"] = CASE_MAP.get(case_code, case_code)
+
+    # Enrich Gender
+    if new_data.get("gender"):
+        gender_code = new_data["gender"].strip().upper()
+        new_data["gender"] = GENDER_MAP.get(gender_code, gender_code)
+
+    # Enrich Comparison/Degree
+    if new_data.get("comparison"):
+        comp_code = new_data["comparison"].strip().upper()
+        new_data["comparison"] = DEGREE_MAP.get(comp_code, comp_code)
+
+    return new_data
+
 
 @dataclass
 class WhitakerWordParts:
@@ -207,6 +539,11 @@ class WhitakerWordData:
     variant: str | None = field(default=None)
     comparison: str | None = field(default=None)
     term_analysis: WhitakerWordParts | None = field(default=None)
+    conjugation: str | None = field(default=None)
+    tense: str | None = field(default=None)
+    voice: str | None = field(default=None)
+    mood: str | None = field(default=None)
+    person: str | None = field(default=None)
 
 
 @dataclass
@@ -290,15 +627,19 @@ def fixup(wordlist):
     fixed_words = []
     for word in wordlist:
         codeline = word.get("codeline", None)
-        # print("hihi", enrich_codeline_data(codeline))
         if codeline is not None:
+            # Add term from first term if codeline doesn't have one
+            if not codeline.get("term") and word.get("terms"):
+                codeline["term"] = word["terms"][0]["term"]
             codeline = enrich_codeline_data(codeline)
             word["codeline"] = codeline
-            # word["codeline"] = codeline
-            # maybe_term = codeline.get("term", None)
-            # if maybe_term is None:
-            #     codeline["term"] = word["terms"][0]["term"]
-            #     word["codeline"] = enrich_codeline_data(codeline)
+
+        # Enrich term data with morphology
+        terms = word.get("terms", [])
+        if terms:
+            enriched_terms = [_enrich_term_data(term) for term in terms]
+            word["terms"] = enriched_terms
+
         fixed_words.append(word)
     logger.debug("fixup_completed", input_count=len(wordlist), output_count=len(fixed_words))
     return fixed_words
@@ -418,15 +759,18 @@ class WhitakersWords:
                 if v == _v:
                     pass
                 else:
-                    logger.warning("merge_collision", key=k, src_value=v, dest_value=_v)
+                    # Only warn for non-list collisions (e.g., codeline with different values)
+                    # List concatenation (senses, terms) is expected behavior
+                    if not (isinstance(v, list) or isinstance(_v, list)):
+                        logger.warning("merge_collision", key=k, src_value=v, dest_value=_v)
                     if isinstance(v, list) and isinstance(_v, list):
-                        dest[k] = v + _v
+                        dest[k] = _v + v  # Preserve order: existing first, then new
                     elif isinstance(v, list):
-                        dest[k] = v + [f"{_v}".strip()]
+                        dest[k] = [f"{_v}".strip()] + v  # Convert single to list, prepend
                     elif isinstance(_v, list):
-                        dest[k] = _v + [f"{v}".strip()]
+                        dest[k] = _v + [f"{v}".strip()]  # Append single to existing list
                     else:
-                        pass
+                        pass  # Non-list collision: preserve existing, drop new
             else:
                 dest[k] = v
 
