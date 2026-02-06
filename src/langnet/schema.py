@@ -33,6 +33,15 @@ class Sense:
 
 
 @dataclass
+class DictionaryBlock:
+    """A raw dictionary entry block from Diogenes."""
+
+    entry: str  # The dictionary text ("lupus, i, m. kindred with...")
+    entryid: str  # Hierarchical ID ("00", "00:00", etc.)
+    citations: dict[str, str] = field(default_factory=dict)  # CTS URN -> citation text
+
+
+@dataclass
 class MorphologyInfo:
     """Morphological parsing results."""
 
@@ -52,3 +61,5 @@ class DictionaryEntry:
     morphology: MorphologyInfo | None = None
     source: str = ""  # Backend name ('heritage', 'cdsl', 'whitakers', etc.)
     metadata: dict[str, Any] = field(default_factory=dict)
+    dictionary_blocks: list[DictionaryBlock] = field(default_factory=list)  # Raw dictionary blocks
+    dictionary_blocks: list[DictionaryBlock] = field(default_factory=list)  # Raw dictionary blocks

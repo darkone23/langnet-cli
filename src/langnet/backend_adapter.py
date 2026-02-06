@@ -8,7 +8,7 @@ to standardized DictionaryEntry objects with proper citations.
 import cattrs
 import structlog
 
-from langnet.schema import Citation, DictionaryEntry, MorphologyInfo, Sense
+from langnet.schema import Citation, DictionaryBlock, DictionaryEntry, MorphologyInfo, Sense
 
 logger = structlog.get_logger(__name__)
 
@@ -117,76 +117,37 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                     return True
         return False
 
-    def _process_definition_blocks(
-        self, chunks: list, word: str, language: str
-    ) -> list[DictionaryEntry]:
-        """Process definition blocks from chunks."""
-        entries = []
+    def _extract_dictionary_blocks(self, chunks: list) -> list[DictionaryBlock]:
+        """Extract dictionary blocks from chunks."""
+        blocks = []
         for chunk in chunks:
-            definitions_blocks = chunk.get("definitions", {}).get("blocks", [])
-            for block in definitions_blocks:
-                entry = self._create_entry_from_block(block, word, language)
-                if entry:
-                    entries.append(entry)
-        return entries
+            if "definitions" in chunk:
+                definitions_blocks = chunk.get("definitions", {}).get("blocks", [])
+                for block in definitions_blocks:
+                    blocks.append(
+                        DictionaryBlock(
+                            entry=block.get("entry", ""),
+                            entryid=block.get("entryid", ""),
+                            citations=block.get("citations", {}),
+                        )
+                    )
+        return blocks
 
-    def _create_entry_from_block(
-        self, block: dict, word: str, language: str
-    ) -> DictionaryEntry | None:
-        """Create a DictionaryEntry from a definition block."""
-        headword = block.get("entry", "")
-        if not headword or "," not in headword:
-            return None
-
-        senses_list = block.get("senses", [])
-        citations_list = block.get("citations", {})
-        pos = self._extract_pos_from_entry(headword)
-        senses = self._create_senses_with_citations(
-            senses_list, citations_list, pos, headword, word
-        )
-
-        return DictionaryEntry(
-            word=word,
-            language=language,
-            senses=senses,
-            morphology=None,
-            source="diogenes",
-            metadata=block,
-        )
-
-    def _process_morphology_chunks(
-        self, chunks: list, word: str, language: str
-    ) -> list[DictionaryEntry]:
-        """Process morphology chunks and return morphology entries."""
-        entries = []
+    def _extract_morphology(self, chunks: list, word: str) -> MorphologyInfo | None:
+        """Extract morphology from chunks if present."""
         for chunk in chunks:
             if "morphology" in chunk:
                 morph_data = chunk.get("morphology", {})
                 morphs = morph_data.get("morphs", [])
-                for morph in morphs:
-                    entry = self._create_morphology_entry(morph, chunk, word, language)
-                    if entry:
-                        entries.append(entry)
-        return entries
-
-    def _create_morphology_entry(
-        self, morph: dict, chunk: dict, word: str, language: str
-    ) -> DictionaryEntry:
-        """Create a morphology-only DictionaryEntry."""
-        tags = morph.get("tags", [])
-        lemma = morph.get("stem", [""])[0] if morph.get("stem") else word
-        pos = self._map_morph_tags_to_pos(tags)
-
-        morph_info = MorphologyInfo(lemma=lemma, pos=pos, features={"tags": tags}, confidence=1.0)
-
-        return DictionaryEntry(
-            word=word,
-            language=language,
-            senses=[],
-            morphology=morph_info,
-            source="diogenes",
-            metadata={"morphology": morph, "logeion": chunk.get("logeion")},
-        )
+                if morphs:
+                    morph = morphs[0]
+                    tags = morph.get("tags", [])
+                    lemma = morph.get("stem", [word])[0] if morph.get("stem") else word
+                    pos = self._map_morph_tags_to_pos(tags)
+                    return MorphologyInfo(
+                        lemma=lemma, pos=pos, features={"tags": tags}, confidence=1.0
+                    )
+        return None
 
     def _map_morph_tags_to_pos(self, tags: list) -> str:
         """Map morphology tags to POS."""
@@ -196,56 +157,33 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         return "noun"
 
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
-        entries = []
-
-        # Handle None or invalid input
+        """Convert Diogenes data to a single DictionaryEntry with dictionary blocks."""
         if data is None:
-            return entries
+            return []
 
-        # Check if Diogenes returned any chunks with actual data
         chunks = data.get("chunks", [])
         if not self._has_valid_data(chunks):
-            return entries
+            return []
 
-        # Process definition blocks
-        entries.extend(self._process_definition_blocks(chunks, word, language))
+        # Extract dictionary blocks and morphology
+        dictionary_blocks = self._extract_dictionary_blocks(chunks)
+        morphology = self._extract_morphology(chunks, word)
 
-        # Add morphology entries if we have morphology data
-        entries.extend(self._process_morphology_chunks(chunks, word, language))
+        # Create single unified entry
+        entry = DictionaryEntry(
+            word=word,
+            language=language,
+            senses=[],  # No sense extraction - use dictionary_blocks instead
+            morphology=morphology,
+            source="diogenes",
+            dictionary_blocks=dictionary_blocks,
+            metadata={
+                "chunk_types": data.get("chunk_types", []),
+                "dg_parsed": data.get("dg_parsed", False),
+            },
+        )
 
-        return entries
-
-    def _create_senses_with_citations(
-        self, senses_list: list, citations_list: dict, pos: str, headword: str, word: str
-    ) -> list:
-        """Create senses with proper citations."""
-        senses = []
-        for i, sense_text in enumerate(senses_list):
-            citations = []
-
-            # Try to find citations associated with this sense
-            # This is a heuristic approach - citations may not be perfectly mapped
-            for citation_ref, citation_text in citations_list.items():
-                # If citation contains words from this sense, associate it
-                if (
-                    citation_text
-                    and sense_text
-                    and any(
-                        word.lower() in citation_text.lower()
-                        for word in sense_text.split()[:3]  # First few words
-                    )
-                ):
-                    citations.append(self._create_citation_from_logeion(citation_ref))
-
-            sense = Sense(
-                pos=pos,
-                definition=sense_text,
-                citations=citations,
-                examples=[],
-                metadata={"source_block": headword, "sense_index": i},
-            )
-            senses.append(sense)
-        return senses
+        return [entry]
 
 
 class WhitakersBackendAdapter(BaseBackendAdapter):
@@ -305,38 +243,6 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
 
         return entries
 
-    def _create_senses_with_citations(
-        self, senses_list: list, citations_list: dict, pos: str, headword: str, word: str
-    ) -> list:
-        """Create senses with proper citations."""
-        senses = []
-        for i, sense_text in enumerate(senses_list):
-            citations = []
-
-            # Try to find citations associated with this sense
-            # This is a heuristic approach - citations may not be perfectly mapped
-            for citation_ref, citation_text in citations_list.items():
-                # If citation contains words from this sense, associate it
-                if (
-                    citation_text
-                    and sense_text
-                    and any(
-                        word.lower() in citation_text.lower()
-                        for word in sense_text.split()[:3]  # First few words
-                    )
-                ):
-                    citations.append(self._create_citation_from_logeion(citation_ref))
-
-            sense = Sense(
-                pos=pos,
-                definition=sense_text,
-                citations=citations,
-                examples=[],
-                metadata={"source_block": headword, "sense_index": i},
-            )
-            senses.append(sense)
-        return senses
-
 
 class CLTKBackendAdapter(BaseBackendAdapter):
     """Adapter for Classical Language Toolkit."""
@@ -395,38 +301,6 @@ class CLTKBackendAdapter(BaseBackendAdapter):
         entries.append(entry)
 
         return entries
-
-    def _create_senses_with_citations(
-        self, senses_list: list, citations_list: dict, pos: str, headword: str, word: str
-    ) -> list:
-        """Create senses with proper citations."""
-        senses = []
-        for i, sense_text in enumerate(senses_list):
-            citations = []
-
-            # Try to find citations associated with this sense
-            # This is a heuristic approach - citations may not be perfectly mapped
-            for citation_ref, citation_text in citations_list.items():
-                # If citation contains words from this sense, associate it
-                if (
-                    citation_text
-                    and sense_text
-                    and any(
-                        word.lower() in citation_text.lower()
-                        for word in sense_text.split()[:3]  # First few words
-                    )
-                ):
-                    citations.append(self._create_citation_from_logeion(citation_ref))
-
-            sense = Sense(
-                pos=pos,
-                definition=sense_text,
-                citations=citations,
-                examples=[],
-                metadata={"source_block": headword, "sense_index": i},
-            )
-            senses.append(sense)
-        return senses
 
 
 class HeritageBackendAdapter(BaseBackendAdapter):

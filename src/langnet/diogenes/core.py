@@ -54,7 +54,7 @@ class PerseusAnalysisHeader:
 class DiogenesDefinitionBlock:
     entry: str
     entryid: str
-    senses: list[str] | None = field(default=None)
+    # senses: list[str] | None = field(default=None)
     citations: dict | None = field(default=None)
     heading: str | None = field(default=None)
     diogenes_warning: str | None = field(default=None)
@@ -272,37 +272,37 @@ class DiogenesScraper:
             normalized = normalized[:-1]
         return normalized.rstrip(",").rstrip(":")
 
-    def _collect_senses(self, soup: BeautifulSoup) -> list[str]:
-        b_tags = soup.select("b")
-        heading_texts = set()
+    # def _collect_senses(self, soup: BeautifulSoup) -> list[str]:
+    #     b_tags = soup.select("b")
+    #     heading_texts = set()
 
-        for b in b_tags:
-            heading, is_heading = self._extract_heading_from_b(b)
-            if is_heading and heading:
-                heading_texts.add(self._normalize_text_for_comparison(b.get_text()))
+    #     for b in b_tags:
+    #         heading, is_heading = self._extract_heading_from_b(b)
+    #         if is_heading and heading:
+    #             heading_texts.add(self._normalize_text_for_comparison(b.get_text()))
 
-        non_heading_tags = [
-            b
-            for b in b_tags
-            if self._normalize_text_for_comparison(b.get_text()) not in heading_texts
-        ]
+    #     non_heading_tags = [
+    #         b
+    #         for b in b_tags
+    #         if self._normalize_text_for_comparison(b.get_text()) not in heading_texts
+    #     ]
 
-        senses = []
-        for b in non_heading_tags:
-            raw_text = b.get_text()
-            sense_txt = self._normalize_text_for_comparison(raw_text)
+    #     senses = []
+    #     for b in non_heading_tags:
+    #         raw_text = b.get_text()
+    #         sense_txt = self._normalize_text_for_comparison(raw_text)
 
-            if "(" in sense_txt and ")" not in sense_txt:
-                sense_txt += ")"
-            senses.append(sense_txt)
-        return senses
+    #         if "(" in sense_txt and ")" not in sense_txt:
+    #             sense_txt += ")"
+    #         senses.append(sense_txt)
+    #     return senses
 
-    def _deduplicate_senses(self, senses: list[str]) -> list[str]:
-        unique = []
-        for sense in senses:
-            if sense not in unique:
-                unique.append(sense)
-        return unique
+    # def _deduplicate_senses(self, senses: list[str]) -> list[str]:
+    #     unique = []
+    #     for sense in senses:
+    #         if sense not in unique:
+    #             unique.append(sense)
+    #     return unique
 
     def _process_block(self, block: dict, soup: BeautifulSoup, indent_history: list):
         for p in soup.select("p"):
@@ -327,10 +327,10 @@ class DiogenesScraper:
             # CitationCollection(citations=converted_citations)
             logger.debug("handle_references_citations", count=len(refs))
 
-        senses = self._collect_senses(soup)
-        senses_cleaned = self._deduplicate_senses(senses)
-        if len(senses_cleaned) > 0:
-            block["senses"] = senses_cleaned
+        # senses = self._collect_senses(soup)
+        # senses_cleaned = self._deduplicate_senses(senses)
+        # if len(senses_cleaned) > 0:
+        #     block["senses"] = senses_cleaned
 
         block_txt = soup.get_text().strip().rstrip(",")
 
@@ -474,7 +474,7 @@ class DiogenesScraper:
             entry=b.get("entry", ""),
             entryid=b.get("entryid", ""),
             citations=b.get("citations"),
-            senses=b.get("senses"),
+            # senses=b.get("senses"),
             heading=b.get("heading"),
             diogenes_warning=b.get("diogenes_warning"),
         )
@@ -484,7 +484,7 @@ class DiogenesScraper:
         return DiogenesDefinitionBlock(
             entry=b.get("entry", "") if isinstance(b, dict) else "",
             entryid=b.get("entryid", "") if isinstance(b, dict) else "",
-            senses=b.get("senses") if isinstance(b, dict) else None,
+            # senses=b.get("senses") if isinstance(b, dict) else None,
             citations=b.get("citations") if isinstance(b, dict) else None,
             heading=b.get("heading") if isinstance(b, dict) else None,
             diogenes_warning=b.get("diogenes_warning") if isinstance(b, dict) else None,
