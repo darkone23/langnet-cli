@@ -6,164 +6,10 @@ from bs4 import BeautifulSoup
 from .html_extractor import HeritageHTMLExtractor
 from .lineparsers.parse_morphology import MorphologyReducer
 
-# Grammatical abbreviations (copied from abbreviations.py to avoid import issues)
-GRAMMATICAL_ABBREVIATIONS = {
-    # Case and number
-    "a.": "adjective",
-    "abl.": "ablative",
-    "abs.": "absolutive",
-    "acc.": "accusative",
-    "ac.": "active",
-    "act.": "action",
-    "adr.": "term of address",
-    "adv.": "adverb",
-    "agt.": "agent",
-    "all.": "German",
-    "ang.": "English",
-    "ant.": "before the common era",
-    "aor.": "aorist",
-    "approx.": "approximately",
-    "arch.": "architecture",
-    "astr.": "astronomy",
-    "av.": "with",
-    "bd.": "Buddhism",
-    "bén.": "benedictive",
-    "bio.": "biology",
-    "ca.": "causative",
-    "c.-à-d.": "that is to say / i.e.",
-    "cf.": "compare / see",
-    "cél.": "celebrative",
-    "comp.": "comparative",
-    "cond.": "conditional",
-    "conf.": "confer / compare",
-    "conj.": "conjunction",
-    "cons.": "consonant",
-    "contr.": "contraction",
-    "cop.": "copulative",
-    "cor.": "correlative",
-    "désid.": "desiderative",
-    "désin.": "desinential",
-    "dét.": "determinative",
-    "dir.": "direct",
-    "dist.": "distributive",
-    "dr.": "doctor",
-    "dur.": "durative",
-    "écon.": "economic",
-    "ép.": "epic",
-    "équ.": "equative",
-    "err.": "error",
-    "excl.": "exclamatory",
-    "f.": "feminine",
-    "fam.": "familial",
-    "fig.": "figurative",
-    "fut.": "future",
-    "géom.": "geometry",
-    "ger.": "gerund",
-    "gér.": "causative",
-    "gr.": "Greek",
-    "hébr.": "Hebrew",
-    "hist.": "historical",
-    "i.": "intransitive",
-    "imp.": "imperative",
-    "impf.": "imperfect",
-    "ind.": "indicative",
-    "infin.": "infinitive",
-    "intens.": "intensive",
-    "intr.": "intransitive",
-    "irr.": "irregular",
-    "it.": "Italian",
-    "lat.": "Latin",
-    "law.": "law",
-    "lit.": "literally",
-    "loc.": "locative",
-    "log.": "logic",
-    "m.": "masculine",
-    "math.": "mathematics",
-    "med.": "medical",
-    "méd.": "medial",
-    "mét.": "metal",
-    "métaph.": "metaphorical",
-    "mil.": "military",
-    "modal.": "modal",
-    "mood.": "mood",
-    "morf.": "morphological",
-    "mor.": "moral",
-    "msc.": "miscellaneous",
-    "n.": "neuter",
-    "nom.": "nominative",
-    "nucl.": "nuclear",
-    "num.": "numeral",
-    "obj.": "objective",
-    "obl.": "oblique",
-    "opt.": "optative (potential)",
-    "ord.": "ordinal",
-    "part.": "particle",
-    "patr.": "patronymic",
-    "péj.": "pejorative",
-    "péri.": "periphrastic",
-    "pers.": "person",
-    "pf.": "prefix",
-    "pft.": "perfect",
-    "phil.": "philosophy",
-    "phon.": "phonetics",
-    "pl.": "plural",
-    "poss.": "possessive",
-    "pfut.": "future participle",
-    "pfp.": "future passive participle",
-    "pp.": "past passive participle",
-    "ppa.": "past active participle",
-    "ppft.": "perfect participle",
-    "ppr.": "present participle",
-    "pr.": "present",
-    "prép.": "preposition",
-    "priv.": "privative",
-    "prk.": "Prakrit",
-    "pron.": "pronoun",
-    "ps.": "passive",
-    "pt.": "Portuguese",
-    "qqc.": "something",
-    "qqf.": "sometimes",
-    "qqn.": "someone",
-    "red.": "reduplication",
-    "refl.": "reflexive",
-    "rel.": "relative",
-    "rét.": "retroflex",
-    "s.": "singular",
-    "sc.": "science",
-    "schol.": "scholarly",
-    "sec.": "secondary",
-    "sem.": "semantic",
-    "sg.": "singular",
-    "socio.": "sociological",
-    "spéc.": "specific",
-    "subj.": "subjunctive",
-    "subord.": "subordinating",
-    "superl.": "superlative",
-    "syn.": "synonymous",
-    "syntax.": "syntactic",
-    "t.": "transitive",
-    "tech.": "technical",
-    "temp.": "temporal",
-    "théol.": "theological",
-    "topo.": "topography",
-    "top.": "topic",
-    "tr.": "transitive",
-    "un.": "union",
-    "univ.": "universal",
-    "v.": "verb",
-    "véd.": "Vedic",
-    "voc.": "vocative",
-    "vol.": "volitional",
-    "vr.": "vṛddhi",
-    "ZOO.": "zoology",
-}
+# NB: I don't actually want abbreviation functionality in this file
+GRAMMATICAL_ABBREVIATIONS = {}
 
-COMPOUND_INDICATORS = {
-    "ic.": "in composition",
-    "ifc.": "at the end of a compound",
-    "iic.": "at the beginning of a compound",
-    "iiv.": "at the beginning of a verb",
-}
+COMPOUND_INDICATORS = {}
 
 
 def expand_abbreviation(abbr: str, context: str = "") -> str:
@@ -277,8 +123,6 @@ class SimpleHeritageParser:
                 "mood": None,
                 "stem": "",
                 "meaning": [],
-                "lexicon_refs": [],
-                "confidence": 0.0,
             }
 
             # Extract text content from table
@@ -374,8 +218,6 @@ class SimpleHeritageParser:
                                     "mood": None,
                                     "stem": "",
                                     "meaning": [],
-                                    "lexicon_refs": [],
-                                    "confidence": 0.0,
                                     "analysis": analysis_code,
                                     # Expand abbreviations in the analysis
                                     "expanded_analysis": expand_abbreviation(analysis_code),
@@ -402,10 +244,23 @@ class MorphologyParser:
     def parse(self, html_content: str) -> dict[str, Any]:
         """Parse morphology analysis results using new Lark-based parser with fallback"""
         if self.use_new_parser:
+            solution_blocks = self.html_extractor._extract_solution_blocks(
+                BeautifulSoup(html_content, "html.parser")
+            )
             plain_text = self.html_extractor.extract_plain_text(html_content)
             if plain_text.strip():
                 try:
                     solutions = self.morphology_reducer.reduce(plain_text)
+                    # Enrich solutions with raw text/color where available
+                    context_by_num = {b["number"]: b for b in solution_blocks}
+                    for sol in solutions:
+                        ctx = context_by_num.get(sol.get("solution_number"))
+                        if ctx:
+                            sol_metadata = sol.get("metadata", {})
+                            sol_metadata.update(
+                                {"color": ctx.get("color"), "raw_text": ctx.get("raw_text")}
+                            )
+                            sol["metadata"] = sol_metadata
                     result = {
                         "solutions": solutions,
                         "word_analyses": [],

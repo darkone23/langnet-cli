@@ -19,8 +19,6 @@ class HeritageWordAnalysis:
     mood: str | None = None
     stem: str = ""
     meaning: list[str] = field(default_factory=list)
-    lexicon_refs: list[str] = field(default_factory=list)
-    confidence: float = 0.0
 
 
 @dataclass
@@ -48,7 +46,6 @@ class HeritageDictionaryEntry:
     etymology: str | None = None
     stem: str | None = None
     root: str | None = None
-    lexicon_refs: list[str] = field(default_factory=list)
     frequency: int | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -87,7 +84,6 @@ class HeritageLemmaResult:
     input_word: str
     lemmas: list[str]
     best_lemma: str | None = None
-    confidence: float = 0.0
     processing_time: float = 0.0
 
 

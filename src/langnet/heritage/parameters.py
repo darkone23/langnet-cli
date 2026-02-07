@@ -304,10 +304,6 @@ class HeritageParameterBuilder:
         # Text input - encode the text if encoding is specified
         if encoding:
             encoded_text = HeritageParameterBuilder.encode_text(text, encoding)
-            # Apply Velthuis input tip: ensure long vowels are doubled
-            if encoding == "velthuis":
-                # Double vowels explicitly for better sktreader results
-                encoded_text = HeritageParameterBuilder._double_long_vowels(encoded_text)
             params["text"] = encoded_text
             params["t"] = HeritageParameterBuilder.get_cgi_encoding_param(encoding)
         else:
@@ -325,7 +321,11 @@ class HeritageParameterBuilder:
         params["corpdir"] = ""  # No corpus directory
         params["sentno"] = ""  # No sentence number
         params["mode"] = "p"  # Parse mode
+        params["best_mode"] = "b"  # Best mode
+        params["fmode"] = "w"  # Form mode
         params["cpts"] = ""  # No custom points
+        params["rcpts"] = ""  # No reverse custom points
+        params["rcpts"] = ""  # No reverse custom points
 
         # Number of solutions
         if max_solutions is not None:
@@ -335,30 +335,6 @@ class HeritageParameterBuilder:
         params.update({k: v for k, v in kwargs.items() if k not in ["lexicon", "font"]})
 
         return params
-
-    @staticmethod
-    def _double_long_vowels(text: str) -> str:
-        """Double long vowels in Velthuis encoding for better sktreader results"""
-        # Only double vowels when they're at the end of the word or followed by consonants
-        # This avoids double vowels in the middle of words like "agni" -> "agnii"
-        words = text.split()
-        doubled_words = []
-
-        for word in words:
-            # Double final vowels only
-            if len(word) > 1:
-                # Check if the last character is a vowel that should be doubled
-                final_char = word[-1]
-                if final_char in ["a", "i", "u", "e", "o"]:
-                    # Double the final vowel
-                    doubled_word = word[:-1] + final_char + final_char
-                    doubled_words.append(doubled_word)
-                else:
-                    doubled_words.append(word)
-            else:
-                doubled_words.append(word)
-
-        return " ".join(doubled_words)
 
     @staticmethod
     def build_search_params(
@@ -388,14 +364,16 @@ class HeritageParameterBuilder:
     @staticmethod
     def build_lemma_params(word: str, encoding: str | None = None, **kwargs) -> dict[str, Any]:
         """Build parameters for lemmatization (sktlemmatizer)"""
-        params = {}
-
-        # Word input - always pass original word for CGI processing
-        params["word"] = word
+        params = {
+            "lex": "SH",  # Default to Shabda Sanskrit lexicon
+            "q": word,  # Query parameter (not 'word')
+        }
 
         # Encoding parameter (t=VH for Velthuis, etc.)
         if encoding:
             params["t"] = HeritageParameterBuilder.get_cgi_encoding_param(encoding)
+        else:
+            params["t"] = "VH"  # Default to Velthuis encoding
 
         params.update(kwargs)
 

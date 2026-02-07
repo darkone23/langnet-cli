@@ -86,6 +86,33 @@ class TestHeritageMorphologyParser(unittest.TestCase):
         self.assertEqual(analysis.voice, "active")
         self.assertEqual(analysis.mood, "indicative")
 
+    def test_multiple_solution_sections(self):
+        """Parser should respect multiple solution blocks in HTML"""
+        fixture_path = self.FIXTURE_DIR / "agnii_morph.html"
+        input_html = fixture_path.read_text()
+        parser = MorphologyParser()
+
+        result = parser.parse(input_html)
+
+        self.assertEqual(result["total_solutions"], 2)
+        self.assertEqual(len(result["solutions"]), 2)
+
+        first_solution = result["solutions"][0]
+        self.assertEqual(first_solution["solution_number"], 1)
+        self.assertEqual(len(first_solution["analyses"]), 1)
+        first_analysis = first_solution["analyses"][0]
+        self.assertEqual(first_analysis.word, "agni")
+        self.assertEqual(first_analysis.case, "accusative")
+        self.assertEqual(first_analysis.gender, "masculine")
+        self.assertEqual(first_analysis.number, "dual")
+
+        second_solution = result["solutions"][1]
+        self.assertEqual(second_solution["solution_number"], 2)
+        self.assertEqual(len(second_solution["analyses"]), 1)
+        second_analysis = second_solution["analyses"][0]
+        self.assertEqual(second_analysis.case, "vocative")
+        self.assertEqual(second_analysis.number, "dual")
+
 
 class TestHeritageHTMLExtractor(unittest.TestCase):
     """Test suite for Heritage HTML extractor"""

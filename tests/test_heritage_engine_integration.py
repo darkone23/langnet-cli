@@ -66,7 +66,6 @@ class TestHeritageEngineIntegration(unittest.TestCase):
         mock_morphology_result.solutions[0].analyses[0].lemma = "yoga"
         mock_morphology_result.solutions[0].analyses[0].pos = "noun"
         mock_morphology_result.solutions[0].analyses[0].word = "yoga"
-        mock_morphology_result.solutions[0].analyses[0].confidence = 0.9
 
         mock_dict_result = {
             "word": "yoga",
@@ -139,8 +138,8 @@ class TestHeritageEngineIntegration(unittest.TestCase):
         mock_morphology_result = Mock()
         mock_morphology_result.solutions = [Mock()]
         mock_morphology_result.solutions[0].analyses = [
-            Mock(lemma="yoga", pos="noun", word="yoga", confidence=0.9),
-            Mock(lemma="yogin", pos="noun", word="yogin", confidence=0.8),
+            Mock(lemma="yoga", pos="noun", word="yoga"),
+            Mock(lemma="yogin", pos="noun", word="yogin"),
         ]
 
         mock_dict_result = {

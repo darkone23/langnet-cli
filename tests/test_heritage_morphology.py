@@ -76,14 +76,12 @@ class TestHeritageModels(unittest.TestCase):
             gender=None,
             number=None,
             meaning=["fire", "god of fire"],
-            confidence=0.95,
         )
 
         self.assertEqual(analysis.word, "agni")
         self.assertEqual(analysis.lemma, "agni")
         self.assertEqual(analysis.pos, "noun")
         self.assertEqual(len(analysis.meaning), 2)
-        self.assertEqual(analysis.confidence, 0.95)
 
     def test_heritage_solution(self):
         """Test HeritageSolution model"""

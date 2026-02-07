@@ -1,4 +1,4 @@
-start: solution_section | pattern_section+
+start: solution_section+ | pattern_section+
 
 # Solution sections marked with "Solution X :"
 solution_section: "Solution" INT solution_content

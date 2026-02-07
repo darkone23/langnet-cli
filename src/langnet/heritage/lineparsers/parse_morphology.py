@@ -84,7 +84,13 @@ class MorphologyTransformer(Transformer):
 
     def start(self, args):
         """Entry point for transformation"""
-        return args[0] if args else []
+        results = []
+        for arg in args:
+            if isinstance(arg, list):
+                results.extend(arg)
+            else:
+                results.append(arg)
+        return results
 
     def solution_section(self, args):
         """Transform a solution section"""
@@ -124,6 +130,10 @@ class MorphologyTransformer(Transformer):
             "score": 0.0,
             "metadata": {},
         }
+
+    def solution_content(self, args):
+        """Pass through the analyses captured for a solution section."""
+        return args
 
     def analysis_pattern(self, args):
         """Transform an analysis pattern"""
@@ -165,8 +175,6 @@ class MorphologyTransformer(Transformer):
             mood=features.get("mood"),
             stem=features.get("stem", ""),
             meaning=[],  # Not available in morphology responses
-            lexicon_refs=[],  # Not available in morphology responses
-            confidence=0.0,
         )
 
     def _parse_analysis_code(self, code):
@@ -186,6 +194,10 @@ class MorphologyTransformer(Transformer):
 
         if not code or code == "?":
             return features
+
+        # When multiple analyses are separated by '|', use the first alternative
+        if "|" in code:
+            code = code.split("|", 1)[0].strip()
 
         # Check for text-based descriptions (e.g., "m. sg. voc.")
         if "." in code and " " in code:

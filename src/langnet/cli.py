@@ -1017,30 +1017,90 @@ def heritage_morphology(query: str, output: str, save: str):
     _tool_query("heritage", "morphology", query=query, output=output, save=save)
 
 
-@heritage.command("dictionary")
-@click.option("--query", required=True, help="Word to lookup")
-@click.option("--dict", "dict_name", help="Dictionary ID (default: MW)")
-@click.option(
-    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
-)
-@click.option("--save", help="Save output to fixture file")
-def heritage_dictionary(query: str, dict_name: str, output: str, save: str):
-    """Dictionary lookup using Heritage Platform backend."""
-    _tool_query(
-        "heritage", "dictionary", query=query, dict_name=dict_name, output=output, save=save
-    )
-
-
 @heritage.command("analyze")
 @click.option("--query", required=True, help="Word to analyze")
-@click.option("--dict", "dict_name", help="Dictionary ID (default: MW)")
 @click.option(
     "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
 )
 @click.option("--save", help="Save output to fixture file")
-def heritage_analyze(query: str, dict_name: str, output: str, save: str):
+def heritage_analyze(query: str, output: str, save: str):
     """Comprehensive analysis using Heritage Platform backend."""
-    _tool_query("heritage", "analyze", query=query, dict_name=dict_name, output=output, save=save)
+    _tool_query("heritage", "analyze", query=query, output=output, save=save)
+
+
+@heritage.command("search")
+@click.option("--query", required=True, help="Word to search")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def heritage_search(query: str, output: str, save: str):
+    """
+    Search Heritage Platform dictionary using sktindex.
+
+    This is the fast index-based search for dictionary lookups.
+
+    Examples:
+        just cli tool heritage search --query agni
+        just cli tool heritage search --query agni
+    """
+    _tool_query("heritage", "search", query=query, output=output, save=save)
+
+
+@heritage.command("canonical")
+@click.option("--query", required=True, help="Word to canonicalize")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def heritage_canonical(query: str, output: str, save: str):
+    """
+    Get canonical Sanskrit form using sktsearch.
+
+    Handles transliteration and encoding normalization.
+    Useful for converting user input to standard dictionary form.
+
+    Examples:
+        just cli tool heritage canonical --query agnii
+        # Returns: {canonical_sanskrit: "agni", canonical_text: "अग्नि"}
+    """
+    _tool_query("heritage", "canonical", query=query, output=output, save=save)
+
+
+@heritage.command("lemmatize")
+@click.option("--query", required=True, help="Inflected form to lemmatize")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def heritage_lemmatize(query: str, output: str, save: str):
+    """
+    Get lemma from inflected form using sktlemmatizer.
+
+    Examples:
+        just cli tool heritage lemmatize --query agniis
+        # Returns: {lemma: "agni", inflected_form: "agniis"}
+    """
+    _tool_query("heritage", "lemmatize", query=query, output=output, save=save)
+
+
+@heritage.command("entry")
+@click.option("--url", required=True, help="Entry URL (e.g., /skt/MW/890.html#agni)")
+@click.option(
+    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
+)
+@click.option("--save", help="Save output to fixture file")
+def heritage_entry(url: str, output: str, save: str):
+    """
+    Fetch complete dictionary entry via sktreader.
+
+    Use this when you need full entry details including all senses,
+    etymology, examples, and references.
+
+    Examples:
+        just cli tool heritage entry --url "/skt/MW/890.html#agni"
+    """
+    _tool_query("heritage", "entry", query=url, output=output, save=save)
 
 
 @tool.group()
@@ -1115,15 +1175,39 @@ def _tool_query(  # noqa: PLR0913
 
 @tool.command("query")
 @click.option(
-    "--tool",
+    "--action",
     required=True,
-    type=click.Choice(["diogenes", "whitakers", "heritage", "cdsl", "cltk"]),
-    help="Backend tool",
+    type=click.Choice(
+        [
+            "search",
+            "parse",
+            "analyze",
+            "morphology",
+            "dictionary",
+            "lookup",
+            "canonical",
+            "lemmatize",
+            "entry",
+        ]
+    ),
+    help="Action to perform",
 )
 @click.option(
     "--action",
     required=True,
-    type=click.Choice(["search", "parse", "analyze", "morphology", "dictionary", "lookup"]),
+    type=click.Choice(
+        [
+            "search",
+            "parse",
+            "analyze",
+            "morphology",
+            "dictionary",
+            "lookup",
+            "canonical",
+            "lemmatize",
+            "entry",
+        ]
+    ),
     help="Action to perform",
 )
 @click.option("--lang", help="Language code (required for diogenes/cltk)")

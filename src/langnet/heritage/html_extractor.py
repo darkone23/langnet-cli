@@ -16,86 +16,45 @@ class HeritageHTMLExtractor:
         self.pattern = r"\[([^\]]+)\]\{([^}]+)\}"
 
     def extract_solutions(self, html_content: str) -> list[dict[str, Any]]:
-        """Extract solution data from HTML content"""
+        """Extract solution data from HTML content using Heritage layout hints."""
         soup = BeautifulSoup(html_content, "html.parser")
 
-        solutions = []
-
-        # Find all solution spans
-        for span in soup.find_all("span"):
-            span_text = span.get_text()
-            if span_text and "Solution" in span_text:
-                solution = self._extract_solution(span, soup)
-                if solution:
-                    solutions.append(solution)
-
-        # If no solution spans found, try alternative extraction
-        if not solutions:
-            solutions = self._extract_from_tables(soup)
-
-        return solutions
-
-    def _extract_solution(self, solution_span, soup) -> dict[str, Any] | None:
-        """Extract a single solution from a solution span"""
-        try:
-            # Get solution number
-            solution_text = solution_span.get_text()
-            solution_match = re.search(r"Solution (\d+)", solution_text)
-            if not solution_match:
-                return None
-
-            solution_num = int(solution_match.group(1))
-
-            # Look for analysis patterns in the following content
-            patterns = []
-
-            # Look for pattern elements after the span
-            next_element = solution_span.next_sibling
-            if next_element:
-                # Extract text content recursively
-                pattern_text = self._extract_text_recursive(next_element)
-                pattern_matches = re.findall(self.pattern, pattern_text)
-
-                for word, analysis in pattern_matches:
-                    patterns.append({"word": word.strip(), "analysis": analysis.strip()})
-
-            return {
-                "type": "morphological_analysis",
-                "solution_number": solution_num,
-                "patterns": patterns,
-                "total_words": len(patterns),
-                "score": 0.0,
-                "metadata": {},
-            }
-
-        except Exception:
-            return None
-
-    def _extract_from_tables(self, soup) -> list[dict[str, Any]]:
-        """Extract solutions from table elements"""
-        solutions = []
-
-        # Look for grey_back tables
-        tables = soup.find_all("table", class_="grey_back")
-
-        for i, table in enumerate(tables):
-            pattern_text = table.get_text(strip=True)
-            pattern_matches = re.findall(self.pattern, pattern_text)
-
-            patterns = []
-            for word, analysis in pattern_matches:
-                patterns.append({"word": word.strip(), "analysis": analysis.strip()})
-
-            if patterns:
-                solution = {
+        # Prefer explicit "Solution" sections when present
+        solutions: list[dict[str, Any]] = []
+        for block in self._extract_solution_blocks(soup):
+            patterns = [{"word": w, "analysis": a} for w, a, _ in block["patterns"]]
+            solutions.append(
+                {
                     "type": "morphological_analysis",
-                    "solution_number": i + 1,
+                    "solution_number": block["number"],
                     "patterns": patterns,
                     "total_words": len(patterns),
                     "score": 0.0,
-                    "metadata": {},
+                    "metadata": {
+                        "color": block["color"],
+                        "raw_text": block["raw_text"],
+                    },
                 }
-                solutions.append(solution)
+            )
+
+        # Fallback to loose table extraction if no solution markers were found
+        if not solutions:
+            loose_patterns = self._extract_loose_patterns(soup)
+            if loose_patterns:
+                patterns = [{"word": w, "analysis": a} for w, a, _ in loose_patterns]
+                solutions.append(
+                    {
+                        "type": "morphological_analysis",
+                        "solution_number": 1,
+                        "patterns": patterns,
+                        "total_words": len(patterns),
+                        "score": 0.0,
+                        "metadata": {
+                            "color": None,
+                            "raw_text": "\n".join(raw for _, _, raw in loose_patterns),
+                        },
+                    }
+                )
 
         return solutions
 
@@ -133,7 +92,7 @@ class HeritageHTMLExtractor:
     def _is_pattern_table(self, table) -> bool:
         """Check if a table is a pattern table by class"""
         classes = table.get("class") or []
-        return any(c in classes for c in ["grey_back", "lawngreen_back"])
+        return any("back" in c for c in classes)
 
     def _extract_pattern_from_element(self, element) -> str | None:
         """Extract [word]{analysis} pattern from an element's text"""
@@ -143,8 +102,8 @@ class HeritageHTMLExtractor:
 
     def _get_innermost_pattern_tables(self, soup):
         """Find innermost pattern tables (those without nested pattern tables)"""
-        pattern_tables = soup.find_all("table", class_="grey_back")
-        pattern_tables.extend(soup.find_all("table", class_="lawngreen_back"))
+        pattern_tables = soup.find_all("table")
+        pattern_tables = [t for t in pattern_tables if self._is_pattern_table(t)]
 
         innermost = []
         for table in pattern_tables:
@@ -160,24 +119,125 @@ class HeritageHTMLExtractor:
     def extract_plain_text(self, html_content: str) -> str:
         """Extract plain text from HTML content for Lark parsing"""
         soup = BeautifulSoup(html_content, "html.parser")
-        solution_sections = []
-        seen_texts = set()
+        lines: list[str] = []
 
-        innermost_tables = self._get_innermost_pattern_tables(soup)
-        for table in innermost_tables:
-            text = self._extract_pattern_from_element(table)
-            if text and text not in seen_texts:
-                seen_texts.add(text)
-                solution_sections.append(text)
+        # Prefer explicit solution sections to preserve solution boundaries
+        solution_blocks = self._extract_solution_blocks(soup)
+        if solution_blocks:
+            for block in solution_blocks:
+                solution_number = block["number"]
+                patterns = block["patterns"]
+                lines.append(f"Solution {solution_number}")
+                lines.extend(f"[{word}]{{{analysis}}}" for word, analysis, _ in patterns)
+            return "\n".join(lines)
 
-        if not solution_sections:
+        # Fallback: collect any pattern-bearing tables/spans we can find
+        loose_patterns = self._extract_loose_patterns(soup)
+        lines.extend(f"[{word}]{{{analysis}}}" for word, analysis, _ in loose_patterns)
+        return "\n".join(lines)
+
+    def _extract_solution_blocks(self, soup) -> list[dict[str, Any]]:
+        """Return solution blocks with number, patterns, color class, and raw text."""
+        blocks: list[dict[str, Any]] = []
+
+        for span in soup.find_all("span"):
+            text = span.get_text()
+            if not text or "Solution" not in text:
+                continue
+
+            solution_match = re.search(r"Solution\s*(\d+)", text)
+            if not solution_match:
+                continue
+
+            solution_number = int(solution_match.group(1))
+            table = self._find_solution_table(span)
+            if not table:
+                continue
+
+            patterns = self._collect_patterns(table)
+            if patterns:
+                color = self._table_color(table)
+                raw_text = "\n".join(raw for _, _, raw in patterns)
+                blocks.append(
+                    {
+                        "number": solution_number,
+                        "patterns": patterns,
+                        "color": color,
+                        "raw_text": raw_text,
+                    }
+                )
+
+        return blocks
+
+    def _find_solution_table(self, solution_span):
+        """Locate the first pattern table after the given solution span."""
+        table = solution_span.find_next("table")
+        while table:
+            if self._is_pattern_table(table):
+                return table
+            table = table.find_next("table")
+        return None
+
+    def _collect_patterns(self, container) -> list[tuple[str, str, str]]:
+        """Collect unique (word, analysis, raw_text) triples from latin12 spans within a container."""
+        if container is None:
+            return []
+
+        patterns: list[tuple[str, str, str]] = []
+        seen: set[str] = set()
+
+        for span in container.find_all("span", class_="latin12"):
+            span_text = span.get_text(strip=True)
+            match = re.search(self.pattern, span_text)
+            if not match:
+                continue
+
+            word = match.group(1).strip()
+            analysis = match.group(2).strip()
+            key = f"{word}||{analysis}"
+            if key in seen:
+                continue
+            seen.add(key)
+            patterns.append((word, analysis, match.group(0)))
+
+        return patterns
+
+    def _extract_loose_patterns(self, soup) -> list[tuple[str, str, str]]:
+        """Extract patterns when no explicit solution sections are present."""
+        patterns: list[tuple[str, str, str]] = []
+        seen: set[str] = set()
+
+        for table in self._get_innermost_pattern_tables(soup):
+            for word, analysis in self._collect_patterns(table):
+                key = f"{word}||{analysis}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                patterns.append((word, analysis, f"[{word}]{{{analysis}}}"))
+
+        if not patterns:
             for span in soup.find_all("span", class_="latin12"):
-                text = self._extract_pattern_from_element(span)
-                if text and text not in seen_texts:
-                    seen_texts.add(text)
-                    solution_sections.append(text)
+                span_text = span.get_text(strip=True)
+                match = re.search(self.pattern, span_text)
+                if not match:
+                    continue
+                word = match.group(1).strip()
+                analysis = match.group(2).strip()
+                key = f"{word}||{analysis}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                patterns.append((word, analysis, match.group(0)))
 
-        return "\n".join(solution_sections)
+        return patterns
+
+    def _table_color(self, table) -> str | None:
+        """Return the CSS class that signals color (e.g., deep_sky_back)."""
+        classes = table.get("class") or []
+        for cls in classes:
+            if cls.endswith("_back") or cls.endswith("back"):
+                return cls
+        return None
 
     def _extract_solution_text(self, solution_span) -> str:
         """Extract text content from a solution section"""

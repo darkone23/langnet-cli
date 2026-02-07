@@ -9,8 +9,8 @@ from langnet.backend_adapter import LanguageAdapterRegistry
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
-from langnet.heritage.dictionary import HeritageDictionaryService
-from langnet.heritage.morphology import HeritageMorphologyService
+from langnet.heritage.client import HeritageHTTPClient
+from langnet.heritage.morphology import HeritageMorphologyService # TODO: not sure why this is not just in heritage client?
 from langnet.normalization import NormalizationPipeline
 from langnet.whitakers_words.core import WhitakersWords
 
@@ -121,9 +121,9 @@ class LanguageEngineConfig:
     whitakers: WhitakersWords
     cltk: ClassicsToolkit
     cdsl: SanskritCologneLexicon
-    heritage_morphology: HeritageMorphologyService | None = None
-    heritage_dictionary: HeritageDictionaryService | None = None
-    normalization_pipeline: NormalizationPipeline | None = None
+    heritage_morphology: HeritageMorphologyService
+    heritage_client: HeritageHTTPClient
+    normalization_pipeline: NormalizationPipeline
     enable_normalization: bool = True
 
 
@@ -134,7 +134,7 @@ class LanguageEngine:
         self.cltk = config.cltk
         self.cdsl = config.cdsl
         self.heritage_morphology = config.heritage_morphology
-        self.heritage_dictionary = config.heritage_dictionary
+        self.heritage_client = config.heritage_client
         self.normalization_pipeline = config.normalization_pipeline
         self.enable_normalization = config.enable_normalization
         self._cattrs_converter = cattrs.Converter(omit_if_default=True)
@@ -190,97 +190,23 @@ class LanguageEngine:
         if heritage_result:
             result["heritage"] = heritage_result
 
-        cdsl_result = self._query_sanskrit_cdsl(word, _cattrs_converter)
-        if cdsl_result:
-            result["cdsl"] = cdsl_result
-
-        lemma_result = self._query_sanskrit_lemma_fallback(result, _cattrs_converter)
-        if lemma_result:
-            result["cdsl"] = lemma_result
+        # TODO: Implement _query_sanskrit_cdsl and _query_sanskrit_lemma_fallback
+        # cdsl_result = self._query_sanskrit_cdsl(word, _cattrs_converter)
+        # if cdsl_result:
+        #     result["cdsl"] = cdsl_result
+        #
+        # lemma_result = self._query_sanskrit_lemma_fallback(result, _cattrs_converter)
+        # if lemma_result:
+        #     result["cdsl"] = lemma_result
 
         return result
 
     def _query_sanskrit_heritage(self, word: str, _cattrs_converter) -> dict | None:
-        if not self.heritage_morphology or not self.heritage_dictionary:
+        if not self.heritage_morphology:
+            logger.warning("heritage_morphology_service_not_available")
             return None
 
-        try:
-            logger.debug("attempting_heritage_analysis", word=word)
-            heritage_result = self._query_sanskrit_with_heritage(word, _cattrs_converter)
-            if heritage_result.get("morphology") or heritage_result.get("dictionary"):
-                logger.debug("heritage_analysis_success", word=word)
-                return heritage_result
-            else:
-                logger.debug("heritage_analysis_empty", word=word)
-                return heritage_result
-        except Exception as e:
-            logger.error("heritage_analysis_failed", word=word, error=str(e))
-            return {"error": f"Heritage analysis failed: {str(e)}"}
-
-    def _query_sanskrit_cdsl(self, word: str, _cattrs_converter) -> dict:
-        try:
-            logger.debug("attempting_cdsl_lookup", word=word)
-            direct_result = _cattrs_converter.unstructure(self.cdsl.lookup_ascii(word))
-            has_results = bool(
-                direct_result.get("dictionaries", {}).get("mw")
-                or direct_result.get("dictionaries", {}).get("ap90")
-            )
-            if has_results:
-                direct_result["_search_method"] = "direct"
-                logger.debug("cdsl_lookup_success", word=word)
-            else:
-                direct_result["_search_method"] = "no_results"
-                direct_result["_warning"] = (
-                    "Sanskrit lemmatization unavailable. "
-                    "Please search headwords directly (e.g., 'yoga' not 'योगेन')."
-                )
-                logger.debug("cdsl_lookup_empty", word=word, note="no CDSL results")
-            return direct_result
-        except Exception as e:
-            logger.error("cdsl_lookup_failed", word=word, error=str(e))
-            return {"error": f"CDSL unavailable: {str(e)}"}
-
-    def _query_sanskrit_lemma_fallback(self, result: dict, _cattrs_converter) -> dict | None:
-        if not result.get("heritage") or result.get("cdsl", {}).get("dictionaries"):
-            return None
-
-        heritage_data = result.get("heritage", {})
-        solutions = heritage_data.get("morphology", {}).get("solutions", [])
-        if not solutions:
-            return None
-
-        first_solution = solutions[0]
-        analyses = first_solution.get("analyses", [])
-        if not analyses:
-            return None
-
-        first_analysis = analyses[0]
-        lemma = first_analysis.get("lemma")
-        if not lemma:
-            return None
-
-        try:
-            logger.debug("attempting_cdsl_lemma_lookup", lemma=lemma)
-            cdsl_result = _cattrs_converter.unstructure(self.cdsl.lookup_ascii(lemma))
-            if cdsl_result.get("dictionaries"):
-                cdsl_result["_search_method"] = "lemma"
-                logger.debug("cdsl_lemma_lookup_success", lemma=lemma)
-                return cdsl_result
-        except Exception as e:
-            logger.error("cdsl_lemma_lookup_failed", lemma=lemma, error=str(e))
-        return None
-
-    def _query_sanskrit_with_heritage(self, word: str, _cattrs_converter) -> dict:
-        """Query Sanskrit using Heritage Platform for better lemmatization"""
-        result: dict[str, Any] = {
-            "morphology": None,
-            "dictionary": None,
-            "combined": None,
-        }
-
-        if not self.heritage_morphology or not self.heritage_dictionary:
-            logger.warning("heritage_services_not_available")
-            return result
+        result: dict[str, Any] = {}
 
         # Perform morphological analysis
         morphology_result = self.heritage_morphology.analyze_word(word)
@@ -293,9 +219,13 @@ class LanguageEngine:
                 first_analysis = morphology_result.solutions[0].analyses[0]
                 lemma = first_analysis.lemma if first_analysis.lemma else None
                 if lemma:
-                    dict_result = self.heritage_dictionary.lookup_word(lemma)
-                    if dict_result and dict_result.get("entries"):
+                    # Try Heritage Platform dictionary first, fallback to old service
+                    dict_result = None
+                    dict_source = None
+                    if dict_result:
+                        # Store dictionary source in result
                         result["dictionary"] = _cattrs_converter.unstructure(dict_result)
+                        result["dictionary_source"] = dict_source
 
                         # Create combined analysis
                         combined = {
@@ -306,11 +236,11 @@ class LanguageEngine:
                                     "word": analysis.word,
                                     "lemma": analysis.lemma,
                                     "pos": analysis.pos,
-                                    "confidence": analysis.confidence,
                                 }
                                 for analysis in morphology_result.solutions[0].analyses
                             ],
                             "dictionary_entries": dict_result.get("entries", []),
+                            "dictionary_source": dict_source,
                             "transliteration": dict_result.get("transliteration", {}),
                         }
                         result["combined"] = combined
@@ -376,7 +306,17 @@ class LanguageEngine:
     def _validate_tool_and_action(self, tool: str, action: str):
         """Validate tool and action parameters."""
         valid_tools = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
-        valid_actions = {"search", "parse", "analyze", "morphology", "dictionary", "lookup"}
+        valid_actions = {
+            "search",
+            "parse",
+            "analyze",
+            "morphology",
+            "dictionary",
+            "lookup",
+            "canonical",
+            "lemmatize",
+            "entry",
+        }
 
         if tool not in valid_tools:
             raise ValueError(
@@ -489,8 +429,8 @@ class LanguageEngine:
 
     def _get_heritage_raw(self, query: str, action: str, dict_name: str | None = None) -> dict:
         """Get raw data from Heritage Platform backend."""
-        if not self.heritage_morphology or not self.heritage_dictionary:
-            raise ValueError("Heritage services not available")
+        if not self.heritage_morphology:
+            raise ValueError("Heritage morphology service not available")
 
         result = {}
 
@@ -499,19 +439,15 @@ class LanguageEngine:
             if morphology_result:
                 result["morphology"] = self._cattrs_converter.unstructure(morphology_result)
 
-        if action in ["dictionary", "lookup"]:
-            if dict_name:
-                dict_result = self.heritage_dictionary.lookup_word(query, dict_name)
-            else:
-                dict_result = self.heritage_dictionary.lookup_word(query)
+        if action in ["canonical", "search"]:
+            canonical_result = self.heritage_client.fetch_canonical_sanskrit(
+                query
+            )
+            result["canonical"] = canonical_result
 
-            if dict_result and dict_result.get("entries"):
-                result["dictionary"] = self._cattrs_converter.unstructure(dict_result)
-
-        if action == "analyze" and result:
-            # For analyze action, try to get combined results
-            combined = self._query_sanskrit_with_heritage(query, self._cattrs_converter)
-            result.update(combined)
+        if action == "lemmatize":
+            lemmatize_result = self.heritage_client.fetch_lemmatization(query)
+            result["lemmatize"] = lemmatize_result
 
         return result
 

@@ -6,9 +6,10 @@ from langnet.config import config as langnet_config
 from langnet.diogenes.core import DiogenesScraper
 from langnet.engine.core import LanguageEngine, LanguageEngineConfig
 from langnet.heritage.config import HeritageConfig
-from langnet.heritage.dictionary import HeritageDictionaryService
+from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.morphology import HeritageMorphologyService
 from langnet.whitakers_words.core import WhitakersWords
+from langnet.normalization import NormalizationPipeline
 
 logger = structlog.get_logger(__name__)
 
@@ -35,15 +36,17 @@ class LangnetWiring:
             timeout=langnet_config.http_timeout,
         )
         heritage_morphology = HeritageMorphologyService(heritage_config)
-        heritage_dictionary = HeritageDictionaryService()
+        heritage_platform = HeritageHTTPClient()
+        norm_pipeline = NormalizationPipeline()
 
         config = LanguageEngineConfig(
             scraper=scraper,
             whitakers=whitakers,
             cltk=cltk,
             cdsl=cdsl,
+            heritage_client=heritage_platform,
             heritage_morphology=heritage_morphology,
-            heritage_dictionary=heritage_dictionary,
+            normalization_pipeline=norm_pipeline,
         )
         self.engine = LanguageEngine(config)
         self._initialized = True
