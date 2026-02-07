@@ -13,9 +13,9 @@ import json
 import re
 import subprocess
 import sys
+from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, List, Sequence
 
 DEFAULT_SAVE_PATH = Path("examples/debug/fuzz_results")
 FuzzMode = str
@@ -49,7 +49,10 @@ TOOL_CATALOG: dict = {
                 "langs": ["san"],
                 "default_words": {"san": ["agnii", "agnim", "agnina", "agni", "veda"]},
             },
-            "lemmatize": {"langs": ["san"], "default_words": {"san": ["agnim", "yogena", "agnina"]}},
+            "lemmatize": {
+                "langs": ["san"],
+                "default_words": {"san": ["agnim", "yogena", "agnina"]},
+            },
         }
     },
     "cdsl": {
@@ -66,7 +69,11 @@ TOOL_CATALOG: dict = {
         "actions": {
             "morphology": {
                 "langs": ["lat", "grc", "san"],
-                "default_words": {"lat": ["amo", "sum"], "grc": ["logos", "anthropos"], "san": ["agni"]},
+                "default_words": {
+                    "lat": ["amo", "sum"],
+                    "grc": ["logos", "anthropos"],
+                    "san": ["agni"],
+                },
                 "compare_optional": True,
             },
             "dictionary": {
@@ -123,9 +130,13 @@ class FuzzResult:
         return payload
 
 
-def _parse_args(argv: List[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Fuzz backend tool or unified query outputs via API endpoints")
-    parser.add_argument("--tool", help="Tool to exercise (diogenes, whitakers, heritage, cdsl, cltk)")
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Fuzz backend tool or unified query outputs via API endpoints"
+    )
+    parser.add_argument(
+        "--tool", help="Tool to exercise (diogenes, whitakers, heritage, cdsl, cltk)"
+    )
     parser.add_argument("--action", help="Action/verb to use (search, parse, etc.)")
     parser.add_argument("--lang", help="Language code to use (lat, grc, san)")
     parser.add_argument("--words", help="Comma-separated list of words to test")
@@ -271,7 +282,9 @@ def _run_target(target: FuzzTarget, mode: FuzzMode, validate: bool) -> FuzzResul
             unified_raw = entries
             unified_summary = _summarize_raw({"entries": entries})
             unified_ok = bool(entries) or target.allow_empty or not validate
-            unified_sources = sorted({entry.get("source") for entry in entries if entry.get("source")})
+            unified_sources = sorted(
+                {entry.get("source") for entry in entries if entry.get("source")}
+            )
             source_present = target.tool in unified_sources
             if target.compare_optional and not source_present:
                 # Treat missing source as informational, not a failure
@@ -349,7 +362,7 @@ def _save_results(save_path: Path, results: list[FuzzResult]) -> None:
     print(f"Saved {len(results)} per-target results to {save_path}/ (summary.json)")
 
 
-def run_from_args(argv: List[str]) -> int:
+def run_from_args(argv: list[str]) -> int:
     """Entry point callable from scripts or CLI."""
     args = _parse_args(argv)
 
@@ -376,7 +389,9 @@ def run_from_args(argv: List[str]) -> int:
             if result.tool_ok:
                 status_parts.append("tool=ok")
             elif result.tool_ok is False:
-                status_parts.append(f"tool=error{'' if not result.tool_error else f' ({result.tool_error})'}")
+                status_parts.append(
+                    f"tool=error{'' if not result.tool_error else f' ({result.tool_error})'}"
+                )
             else:
                 status_parts.append("tool=skip")
 

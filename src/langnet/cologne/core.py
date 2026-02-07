@@ -10,7 +10,6 @@ import structlog
 from indic_transliteration.detect import detect
 from indic_transliteration.sanscript import DEVANAGARI, SLP1, transliterate
 
-from langnet.citation.models import Citation, CitationCollection, CitationType, TextReference
 from langnet.config import config
 
 from .models import (

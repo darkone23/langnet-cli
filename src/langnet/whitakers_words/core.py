@@ -1,31 +1,52 @@
 import re
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 
 import cattrs
 import structlog
 from sh import Command
 
-from enum import Enum, auto
-
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
-
 from langnet.whitakers_words.enums import (
-    Tense as WWTense,
-    Voice as WWVoice,
-    Mood as WWMood,
-    Gender as WWGender,
-    Number as WWNumber,
-    Case as WWCase,
-    Degree as WWDegree,
-    Person as WWPerson,
     Age as WWAge,
+)
+from langnet.whitakers_words.enums import (
     Area as WWArea,
-    Geography as WWGeography,
+)
+from langnet.whitakers_words.enums import (
+    Case as WWCase,
+)
+from langnet.whitakers_words.enums import (
+    Degree as WWDegree,
+)
+from langnet.whitakers_words.enums import (
     Frequency as WWFrequency,
+)
+from langnet.whitakers_words.enums import (
+    Gender as WWGender,
+)
+from langnet.whitakers_words.enums import (
+    Geography as WWGeography,
+)
+from langnet.whitakers_words.enums import (
+    Mood as WWMood,
+)
+from langnet.whitakers_words.enums import (
+    Number as WWNumber,
+)
+from langnet.whitakers_words.enums import (
+    Person as WWPerson,
+)
+from langnet.whitakers_words.enums import (
     Source as WWSource,
 )
-
+from langnet.whitakers_words.enums import (
+    Tense as WWTense,
+)
+from langnet.whitakers_words.enums import (
+    Voice as WWVoice,
+)
 
 from .lineparsers import CodesReducer, FactsReducer, SensesReducer
 
@@ -459,10 +480,7 @@ def enrich_codeline_data(data: dict) -> dict:
                 # Otherwise it's a declension number
                 new_data["pos_form"] = f"{form} Declension"
 
-        elif raw_pos_code == "CONJ":  # Conjunction - Usually no form
-            new_data["pos_form"] = None
-
-        elif raw_pos_code == "INTERJ":  # Interjection - Usually no form
+        elif raw_pos_code == "CONJ" or raw_pos_code == "INTERJ":  # Conjunction - Usually no form
             new_data["pos_form"] = None
 
     return new_data
@@ -577,16 +595,12 @@ class _WhitakersProcHolder:
         maybe_words = home / ".local/bin/whitakers-words"
         if maybe_words.exists():
             logger.info("using_whitakers_binary", path=str(maybe_words))
-            self.proc = Command(maybe_words).bake(
-                _tty=False, _tty_out=False, _tty_in=False
-            )
+            self.proc = Command(maybe_words).bake(_tty=False, _tty_out=False, _tty_in=False)
             return self.proc
         maybe_words = Path() / "deps/whitakers-words/bin/words"
         if maybe_words.exists():
             logger.info("using_whitakers_binary", path=str(maybe_words))
-            self.proc = Command(maybe_words).bake(
-                _tty=False, _tty_out=False, _tty_in=False
-            )
+            self.proc = Command(maybe_words).bake(_tty=False, _tty_out=False, _tty_in=False)
             return self.proc
         else:
             logger.warning("whitakers_binary_not_found")

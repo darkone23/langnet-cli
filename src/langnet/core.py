@@ -5,11 +5,11 @@ from langnet.cologne.core import SanskritCologneLexicon
 from langnet.config import config as langnet_config
 from langnet.diogenes.core import DiogenesScraper
 from langnet.engine.core import LanguageEngine, LanguageEngineConfig
-from langnet.heritage.config import HeritageConfig
 from langnet.heritage.client import HeritageHTTPClient
+from langnet.heritage.config import HeritageConfig
 from langnet.heritage.morphology import HeritageMorphologyService
-from langnet.whitakers_words.core import WhitakersWords
 from langnet.normalization import NormalizationPipeline
+from langnet.whitakers_words.core import WhitakersWords
 
 logger = structlog.get_logger(__name__)
 

@@ -211,7 +211,9 @@ def _apply_to_heritage(result: dict) -> None:
         for analysis in analyses:
             if not isinstance(analysis, dict):
                 continue
-            features = analysis.get("features") if isinstance(analysis.get("features"), dict) else {}
+            features = (
+                analysis.get("features") if isinstance(analysis.get("features"), dict) else {}
+            )
             foster_codes = _map_sanskrit_tags(features)
             if foster_codes:
                 analysis["foster_codes"] = foster_codes

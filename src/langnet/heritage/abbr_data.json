@@ -1,0 +1,1142 @@
+{
+  "a": {
+    "display": "a.",
+    "long_name": "adjectif  (",
+    "kind": "source"
+  },
+  "abl": {
+    "display": "abl.",
+    "long_name": "ablatif  (",
+    "kind": "grammar"
+  },
+  "abs": {
+    "display": "abs.",
+    "long_name": "absolutif  (",
+    "kind": "source"
+  },
+  "abstr": {
+    "display": "abstr.",
+    "long_name": "abstrait  (",
+    "kind": "source"
+  },
+  "ac": {
+    "display": "ac.",
+    "long_name": "actif  (",
+    "kind": "source"
+  },
+  "acc": {
+    "display": "acc.",
+    "long_name": "accusatif  (",
+    "kind": "grammar"
+  },
+  "act": {
+    "display": "act.",
+    "long_name": "action  (",
+    "kind": "source"
+  },
+  "adr": {
+    "display": "adr.",
+    "long_name": "terme d'adresse  (",
+    "kind": "source"
+  },
+  "adv": {
+    "display": "adv.",
+    "long_name": "adverbe  (",
+    "kind": "source"
+  },
+  "agt": {
+    "display": "agt.",
+    "long_name": "agent  (",
+    "kind": "source"
+  },
+  "all": {
+    "display": "all.",
+    "long_name": "allemand  (",
+    "kind": "source"
+  },
+  "ang": {
+    "display": "ang.",
+    "long_name": "anglais  (",
+    "kind": "source"
+  },
+  "ant": {
+    "display": "ant.",
+    "long_name": "avant l'ère commune  (",
+    "kind": "source"
+  },
+  "aor": {
+    "display": "aor.",
+    "long_name": "aoriste  (",
+    "kind": "grammar"
+  },
+  "approx": {
+    "display": "approx.",
+    "long_name": "approximativement  (",
+    "kind": "source"
+  },
+  "arch": {
+    "display": "arch.",
+    "long_name": "architecture  (",
+    "kind": "source"
+  },
+  "astr": {
+    "display": "astr.",
+    "long_name": "astronomie  (",
+    "kind": "source"
+  },
+  "av": {
+    "display": "AV.",
+    "long_name": "Atharva Veda",
+    "kind": "source"
+  },
+  "bd": {
+    "display": "bd.",
+    "long_name": "bouddhisme  (",
+    "kind": "source"
+  },
+  "ben": {
+    "display": "bén.",
+    "long_name": "bénédictif  (",
+    "kind": "source"
+  },
+  "bio": {
+    "display": "bio.",
+    "long_name": "biologie  (",
+    "kind": "source"
+  },
+  "са": {
+    "display": "са.",
+    "long_name": "causatif  (",
+    "kind": "source"
+  },
+  "cad": {
+    "display": "c.-à-d.",
+    "long_name": "c'est-à-dire  (",
+    "kind": "source"
+  },
+  "cf": {
+    "display": "cf.",
+    "long_name": "confer  (",
+    "kind": "source"
+  },
+  "cl": {
+    "display": "cl.",
+    "long_name": "clitique  (",
+    "kind": "source"
+  },
+  "comp": {
+    "display": "comp.",
+    "long_name": "composé  (",
+    "kind": "source"
+  },
+  "compar": {
+    "display": "compar.",
+    "long_name": "comparatif  (",
+    "kind": "source"
+  },
+  "cond": {
+    "display": "cond.",
+    "long_name": "conditionnel  (",
+    "kind": "source"
+  },
+  "conj": {
+    "display": "conj.",
+    "long_name": "conjonction  (",
+    "kind": "source"
+  },
+  "cons": {
+    "display": "cons.",
+    "long_name": "consonne  (",
+    "kind": "source"
+  },
+  "contr": {
+    "display": "contr.",
+    "long_name": "contraction  (",
+    "kind": "source"
+  },
+  "corr": {
+    "display": "corr.",
+    "long_name": "correspondant  (",
+    "kind": "source"
+  },
+  "correl": {
+    "display": "corrél.",
+    "long_name": "corrélatif  (",
+    "kind": "source"
+  },
+  "dat": {
+    "display": "dat.",
+    "long_name": "datif  (",
+    "kind": "grammar"
+  },
+  "dem": {
+    "display": "dém.",
+    "long_name": "démonstratif  (",
+    "kind": "source"
+  },
+  "des": {
+    "display": "dés.",
+    "long_name": "désidératif  (",
+    "kind": "source"
+  },
+  "du": {
+    "display": "du.",
+    "long_name": "duel  (",
+    "kind": "source"
+  },
+  "epith": {
+    "display": "épith.",
+    "long_name": "épithète  (",
+    "kind": "source"
+  },
+  "ex": {
+    "display": "ex.",
+    "long_name": "exemple  (",
+    "kind": "source"
+  },
+  "excl": {
+    "display": "excl.",
+    "long_name": "exclamatif  (",
+    "kind": "source"
+  },
+  "ext": {
+    "display": "ext.",
+    "long_name": "extension  (",
+    "kind": "source"
+  },
+  "f": {
+    "display": "f.",
+    "long_name": "féminin  (",
+    "kind": "source"
+  },
+  "fb": {
+    "display": "fb.",
+    "long_name": "faible  (",
+    "kind": "source"
+  },
+  "fig": {
+    "display": "fig.",
+    "long_name": "figuré  (",
+    "kind": "source"
+  },
+  "fr": {
+    "display": "fr.",
+    "long_name": "français  (",
+    "kind": "source"
+  },
+  "fut": {
+    "display": "fut.",
+    "long_name": "futur  (",
+    "kind": "grammar"
+  },
+  "g": {
+    "display": "g.",
+    "long_name": "génitif  (",
+    "kind": "source"
+  },
+  "gem": {
+    "display": "gém.",
+    "long_name": "géminé  (",
+    "kind": "source"
+  },
+  "gen": {
+    "display": "gén.",
+    "long_name": "général  (",
+    "kind": "grammar"
+  },
+  "geo": {
+    "display": "géo.",
+    "long_name": "géographie  (",
+    "kind": "source"
+  },
+  "gr": {
+    "display": "gr.",
+    "long_name": "grec  (",
+    "kind": "source"
+  },
+  "gram": {
+    "display": "gram.",
+    "long_name": "grammaire  (",
+    "kind": "source"
+  },
+  "hi": {
+    "display": "hi.",
+    "long_name": "hindi  (",
+    "kind": "source"
+  },
+  "hist": {
+    "display": "hist.",
+    "long_name": "histoire  (",
+    "kind": "source"
+  },
+  "hom": {
+    "display": "hom.",
+    "long_name": "homonyme  (",
+    "kind": "source"
+  },
+  "i": {
+    "display": "i.",
+    "long_name": "instrumental  (",
+    "kind": "source"
+  },
+  "ic": {
+    "display": "ic.",
+    "long_name": "in compositi  (",
+    "kind": "source"
+  },
+  "id": {
+    "display": "id.",
+    "long_name": "idem  (",
+    "kind": "source"
+  },
+  "ifc": {
+    "display": "ifc.",
+    "long_name": "in fine compositi  (",
+    "kind": "source"
+  },
+  "iic": {
+    "display": "iic.",
+    "long_name": "in initio compositi  (",
+    "kind": "source"
+  },
+  "iiv": {
+    "display": "iiv.",
+    "long_name": "in initio verbi  (",
+    "kind": "source"
+  },
+  "imp": {
+    "display": "imp.",
+    "long_name": "impératif  (",
+    "kind": "source"
+  },
+  "impers": {
+    "display": "impers.",
+    "long_name": "impersonnel  (",
+    "kind": "source"
+  },
+  "impft": {
+    "display": "impft.",
+    "long_name": "imparfait  (",
+    "kind": "source"
+  },
+  "ind": {
+    "display": "ind.",
+    "long_name": "indéclinable  (",
+    "kind": "source"
+  },
+  "inf": {
+    "display": "inf.",
+    "long_name": "infinitif  (",
+    "kind": "source"
+  },
+  "inj": {
+    "display": "inj.",
+    "long_name": "injonctif  (",
+    "kind": "source"
+  },
+  "instr": {
+    "display": "instr.",
+    "long_name": "instrument  (",
+    "kind": "source"
+  },
+  "intens": {
+    "display": "intens.",
+    "long_name": "intensif  (",
+    "kind": "source"
+  },
+  "interj": {
+    "display": "interj.",
+    "long_name": "interjection  (",
+    "kind": "source"
+  },
+  "interr": {
+    "display": "interr.",
+    "long_name": "interrogatif  (",
+    "kind": "source"
+  },
+  "jn": {
+    "display": "jn.",
+    "long_name": "jaïnisme  (",
+    "kind": "source"
+  },
+  "lat": {
+    "display": "lat.",
+    "long_name": "latin  (",
+    "kind": "source"
+  },
+  "lex": {
+    "display": "lex.",
+    "long_name": "lexicographie  (",
+    "kind": "source"
+  },
+  "lit": {
+    "display": "lit.",
+    "long_name": "littérature  (",
+    "kind": "source"
+  },
+  "litt": {
+    "display": "litt.",
+    "long_name": "littéralement  (",
+    "kind": "source"
+  },
+  "loc": {
+    "display": "loc.",
+    "long_name": "locatif  (",
+    "kind": "grammar"
+  },
+  "m": {
+    "display": "m.",
+    "long_name": "masculin  (",
+    "kind": "source"
+  },
+  "math": {
+    "display": "math.",
+    "long_name": "mathématique  (",
+    "kind": "source"
+  },
+  "med": {
+    "display": "méd.",
+    "long_name": "médecine  (",
+    "kind": "source"
+  },
+  "mod": {
+    "display": "mod.",
+    "long_name": "moderne  (",
+    "kind": "source"
+  },
+  "mo": {
+    "display": "mo.",
+    "long_name": "moyen  (",
+    "kind": "source"
+  },
+  "mus": {
+    "display": "mus.",
+    "long_name": "musique  (",
+    "kind": "source"
+  },
+  "myth": {
+    "display": "myth.",
+    "long_name": "mythologie  (",
+    "kind": "source"
+  },
+  "n": {
+    "display": "n.",
+    "long_name": "neutre  (",
+    "kind": "source"
+  },
+  "neg": {
+    "display": "nég.",
+    "long_name": "négation  (",
+    "kind": "source"
+  },
+  "nom": {
+    "display": "nom.",
+    "long_name": "nominatif  (",
+    "kind": "grammar"
+  },
+  "not": {
+    "display": "not.",
+    "long_name": "notamment  (",
+    "kind": "source"
+  },
+  "nota": {
+    "display": "nota.",
+    "long_name": "notation  (",
+    "kind": "source"
+  },
+  "пр": {
+    "display": "пр.",
+    "long_name": "nom propre  (",
+    "kind": "source"
+  },
+  "num": {
+    "display": "num.",
+    "long_name": "numéral  (",
+    "kind": "source"
+  },
+  "obj": {
+    "display": "obj.",
+    "long_name": "objet  (",
+    "kind": "source"
+  },
+  "obl": {
+    "display": "obl.",
+    "long_name": "oblique  (",
+    "kind": "source"
+  },
+  "opp": {
+    "display": "opp.",
+    "long_name": "opposé à  (",
+    "kind": "source"
+  },
+  "opt": {
+    "display": "opt.",
+    "long_name": "optatif (potentiel)  (",
+    "kind": "grammar"
+  },
+  "ord": {
+    "display": "ord.",
+    "long_name": "ordinal  (",
+    "kind": "source"
+  },
+  "part": {
+    "display": "part.",
+    "long_name": "particule  (",
+    "kind": "source"
+  },
+  "patr": {
+    "display": "patr.",
+    "long_name": "patronyme  (",
+    "kind": "source"
+  },
+  "pej": {
+    "display": "péj.",
+    "long_name": "péjoratif  (",
+    "kind": "source"
+  },
+  "peri": {
+    "display": "péri.",
+    "long_name": "périphrastique  (",
+    "kind": "source"
+  },
+  "pers": {
+    "display": "pers.",
+    "long_name": "personne  (",
+    "kind": "source"
+  },
+  "pf": {
+    "display": "pf.",
+    "long_name": "préfixe  (",
+    "kind": "source"
+  },
+  "pft": {
+    "display": "pft.",
+    "long_name": "parfait  (",
+    "kind": "source"
+  },
+  "phil": {
+    "display": "phil.",
+    "long_name": "philosophie  (",
+    "kind": "source"
+  },
+  "phon": {
+    "display": "phon.",
+    "long_name": "phonétique  (",
+    "kind": "source"
+  },
+  "pl": {
+    "display": "pl.",
+    "long_name": "pluriel  (",
+    "kind": "source"
+  },
+  "poss": {
+    "display": "poss.",
+    "long_name": "possessif  (",
+    "kind": "source"
+  },
+  "pfut": {
+    "display": "pfut.",
+    "long_name": "participe futur  (",
+    "kind": "source"
+  },
+  "pfp": {
+    "display": "pfp.",
+    "long_name": "participe futur passif  (",
+    "kind": "source"
+  },
+  "pp": {
+    "display": "PP.",
+    "long_name": "Padma Purana",
+    "kind": "source"
+  },
+  "ppa": {
+    "display": "ppa.",
+    "long_name": "participe passé actif  (",
+    "kind": "source"
+  },
+  "ppft": {
+    "display": "ppft.",
+    "long_name": "participe parfait  (",
+    "kind": "source"
+  },
+  "ppr": {
+    "display": "ppr.",
+    "long_name": "participe présent  (",
+    "kind": "source"
+  },
+  "pr": {
+    "display": "pr.",
+    "long_name": "présent  (",
+    "kind": "source"
+  },
+  "prep": {
+    "display": "prép.",
+    "long_name": "préposition  (",
+    "kind": "source"
+  },
+  "priv": {
+    "display": "priv.",
+    "long_name": "privatif  (",
+    "kind": "source"
+  },
+  "prk": {
+    "display": "prk.",
+    "long_name": "prakrt  (",
+    "kind": "source"
+  },
+  "pron": {
+    "display": "pron.",
+    "long_name": "pronom  (",
+    "kind": "source"
+  },
+  "ps": {
+    "display": "ps.",
+    "long_name": "passif  (",
+    "kind": "source"
+  },
+  "pt": {
+    "display": "PT.",
+    "long_name": "Pañcatantra",
+    "kind": "source"
+  },
+  "qqc": {
+    "display": "qqc.",
+    "long_name": "quelque chose  (",
+    "kind": "source"
+  },
+  "qqf": {
+    "display": "qqf.",
+    "long_name": "quelquefois  (",
+    "kind": "source"
+  },
+  "qqn": {
+    "display": "qqn.",
+    "long_name": "quelqu'un  (",
+    "kind": "source"
+  },
+  "red": {
+    "display": "red.",
+    "long_name": "reduplication  (",
+    "kind": "source"
+  },
+  "resp": {
+    "display": "resp.",
+    "long_name": "respectivement  (",
+    "kind": "source"
+  },
+  "rhet": {
+    "display": "rhét.",
+    "long_name": "rhétorique  (",
+    "kind": "source"
+  },
+  "ru": {
+    "display": "ru.",
+    "long_name": "russe  (",
+    "kind": "source"
+  },
+  "s": {
+    "display": "S.",
+    "long_name": "substantif  (",
+    "kind": "source"
+  },
+  "sf": {
+    "display": "sf.",
+    "long_name": "suffixe  (",
+    "kind": "source"
+  },
+  "sg": {
+    "display": "sg.",
+    "long_name": "singulier  (",
+    "kind": "source"
+  },
+  "soc": {
+    "display": "SOC.",
+    "long_name": "société  (",
+    "kind": "source"
+  },
+  "subj": {
+    "display": "subj.",
+    "long_name": "subjonctif  (",
+    "kind": "source"
+  },
+  "super": {
+    "display": "super.",
+    "long_name": "superlatif  (",
+    "kind": "source"
+  },
+  "suppl": {
+    "display": "suppl.",
+    "long_name": "supplétif  (",
+    "kind": "source"
+  },
+  "symb": {
+    "display": "symb.",
+    "long_name": "symbolique  (",
+    "kind": "source"
+  },
+  "syn": {
+    "display": "syn.",
+    "long_name": "synonyme  (",
+    "kind": "source"
+  },
+  "tantr": {
+    "display": "tantr.",
+    "long_name": "tantrique  (",
+    "kind": "source"
+  },
+  "th": {
+    "display": "th.",
+    "long_name": "thème  (",
+    "kind": "source"
+  },
+  "v": {
+    "display": "V.",
+    "long_name": "verbe  (",
+    "kind": "source"
+  },
+  "var": {
+    "display": "var.",
+    "long_name": "variante  (",
+    "kind": "source"
+  },
+  "ved": {
+    "display": "véd.",
+    "long_name": "védique  (",
+    "kind": "source"
+  },
+  "vn": {
+    "display": "vn.",
+    "long_name": "verbe nominal  (",
+    "kind": "source"
+  },
+  "voc": {
+    "display": "VOC.",
+    "long_name": "vocatif  (",
+    "kind": "grammar"
+  },
+  "vr": {
+    "display": "vr.",
+    "long_name": "vṛddhi  (",
+    "kind": "source"
+  },
+  "zoo": {
+    "display": "ZOO.",
+    "long_name": "zoologie  (",
+    "kind": "source"
+  },
+  "ab": {
+    "display": "AB.",
+    "long_name": "Aitareya Brahmana",
+    "kind": "source"
+  },
+  "ad": {
+    "display": "AD.",
+    "long_name": "Agamadambara",
+    "kind": "source"
+  },
+  "ag": {
+    "display": "AG.",
+    "long_name": "Astavakra Gītā",
+    "kind": "source"
+  },
+  "ap": {
+    "display": "AP.",
+    "long_name": "Agni Purāņa",
+    "kind": "source"
+  },
+  "arth": {
+    "display": "Arth.",
+    "long_name": "Arthaśāstra",
+    "kind": "source"
+  },
+  "as": {
+    "display": "AS.",
+    "long_name": "Abhijñāna Sakuntalā",
+    "kind": "source"
+  },
+  "bhg": {
+    "display": "BhG.",
+    "long_name": "Bhagavad Gītā",
+    "kind": "source"
+  },
+  "bhp": {
+    "display": "BhP.",
+    "long_name": "Bhagavata Purana",
+    "kind": "source"
+  },
+  "bp": {
+    "display": "BP.",
+    "long_name": "Brahma Purana",
+    "kind": "source"
+  },
+  "brp": {
+    "display": "BrP.",
+    "long_name": "Brahmanda Purāņa",
+    "kind": "source"
+  },
+  "brs": {
+    "display": "BrS.",
+    "long_name": "Brahma Sūtra",
+    "kind": "source"
+  },
+  "bs": {
+    "display": "BS.",
+    "long_name": "Brhat Samhitā",
+    "kind": "source"
+  },
+  "bu": {
+    "display": "BU.",
+    "long_name": "Brhadaranyaka Upanişad",
+    "kind": "source"
+  },
+  "bvp": {
+    "display": "BvP.",
+    "long_name": "Bhavisya Purana",
+    "kind": "source"
+  },
+  "chu": {
+    "display": "ChU.",
+    "long_name": "Chandogya Upanisad",
+    "kind": "source"
+  },
+  "dkc": {
+    "display": "DKC.",
+    "long_name": "Daśakumāracarita",
+    "kind": "source"
+  },
+  "gg": {
+    "display": "GG.",
+    "long_name": "Gītagovinda",
+    "kind": "source"
+  },
+  "gp": {
+    "display": "GP.",
+    "long_name": "Garuda Purana",
+    "kind": "source"
+  },
+  "gs": {
+    "display": "GS.",
+    "long_name": "Gorakşa Sataka",
+    "kind": "source"
+  },
+  "hc": {
+    "display": "HC.",
+    "long_name": "Harşacaritacintāmaņi",
+    "kind": "source"
+  },
+  "hit": {
+    "display": "Hit.",
+    "long_name": "Hitopadeśa",
+    "kind": "source"
+  },
+  "hp": {
+    "display": "HP.",
+    "long_name": "Hatha Pradīpikā",
+    "kind": "source"
+  },
+  "hv": {
+    "display": "HV.",
+    "long_name": "Harivamśa",
+    "kind": "source"
+  },
+  "iu": {
+    "display": "IU.",
+    "long_name": "Iśā Upaniṣad",
+    "kind": "source"
+  },
+  "jb": {
+    "display": "JB.",
+    "long_name": "Jaiminīya Brahmana",
+    "kind": "source"
+  },
+  "k": {
+    "display": "K.",
+    "long_name": "Kādambarī",
+    "kind": "source"
+  },
+  "ka": {
+    "display": "KA.",
+    "long_name": "Kautiliya Arthaśāstra",
+    "kind": "source"
+  },
+  "kb": {
+    "display": "KB.",
+    "long_name": "Kauşītaki Brāhmaņa",
+    "kind": "source"
+  },
+  "kd": {
+    "display": "KD.",
+    "long_name": "Kāvyadarśā",
+    "kind": "source"
+  },
+  "keu": {
+    "display": "KeU.",
+    "long_name": "Kena Upanisad",
+    "kind": "source"
+  },
+  "kir": {
+    "display": "Kir.",
+    "long_name": "Kirātārjunīya",
+    "kind": "source"
+  },
+  "kkv": {
+    "display": "KKV.",
+    "long_name": "Kāamakalāvilāsa",
+    "kind": "source"
+  },
+  "km": {
+    "display": "KM.",
+    "long_name": "Kāvyamīmāmsā",
+    "kind": "source"
+  },
+  "ks": {
+    "display": "KS.",
+    "long_name": "Kathaka Samhitā",
+    "kind": "source"
+  },
+  "kss": {
+    "display": "KSS.",
+    "long_name": "Kathāsaritsāgara",
+    "kind": "source"
+  },
+  "ku": {
+    "display": "KU.",
+    "long_name": "Katha Upanişad",
+    "kind": "source"
+  },
+  "kus": {
+    "display": "KuS.",
+    "long_name": "Kumārasambhava",
+    "kind": "source"
+  },
+  "mah": {
+    "display": "Mah.",
+    "long_name": "Mahābhārata",
+    "kind": "source"
+  },
+  "mai": {
+    "display": "MAI.",
+    "long_name": "Mālavikāgnimitra",
+    "kind": "source"
+  },
+  "mb": {
+    "display": "MB.",
+    "long_name": "Mahābhāşya",
+    "kind": "source"
+  },
+  "md": {
+    "display": "MD.",
+    "long_name": "Meghadūta",
+    "kind": "source"
+  },
+  "mi": {
+    "display": "MI.",
+    "long_name": "Mīmaämsä Sūtra",
+    "kind": "source"
+  },
+  "mk": {
+    "display": "MK.",
+    "long_name": "Mrechakatika",
+    "kind": "source"
+  },
+  "mkp": {
+    "display": "MkP.",
+    "long_name": "Markandeya Purāņa",
+    "kind": "source"
+  },
+  "mp": {
+    "display": "MP.",
+    "long_name": "Matsya Purana",
+    "kind": "source"
+  },
+  "ms": {
+    "display": "MS.",
+    "long_name": "Manu Smrti",
+    "kind": "source"
+  },
+  "mu": {
+    "display": "MU.",
+    "long_name": "Mandūkyopanişad",
+    "kind": "source"
+  },
+  "muk": {
+    "display": "Muk.",
+    "long_name": "Muktika Upanişad",
+    "kind": "source"
+  },
+  "nn": {
+    "display": "NN.",
+    "long_name": "Navyanyāya",
+    "kind": "source"
+  },
+  "np": {
+    "display": "NP.",
+    "long_name": "Nārada Purāņa",
+    "kind": "source"
+  },
+  "ns": {
+    "display": "NS.",
+    "long_name": "Nyaya Sūtra",
+    "kind": "source"
+  },
+  "ragh": {
+    "display": "Ragh.",
+    "long_name": "Raghuvamśa",
+    "kind": "source"
+  },
+  "rat": {
+    "display": "Rat.",
+    "long_name": "Ratnāvalī",
+    "kind": "source"
+  },
+  "ram": {
+    "display": "Ram.",
+    "long_name": "Ramayana",
+    "kind": "source"
+  },
+  "rv": {
+    "display": "RV.",
+    "long_name": "Rgveda Samhitā",
+    "kind": "source"
+  },
+  "sb": {
+    "display": "SB.",
+    "long_name": "Satapatha Brahmaņa",
+    "kind": "source"
+  },
+  "sk": {
+    "display": "SK.",
+    "long_name": "Siddhanta Kaumudi",
+    "kind": "source"
+  },
+  "spv": {
+    "display": "SPV.",
+    "long_name": "Śiśupālavadha",
+    "kind": "source"
+  },
+  "srbh": {
+    "display": "SRBh.",
+    "long_name": "Subhāṣita Ratna Bhandāgāra",
+    "kind": "source"
+  },
+  "srk": {
+    "display": "SRK.",
+    "long_name": "Subhāṣita Ratna Koşa",
+    "kind": "source"
+  },
+  "skp": {
+    "display": "SkP.",
+    "long_name": "Skanda Purana",
+    "kind": "source"
+  },
+  "siv": {
+    "display": "SIV.",
+    "long_name": "Ślokavärttika",
+    "kind": "source"
+  },
+  "sp": {
+    "display": "SP.",
+    "long_name": "Śiva Purāņa",
+    "kind": "source"
+  },
+  "ss": {
+    "display": "SS.",
+    "long_name": "Śiva Sūtra",
+    "kind": "source"
+  },
+  "su": {
+    "display": "SU.",
+    "long_name": "Śvetāśvataropanişad",
+    "kind": "source"
+  },
+  "sv": {
+    "display": "SV.",
+    "long_name": "Sama Veda",
+    "kind": "source"
+  },
+  "ta": {
+    "display": "TA.",
+    "long_name": "Taittirīya Aranyaka",
+    "kind": "source"
+  },
+  "tks": {
+    "display": "TkS.",
+    "long_name": "Tarkasamgraha",
+    "kind": "source"
+  },
+  "ts": {
+    "display": "TS.",
+    "long_name": "Taittirīya Samhitä",
+    "kind": "source"
+  },
+  "tu": {
+    "display": "TU.",
+    "long_name": "Taittirīya Upanişad",
+    "kind": "source"
+  },
+  "vad": {
+    "display": "VAD.",
+    "long_name": "Väsavadatta",
+    "kind": "source"
+  },
+  "vak": {
+    "display": "VAK.",
+    "long_name": "Vākyapadīya",
+    "kind": "source"
+  },
+  "vap": {
+    "display": "VAP.",
+    "long_name": "Vārāha Purana",
+    "kind": "source"
+  },
+  "vc": {
+    "display": "VC.",
+    "long_name": "Vikramacarita",
+    "kind": "source"
+  },
+  "ve": {
+    "display": "Ve.",
+    "long_name": "Venīsamhāra",
+    "kind": "source"
+  },
+  "vep": {
+    "display": "VeP.",
+    "long_name": "Vetālapañcavimśatikā",
+    "kind": "source"
+  },
+  "vj": {
+    "display": "VJ.",
+    "long_name": "Vessantara Jataka",
+    "kind": "source"
+  },
+  "vm": {
+    "display": "VM.",
+    "long_name": "Vivekamārtanda",
+    "kind": "source"
+  },
+  "vp": {
+    "display": "VP.",
+    "long_name": "Visnu Purana",
+    "kind": "source"
+  },
+  "vu": {
+    "display": "VU.",
+    "long_name": "Vikramorvaśī",
+    "kind": "source"
+  },
+  "yjsm": {
+    "display": "YjSm.",
+    "long_name": "Yājñavalkyasmrti",
+    "kind": "source"
+  },
+  "ys": {
+    "display": "YS.",
+    "long_name": "Yogasūtra",
+    "kind": "source"
+  },
+  "yv": {
+    "display": "YV.",
+    "long_name": "Yoga Vasistha",
+    "kind": "source"
+  }
+}

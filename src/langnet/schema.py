@@ -41,6 +41,13 @@ class DictionaryBlock:
     entry: str  # The dictionary text ("lupus, i, m. kindred with...")
     entryid: str  # Hierarchical ID ("00", "00:00", etc.)
     citations: dict[str, str] = field(default_factory=dict)  # CTS URN -> citation text
+    original_citations: dict[str, str] = field(
+        default_factory=dict
+    )  # Raw citation ids/text prior to normalization
+    citation_details: dict[str, dict[str, str]] = field(
+        default_factory=dict
+    )  # Metadata (author/work/display)
+    metadata: dict[str, Any] = field(default_factory=dict)  # POS/foster and other enrichment data
 
 
 @dataclass

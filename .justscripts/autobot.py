@@ -35,6 +35,7 @@ try:
 except ImportError:
     fuzz = None  # type: ignore[assignment]
 
+
 @click.group()
 def autobot():
     """Automation tool for langnet-cli development tasks."""

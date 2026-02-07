@@ -1,10 +1,9 @@
 import inspect
 import sys
 from enum import Enum
-from typing import Type
 
 
-def get_enum_or_dict(name: str) -> Type[Enum]:
+def get_enum_or_dict(name: str) -> type[Enum]:
     enum_class = [x[1] for x in names if x[0] == name]
     return enum_class[0]
 
@@ -229,7 +228,7 @@ class Source(Enum):
     Z = "Sent by user"  # no dictionary reference
 
 
-prop_classes: list[Type[Enum]] = [Age, Area, Geography, Frequency, Source]
+prop_classes: list[type[Enum]] = [Age, Area, Geography, Frequency, Source]
 
 
 class NounType(Enum):

@@ -51,6 +51,21 @@
 - Citation loss → retain original refs in metadata while adding normalized CTS where possible.
 - Transliteration corruption → restrict auto-clean to confidently detected SLP1 segments; log when skipped.
 
+## Moving Forward / Handoff
+- Finish CTS normalization for Diogenes:
+  - Use local CTS URN mapping database (`src/langnet/citation/cts_urn.py` + index) to convert Perseus refs; keep `original_citations` alongside normalized.
+  - Attach normalized citations to both dictionary blocks and morphology chunks; expose in unified entries.
+- Canonical consistency:
+  - Latin/Greek: apply betacode→Unicode (Greek) and macron-preserving canonical forms; surface `canonical_form` at adapter level.
+  - Sanskrit: ensure `canonical_form` from sktsearch is propagated through aggregated entries (dictionary + morphology).
+- Foster exposure in dictionaries:
+  - Whitaker/CLTK: tag dictionary senses/lines with POS and foster_codes where derivable (from codeline or features).
+  - Diogenes dictionary blocks: add POS/foster where recoverable from morphology tags in the same chunk.
+- Universal schema/aggregation:
+  - Group entries by canonical_form + lemma; ensure foster_codes are available on morphology and as metadata for dictionary-only entries.
+  - Document expected output shape for `/api/q` (pedagogy-first ordering, foster + canonical + citations).
+- Validation docs:
+  - Capture “good” examples (lat lupus, grc logos, san agni/yogena) with foster codes, canonical forms, and CTS citations for `docs/PEDAGOGICAL_PHILOSOPHY.md`.
 ## Draft Mapping Rules (@architect)
 - Case/number/gender
   - Latin (diogenes/whitaker): nom/voc/acc/gen/dat/abl/loc → NAMING/CALLING/RECEIVING/POSSESSING/TO_FOR/BY_WITH_FROM_IN/IN_WHERE; sg/pl/du → SINGLE/GROUP/PAIR; m/f/n → MALE/FEMALE/NEUTER.

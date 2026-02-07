@@ -5,22 +5,24 @@ This module provides adapters that convert raw backend outputs
 to standardized DictionaryEntry objects with proper citations.
 """
 
+import betacode.conv
 import cattrs
 import structlog
 
-from langnet.schema import (
-    Citation,
-    DictionaryBlock,
-    DictionaryDefinition,
-    DictionaryEntry,
-    MorphologyInfo,
-)
+from langnet.citation.cts_urn import CTSUrnMapper
 from langnet.foster.latin import (
     FOSTER_LATIN_CASES,
     FOSTER_LATIN_GENDERS,
     FOSTER_LATIN_MISCELLANEOUS,
     FOSTER_LATIN_NUMBERS,
     FOSTER_LATIN_TENSES,
+)
+from langnet.schema import (
+    Citation,
+    DictionaryBlock,
+    DictionaryDefinition,
+    DictionaryEntry,
+    MorphologyInfo,
 )
 
 logger = structlog.get_logger(__name__)
@@ -118,12 +120,115 @@ class BaseBackendAdapter:
 class DiogenesBackendAdapter(BaseBackendAdapter):
     """Adapter for Diogenes web scraper."""
 
+    def __init__(self):
+        self.cts_mapper = CTSUrnMapper()
+
+    def _normalize_citation_id(self, citation_id: str, citation_text: str | None) -> str | None:
+        """Normalize citation ids to CTS URNs where possible."""
+        if not citation_id:
+            return None
+        if citation_id.startswith("urn:cts:"):
+            return citation_id
+
+        urn = self.cts_mapper.map_text_to_urn(citation_id)
+        if not urn and citation_text:
+            urn = self.cts_mapper.map_text_to_urn(citation_text)
+        return urn
+
+    def _normalize_block_citations(
+        self, citations: dict[str, str]
+    ) -> tuple[dict[str, str], dict[str, str]]:
+        """Normalize citation ids and preserve originals for audit."""
+        if not citations:
+            return {}, {}
+
+        normalized: dict[str, str] = {}
+        originals: dict[str, str] = {}
+
+        for citation_id, citation_text in citations.items():
+            originals[citation_id] = citation_text
+            normalized_id = self._normalize_citation_id(citation_id, citation_text) or citation_id
+            normalized[normalized_id] = citation_text
+
+        return normalized, originals
+
+    def _build_citation_details(
+        self, citations: dict[str, str], language: str | None = None
+    ) -> dict[str, dict[str, str]]:
+        """Attach author/work metadata to normalized citations when possible."""
+        details: dict[str, dict[str, str]] = {}
+        for citation_id, citation_text in citations.items():
+            info: dict[str, str] = {}
+            is_urn = citation_id.startswith("urn:cts:")
+            kind = "cts" if is_urn else "unknown"
+            if citation_text:
+                info["text"] = citation_text
+
+            urn_meta = self.cts_mapper.get_urn_metadata(citation_id) if is_urn else None
+            abbrev_meta = None
+            if not is_urn:
+                abbrev_meta = self.cts_mapper.get_abbreviation_metadata(
+                    citation_id, citation_text, language=language
+                )
+
+            display = None
+            if urn_meta:
+                info.update(urn_meta)
+                display_bits = [urn_meta.get("author"), urn_meta.get("work"), citation_text]
+                display = " — ".join(bit for bit in display_bits if bit)
+            elif abbrev_meta:
+                info.update(abbrev_meta)
+                kind = abbrev_meta.get("kind", "abbreviation")
+                display = abbrev_meta.get("display") or citation_text
+
+            info["kind"] = kind
+            if not display:
+                display = citation_text or citation_id
+            if display:
+                info["display"] = display
+            if info:
+                details[citation_id] = info
+        return details
+
     def _collect_citations(self, blocks: list[DictionaryBlock]) -> list[dict]:
         citations = []
         for block in blocks:
             if block.citations:
                 citations.append({"entryid": block.entryid, "citations": block.citations})
         return citations
+
+    def _collect_citation_details(self, blocks: list[DictionaryBlock]) -> list[dict]:
+        details = []
+        for block in blocks:
+            if block.citation_details:
+                details.append({"entryid": block.entryid, "citations": block.citation_details})
+        return details
+
+    def _collect_original_citations(self, blocks: list[DictionaryBlock]) -> list[dict]:
+        originals = []
+        for block in blocks:
+            if block.original_citations:
+                originals.append({"entryid": block.entryid, "citations": block.original_citations})
+        return originals
+
+    def _is_greek_char(self, ch: str) -> bool:
+        codepoint = ord(ch)
+        return (0x0370 <= codepoint <= 0x03FF) or (0x1F00 <= codepoint <= 0x1FFF)
+
+    def _normalize_canonical_form(
+        self, lemma: str | None, language: str, fallback: str
+    ) -> str | None:
+        """Normalize canonical form, converting betacode to Unicode Greek when needed."""
+        target = lemma or fallback
+        if not target:
+            return target
+
+        if language == "grc" and not any(self._is_greek_char(ch) for ch in target):
+            try:
+                target = betacode.conv.beta_to_uni(target)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("betacode_to_unicode_failed", lemma=target, error=str(exc))
+        return target
 
     def _has_valid_data(self, chunks: list) -> bool:
         """Check if any chunks contain valid data."""
@@ -137,21 +242,51 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                     return True
         return False
 
-    def _extract_dictionary_blocks(self, chunks: list) -> list[DictionaryBlock]:
+    def _extract_dictionary_blocks(
+        self, chunks: list, language: str | None = None
+    ) -> list[DictionaryBlock]:
         """Extract dictionary blocks from chunks."""
         blocks = []
         for chunk in chunks:
             if "definitions" in chunk:
                 definitions_blocks = chunk.get("definitions", {}).get("blocks", [])
                 for block in definitions_blocks:
+                    entry_text = block.get("entry", "")
+                    pos = self._extract_pos_from_entry(entry_text)
+                    citations, original_citations = self._normalize_block_citations(
+                        block.get("citations", {})
+                    )
+                    citation_details = self._build_citation_details(citations, language=language)
+                    metadata = {}
+                    if pos and pos != "unknown":
+                        metadata["pos"] = pos
                     blocks.append(
                         DictionaryBlock(
-                            entry=block.get("entry", ""),
+                            entry=entry_text,
                             entryid=block.get("entryid", ""),
-                            citations=block.get("citations", {}),
+                            citations=citations,
+                            original_citations=original_citations,
+                            citation_details=citation_details,
+                            metadata=metadata,
                         )
                     )
         return blocks
+
+    def _enrich_block_metadata(
+        self, dictionary_blocks: list[DictionaryBlock], morphology: MorphologyInfo | None
+    ) -> None:
+        """Propagate morphology hints (POS/foster) into dictionary blocks."""
+        foster_codes = morphology.foster_codes if morphology else None
+        morph_pos = morphology.pos if morphology else None
+
+        for block in dictionary_blocks:
+            metadata = dict(block.metadata) if block.metadata else {}
+            if morph_pos and (not metadata.get("pos") or metadata.get("pos") == "unknown"):
+                metadata["pos"] = morph_pos
+            if foster_codes and "foster_codes" not in metadata:
+                metadata["foster_codes"] = foster_codes
+            if metadata:
+                block.metadata = metadata
 
     def _extract_morphology(self, chunks: list, word: str) -> MorphologyInfo | None:
         """Extract morphology from chunks if present."""
@@ -169,7 +304,9 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                         lemma=lemma,
                         pos=pos,
                         features={"tags": tags},
-                        foster_codes=foster_codes if isinstance(foster_codes, (list, dict)) else None,
+                        foster_codes=foster_codes
+                        if isinstance(foster_codes, (list, dict))
+                        else None,
                     )
         return None
 
@@ -190,11 +327,37 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             return []
 
         # Extract dictionary blocks and morphology
-        dictionary_blocks = self._extract_dictionary_blocks(chunks)
+        dictionary_blocks = self._extract_dictionary_blocks(chunks, language=language)
         morphology = self._extract_morphology(chunks, word)
-        canonical_form = morphology.lemma if morphology else None
+        self._enrich_block_metadata(dictionary_blocks, morphology)
+        canonical_form = self._normalize_canonical_form(
+            morphology.lemma if morphology else None, language, word
+        )
+        if morphology and canonical_form:
+            morphology.lemma = canonical_form
         citations = self._collect_citations(dictionary_blocks)
-        original_citations = data.get("citations") if isinstance(data.get("citations"), dict) else None
+        citation_details = self._collect_citation_details(dictionary_blocks)
+        original_citations = self._collect_original_citations(dictionary_blocks)
+        raw_original_citations = (
+            data.get("citations") if isinstance(data.get("citations"), dict) else None
+        )
+
+        metadata = {
+            "chunk_types": data.get("chunk_types", []),
+            "dg_parsed": data.get("dg_parsed", False),
+        }
+        if canonical_form:
+            metadata["canonical_form"] = canonical_form
+        if morphology and morphology.foster_codes:
+            metadata["foster_codes"] = morphology.foster_codes
+        if citations:
+            metadata["citations"] = citations
+        if citation_details:
+            metadata["citation_details"] = citation_details
+        if original_citations:
+            metadata["original_citations"] = original_citations
+        if raw_original_citations and not original_citations:
+            metadata["original_citations_raw"] = raw_original_citations
 
         # Create single unified entry
         entry = DictionaryEntry(
@@ -204,13 +367,7 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             morphology=morphology,
             source="diogenes",
             dictionary_blocks=dictionary_blocks,
-            metadata={
-                "chunk_types": data.get("chunk_types", []),
-                "dg_parsed": data.get("dg_parsed", False),
-                **({"canonical_form": canonical_form} if canonical_form else {}),
-                **({"citations": citations} if citations else {}),
-                **({"original_citations": original_citations} if original_citations else {}),
-            },
+            metadata=metadata,
         )
 
         return [entry]
@@ -306,6 +463,7 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
             # Extract primary morphology (first term) or None if no terms
             terms = word_data.get("terms", [])
             morphology = None
+            foster_codes: dict[str, str] | None = None
             if terms:
                 first_term = terms[0]
                 declension = first_term.get("declension")
@@ -346,7 +504,7 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
                     "lemma": first_term.get("term_analysis", {}).get("stem", word),
                     "pos": pos,
                 }
-                
+
                 # Build features dict with only non-None values
                 features_kwargs = {}
                 case_val = first_term.get("case")
@@ -366,6 +524,9 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
                 foster_codes = self._build_foster_codes(first_term)
                 if foster_codes:
                     morphology_kwargs["foster_codes"] = foster_codes
+                    # Also expose on definitions metadata for dictionary-only views
+                    for sense in definitions:
+                        sense.metadata = {**sense.metadata, "foster_codes": foster_codes}
 
                 # Only add optional fields if they're not None
                 if declension_str:
@@ -392,17 +553,21 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
                 morphology = MorphologyInfo(**morphology_kwargs)
 
             # Create ONE entry per word_data with all terms in metadata
+            entry_metadata = {
+                "word_data": word_data,  # Include all original data
+                "terms": terms,  # Keep all terms accessible
+                **({"canonical_form": morphology.lemma} if morphology else {}),
+            }
+            if foster_codes:
+                entry_metadata["foster_codes"] = foster_codes
+
             entry = DictionaryEntry(
                 word=word,
                 language=language,
                 definitions=definitions,  # Note: definitions variable contains DictionaryDefinition objects
                 morphology=morphology,
                 source="whitakers",
-                metadata={
-                    "word_data": word_data,  # Include all original data
-                    "terms": terms,  # Keep all terms accessible
-                    **({"canonical_form": morphology.lemma} if morphology else {}),
-                },
+                metadata=entry_metadata,
             )
             entries.append(entry)
 
@@ -411,6 +576,41 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
 
 class CLTKBackendAdapter(BaseBackendAdapter):
     """Adapter for Classical Language Toolkit."""
+
+    @staticmethod
+    def _infer_pos_gender_from_line(line: str) -> tuple[str, str | None]:
+        """Lightweight heuristics to tag POS/gender from Lewis & Short line text."""
+        lower = line.lower()
+        pos = "unknown"
+        gender: str | None = None
+
+        # Gender hints
+        if ", m" in lower or " m " in lower or " masc" in lower:
+            gender = "masculine"
+        elif ", f" in lower or " f " in lower or " fem" in lower:
+            gender = "feminine"
+        elif ", n" in lower or " n " in lower or " neut" in lower:
+            gender = "neuter"
+        elif " common gender" in lower:
+            gender = "common"
+
+        # POS hints
+        if " adj" in lower or "adj." in lower:
+            pos = "adjective"
+        elif " verb" in lower or " vb" in lower:
+            pos = "verb"
+        elif " adv" in lower or "adv." in lower:
+            pos = "adverb"
+        elif " prep" in lower or "prep." in lower:
+            pos = "preposition"
+        elif " conj" in lower or "conj." in lower:
+            pos = "conjunction"
+        elif " pron" in lower or "pron." in lower:
+            pos = "pronoun"
+        elif gender:
+            pos = "noun"
+
+        return pos, gender
 
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries = []
@@ -437,11 +637,13 @@ class CLTKBackendAdapter(BaseBackendAdapter):
         for line in lewis_lines:
             if ":" in line:
                 definition = line.split(":", 1)[1].strip()
+                pos, gender = self._infer_pos_gender_from_line(line)
                 sense = DictionaryDefinition(
-                    pos="unknown",  # CLTK doesn't parse POS reliably
+                    pos=pos,
                     definition=definition,
                     citations=[],  # Could extract references from definitions
                     examples=[],
+                    gender=gender if gender else None,
                     metadata={"lewis_line": line},
                 )
                 definitions.append(sense)
@@ -564,8 +766,16 @@ class HeritageBackendAdapter(BaseBackendAdapter):
             metadata={
                 "all_analyses": all_analyses,
                 "combined": data.get("combined", {}),
-                **({"canonical": data.get("canonical")} if data.get("canonical") is not None else {}),
-                **({"lemmatize": data.get("lemmatize")} if data.get("lemmatize") is not None else {}),
+                **(
+                    {"canonical": data.get("canonical")}
+                    if data.get("canonical") is not None
+                    else {}
+                ),
+                **(
+                    {"lemmatize": data.get("lemmatize")}
+                    if data.get("lemmatize") is not None
+                    else {}
+                ),
                 **(
                     {"canonical_form": data.get("canonical", {}).get("canonical_sanskrit")}
                     if isinstance(data.get("canonical"), dict)
@@ -614,11 +824,7 @@ class HeritageBackendAdapter(BaseBackendAdapter):
                     metadata={
                         **dictionary_data,
                         **(
-                            {
-                                "canonical_form": data.get("canonical", {}).get(
-                                    "canonical_sanskrit"
-                                )
-                            }
+                            {"canonical_form": data.get("canonical", {}).get("canonical_sanskrit")}
                             if isinstance(data.get("canonical"), dict)
                             else {}
                         ),
@@ -687,6 +893,11 @@ class HeritageBackendAdapter(BaseBackendAdapter):
 class CDSLBackendAdapter(BaseBackendAdapter):
     """Adapter for Sanskrit Cologne Digital Lexicon (MW/Apte dictionaries)."""
 
+    def __init__(self):
+        from langnet.citation.cts_urn import CTSUrnMapper  # lazy import
+
+        self.cts_mapper = CTSUrnMapper()
+
     def _convert_citation_collection_to_schema(self, citation_collection) -> list[Citation]:
         """Convert CitationCollection to schema.Citation objects."""
         if not citation_collection:
@@ -699,15 +910,15 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                 citation_kwargs = {}
                 title = citation.abbreviation or primary_ref.work or primary_ref.text
                 if title:
-                    citation_kwargs['title'] = title
+                    citation_kwargs["title"] = title
                 if primary_ref.url:
-                    citation_kwargs['url'] = primary_ref.url
+                    citation_kwargs["url"] = primary_ref.url
                 if citation.author:
-                    citation_kwargs['author'] = citation.author
+                    citation_kwargs["author"] = citation.author
                 if primary_ref.page:
-                    citation_kwargs['page'] = primary_ref.page
+                    citation_kwargs["page"] = primary_ref.page
                 if primary_ref.text:
-                    citation_kwargs['excerpt'] = primary_ref.text
+                    citation_kwargs["excerpt"] = primary_ref.text
                 citations.append(Citation(**citation_kwargs))
         return citations
 
@@ -757,7 +968,7 @@ class CDSLBackendAdapter(BaseBackendAdapter):
 
             for entry_data in dict_data:
                 if isinstance(entry_data, dict):
-                    citations = self._extract_citations_from_references(
+                    citations, citation_details = self._extract_citations_from_references(
                         entry_data.get("references", [])
                     )
 
@@ -780,6 +991,8 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                         gender=gender,
                         etymology=etymology_text,
                     )
+                    if citation_details:
+                        sense.metadata = {**sense.metadata, "citation_details": citation_details}
                     definitions.append(sense)
                     original_entries.append(
                         {
@@ -789,13 +1002,19 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                         }
                     )
 
-
             if definitions:
                 metadata = {
                     "dictionary": dict_name,
                     "original_entry_count": len(original_entries),
                     "original_entries": original_entries,
                 }
+                combined_details = []
+                for sense in definitions:
+                    details = sense.metadata.get("citation_details", [])
+                    if details:
+                        combined_details.extend(details)
+                if combined_details:
+                    metadata["citation_details"] = combined_details
                 if transliteration:
                     metadata["transliteration"] = transliteration
                     canonical_form = transliteration.get("iast")
@@ -826,7 +1045,7 @@ class CDSLBackendAdapter(BaseBackendAdapter):
             for entry_data in dict_data:
                 if isinstance(entry_data, dict):
                     definitions = []
-                    citations = self._extract_citations_from_references(
+                    citations, citation_details = self._extract_citations_from_references(
                         entry_data.get("references", [])
                     )
 
@@ -849,10 +1068,19 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                         gender=gender,
                         etymology=etymology_text,
                     )
+                    if citation_details:
+                        sense.metadata = {**sense.metadata, "citation_details": citation_details}
                     definitions.append(sense)
 
                     if definitions:
                         metadata = {"dictionary": dict_name}
+                        combined_details = []
+                        for sense in definitions:
+                            details = sense.metadata.get("citation_details", [])
+                            if details:
+                                combined_details.extend(details)
+                        if combined_details:
+                            metadata["citation_details"] = combined_details
                         if transliteration:
                             metadata["transliteration"] = transliteration
                             canonical_form = transliteration.get("iast")
@@ -875,21 +1103,30 @@ class CDSLBackendAdapter(BaseBackendAdapter):
 
         return entries
 
-    def _extract_citations_from_references(self, references: list) -> list:
-        """Extract citations from reference list."""
-        citations = []
+    def _extract_citations_from_references(
+        self, references: list
+    ) -> tuple[list[Citation], list[dict]]:
+        """Extract citations and details from reference list."""
+        citations: list[Citation] = []
+        details: list[dict] = []
 
         for ref in references:
             if isinstance(ref, dict):
-                citations.extend(self._process_dict_reference(ref))
+                new_citations, new_details = self._process_dict_reference(ref)
+                citations.extend(new_citations)
+                details.extend(new_details)
             elif isinstance(ref, str):
                 citations.append(Citation(title=str(ref), excerpt=f"Reference: {ref}"))
+                meta = self.cts_mapper.get_abbreviation_metadata(ref, ref, language="san")
+                if meta:
+                    details.append({ref: meta})
 
-        return citations
+        return citations, details
 
-    def _process_dict_reference(self, ref: dict) -> list:
-        """Process a dictionary reference and return citations."""
-        citations = []
+    def _process_dict_reference(self, ref: dict) -> tuple[list[Citation], list[dict]]:
+        """Process a dictionary reference and return citations and details."""
+        citations: list[Citation] = []
+        details: list[dict] = []
         source = ref.get("source")
         page_ref = ref.get("page_ref")
 
@@ -905,6 +1142,11 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                         if text:
                             citation_kwargs["excerpt"] = text
                         citations.append(Citation(**citation_kwargs))
+                        meta = self.cts_mapper.get_abbreviation_metadata(
+                            citation_kwargs.get("title"), text, language="san"
+                        )
+                        if meta and citation_kwargs.get("title"):
+                            details.append({citation_kwargs["title"]: meta})
         else:
             # Handle simple references
             citation_kwargs = {"title": source}
@@ -914,8 +1156,11 @@ class CDSLBackendAdapter(BaseBackendAdapter):
             if ref_type:
                 citation_kwargs["excerpt"] = ref_type
             citations.append(Citation(**citation_kwargs))
+            meta = self.cts_mapper.get_abbreviation_metadata(source, ref_type, language="san")
+            if meta and source:
+                details.append({source: meta})
 
-        return citations
+        return citations, details
 
     def _create_fallback_entry(self, data: dict, word: str, language: str) -> DictionaryEntry:
         """Create a fallback entry when no structured data is available."""

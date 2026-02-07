@@ -17,14 +17,57 @@ The mapper uses the DuckDB CTS URN indexer database for authoritative mappings.
 
 import logging
 import os
+import unicodedata
 
 import duckdb
+
+from langnet.heritage.abbr import HERITAGE_ABBR_MAP
 
 logger = logging.getLogger(__name__)
 
 MIN_AUTHOR_NAME_LENGTH = 3
 MIN_WORK_TITLE_LENGTH = 4
 MIN_ABBREV_LENGTH = 2
+
+# Allowlisted non-CTS abbreviations for dictionary citations, scoped by language.
+# Keys inside each map are normalized (lowercase, alphanumeric) forms.
+NON_CTS_ABBREVIATIONS: dict[str, dict[str, dict[str, str]]] = {
+    "grc": {
+        "lsj": {"display": "LSJ", "long_name": "Liddell-Scott-Jones Greek-English Lexicon"},
+        "dge": {"display": "DGE", "long_name": "Diccionario Griego-Espanol"},
+        "lfgre": {"display": "LfgrE", "long_name": "Lexikon des fruhgriechischen Epos"},
+    },
+    "lat": {
+        "old": {"display": "OLD", "long_name": "Oxford Latin Dictionary"},
+        "ls": {"display": "Lewis & Short", "long_name": "Lewis and Short Latin Dictionary"},
+        "lewisandshort": {
+            "display": "Lewis & Short",
+            "long_name": "Lewis and Short Latin Dictionary",
+        },
+        "l": {"display": "Livy", "long_name": "Titus Livius"},
+    },
+    "san": {
+        "mw": {"display": "MW", "long_name": "Monier-Williams Sanskrit-English Dictionary"},
+        "monierwilliams": {
+            "display": "MW",
+            "long_name": "Monier-Williams Sanskrit-English Dictionary",
+        },
+        "apte": {"display": "Apte", "long_name": "Apte Practical Sanskrit-English Dictionary"},
+        "boehtlingkroth": {
+            "display": "Boehtlingk-Roth",
+            "long_name": "Sanskrit-Worterbuch (Boehtlingk & Roth)",
+        },
+        "susr": {"display": "Susr.", "long_name": "Susruta Samhita"},
+        "un": {"display": "Un.", "long_name": "Unadisastra"},
+        "apsr": {"display": "ApSr.", "long_name": "Apastamba Srauta Sutra"},
+        "katantra": {"display": "Katantra", "long_name": "Katantra grammar"},
+        "garhapatya": {"display": "Gārhapatya", "long_name": "Gārhapatya sacred fire"},
+        "ahavaniya": {"display": "Āhavanīya", "long_name": "Āhavanīya sacred fire"},
+        "dakshina": {"display": "Dakṣiṇa", "long_name": "Dakṣiṇa sacred fire"},
+        "suryas": {"display": "Sūryas.", "long_name": "Sūryas collection"},
+        "sun": {"display": "Sūryas.", "long_name": "Sūryas collection"},
+    },
+}
 
 
 class CTSUrnMapper:
@@ -149,6 +192,15 @@ class CTSUrnMapper:
         # return abbreviation.lower().replace(".", "").replace(" ", "").strip()
         return abbreviation
 
+    @staticmethod
+    def _normalize_abbrev_key(text: str | None) -> str:
+        """Normalize arbitrary citation text into an abbreviation key."""
+        if not text:
+            return ""
+        decomposed = unicodedata.normalize("NFD", text)
+        stripped = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+        return "".join(ch for ch in stripped.lower() if ch.isalnum())
+
     def map_citation_to_urn(self, citation) -> str | None:
         """
         Map a Citation to a CTS URN.
@@ -258,7 +310,7 @@ class CTSUrnMapper:
             # TODO; better stoa mappings
             # if prefix_type == "stoa":
             #     work_num += ".opp-lat1"
-            
+
             if location_part:
                 work_urn = f"{prefix_type}{author_num}.{prefix_type}{work_num}"
                 urn = f"urn:cts:{namespace}:{work_urn}:{location_part}"
@@ -345,6 +397,93 @@ class CTSUrnMapper:
         except Exception as e:
             logger.debug(f"Database lookup error: {e}")
             return None
+
+    def get_urn_metadata(self, urn: str) -> dict[str, str] | None:
+        """
+        Look up author/work metadata for a CTS URN using the local index.
+
+        Returns a dict with author_name and work_title when available.
+        """
+        if not urn:
+            return None
+
+        conn = self._get_connection()
+        if not conn:
+            return None
+
+        try:
+            cursor = conn.cursor()
+            # Exact match first
+            row = cursor.execute(
+                """
+                SELECT a.author_name, w.work_title
+                FROM works w
+                JOIN author_index a ON w.author_id = a.author_id
+                WHERE w.cts_urn = ?
+                LIMIT 1
+                """,
+                (urn,),
+            ).fetchone()
+
+            # Fallback: allow urn with location component (prefix match)
+            if not row:
+                row = cursor.execute(
+                    """
+                    SELECT a.author_name, w.work_title
+                    FROM works w
+                    JOIN author_index a ON w.author_id = a.author_id
+                    WHERE ? LIKE w.cts_urn || '%'
+                    ORDER BY LENGTH(w.cts_urn) DESC
+                    LIMIT 1
+                    """,
+                    (urn,),
+                ).fetchone()
+
+            if not row:
+                return None
+
+            author_name, work_title = row
+            return {"author": author_name, "work": work_title}
+        except Exception as e:
+            logger.debug(f"URN metadata lookup failed: {e}")
+            return None
+
+    def get_abbreviation_metadata(
+        self, citation_id: str | None, citation_text: str | None = None, language: str | None = None
+    ) -> dict[str, str] | None:
+        """
+        Get metadata for non-CTS abbreviation-based citations using the local allowlist.
+
+        Returns display/long_name when available while preserving the original id/text.
+        """
+        keys = []
+        for raw in (citation_id, citation_text):
+            norm = self._normalize_abbrev_key(raw)
+            if norm:
+                keys.append(norm)
+
+        scopes = []
+        if language:
+            scopes.append(language)
+        scopes.append("global")
+
+        # Merge in Heritage ABBR map for Sanskrit
+        if language == "san":
+            scopes.insert(0, "heritage")
+
+        for scope in scopes:
+            scope_map = NON_CTS_ABBREVIATIONS.get(scope, {})
+            if scope == "heritage":
+                scope_map = HERITAGE_ABBR_MAP
+            for key in keys:
+                meta = scope_map.get(key)
+                if meta:
+                    enriched = {**meta, "kind": "abbreviation", "language": language or scope}
+                    if citation_text and "display" not in enriched:
+                        enriched["display"] = citation_text
+                    return enriched
+
+        return None
 
     def add_urns_to_citations(self, citations):
         """

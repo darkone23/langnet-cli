@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import click
-from rich.console import Console
-
 from fuzz_tool_outputs import run_from_args
+from rich.console import Console
 
 console = Console()
 

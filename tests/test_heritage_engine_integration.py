@@ -3,11 +3,12 @@
 import unittest
 from unittest.mock import Mock
 
+from langnet.heritage.dictionary import HeritageDictionaryService
+
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesScraper
 from langnet.engine.core import LanguageEngine, LanguageEngineConfig
-from langnet.heritage.dictionary import HeritageDictionaryService
 from langnet.heritage.morphology import HeritageMorphologyService
 from langnet.whitakers_words.core import WhitakersWords
 

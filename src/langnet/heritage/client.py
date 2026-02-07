@@ -6,7 +6,6 @@ from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
-from indic_transliteration.sanscript import DEVANAGARI, IAST, transliterate
 
 from .config import heritage_config
 from .parameters import HeritageParameterBuilder

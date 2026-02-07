@@ -9,11 +9,13 @@ from langnet.backend_adapter import LanguageAdapterRegistry
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
+from langnet.foster.apply import apply_foster_view
 from langnet.heritage.client import HeritageHTTPClient
-from langnet.heritage.morphology import HeritageMorphologyService # TODO: not sure why this is not just in heritage client?
+from langnet.heritage.morphology import (
+    HeritageMorphologyService,  # TODO: not sure why this is not just in heritage client?
+)
 from langnet.normalization import NormalizationPipeline
 from langnet.whitakers_words.core import WhitakersWords
-from langnet.foster.apply import apply_foster_view
 
 logger = structlog.get_logger(__name__)
 

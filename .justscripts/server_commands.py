@@ -25,9 +25,7 @@ def restart():
     console.print("[cyan]Restarting uvicorn server...[/cyan]")
 
     # Avoid PTY exhaustion in limited environments by disabling TTY allocation
-    sh.Command("pkill")(
-        "-f", "uvicorn", _ok_code=[0, 1], _tty=False, _tty_out=False, _tty_in=False
-    )
+    sh.Command("pkill")("-f", "uvicorn", _ok_code=[0, 1], _tty=False, _tty_out=False, _tty_in=False)
     console.print("[yellow]Sent pkill to uvicorn processes[/yellow]")
 
     time.sleep(5)
