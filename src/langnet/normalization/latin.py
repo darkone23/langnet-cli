@@ -168,9 +168,6 @@ class LatinNormalizer(LanguageNormalizer):
         # Generate alternate forms
         alternates = self.generate_alternates(canonical_text)
 
-        # Calculate confidence
-        confidence = self._calculate_confidence(query, encoding)
-
         # Build normalization notes
         notes = [f"Detected encoding: {encoding}"]
         if encoding == Encoding.UNICODE.value:
@@ -184,22 +181,5 @@ class LatinNormalizer(LanguageNormalizer):
             canonical_text=canonical_text,
             alternate_forms=alternates,
             detected_encoding=Encoding(encoding),
-            confidence=confidence,
             normalization_notes=notes,
         )
-
-    def _calculate_confidence(self, query: str, encoding: str) -> float:
-        """Calculate confidence score for normalization."""
-        base_confidence = 0.7
-
-        # Boost confidence for known encodings
-        if encoding == Encoding.ASCII.value:
-            base_confidence = 0.9
-        elif encoding == Encoding.UNICODE.value:
-            base_confidence = 0.8
-
-        # Adjust for query length
-        if MIN_QUERY_LENGTH <= len(query) <= MAX_QUERY_LENGTH:
-            base_confidence = min(base_confidence + 0.1, 1.0)
-
-        return base_confidence

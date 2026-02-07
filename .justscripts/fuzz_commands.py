@@ -12,7 +12,7 @@ console = Console()
 
 @click.group()
 def fuzz():
-    """Fuzz backend tool outputs and compare with unified queries."""
+    """Fuzz backend tool outputs and/or unified queries."""
     pass
 
 
@@ -30,7 +30,12 @@ def list_targets():
 @click.option("--lang", help="Language code (lat, grc, san)")
 @click.option("--words", help="Comma-separated words to test")
 @click.option("--validate", is_flag=True, help="Fail on empty/error raw outputs")
-@click.option("--compare", is_flag=True, help="Check unified query results for the backend source")
+@click.option(
+    "--mode",
+    type=click.Choice(["tool", "query", "compare"]),
+    default="tool",
+    help="tool: /api/tool only; query: /api/q only; compare: both",
+)
 @click.option(
     "--save",
     is_flag=False,
@@ -38,7 +43,7 @@ def list_targets():
     default=None,
     help="Save JSON summary (optional path, defaults to examples/debug/fuzz_results.json)",
 )
-def run(tool, action, lang, words, validate, compare, save):
+def run(tool, action, lang, words, validate, mode, save):
     """Run fuzzing for selected targets."""
     args: list[str] = []
     if tool:
@@ -51,8 +56,8 @@ def run(tool, action, lang, words, validate, compare, save):
         args.extend(["--words", words])
     if validate:
         args.append("--validate")
-    if compare:
-        args.append("--compare")
+    if mode:
+        args.extend(["--mode", mode])
     if save is not None:
         if save is True:
             args.append("--save")

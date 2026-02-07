@@ -15,6 +15,13 @@ from langnet.schema import (
     DictionaryEntry,
     MorphologyInfo,
 )
+from langnet.foster.latin import (
+    FOSTER_LATIN_CASES,
+    FOSTER_LATIN_GENDERS,
+    FOSTER_LATIN_MISCELLANEOUS,
+    FOSTER_LATIN_NUMBERS,
+    FOSTER_LATIN_TENSES,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -111,6 +118,13 @@ class BaseBackendAdapter:
 class DiogenesBackendAdapter(BaseBackendAdapter):
     """Adapter for Diogenes web scraper."""
 
+    def _collect_citations(self, blocks: list[DictionaryBlock]) -> list[dict]:
+        citations = []
+        for block in blocks:
+            if block.citations:
+                citations.append({"entryid": block.entryid, "citations": block.citations})
+        return citations
+
     def _has_valid_data(self, chunks: list) -> bool:
         """Check if any chunks contain valid data."""
         for chunk in chunks:
@@ -150,8 +164,12 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                     tags = morph.get("tags", [])
                     lemma = morph.get("stem", [word])[0] if morph.get("stem") else word
                     pos = self._map_morph_tags_to_pos(tags)
+                    foster_codes = morph.get("foster_codes")
                     return MorphologyInfo(
-                        lemma=lemma, pos=pos, features={"tags": tags}, confidence=1.0
+                        lemma=lemma,
+                        pos=pos,
+                        features={"tags": tags},
+                        foster_codes=foster_codes if isinstance(foster_codes, (list, dict)) else None,
                     )
         return None
 
@@ -174,6 +192,9 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         # Extract dictionary blocks and morphology
         dictionary_blocks = self._extract_dictionary_blocks(chunks)
         morphology = self._extract_morphology(chunks, word)
+        canonical_form = morphology.lemma if morphology else None
+        citations = self._collect_citations(dictionary_blocks)
+        original_citations = data.get("citations") if isinstance(data.get("citations"), dict) else None
 
         # Create single unified entry
         entry = DictionaryEntry(
@@ -186,6 +207,9 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             metadata={
                 "chunk_types": data.get("chunk_types", []),
                 "dg_parsed": data.get("dg_parsed", False),
+                **({"canonical_form": canonical_form} if canonical_form else {}),
+                **({"citations": citations} if citations else {}),
+                **({"original_citations": original_citations} if original_citations else {}),
             },
         )
 
@@ -194,6 +218,49 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
 
 class WhitakersBackendAdapter(BaseBackendAdapter):
     """Adapter for Whitaker's Words."""
+
+    def _map_to_foster(self, value: str | None, mapping: dict) -> str | None:
+        if not value:
+            return None
+        mapped = mapping.get(value)
+        return mapped.value if mapped else None
+
+    def _build_foster_codes(self, first_term: dict) -> dict:
+        foster_codes: dict[str, str] = {}
+
+        case_val = first_term.get("case")
+        mapped_case = self._map_to_foster(case_val, FOSTER_LATIN_CASES)
+        if mapped_case:
+            foster_codes["case"] = mapped_case
+
+        number_val = first_term.get("number")
+        mapped_number = self._map_to_foster(number_val, FOSTER_LATIN_NUMBERS)
+        if mapped_number:
+            foster_codes["number"] = mapped_number
+
+        gender_val = first_term.get("gender")
+        mapped_gender = self._map_to_foster(gender_val, FOSTER_LATIN_GENDERS)
+        if mapped_gender:
+            foster_codes["gender"] = mapped_gender
+
+        tense_val = first_term.get("tense")
+        mapped_tense = self._map_to_foster(tense_val, FOSTER_LATIN_TENSES)
+        if mapped_tense:
+            foster_codes["tense"] = mapped_tense
+
+        for key in ("voice", "mood", "variant"):
+            val = first_term.get(key)
+            mapped_misc = self._map_to_foster(val, FOSTER_LATIN_MISCELLANEOUS)
+            if mapped_misc:
+                foster_codes[key] = mapped_misc
+
+        # Participles may appear as "part" mood; map separately so we do not drop it.
+        part_val = first_term.get("variant") or first_term.get("mood")
+        mapped_part = self._map_to_foster(part_val, FOSTER_LATIN_MISCELLANEOUS)
+        if mapped_part == "PARTICIPLE":
+            foster_codes["participle"] = mapped_part
+
+        return foster_codes
 
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries = []
@@ -278,7 +345,6 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
                 morphology_kwargs = {
                     "lemma": first_term.get("term_analysis", {}).get("stem", word),
                     "pos": pos,
-                    "confidence": 1.0,
                 }
                 
                 # Build features dict with only non-None values
@@ -296,6 +362,10 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
                     features_kwargs["variant"] = variant_val
                 if features_kwargs:
                     morphology_kwargs["features"] = features_kwargs
+
+                foster_codes = self._build_foster_codes(first_term)
+                if foster_codes:
+                    morphology_kwargs["foster_codes"] = foster_codes
 
                 # Only add optional fields if they're not None
                 if declension_str:
@@ -331,6 +401,7 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
                 metadata={
                     "word_data": word_data,  # Include all original data
                     "terms": terms,  # Keep all terms accessible
+                    **({"canonical_form": morphology.lemma} if morphology else {}),
                 },
             )
             entries.append(entry)
@@ -361,6 +432,8 @@ class CLTKBackendAdapter(BaseBackendAdapter):
         lewis_lines = data.get("lewis_1890_lines", [])
         definitions = []
 
+        canonical_form = headword or word
+
         for line in lewis_lines:
             if ":" in line:
                 definition = line.split(":", 1)[1].strip()
@@ -390,7 +463,7 @@ class CLTKBackendAdapter(BaseBackendAdapter):
             definitions=definitions,
             morphology=None,
             source="cltk",
-            metadata=data,
+            metadata={**data, "canonical_form": canonical_form},
         )
         entries.append(entry)
 
@@ -442,9 +515,12 @@ class HeritageBackendAdapter(BaseBackendAdapter):
                 "lemma": lemma,
                 "pos": pos,
                 "features": features,
-                "confidence": 1.0,
                 "stem_type": "heritage",
             }
+
+            foster_codes = first_analysis.get("foster_codes")
+            if foster_codes:
+                morphology_kwargs["foster_codes"] = foster_codes
 
             # Only add optional fields if they're not None
             # Extract case and gender from features if available
@@ -488,6 +564,13 @@ class HeritageBackendAdapter(BaseBackendAdapter):
             metadata={
                 "all_analyses": all_analyses,
                 "combined": data.get("combined", {}),
+                **({"canonical": data.get("canonical")} if data.get("canonical") is not None else {}),
+                **({"lemmatize": data.get("lemmatize")} if data.get("lemmatize") is not None else {}),
+                **(
+                    {"canonical_form": data.get("canonical", {}).get("canonical_sanskrit")}
+                    if isinstance(data.get("canonical"), dict)
+                    else {}
+                ),
             },
         )
         entries.append(entry)
@@ -528,7 +611,28 @@ class HeritageBackendAdapter(BaseBackendAdapter):
                     definitions=definitions,
                     morphology=None,
                     source="heritage",
-                    metadata=dictionary_data,
+                    metadata={
+                        **dictionary_data,
+                        **(
+                            {
+                                "canonical_form": data.get("canonical", {}).get(
+                                    "canonical_sanskrit"
+                                )
+                            }
+                            if isinstance(data.get("canonical"), dict)
+                            else {}
+                        ),
+                        **(
+                            {"canonical": data.get("canonical")}
+                            if data.get("canonical") is not None
+                            else {}
+                        ),
+                        **(
+                            {"lemmatize": data.get("lemmatize")}
+                            if data.get("lemmatize") is not None
+                            else {}
+                        ),
+                    },
                 )
                 entries.append(entry)
 
@@ -615,12 +719,17 @@ class CDSLBackendAdapter(BaseBackendAdapter):
 
         entries = []
 
+        transliteration = data.get("transliteration")
+        root = data.get("root")
+
         # Process dictionary entries
         dictionaries = data.get("dictionaries", {})
         for dict_name, dict_data in dictionaries.items():
             if dict_data:
                 entries.extend(
-                    self._process_dictionary_entries(dict_data, dict_name, word, language)
+                    self._process_dictionary_entries(
+                        dict_data, dict_name, word, language, transliteration, root
+                    )
                 )
 
         # If no structured data, create fallback entry
@@ -630,7 +739,13 @@ class CDSLBackendAdapter(BaseBackendAdapter):
         return entries
 
     def _process_dictionary_entries(
-        self, dict_data: list, dict_name: str, word: str, language: str
+        self,
+        dict_data: list,
+        dict_name: str,
+        word: str,
+        language: str,
+        transliteration: dict | None,
+        root: dict | None,
     ) -> list[DictionaryEntry]:
         """Process entries from a specific dictionary."""
         entries = []
@@ -676,17 +791,34 @@ class CDSLBackendAdapter(BaseBackendAdapter):
 
 
             if definitions:
+                metadata = {
+                    "dictionary": dict_name,
+                    "original_entry_count": len(original_entries),
+                    "original_entries": original_entries,
+                }
+                if transliteration:
+                    metadata["transliteration"] = transliteration
+                    canonical_form = transliteration.get("iast")
+                    if canonical_form:
+                        metadata["canonical_form"] = canonical_form
+                if root:
+                    metadata["root"] = root
+
+                foster_codes = [
+                    entry_data.get("foster_codes")
+                    for entry_data in dict_data
+                    if isinstance(entry_data, dict) and entry_data.get("foster_codes")
+                ]
+                if foster_codes:
+                    metadata["foster_codes"] = foster_codes
+
                 entry = DictionaryEntry(
                     word=word,
                     language=language,
                     definitions=definitions,
                     morphology=None,
                     source="cdsl",
-                    metadata={
-                        "dictionary": dict_name,
-                        "original_entry_count": len(original_entries),
-                        "original_entries": original_entries,
-                    },
+                    metadata=metadata,
                 )
                 entries.append(entry)
         else:
@@ -720,13 +852,24 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                     definitions.append(sense)
 
                     if definitions:
+                        metadata = {"dictionary": dict_name}
+                        if transliteration:
+                            metadata["transliteration"] = transliteration
+                            canonical_form = transliteration.get("iast")
+                            if canonical_form:
+                                metadata["canonical_form"] = canonical_form
+                        if root:
+                            metadata["root"] = root
+                        foster_codes = entry_data.get("foster_codes")
+                        if foster_codes:
+                            metadata["foster_codes"] = foster_codes
                         entry = DictionaryEntry(
                             word=word,
                             language=language,
                             definitions=definitions,
                             morphology=None,
                             source="cdsl",
-                            metadata={"dictionary": dict_name},
+                            metadata=metadata,
                         )
                         entries.append(entry)
 

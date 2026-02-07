@@ -13,6 +13,7 @@ from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.morphology import HeritageMorphologyService # TODO: not sure why this is not just in heritage client?
 from langnet.normalization import NormalizationPipeline
 from langnet.whitakers_words.core import WhitakersWords
+from langnet.foster.apply import apply_foster_view
 
 logger = structlog.get_logger(__name__)
 
@@ -190,14 +191,12 @@ class LanguageEngine:
         if heritage_result:
             result["heritage"] = heritage_result
 
-        # TODO: Implement _query_sanskrit_cdsl and _query_sanskrit_lemma_fallback
-        # cdsl_result = self._query_sanskrit_cdsl(word, _cattrs_converter)
-        # if cdsl_result:
-        #     result["cdsl"] = cdsl_result
-        #
-        # lemma_result = self._query_sanskrit_lemma_fallback(result, _cattrs_converter)
-        # if lemma_result:
-        #     result["cdsl"] = lemma_result
+        try:
+            cdsl_result = self.cdsl.lookup_ascii(word)
+            result["cdsl"] = _cattrs_converter.unstructure(cdsl_result)
+        except Exception as e:  # noqa: BLE001
+            logger.error("backend_failed", backend="cdsl", error=str(e))
+            result["cdsl"] = {"error": f"CDSL unavailable: {str(e)}"}
 
         return result
 
@@ -209,7 +208,12 @@ class LanguageEngine:
         result: dict[str, Any] = {}
 
         # Perform morphological analysis
-        morphology_result = self.heritage_morphology.analyze_word(word)
+        try:
+            morphology_result = self.heritage_morphology.analyze_word(word)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("backend_failed", backend="heritage_morphology", error=str(exc))
+            morphology_result = None
+
         if morphology_result:
             result["morphology"] = _cattrs_converter.unstructure(morphology_result)
 
@@ -245,6 +249,22 @@ class LanguageEngine:
                         }
                         result["combined"] = combined
 
+        # Fetch canonical form and lemmatization from Heritage HTTP endpoints
+        if self.heritage_client:
+            try:
+                canonical_result = self.heritage_client.fetch_canonical_sanskrit(word)
+                if canonical_result:
+                    result["canonical"] = canonical_result
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("heritage_canonical_failed", word=word, error=str(exc))
+
+            try:
+                lemmatize_result = self.heritage_client.fetch_lemmatization(word)
+                if lemmatize_result:
+                    result["lemmatize"] = lemmatize_result
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("heritage_lemmatize_failed", word=word, error=str(exc))
+
         return result
 
     def handle_query(self, lang, word):
@@ -266,6 +286,12 @@ class LanguageEngine:
             raw_result = self._query_sanskrit(word, _cattrs_converter)
         else:
             raise NotImplementedError(f"Do not know how to handle {lang}")
+
+        # Apply Foster functional mapping before adapting to universal schema
+        try:
+            raw_result = apply_foster_view(raw_result)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("apply_foster_view_failed", error=str(exc))
 
         # Convert to universal schema
         adapter_registry = LanguageAdapterRegistry()
@@ -306,16 +332,12 @@ class LanguageEngine:
     def _validate_tool_and_action(self, tool: str, action: str):
         """Validate tool and action parameters."""
         valid_tools = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
-        valid_actions = {
-            "search",
-            "parse",
-            "analyze",
-            "morphology",
-            "dictionary",
-            "lookup",
-            "canonical",
-            "lemmatize",
-            "entry",
+        valid_actions_by_tool = {
+            "diogenes": {"parse"},
+            "whitakers": {"search"},
+            "heritage": {"morphology", "canonical", "lemmatize"},
+            "cdsl": {"lookup"},
+            "cltk": {"morphology", "dictionary"},
         }
 
         if tool not in valid_tools:
@@ -323,9 +345,11 @@ class LanguageEngine:
                 f"Invalid tool: {tool}. Must be one of: {', '.join(sorted(valid_tools))}"
             )
 
-        if action not in valid_actions:
+        allowed_actions = valid_actions_by_tool.get(tool, set())
+        if action not in allowed_actions:
             raise ValueError(
-                f"Invalid action: {action}. Must be one of: {', '.join(sorted(valid_actions))}"
+                f"Invalid action '{action}' for tool '{tool}'. Must be one of: "
+                f"{', '.join(sorted(allowed_actions)) or '(none)'}"
             )
 
     def _validate_tool_parameters(
@@ -434,15 +458,13 @@ class LanguageEngine:
 
         result = {}
 
-        if action in ["morphology", "analyze"]:
+        if action == "morphology":
             morphology_result = self.heritage_morphology.analyze_word(query)
             if morphology_result:
                 result["morphology"] = self._cattrs_converter.unstructure(morphology_result)
 
-        if action in ["canonical", "search"]:
-            canonical_result = self.heritage_client.fetch_canonical_sanskrit(
-                query
-            )
+        if action == "canonical":
+            canonical_result = self.heritage_client.fetch_canonical_sanskrit(query)
             result["canonical"] = canonical_result
 
         if action == "lemmatize":
@@ -462,13 +484,13 @@ class LanguageEngine:
         """Get raw data from CLTK backend."""
         result = {}
 
-        if lang == "lat" and action in ["morphology", "parse"]:
+        if lang == "lat" and action == "morphology":
             cltk_result = self.cltk.latin_query(query)
             result["latin_morphology"] = self._cattrs_converter.unstructure(cltk_result)
-        elif lang == "grc" and action in ["morphology", "parse"]:
+        elif lang == "grc" and action == "morphology":
             cltk_result = self.cltk.greek_morphology_query(query)
             result["greek_morphology"] = self._cattrs_converter.unstructure(cltk_result)
-        elif lang == "san" and action in ["morphology", "parse"]:
+        elif lang == "san" and action == "morphology":
             cltk_result = self.cltk.sanskrit_morphology_query(query)
             result["sanskrit_morphology"] = self._cattrs_converter.unstructure(cltk_result)
         elif action == "dictionary":

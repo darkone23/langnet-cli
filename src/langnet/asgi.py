@@ -26,15 +26,13 @@ json_converter = cattrs.Converter(omit_if_default=True)
 VALID_LANGUAGES = {"lat", "grc", "san", "grk"}
 VALID_TOOLS = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
 VALID_ACTIONS = {
-    "search",
-    "parse",
-    "analyze",
-    "morphology",
-    "dictionary",
-    "lookup",
-    "canonical",
-    "lemmatize",
-    "entry",
+    "parse",  # diogenes
+    "search",  # whitakers
+    "morphology",  # heritage/cltk
+    "canonical",  # heritage
+    "lemmatize",  # heritage
+    "lookup",  # cdsl
+    "dictionary",  # cltk
 }
 
 # from langnet.citation.models import CitationCollection, Citation, TextReference, CitationType

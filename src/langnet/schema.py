@@ -50,7 +50,7 @@ class MorphologyInfo:
     lemma: str
     pos: str
     features: dict[str, str]  # Morphological features (case, tense, etc.)
-    confidence: float = 1.0
+    foster_codes: list[str] | dict[str, str] | None = None  # Foster functional grammar codes
     declension: str | None = None  # Noun/adjective declension (1st, 2nd, 3rd, etc.)
     conjugation: str | None = None  # Verb conjugation (1st, 2nd, 3rd, 4th, etc.)
     stem_type: str | None = None  # Type of stem (thematic/athematic, strong/weak, etc.)

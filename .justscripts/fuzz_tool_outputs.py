@@ -1,8 +1,9 @@
 """Backend tool fuzzing harness (CLI-driven).
 
 This utility enumerates supported backend tools/actions and exercises them by
-shelling out to the langnet CLI (`langnet-cli tool ...`). Optionally, it checks
-that the unified `langnet-cli query` response contains the backend source.
+shelling out to the langnet CLI (`langnet-cli tool ...`). It can also fuzz the
+unified `/api/q` endpoint (`langnet-cli query ...`) or run both paths for a
+side-by-side comparison.
 """
 
 from __future__ import annotations
@@ -17,22 +18,19 @@ from pathlib import Path
 from typing import Iterable, List, Sequence
 
 DEFAULT_SAVE_PATH = Path("examples/debug/fuzz_results")
+FuzzMode = str
 
 
 # Catalog of supported tools/actions with default word lists
 TOOL_CATALOG: dict = {
     "diogenes": {
         "actions": {
-            "search": {
-                "langs": ["lat", "grc"],
-                "default_words": {
-                    "lat": ["lupus", "arma", "vir", "amo"],
-                    "grc": ["logos", "anthropos", "agathos"],
-                },
-            },
             "parse": {
                 "langs": ["lat", "grc"],
-                "default_words": {"lat": ["amo", "sum", "video"], "grc": ["lego", "anthropos"]},
+                "default_words": {
+                    "lat": ["lupus", "arma", "vir", "amo", "sum", "video"],
+                    "grc": ["logos", "anthropos", "agathos", "lego"],
+                },
             },
         }
     },
@@ -47,17 +45,11 @@ TOOL_CATALOG: dict = {
     "heritage": {
         "actions": {
             "morphology": {"langs": ["san"], "default_words": {"san": ["agni", "yoga"]}},
-            "analyze": {"langs": ["san"], "default_words": {"san": ["agni"]}},
-            "search": {"langs": ["san"], "default_words": {"san": ["agni", "veda"]}},
-            "canonical": {"langs": ["san"], "default_words": {"san": ["agnii", "agnim", "agnina"]}},
-            "lemmatize": {"langs": ["san"], "default_words": {"san": ["agnim", "yogena", "agnina"]}},
-            # Entry URLs are backend-specific; use only when you have a known path.
-            "entry": {
+            "canonical": {
                 "langs": ["san"],
-                "default_words": {"san": ["/skt/MW/890.html#agni", "/skt/AP90/125.html#agni"]},
-                "allow_empty": True,
-                "compare_optional": True,
+                "default_words": {"san": ["agnii", "agnim", "agnina", "agni", "veda"]},
             },
+            "lemmatize": {"langs": ["san"], "default_words": {"san": ["agnim", "yogena", "agnina"]}},
         }
     },
     "cdsl": {
@@ -77,14 +69,9 @@ TOOL_CATALOG: dict = {
                 "default_words": {"lat": ["amo", "sum"], "grc": ["logos", "anthropos"], "san": ["agni"]},
                 "compare_optional": True,
             },
-            "parse": {
-                "langs": ["lat", "grc", "san"],
-                "default_words": {"lat": ["sum", "video"], "grc": ["anthropos", "lego"], "san": ["yoga"]},
-                "compare_optional": True,
-            },
             "dictionary": {
                 "langs": ["lat"],
-                "default_words": {"lat": ["lupus", "arma"]},
+                "default_words": {"lat": ["lupus", "arma", "amo"]},
                 "compare_optional": True,
             },
         }
@@ -106,28 +93,38 @@ class FuzzTarget:
 @dataclass
 class FuzzResult:
     target: FuzzTarget
-    raw_ok: bool
-    raw_error: str | None
-    raw_summary: dict | None
+    mode: FuzzMode
+    tool_raw: dict | list | None
+    tool_ok: bool | None
+    tool_error: str | None
+    tool_summary: dict | None
+    unified_raw: list[dict] | dict | None
+    unified_ok: bool | None
+    unified_error: str | None
+    unified_summary: dict | None
     unified_sources: list[str] | None
     source_present: bool | None
-    compare_error: str | None
 
     def to_dict(self) -> dict:
         payload = {
             "target": asdict(self.target),
-            "raw_ok": self.raw_ok,
-            "raw_error": self.raw_error,
-            "raw_summary": self.raw_summary,
+            "mode": self.mode,
+            "tool_raw": self.tool_raw,
+            "tool_ok": self.tool_ok,
+            "tool_error": self.tool_error,
+            "tool_summary": self.tool_summary,
+            "unified_raw": self.unified_raw,
+            "unified_ok": self.unified_ok,
+            "unified_error": self.unified_error,
+            "unified_summary": self.unified_summary,
             "unified_sources": self.unified_sources,
             "source_present": self.source_present,
-            "compare_error": self.compare_error,
         }
         return payload
 
 
 def _parse_args(argv: List[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Fuzz backend tool outputs via API endpoints")
+    parser = argparse.ArgumentParser(description="Fuzz backend tool or unified query outputs via API endpoints")
     parser.add_argument("--tool", help="Tool to exercise (diogenes, whitakers, heritage, cdsl, cltk)")
     parser.add_argument("--action", help="Action/verb to use (search, parse, etc.)")
     parser.add_argument("--lang", help="Language code to use (lat, grc, san)")
@@ -138,9 +135,13 @@ def _parse_args(argv: List[str]) -> argparse.Namespace:
         help="Mark run as failed when raw output is empty or raises an error",
     )
     parser.add_argument(
-        "--compare",
-        action="store_true",
-        help="Compare unified query results to see if the backend source is present",
+        "--mode",
+        choices=["tool", "query", "compare"],
+        default="tool",
+        help=(
+            "Fuzz mode: tool (only /api/tool/*), query (only /api/q), "
+            "compare (tool plus unified comparison)"
+        ),
     )
     parser.add_argument("--list", action="store_true", help="List available tool/actions and exit")
     parser.add_argument(
@@ -190,9 +191,12 @@ def _iter_targets(
                     )
 
 
-def _summarize_raw(raw: dict | None) -> dict | None:
+def _summarize_raw(raw: dict | list | None) -> dict | None:
     if raw is None:
         return None
+
+    if isinstance(raw, list):
+        return {"items": len(raw)}
 
     if not isinstance(raw, dict):
         return {"type": type(raw).__name__}
@@ -240,41 +244,55 @@ def _cli_unified_query(lang: str, word: str) -> list[dict]:
     return json.loads(stdout) if stdout else []
 
 
-def _run_target(target: FuzzTarget, compare: bool, validate: bool) -> FuzzResult:
-    raw_ok = False
-    raw_error: str | None = None
-    raw_summary: dict | None = None
+def _run_target(target: FuzzTarget, mode: FuzzMode, validate: bool) -> FuzzResult:
+    tool_raw: dict | list | None = None
+    tool_ok: bool | None = None
+    tool_error: str | None = None
+    tool_summary: dict | None = None
+    unified_raw: list[dict] | dict | None = None
+    unified_ok: bool | None = None
+    unified_error: str | None = None
+    unified_summary: dict | None = None
     unified_sources: list[str] | None = None
     source_present: bool | None = None
-    compare_error: str | None = None
 
-    try:
-        raw_data = _cli_tool_request(target)
-        raw_summary = _summarize_raw(raw_data)
-        raw_ok = bool(raw_data) or target.allow_empty or not validate
-    except Exception as exc:  # noqa: BLE001
-        raw_error = str(exc)
-        raw_ok = False
+    if mode in ("tool", "compare"):
+        try:
+            tool_raw = _cli_tool_request(target)
+            tool_summary = _summarize_raw(tool_raw)
+            tool_ok = bool(tool_raw) or target.allow_empty or not validate
+        except Exception as exc:  # noqa: BLE001
+            tool_error = str(exc)
+            tool_ok = False
 
-    if compare and target.lang:
+    if mode in ("query", "compare") and target.lang:
         try:
             entries = _cli_unified_query(target.lang, target.word)
+            unified_raw = entries
+            unified_summary = _summarize_raw({"entries": entries})
+            unified_ok = bool(entries) or target.allow_empty or not validate
             unified_sources = sorted({entry.get("source") for entry in entries if entry.get("source")})
             source_present = target.tool in unified_sources
             if target.compare_optional and not source_present:
                 # Treat missing source as informational, not a failure
                 source_present = None
         except Exception as exc:  # noqa: BLE001
-            compare_error = str(exc)
+            unified_error = str(exc)
+            unified_ok = False
 
     return FuzzResult(
         target=target,
-        raw_ok=raw_ok,
-        raw_error=raw_error,
-        raw_summary=raw_summary,
+        mode=mode,
+        tool_raw=tool_raw,
+        tool_ok=tool_ok,
+        tool_error=tool_error,
+        tool_summary=tool_summary,
+        unified_raw=unified_raw,
+        unified_ok=unified_ok,
+        unified_error=unified_error,
+        unified_summary=unified_summary,
         unified_sources=unified_sources,
         source_present=source_present,
-        compare_error=compare_error,
     )
 
 
@@ -317,9 +335,11 @@ def _save_results(save_path: Path, results: list[FuzzResult]) -> None:
             {
                 "file": fname,
                 "target": asdict(r.target),
-                "raw_ok": r.raw_ok,
-                "raw_error": r.raw_error,
-                "compare_error": r.compare_error,
+                "mode": r.mode,
+                "tool_ok": r.tool_ok,
+                "tool_error": r.tool_error,
+                "unified_ok": r.unified_ok,
+                "unified_error": r.unified_error,
                 "source_present": r.source_present,
                 "unified_sources": r.unified_sources,
             }
@@ -348,33 +368,53 @@ def run_from_args(argv: List[str]) -> int:
 
     results: list[FuzzResult] = []
     for target in targets:
-        result = _run_target(target, compare=args.compare, validate=args.validate)
+        result = _run_target(target, mode=args.mode, validate=args.validate)
         results.append(result)
-        compare_note = ""
-        if args.compare:
-            if result.compare_error is not None:
-                compare_note = f" compare_error={result.compare_error}"
-            elif result.source_present is True:
-                compare_note = " compare=ok"
-            elif result.source_present is False and target.compare_optional:
-                compare_note = " compare=optional-missing"
-            elif result.source_present is False:
-                compare_note = " compare=missing"
+        status_parts = [f"{target.tool}:{target.action}:{target.lang}:{target.word}"]
+
+        if args.mode in ("tool", "compare"):
+            if result.tool_ok:
+                status_parts.append("tool=ok")
+            elif result.tool_ok is False:
+                status_parts.append(f"tool=error{'' if not result.tool_error else f' ({result.tool_error})'}")
             else:
-                compare_note = " compare=skip"
-        print(
-            f"{target.tool}:{target.action}:{target.lang}:{target.word} -> "
-            f"raw={'ok' if result.raw_ok else 'error'}"
-            f"{'' if not result.raw_error else f' ({result.raw_error})'}"
-            f"{compare_note}"
-        )
+                status_parts.append("tool=skip")
+
+        if args.mode in ("query", "compare"):
+            if result.unified_error is not None:
+                status_parts.append(f"query=error ({result.unified_error})")
+            elif result.source_present is True:
+                status_parts.append("query=has-source")
+            elif result.source_present is False and target.compare_optional:
+                status_parts.append("query=optional-missing")
+            elif result.source_present is False:
+                status_parts.append("query=missing")
+            elif result.unified_ok:
+                status_parts.append("query=ok")
+            else:
+                status_parts.append("query=skip")
+
+        print(" -> ".join(status_parts))
 
     if args.save is not None:
         output_path = Path(args.save) if args.save else DEFAULT_SAVE_PATH
         _save_results(output_path, results)
 
-    failures = [r for r in results if not r.raw_ok or (args.compare and r.compare_error)]
-    return 1 if failures and args.validate else 0
+    if not args.validate:
+        return 0
+
+    failures: list[FuzzResult] = []
+    for r in results:
+        if args.mode in ("tool", "compare") and r.tool_ok is False:
+            failures.append(r)
+            continue
+        if args.mode in ("query", "compare") and r.unified_error:
+            failures.append(r)
+            continue
+        if args.mode == "query" and r.unified_ok is False:
+            failures.append(r)
+
+    return 1 if failures else 0
 
 
 def main() -> int:

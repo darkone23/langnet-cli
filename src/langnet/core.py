@@ -31,6 +31,9 @@ class LangnetWiring:
         cltk = ClassicsToolkit()
         cdsl = SanskritCologneLexicon()
 
+        # Pre-warm CLTK models to avoid first-call latency during health checks
+        self._warmup_cltk(cltk)
+
         heritage_config = HeritageConfig(
             base_url=langnet_config.heritage_url,
             timeout=langnet_config.http_timeout,
@@ -50,3 +53,20 @@ class LangnetWiring:
         )
         self.engine = LanguageEngine(config)
         self._initialized = True
+
+    def _warmup_cltk(self, cltk: ClassicsToolkit) -> None:
+        """Prime CLTK/spaCy models to prevent delayed readiness on first request."""
+        try:
+            cltk.latin_query("amo")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cltk_warmup_latin_failed", error=str(exc))
+
+        try:
+            cltk.greek_morphology_query("logos")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cltk_warmup_greek_failed", error=str(exc))
+
+        try:
+            cltk.sanskrit_morphology_query("agni")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cltk_warmup_sanskrit_failed", error=str(exc))

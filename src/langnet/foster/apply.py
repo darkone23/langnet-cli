@@ -146,7 +146,9 @@ def _apply_to_cltk_greek(result: dict) -> None:
 
 
 def _get_sanskrit_entries(result: dict) -> list:
-    dictionaries = result.get("dictionaries")
+    # Prefer CDSL dictionaries under the cdsl key; fall back to direct dictionaries key.
+    cdsl_data = result.get("cdsl") or {}
+    dictionaries = cdsl_data.get("dictionaries") or result.get("dictionaries")
     if not dictionaries:
         return []
 
@@ -192,8 +194,32 @@ def _apply_to_sanskrit(result: dict) -> None:
             entry["foster_codes"] = foster_codes
 
 
+def _apply_to_heritage(result: dict) -> None:
+    heritage = result.get("heritage")
+    if not heritage:
+        return
+
+    morphology = heritage.get("morphology")
+    if not isinstance(morphology, dict):
+        return
+
+    solutions = morphology.get("solutions") or []
+    for solution in solutions:
+        analyses = solution.get("analyses") if isinstance(solution, dict) else None
+        if not analyses:
+            continue
+        for analysis in analyses:
+            if not isinstance(analysis, dict):
+                continue
+            features = analysis.get("features") if isinstance(analysis.get("features"), dict) else {}
+            foster_codes = _map_sanskrit_tags(features)
+            if foster_codes:
+                analysis["foster_codes"] = foster_codes
+
+
 def apply_foster_view(result: dict) -> dict:
     _apply_to_diogenes(result)
     _apply_to_cltk_greek(result)
     _apply_to_sanskrit(result)
+    _apply_to_heritage(result)
     return result

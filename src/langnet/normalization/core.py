@@ -89,7 +89,6 @@ class NormalizationPipeline:
                 canonical_text="",
                 alternate_forms=[],
                 detected_encoding=Encoding.UNKNOWN,
-                confidence=0.0,
                 normalization_notes=["Empty query received"],
             )
 
@@ -127,7 +126,6 @@ class NormalizationPipeline:
                 canonical_text="",
                 alternate_forms=[],
                 detected_encoding=Encoding.UNKNOWN,
-                confidence=0.0,
                 normalization_notes=["Empty query received - no normalization applied"],
             )
 
@@ -140,7 +138,6 @@ class NormalizationPipeline:
             canonical_text=canonical_text,
             alternate_forms=[],
             detected_encoding=Encoding.UNKNOWN,
-            confidence=0.0,
             normalization_notes=["No normalization handler available - using original query"],
         )
 

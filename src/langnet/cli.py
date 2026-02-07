@@ -955,22 +955,6 @@ def diogenes():
     pass
 
 
-@diogenes.command("search")
-@click.option("--lang", required=True, help="Language code (lat, grc, grk)")
-@click.option("--query", required=True, help="Word to search")
-@click.option(
-    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
-)
-@click.option("--save", help="Save output to fixture file")
-def diogenes_search(lang: str, query: str, output: str, save: str):
-    """Search for a word using Diogenes backend."""
-    _tool_query_with_context(
-        ToolQueryContext(
-            tool="diogenes", action="search", lang=lang, query=query, output=output, save=save
-        )
-    )
-
-
 @diogenes.command("parse")
 @click.option("--lang", required=True, help="Language code (lat, grc, grk)")
 @click.option("--query", required=True, help="Word to parse")
@@ -1017,36 +1001,6 @@ def heritage_morphology(query: str, output: str, save: str):
     _tool_query("heritage", "morphology", query=query, output=output, save=save)
 
 
-@heritage.command("analyze")
-@click.option("--query", required=True, help="Word to analyze")
-@click.option(
-    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
-)
-@click.option("--save", help="Save output to fixture file")
-def heritage_analyze(query: str, output: str, save: str):
-    """Comprehensive analysis using Heritage Platform backend."""
-    _tool_query("heritage", "analyze", query=query, output=output, save=save)
-
-
-@heritage.command("search")
-@click.option("--query", required=True, help="Word to search")
-@click.option(
-    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
-)
-@click.option("--save", help="Save output to fixture file")
-def heritage_search(query: str, output: str, save: str):
-    """
-    Search Heritage Platform dictionary using sktindex.
-
-    This is the fast index-based search for dictionary lookups.
-
-    Examples:
-        just cli tool heritage search --query agni
-        just cli tool heritage search --query agni
-    """
-    _tool_query("heritage", "search", query=query, output=output, save=save)
-
-
 @heritage.command("canonical")
 @click.option("--query", required=True, help="Word to canonicalize")
 @click.option(
@@ -1082,25 +1036,6 @@ def heritage_lemmatize(query: str, output: str, save: str):
         # Returns: {lemma: "agni", inflected_form: "agniis"}
     """
     _tool_query("heritage", "lemmatize", query=query, output=output, save=save)
-
-
-@heritage.command("entry")
-@click.option("--url", required=True, help="Entry URL (e.g., /skt/MW/890.html#agni)")
-@click.option(
-    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
-)
-@click.option("--save", help="Save output to fixture file")
-def heritage_entry(url: str, output: str, save: str):
-    """
-    Fetch complete dictionary entry via sktreader.
-
-    Use this when you need full entry details including all senses,
-    etymology, examples, and references.
-
-    Examples:
-        just cli tool heritage entry --url "/skt/MW/890.html#agni"
-    """
-    _tool_query("heritage", "entry", query=url, output=output, save=save)
 
 
 @tool.group(name="cdsl")
@@ -1139,18 +1074,6 @@ def cltk_morphology(lang: str, query: str, output: str, save: str):
     _tool_query("cltk", "morphology", lang=lang, query=query, output=output, save=save)
 
 
-@cltk.command("parse")
-@click.option("--lang", required=True, help="Language code (lat, grc, san)")
-@click.option("--query", required=True, help="Word to parse")
-@click.option(
-    "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
-)
-@click.option("--save", help="Save output to fixture file")
-def cltk_parse(lang: str, query: str, output: str, save: str):
-    """Parse a word using CLTK backend."""
-    _tool_query("cltk", "parse", lang=lang, query=query, output=output, save=save)
-
-
 def _tool_query(  # noqa: PLR0913
     tool: str,
     action: str,
@@ -1185,15 +1108,13 @@ def _tool_query(  # noqa: PLR0913
     required=True,
     type=click.Choice(
         [
-            "search",
             "parse",
-            "analyze",
+            "search",
             "morphology",
             "dictionary",
             "lookup",
             "canonical",
             "lemmatize",
-            "entry",
         ]
     ),
     help="Action to perform",

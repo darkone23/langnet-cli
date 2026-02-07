@@ -177,11 +177,10 @@ class HeritageHTTPClient:
                     )
 
             if not lemmas:
-                # If no structured data found, return raw content for analysis
+                # If no structured data found, return minimal diagnostic info
                 return {
                     "inflected_form": None,
                     "lemma": None,
-                    "raw_html": html_content,
                     "message": "No structured lemmatization data found",
                 }
 
@@ -190,7 +189,6 @@ class HeritageHTTPClient:
                 "lemma": lemmas[0]["lemma"] if lemmas else None,
                 "grammar": lemmas[0].get("grammar", "") if lemmas else "",
                 "all_lemmas": lemmas,
-                "raw_html": html_content,
             }
 
         except Exception as e:

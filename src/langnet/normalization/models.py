@@ -57,7 +57,6 @@ class CanonicalQuery:
 
     # Metadata
     detected_encoding: Encoding = Encoding.UNKNOWN
-    confidence: float = 0.0
     normalization_notes: list[str] = field(default_factory=list)
     enrichment_metadata: dict[str, Any] | None = None
 
@@ -71,9 +70,6 @@ class CanonicalQuery:
 
         if not isinstance(self.canonical_text, str):
             raise ValueError("canonical_text must be a string")
-
-        if self.confidence < 0.0 or self.confidence > 1.0:
-            raise ValueError("confidence must be between 0.0 and 1.0")
 
         if not isinstance(self.alternate_forms, list):
             raise ValueError("alternate_forms must be a list")
@@ -93,7 +89,6 @@ class CanonicalQuery:
                 for citation in self.citations
             ],
             "detected_encoding": self.detected_encoding.value,
-            "confidence": self.confidence,
             "normalization_notes": self.normalization_notes,
             "enrichment_metadata": self.enrichment_metadata,
         }
@@ -108,14 +103,9 @@ class CanonicalQuery:
             alternate_forms=data.get("alternate_forms", []),
             citations=data.get("citations", []),
             detected_encoding=Encoding(data.get("detected_encoding", "unknown")),
-            confidence=data.get("confidence", 0.0),
             normalization_notes=data.get("normalization_notes", []),
             enrichment_metadata=data.get("enrichment_metadata"),
         )
-
-    def has_high_confidence(self, threshold: float = 0.8) -> bool:
-        """Check if normalization has high confidence."""
-        return self.confidence >= threshold
 
     def get_primary_form(self) -> str:
         """Get the primary canonical form."""

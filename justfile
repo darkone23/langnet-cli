@@ -61,6 +61,18 @@ typecheck *args:
 autobot *args:
     python3 .justscripts/autobot.py {{ args }}
 
-# Run full fuzz suite against localhost:8000 and save per-target outputs
+# Run backend tool fuzzing (only /api/tool/* endpoints)
+fuzz-tools:
+    just autobot fuzz run --mode tool --validate --save examples/debug/fuzz_results
+
+# Run unified query fuzzing (only /api/q endpoint)
+fuzz-query:
+    just autobot fuzz run --mode query --validate --save examples/debug/fuzz_results_query
+
+# Run tool + query comparison (hits both endpoints)
+fuzz-compare:
+    just autobot fuzz run --mode compare --validate --save examples/debug/fuzz_results_compare
+
+# Legacy alias for tool fuzzing
 fuzz-all:
-    just autobot fuzz run --validate --compare --save examples/debug/fuzz_results
+    just fuzz-tools

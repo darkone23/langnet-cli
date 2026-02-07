@@ -304,7 +304,7 @@ just autobot fuzz run --validate
 curl http://localhost:8000/api/health
 
 # Test individual tools
-langnet-cli tool diogenes search --lang lat --query lupus --output pretty
+langnet-cli tool diogenes parse --lang lat --query lupus --output pretty
 
 # Validate all fixtures
 just autobot fuzz run --validate
@@ -317,11 +317,11 @@ python tools/compare_tool_outputs.py --tool diogenes --action search --word lupu
 
 | Tool | Actions | Langs | Default samples | Notes |
 |------|---------|-------|-----------------|-------|
-| diogenes | search, parse | lat, grc | lat: lupus/arma/vir/amo; grc: logos/anthropos/agathos | Lexicon + morphology |
+| diogenes | parse | lat, grc | lat: lupus/arma/vir/amo/sum/video; grc: logos/anthropos/agathos/lego | Lexicon + morphology |
 | whitakers | search | lat | amo/bellum/lupus | Whitaker's Words parser |
-| heritage | morphology, analyze, search, canonical, lemmatize, entry | san | agni/yoga/veda; canonical: agnii/agnim/agnina; entry: /skt/MW/890.html#agni | Sanskrit Heritage stack |
+| heritage | morphology, canonical, lemmatize | san | morph: agni/yoga; canonical: agnii/agnim/agnina/agni/veda; lemma: agnim/yogena/agnina | Sanskrit Heritage stack |
 | cdsl | lookup | san | agni/yoga/deva | Monier-Williams/AP90 via CDSL |
-| cltk | morphology, parse, dictionary | lat, grc, san (dictionary: lat) | morph: amo/sum/logos/anthropos/agni; parse: sum/video/anthropos/lego/yoga; dict: lupus/arma | CLTK wrappers |
+| cltk | morphology, dictionary | lat, grc, san (dictionary: lat) | morph: amo/sum/logos/anthropos/agni; dict: lupus/arma/amo | CLTK wrappers |
 
 Use `just autobot fuzz list` to see this matrix in the CLI and `just autobot fuzz run` to exercise it. All fuzzing shells out to `langnet-cli tool ...` against `http://localhost:8000`.
 

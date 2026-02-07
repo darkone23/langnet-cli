@@ -364,9 +364,6 @@ class SanskritNormalizer(LanguageNormalizer):
         # Generate alternate forms
         alternates = self.generate_alternates(canonical_text)
 
-        # Calculate confidence
-        confidence = self._calculate_confidence(query, encoding, enrichment_metadata)
-
         # Build normalization notes
         notes = [f"Detected encoding: {encoding}"]
         if enrichment_metadata:
@@ -380,7 +377,6 @@ class SanskritNormalizer(LanguageNormalizer):
             canonical_text=canonical_text,
             alternate_forms=alternates,
             detected_encoding=Encoding(encoding),
-            confidence=confidence,
             normalization_notes=notes,
             enrichment_metadata=enrichment_metadata,
         )
@@ -435,7 +431,6 @@ class SanskritNormalizer(LanguageNormalizer):
                         "source": "heritage_sktsearch",
                         "original_query": query,
                         "enrichment_type": "ascii_to_sanskrit",
-                        "confidence": 0.9,
                         "canonical_form": canonical_result["canonical_text"],
                         "entry_url": canonical_result["entry_url"],
                         "lexicon": canonical_result["lexicon"],
@@ -444,7 +439,6 @@ class SanskritNormalizer(LanguageNormalizer):
                                 "term": canonical_result["canonical_text"],
                                 "form": canonical_result["canonical_text"],
                                 "encoding": "velthuis",
-                                "confidence": 0.9,
                                 "entry_url": canonical_result["entry_url"],
                             }
                         ],
@@ -459,7 +453,6 @@ class SanskritNormalizer(LanguageNormalizer):
                         "source": "heritage_mw",
                         "original_query": query,
                         "enrichment_type": "ascii_to_sanskrit",
-                        "confidence": 0.8,
                         "canonical_form": mw_result["canonical_sanskrit"],
                         "entry_url": mw_result["entry_url"],
                         "lexicon": mw_result["lexicon"],
@@ -468,7 +461,6 @@ class SanskritNormalizer(LanguageNormalizer):
                                 "term": mw_result["canonical_sanskrit"],
                                 "form": mw_result["canonical_sanskrit"],
                                 "encoding": "devanagari",
-                                "confidence": 0.8,
                                 "entry_url": mw_result["entry_url"],
                             }
                         ],
@@ -483,27 +475,3 @@ class SanskritNormalizer(LanguageNormalizer):
         except Exception as e:
             logger.error(f"Heritage enrichment failed: {e}")
             return None
-
-    def _calculate_confidence(
-        self, query: str, encoding: str, enrichment_metadata: dict[str, Any] | None
-    ) -> float:
-        """Calculate confidence score for normalization."""
-        base_confidence = 0.5
-
-        # Boost confidence for known encodings
-        if encoding in [Encoding.SLP1.value, Encoding.DEVANAGARI.value, Encoding.IAST.value]:
-            base_confidence = 0.9
-        elif encoding == Encoding.VELTHUIS.value:
-            base_confidence = 0.8
-        elif encoding == Encoding.ASCII.value:
-            base_confidence = 0.4
-
-        # Boost confidence if Heritage enrichment was used
-        if enrichment_metadata:
-            base_confidence = min(base_confidence + 0.3, 1.0)
-
-        # Adjust for query length
-        if MIN_QUERY_LENGTH <= len(query) <= MAX_QUERY_LENGTH:
-            base_confidence = min(base_confidence + 0.1, 1.0)
-
-        return base_confidence
