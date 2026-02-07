@@ -1103,7 +1103,7 @@ def heritage_entry(url: str, output: str, save: str):
     _tool_query("heritage", "entry", query=url, output=output, save=save)
 
 
-@tool.group()
+@tool.group(name="cdsl")
 def cdsl_tool():
     """CDSL backend tools for Sanskrit."""
     pass
@@ -1175,22 +1175,10 @@ def _tool_query(  # noqa: PLR0913
 
 @tool.command("query")
 @click.option(
-    "--action",
+    "--tool",
     required=True,
-    type=click.Choice(
-        [
-            "search",
-            "parse",
-            "analyze",
-            "morphology",
-            "dictionary",
-            "lookup",
-            "canonical",
-            "lemmatize",
-            "entry",
-        ]
-    ),
-    help="Action to perform",
+    type=click.Choice(["diogenes", "whitakers", "heritage", "cdsl", "cltk"]),
+    help="Backend tool to invoke",
 )
 @click.option(
     "--action",

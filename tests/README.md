@@ -10,8 +10,6 @@ This directory contains the comprehensive test suite for the langnet-cli project
 | `test_api_integration.py` | API integration tests | Greek Spacy integration, backend responses |
 | `test_canonical_lookup_importance.py` | Canonical query importance | Query normalization, lookup validation |
 | `test_cts_urn_basic.py` | CTS URN parsing and indexing | Citation system, URN parsing, index building |
-| `test_fuzz_backend_adapters.py` | Backend adapter fuzz testing | Adapter validation with real fixtures |
-| `test_fuzz_universal_schema.py` | Universal schema fuzz testing | Schema compliance, cross-backend consistency |
 | `test_universal_schema_integration.py` | Universal schema integration | Schema validation, adapter integration |
 
 ### Language Backend Tests
@@ -67,14 +65,9 @@ This directory contains the comprehensive test suite for the langnet-cli project
 
 The `fixtures/` directory contains test data used for validation:
 
-### Raw Tool Outputs (`fixtures/raw_tool_outputs/`)
-| Directory | Purpose |
-|-----------|---------|
-| `cdsl/` | CDSL backend raw outputs |
-| `cltk/` | CLTK backend raw outputs |
-| `diogenes/` | Diogenes backend raw outputs |
-| `heritage/` | Heritage Platform raw outputs |
-| `whitakers/` | Whitaker's Words raw outputs |
+### Raw Tool Outputs
+Raw outputs can be generated on-demand with `just autobot fuzz run --save` and
+are stored under `examples/debug/fuzz_outputs/` (or a custom path).
 
 ### Heritage Fixtures (`fixtures/heritage/`)
 | Directory | Purpose |
@@ -106,8 +99,9 @@ nose2 -s tests --config tests/nose2.cfg -v
 # Run with debug logging
 LANGNET_LOG_LEVEL=DEBUG nose2 -s tests --config tests/nose2.cfg
 
-# Run fuzz testing
-python -m tests.fuzz_tool_outputs --validate --compare
+# Run fuzz testing (via autobot)
+just autobot fuzz list
+just autobot fuzz run --tool diogenes --action search --validate --compare
 ```
 
 ## Test Configuration

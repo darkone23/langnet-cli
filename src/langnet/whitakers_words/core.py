@@ -577,17 +577,21 @@ class _WhitakersProcHolder:
         maybe_words = home / ".local/bin/whitakers-words"
         if maybe_words.exists():
             logger.info("using_whitakers_binary", path=str(maybe_words))
-            self.proc = Command(maybe_words)
+            self.proc = Command(maybe_words).bake(
+                _tty=False, _tty_out=False, _tty_in=False
+            )
             return self.proc
         maybe_words = Path() / "deps/whitakers-words/bin/words"
         if maybe_words.exists():
             logger.info("using_whitakers_binary", path=str(maybe_words))
-            self.proc = Command(maybe_words)
+            self.proc = Command(maybe_words).bake(
+                _tty=False, _tty_out=False, _tty_in=False
+            )
             return self.proc
         else:
             logger.warning("whitakers_binary_not_found")
             test_cmd = Command("test")
-            self.proc = test_cmd.bake("!", "-z")
+            self.proc = test_cmd.bake("!", "-z", _tty=False, _tty_out=False, _tty_in=False)
             return self.proc
 
 
@@ -596,23 +600,6 @@ _holder = _WhitakersProcHolder()
 
 def get_whitakers_proc() -> "Command | None":
     return _holder.get()
-
-    home = Path.home()
-    maybe_words = home / ".local/bin/whitakers-words"
-    if maybe_words.exists():
-        logger.info("using_whitakers_binary", path=str(maybe_words))
-        _cached_whitakers_proc = Command(maybe_words)
-        return _cached_whitakers_proc
-    maybe_words = Path() / "deps/whitakers-words/bin/words"
-    if maybe_words.exists():
-        logger.info("using_whitakers_binary", path=str(maybe_words))
-        _cached_whitakers_proc = Command(maybe_words)
-        return _cached_whitakers_proc
-    else:
-        logger.warning("whitakers_binary_not_found")
-        test_cmd = Command("test")
-        _cached_whitakers_proc = test_cmd.bake("!", "-z")
-        return _cached_whitakers_proc
 
 
 # def fixlines(lines):
@@ -659,7 +646,8 @@ class WhitakersWordsChunker:
         # we might be in a special input mode
         # need special output parsing for that case
         self.input = input
-        self.result: str = self.ww(*input, _encoding="utf-8")  # type: ignore[assignment]
+        # Disable TTY allocation to work in sandboxed environments
+        self.result: str = self.ww(*input, _tty=False, _encoding="utf-8")  # type: ignore[assignment]
 
     def classify_line(self, line):
         line_type = None

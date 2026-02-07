@@ -30,6 +30,10 @@ try:
 except ImportError:
     model = None  # type: ignore[assignment]
 
+try:
+    from fuzz_commands import fuzz  # type: ignore[assignment,attr-defined]
+except ImportError:
+    fuzz = None  # type: ignore[assignment]
 
 @click.group()
 def autobot():
@@ -48,6 +52,10 @@ if server is not None:
 # Add model routing group to autobot if available
 if model is not None:
     autobot.add_command(model, name="model")
+
+# Add fuzz group to autobot if available
+if fuzz is not None:
+    autobot.add_command(fuzz, name="fuzz")
 
 
 if __name__ == "__main__":

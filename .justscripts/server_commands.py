@@ -24,14 +24,23 @@ def restart():
     """Kill uvicorn and wait for port to be active again."""
     console.print("[cyan]Restarting uvicorn server...[/cyan]")
 
-    sh.Command("pkill")("-f", "uvicorn", _ok_code=[0, 1])
+    # Avoid PTY exhaustion in limited environments by disabling TTY allocation
+    sh.Command("pkill")(
+        "-f", "uvicorn", _ok_code=[0, 1], _tty=False, _tty_out=False, _tty_in=False
+    )
     console.print("[yellow]Sent pkill to uvicorn processes[/yellow]")
 
     time.sleep(5)
     console.print("[cyan]Waiting for port to become available...[/cyan]")
     for i in range(30):
         try:
-            check_result = sh.Command("ss")("-tlnp", f"sport = :{UVICORN_PORT}")
+            check_result = sh.Command("ss")(
+                "-tlnp",
+                f"sport = :{UVICORN_PORT}",
+                _tty=False,
+                _tty_out=False,
+                _tty_in=False,
+            )
             if f":{UVICORN_PORT}" in str(check_result) and "LISTEN" in str(check_result):
                 console.print(f"[green]Port {UVICORN_PORT} is now active[/green]")
                 break
@@ -62,6 +71,9 @@ def verify():
             "-w",
             "%{http_code}",
             f"http://127.0.0.1:{UVICORN_PORT}/api/health",
+            _tty=False,
+            _tty_out=False,
+            _tty_in=False,
         )
         http_code = str(result).strip()
 

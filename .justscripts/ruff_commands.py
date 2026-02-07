@@ -62,6 +62,9 @@ def _process_file_for_ruff(py_file, todo_dir):
             _ok_code=[0, 1, 127],
             _err_to_out=True,
             _env=env,
+            _tty=False,
+            _tty_out=False,
+            _tty_in=False,
         )
 
         # Strip color codes from output (just in case)

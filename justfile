@@ -60,3 +60,7 @@ typecheck *args:
 # project level automation tool
 autobot *args:
     python3 .justscripts/autobot.py {{ args }}
+
+# Run full fuzz suite against localhost:8000 and save per-target outputs
+fuzz-all:
+    just autobot fuzz run --validate --compare --save examples/debug/fuzz_results

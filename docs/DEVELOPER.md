@@ -100,47 +100,35 @@ Automated testing for backend tools:
 
 ```bash
 # Generate fixtures for multiple words
-python -m tests.fuzz_tool_outputs \
-  --tool diogenes \
-  --action search \
-  --words "lupus,arma,vir" \
-  --validate
+just autobot fuzz run --tool diogenes --action search --words "lupus,arma,vir" --validate
 
 # Validate existing fixtures
-python -m tests.fuzz_tool_outputs \
-  --tool heritage \
-  --action morphology \
-  --validate
+just autobot fuzz run --tool heritage --action morphology --validate
 
 # Compare raw vs unified outputs
-python -m tests.fuzz_tool_outputs \
-  --tool cdsl \
-  --action lookup \
-  --compare
+just autobot fuzz run --tool cdsl --action lookup --compare
 ```
 
 ### Fixtures Management
 
-Raw backend outputs are stored as fixtures:
+Raw backend outputs can be generated on-demand:
 
 ```
-tests/fixtures/raw_tool_outputs/
-├── diogenes/          # Diogenes backend outputs
-├── whitakers/         # Whitaker's Words outputs
-├── heritage/          # Heritage Platform outputs
-├── cdsl/             # CDSL outputs
-└── cltk/             # CLTK outputs
+just autobot fuzz run \
+  --tool diogenes \
+  --action search \
+  --words "lupus,amo" \
+  --save                # defaults to examples/debug/fuzz_results.json
+
+just autobot fuzz list
+just autobot fuzz run --tool diogenes --action search --validate --compare
 ```
 
-Generate fixtures with `--save` flag or manually:
+Save individual outputs manually when needed:
 
 ```bash
-# Auto-generate fixture
-langnet-cli tool diogenes search --lang lat --query lupus --save
-
-# Manual fixture creation
 curl "http://localhost:8000/api/tool/diogenes/search?lang=lat&query=lupus" \
-  | jq . > tests/fixtures/raw_tool_outputs/diogenes/search_lat_lupus.json
+  | jq . > examples/debug/fuzz_outputs/diogenes_search_lat_lupus.json
 ```
 
 ### Schema Evolution
@@ -231,22 +219,18 @@ langnet-cli tool heritage morphology --query agni
 Comprehensive automated testing:
 
 ```bash
-# Test all tools with default word lists
-python -m tests.fuzz_tool_outputs --validate --compare
+# Test all tools with default word lists (langnet-cli will hit the running API)
+just autobot fuzz run --validate --compare
 
 # Test specific scenarios
-python -m tests.fuzz_tool_outputs \
+just autobot fuzz run \
   --tool diogenes \
   --action search \
   --words "lupus,arma,vir,rosa,amicus" \
   --validate
 
-# Generate test coverage report
-python -m tests.fuzz_tool_outputs \
-  --tool diogenes \
-  --action search \
-  --validate \
-  --generate-report
+# Exhaustive defaults across all backends (hits localhost:8000, saves per-target files)
+just autobot fuzz run --validate --compare --save examples/debug/fuzz_results
 ```
 
 ### 4. Schema Validation
@@ -266,7 +250,7 @@ print('✓ Schema validation passed')
 "
 
 # Batch validation
-python -m tests.fuzz_tool_outputs --validate
+just autobot fuzz run --validate
 ```
 
 ## Development Workflow
@@ -323,11 +307,25 @@ curl http://localhost:8000/api/health
 langnet-cli tool diogenes search --lang lat --query lupus --output pretty
 
 # Validate all fixtures
-python -m tests.fuzz_tool_outputs --validate
+just autobot fuzz run --validate
 
 # Compare outputs
 python tools/compare_tool_outputs.py --tool diogenes --action search --word lupus
 ```
+
+### Tool Matrix (backend → actions → defaults)
+
+| Tool | Actions | Langs | Default samples | Notes |
+|------|---------|-------|-----------------|-------|
+| diogenes | search, parse | lat, grc | lat: lupus/arma/vir/amo; grc: logos/anthropos/agathos | Lexicon + morphology |
+| whitakers | search | lat | amo/bellum/lupus | Whitaker's Words parser |
+| heritage | morphology, analyze, search, canonical, lemmatize, entry | san | agni/yoga/veda; canonical: agnii/agnim/agnina; entry: /skt/MW/890.html#agni | Sanskrit Heritage stack |
+| cdsl | lookup | san | agni/yoga/deva | Monier-Williams/AP90 via CDSL |
+| cltk | morphology, parse, dictionary | lat, grc, san (dictionary: lat) | morph: amo/sum/logos/anthropos/agni; parse: sum/video/anthropos/lego/yoga; dict: lupus/arma | CLTK wrappers |
+
+Use `just autobot fuzz list` to see this matrix in the CLI and `just autobot fuzz run` to exercise it. All fuzzing shells out to `langnet-cli tool ...` against `http://localhost:8000`.
+
+Fuzz saves now default to a directory (`examples/debug/fuzz_results/`) with one JSON per target plus `summary.json`, which avoids extremely large aggregate files.
 
 ## Code Conventions
 
