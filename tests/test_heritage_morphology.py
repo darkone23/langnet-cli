@@ -45,13 +45,6 @@ class TestHeritageParameterBuilder(unittest.TestCase):
         self.assertEqual(params["t"], "VH")
         self.assertEqual(params["max"], "10")
 
-    def test_build_lemma_params(self):
-        """Test building lemmatization parameters"""
-        params = HeritageParameterBuilder.build_lemma_params(word="योगेन", encoding="velthuis")
-
-        self.assertEqual(params["q"], "योगेन")
-        self.assertEqual(params["t"], "VH")
-
     def test_get_cgi_encoding_param(self):
         """Test CGI encoding parameter mapping"""
         self.assertEqual(HeritageParameterBuilder.get_cgi_encoding_param("velthuis"), "VH")

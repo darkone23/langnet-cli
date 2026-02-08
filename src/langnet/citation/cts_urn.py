@@ -17,8 +17,10 @@ The mapper uses the DuckDB CTS URN indexer database for authoritative mappings.
 
 import logging
 import os
-import unicodedata
 import re
+import unicodedata
+
+import betacode.conv
 
 import duckdb
 
@@ -216,6 +218,25 @@ class CTSUrnMapper:
                 return ""
             return candidate
         return ""
+
+    def _maybe_betacode_to_unicode(self, text: str | None) -> str | None:
+        """Convert betacode-ish strings to Unicode Greek; otherwise return original."""
+        if not text or not isinstance(text, str):
+            return text
+
+        # Betacode texts typically contain diacritic markers like *, /, \, =, +, ().
+        if not re.search(r"[*/\\\\()=+]|/[A-Za-z]", text):
+            return text
+
+        try:
+            cleaned = text.lstrip("$")
+            converted = betacode.conv.beta_to_uni(cleaned)
+            if converted != cleaned:
+                return converted
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("betacode_to_unicode_failed", text=text, error=str(exc))
+
+        return text
 
     def _parse_urn_components(self, urn: str) -> tuple[str | None, str | None]:
         """Return author and work numbers (without prefixes) from a CTS URN when possible."""
@@ -528,6 +549,8 @@ class CTSUrnMapper:
                 return None
 
             author_name, work_title = row
+            author_name = self._maybe_betacode_to_unicode(author_name)
+            work_title = self._maybe_betacode_to_unicode(work_title)
             return {"author": author_name, "work": work_title}
         except Exception as e:
             logger.debug(f"URN metadata lookup failed: {e}")

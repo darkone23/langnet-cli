@@ -161,8 +161,9 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             info: dict[str, str] = {}
             is_urn = citation_id.startswith("urn:cts:")
             kind = "cts" if is_urn else "unknown"
-            if citation_text:
-                info["text"] = citation_text
+            clean_text = self._betacode_to_unicode_if_needed(citation_text)
+            if clean_text:
+                info["text"] = clean_text
 
             urn_meta = (
                 self.cts_mapper.get_urn_metadata(citation_id, citation_text) if is_urn else None
@@ -181,11 +182,13 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             elif abbrev_meta:
                 info.update(abbrev_meta)
                 kind = abbrev_meta.get("kind", "abbreviation")
-                display = abbrev_meta.get("display") or citation_text
+                display = abbrev_meta.get("display") or clean_text
+                display = self._betacode_to_unicode_if_needed(display)
 
             info["kind"] = kind
             if not display:
-                display = citation_text or citation_id
+                display = clean_text or citation_id
+            display = self._betacode_to_unicode_if_needed(display)
             if display:
                 info["display"] = display
             if info:
@@ -216,6 +219,22 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
     def _is_greek_char(self, ch: str) -> bool:
         codepoint = ord(ch)
         return (0x0370 <= codepoint <= 0x03FF) or (0x1F00 <= codepoint <= 0x1FFF)
+
+    def _betacode_to_unicode_if_needed(self, text: str | None) -> str | None:
+        """Convert betacode-ish strings to Unicode Greek if they are plain ASCII."""
+        if not text:
+            return text
+        if any(self._is_greek_char(ch) for ch in text):
+            return text
+        if all(ord(ch) < 128 for ch in text) and any(
+            ch in text for ch in ["(", ")", "/", "\\", "*", "+", "=", "'", "|"]
+        ):
+            try:
+                converted = betacode.conv.beta_to_uni(text)
+                return converted or text
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("betacode_citation_convert_failed", text=text, error=str(exc))
+        return text
 
     def _normalize_canonical_form(
         self, lemma: str | None, language: str, fallback: str
@@ -337,12 +356,6 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         )
         if morphology and canonical_form:
             morphology.lemma = canonical_form
-        citations = self._collect_citations(dictionary_blocks)
-        citation_details = self._collect_citation_details(dictionary_blocks)
-        original_citations = self._collect_original_citations(dictionary_blocks)
-        raw_original_citations = (
-            data.get("citations") if isinstance(data.get("citations"), dict) else None
-        )
 
         metadata = {
             "chunk_types": data.get("chunk_types", []),
@@ -352,14 +365,6 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             metadata["canonical_form"] = canonical_form
         if morphology and morphology.foster_codes:
             metadata["foster_codes"] = morphology.foster_codes
-        if citations:
-            metadata["citations"] = citations
-        if citation_details:
-            metadata["citation_details"] = citation_details
-        if original_citations:
-            metadata["original_citations"] = original_citations
-        if raw_original_citations and not original_citations:
-            metadata["original_citations_raw"] = raw_original_citations
 
         # Create single unified entry
         entry = DictionaryEntry(
@@ -638,23 +643,23 @@ class CLTKBackendAdapter(BaseBackendAdapter):
 
         seen_definitions = set()
         for line in lewis_lines:
-            clean_line = line.strip()
-            if not clean_line:
+            # Keep whitespace and punctuation from Lewis & Short intact; it often carries meaning.
+            raw_line = line.rstrip("\n")
+            if not raw_line:
                 continue
 
-            # Keep the raw Lewis & Short line untouched; avoid heuristic parsing until a real parser exists.
-            if clean_line in seen_definitions:
+            if raw_line in seen_definitions:
                 continue
-            seen_definitions.add(clean_line)
+            seen_definitions.add(raw_line)
 
-            pos, gender = self._infer_pos_gender_from_line(clean_line)
+            pos, gender = self._infer_pos_gender_from_line(raw_line)
             sense = DictionaryDefinition(
                 pos=pos,
-                definition=clean_line,
+                definition=raw_line,
                 citations=[],  # Could extract references from definitions
                 examples=[],
                 gender=gender if gender else None,
-                metadata={"lewis_line": line},
+                metadata={},
             )
             definitions.append(sense)
 
@@ -669,11 +674,12 @@ class CLTKBackendAdapter(BaseBackendAdapter):
             )
             definitions.append(sense)
 
-        metadata = {"canonical_form": canonical_form}
-        if headword:
-            metadata["headword"] = headword
-        if data.get("ipa"):
-            metadata["ipa"] = data.get("ipa")
+        metadata = {}
+        if canonical_form:
+            metadata["canonical_form"] = canonical_form
+        ipa = data.get("ipa")
+        if ipa:
+            metadata["ipa"] = ipa
 
         entry = DictionaryEntry(
             word=headword,
@@ -773,31 +779,29 @@ class HeritageBackendAdapter(BaseBackendAdapter):
 
             morphology = MorphologyInfo(**morphology_kwargs)
 
+        additional_analyses = all_analyses[1:] if len(all_analyses) > 1 else []
+        metadata = {
+            "analysis_count": len(all_analyses),
+            "solution_count": len(morphology_data.get("solutions", [])),
+        }
+        if additional_analyses:
+            metadata["additional_analyses"] = additional_analyses
+
+        canonical_data = data.get("canonical")
+        if canonical_data is not None:
+            metadata["canonical"] = canonical_data
+
+        lemmatize_data = data.get("lemmatize")
+        if lemmatize_data is not None:
+            metadata["lemmatize"] = lemmatize_data
+
         entry = DictionaryEntry(
             word=word,
             language=language,
             definitions=definitions,
             morphology=morphology,
             source="heritage",
-            metadata={
-                "all_analyses": all_analyses,
-                "combined": data.get("combined", {}),
-                **(
-                    {"canonical": data.get("canonical")}
-                    if data.get("canonical") is not None
-                    else {}
-                ),
-                **(
-                    {"lemmatize": data.get("lemmatize")}
-                    if data.get("lemmatize") is not None
-                    else {}
-                ),
-                **(
-                    {"canonical_form": data.get("canonical", {}).get("canonical_sanskrit")}
-                    if isinstance(data.get("canonical"), dict)
-                    else {}
-                ),
-            },
+            metadata=metadata,
         )
         entries.append(entry)
 
@@ -838,10 +842,14 @@ class HeritageBackendAdapter(BaseBackendAdapter):
                     morphology=None,
                     source="heritage",
                     metadata={
-                        **dictionary_data,
+                        "dictionary": dictionary_data.get("dict_id")
+                        or dictionary_data.get("dictionary")
+                        or dictionary_data.get("dict")
+                        or "heritage",
+                        "entry_count": len(dictionary_data.get("entries", [])),
                         **(
-                            {"canonical_form": data.get("canonical", {}).get("canonical_sanskrit")}
-                            if isinstance(data.get("canonical"), dict)
+                            {"transliteration": dictionary_data.get("transliteration")}
+                            if dictionary_data.get("transliteration")
                             else {}
                         ),
                         **(
@@ -948,6 +956,9 @@ class CDSLBackendAdapter(BaseBackendAdapter):
 
         transliteration = data.get("transliteration")
         root = data.get("root")
+        canonical_form = data.get("canonical_form")
+        canonical_candidates = data.get("canonical_form_candidates")
+        input_form = data.get("input_form")
 
         # Process dictionary entries
         dictionaries = data.get("dictionaries", {})
@@ -955,7 +966,15 @@ class CDSLBackendAdapter(BaseBackendAdapter):
             if dict_data:
                 entries.extend(
                     self._process_dictionary_entries(
-                        dict_data, dict_name, word, language, transliteration, root
+                        dict_data,
+                        dict_name,
+                        word,
+                        language,
+                        transliteration,
+                        root,
+                        canonical_form=canonical_form,
+                        canonical_candidates=canonical_candidates,
+                        input_form=input_form,
                     )
                 )
 
@@ -973,6 +992,9 @@ class CDSLBackendAdapter(BaseBackendAdapter):
         language: str,
         transliteration: dict | None,
         root: dict | None,
+        canonical_form: str | None = None,
+        canonical_candidates: list[str] | None = None,
+        input_form: str | None = None,
     ) -> list[DictionaryEntry]:
         """Process entries from a specific dictionary."""
         entries = []
@@ -998,23 +1020,31 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                         eroot = etymology_data.get("root", "")
                         etymology_text = f"{etype} {eroot}".strip()
 
+                    # Strip noisy reference payload from metadata; keep citation_details separately.
+                    # Drop meaning/definition fields here to avoid duplicating definition text in metadata.
+                    sense_metadata = {
+                        k: v
+                        for k, v in entry_data.items()
+                        if k not in {"references", "meaning", "definitions", "definition"}
+                    }
                     sense = DictionaryDefinition(
                         pos=entry_data.get("pos", "unknown"),
                         definition=entry_data.get("meaning", ""),
                         citations=citations,
                         examples=entry_data.get("examples", []),
-                        metadata=entry_data,
+                        metadata=sense_metadata,
                         gender=gender,
                         etymology=etymology_text,
                     )
                     if citation_details:
-                        sense.metadata = {**sense.metadata, "citation_details": citation_details}
+                        combined_details = sense_metadata.get("_combined_citation_details", [])
+                        combined_details.extend(citation_details)
+                        sense_metadata["_combined_citation_details"] = combined_details
                     definitions.append(sense)
                     original_entries.append(
                         {
                             "id": entry_data.get("id"),
                             "meaning": entry_data.get("meaning", ""),
-                            "page_ref": entry_data.get("page_ref"),
                         }
                     )
 
@@ -1022,30 +1052,26 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                 metadata = {
                     "dictionary": dict_name,
                     "original_entry_count": len(original_entries),
-                    "original_entries": original_entries,
                 }
+                if transliteration:
+                    metadata["transliteration"] = transliteration
+                if canonical_form:
+                    metadata["canonical_form"] = canonical_form
+                if canonical_candidates:
+                    metadata["canonical_form_candidates"] = canonical_candidates
+                if input_form:
+                    metadata["input_form"] = input_form
+                if root:
+                    metadata["root"] = root
+
+                # Collate citation details once at entry level
                 combined_details = []
                 for sense in definitions:
-                    details = sense.metadata.get("citation_details", [])
+                    details = sense.metadata.pop("_combined_citation_details", None)
                     if details:
                         combined_details.extend(details)
                 if combined_details:
                     metadata["citation_details"] = combined_details
-                if transliteration:
-                    metadata["transliteration"] = transliteration
-                    canonical_form = transliteration.get("iast")
-                    if canonical_form:
-                        metadata["canonical_form"] = canonical_form
-                if root:
-                    metadata["root"] = root
-
-                foster_codes = [
-                    entry_data.get("foster_codes")
-                    for entry_data in dict_data
-                    if isinstance(entry_data, dict) and entry_data.get("foster_codes")
-                ]
-                if foster_codes:
-                    metadata["foster_codes"] = foster_codes
 
                 entry = DictionaryEntry(
                     word=word,
@@ -1075,35 +1101,45 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                         eroot = etymology_data.get("root", "")
                         etymology_text = f"{etype} {eroot}".strip()
 
+                    sense_metadata = {
+                        k: v
+                        for k, v in entry_data.items()
+                        if k not in {"references", "meaning", "definitions", "definition"}
+                    }
                     sense = DictionaryDefinition(
                         pos=entry_data.get("pos", "unknown"),
                         definition=entry_data.get("meaning", ""),
                         citations=citations,
                         examples=entry_data.get("examples", []),
-                        metadata=entry_data,
+                        metadata=sense_metadata,
                         gender=gender,
                         etymology=etymology_text,
                     )
                     if citation_details:
-                        sense.metadata = {**sense.metadata, "citation_details": citation_details}
+                        combined_details = sense_metadata.get("_combined_citation_details", [])
+                        combined_details.extend(citation_details)
+                        sense_metadata["_combined_citation_details"] = combined_details
                     definitions.append(sense)
 
                     if definitions:
                         metadata = {"dictionary": dict_name}
                         combined_details = []
                         for sense in definitions:
-                            details = sense.metadata.get("citation_details", [])
+                            details = sense.metadata.pop("_combined_citation_details", None)
                             if details:
                                 combined_details.extend(details)
                         if combined_details:
                             metadata["citation_details"] = combined_details
                         if transliteration:
                             metadata["transliteration"] = transliteration
-                            canonical_form = transliteration.get("iast")
-                            if canonical_form:
-                                metadata["canonical_form"] = canonical_form
                         if root:
                             metadata["root"] = root
+                        if canonical_form:
+                            metadata["canonical_form"] = canonical_form
+                        if canonical_candidates:
+                            metadata["canonical_form_candidates"] = canonical_candidates
+                        if input_form:
+                            metadata["input_form"] = input_form
                         foster_codes = entry_data.get("foster_codes")
                         if foster_codes:
                             metadata["foster_codes"] = foster_codes
@@ -1317,6 +1353,9 @@ class SanskritAdapter(BaseLanguageAdapter):
 
     def adapt(self, raw_backends_result: dict, language: str, word: str) -> list[DictionaryEntry]:
         all_entries = []
+        canonical_form = raw_backends_result.get("canonical_form")
+        input_form = raw_backends_result.get("input_form", word)
+        canonical_tokens = raw_backends_result.get("canonical_tokens")
 
         # Process CDSL dictionaries (Monier-Williams, Apte)
         cdsl_data = raw_backends_result.get("cdsl", {})
@@ -1337,5 +1376,23 @@ class SanskritAdapter(BaseLanguageAdapter):
                 all_entries.extend(heritage_entries)
             except Exception as e:
                 logger.warning("heritage_adaptation_failed", word=word, error=str(e))
+
+        if input_form or canonical_form:
+            for entry in all_entries:
+                metadata = entry.metadata or {}
+                if input_form and "input_form" not in metadata:
+                    metadata["input_form"] = input_form
+                if canonical_form and "canonical_form" not in metadata:
+                    metadata["canonical_form"] = canonical_form
+                if canonical_tokens and "canonical_tokens" not in metadata:
+                    metadata["canonical_tokens"] = canonical_tokens
+                if (
+                    canonical_form
+                    and input_form
+                    and canonical_form != input_form
+                    and "canonical_hint" not in metadata
+                ):
+                    metadata["canonical_hint"] = f"{input_form} → {canonical_form}"
+                entry.metadata = metadata
 
         return all_entries

@@ -56,7 +56,30 @@ class NormalizationPipeline:
 
     def initialize(self) -> None:
         """Initialize the pipeline with language handlers."""
-        # This will be called by the main application
+        # Register built-in language handlers; keep pipeline resilient if optional ones fail.
+        self.language_handlers.clear()
+
+        try:
+            from langnet.normalization.latin import LatinNormalizer  # noqa: PLC0415
+
+            self.register_handler(Language.LATIN, LatinNormalizer())
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("latin_normalizer_unavailable", error=str(exc))
+
+        try:
+            from langnet.normalization.greek import GreekNormalizer  # noqa: PLC0415
+
+            self.register_handler(Language.GREEK, GreekNormalizer())
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("greek_normalizer_unavailable", error=str(exc))
+
+        try:
+            from langnet.normalization.sanskrit import SanskritNormalizer  # noqa: PLC0415
+
+            self.register_handler(Language.SANSKRIT, SanskritNormalizer())
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("sanskrit_normalizer_unavailable", error=str(exc))
+
         self._initialized = True
         logger.info("Normalization pipeline initialized")
 

@@ -151,23 +151,68 @@ class HeritageHTMLExtractor:
 
             solution_number = int(solution_match.group(1))
             table = self._find_solution_table(span)
-            if not table:
-                continue
+            next_solution = None
+            for candidate in span.find_all_next("span"):
+                if candidate is span:
+                    continue
+                if candidate.get_text() and "Solution" in candidate.get_text():
+                    next_solution = candidate
+                    break
 
-            patterns = self._collect_patterns(table)
+            patterns = self._collect_patterns(table) if table else []
+            if not patterns:
+                patterns.extend(self._collect_inline_patterns(span, next_solution))
+            segments = self._collect_segments(span, next_solution)
             if patterns:
-                color = self._table_color(table)
-                raw_text = "\n".join(raw for _, _, raw in patterns)
+                color = self._table_color(table) if table else None
+                raw_text = "\n".join(raw for _, _, raw in patterns) or " ".join(
+                    seg["text"] for seg in segments if seg.get("text")
+                )
                 blocks.append(
                     {
                         "number": solution_number,
                         "patterns": patterns,
                         "color": color,
                         "raw_text": raw_text,
+                        "segments": segments,
                     }
                 )
 
         return blocks
+
+    def _collect_segments(self, start_span, next_solution_span) -> list[dict[str, Any]]:
+        """Collect span text/class between current solution marker and the next one."""
+        segments: list[dict[str, Any]] = []
+        current = start_span.next_sibling
+        while current and current != next_solution_span:
+            if getattr(current, "name", None) == "span":
+                segments.append(
+                    {
+                        "class": (current.get("class") or [None])[0],
+                        "text": current.get_text(strip=True),
+                    }
+                )
+            current = current.next_sibling
+        return segments
+
+    def _collect_inline_patterns(self, start_span, next_solution_span) -> list[tuple[str, str, str]]:
+        """Collect latin12 patterns between solution markers when no table exists."""
+        patterns: list[tuple[str, str, str]] = []
+        current = start_span.next_sibling
+        seen: set[str] = set()
+        while current and current != next_solution_span:
+            if getattr(current, "name", None) == "span" and "latin12" in (current.get("class") or []):
+                span_text = current.get_text(strip=True)
+                match = re.search(self.pattern, span_text)
+                if match:
+                    word = match.group(1).strip()
+                    analysis = match.group(2).strip()
+                    key = f"{word}||{analysis}"
+                    if key not in seen:
+                        seen.add(key)
+                        patterns.append((word, analysis, match.group(0)))
+            current = current.next_sibling
+        return patterns
 
     def _find_solution_table(self, solution_span):
         """Locate the first pattern table after the given solution span."""

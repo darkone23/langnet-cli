@@ -1,4 +1,3 @@
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -173,11 +172,9 @@ class ClassicsToolkit:
             if transcription:
                 transcription = transcription[1:-1]
 
-            merged_lines = " ".join(results.splitlines(keepends=False))
-            parts = re.sub(r"\s+", " ", merged_lines)
-            l_lines = []
-            if parts:
-                l_lines = [parts]
+            # Keep the raw Lewis & Short text rather than collapsing whitespace so
+            # downstream consumers can show the full entry without losing structure.
+            l_lines = [results] if results else []
 
             return LatinQueryResult(
                 headword=stem,

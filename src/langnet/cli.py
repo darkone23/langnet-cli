@@ -1044,18 +1044,17 @@ def heritage_canonical(query: str, output: str, save: str):
 
 
 @heritage.command("lemmatize")
-@click.option("--query", required=True, help="Inflected form to lemmatize")
+@click.option("--query", required=True, help="Inflected form to lemmatize (via sktreader)")
 @click.option(
     "--output", type=click.Choice(["json", "pretty", "yaml"]), default="json", help="Output format"
 )
 @click.option("--save", help="Save output to fixture file")
 def heritage_lemmatize(query: str, output: str, save: str):
     """
-    Get lemma from inflected form using sktlemmatizer.
+    Get lemma from inflected form using Heritage morphology (sktreader-backed).
 
     Examples:
         just cli tool heritage lemmatize --query agniis
-        # Returns: {lemma: "agni", inflected_form: "agniis"}
     """
     _tool_query("heritage", "lemmatize", query=query, output=output, save=save)
 

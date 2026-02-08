@@ -362,24 +362,6 @@ class HeritageParameterBuilder:
         return params
 
     @staticmethod
-    def build_lemma_params(word: str, encoding: str | None = None, **kwargs) -> dict[str, Any]:
-        """Build parameters for lemmatization (sktlemmatizer)"""
-        params = {
-            "lex": "SH",  # Default to Shabda Sanskrit lexicon
-            "q": word,  # Query parameter (not 'word')
-        }
-
-        # Encoding parameter (t=VH for Velthuis, etc.)
-        if encoding:
-            params["t"] = HeritageParameterBuilder.get_cgi_encoding_param(encoding)
-        else:
-            params["t"] = "VH"  # Default to Velthuis encoding
-
-        params.update(kwargs)
-
-        return params
-
-    @staticmethod
     def build_declension_params(
         lemma: str,
         gender: str = "m",

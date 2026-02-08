@@ -258,7 +258,11 @@ class MorphologyParser:
                         if ctx:
                             sol_metadata = sol.get("metadata", {})
                             sol_metadata.update(
-                                {"color": ctx.get("color"), "raw_text": ctx.get("raw_text")}
+                                {
+                                    "color": ctx.get("color"),
+                                    "raw_text": ctx.get("raw_text"),
+                                    "segments": ctx.get("segments"),
+                                }
                             )
                             sol["metadata"] = sol_metadata
                     result = {

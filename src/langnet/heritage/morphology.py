@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 
 from ..cologne.core import SanskritCologneLexicon
 from .client import HeritageAPIError, HeritageHTTPClient
+from .encoding_service import EncodingService
 from .models import HeritageMorphologyResult, HeritageSolution, HeritageWordAnalysis
 from .parameters import HeritageParameterBuilder
 from .parsers import MorphologyParser
@@ -60,9 +61,10 @@ class HeritageDictionaryService:
         try:
             # Create a client directly without context manager
             client = HeritageHTTPClient()
+            normalized_word, normalized_encoding = self._normalize_for_sktreader(word, encoding)
             morph_params = HeritageParameterBuilder.build_morphology_params(
-                text=word,
-                encoding=encoding,
+                text=normalized_word,
+                encoding=normalized_encoding,
                 max_solutions=max_solutions,
             )
             morph_result = client.fetch_cgi_script("sktreader", morph_params)
@@ -268,39 +270,47 @@ class HeritageMorphologyService:
             "Client must be initialized before calling _analyze_with_fallback"
         )
 
+        # Normalize to Velthuis before hitting sktreader to avoid encoding surprises.
+        normalized_text, normalized_encoding = self._normalize_for_sktreader(text, encoding)
+
         # Try original query
         params = HeritageParameterBuilder.build_morphology_params(
-            text=text,
-            encoding=encoding,
+            text=normalized_text,
+            encoding=normalized_encoding,
             max_solutions=max_solutions,
         )
         html_content = self.client.fetch_cgi_script("sktreader", params=params, timeout=timeout)
 
+        parsed_data = self.parser.parse(html_content)
+        has_solutions = bool(parsed_data.get("solutions"))
+
+        # If we got solutions, return immediately even if the HTML contained warning markers.
+        if has_solutions:
+            return self._build_morphology_result(
+                text=normalized_text, parsed_data=parsed_data, processing_time=0.0
+            )
+
         # Check if result indicates unknown/error
         if use_fallback and self._is_unknown_result(html_content):
             # Generate long vowel variants and try them
-            variants = self._generate_long_vowel_variants(text)
+            variants = self._generate_long_vowel_variants(normalized_text)
             for variant in variants:
                 try:
                     fallback_params = HeritageParameterBuilder.build_morphology_params(
                         text=variant,
-                        encoding=encoding,
-                        max_solutions=max_solutions,
-                    )
-                    fallback_params = HeritageParameterBuilder.build_morphology_params(
-                        text=variant,
-                        encoding=encoding,
+                        encoding=normalized_encoding,
                         max_solutions=max_solutions,
                     )
                     fallback_html = self.client.fetch_cgi_script(
                         "sktreader", params=fallback_params, timeout=timeout
                     )
 
-                    if not self._is_unknown_result(fallback_html):
-                        # Fallback worked, parse and return with metadata
-                        parsed_data = self.parser.parse(fallback_html)
+                    parsed_fallback = self.parser.parse(fallback_html)
+                    if parsed_fallback.get("solutions"):
                         result = self._build_morphology_result(
-                            text=text, parsed_data=parsed_data, processing_time=0.0
+                            text=normalized_text,
+                            parsed_data=parsed_fallback,
+                            processing_time=0.0,
                         )
                         # Add fallback metadata
                         if not result.metadata:
@@ -309,6 +319,7 @@ class HeritageMorphologyService:
                             {
                                 "fallback_used": True,
                                 "original_input": text,
+                                "normalized_input": normalized_text,
                                 "suggested_input": variant,
                             }
                         )
@@ -317,12 +328,10 @@ class HeritageMorphologyService:
                 except Exception:
                     continue
 
-        # If no fallback or fallback didn't work, parse original result
-        parsed_data = self.parser.parse(html_content)
-        result = self._build_morphology_result(
-            text=text, parsed_data=parsed_data, processing_time=0.0
+        # If no fallback or fallback didn't work, return parsed (possibly empty) result
+        return self._build_morphology_result(
+            text=normalized_text, parsed_data=parsed_data, processing_time=0.0
         )
-        return result
 
     def _is_unknown_result(self, html_content: str) -> bool:
         """Check if HTML result indicates unknown/error analysis."""
@@ -341,6 +350,23 @@ class HeritageMorphologyService:
             variants.append(text + "u")  # guru → guruu
 
         return variants
+
+    def _normalize_for_sktreader(self, text: str, encoding: str | None) -> tuple[str, str]:
+        """
+        Normalize any incoming script/transliteration to Velthuis before sending to sktreader.
+        """
+        target_encoding = "velthuis"
+        try:
+            from indic_transliteration.sanscript import VELTHUIS, transliterate  # noqa: PLC0415
+            from indic_transliteration.detect import detect  # noqa: PLC0415
+
+            detected = encoding or EncodingService.detect_encoding(text) or "ascii"
+            source_scheme = detect(text) or detected
+            normalized = transliterate(text, source_scheme, VELTHUIS)
+            return normalized, target_encoding
+        except Exception:
+            # Best effort fallback: leave text as-is, still mark encoding as velthuis to avoid DN/IAST params.
+            return text, target_encoding
 
     def _build_morphology_result(
         self, text: str, parsed_data: dict[str, Any], processing_time: float

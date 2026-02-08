@@ -7,10 +7,11 @@ import structlog
 import langnet.logging  # noqa: F401 - ensures logging is configured before use
 from langnet.backend_adapter import LanguageAdapterRegistry
 from langnet.classics_toolkit.core import ClassicsToolkit
-from langnet.cologne.core import SanskritCologneLexicon
+from langnet.cologne.core import SanskritCologneLexicon, to_slp1 as cdsl_to_slp1
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
 from langnet.foster.apply import apply_foster_view
 from langnet.heritage.client import HeritageHTTPClient
+from langnet.heritage.encoding_service import EncodingService
 from langnet.heritage.morphology import (
     HeritageMorphologyService,  # TODO: not sure why this is not just in heritage client?
 )
@@ -189,18 +190,200 @@ class LanguageEngine:
     def _query_sanskrit(self, word: str, _cattrs_converter) -> dict:
         result = {}
 
-        heritage_result = self._query_sanskrit_heritage(word, _cattrs_converter)
+        # Normalize word to canonical form (prefer Heritage sktsearch) before hitting backends.
+        canonical, canonical_slp1, slp1_candidates, canonical_tokens = self._normalize_sanskrit_word(
+            word
+        )
+
+        heritage_result = self._query_sanskrit_heritage(canonical, _cattrs_converter)
         if heritage_result:
             result["heritage"] = heritage_result
 
         try:
-            cdsl_result = self.cdsl.lookup_ascii(word)
-            result["cdsl"] = _cattrs_converter.unstructure(cdsl_result)
+            cdsl_lookup_error: Exception | None = None
+            cdsl_result = None
+            for candidate in [canonical_slp1, *slp1_candidates]:
+                try:
+                    cdsl_result = self.cdsl.lookup_ascii(candidate)
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    cdsl_lookup_error = exc
+                    continue
+
+            if cdsl_result:
+                result["cdsl"] = _cattrs_converter.unstructure(cdsl_result)
+            else:
+                raise cdsl_lookup_error or RuntimeError("CDSL lookup failed for all candidates")
         except Exception as e:  # noqa: BLE001
             logger.error("backend_failed", backend="cdsl", error=str(e))
             result["cdsl"] = {"error": f"CDSL unavailable: {str(e)}"}
 
+        result["canonical_form"] = canonical_slp1 or canonical
+        result["canonical_slp1"] = canonical_slp1
+        if slp1_candidates:
+            result["canonical_slp1_candidates"] = slp1_candidates
+        result["canonical_heritage"] = canonical
+        if canonical_tokens:
+            result["canonical_tokens"] = canonical_tokens
+        result["input_form"] = word
         return result
+
+    def _normalize_sanskrit_word(self, word: str) -> tuple[str, str, list[str], list[str] | None]:
+        """Return canonical Sanskrit forms: heritage-friendly, primary SLP1, SLP1 alternates, tokens."""
+        heritage_form = word
+        slp1_form = word
+        slp1_candidates: list[str] = []
+        canonical_tokens: list[str] | None = None
+
+        # Prefer normalization pipeline (which hits sktsearch) for canonicalization.
+        if self.normalization_pipeline:
+            if not getattr(self.normalization_pipeline, "_initialized", False):
+                try:
+                    self.normalization_pipeline.initialize()
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("normalization_init_failed", error=str(exc))
+            try:
+                normalized = self.normalization_pipeline.normalize_query("san", word)
+                heritage_form = normalized.canonical_text or heritage_form
+                if heritage_form and " " in heritage_form:
+                    canonical_tokens = [tok for tok in heritage_form.split(" ") if tok]
+                    if canonical_tokens:
+                        heritage_form = canonical_tokens[0]
+                # Prefer precomputed SLP1 alternates when available.
+                alt_slp1 = self._first_slp1_alternate(normalized.alternate_forms)
+                if alt_slp1:
+                    slp1_form = alt_slp1
+                # Collect all SLP1 alternates for downstream fallbacks.
+                for alt in normalized.alternate_forms:
+                    try:
+                        from indic_transliteration.detect import detect  # noqa: PLC0415
+                    except Exception:
+                        break
+                    try:
+                        if detect(alt) == "slp1":
+                            slp1_candidates.append(alt)
+                    except Exception:
+                        continue
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("sanskrit_normalization_failed", word=word, error=str(exc))
+
+        # If normalization pipeline is absent or did not yield a canonical form, fall back to sktsearch directly.
+        if heritage_form == word and self.heritage_client:
+            try:
+                canonical = self.heritage_client.fetch_canonical_via_sktsearch(word)
+                canon_text = canonical.get("canonical_text")
+                if canon_text:
+                    heritage_form = canon_text
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("sktsearch_canonical_failed", word=word, error=str(exc))
+
+        if slp1_form == word:
+            slp1_form = self._to_slp1(heritage_form)
+        if not slp1_candidates:
+            slp1_candidates.append(slp1_form)
+        # Ensure a Velthuis→SLP1 candidate exists for CDSL fallbacks.
+        slp1_candidates.append(self._velthuis_to_slp1_basic(heritage_form))
+
+        # If primary SLP1 looks mangled (digits/quotes), replace with basic mapping.
+        if self._looks_mangled_slp1(slp1_form):
+            slp1_form = self._velthuis_to_slp1_basic(heritage_form)
+
+        # Force a lowercased SLP1 guess using the CDSL transliterator to catch ASCII roman inputs (e.g., shiva -> ziva).
+        try:
+            cdsl_slp1 = cdsl_to_slp1(heritage_form)
+            if cdsl_slp1:
+                slp1_candidates.append(cdsl_slp1)
+                slp1_form = cdsl_slp1
+        except Exception:
+            pass
+
+        # Deduplicate while preserving order
+        seen: set[str] = set()
+        slp1_candidates = [c for c in slp1_candidates if c and not (c in seen or seen.add(c))]
+
+        return heritage_form, slp1_form, slp1_candidates, canonical_tokens
+
+    @staticmethod
+    def _to_slp1(text: str) -> str:
+        """Transliterate Sanskrit text to SLP1 for CDSL/ASCII backends."""
+        try:
+            from indic_transliteration.detect import detect  # noqa: PLC0415
+            from indic_transliteration.sanscript import (  # noqa: PLC0415
+                SLP1,
+                VELTHUIS,
+                transliterate,
+            )
+
+            src = detect(text)
+            # Heuristic: if the text looks like Velthuis (dots/long vowels), force VELTHUIS.
+            looks_velthuis = any(ch in text for ch in [".", "~", "aa", "ii", "uu"])
+            if looks_velthuis:
+                src_scheme = VELTHUIS
+            else:
+                src_scheme = src
+            return transliterate(text, src_scheme, SLP1)
+        except Exception:
+            return text
+
+    @staticmethod
+    def _first_slp1_alternate(alternates: list[str]) -> str | None:
+        """Return the first SLP1-looking alternate if present."""
+        try:
+            from indic_transliteration.detect import detect  # noqa: PLC0415
+        except Exception:
+            return None
+
+        for alt in alternates:
+            try:
+                if detect(alt) == "slp1":
+                    return alt.lower()
+            except Exception:
+                continue
+        return None
+
+    @staticmethod
+    def _velthuis_to_slp1_basic(text: str) -> str:
+        """Simple Velthuis to SLP1 mapper for fallback canonicalization."""
+        replacements = [
+            ("aa", "A"),
+            ("ii", "I"),
+            ("uu", "U"),
+            ("~n", "Y"),
+            (".rr", "F"),
+            (".r", "f"),
+            (".ll", "X"),
+            (".l", "x"),
+            (".n", "R"),
+            (".t", "w"),
+            (".d", "q"),
+            (".s", "z"),
+            ("'s", "S"),
+        ]
+        out = text
+        for old, new in replacements:
+            out = out.replace(old, new)
+        return out
+
+    @staticmethod
+    def _looks_mangled_slp1(text: str) -> bool:
+        """Detect obvious transliteration artifacts like digits/quotes in SLP1 output."""
+        return any(ch.isdigit() or ch in {"\"", "'"} for ch in text)
+
+    @staticmethod
+    def _detect_heritage_encoding(word: str) -> str:
+        """
+        Detect the best encoding hint for Heritage.
+        We normalize to Velthuis for non-ASCII inputs to maximize hit rate.
+        """
+        try:
+            from langnet.heritage.encoding_service import EncodingService  # noqa: PLC0415
+        except Exception:
+            return "velthuis"
+
+        encoding = EncodingService.detect_encoding(word)
+        if encoding in {"devanagari", "iast", "hk", "slp1"}:
+            return "velthuis"
+        return encoding or "velthuis"
 
     def _query_sanskrit_heritage(self, word: str, _cattrs_converter) -> dict | None:
         if not self.heritage_morphology:
@@ -211,7 +394,10 @@ class LanguageEngine:
 
         # Perform morphological analysis
         try:
-            morphology_result = self.heritage_morphology.analyze_word(word)
+            morphology_encoding = self._detect_heritage_encoding(word)
+            morphology_result = self.heritage_morphology.analyze_word(
+                word, encoding=morphology_encoding
+            )
         except Exception as exc:  # noqa: BLE001
             logger.error("backend_failed", backend="heritage_morphology", error=str(exc))
             morphology_result = None
@@ -225,7 +411,6 @@ class LanguageEngine:
                 first_analysis = morphology_result.solutions[0].analyses[0]
                 lemma = first_analysis.lemma if first_analysis.lemma else None
                 if lemma:
-                    # Try Heritage Platform dictionary first, fallback to old service
                     dict_result = None
                     dict_source = None
                     if dict_result:
@@ -259,13 +444,6 @@ class LanguageEngine:
                     result["canonical"] = canonical_result
             except Exception as exc:  # noqa: BLE001
                 logger.warning("heritage_canonical_failed", word=word, error=str(exc))
-
-            try:
-                lemmatize_result = self.heritage_client.fetch_lemmatization(word)
-                if lemmatize_result:
-                    result["lemmatize"] = lemmatize_result
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("heritage_lemmatize_failed", word=word, error=str(exc))
 
         return result
 
@@ -458,29 +636,135 @@ class LanguageEngine:
         if not self.heritage_morphology:
             raise ValueError("Heritage morphology service not available")
 
+        (
+            canonical_query,
+            canonical_slp1,
+            _slp1_candidates,
+            canonical_tokens,
+        ) = self._normalize_sanskrit_word(query)
         result = {}
 
         if action == "morphology":
-            morphology_result = self.heritage_morphology.analyze_word(query)
+            morphology_encoding = self._detect_heritage_encoding(canonical_query)
+            morphology_result = self.heritage_morphology.analyze_word(
+                canonical_query, encoding=morphology_encoding
+            )
             if morphology_result:
                 result["morphology"] = self._cattrs_converter.unstructure(morphology_result)
 
         if action == "canonical":
-            canonical_result = self.heritage_client.fetch_canonical_sanskrit(query)
+            canonical_result = (
+                self.heritage_client.fetch_canonical_via_sktsearch(query)
+                if self.heritage_client
+                else {"canonical_text": None, "match_method": "unavailable"}
+            )
+            if (
+                canonical_result
+                and not canonical_result.get("canonical_text")
+                and self.heritage_client
+            ):
+                # Fallback to older canonical endpoint if sktsearch misses
+                canonical_result = self.heritage_client.fetch_canonical_sanskrit(query)
             result["canonical"] = canonical_result
 
         if action == "lemmatize":
-            lemmatize_result = self.heritage_client.fetch_lemmatization(query)
-            result["lemmatize"] = lemmatize_result
+            # Use morphology as the lemmatization source to avoid legacy endpoints.
+            morphology_encoding = self._detect_heritage_encoding(canonical_query)
+            morpho = self.heritage_morphology.analyze_word(
+                canonical_query, encoding=morphology_encoding
+            )
+            if morpho and morpho.solutions:
+                analyses = morpho.solutions[0].analyses if morpho.solutions else []
+                primary = analyses[0] if analyses else {}
+                result["lemmatize"] = {
+                    "lemma": primary.get("lemma"),
+                    "grammar": primary.get("analysis") or primary.get("pos"),
+                    "analyses": self._cattrs_converter.unstructure(analyses),
+                    "used_source": "heritage_sktreader",
+                    "original_input": query,
+                    "canonical_input": canonical_query,
+                }
+            else:
+                result["lemmatize"] = {
+                    "lemma": None,
+                    "message": "No structured lemmatization data found",
+                    "used_source": "heritage_sktreader",
+                    "original_input": query,
+                    "canonical_input": canonical_query,
+                }
 
+        if canonical_tokens:
+            result["canonical_tokens"] = canonical_tokens
         return result
 
     def _get_cdsl_raw(self, query: str, dict_name: str | None = None) -> dict:
         """Get raw data from CDSL backend."""
-        # CDSL only supports ASCII lookup currently
-        result = self.cdsl.lookup_ascii(query)
+        heritage_form, canonical_slp1, slp1_candidates, canonical_tokens = (
+            self._normalize_sanskrit_word(query)
+        )
 
-        return self._cattrs_converter.unstructure(result)
+        # Ensure we always have at least one SLP1 candidate even if normalization is minimal.
+        try:
+            from langnet.heritage.encoding_service import EncodingService  # noqa: PLC0415
+            from indic_transliteration.sanscript import IAST, SLP1, transliterate  # noqa: PLC0415
+            from indic_transliteration.detect import detect  # noqa: PLC0415
+
+            enc = EncodingService.detect_encoding(query)
+            if enc != "slp1":
+                if any(ord(c) > 127 for c in query):
+                    src = IAST
+                else:
+                    src = detect(query) or enc
+                fallback_slp1 = transliterate(query, src, SLP1)
+                slp1_candidates.append(fallback_slp1)
+        except Exception:
+            pass
+
+        # Always include a transliteration of the original query using the CDSL helper (covers shiva -> siva/ziva).
+        try:
+            slp1_candidates.append(cdsl_to_slp1(query))
+        except Exception:
+            pass
+
+        # Build a candidate list preferring clean SLP1 forms first.
+        dedup: list[str] = []
+        for c in [canonical_slp1, *slp1_candidates]:
+            if c and c not in dedup:
+                dedup.append(c)
+        candidate_list = [c for c in dedup if not self._looks_mangled_slp1(c)]
+        if not candidate_list:
+            candidate_list = dedup
+        # Normalize casing so mixed-case headwords (e.g., Siva/) still match CDSL keys.
+        candidate_list = [c.lower() for c in candidate_list]
+        # Deduplicate again after lowercasing while preserving order
+        seen_lower: set[str] = set()
+        candidate_list = [
+            c for c in candidate_list if c and not (c in seen_lower or seen_lower.add(c))
+        ]
+
+        cdsl_result = None
+        last_error: Exception | None = None
+        for candidate in candidate_list:
+            try:
+                cdsl_result = self.cdsl.lookup_ascii(candidate)
+                break
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                continue
+
+        if cdsl_result is None:
+            raise last_error or RuntimeError(f"CDSL lookup failed for {query}")
+
+        # Attach canonical forms for caller visibility
+        cdsl_result["canonical_form"] = canonical_slp1 or heritage_form
+        cdsl_result["canonical_form_candidates"] = [
+            c for c in [canonical_slp1, *slp1_candidates] if c
+        ]
+        cdsl_result["input_form"] = query
+        if canonical_tokens:
+            cdsl_result["canonical_tokens"] = canonical_tokens
+
+        return self._cattrs_converter.unstructure(cdsl_result)
 
     def _get_cltk_raw(self, lang: str, query: str, action: str) -> dict:
         """Get raw data from CLTK backend."""

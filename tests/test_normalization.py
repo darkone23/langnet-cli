@@ -131,18 +131,18 @@ class TestSanskritNormalizer(unittest.TestCase):
     def test_canonical_conversion(self):
         """Test conversion to canonical form."""
         # Test ASCII input - Heritage returns Velthuis-encoded canonical form
-        canonical = self.normalizer.to_canonical("krishna", Encoding.ASCII.value)
+        canonical, _meta = self.normalizer.to_canonical("krishna", Encoding.ASCII.value)
         # The canonical form from Heritage is the Velthuis-encoded version
         self.assertIsInstance(canonical, str)
         self.assertGreater(len(canonical), 0)
 
         # Test SLP1 input (should remain unchanged or converted appropriately)
-        canonical = self.normalizer.to_canonical("agni", Encoding.SLP1.value)
+        canonical, _meta = self.normalizer.to_canonical("agni", Encoding.SLP1.value)
         self.assertIsInstance(canonical, str)
         self.assertGreater(len(canonical), 0)
 
         # Test Unicode input (should become lowercase)
-        canonical = self.normalizer.to_canonical("अग्नि", Encoding.DEVANAGARI.value)
+        canonical, _meta = self.normalizer.to_canonical("अग्नि", Encoding.DEVANAGARI.value)
         self.assertIsInstance(canonical, str)
 
     def test_alternate_forms_generation(self):
@@ -183,8 +183,8 @@ class TestSanskritNormalizer(unittest.TestCase):
 
     def test_needs_heritage_enrichment(self):
         """Test Heritage enrichment detection."""
-        # Should return False when no heritage client
-        self.assertFalse(self.normalizer._needs_heritage_enrichment("krishna"))
+        # Bare ASCII Sanskrit should be eligible for enrichment
+        self.assertTrue(self.normalizer._needs_heritage_enrichment("krishna"))
 
         # With a mock heritage client, it would check patterns
         # For now, test basic validation
