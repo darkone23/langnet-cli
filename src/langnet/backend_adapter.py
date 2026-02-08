@@ -164,7 +164,9 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             if citation_text:
                 info["text"] = citation_text
 
-            urn_meta = self.cts_mapper.get_urn_metadata(citation_id) if is_urn else None
+            urn_meta = (
+                self.cts_mapper.get_urn_metadata(citation_id, citation_text) if is_urn else None
+            )
             abbrev_meta = None
             if not is_urn:
                 abbrev_meta = self.cts_mapper.get_abbreviation_metadata(
@@ -174,7 +176,7 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             display = None
             if urn_meta:
                 info.update(urn_meta)
-                display_bits = [urn_meta.get("author"), urn_meta.get("work"), citation_text]
+                display_bits = [urn_meta.get("author"), urn_meta.get("work")]
                 display = " — ".join(bit for bit in display_bits if bit)
             elif abbrev_meta:
                 info.update(abbrev_meta)
@@ -634,19 +636,27 @@ class CLTKBackendAdapter(BaseBackendAdapter):
 
         canonical_form = headword or word
 
+        seen_definitions = set()
         for line in lewis_lines:
-            if ":" in line:
-                definition = line.split(":", 1)[1].strip()
-                pos, gender = self._infer_pos_gender_from_line(line)
-                sense = DictionaryDefinition(
-                    pos=pos,
-                    definition=definition,
-                    citations=[],  # Could extract references from definitions
-                    examples=[],
-                    gender=gender if gender else None,
-                    metadata={"lewis_line": line},
-                )
-                definitions.append(sense)
+            clean_line = line.strip()
+            if not clean_line:
+                continue
+
+            # Keep the raw Lewis & Short line untouched; avoid heuristic parsing until a real parser exists.
+            if clean_line in seen_definitions:
+                continue
+            seen_definitions.add(clean_line)
+
+            pos, gender = self._infer_pos_gender_from_line(clean_line)
+            sense = DictionaryDefinition(
+                pos=pos,
+                definition=clean_line,
+                citations=[],  # Could extract references from definitions
+                examples=[],
+                gender=gender if gender else None,
+                metadata={"lewis_line": line},
+            )
+            definitions.append(sense)
 
         # If no dictionary data, still provide headword info
         if not definitions:
@@ -659,13 +669,19 @@ class CLTKBackendAdapter(BaseBackendAdapter):
             )
             definitions.append(sense)
 
+        metadata = {"canonical_form": canonical_form}
+        if headword:
+            metadata["headword"] = headword
+        if data.get("ipa"):
+            metadata["ipa"] = data.get("ipa")
+
         entry = DictionaryEntry(
             word=headword,
             language=language,
             definitions=definitions,
             morphology=None,
             source="cltk",
-            metadata={**data, "canonical_form": canonical_form},
+            metadata=metadata,
         )
         entries.append(entry)
 

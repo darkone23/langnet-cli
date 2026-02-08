@@ -59,21 +59,29 @@ def build():
 
 @build.command("cts-urn")
 @click.option(
+    "--perseus-dir",
     "--source",
     "-s",
+    "perseus_dir",
     type=click.Path(exists=True),
-    default="/home/nixos/langnet-tools/diogenes/Classics-Data",
-    help="Source data directory",
+    default=str(Path.home() / "perseus"),
+    help="Perseus corpus root (expects canonical-latinLit and canonical-greekLit under this path)",
+    show_default=True,
 )
 @click.option("--output", "-o", type=click.Path(), help="Output database path")
-@click.option("--overwrite", is_flag=True, default=False, help="Overwrite existing index file")
+@click.option(
+    "--wipe/--no-wipe",
+    default=True,
+    help="Delete any existing CTS index file before rebuilding",
+    show_default=True,
+)
 @click.option("--force", is_flag=True, help="Force rebuild even if index exists")
 @click.option("--config-dir", type=click.Path(), help="Configuration directory")
 def build_cts_urn(
-    source: str, output: str | None, overwrite: bool, force: bool, config_dir: str | None
+    perseus_dir: str, output: str | None, wipe: bool, force: bool, config_dir: str | None
 ):
     """Build CTS URN reference index."""
-    source_path = Path(source)
+    source_path = Path(perseus_dir)
     output_path = (
         Path(output) if output else Path.home() / ".local" / "share" / "langnet" / "cts_urn.duckdb"
     )
@@ -81,21 +89,19 @@ def build_cts_urn(
     # Create output directory if needed
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Overwrite if requested
-    if output_path.exists():
-        if overwrite:
-            output_path.unlink()
-            click.echo(f"Deleted existing index file {output_path}")
-        else:
-            click.echo(f"Index already exists at {output_path}. Use --overwrite to replace.")
-            return 1
+    if output_path.exists() and wipe:
+        output_path.unlink()
+        click.echo(f"Deleted existing index file {output_path}")
+    elif output_path.exists() and not force:
+        click.echo(f"Index already exists at {output_path}. Use --wipe or --force to rebuild.")
+        return 1
 
     click.echo("Building CTS URN index...")
     click.echo(f"Source: {source_path}")
     click.echo(f"Output: {output_path}")
 
     # Build indexer
-    config = {"source_dir": str(source_path), "force_rebuild": force}
+    config = {"perseus_dir": str(source_path), "force_rebuild": force, "wipe_existing": wipe}
 
     indexer = CtsUrnIndexer(output_path, config)
 
@@ -115,6 +121,10 @@ def build_cts_urn(
             work_count = stats.get("work_count", "N/A")
             size_mb = stats.get("size_mb", 0)
             click.echo(f"📊 Stats: {work_count} works, {size_mb:.2f} MB")
+            perseus = stats.get("perseus_count", "?")
+            legacy = stats.get("legacy_count", "?")
+            supplements = stats.get("supplement_count", "?")
+            click.echo(f"    Perseus: {perseus} | Legacy gaps: {legacy} | Supplemental: {supplements}")
         else:
             click.echo("❌ Failed to build CTS URN index")
             return 1

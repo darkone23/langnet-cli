@@ -18,6 +18,7 @@ The mapper uses the DuckDB CTS URN indexer database for authoritative mappings.
 import logging
 import os
 import unicodedata
+import re
 
 import duckdb
 
@@ -200,6 +201,66 @@ class CTSUrnMapper:
         decomposed = unicodedata.normalize("NFD", text)
         stripped = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
         return "".join(ch for ch in stripped.lower() if ch.isalnum())
+
+    def _extract_hint_from_citation_text(self, citation_text: str | None) -> str:
+        """Pull a short work hint from citation text (e.g., 'Cic. Or. 48, 160' -> 'or')."""
+        if not citation_text:
+            return ""
+        stop_tokens = {"ib", "ibid", "id", "idem"}
+        tokens = [t for t in re.split("[ \t,.;:()]+", citation_text) if t]
+        if len(tokens) >= 2:
+            candidate = self._normalize_abbrev_key(tokens[1])
+            if candidate in stop_tokens:
+                return ""
+            if candidate.isdigit():
+                return ""
+            return candidate
+        return ""
+
+    def _parse_urn_components(self, urn: str) -> tuple[str | None, str | None]:
+        """Return author and work numbers (without prefixes) from a CTS URN when possible."""
+        m = re.search(r"urn:cts:[^:]+:(?:phi|lat|tlg)(\d{4})\.(?:phi|lat|tlg)(\d{3})", urn)
+        if not m:
+            return None, None
+        return m.group(1), m.group(2)
+
+    def _lookup_work_by_hint(self, author_num: str | None, hint_key: str) -> tuple | None:
+        """Fallback lookup: choose a work for an author whose normalized title matches a hint."""
+        if not author_num or not hint_key:
+            return None
+
+        conn = self._get_connection()
+        if not conn:
+            return None
+
+        try:
+            author_ids = [f"phi{author_num}", f"lat{author_num}", f"tlg{author_num}"]
+            like_key = f"%{hint_key}%"
+            rows = conn.execute(
+                f"""
+                SELECT a.author_name, w.work_title, w.cts_urn
+                FROM works w
+                JOIN author_index a ON w.author_id = a.author_id
+                WHERE w.author_id IN ({",".join("?" for _ in author_ids)})
+                  AND LOWER(REPLACE(w.work_title, ' ', '')) LIKE ?
+                """,
+                (*author_ids, like_key),
+            ).fetchall()
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"hint_lookup_failed: {e}")
+            return None
+
+        best = None
+        best_len = None
+        for author_name, work_title, cts_urn in rows:
+            norm_title = self._normalize_abbrev_key(work_title)
+            if not norm_title:
+                continue
+            if hint_key in norm_title or norm_title.startswith(hint_key) or hint_key.startswith(norm_title):
+                if best is None or len(norm_title) < best_len:
+                    best = (author_name, work_title, cts_urn)
+                    best_len = len(norm_title)
+        return best
 
     def map_citation_to_urn(self, citation) -> str | None:
         """
@@ -398,7 +459,7 @@ class CTSUrnMapper:
             logger.debug(f"Database lookup error: {e}")
             return None
 
-    def get_urn_metadata(self, urn: str) -> dict[str, str] | None:
+    def get_urn_metadata(self, urn: str, citation_text: str | None = None) -> dict[str, str] | None:
         """
         Look up author/work metadata for a CTS URN using the local index.
 
@@ -411,9 +472,12 @@ class CTSUrnMapper:
         if not conn:
             return None
 
-        try:
+        hint_key = self._extract_hint_from_citation_text(citation_text)
+        hint_display_overrides = {"arat": "Aratea (Phaenomena)"}
+        author_num, _work_num = self._parse_urn_components(urn)
+
+        def _lookup(urn_candidate: str):
             cursor = conn.cursor()
-            # Exact match first
             row = cursor.execute(
                 """
                 SELECT a.author_name, w.work_title
@@ -422,10 +486,9 @@ class CTSUrnMapper:
                 WHERE w.cts_urn = ?
                 LIMIT 1
                 """,
-                (urn,),
+                (urn_candidate,),
             ).fetchone()
 
-            # Fallback: allow urn with location component (prefix match)
             if not row:
                 row = cursor.execute(
                     """
@@ -436,8 +499,30 @@ class CTSUrnMapper:
                     ORDER BY LENGTH(w.cts_urn) DESC
                     LIMIT 1
                     """,
-                    (urn,),
+                    (urn_candidate,),
                 ).fetchone()
+            return row
+
+        try:
+            row = _lookup(urn)
+            if row and hint_key:
+                norm_title = self._normalize_abbrev_key(row[1] or "")
+                if hint_key and norm_title and hint_key not in norm_title and not norm_title.startswith(hint_key):
+                    hinted = self._lookup_work_by_hint(author_num, hint_key)
+                    if hinted:
+                        hinted_title_norm = self._normalize_abbrev_key(hinted[1] or "")
+                        if hinted[2] == urn:
+                            row = (hinted[0], hinted[1])
+                        else:
+                            row = (row[0], hint_display_overrides.get(hint_key, hint_key.title()))
+                    else:
+                        # Use hint as a display fallback when we cannot find a matching work title
+                        row = (row[0], hint_display_overrides.get(hint_key, hint_key.title()))
+
+            if not row and hint_key:
+                hinted = self._lookup_work_by_hint(author_num, hint_key)
+                if hinted:
+                    row = (hinted[0], hinted[1])
 
             if not row:
                 return None

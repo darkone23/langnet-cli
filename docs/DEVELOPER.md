@@ -184,6 +184,23 @@ class TestMyFeature(ToolFixtureMixin):
         )
 ```
 
+## CTS URN Index (Perseus + legacy gaps)
+
+- Primary source: Perseus corpora at `~/perseus` (`canonical-latinLit`, `canonical-greekLit`).
+- Optional gap-fill: legacy Classics-Data (`~/langnet-tools/diogenes/Classics-Data`) for works not present in Perseus (e.g., some stoa URNs).
+- Build (default merges Perseus + legacy gaps, wipes old DB):
+  ```sh
+  just cli indexer build-cts --perseus-dir ~/perseus --wipe
+  ```
+- Pure-Perseus build (no legacy supplements):
+  ```sh
+  just cli indexer build-cts --perseus-dir ~/perseus --wipe --no-legacy
+  ```
+- Output: `~/.local/share/langnet/cts_urn.duckdb`. CTS regression tests:
+  ```sh
+  just test tests.test_cts_urn_basic
+  ```
+
 ## Testing Strategy
 
 ### 1. Unit Testing
