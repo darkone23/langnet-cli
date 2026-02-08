@@ -73,7 +73,7 @@ class TestSanskritNormalizer(unittest.TestCase):
     def test_sanskrit_normalizer_init(self):
         """Test SanskritNormalizer initialization."""
         normalizer = SanskritNormalizer()
-        self.assertIsNone(normalizer.heritage_client)
+        self.assertIsNotNone(normalizer.heritage_client)
         self.assertIsNotNone(normalizer.common_terms)
 
     def test_sanskrit_normalizer_with_client(self):
@@ -176,18 +176,15 @@ class TestSanskritNormalizer(unittest.TestCase):
 
     def test_needs_heritage_enrichment(self):
         """Test Heritage enrichment need detection."""
-        normalizer = SanskritNormalizer()
+        normalizer_no_client = SanskritNormalizer(heritage_client=None)
+        # Force-disable the client to mimic environments without Heritage
+        normalizer_no_client.heritage_client = None
+        self.assertFalse(normalizer_no_client._needs_heritage_enrichment("krishna"))
 
-        # Test without heritage client
-        self.assertFalse(normalizer._needs_heritage_enrichment("krishna"))
-
-        # Test with heritage client
+        # With a client, ASCII Sanskrit like "krishna" should trigger enrichment
         mock_client = Mock()
         normalizer = SanskritNormalizer(heritage_client=mock_client)
-
-        # Test valid query
-        result = normalizer._needs_heritage_enrichment("krishna")
-        self.assertIsInstance(result, bool)
+        self.assertTrue(normalizer._needs_heritage_enrichment("krishna"))
 
         # Test short query
         self.assertFalse(normalizer._needs_heritage_enrichment("a"))
@@ -225,10 +222,18 @@ class TestSanskritNormalizer(unittest.TestCase):
 
     def test_normalize_with_heritage(self):
         """Test normalization with heritage client."""
-        # Note: The current implementation creates a new HeritageHTTPClient internally
-        # in _enrich_with_heritage, so passed heritage_client is not used for that.
-        # This test verifies the normalizer accepts a heritage_client parameter.
         mock_client = Mock()
+        mock_client.fetch_canonical_via_sktsearch.return_value = {
+            "canonical_text": "k.r.s.naa",
+            "entry_url": "/skt/MW/68.html#H_k.r.s.naa",
+            "lexicon": "MW",
+            "match_method": "sktsearch",
+        }
+        mock_client.fetch_canonical_sanskrit.return_value = {
+            "canonical_sanskrit": "k.r.s.naa",
+            "entry_url": "/skt/MW/68.html#H_k.r.s.naa",
+            "lexicon": "MW",
+        }
 
         normalizer = SanskritNormalizer(heritage_client=mock_client)
 

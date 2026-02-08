@@ -44,7 +44,11 @@ class HeritageHTTPClient:
     def build_cgi_url(self, script_name: str, params: dict[str, Any] | None = None) -> str:
         """Build complete CGI script URL with semicolon-separated parameters"""
         base_url = self.config.base_url.rstrip("/")
-        cgi_path = self.config.cgi_path.rstrip("/") + "/"
+        # Heritage hosts sktsearch at /cgi-bin/sktsearch (without /skt/)
+        if script_name == "sktsearch" and self.config.cgi_path.rstrip("/").endswith("/skt"):
+            cgi_path = self.config.cgi_path.rstrip("/").rsplit("/", 1)[0] + "/"
+        else:
+            cgi_path = self.config.cgi_path.rstrip("/") + "/"
         url = urljoin(base_url, cgi_path + script_name)
 
         if params:

@@ -56,18 +56,21 @@ This directory contains the complete documentation for langnet-cli, organized by
 
 ```bash
 # Enter development environment
-devenv shell
+devenv shell langnet-cli
 
-# Start the API server
-uvicorn-run
+# Run a single command with environment activated
+devenv shell langnet-cli -- langnet-cli query lat lupus --output json
+
+# Start the API server (requires external services running)
+devenv shell langnet-cli -- uvicorn-run --reload
 
 # Query classical languages
-langnet-cli query lat lupus        # Latin: wolf
-langnet-cli query grc λόγος      # Greek: word
-langnet-cli query san agni        # Sanskrit: fire
+devenv shell langnet-cli -- langnet-cli query lat lupus        # Latin: wolf
+devenv shell langnet-cli -- langnet-cli query grc λόγος      # Greek: word
+devenv shell langnet-cli -- langnet-cli query san agni        # Sanskrit: fire
 
-# Check backend health
-langnet-cli verify
+# Check backend health (Heritage, Diogenes, Whitaker's Words)
+devenv shell langnet-cli -- langnet-cli verify
 ```
 
 ## 📖 Documentation Navigation
@@ -130,11 +133,10 @@ See **[../AGENTS.md](../AGENTS.md)** and **[technical/opencode/](technical/openc
 
 ## 📊 Project Status
 
-- **Implementation**: ~85% complete (citation system fully functional)
-- **Code Quality**: Excellent (all ruff/typecheck checks pass)
-- **Test Coverage**: 381+ tests passing
-- **Documentation**: Comprehensive and well-organized
-- **Architecture**: Well-designed modular system
+- **State**: Actively developed; requires local Heritage, Diogenes, and Whitaker's Words services for most features.
+- **Known gaps**: Diogenes sense extraction and CTS URN enrichment are flaky, Sanskrit canonicalization/DICO integration are incomplete, CDSL definitions often include SLP1 artifacts, and universal schema + fuzzy search are still in design (see `docs/TODO.md`).
+- **Validation**: Tests and linting were not run during this audit; many suites depend on the external services above. Use `devenv shell langnet-cli -- just test` and `devenv shell langnet-cli -- just lint-all` once dependencies are available.
+- **Planning**: Active plans live under `docs/plans/active/` with backlog items in `docs/plans/todo/`; see `docs/ROADMAP.md` for high-level targets.
 
 ## 🆘 Getting Help
 
@@ -147,8 +149,3 @@ See **[../AGENTS.md](../AGENTS.md)** and **[technical/opencode/](technical/openc
 ## 📄 License
 
 This project is licensed under the MIT License. See **[../LICENSE](../LICENSE)** for details.
-
----
-
-*Last Updated: February 5, 2026*  
-*For the latest updates and roadmap, see [ROADMAP.md](ROADMAP.md) and [plans/](plans/)*

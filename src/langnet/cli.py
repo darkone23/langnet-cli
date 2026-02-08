@@ -34,12 +34,13 @@ from rich.pretty import pprint
 from rich.table import Table
 
 from langnet.cologne.core import CdslIndex, CdslIndexBuilder, batch_build
-from langnet.config import config
+from langnet.config import get_settings
 from langnet.foster.render import render_foster_codes
 from langnet.indexer.core import IndexType
 from langnet.indexer.cts_urn_indexer import CtsUrnIndexer
 from langnet.indexer.utils import get_index_manager
 from langnet.logging import setup_logging
+from langnet.validation import LANG_ALIASES, VALID_LANGUAGES, validate_query
 
 BODY_PREVIEW_LENGTH = 100
 
@@ -72,6 +73,7 @@ class ToolQueryContext:
 
 console = Console()
 DEFAULT_API_URL = "http://localhost:8000"
+settings = get_settings()
 
 
 def _format_morph_with_foster(morph: dict) -> str:
@@ -189,7 +191,7 @@ def main():
     Provides unified access to Latin, Greek, and Sanskrit resources
     including Diogenes, Whitakers, CLTK, and spaCy backends.
     """
-    setup_logging()
+    setup_logging(settings.log_level_value)
 
 
 def _verify_impl(api_url: str, socket_timeout: float = 1.0, http_timeout: float = 30.0):
@@ -310,16 +312,14 @@ def query(lang: str, word: str, api_url: str, output: str):
         langnet-cli query san '.agni'        # Sanskrit: Velthuis encoding
         langnet-cli query lat lupus --output json | jq '.diogenes'
     """
-    valid_languages = {"lat", "grc", "san", "grk"}
-    if lang not in valid_languages:
-        console.print(
-            f"[red]Error: Invalid language '{lang}'. Must be one of: "
-            f"{', '.join(sorted(valid_languages))}[/]"
-        )
+    err, normalized_lang = validate_query(lang, word)
+    if err:
+        console.print(f"[red]Error: {err}[/]")
         sys.exit(1)
 
-    if lang == "grk":
-        lang = "grc"
+    lang = normalized_lang or lang
+    if lang in LANG_ALIASES:
+        lang = LANG_ALIASES[lang]
 
     url = f"{api_url}/api/q"
 
@@ -380,11 +380,11 @@ def health(api_url: str, timeout: float):
 
 
 def get_cdsl_db_dir() -> Path:
-    return config.cdsl_db_dir
+    return settings.cdsl_db_dir
 
 
 def get_cdsl_dict_dir() -> Path:
-    return config.cdsl_dict_dir
+    return settings.cdsl_dict_dir
 
 
 @main.group()

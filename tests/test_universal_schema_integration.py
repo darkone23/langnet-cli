@@ -25,7 +25,7 @@ from langnet.backend_adapter import (
     WhitakersBackendAdapter,
 )
 from langnet.classics_toolkit.core import ClassicsToolkit
-from langnet.core import LangnetWiring
+from langnet.core import LangnetWiring, LangnetWiringConfig
 from langnet.schema import Citation, DictionaryDefinition, DictionaryEntry, MorphologyInfo
 
 
@@ -61,7 +61,7 @@ class TestUniversalSchemaComprehensive(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment with universal schema enabled."""
-        self.wiring = LangnetWiring(cache_enabled=False)
+        self.wiring = LangnetWiring(LangnetWiringConfig(warmup_backends=False))
         self.adapter_registry = BackendAdapterRegistry()
 
     def tearDown(self):
@@ -228,7 +228,7 @@ class TestUniversalSchemaComprehensive(unittest.TestCase):
 
     def test_backward_compatibility_mode(self):
         """Test that the universal schema returns structured DictionaryEntry objects."""
-        wiring = LangnetWiring(cache_enabled=False)
+        wiring = LangnetWiring(LangnetWiringConfig(warmup_backends=False))
         entries = wiring.engine.handle_query("lat", "lupus")
 
         # Should be a list of DictionaryEntry

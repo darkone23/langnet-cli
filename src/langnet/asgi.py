@@ -1,39 +1,47 @@
 import time
 import traceback
-from pathlib import Path
+import uuid
 from typing import Any
 
 import cattrs
 import orjson
-import requests
 import structlog
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
 
-import langnet.logging  # noqa: F401 - ensures logging is configured before use
+from langnet.config import get_settings
+from langnet.core import LangnetWiring, build_langnet_wiring
+from langnet.health import run_health_checks
+from langnet.logging import scoped_context, setup_logging
+from langnet.validation import validate_query, validate_tool_request
 
 logger = structlog.get_logger(__name__)
 
-from langnet.core import LangnetWiring  # noqa: E402
-from langnet.heritage.config import HeritageConfig  # noqa: E402
-from langnet.heritage.morphology import HeritageMorphologyService  # noqa: E402
-
 # Configure cattrs for JSON serialization with omit_if_default
 json_converter = cattrs.Converter(omit_if_default=True)
+settings = get_settings()
+setup_logging(settings.log_level_value)
 
-VALID_LANGUAGES = {"lat", "grc", "san", "grk"}
-VALID_TOOLS = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
-VALID_ACTIONS = {
-    "parse",  # diogenes
-    "search",  # whitakers
-    "morphology",  # heritage/cltk
-    "canonical",  # heritage
-    "lemmatize",  # heritage
-    "lookup",  # cdsl
-    "dictionary",  # cltk
-}
+def _request_context(request: Request):
+    request_id = (
+        request.headers.get("x-request-id")
+        or request.headers.get("x-correlation-id")
+        or str(uuid.uuid4())
+    )
+    return scoped_context(
+        request_id=request_id,
+        path=str(request.url.path),
+        method=request.method,
+    )
+
+
+def _ensure_wiring(request: Request) -> LangnetWiring:
+    if not hasattr(request.app.state, "wiring"):
+        request.app.state.wiring = build_langnet_wiring(settings=settings)
+    return request.app.state.wiring
+
 
 # from langnet.citation.models import CitationCollection, Citation, TextReference, CitationType
 # from langnet.citation.cts_urn import CTSUrnMapper
@@ -55,102 +63,17 @@ class ORJsonResponse(Response):
         return orjson.dumps(content)
 
 
-class HealthChecker:
-    @staticmethod
-    def diogenes(base_url: str = "http://localhost:8888/") -> dict:
-        try:
-            # DiogenesScraper(base_url=base_url)
-            # result = scraper.parse_word("lupus", "lat")
-            # if result.dg_parsed and len(result.chunks) > 0:
-            # TODO: we don't want to actually issue queries for this check
-            return {"status": "healthy", "code": 200}
-            # else:
-            #     return {
-            #         "status": "unhealthy",
-            #         "message": "Diogenes parsed but returned no valid chunks",
-            #     }
-        except requests.RequestException as e:
-            return {"status": "error", "message": str(e)}
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
-
-    @staticmethod
-    def cltk() -> dict:
-        try:
-            import cltk.alphabet.lat as cltk_latchars  # noqa: PLC0415, F401
-            import cltk.data.fetch as cltk_fetch  # noqa: PLC0415, F401
-            import cltk.lemmatize.lat as cltk_latlem  # noqa: PLC0415, F401
-            import cltk.lexicon.lat as cltk_latlex  # noqa: PLC0415, F401
-            import cltk.phonology.lat.transcription as cltk_latscript  # noqa: PLC0415, F401
-            from cltk.languages.utils import get_lang  # noqa: PLC0415, F401
-
-            return {"status": "healthy"}
-        except ImportError as e:
-            return {"status": "missing", "message": f"CLTK module not installed: {e}"}
-
-    @staticmethod
-    def spacy() -> dict:
-        try:
-            import spacy  # noqa: PLC0415
-
-            model_name = "grc_odycy_joint_sm"
-            try:
-                spacy.load(model_name)
-                return {"status": "healthy", "model": model_name}
-            except OSError as e:
-                return {
-                    "status": "missing",
-                    "message": f"Spacy model '{model_name}' not installed: {e}",
-                }
-        except ImportError as e:
-            return {"status": "missing", "message": f"Spacy module not installed: {e}"}
-
-    @staticmethod
-    def whitakers() -> dict:
-        whitakers_path = Path.home() / ".local/bin/whitakers-words"
-        if whitakers_path.exists() and whitakers_path.is_file():
-            return {"status": "healthy"}
-        else:
-            return {
-                "status": "missing",
-                "message": "whitakers-words binary not found in ~/.local/bin",
-            }
-
-    @staticmethod
-    def cdsl() -> dict:
-        return {"status": "healthy"}
-
-    @staticmethod
-    def heritage() -> dict:
-        try:
-            config = HeritageConfig()
-            HeritageMorphologyService(config)
-            return {"status": "healthy"}
-        except Exception as e:
-            return {"status": "unhealthy", "message": str(e)}
-
-
 async def health_check(request: Request):
-    try:
-        if not hasattr(request.app.state, "wiring"):
-            request.app.state.wiring = LangnetWiring()
-    except Exception as e:
-        return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
-    try:
-        health = {
-            "diogenes": HealthChecker.diogenes(),
-            "cltk": HealthChecker.cltk(),
-            "spacy": HealthChecker.spacy(),
-            "whitakers": HealthChecker.whitakers(),
-            "cdsl": HealthChecker.cdsl(),
-            "heritage": HealthChecker.heritage(),
-        }
-        overall = (
-            "healthy" if all(h.get("status") == "healthy" for h in health.values()) else "degraded"
-        )
-        return ORJsonResponse({"status": overall, "components": health})
-    except Exception as e:
-        return ORJsonResponse({"error": str(e)}, status_code=500)
+    with _request_context(request):
+        try:
+            _ensure_wiring(request)
+        except Exception as e:
+            return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
+        try:
+            health = run_health_checks(settings)
+            return ORJsonResponse(health)
+        except Exception as e:
+            return ORJsonResponse({"error": str(e)}, status_code=500)
 
 
 async def cache_stats_api(request: Request):
@@ -163,127 +86,61 @@ async def cache_stats_api(request: Request):
         return ORJsonResponse({"error": str(e)}, status_code=500)
 
 
-def _validate_query_params(lang, word):
-    """Validate query parameters and return error message if invalid."""
-    if not lang:
-        return "Missing required parameter: l (language)"
-    if not word:
-        return "Missing required parameter: s (search term)"
-    if lang not in VALID_LANGUAGES:
-        return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(VALID_LANGUAGES))}"
-    if lang == "grk":
-        return None  # Will be normalized below
-    if not str(word).strip():
-        return "Search term cannot be empty"
-    return None
-
-
 async def query_api(request: Request):
-    if request.method == "POST":
-        form_data = await request.form()
-        lang = form_data.get("l")
-        word = form_data.get("s")
-    else:
-        lang = request.query_params.get("l")
-        word = request.query_params.get("s")
+    with _request_context(request):
+        if request.method == "POST":
+            form_data = await request.form()
+            lang = form_data.get("l")
+            word = form_data.get("s")
+        else:
+            lang = request.query_params.get("l")
+            word = request.query_params.get("s")
 
-    validation_error = _validate_query_params(lang, word)
-    if validation_error:
-        return ORJsonResponse({"error": validation_error}, status_code=400)
+        validation_error, normalized_lang = validate_query(lang, word)
+        if validation_error:
+            return ORJsonResponse({"error": validation_error}, status_code=400)
 
-    if lang == "grk":
-        lang = "grc"
+        lang = normalized_lang or lang
 
-    try:
-        if not hasattr(request.app.state, "wiring"):
-            request.app.state.wiring = LangnetWiring()
-        wiring: LangnetWiring = request.app.state.wiring
-    except Exception as e:
-        return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
+        try:
+            wiring: LangnetWiring = _ensure_wiring(request)
+        except Exception as e:
+            return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
 
-    try:
-        result = wiring.engine.handle_query(lang, word)
+        try:
+            result = wiring.engine.handle_query(lang, word)
 
-        # Unstructure DictionaryEntry objects to dicts (omits None fields)
-        result_dict = [json_converter.unstructure(entry) for entry in result]
+            # Unstructure DictionaryEntry objects to dicts (omits None fields)
+            result_dict = [json_converter.unstructure(entry) for entry in result]
 
-        return ORJsonResponse(result_dict)
-    except Exception as e:
-        logger.error(f"Error in query API: {e}")
-        logger.error(f"Error type: {type(e)}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        return ORJsonResponse({"error": str(e)}, status_code=500)
-
-
-def _validate_diogenes_params(lang: str | None, query: str | None) -> str | None:
-    """Validate Diogenes-specific parameters."""
-    if not lang:
-        return "Missing required parameter: lang for diogenes tool"
-    if lang not in VALID_LANGUAGES:
-        return f"Invalid language: {lang}. Must be one of: {', '.join(sorted(VALID_LANGUAGES))}"
-    if not query:
-        return "Missing required parameter: query for diogenes tool"
-    return None
-
-
-def _validate_cltk_params(lang: str | None, query: str | None) -> str | None:
-    """Validate CLTK-specific parameters."""
-    if not lang:
-        return "Missing required parameter: lang for cltk tool"
-    if lang not in {"lat", "grc", "san"}:
-        return f"Invalid language: {lang}. Must be one of: lat, grc, san"
-    if not query:
-        return "Missing required parameter: query for cltk tool"
-    return None
-
-
-def _validate_tool_params(
-    tool: str | None,
-    action: str | None,
-    lang: str | None = None,
-    query: str | None = None,
-    dict_name: str | None = None,
-) -> str | None:
-    """Validate tool-specific parameters and return error message if invalid."""
-    if tool not in VALID_TOOLS:
-        return f"Invalid tool: {tool}. Must be one of: {', '.join(sorted(VALID_TOOLS))}"
-
-    if action not in VALID_ACTIONS:
-        return f"Invalid action: {action}. Must be one of: {', '.join(sorted(VALID_ACTIONS))}"
-
-    # Tool-specific parameter validation
-    tool_validators = {
-        "diogenes": lambda: _validate_diogenes_params(lang, query),
-        "whitakers": lambda: None
-        if query
-        else "Missing required parameter: query for whitakers tool",
-        "heritage": lambda: None
-        if query
-        else "Missing required parameter: query for heritage tool",
-        "cdsl": lambda: None if query else "Missing required parameter: query for cdsl tool",
-        "cltk": lambda: _validate_cltk_params(lang, query),
-    }
-
-    return tool_validators.get(tool, lambda: None)()
+            return ORJsonResponse(result_dict)
+        except Exception as e:
+            logger.error(
+                "query_api_failed",
+                error=str(e),
+                exc_info=True,
+                lang=lang,
+                word=word,
+            )
+            return ORJsonResponse({"error": str(e)}, status_code=500)
 
 
 async def tool_api(request: Request):
     """API endpoint for tool-specific debugging and raw data access."""
-    tool = request.path_params.get("tool")
-    action = request.path_params.get("action")
-    lang = request.query_params.get("lang")
-    query = request.query_params.get("query")
-    dict_name = request.query_params.get("dict")
+    with _request_context(request):
+        tool = request.path_params.get("tool")
+        action = request.path_params.get("action")
+        lang = request.query_params.get("lang")
+        query = request.query_params.get("query")
+        dict_name = request.query_params.get("dict")
 
     # Validate parameters
-    validation_error = _validate_tool_params(tool, action, lang, query, dict_name)
+    validation_error = validate_tool_request(tool, action, lang, query, dict_name)
     if validation_error:
         return ORJsonResponse({"error": validation_error}, status_code=400)
 
     try:
-        if not hasattr(request.app.state, "wiring"):
-            request.app.state.wiring = LangnetWiring()
-        wiring: LangnetWiring = request.app.state.wiring
+        wiring: LangnetWiring = _ensure_wiring(request)
     except Exception as e:
         return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
 
@@ -293,12 +150,16 @@ async def tool_api(request: Request):
         )
         return ORJsonResponse(result)
     except ValueError as e:
-        logger.error(f"Tool API parameter error: {e}")
+        logger.error("tool_api_param_error", error=str(e))
         return ORJsonResponse({"error": str(e)}, status_code=400)
     except Exception as e:
-        logger.error(f"Error in tool API: {e}")
-        logger.error(f"Error type: {type(e)}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(
+            "tool_api_failed",
+            error=str(e),
+            exc_info=True,
+            tool=tool,
+            action=action,
+        )
         return ORJsonResponse({"error": f"Internal server error: {str(e)}"}, status_code=500)
 
 
@@ -317,7 +178,7 @@ def create_app() -> Starlette:
     async def startup():
         start = time.perf_counter()
         try:
-            app.state.wiring = LangnetWiring()
+            app.state.wiring = build_langnet_wiring(settings=settings)
             elapsed = time.perf_counter() - start
             logger.info("wiring_initialized", duration_seconds=elapsed)
         except Exception as e:

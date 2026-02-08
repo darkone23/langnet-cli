@@ -1,7 +1,7 @@
 import logging
 import unittest
 
-from langnet.core import LangnetWiring
+from langnet.core import LangnetWiring, LangnetWiringConfig
 
 logging.getLogger("urllib3.connection").setLevel(logging.ERROR)
 
@@ -21,7 +21,7 @@ def get_first_entry_by_source(entries, source):
 
 class TestGreekSpacyIntegration(unittest.TestCase):
     def setUp(self):
-        self.wiring = LangnetWiring(cache_enabled=False)
+        self.wiring = LangnetWiring(LangnetWiringConfig(warmup_backends=False))
 
     def test_greek_query_includes_diogenes_response(self):
         entries = self.wiring.engine.handle_query("grc", "λόγος")
@@ -41,7 +41,7 @@ class TestGreekSpacyIntegration(unittest.TestCase):
 
 class TestLatinQueryIntegration(unittest.TestCase):
     def setUp(self):
-        self.wiring = LangnetWiring(cache_enabled=False)
+        self.wiring = LangnetWiring(LangnetWiringConfig(warmup_backends=False))
 
     def test_latin_query_aggregates_sources(self):
         entries = self.wiring.engine.handle_query("lat", "lupus")
@@ -59,7 +59,11 @@ class TestLatinQueryIntegration(unittest.TestCase):
         if cltk_entry:
             cltk_result = cltk_entry.metadata
             self.assertIsInstance(cltk_result, dict)
-            self.assertIn("headword", cltk_result)
+            # CLTK metadata currently surfaces canonical_form; older runs used headword.
+            self.assertTrue(
+                "headword" in cltk_result or "canonical_form" in cltk_result,
+                "CLTK entry should expose a headword or canonical form",
+            )
 
 
 if __name__ == "__main__":

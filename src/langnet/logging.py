@@ -1,50 +1,39 @@
 """Structured logging configuration for langnet-cli.
 
-Uses structlog for structured logging with:
-- ISO timestamps
-- Colored console output
-- Level filtering via LANGNET_LOG_LEVEL env var (default: WARNING)
-- Only affects langnet.* loggers, not third-party libraries
-
-Example usage:
-    import structlog
-    logger = structlog.get_logger(__name__)
-
-    logger.debug("processing_item", item_id=123)
-    logger.info("task_completed", task="import")
-    logger.warning("rate_limited", retries=3)
-    logger.error("connection_failed", host="localhost")
-
-Environment variables:
-    LANGNET_LOG_LEVEL: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: WARNING)
+Call `setup_logging()` from entrypoints to enable structured logs with optional
+correlation metadata for requests/tasks. No configuration happens at import time.
 """
 
+from __future__ import annotations
+
+import contextlib
+import contextvars
 import logging
 import os
+from typing import Any
 
 import structlog
 
 
-class _LogLevelHolder:
-    _instance: "_LogLevelHolder | None" = None
-    level: int = logging.WARNING
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def set(self, level: int) -> None:
-        self.level = level
-
-
-_holder = _LogLevelHolder()
+_log_context: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar(
+    "langnet_log_context", default={}
+)
+_configured = False
+_configured_level: int | None = None
 
 
 def _get_log_level_from_env() -> int:
     """Get log level from LANGNET_LOG_LEVEL env var, defaulting to WARNING."""
     level_name = os.environ.get("LANGNET_LOG_LEVEL", "WARNING").upper()
     return getattr(logging, level_name, logging.WARNING)
+
+
+def _coerce_level(level: int | str | None) -> int:
+    if level is None:
+        return _get_log_level_from_env()
+    if isinstance(level, int):
+        return level
+    return getattr(logging, level.upper(), logging.INFO)
 
 
 def _filter_by_level(logger, method_name, event_dict):
@@ -54,37 +43,44 @@ def _filter_by_level(logger, method_name, event_dict):
     This allows filtering before processors add more data to the event.
     """
     method_level = getattr(logging, method_name.upper(), logging.DEBUG)
-    if method_level < _holder.level:
+    effective_level = _configured_level or logging.WARNING
+    if method_level < effective_level:
         raise structlog.DropEvent
     return event_dict
 
 
-def setup_logging(level: int | None = None) -> None:
+def _add_context(logger, method_name, event_dict):
+    """Inject contextual metadata (request/task IDs, etc.)."""
+    context = _log_context.get()
+    if context:
+        event_dict.update(context)
+    return event_dict
+
+
+def setup_logging(level: int | str | None = None, force: bool = False) -> None:
     """Configure logging for langnet package.
 
     Configures structlog with:
     - ConsoleRenderer for colored terminal output
     - TimeStamper for ISO 8601 timestamps
-    - Level filtering that respects LANGNET_LOG_LEVEL
+    - Correlation metadata from `bind_context`
 
     Only affects structlog output in langnet.* loggers. Third-party libraries
     (sh, urllib3, requests, etc.) are not affected and use their own logging.
-
-    Args:
-        level: Log level as int (e.g. logging.INFO). If None, reads from
-               LANGNET_LOG_LEVEL env var, defaulting to WARNING.
-
-    Example:
-        >>> from langnet.logging import setup_logging
-        >>> setup_logging(logging.DEBUG)  # enable debug output
     """
-    resolved_level = level if level is not None else _get_log_level_from_env()
+    global _configured
+    if _configured and not force:
+        return
 
-    _holder.level = resolved_level
+    resolved_level = _coerce_level(level)
+    global _configured_level
+    _configured_level = resolved_level
+    logging.basicConfig(level=resolved_level)
 
     structlog.configure(
         processors=[
             _filter_by_level,
+            _add_context,
             structlog.stdlib.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.processors.StackInfoRenderer(),
@@ -95,6 +91,33 @@ def setup_logging(level: int | None = None) -> None:
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
     )
+    _configured = True
 
 
-setup_logging()
+def bind_context(**kwargs: Any) -> None:
+    """Bind contextual metadata (e.g., request_id, path)."""
+    current = dict(_log_context.get())
+    current.update({k: v for k, v in kwargs.items() if v is not None})
+    _log_context.set(current)
+
+
+def clear_context(*keys: str) -> None:
+    """Clear selected context keys or all context if none provided."""
+    if not keys:
+        _log_context.set({})
+        return
+    current = dict(_log_context.get())
+    for key in keys:
+        current.pop(key, None)
+    _log_context.set(current)
+
+
+@contextlib.contextmanager
+def scoped_context(**kwargs: Any):
+    """Context manager to bind metadata for the duration of a block."""
+    original = _log_context.get()
+    bind_context(**kwargs)
+    try:
+        yield
+    finally:
+        _log_context.set(original)

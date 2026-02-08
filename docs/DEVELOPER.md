@@ -12,31 +12,35 @@ langnet-cli is a classical language education tool designed to help students and
 
 ```sh
 # Enter development shell (loads Python venv, sets env vars)
-devenv shell
+devenv shell langnet-cli
 
-# Run bash commands inside the project context:
-just devenv-bash env
-just devenv-bash 'echo wow | cat'
+# One-off commands with the environment activated
+devenv shell langnet-cli -- langnet-cli verify
+devenv shell langnet-cli -- langnet-cli query lat lupus --output json
 
-# Start API server with auto-reload
-uvicorn-run --reload
+# Start API server with auto-reload (requires external services running)
+devenv shell langnet-cli -- uvicorn-run --reload
 
 # Start zombie process reaper (runs continuously)
-just langnet-dg-reaper
+devenv shell langnet-cli -- just langnet-dg-reaper
 ```
+
+Long-running API/server processes cache imported modules; restart `uvicorn-run` after code changes before re-validating.
 
 ## Testing
 
+Most tests expect Heritage, Diogenes, and Whitaker's Words to be reachable locally.
+
 ```sh
-# Run all tests
-nose2 -s tests --config tests/nose2.cfg
+# Run all tests (preferred)
+devenv shell langnet-cli -- just test
 
 # Run single test (full dotted path required)
-nose2 -s tests <TestClass>.<test_method> --config tests/nose2.cfg
+devenv shell langnet-cli -- nose2 -s tests <TestClass>.<test_method> --config tests/nose2.cfg
 
 # Run tests with verbose logging
-LANGNET_LOG_LEVEL=INFO nose2 -s tests --config tests/nose2.cfg
-LANGNET_LOG_LEVEL=DEBUG nose2 -s tests --config tests/nose2.cfg
+devenv shell langnet-cli -- LANGNET_LOG_LEVEL=INFO nose2 -s tests --config tests/nose2.cfg
+devenv shell langnet-cli -- LANGNET_LOG_LEVEL=DEBUG nose2 -s tests --config tests/nose2.cfg
 ```
 
 ## Environment Variables
@@ -83,15 +87,15 @@ Use `langnet-cli tool` for command-line debugging:
 
 ```bash
 # Tool-specific commands
-langnet-cli tool diogenes search --lang lat --query lupus --save
-langnet-cli tool heritage morphology --query agni --output pretty
-langnet-cli tool cdsl lookup --dict mw --query yoga --save
+devenv shell langnet-cli -- langnet-cli tool diogenes search --lang lat --query lupus --save
+devenv shell langnet-cli -- langnet-cli tool heritage morphology --query agni --output pretty
+devenv shell langnet-cli -- langnet-cli tool cdsl lookup --dict mw --query yoga --save
 
 # Generic query interface
-langnet-cli tool query --tool whitakers --action analyze --query lupus
+devenv shell langnet-cli -- langnet-cli tool query --tool whitakers --action analyze --query lupus
 
 # Output formats: json (default), pretty, yaml
-langnet-cli tool diogenes search --lang lat --query lupus --output pretty
+devenv shell langnet-cli -- langnet-cli tool diogenes search --lang lat --query lupus --output pretty
 ```
 
 ### Fuzz Testing and Validation
@@ -100,13 +104,13 @@ Automated testing for backend tools:
 
 ```bash
 # Generate fixtures for multiple words
-just autobot fuzz run --tool diogenes --action search --words "lupus,arma,vir" --validate
+devenv shell langnet-cli -- just autobot fuzz run --tool diogenes --action search --words "lupus,arma,vir" --validate
 
 # Validate existing fixtures
-just autobot fuzz run --tool heritage --action morphology --validate
+devenv shell langnet-cli -- just autobot fuzz run --tool heritage --action morphology --validate
 
 # Compare raw vs unified outputs
-just autobot fuzz run --tool cdsl --action lookup --compare
+devenv shell langnet-cli -- just autobot fuzz run --tool cdsl --action lookup --compare
 ```
 
 ### Fixtures Management
@@ -114,14 +118,14 @@ just autobot fuzz run --tool cdsl --action lookup --compare
 Raw backend outputs can be generated on-demand:
 
 ```
-just autobot fuzz run \
+devenv shell langnet-cli -- just autobot fuzz run \
   --tool diogenes \
   --action search \
   --words "lupus,amo" \
   --save                # defaults to examples/debug/fuzz_results.json
 
-just autobot fuzz list
-just autobot fuzz run --tool diogenes --action search --validate --compare
+devenv shell langnet-cli -- just autobot fuzz list
+devenv shell langnet-cli -- just autobot fuzz run --tool diogenes --action search --validate --compare
 ```
 
 Save individual outputs manually when needed:
@@ -137,20 +141,20 @@ Monitor and manage schema changes:
 
 ```bash
 # Compare raw vs unified outputs
-python tools/compare_tool_outputs.py \
+devenv shell langnet-cli -- python examples/compare_tool_outputs.py \
   --tool diogenes \
   --action search \
   --word lupus \
   --generate-fixes
 
 # Detect schema drift
-python tools/compare_tool_outputs.py \
+devenv shell langnet-cli -- python examples/compare_tool_outputs.py \
   --tool heritage \
   --action morphology \
   --generate-fixes
 
 # Save comparison results
-python tools/compare_tool_outputs.py \
+devenv shell langnet-cli -- python examples/compare_tool_outputs.py \
   --tool cdsl \
   --action lookup \
   --word agni \
@@ -190,15 +194,15 @@ class TestMyFeature(ToolFixtureMixin):
 - Optional gap-fill: legacy Classics-Data (`~/langnet-tools/diogenes/Classics-Data`) for works not present in Perseus (e.g., some stoa URNs).
 - Build (default merges Perseus + legacy gaps, wipes old DB):
   ```sh
-  just cli indexer build-cts --perseus-dir ~/perseus --wipe
+  devenv shell langnet-cli -- just cli indexer build-cts --perseus-dir ~/perseus --wipe
   ```
 - Pure-Perseus build (no legacy supplements):
   ```sh
-  just cli indexer build-cts --perseus-dir ~/perseus --wipe --no-legacy
+  devenv shell langnet-cli -- just cli indexer build-cts --perseus-dir ~/perseus --wipe --no-legacy
   ```
 - Output: `~/.local/share/langnet/cts_urn.duckdb`. CTS regression tests:
   ```sh
-  just test tests.test_cts_urn_basic
+  devenv shell langnet-cli -- just test tests.test_cts_urn_basic
   ```
 
 ## Testing Strategy
@@ -209,12 +213,12 @@ Test individual components in isolation:
 
 ```bash
 # Test specific modules
-python -m pytest tests/test_heritage_integration.py -v
-python -m pytest tests/test_cdsl.py -v
-python -m pytest tests/test_api_integration.py -v
+devenv shell langnet-cli -- just test tests.test_heritage_integration
+devenv shell langnet-cli -- just test tests.test_cdsl
+devenv shell langnet-cli -- just test tests.test_api_integration
 
 # Run with raw test mode
-RAW_TEST_MODE=true python -m pytest tests/test_heritage_integration.py -v
+devenv shell langnet-cli -- RAW_TEST_MODE=true nose2 -s tests tests.test_heritage_integration --config tests/nose2.cfg -v
 ```
 
 ### 2. Integration Testing
@@ -227,8 +231,8 @@ curl "http://localhost:8000/api/tool/diogenes/search?lang=lat&query=lupus"
 curl "http://localhost:8000/api/tool/heritage/morphology?query=agni"
 
 # Test CLI commands
-langnet-cli tool diogenes search --lang lat --query lupus
-langnet-cli tool heritage morphology --query agni
+devenv shell langnet-cli -- langnet-cli tool diogenes search --lang lat --query lupus
+devenv shell langnet-cli -- langnet-cli tool heritage morphology --query agni
 ```
 
 ### 3. Fuzz Testing
@@ -237,17 +241,17 @@ Comprehensive automated testing:
 
 ```bash
 # Test all tools with default word lists (langnet-cli will hit the running API)
-just autobot fuzz run --validate --compare
+devenv shell langnet-cli -- just autobot fuzz run --validate --compare
 
 # Test specific scenarios
-just autobot fuzz run \
+devenv shell langnet-cli -- just autobot fuzz run \
   --tool diogenes \
   --action search \
   --words "lupus,arma,vir,rosa,amicus" \
   --validate
 
 # Exhaustive defaults across all backends (hits localhost:8000, saves per-target files)
-just autobot fuzz run --validate --compare --save examples/debug/fuzz_results
+devenv shell langnet-cli -- just autobot fuzz run --validate --compare --save examples/debug/fuzz_results
 ```
 
 ### 4. Schema Validation
@@ -321,13 +325,13 @@ just autobot fuzz run --validate
 curl http://localhost:8000/api/health
 
 # Test individual tools
-langnet-cli tool diogenes parse --lang lat --query lupus --output pretty
+devenv shell langnet-cli -- langnet-cli tool diogenes parse --lang lat --query lupus --output pretty
 
 # Validate all fixtures
-just autobot fuzz run --validate
+devenv shell langnet-cli -- just autobot fuzz run --validate
 
 # Compare outputs
-python tools/compare_tool_outputs.py --tool diogenes --action search --word lupus
+devenv shell langnet-cli -- python examples/compare_tool_outputs.py --tool diogenes --action search --word lupus
 ```
 
 ### Tool Matrix (backend → actions → defaults)
@@ -340,7 +344,7 @@ python tools/compare_tool_outputs.py --tool diogenes --action search --word lupu
 | cdsl | lookup | san | agni/yoga/deva | Monier-Williams/AP90 via CDSL |
 | cltk | morphology, dictionary | lat, grc, san (dictionary: lat) | morph: amo/sum/logos/anthropos/agni; dict: lupus/arma/amo | CLTK wrappers |
 
-Use `just autobot fuzz list` to see this matrix in the CLI and `just autobot fuzz run` to exercise it. All fuzzing shells out to `langnet-cli tool ...` against `http://localhost:8000`.
+Use `devenv shell langnet-cli -- just autobot fuzz list` to see this matrix in the CLI and `devenv shell langnet-cli -- just autobot fuzz run` to exercise it. All fuzzing shells out to `langnet-cli tool ...` against `http://localhost:8000`.
 
 Fuzz saves now default to a directory (`examples/debug/fuzz_results/`) with one JSON per target plus `summary.json`, which avoids extremely large aggregate files.
 
@@ -449,12 +453,6 @@ When adding support for new dictionaries, morphological analyzers, or lexicon so
 
 See [ROADMAP.md](../ROADMAP.md) for detailed roadmap and current priorities.
 
-## Code Style Tools
-
-- **Formatter**: `ruff format`
-- **Type checker**: `ty check`
-- **Linter**: `ruff check`
-
 ## AI-Assisted Development
 
 This project uses a sophisticated multi-model AI development system. For complete AI development documentation, see:
@@ -532,7 +530,7 @@ Configured in `.opencode/opencode.json`:
 - Review code changes carefully before accepting
 - Run `just ruff-format`, `just ruff-check`, `just typecheck`, and `just test` after opencode makes changes
 - Use `LANGNET_LOG_LEVEL=DEBUG` for detailed logging when debugging
-- Clear cache with `langnet-cli cache-clear` when testing backend changes
+- Clear cache with `devenv shell langnet-cli -- langnet-cli cache-clear` when testing backend changes
 - Restart the uvicorn server after code changes (modules are cached)
 
 ### Example Session

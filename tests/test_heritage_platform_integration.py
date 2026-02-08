@@ -184,7 +184,8 @@ class TestHeritagePlatformIntegration(unittest.TestCase):
         """Test sktsearch endpoint for canonical lookup."""
         try:
             params = {"q": "agni"}
-            response = requests.get(f"{self.base_url}/sktsearch", params=params, timeout=15)
+            primary_path = "/cgi-bin/sktsearch"
+            response = requests.get(f"{self.base_url}{primary_path}", params=params, timeout=15)
 
             if response.status_code == HTTP_OK:
                 content = response.text
@@ -207,7 +208,7 @@ class TestHeritagePlatformIntegration(unittest.TestCase):
             else:
                 print(f"⚠️  sktsearch returned status: {response.status_code}")
                 # Try alternative paths
-                alternative_paths = ["/cgi-bin/sktsearch", "/sktsearch.cgi", "/sktsearch.pl"]
+                alternative_paths = ["/sktsearch", "/sktsearch.cgi", "/sktsearch.pl"]
                 for path in alternative_paths:
                     try:
                         alt_response = requests.get(

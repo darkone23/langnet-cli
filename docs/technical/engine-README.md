@@ -86,13 +86,13 @@ Dict with backend-specific keys, e.g.:
 
 Engine is instantiated via `LangnetWiring` (dependency injection):
 ```python
-from langnet.core import LangnetWiring
+from langnet.core import build_langnet_wiring
 
-wiring = LangnetWiring()
+wiring = build_langnet_wiring()  # uses env-driven LangnetSettings
 engine = wiring.engine  # LanguageEngine instance
 ```
 
-This ensures all backends are initialized consistently.
+This ensures all backends are initialized consistently while allowing settings/factory overrides for tests and custom deployments.
 
 ## Error Handling
 

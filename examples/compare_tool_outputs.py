@@ -16,8 +16,6 @@ from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
 
-from langnet.logging import setup_logging
-
 logger = structlog.get_logger(__name__)
 console = Console()
 

@@ -4,14 +4,16 @@ from typing import Any, Optional
 import cattrs
 import structlog
 
-import langnet.logging  # noqa: F401 - ensures logging is configured before use
 from langnet.backend_adapter import LanguageAdapterRegistry
 from langnet.classics_toolkit.core import ClassicsToolkit
-from langnet.cologne.core import SanskritCologneLexicon, to_slp1 as cdsl_to_slp1
+from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
+from langnet.engine.sanskrit_normalizer import (
+    SanskritNormalizationResult,
+    SanskritQueryNormalizer,
+)
 from langnet.foster.apply import apply_foster_view
 from langnet.heritage.client import HeritageHTTPClient
-from langnet.heritage.encoding_service import EncodingService
 from langnet.heritage.morphology import (
     HeritageMorphologyService,  # TODO: not sure why this is not just in heritage client?
 )
@@ -128,6 +130,7 @@ class LanguageEngineConfig:
     heritage_morphology: Optional[HeritageMorphologyService] = None
     heritage_client: Optional[HeritageHTTPClient] = None
     normalization_pipeline: Optional[NormalizationPipeline] = None
+    sanskrit_normalizer: Optional[SanskritQueryNormalizer] = None
     enable_normalization: bool = True
 
 
@@ -140,6 +143,7 @@ class LanguageEngine:
         self.heritage_morphology = config.heritage_morphology
         self.heritage_client = config.heritage_client
         self.normalization_pipeline = config.normalization_pipeline
+        self.sanskrit_normalizer = config.sanskrit_normalizer
         self.enable_normalization = config.enable_normalization
         self._cattrs_converter = cattrs.Converter(omit_if_default=True)
 
@@ -190,10 +194,17 @@ class LanguageEngine:
     def _query_sanskrit(self, word: str, _cattrs_converter) -> dict:
         result = {}
 
-        # Normalize word to canonical form (prefer Heritage sktsearch) before hitting backends.
-        canonical, canonical_slp1, slp1_candidates, canonical_tokens = self._normalize_sanskrit_word(
-            word
+        normalizer = self.sanskrit_normalizer or SanskritQueryNormalizer(
+            heritage_client=self.heritage_client,
+            normalization_pipeline=self.normalization_pipeline if self.enable_normalization else None,
         )
+        self.sanskrit_normalizer = normalizer
+
+        normalized: SanskritNormalizationResult = normalizer.normalize(word)
+        canonical = normalized.canonical_heritage
+        canonical_slp1 = normalized.canonical_slp1
+        slp1_candidates = normalized.slp1_candidates
+        canonical_tokens = normalized.canonical_tokens
 
         heritage_result = self._query_sanskrit_heritage(canonical, _cattrs_converter)
         if heritage_result:
@@ -228,163 +239,6 @@ class LanguageEngine:
         result["input_form"] = word
         return result
 
-    def _normalize_sanskrit_word(self, word: str) -> tuple[str, str, list[str], list[str] | None]:
-        """Return canonical Sanskrit forms: heritage-friendly, primary SLP1, SLP1 alternates, tokens."""
-        heritage_form = word
-        slp1_form = word
-        slp1_candidates: list[str] = []
-        canonical_tokens: list[str] | None = None
-
-        # Prefer normalization pipeline (which hits sktsearch) for canonicalization.
-        if self.normalization_pipeline:
-            if not getattr(self.normalization_pipeline, "_initialized", False):
-                try:
-                    self.normalization_pipeline.initialize()
-                except Exception as exc:  # noqa: BLE001
-                    logger.debug("normalization_init_failed", error=str(exc))
-            try:
-                normalized = self.normalization_pipeline.normalize_query("san", word)
-                heritage_form = normalized.canonical_text or heritage_form
-                if heritage_form and " " in heritage_form:
-                    canonical_tokens = [tok for tok in heritage_form.split(" ") if tok]
-                    if canonical_tokens:
-                        heritage_form = canonical_tokens[0]
-                # Prefer precomputed SLP1 alternates when available.
-                alt_slp1 = self._first_slp1_alternate(normalized.alternate_forms)
-                if alt_slp1:
-                    slp1_form = alt_slp1
-                # Collect all SLP1 alternates for downstream fallbacks.
-                for alt in normalized.alternate_forms:
-                    try:
-                        from indic_transliteration.detect import detect  # noqa: PLC0415
-                    except Exception:
-                        break
-                    try:
-                        if detect(alt) == "slp1":
-                            slp1_candidates.append(alt)
-                    except Exception:
-                        continue
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("sanskrit_normalization_failed", word=word, error=str(exc))
-
-        # If normalization pipeline is absent or did not yield a canonical form, fall back to sktsearch directly.
-        if heritage_form == word and self.heritage_client:
-            try:
-                canonical = self.heritage_client.fetch_canonical_via_sktsearch(word)
-                canon_text = canonical.get("canonical_text")
-                if canon_text:
-                    heritage_form = canon_text
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("sktsearch_canonical_failed", word=word, error=str(exc))
-
-        if slp1_form == word:
-            slp1_form = self._to_slp1(heritage_form)
-        if not slp1_candidates:
-            slp1_candidates.append(slp1_form)
-        # Ensure a Velthuis→SLP1 candidate exists for CDSL fallbacks.
-        slp1_candidates.append(self._velthuis_to_slp1_basic(heritage_form))
-
-        # If primary SLP1 looks mangled (digits/quotes), replace with basic mapping.
-        if self._looks_mangled_slp1(slp1_form):
-            slp1_form = self._velthuis_to_slp1_basic(heritage_form)
-
-        # Force a lowercased SLP1 guess using the CDSL transliterator to catch ASCII roman inputs (e.g., shiva -> ziva).
-        try:
-            cdsl_slp1 = cdsl_to_slp1(heritage_form)
-            if cdsl_slp1:
-                slp1_candidates.append(cdsl_slp1)
-                slp1_form = cdsl_slp1
-        except Exception:
-            pass
-
-        # Deduplicate while preserving order
-        seen: set[str] = set()
-        slp1_candidates = [c for c in slp1_candidates if c and not (c in seen or seen.add(c))]
-
-        return heritage_form, slp1_form, slp1_candidates, canonical_tokens
-
-    @staticmethod
-    def _to_slp1(text: str) -> str:
-        """Transliterate Sanskrit text to SLP1 for CDSL/ASCII backends."""
-        try:
-            from indic_transliteration.detect import detect  # noqa: PLC0415
-            from indic_transliteration.sanscript import (  # noqa: PLC0415
-                SLP1,
-                VELTHUIS,
-                transliterate,
-            )
-
-            src = detect(text)
-            # Heuristic: if the text looks like Velthuis (dots/long vowels), force VELTHUIS.
-            looks_velthuis = any(ch in text for ch in [".", "~", "aa", "ii", "uu"])
-            if looks_velthuis:
-                src_scheme = VELTHUIS
-            else:
-                src_scheme = src
-            return transliterate(text, src_scheme, SLP1)
-        except Exception:
-            return text
-
-    @staticmethod
-    def _first_slp1_alternate(alternates: list[str]) -> str | None:
-        """Return the first SLP1-looking alternate if present."""
-        try:
-            from indic_transliteration.detect import detect  # noqa: PLC0415
-        except Exception:
-            return None
-
-        for alt in alternates:
-            try:
-                if detect(alt) == "slp1":
-                    return alt.lower()
-            except Exception:
-                continue
-        return None
-
-    @staticmethod
-    def _velthuis_to_slp1_basic(text: str) -> str:
-        """Simple Velthuis to SLP1 mapper for fallback canonicalization."""
-        replacements = [
-            ("aa", "A"),
-            ("ii", "I"),
-            ("uu", "U"),
-            ("~n", "Y"),
-            (".rr", "F"),
-            (".r", "f"),
-            (".ll", "X"),
-            (".l", "x"),
-            (".n", "R"),
-            (".t", "w"),
-            (".d", "q"),
-            (".s", "z"),
-            ("'s", "S"),
-        ]
-        out = text
-        for old, new in replacements:
-            out = out.replace(old, new)
-        return out
-
-    @staticmethod
-    def _looks_mangled_slp1(text: str) -> bool:
-        """Detect obvious transliteration artifacts like digits/quotes in SLP1 output."""
-        return any(ch.isdigit() or ch in {"\"", "'"} for ch in text)
-
-    @staticmethod
-    def _detect_heritage_encoding(word: str) -> str:
-        """
-        Detect the best encoding hint for Heritage.
-        We normalize to Velthuis for non-ASCII inputs to maximize hit rate.
-        """
-        try:
-            from langnet.heritage.encoding_service import EncodingService  # noqa: PLC0415
-        except Exception:
-            return "velthuis"
-
-        encoding = EncodingService.detect_encoding(word)
-        if encoding in {"devanagari", "iast", "hk", "slp1"}:
-            return "velthuis"
-        return encoding or "velthuis"
-
     def _query_sanskrit_heritage(self, word: str, _cattrs_converter) -> dict | None:
         if not self.heritage_morphology:
             logger.warning("heritage_morphology_service_not_available")
@@ -394,7 +248,11 @@ class LanguageEngine:
 
         # Perform morphological analysis
         try:
-            morphology_encoding = self._detect_heritage_encoding(word)
+            morphology_encoding = (
+                self.sanskrit_normalizer.detect_heritage_encoding(word)
+                if self.sanskrit_normalizer
+                else "velthuis"
+            )
             morphology_result = self.heritage_morphology.analyze_word(
                 word, encoding=morphology_encoding
             )
@@ -413,12 +271,27 @@ class LanguageEngine:
                 if lemma:
                     dict_result = None
                     dict_source = None
+                    try:
+                        if self.cdsl:
+                            cdsl_lookup = self.cdsl.lookup_ascii(lemma)
+                            entries: list[dict] = []
+                            for entry_list in cdsl_lookup.get("dictionaries", {}).values():
+                                if isinstance(entry_list, list):
+                                    entries.extend(entry_list)
+                            if entries:
+                                dict_result = {
+                                    "entries": entries,
+                                    "transliteration": cdsl_lookup.get("transliteration", {}),
+                                    "dictionary": "cdsl",
+                                }
+                                dict_source = "cdsl"
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("cdsl_dictionary_lookup_failed", lemma=lemma, error=str(exc))
+
                     if dict_result:
-                        # Store dictionary source in result
                         result["dictionary"] = _cattrs_converter.unstructure(dict_result)
                         result["dictionary_source"] = dict_source
 
-                        # Create combined analysis
                         combined = {
                             "lemma": lemma,
                             "pos": first_analysis.pos if first_analysis.pos else "unknown",
@@ -500,91 +373,11 @@ class LanguageEngine:
             dict_name=dict_name,
         )
 
-        # Validate tool and action
-        self._validate_tool_and_action(tool, action)
+        validation_error = validate_tool_request(tool, action, lang, query, dict_name)
+        if validation_error:
+            raise ValueError(validation_error)
 
-        # Validate tool-specific parameters
-        self._validate_tool_parameters(tool, lang, query, dict_name)
-
-        # Call tool-specific methods
         return self._execute_tool(tool, action, lang, query, dict_name)
-
-    def _validate_tool_and_action(self, tool: str, action: str):
-        """Validate tool and action parameters."""
-        valid_tools = {"diogenes", "whitakers", "heritage", "cdsl", "cltk"}
-        valid_actions_by_tool = {
-            "diogenes": {"parse"},
-            "whitakers": {"search"},
-            "heritage": {"morphology", "canonical", "lemmatize"},
-            "cdsl": {"lookup"},
-            "cltk": {"morphology", "dictionary"},
-        }
-
-        if tool not in valid_tools:
-            raise ValueError(
-                f"Invalid tool: {tool}. Must be one of: {', '.join(sorted(valid_tools))}"
-            )
-
-        allowed_actions = valid_actions_by_tool.get(tool, set())
-        if action not in allowed_actions:
-            raise ValueError(
-                f"Invalid action '{action}' for tool '{tool}'. Must be one of: "
-                f"{', '.join(sorted(allowed_actions)) or '(none)'}"
-            )
-
-    def _validate_tool_parameters(
-        self, tool: str, lang: str | None, query: str | None, dict_name: str | None
-    ):
-        """Validate tool-specific parameters."""
-        if tool == "diogenes":
-            self._validate_diogenes_params(lang, query)
-        elif tool == "whitakers":
-            self._validate_whitakers_params(query)
-        elif tool == "heritage":
-            self._validate_heritage_params(query)
-        elif tool == "cdsl":
-            self._validate_cdsl_params(query)
-        elif tool == "cltk":
-            self._validate_cltk_params(lang, query)
-
-    def _validate_diogenes_params(self, lang: str | None, query: str | None):
-        """Validate Diogenes-specific parameters."""
-        if not lang:
-            raise ValueError("Missing required parameter: lang for diogenes tool")
-        if not query:
-            raise ValueError("Missing required parameter: query for diogenes tool")
-        valid_languages = {"lat", "grc", "san", "grk"}
-        if lang not in valid_languages:
-            raise ValueError(
-                f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
-            )
-
-    def _validate_whitakers_params(self, query: str | None):
-        """Validate Whitaker's Words-specific parameters."""
-        if not query:
-            raise ValueError("Missing required parameter: query for whitakers tool")
-
-    def _validate_heritage_params(self, query: str | None):
-        """Validate Heritage-specific parameters."""
-        if not query:
-            raise ValueError("Missing required parameter: query for heritage tool")
-
-    def _validate_cdsl_params(self, query: str | None):
-        """Validate CDSL-specific parameters."""
-        if not query:
-            raise ValueError("Missing required parameter: query for cdsl tool")
-
-    def _validate_cltk_params(self, lang: str | None, query: str | None):
-        """Validate CLTK-specific parameters."""
-        if not lang:
-            raise ValueError("Missing required parameter: lang for cltk tool")
-        if not query:
-            raise ValueError("Missing required parameter: query for cltk tool")
-        valid_languages = {"lat", "grc", "san"}
-        if lang not in valid_languages:
-            raise ValueError(
-                f"Invalid language: {lang}. Must be one of: {', '.join(sorted(valid_languages))}"
-            )
 
     def _execute_tool(
         self, tool: str, action: str, lang: str | None, query: str | None, dict_name: str | None

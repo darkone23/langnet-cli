@@ -1,0 +1,92 @@
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from langnet.config import LangnetSettings
+from langnet.health import (
+    ComponentStatus,
+    check_cdsl,
+    check_diogenes,
+    check_heritage,
+    overall_status,
+    run_health_checks,
+)
+
+
+class FakeResponse:
+    def __init__(self, status_code: int = 200, text: str = "ok"):
+        self.status_code = status_code
+        self.text = text
+
+
+class HealthCheckTests(unittest.TestCase):
+    def test_check_diogenes_healthy_on_200(self):
+        result = check_diogenes(
+            "http://example.com",
+            timeout=1,
+            requester=lambda *args, **kwargs: FakeResponse(status_code=200),
+        )
+        self.assertEqual(result.status, "healthy")
+        self.assertEqual(result.details["status_code"], 200)
+
+    def test_check_diogenes_degraded_on_404(self):
+        result = check_diogenes(
+            "http://example.com",
+            timeout=1,
+            requester=lambda *args, **kwargs: FakeResponse(status_code=404),
+        )
+        self.assertEqual(result.status, "degraded")
+        self.assertIn("404", result.message)
+
+    def test_check_cdsl_missing_indexes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_dir = Path(tmpdir)
+            result = check_cdsl(db_dir)
+            self.assertEqual(result.status, "missing")
+            self.assertIn("Missing CDSL indexes", result.message)
+
+    def test_check_heritage_fallback_path(self):
+        responses = iter([FakeResponse(status_code=404), FakeResponse(status_code=200)])
+
+        def requester(url, timeout):
+            return next(responses)
+
+        result = check_heritage("http://example.com", timeout=1, requester=requester)
+        self.assertEqual(result.status, "healthy")
+
+    def test_run_health_checks_can_be_stubbed(self):
+        settings = LangnetSettings.from_env(
+            {
+                "LANGNET_ENV": "test",
+                "HTTP_TIMEOUT": "1",
+                "DIOGENES_URL": "http://example.com",
+                "HERITAGE_URL": "http://example.com",
+                "CDSL_DB_DIR": "/tmp",
+                "CDSL_DICT_DIR": "/tmp",
+            }
+        )
+
+        with (
+            mock.patch("langnet.health.check_diogenes", return_value=ComponentStatus("healthy")),
+            mock.patch("langnet.health.check_cltk", return_value=ComponentStatus("healthy")),
+            mock.patch("langnet.health.check_spacy", return_value=ComponentStatus("healthy")),
+            mock.patch("langnet.health.check_whitakers", return_value=ComponentStatus("healthy")),
+            mock.patch("langnet.health.check_cdsl", return_value=ComponentStatus("healthy")),
+            mock.patch("langnet.health.check_heritage", return_value=ComponentStatus("healthy")),
+        ):
+            health = run_health_checks(settings)
+
+        self.assertEqual(health["status"], "healthy")
+        self.assertTrue(all(comp["status"] == "healthy" for comp in health["components"].values()))
+
+    def test_overall_status_degraded_when_component_unhealthy(self):
+        components = {
+            "a": ComponentStatus("healthy"),
+            "b": ComponentStatus("missing"),
+        }
+        self.assertEqual(overall_status(components), "degraded")
+
+
+if __name__ == "__main__":
+    unittest.main()

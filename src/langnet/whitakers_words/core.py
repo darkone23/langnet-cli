@@ -7,7 +7,6 @@ import cattrs
 import structlog
 from sh import Command
 
-import langnet.logging  # noqa: F401 - ensures logging is configured before use
 from langnet.whitakers_words.enums import (
     Age as WWAge,
 )

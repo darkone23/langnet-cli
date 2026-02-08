@@ -9,8 +9,6 @@ from rich import print as rprint
 from rich.panel import Panel
 from sh import bash
 
-import langnet.logging  # noqa: F401 - ensures logging is configured before use
-
 logger = structlog.get_logger(__name__)
 
 

@@ -5,19 +5,22 @@ A command-line tool for querying classical language lexicons and morphological a
 ## Quick Setup
 
 ```bash
-# Enter development environment
-devenv shell
+# Enter development environment (preferred)
+devenv shell langnet-cli
 
-# Check available backends
-langnet-cli verify
+# Or run a single command with the environment activated
+devenv shell langnet-cli -- langnet-cli query lat lupus --output json
+
+# Check available backends (requires external services running)
+devenv shell langnet-cli -- langnet-cli verify
 
 # Start API server
-uvicorn-run
+devenv shell langnet-cli -- uvicorn-run --reload
 
 # Query words
-langnet-cli query lat lupus      # Latin
-langnet-cli query grc λόγος     # Greek  
-langnet-cli query san agni      # Sanskrit
+devenv shell langnet-cli -- langnet-cli query lat lupus      # Latin
+devenv shell langnet-cli -- langnet-cli query grc λόγος     # Greek  
+devenv shell langnet-cli -- langnet-cli query san agni      # Sanskrit
 ```
 
 ## External Services Required
@@ -27,6 +30,8 @@ langnet-cli query san agni      # Sanskrit
 | **Sanskrit Heritage Platform** | Sanskrit | Morphology + dictionary | Must be running at `localhost:48080` |
 | **Diogenes** | Greek/Latin | Lexicons (Lewis & Short, Liddell & Scott) | Must be running at `localhost:8888` |
 | **Whitaker's Words** | Latin | Morphological analysis | Binary in `~/.local/bin/whitakers-words` |
+
+These services are not bundled with the project; run them locally before using `langnet-cli verify` or making queries.
 
 ## Automated Downloads
 
@@ -38,21 +43,21 @@ These are downloaded on first use:
 
 ### Basic Queries
 ```bash
-langnet-cli query lat lupus
-langnet-cli query grc ἄνθρωπος  
-langnet-cli query san dharma
+devenv shell langnet-cli -- langnet-cli query lat lupus
+devenv shell langnet-cli -- langnet-cli query grc ἄνθρωπος  
+devenv shell langnet-cli -- langnet-cli query san dharma
 ```
 
 ### Health Checks
 ```bash
-langnet-cli verify          # Check all backends
-langnet-cli health         # Alias for verify
+devenv shell langnet-cli -- langnet-cli verify          # Check all backends
+devenv shell langnet-cli -- langnet-cli health         # Alias for verify
 ```
 
 ### API Usage
 ```bash
 # Start server
-uvicorn-run
+devenv shell langnet-cli -- uvicorn-run --reload
 
 # Query via HTTP
 curl "http://localhost:8000/api/q?l=lat&s=lupus"
@@ -61,24 +66,24 @@ curl -X POST "http://localhost:8000/api/q" -d "l=lat&s=lupus"
 
 ### Cache Management
 ```bash
-langnet-cli cache-clear    # Clear query cache
-langnet-cli cache-stats    # Show cache statistics
+devenv shell langnet-cli -- langnet-cli cache-clear    # Clear query cache
+devenv shell langnet-cli -- langnet-cli cache-stats    # Show cache statistics
 ```
 
 ### Indexer Tools (CTS URN)
 ```bash
 # Build citation index
-langnet-cli indexer build cts-urn --source /path/to/Classics-Data
+devenv shell langnet-cli -- langnet-cli indexer build cts-urn --source /path/to/Classics-Data
 
 # Query citation index
-langnet-cli indexer query "Hom. Il." --language grc
+devenv shell langnet-cli -- langnet-cli indexer query "Hom. Il." --language grc
 ```
 
 ## Troubleshooting
 
 ### Backend Services Not Found
 ```bash
-langnet-cli verify  # Shows which services are unavailable
+devenv shell langnet-cli -- langnet-cli verify  # Shows which services are unavailable
 
 # Sanskrit Heritage Platform
 curl http://localhost:48080/sktreader
@@ -92,8 +97,9 @@ curl http://localhost:8888
 
 ### Common Issues
 - **CLTK downloading data**: First query may take ~5 minutes
-- **Cache issues**: Run `langnet-cli cache-clear` if responses seem stale
+- **Cache issues**: Run `devenv shell langnet-cli -- langnet-cli cache-clear` if responses seem stale
 - **Process restart needed**: After code changes, restart API server with `uvicorn-run`
+- **External services missing**: Most queries depend on Heritage, Diogenes, and Whitaker's Words being available locally; `langnet-cli verify` reports which ones are missing.
 
 ## Development
 

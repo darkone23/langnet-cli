@@ -9,6 +9,8 @@ This directory contains README files for individual components within the langne
 - **[diogenes-README.md](diogenes-README.md)** - Diogenes Perseus interface for classical texts
 - **[engine-README.md](engine-README.md)** - Core language processing engine
 - **[whitakers-words-README.md](whitakers-words-README.md)** - Whitaker's Words Latin dictionary parser
+- **[MAINTAINABILITY_REVIEW.md](MAINTAINABILITY_REVIEW.md)** - Current audit and forward plan pointer
+- **[MAINTAINABILITY_HANDOFF.md](MAINTAINABILITY_HANDOFF.md)** - Latest progress + remaining work for maintainability initiative
 
 ## Component Overview
 

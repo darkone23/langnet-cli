@@ -1,5 +1,6 @@
 # Langnet CLI - Roadmap & Status
 
+This roadmap is a snapshot of work in progress. Known gaps are tracked in `docs/TODO.md` (Diogenes sense extraction/CTS URNs, Sanskrit canonicalization + DICO integration, CDSL SLP1 artifacts, universal schema). External services (Heritage, Diogenes, Whitaker's Words) remain required for most functionality and for running tests.
 
 
 #### Core Pedagogical Foundation
@@ -63,4 +64,3 @@
 - **Interface**: Intuitive CLI with helpful error messages
 - **Reliability**: Robust backend service integration
 - **Cross-Platform**: Works across different environments
-

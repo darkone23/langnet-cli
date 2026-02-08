@@ -10,7 +10,6 @@ import requests
 import structlog
 from bs4 import BeautifulSoup
 
-import langnet.logging  # noqa: F401 - ensures logging is configured before use
 from langnet.citation.cts_urn import CTSUrnMapper
 
 # from langnet.citation.models import Citation, CitationCollection, CitationType

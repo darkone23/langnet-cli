@@ -93,10 +93,12 @@ class TestSanskritNormalizer(unittest.TestCase):
         normalizer = SanskritNormalizer()
 
         # Test basic conversion
-        result = normalizer.to_canonical("krishna", "ascii")
+        canonical_text, metadata = normalizer.to_canonical("krishna", "ascii")
 
-        self.assertIsInstance(result, str)
-        self.assertGreater(len(result), 0)
+        self.assertIsInstance(canonical_text, str)
+        self.assertGreater(len(canonical_text), 0)
+        if metadata:
+            self.assertIsInstance(metadata, dict)
 
     def test_full_normalization(self):
         """Test complete normalization workflow"""
