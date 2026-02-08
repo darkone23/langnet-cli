@@ -55,8 +55,8 @@ class TestHeritageHTTPClient(unittest.TestCase):
         client = HeritageHTTPClient()
         self.assertIsNotNone(client)
 
-    @patch("requests.Session.post")
-    def test_fetch_canonical_via_sktsearch_success(self, mock_post):
+    @patch("requests.get")
+    def test_fetch_canonical_via_sktsearch_success(self, mock_get):
         """Test successful canonical fetch via sktsearch."""
         # Mock successful response with proper HTML content
         mock_response = Mock()
@@ -66,7 +66,7 @@ class TestHeritageHTTPClient(unittest.TestCase):
         </body></html>
         """
         mock_response.raise_for_status.return_value = None
-        mock_post.return_value = mock_response
+        mock_get.return_value = mock_response
 
         client = HeritageHTTPClient()
 
@@ -78,13 +78,13 @@ class TestHeritageHTTPClient(unittest.TestCase):
             self.assertIsNotNone(result)
             self.assertIn("canonical_text", result)
 
-    @patch("requests.Session.post")
-    def test_fetch_canonical_via_sktsearch_failure(self, mock_post):
+    @patch("requests.get")
+    def test_fetch_canonical_via_sktsearch_failure(self, mock_get):
         """Test failed canonical fetch via sktsearch."""
         # Mock failed response
         mock_response = Mock()
         mock_response.raise_for_status.side_effect = Exception("HTTP error")
-        mock_post.return_value = mock_response
+        mock_get.return_value = mock_response
 
         client = HeritageHTTPClient()
 
@@ -163,13 +163,9 @@ class TestSmartVelthuisNormalizerIntegration(unittest.TestCase):
 class TestHeritageIntegrationWorkflow(unittest.TestCase):
     """Test Heritage Platform integration workflow."""
 
-    @patch("requests.Session")
-    def test_sktsearch_workflow_integration(self, mock_session_class):
+    @patch("requests.get")
+    def test_sktsearch_workflow_integration(self, mock_get):
         """Test sktsearch workflow integration."""
-        # Mock the session
-        mock_session = Mock()
-        mock_session_class.return_value = mock_session
-
         # Mock successful sktsearch response - HTML format from Heritage
         mock_response = Mock()
         mock_response.text = """
@@ -178,7 +174,7 @@ class TestHeritageIntegrationWorkflow(unittest.TestCase):
         </body></html>
         """
         mock_response.raise_for_status.return_value = None
-        mock_session.request.return_value = mock_response
+        mock_get.return_value = mock_response
 
         # Test the workflow
         with HeritageHTTPClient() as client:
@@ -188,18 +184,14 @@ class TestHeritageIntegrationWorkflow(unittest.TestCase):
             self.assertIn("canonical_text", result)
             self.assertIn("bare_query", result)
 
-    @patch("requests.Session")
-    def test_fallback_workflow_integration(self, mock_session_class):
+    @patch("requests.get")
+    def test_fallback_workflow_integration(self, mock_get):
         """Test fallback workflow integration."""
-        # Mock the session
-        mock_session = Mock()
-        mock_session_class.return_value = mock_session
-
         # Mock failed sktsearch response (no matching entries)
         mock_response = Mock()
         mock_response.text = "<html><body>No results found</body></html>"
         mock_response.raise_for_status.return_value = None
-        mock_session.request.return_value = mock_response
+        mock_get.return_value = mock_response
 
         # Test the workflow
         with HeritageHTTPClient() as client:
@@ -228,13 +220,13 @@ class TestHeritageIntegrationWorkflow(unittest.TestCase):
 class TestErrorHandling(unittest.TestCase):
     """Test error handling in Heritage integration."""
 
-    @patch("requests.Session.post")
-    def test_http_error_handling(self, mock_post):
+    @patch("requests.get")
+    def test_http_error_handling(self, mock_get):
         """Test HTTP error handling."""
         # Mock HTTP error
         mock_response = Mock()
         mock_response.raise_for_status.side_effect = Exception("HTTP 404 Not Found")
-        mock_post.return_value = mock_response
+        mock_get.return_value = mock_response
 
         client = HeritageHTTPClient()
 

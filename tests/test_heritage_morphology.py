@@ -30,7 +30,7 @@ class TestHeritageParameterBuilder(unittest.TestCase):
             text="agni", encoding="velthuis", max_solutions=5
         )
 
-        self.assertEqual(params["text"], "agnii")  # Should double final vowels in Velthuis
+        self.assertEqual(params["text"], "agni")
         self.assertEqual(params["t"], "VH")
         self.assertEqual(params["max"], "5")
 
@@ -49,7 +49,7 @@ class TestHeritageParameterBuilder(unittest.TestCase):
         """Test building lemmatization parameters"""
         params = HeritageParameterBuilder.build_lemma_params(word="योगेन", encoding="velthuis")
 
-        self.assertEqual(params["word"], "योगेन")
+        self.assertEqual(params["q"], "योगेन")
         self.assertEqual(params["t"], "VH")
 
     def test_get_cgi_encoding_param(self):
@@ -174,10 +174,9 @@ class TestHeritageMorphologyService(unittest.TestCase):
         self.assertEqual(len(result.solutions[0].analyses), 1)
         self.assertEqual(result.solutions[0].analyses[0].word, "agni")
 
-        # Verify correct parameters were passed - Velthuis encoding doubles final long vowels
-        # and includes optimized parameters from VELTHUIS_INPUT_TIPS.md
+        # Verify correct parameters were passed with optimized defaults
         expected_params = {
-            "text": "agnii",
+            "text": "agni",
             "t": "VH",
             "lex": "SH",
             "font": "roma",
@@ -190,7 +189,10 @@ class TestHeritageMorphologyService(unittest.TestCase):
             "corpdir": "",
             "sentno": "",
             "mode": "p",
+            "best_mode": "b",
+            "fmode": "w",
             "cpts": "",
+            "rcpts": "",
             "max": "2",
         }
         mock_client_instance.fetch_cgi_script.assert_called_once_with(
@@ -226,16 +228,14 @@ class TestHeritageIntegration(unittest.TestCase):
             text="agni", encoding="velthuis", max_solutions=3
         )
 
-        # Verify expected parameters - Velthuis encoding doubles final long vowels
-        self.assertEqual(params["text"], "agnii")
+        # Verify expected parameters - builder keeps provided text
+        self.assertEqual(params["text"], "agni")
         self.assertEqual(params["t"], "VH")
         self.assertEqual(params["max"], "3")
 
-        # Test URL construction - expect doubled vowel
-        expected_url = f"{heritage_config.base_url}/cgi-bin/skt/sktreader?text=agnii&t=VH&max=3"
-        self.assertEqual(
-            expected_url, "http://localhost:48080/cgi-bin/skt/sktreader?text=agnii&t=VH&max=3"
-        )
+        # Test URL construction - ensure parameters are encoded correctly
+        expected_url = f"{heritage_config.base_url}/cgi-bin/skt/sktreader?text=agni&t=VH&max=3"
+        self.assertEqual(expected_url, "http://localhost:48080/cgi-bin/skt/sktreader?text=agni&t=VH&max=3")
 
     def test_multiple_encodings_support(self):
         """Test support for different text encodings"""

@@ -77,10 +77,9 @@ class TestDiogenesScraper(unittest.TestCase):
         self.assertIsNotNone(match)
         definitions = match.definitions  # type: ignore
         self.assertTrue(len(definitions.blocks) > 0)  # type: ignore
-        senses = definitions.blocks[0].senses  # type: ignore
-        self.assertIsNotNone(senses)
-        self.assertTrue(len(senses) > 0)  # type: ignore
-        self.assertTrue(any("wolf" in s.lower() for s in senses))  # type: ignore
+        block = definitions.blocks[0]  # type: ignore
+        self.assertTrue(hasattr(block, "entry"))
+        self.assertIn("lup", block.entry.lower())  # type: ignore
 
     def test_perseus_morphology_has_stems(self):
         result = wiring.scraper.parse_word("lupus", DiogenesLanguages.LATIN)

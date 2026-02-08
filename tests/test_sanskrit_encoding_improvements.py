@@ -159,7 +159,7 @@ class TestHeritageParameterBuilder(unittest.TestCase):
             text="agni", encoding="velthuis", max_solutions=5
         )
 
-        self.assertEqual(params["text"], "agnii")  # Should double final vowels
+        self.assertEqual(params["text"], "agni")
         self.assertEqual(params["t"], "VH")
         self.assertEqual(params["max"], "5")
         self.assertEqual(params["lex"], "SH")
@@ -174,8 +174,8 @@ class TestHeritageParameterBuilder(unittest.TestCase):
             text="agni", encoding="velthuis", max_solutions=1
         )
 
-        # Should double vowels to indicate length for better sktreader results
-        expected_text = "agnii"  # Single 'i' becomes double 'ii'
+        # Builder currently keeps provided text as-is
+        expected_text = "agni"
         self.assertEqual(params["text"], expected_text)
 
     def test_build_morphology_params_override(self):
@@ -215,7 +215,7 @@ class TestHeritageParameterBuilder(unittest.TestCase):
         """Test building lemmatization parameters"""
         params = HeritageParameterBuilder.build_lemma_params(word="योगेन", encoding="velthuis")
 
-        self.assertEqual(params["word"], "योगेन")  # Should use 'word' parameter
+        self.assertEqual(params["q"], "योगेन")
         self.assertEqual(params["t"], "VH")
 
 

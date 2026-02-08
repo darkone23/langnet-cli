@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 import cattrs
 import structlog
@@ -124,9 +124,9 @@ class LanguageEngineConfig:
     whitakers: WhitakersWords
     cltk: ClassicsToolkit
     cdsl: SanskritCologneLexicon
-    heritage_morphology: HeritageMorphologyService
-    heritage_client: HeritageHTTPClient
-    normalization_pipeline: NormalizationPipeline
+    heritage_morphology: Optional[HeritageMorphologyService] = None
+    heritage_client: Optional[HeritageHTTPClient] = None
+    normalization_pipeline: Optional[NormalizationPipeline] = None
     enable_normalization: bool = True
 
 

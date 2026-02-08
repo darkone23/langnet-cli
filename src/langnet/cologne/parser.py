@@ -212,7 +212,10 @@ def _parse_lexicon_element(lex_elem) -> tuple[dict, dict]:
 
     for ab in lex_elem.findall("ab"):
         if ab.text:
-            grammar_tags.setdefault("abbreviations", []).append(ab.text.strip())
+            ab_text = ab.text.strip()
+            grammar_tags.setdefault("abbreviations", []).append(ab_text)
+            if "comp" in ab_text.lower():
+                grammar_tags["compound"] = True
 
     return result, grammar_tags
 
@@ -363,29 +366,30 @@ def parse_grammatical_info(xml_data: str) -> dict:
     body_text = _build_body_text(body)
     _parse_etymology_and_references(body, body_text, result)
 
-    # Extract sanskrit_form from header key2 if available (usually has SLP1 diacritics)
-    # Fallback to key1, then to body extraction
+    if grammar_tags:
+        result["grammar_tags"] = grammar_tags
+
+    # Extract sanskrit_form preferring explicit body forms over key1 fallback
     header = root.find("h")
     if header is not None:
-        # Try key2 first (often has SLP1 diacritics like '/' for Udatta)
         key2_elem = header.find("key2")
         if key2_elem is not None and key2_elem.text and key2_elem.text.strip():
             sanskrit_form = key2_elem.text.strip()
             if sanskrit_form:
                 result["sanskrit_form"] = sanskrit_form
 
-        # Fallback to key1 if key2 not available or empty
-        if "sanskrit_form" not in result:
-            key1_elem = header.find("key1")
-            if key1_elem is not None and key1_elem.text:
-                sanskrit_form = key1_elem.text.strip()
-                if sanskrit_form:
-                    result["sanskrit_form"] = sanskrit_form
-
-    # Final fallback: try body extraction if header doesn't have suitable key
+    # Prefer body form if header lacked key2
     if "sanskrit_form" not in result:
         sanskrit_form = _find_sanskrit_form(body)
         if sanskrit_form:
             result["sanskrit_form"] = sanskrit_form
+
+    # Fallback to key1 if nothing else provided a value
+    if "sanskrit_form" not in result and header is not None:
+        key1_elem = header.find("key1")
+        if key1_elem is not None and key1_elem.text:
+            sanskrit_form = key1_elem.text.strip()
+            if sanskrit_form:
+                result["sanskrit_form"] = sanskrit_form
 
     return result

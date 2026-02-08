@@ -208,12 +208,12 @@ class HeritageHTMLExtractor:
         seen: set[str] = set()
 
         for table in self._get_innermost_pattern_tables(soup):
-            for word, analysis in self._collect_patterns(table):
+            for word, analysis, raw_text in self._collect_patterns(table):
                 key = f"{word}||{analysis}"
                 if key in seen:
                     continue
                 seen.add(key)
-                patterns.append((word, analysis, f"[{word}]{{{analysis}}}"))
+                patterns.append((word, analysis, raw_text or f"[{word}]{{{analysis}}}"))
 
         if not patterns:
             for span in soup.find_all("span", class_="latin12"):

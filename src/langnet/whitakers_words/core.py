@@ -818,7 +818,7 @@ class WhitakersWords:
                 wordlist.append(word_structure)
 
         structured_wordlist = []
-        print("in words fn")
+        # print("in words fn")
         for w in fixup(wordlist):
             try:
                 structured_wordlist.append(cattrs.structure(w, WhitakersWordsT))

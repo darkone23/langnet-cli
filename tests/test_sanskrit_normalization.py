@@ -68,7 +68,6 @@ class TestSanskritNormalizer(unittest.TestCase):
         self.assertEqual(result.original_query, "krishna")
         self.assertEqual(result.language, Language.SANSKRIT)
         self.assertEqual(result.detected_encoding.value, "ascii")
-        self.assertGreaterEqual(result.confidence, 0.0)
 
     def test_normalize_agni_real(self):
         """Test real normalization of 'agni'"""
@@ -78,7 +77,6 @@ class TestSanskritNormalizer(unittest.TestCase):
 
         self.assertEqual(result.original_query, "agni")
         self.assertEqual(result.language, Language.SANSKRIT)
-        self.assertGreaterEqual(result.confidence, 0.0)
 
     def test_normalize_devanagari(self):
         """Test real normalization of Devanagari text"""
@@ -111,7 +109,6 @@ class TestSanskritNormalizer(unittest.TestCase):
         self.assertEqual(result.language, Language.SANSKRIT)
         self.assertIsInstance(result.canonical_text, str)
         self.assertIsInstance(result.detected_encoding.value, str)
-        self.assertGreaterEqual(result.confidence, 0.0)
         self.assertIsInstance(result.alternate_forms, list)
 
 

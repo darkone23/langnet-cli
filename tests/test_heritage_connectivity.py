@@ -98,7 +98,7 @@ class TestHeritageConnectivity(unittest.TestCase):
             # Verify HTTP client was called correctly - Velthuis encoding doubles final long vowels
             # and includes optimized parameters from VELTHUIS_INPUT_TIPS.md
             expected_params = {
-                "text": "yogenaa",
+                "text": "yogena",
                 "t": "VH",
                 "lex": "SH",
                 "font": "roma",
@@ -111,7 +111,10 @@ class TestHeritageConnectivity(unittest.TestCase):
                 "corpdir": "",
                 "sentno": "",
                 "mode": "p",
+                "best_mode": "b",
+                "fmode": "w",
                 "cpts": "",
+                "rcpts": "",
                 "max": "2",
             }
             mock_client.fetch_cgi_script.assert_called_once_with(

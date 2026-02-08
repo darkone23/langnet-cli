@@ -243,6 +243,20 @@ class HeritageHTTPClient:
             "match_method": "not_found",
         }
 
+    def fetch_canonical_via_sktsearch(
+        self, query: str, timeout: int | None = None
+    ) -> dict[str, Any]:
+        """Backward-compatible wrapper for canonical Sanskrit lookup via sktsearch."""
+        canonical = self.fetch_canonical_sanskrit(query, timeout=timeout)
+
+        return {
+            "original_query": canonical.get("original_query", query),
+            "bare_query": canonical.get("bare_query", query),
+            "canonical_text": canonical.get("canonical_sanskrit"),
+            "match_method": canonical.get("match_method"),
+            "entry_url": canonical.get("entry_url"),
+        }
+
 
 class HeritageAPIError(Exception):
     """Exception raised for Heritage API errors"""

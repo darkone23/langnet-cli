@@ -24,8 +24,6 @@ from langnet.normalization import (
     SanskritNormalizer,
 )
 
-CONFIDENCE_08 = 0.8
-CONFIDENCE_09 = 0.9
 EXPECTED_ALTERNATE_COUNT = 3
 
 
@@ -39,14 +37,12 @@ class TestCanonicalQuery(unittest.TestCase):
             language=Language.SANSKRIT,
             canonical_text="krsna",
             detected_encoding=Encoding.ASCII,
-            confidence=0.8,
         )
 
         self.assertEqual(query.original_query, "krishna")
         self.assertEqual(query.language, Language.SANSKRIT)
         self.assertEqual(query.canonical_text, "krsna")
         self.assertEqual(query.detected_encoding, Encoding.ASCII)
-        self.assertEqual(query.confidence, CONFIDENCE_08)
         self.assertEqual(query.alternate_forms, [])
         self.assertEqual(query.normalization_notes, [])
         self.assertIsNone(query.enrichment_metadata)
@@ -59,7 +55,6 @@ class TestCanonicalQuery(unittest.TestCase):
             canonical_text="cedo",
             alternate_forms=["CEDO"],
             detected_encoding=Encoding.UNICODE,
-            confidence=0.9,
             normalization_notes=["Macrons stripped"],
             enrichment_metadata={"source": "test"},
         )
@@ -75,24 +70,8 @@ class TestCanonicalQuery(unittest.TestCase):
         self.assertEqual(reconstructed.canonical_text, original.canonical_text)
         self.assertEqual(reconstructed.alternate_forms, original.alternate_forms)
         self.assertEqual(reconstructed.detected_encoding, original.detected_encoding)
-        self.assertEqual(reconstructed.confidence, original.confidence)
         self.assertEqual(reconstructed.normalization_notes, original.normalization_notes)
         self.assertEqual(reconstructed.enrichment_metadata, original.enrichment_metadata)
-
-    def test_high_confidence_check(self):
-        """Test confidence threshold checking."""
-        high_conf_query = CanonicalQuery(
-            original_query="test", language=Language.SANSKRIT, canonical_text="test", confidence=0.9
-        )
-
-        low_conf_query = CanonicalQuery(
-            original_query="test", language=Language.SANSKRIT, canonical_text="test", confidence=0.3
-        )
-
-        self.assertTrue(high_conf_query.has_high_confidence())
-        self.assertTrue(high_conf_query.has_high_confidence(0.8))
-        self.assertFalse(low_conf_query.has_high_confidence())
-        self.assertFalse(low_conf_query.has_high_confidence(0.5))
 
     def test_get_all_forms(self):
         """Test getting all forms including alternates."""
@@ -112,16 +91,6 @@ class TestCanonicalQuery(unittest.TestCase):
 
 def test_validation_errors(self):
     """Test validation catches invalid inputs."""
-    # Test confidence validation
-    with self.assertRaises(ValueError) as context:
-        CanonicalQuery(
-            original_query="test",
-            language=Language.SANSKRIT,
-            canonical_text="test",
-            confidence=1.5,
-        )
-    self.assertIn("confidence must be between 0.0 and 1.0", str(context.exception))
-
     # Test alternate forms validation
     with self.assertRaises(ValueError) as context:
         CanonicalQuery(
@@ -202,7 +171,6 @@ class TestSanskritNormalizer(unittest.TestCase):
         self.assertIsInstance(result.canonical_text, str)
         self.assertGreater(len(result.canonical_text), 0)
         self.assertIn(result.detected_encoding, [Encoding.ASCII, Encoding.VELTHUIS])
-        self.assertGreaterEqual(result.confidence, 0.0)
         self.assertGreaterEqual(len(result.normalization_notes), 1)
 
     def test_sanskrit_word_detection(self):
@@ -306,7 +274,6 @@ class TestLatinNormalizer(unittest.TestCase):
         self.assertEqual(result.language, Language.LATIN)
         self.assertEqual(result.canonical_text, "cedo")
         self.assertEqual(result.detected_encoding, Encoding.UNICODE)
-        self.assertGreaterEqual(result.confidence, CONFIDENCE_08)
         self.assertIn("Macrons stripped", result.normalization_notes)
 
 
@@ -374,7 +341,6 @@ class TestGreekNormalizer(unittest.TestCase):
         self.assertEqual(result.language, Language.GREEK)
         self.assertEqual(result.canonical_text, "οὐσία")
         self.assertEqual(result.detected_encoding, Encoding.UNICODE)
-        self.assertGreaterEqual(result.confidence, CONFIDENCE_09)
 
         # Test betacode input
         result = self.normalizer.normalize("*ou/sia")
@@ -414,7 +380,6 @@ class TestNormalizationPipeline(unittest.TestCase):
         result = self.pipeline.normalize_query("san", "krishna")
         self.assertEqual(result.language, Language.SANSKRIT)
         self.assertEqual(result.original_query, "krishna")
-        self.assertGreaterEqual(result.confidence, 0.0)
 
         # Test Latin
         result = self.pipeline.normalize_query("lat", "cēdō")
@@ -432,7 +397,6 @@ class TestNormalizationPipeline(unittest.TestCase):
         # Should return default normalization
         self.assertEqual(result.original_query, "test")
         self.assertEqual(result.canonical_text, "test")
-        self.assertEqual(result.confidence, 0.0)
 
     def test_pipeline_initialization(self):
         """Test pipeline initialization."""
@@ -465,7 +429,7 @@ class TestIntegration(unittest.TestCase):
             result = self.pipeline.normalize_query(lang, query)
             self.assertEqual(result.language.value, lang, f"Failed for {description}: {query}")
             self.assertEqual(result.original_query, query, f"Failed for {description}: {query}")
-            self.assertGreater(result.confidence, 0.0, f"Low confidence for {description}: {query}")
+            self.assertTrue(isinstance(result.canonical_text, str))
 
     def test_encoding_variations(self):
         """Test handling of different encoding variations."""
@@ -479,7 +443,7 @@ class TestIntegration(unittest.TestCase):
         for query, desc in sanskrit_cases:
             result = self.pipeline.normalize_query("san", query)
             self.assertEqual(result.language, Language.SANSKRIT)
-            self.assertGreater(result.confidence, 0.0)
+            self.assertTrue(isinstance(result.canonical_text, str))
 
         # Latin variations
         latin_cases = [
@@ -490,7 +454,7 @@ class TestIntegration(unittest.TestCase):
         for query, desc in latin_cases:
             result = self.pipeline.normalize_query("lat", query)
             self.assertEqual(result.language, Language.LATIN)
-            self.assertGreater(result.confidence, 0.0)
+            self.assertTrue(isinstance(result.canonical_text, str))
 
         # Greek variations
         greek_cases = [
@@ -502,7 +466,7 @@ class TestIntegration(unittest.TestCase):
         for query, desc in greek_cases:
             result = self.pipeline.normalize_query("grc", query)
             self.assertEqual(result.language, Language.GREEK)
-            self.assertGreater(result.confidence, 0.0)
+            self.assertTrue(isinstance(result.canonical_text, str))
 
     def test_normalization_metadata(self):
         """Test that normalization metadata is properly generated."""
@@ -516,10 +480,6 @@ class TestIntegration(unittest.TestCase):
 
         # Should alternate forms
         self.assertIsInstance(result.alternate_forms, list)
-
-        # Should have reasonable confidence
-        self.assertGreaterEqual(result.confidence, 0.0)
-        self.assertLessEqual(result.confidence, 1.0)
 
     def test_error_handling(self):
         """Test error handling in the pipeline."""

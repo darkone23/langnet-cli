@@ -213,22 +213,6 @@ class TestSanskritNormalizer(unittest.TestCase):
         result = normalizer.generate_alternates("krishna")
         self.assertIn("KRISHNA", result)  # Uppercase form
 
-    def test_calculate_confidence(self):
-        """Test confidence calculation."""
-        normalizer = SanskritNormalizer()
-
-        # Test different encodings
-        result = normalizer._calculate_confidence("krishna", "slp1", None)
-        self.assertGreaterEqual(result, 0.8)  # High confidence for SLP1
-
-        result = normalizer._calculate_confidence("krishna", "ascii", None)
-        self.assertGreaterEqual(result, 0.3)  # Lower confidence for ASCII
-
-        # Test with enrichment
-        enrichment = {"source": "heritage_sktsearch"}
-        result = normalizer._calculate_confidence("krishna", "ascii", enrichment)
-        self.assertGreaterEqual(result, 0.6)  # Higher confidence with enrichment
-
     def test_normalize_basic(self):
         """Test basic normalization."""
         normalizer = SanskritNormalizer()
@@ -238,7 +222,6 @@ class TestSanskritNormalizer(unittest.TestCase):
         self.assertEqual(result.original_query, "krishna")
         self.assertEqual(result.language.value, "san")  # Language enum uses "san"
         self.assertEqual(result.detected_encoding.value, "ascii")
-        self.assertGreaterEqual(result.confidence, 0.0)
 
     def test_normalize_with_heritage(self):
         """Test normalization with heritage client."""
@@ -269,7 +252,6 @@ class TestSanskritNormalizationIntegration(unittest.TestCase):
             result = normalizer.normalize(word)
             self.assertEqual(result.original_query, word)
             self.assertIn(result.detected_encoding.value, ["ascii", "velthuis"])
-            self.assertGreaterEqual(result.confidence, 0.0)
 
     def test_empty_and_edge_cases(self):
         """Test edge cases and empty inputs."""

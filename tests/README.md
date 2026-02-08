@@ -30,14 +30,11 @@ This directory contains the comprehensive test suite for the langnet-cli project
 | `test_heritage_cdsl_integration.py` | Heritage-CDSL integration | Sanskrit platform connectivity |
 | `test_heritage_connectivity.py` | Heritage platform connectivity | Network connectivity, service health |
 | `test_heritage_encoding_bridge.py` | Heritage encoding bridge | Devanagari, IAST, Velthuis, SLP1 conversion |
-| `test_heritage_engine_integration.py` | Heritage engine integration | Query routing, result aggregation |
-| `test_heritage_integration.py` | Heritage integration | Basic platform functionality |
 | `test_heritage_integration_unittest.py` | Heritage unit tests | Detailed platform testing |
 | `test_heritage_morphology_parsing.py` | Heritage morphology parsing | Morphological analysis parsing |
 | `test_heritage_morphology.py` | Heritage morphology | Full morphological analysis |
 | `test_heritage_platform_integration.py` | Heritage platform integration | Complete platform workflow |
 | `test_heritage_pos_parsing.py` | Heritage POS parsing | Part-of-speech analysis |
-| `test_heritage_real_integration.py` | Heritage real integration | Production environment testing |
 | `test_real_heritage_fixtures.py` | Real heritage fixtures | Fixture validation and management |
 | `test_sanskrit_encoding_improvements.py` | Sanskrit encoding improvements | Encoding system enhancements |
 | `test_sanskrit_features.py` | Sanskrit features | Language-specific functionality |
