@@ -6,39 +6,9 @@ This repository organises its design and implementation plans under `docs/plans/
 |----------|-----------|------------------|
 | **Active** | `docs/plans/active/` | Plans that are currently being worked on. They may have partially‑implemented code, ongoing tests, or upcoming milestones. |
 | **Todo** | `docs/plans/todo/` | High‑level ideas, future work, or plans that have not yet started. |
-| **Completed** | `docs/plans/completed/` | Plans whose work has been fully implemented and verified by tests. |
+| **Completed** | `/dev/null` | Once plans are completed they should be deleted |
 
 ---
-
-## ✅ Completed Plans
-
-No plans have been moved into `docs/plans/completed/` yet. Update this section when a plan ships.
-
-## 🚧 Active Plans
-
-- `active/infra/SANSKRIT_CANONICAL_CLEANUP.md` — Finish Sanskrit canonicalization propagation.
-- `active/infra/SANSKRIT_HANDOFF.md` — QA for recent Sanskrit normalization/hit-rate changes.
-- `active/pedagogy/MAPPING_PHASE_ALIGNMENT.md` — Align `/api/q` mapping with pedagogy-first outputs.
-- `active/roadmap/TODO.md` — Near-term cleanup/priorities.
-
-**Closeout:** Each active file now carries a “Closeout”/“Definition of done” section. Ship those checklists, then move the file to `completed/` and note it below.
-
-## 📋 Todo Plans
-
-- **DICO**: `todo/dico/*` (integration guides and pipeline).
-- **Diogenes**: `todo/diogenes/GETTING-STARTED.md`, `todo/diogenes/REMOVE_UNRELIABLE_SENSES.md`.
-- **Infrastructure**: `todo/infra/CTS_INDEXER_PERSEUS_REBUILD.md`, `todo/infra/UNIFIED_TOOL_INTEGRATION.md`.
-- **Normalization**: `todo/normalization/CANONICAL_QUERY_NORMALIZATION_TODO.md`.
-- **Pedagogy**: `todo/pedagogy/CITATION_ENRICHMENT_NEXT.md`, `todo/pedagogy/DICTIONARY_FOSTER_AND_ABBREVS*.md`, `todo/pedagogy/HERITAGE_ABBR_FOLLOWUPS.md`, `todo/pedagogy/MAPPING_PHASE_HANDOFF.md`.
-- **Schema**: `todo/schema/UNIVERSAL_SCHEMA_DEBUG_PLAN.md`.
-- **Sanskrit**: `todo/skt/HERITAGE_INTEGRATION_NEXT_STEPS.md`.
-
-## Status Notes
-
-- Open issues/roadmap now tracked in these plan files (legacy docs/TODO/ROADMAP removed).
-- External services (Heritage, Diogenes, Whitaker's Words) remain required for most work/tests.
-
-Prefer updating these plans over creating separate lists.
 
 ### Maintenance Guidelines
 
