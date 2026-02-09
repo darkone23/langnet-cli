@@ -1,10 +1,17 @@
 import re
-from typing import Any
+from typing import cast
 
 from bs4 import BeautifulSoup
 
+from langnet.types import JSONMapping
+
 from .html_extractor import HeritageHTMLExtractor
 from .lineparsers.parse_morphology import MorphologyReducer
+from .types import (
+    MorphologyAnalysisDict,
+    MorphologyParseResult,
+    MorphologySolutionDict,
+)
 
 # NB: I don't actually want abbreviation functionality in this file
 GRAMMATICAL_ABBREVIATIONS = {}
@@ -32,11 +39,11 @@ class SimpleHeritageParser:
     # Constants for table parsing
     MIN_CELLS_COUNT = 2
 
-    def parse_morphology(self, html_content: str) -> dict[str, Any]:
+    def parse_morphology(self, html_content: str) -> MorphologyParseResult:
         """Parse morphology analysis results"""
         soup = BeautifulSoup(html_content, "html.parser")
 
-        result: dict[str, Any] = {
+        result: MorphologyParseResult = {
             "solutions": [],
             "word_analyses": [],
             "total_solutions": 0,
@@ -71,7 +78,7 @@ class SimpleHeritageParser:
 
         return result
 
-    def _parse_solution_section(self, section_span, soup) -> dict[str, Any] | None:
+    def _parse_solution_section(self, section_span, soup) -> MorphologySolutionDict | None:
         """Parse a single solution section"""
         try:
             # Get the solution number
@@ -80,7 +87,7 @@ class SimpleHeritageParser:
             if not solution_num:
                 return None
 
-            solution: dict[str, Any] = {
+            solution: MorphologySolutionDict = {
                 "type": "morphological_analysis",
                 "solution_number": int(solution_num.group(1)),
                 "analyses": [],
@@ -106,10 +113,10 @@ class SimpleHeritageParser:
         except Exception:
             return None
 
-    def _parse_analysis_table(self, table) -> dict[str, Any] | None:
+    def _parse_analysis_table(self, table) -> MorphologyAnalysisDict | None:
         """Parse an analysis table"""
         try:
-            analysis = {
+            analysis: MorphologyAnalysisDict = {
                 "word": "",
                 "lemma": "",
                 "root": "",
@@ -155,9 +162,9 @@ class SimpleHeritageParser:
         except Exception:
             return None
 
-    def _parse_tables(self, soup) -> list[dict[str, Any]]:
+    def _parse_tables(self, soup) -> list[MorphologySolutionDict]:
         """Parse all tables for analysis data, handling pattern tables and generic tables."""
-        solutions: list[dict[str, Any]] = []
+        solutions: list[MorphologySolutionDict] = []
 
         # First, handle tables that directly contain patterns like [word]{analysis}
         pattern_tables = soup.find_all("table", class_="grey_back")
@@ -196,37 +203,40 @@ class SimpleHeritageParser:
                             first = parsed[0]
                             # MorphologyReducer returns dict, so access directly
                             if isinstance(first, dict):
-                                solution = first
+                                solution = cast(MorphologySolutionDict, first)
                                 solutions.append(solution)
                     except Exception:
                         # If parsing fails, create basic solution
-                        solution = {
-                            "type": "morphological_analysis",
-                            "solution_number": i,
-                            "analyses": [
-                                {
-                                    "word": word,
-                                    "lemma": word,
-                                    "root": "",
-                                    "pos": "unknown",
-                                    "case": None,
-                                    "gender": None,
-                                    "number": None,
-                                    "person": None,
-                                    "tense": None,
-                                    "voice": None,
-                                    "mood": None,
-                                    "stem": "",
-                                    "meaning": [],
-                                    "analysis": analysis_code,
-                                    # Expand abbreviations in the analysis
-                                    "expanded_analysis": expand_abbreviation(analysis_code),
-                                }
-                            ],
-                            "total_words": 1,
-                            "score": 0.0,
-                            "metadata": {},
-                        }
+                        solution = cast(
+                            MorphologySolutionDict,
+                            {
+                                "type": "morphological_analysis",
+                                "solution_number": i,
+                                "analyses": [
+                                    {
+                                        "word": word,
+                                        "lemma": word,
+                                        "root": "",
+                                        "pos": "unknown",
+                                        "case": None,
+                                        "gender": None,
+                                        "number": None,
+                                        "person": None,
+                                        "tense": None,
+                                        "voice": None,
+                                        "mood": None,
+                                        "stem": "",
+                                        "meaning": [],
+                                        "analysis": analysis_code,
+                                        # Expand abbreviations in the analysis
+                                        "expanded_analysis": expand_abbreviation(analysis_code),
+                                    }
+                                ],
+                                "total_words": 1,
+                                "score": 0.0,
+                                "metadata": {},
+                            },
+                        )
                         solutions.append(solution)
 
         return solutions
@@ -241,7 +251,7 @@ class MorphologyParser:
         self.use_new_parser = True
         self.simple_parser = SimpleHeritageParser()
 
-    def parse(self, html_content: str) -> dict[str, Any]:
+    def parse(self, html_content: str) -> MorphologyParseResult:
         """Parse morphology analysis results using new Lark-based parser with fallback"""
         if self.use_new_parser:
             solution_blocks = self.html_extractor._extract_solution_blocks(
@@ -250,7 +260,9 @@ class MorphologyParser:
             plain_text = self.html_extractor.extract_plain_text(html_content)
             if plain_text.strip():
                 try:
-                    solutions = self.morphology_reducer.reduce(plain_text)
+                    solutions = cast(
+                        list[MorphologySolutionDict], self.morphology_reducer.reduce(plain_text)
+                    )
                     # Enrich solutions with raw text/color where available
                     context_by_num = {b["number"]: b for b in solution_blocks}
                     for sol in solutions:
@@ -265,12 +277,14 @@ class MorphologyParser:
                                 }
                             )
                             sol["metadata"] = sol_metadata
-                    result = {
+                    result: MorphologyParseResult = {
                         "solutions": solutions,
                         "word_analyses": [],
                         "total_solutions": len(solutions),
                         "encoding": "velthuis",
-                        "metadata": self.html_extractor.extract_metadata(html_content),
+                        "metadata": cast(
+                            JSONMapping, self.html_extractor.extract_metadata(html_content)
+                        ),
                     }
                     return result
                 except Exception:

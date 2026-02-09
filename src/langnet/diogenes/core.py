@@ -2,13 +2,13 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from string import digits
-from typing import Any
+from typing import TypedDict
 
 import betacode.conv
 import cattrs
 import requests
 import structlog
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from langnet.citation.cts_urn import CTSUrnMapper
 
@@ -96,6 +96,41 @@ class DiogenesResultT:
     ]
     dg_parsed: bool
     chunk_types: list[str]
+    is_fuzzy_overall: bool = field(default=False)
+
+
+class ParsedMorphEntry(TypedDict, total=False):
+    stem: list[str]
+    tags: list[str]
+    defs: list[str]
+
+
+class ParsedMorphology(TypedDict, total=False):
+    morphs: list[ParsedMorphEntry]
+    warning: str
+
+
+class ParseResultDraft(TypedDict, total=False):
+    chunks: list[
+        PerseusAnalysisHeader
+        | NoMatchFoundHeader
+        | DiogenesMatchingReference
+        | DiogenesFuzzyReference
+        | UnknownChunkType
+    ]
+    dg_parsed: bool
+    is_fuzzy_overall: bool
+    chunk_types: list[str]
+
+
+class ChunkDraft(TypedDict, total=False):
+    soup: BeautifulSoup
+    chunk_type: str
+    is_fuzzy_match: bool
+    logeion: str
+    reference_id: str
+    morphology: PerseusMorphology | ParsedMorphology
+    definitions: DiogenesDefinitionEntry
 
 
 class DiogenesChunkType:
@@ -192,7 +227,7 @@ class DiogenesScraper:
         logger.debug("find_nd_coordinate", event_id=event_id, result=coordinates[-1])
         return coordinates[-1]  # Return the last computed coordinate
 
-    def _parse_perseus_morph(self, tag) -> dict:
+    def _parse_perseus_morph(self, tag: Tag) -> ParsedMorphEntry:
         perseus_morph = tag.get_text()
         parts = perseus_morph.split(":")
         assert len(parts) == PERSEUS_MORPH_PART_COUNT, (
@@ -217,15 +252,15 @@ class DiogenesScraper:
             if pos not in cleaned_tags:
                 cleaned_tags.append(pos)
 
-        morph = dict(stem=cleaned_stems, tags=cleaned_tags)
+        morph: ParsedMorphEntry = {"stem": cleaned_stems, "tags": cleaned_tags}
         if cleaned_defs:
             morph["defs"] = cleaned_defs
         return morph
 
-    def handle_morphology(self, soup: BeautifulSoup):
-        morphs = []
-        maybe_morph_els = []
-        warning = None
+    def handle_morphology(self, soup: BeautifulSoup) -> ParsedMorphology:
+        morphs: list[ParsedMorphEntry] = []
+        maybe_morph_els: list[Tag] = []
+        warning: str | None = None
         for tag in soup.find_all("li"):
             maybe_morph_els.append(tag)
         for tag in soup.find_all("p"):
@@ -244,7 +279,7 @@ class DiogenesScraper:
         for tag in maybe_morph_els:
             morphs.append(self._parse_perseus_morph(tag))
 
-        morph_dict: dict[str, Any] = dict(morphs=morphs)
+        morph_dict: ParsedMorphology = {"morphs": morphs}
 
         if warning:
             _nothing, warning_txt = self.extract_parentheses_text(warning)
@@ -387,7 +422,7 @@ class DiogenesScraper:
         logger.debug("handle_references_completed", block_count=len(blocks))
         return references
 
-    def process_chunk(self, result, chunk):
+    def process_chunk(self, result: ParseResultDraft, chunk: ChunkDraft) -> None:
         soup: BeautifulSoup = chunk["soup"]
         chunk_type: str = chunk["chunk_type"]
 
@@ -395,25 +430,40 @@ class DiogenesScraper:
 
         if chunk_type == DiogenesChunkType.PerseusAnalysisHeader:
             self._process_morphology_chunk(chunk, soup)
+            morphology_obj = chunk.get("morphology")
+            if isinstance(morphology_obj, PerseusMorphology):
+                morphology = morphology_obj
+            elif isinstance(morphology_obj, dict):
+                morphology = cattrs.structure(morphology_obj, PerseusMorphology)
+            else:
+                morphology = PerseusMorphology(morphs=[], warning=None)
             result["chunks"].append(
-                PerseusAnalysisHeader(
-                    logeion=chunk.get("logeion", ""), morphology=chunk.get("morphology")
-                )
+                PerseusAnalysisHeader(logeion=chunk.get("logeion", ""), morphology=morphology)
             )
         elif chunk_type == DiogenesChunkType.NoMatchFoundHeader:
             result["chunks"].append(NoMatchFoundHeader(logeion=chunk.get("logeion", "")))
         elif chunk_type == DiogenesChunkType.DiogenesMatchingReference:
             self._process_reference_chunk(chunk, soup)
+            definitions_obj = chunk.get("definitions")
+            if isinstance(definitions_obj, DiogenesDefinitionEntry):
+                definitions = definitions_obj
+            else:
+                definitions = DiogenesDefinitionEntry(blocks=[], term="")
             result["chunks"].append(
                 DiogenesMatchingReference(
-                    reference_id=chunk.get("reference_id", ""), definitions=chunk.get("definitions")
+                    reference_id=chunk.get("reference_id", ""), definitions=definitions
                 )
             )
         elif chunk_type == DiogenesChunkType.DiogenesFuzzyReference:
             self._process_reference_chunk(chunk, soup)
+            definitions_obj = chunk.get("definitions")
+            if isinstance(definitions_obj, DiogenesDefinitionEntry):
+                definitions = definitions_obj
+            else:
+                definitions = DiogenesDefinitionEntry(blocks=[], term="")
             result["chunks"].append(
                 DiogenesFuzzyReference(
-                    reference_id=chunk.get("reference_id", ""), definitions=chunk.get("definitions")
+                    reference_id=chunk.get("reference_id", ""), definitions=definitions
                 )
             )
         else:
@@ -511,8 +561,8 @@ class DiogenesScraper:
             )
         return DiogenesChunkType.UnknownChunkType
 
-    def get_next_chunk(self, result: dict, soup: BeautifulSoup) -> dict:
-        chunk: dict[str, Any] = {"soup": soup}
+    def get_next_chunk(self, result: ParseResultDraft, soup: BeautifulSoup) -> ChunkDraft:
+        chunk: ChunkDraft = {"soup": soup}
 
         looks_like_header = False
         is_perseus_analysis = False
@@ -560,7 +610,7 @@ class DiogenesScraper:
         logger.debug("chunk_classified", chunk_type=chunk.get("chunk_type"))
         return chunk
 
-    def parse_word(self, word, language: str = DiogenesLanguages.LATIN) -> DiogenesResultT:
+    def parse_word(self, word: str, language: str = DiogenesLanguages.LATIN) -> DiogenesResultT:
         assert language in DiogenesLanguages.parse_langs, (
             f"Cannot parse unsupported diogenes language: [{language}]"
         )
@@ -569,7 +619,7 @@ class DiogenesScraper:
 
         response = requests.get(self.__diogenes_parse_url(word, language))
 
-        result: dict[str, Any] = dict(chunks=[], dg_parsed=False)
+        result: ParseResultDraft = {"chunks": [], "dg_parsed": False}
 
         if response.status_code == HTTP_OK_STATUS:
             logger.debug(
@@ -595,9 +645,6 @@ class DiogenesScraper:
             result["chunk_types"] = chunk_types
         else:
             logger.warning("diogenes_request_failed", status_code=response.status_code, word=word)
-
-        # Clean up temporary keys before creating result object
-        result.pop("is_fuzzy_overall", None)
 
         logger.debug(
             "parse_word_completed",

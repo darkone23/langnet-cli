@@ -6,9 +6,10 @@ import logging
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 import duckdb
+
+from langnet.types import JSONMapping
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +35,11 @@ class IndexStatus(Enum):
 class IndexerBase(ABC):
     """Base class for all indexers."""
 
-    def __init__(self, output_path: Path, config: dict[str, Any] | None = None):
+    def __init__(self, output_path: Path, config: JSONMapping | None = None):
         self.output_path = Path(output_path)
         self.config = config or {}
         self.status = IndexStatus.NOT_BUILT
-        self._stats: dict[str, Any] = {}
+        self._stats: JSONMapping = {}
 
     @abstractmethod
     def build(self) -> bool:
@@ -51,7 +52,7 @@ class IndexerBase(ABC):
         pass
 
     @abstractmethod
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> JSONMapping:
         """Get index statistics."""
         pass
 

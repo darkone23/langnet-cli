@@ -1,30 +1,32 @@
-from typing import Any
+from collections.abc import Callable
 
 # Import indic_transliteration library with proper error handling
 try:
     from indic_transliteration.sanscript import DEVANAGARI, ITRANS, SLP1, VELTHUIS, transliterate
 
     HAS_INDIC_TRANSLIT = True
-    DEVANAGARI_AVAILABLE = DEVANAGARI
-    VELTHUIS_AVAILABLE = VELTHUIS
-    ITRANS_AVAILABLE = ITRANS
-    SLP1_AVAILABLE = SLP1
+    DEVANAGARI_AVAILABLE: str | None = DEVANAGARI
+    VELTHUIS_AVAILABLE: str | None = VELTHUIS
+    ITRANS_AVAILABLE: str | None = ITRANS
+    SLP1_AVAILABLE: str | None = SLP1
 except ImportError:
     HAS_INDIC_TRANSLIT = False
-    transliterate: Any | None = None
-    DEVANAGARI_AVAILABLE = None
-    VELTHUIS_AVAILABLE = None
-    ITRANS_AVAILABLE = None
-    SLP1_AVAILABLE = None
+    transliterate: Callable[[str, str, str], str] | None = None
+    DEVANAGARI_AVAILABLE: str | None = None
+    VELTHUIS_AVAILABLE: str | None = None
+    ITRANS_AVAILABLE: str | None = None
+    SLP1_AVAILABLE: str | None = None
 
 
 class HeritageParameterBuilder:
     """Utility class for building CGI script parameters"""
 
+    ParamDict = dict[str, str | int | float | bool | None]
+
     @staticmethod
     def encode_text(text: str, encoding: str = "velthuis") -> str:
         """Encode Sanskrit text using specified encoding"""
-        if HAS_INDIC_TRANSLIT and transliterate is not None:
+        if HAS_INDIC_TRANSLIT and transliterate is not None and DEVANAGARI_AVAILABLE is not None:
             # Use indic_transliteration library if available
             if encoding == "velthuis" and VELTHUIS_AVAILABLE:
                 return transliterate(text, DEVANAGARI_AVAILABLE, VELTHUIS_AVAILABLE)
@@ -297,9 +299,9 @@ class HeritageParameterBuilder:
     @staticmethod
     def build_morphology_params(
         text: str, encoding: str | None = None, max_solutions: int | None = None, **kwargs
-    ) -> dict[str, Any]:
+    ) -> ParamDict:
         """Build parameters for morphological analysis (sktreader) with optimized parameters"""
-        params = {}
+        params: HeritageParameterBuilder.ParamDict = {}
 
         # Text input - encode the text if encoding is specified
         if encoding:
@@ -332,7 +334,9 @@ class HeritageParameterBuilder:
             params["max"] = str(max_solutions)
 
         # Additional parameters (can override defaults)
-        params.update({k: v for k, v in kwargs.items() if k not in ["lexicon", "font"]})
+        params.update(
+            {k: v for k, v in kwargs.items() if k not in {"lexicon", "font"} and v is not None}
+        )
 
         return params
 
@@ -343,7 +347,7 @@ class HeritageParameterBuilder:
         max_results: int | None = None,
         encoding: str | None = None,
         **kwargs,
-    ) -> dict[str, Any]:
+    ) -> ParamDict:
         """Build parameters for dictionary search (sktsearch/sktindex)"""
         params = {
             "lex": lexicon,
@@ -357,7 +361,7 @@ class HeritageParameterBuilder:
         if max_results is not None:
             params["max"] = str(max_results)
 
-        params.update(kwargs)
+        params.update({k: v for k, v in kwargs.items() if v is not None})
 
         return params
 
@@ -369,7 +373,7 @@ class HeritageParameterBuilder:
         number: str = "s",
         encoding: str | None = None,
         **kwargs,
-    ) -> dict[str, Any]:
+    ) -> ParamDict:
         """Build parameters for declension generation (sktdeclin)"""
         params = {
             "lemma": lemma,
@@ -380,7 +384,7 @@ class HeritageParameterBuilder:
         if encoding:
             params["t"] = HeritageParameterBuilder.get_cgi_encoding_param(encoding)
 
-        params.update(kwargs)
+        params.update({k: v for k, v in kwargs.items() if v is not None})
 
         return params
 
@@ -392,7 +396,7 @@ class HeritageParameterBuilder:
         number: str = "s",
         encoding: str | None = None,
         **kwargs,
-    ) -> dict[str, Any]:
+    ) -> ParamDict:
         """Build parameters for conjugation generation (sktconjug)"""
         params = {
             "verb": lemma,
@@ -405,6 +409,6 @@ class HeritageParameterBuilder:
         if encoding:
             params["t"] = HeritageParameterBuilder.get_cgi_encoding_param(encoding)
 
-        params.update(kwargs)
+        params.update({k: v for k, v in kwargs.items() if v is not None})
 
         return params

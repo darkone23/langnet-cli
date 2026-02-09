@@ -228,7 +228,9 @@ class TestHeritageIntegration(unittest.TestCase):
 
         # Test URL construction - ensure parameters are encoded correctly
         expected_url = f"{heritage_config.base_url}/cgi-bin/skt/sktreader?text=agni&t=VH&max=3"
-        self.assertEqual(expected_url, "http://localhost:48080/cgi-bin/skt/sktreader?text=agni&t=VH&max=3")
+        self.assertEqual(
+            expected_url, "http://localhost:48080/cgi-bin/skt/sktreader?text=agni&t=VH&max=3"
+        )
 
     def test_multiple_encodings_support(self):
         """Test support for different text encodings"""

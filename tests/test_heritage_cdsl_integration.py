@@ -7,15 +7,21 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from typing import cast
 from unittest.mock import Mock, patch
+
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from langnet.heritage.encoding_service import HeritageCdslBridge
+from langnet.heritage.encoding_service import (
+    HeritageCdslBridge,
+    HeritagePOSResult,
+)
 
 
 class TestHeritageCdslIntegration(unittest.TestCase):
     """Test suite for complete Heritage Platform + CDSL integration"""
+
     integration = True
 
     def setUp(self):
@@ -39,26 +45,37 @@ class TestHeritageCdslIntegration(unittest.TestCase):
                 try:
                     # Step 1: Use encoding bridge to convert for Heritage Platform
                     heritage_result = self.bridge.search_heritage_and_lookup_cdsl(word, "MW")
+                    self.assertIsInstance(heritage_result, dict)
+                    heritage_map = cast(dict[str, object], heritage_result)
 
                     # Verify basic structure
-                    self.assertIn("query", heritage_result)
-                    self.assertIn("encoding_conversions", heritage_result)
-                    self.assertIn("heritage_search", heritage_result)
-                    self.assertIn("cdsl_lookup", heritage_result)
+                    self.assertIn("query", heritage_map)
+                    self.assertIn("encoding_conversions", heritage_map)
+                    self.assertIn("heritage_search", heritage_map)
+                    self.assertIn("cdsl_lookup", heritage_map)
 
                     # Verify conversion details
-                    self.assertEqual(heritage_result["query"], word)
-                    self.assertIn("original", heritage_result["encoding_conversions"])
-                    self.assertIn("slp1", heritage_result["encoding_conversions"])
+                    self.assertEqual(heritage_map["query"], word)
+                    encoding_conversions = heritage_map.get("encoding_conversions")
+                    self.assertIsInstance(encoding_conversions, dict)
+                    conversions_map = cast(dict[str, object], encoding_conversions)
+                    self.assertIn("original", conversions_map)
+                    self.assertIn("slp1", conversions_map)
 
                     # Verify heritage search parameters
-                    heritage_params = heritage_result["heritage_search"]["parameters"]
+                    heritage_search = heritage_map.get("heritage_search")
+                    self.assertIsInstance(heritage_search, dict)
+                    heritage_params_obj = cast(dict[str, object], heritage_search).get("parameters")
+                    self.assertIsInstance(heritage_params_obj, dict)
+                    heritage_params = cast(dict[str, object], heritage_params_obj)
                     self.assertIn("lex", heritage_params)
                     self.assertIn("q", heritage_params)
                     self.assertIn("t", heritage_params)
 
                     # Verify CDSL lookup structure
-                    cdsl_lookup = heritage_result["cdsl_lookup"]
+                    cdsl_lookup_obj = heritage_map.get("cdsl_lookup")
+                    self.assertIsInstance(cdsl_lookup_obj, dict)
+                    cdsl_lookup = cast(dict[str, object], cdsl_lookup_obj)
                     self.assertIn("slp1_key", cdsl_lookup)
                     self.assertIn("cdsl_query", cdsl_lookup)
 
@@ -79,26 +96,28 @@ class TestHeritageCdslIntegration(unittest.TestCase):
                 try:
                     # Process the Heritage response to extract headwords
                     processed = self.bridge.process_heritage_response_for_cdsl(response)
+                    self.assertIsInstance(processed, dict)
 
                     # Should not have error
                     self.assertNotIn("error", processed)
+                    processed_pos = cast(HeritagePOSResult, processed)
 
                     # Should have extracted headwords
-                    self.assertIn("extracted_headwords_pos", processed)
-                    self.assertTrue(len(processed["extracted_headwords_pos"]) > 0)
+                    self.assertIn("extracted_headwords_pos", processed_pos)
+                    self.assertTrue(len(processed_pos["extracted_headwords_pos"]) > 0)
 
                     # Should have headwords only
-                    self.assertIn("headwords_only", processed)
+                    self.assertIn("headwords_only", processed_pos)
 
                     # Should have POS info
-                    self.assertIn("pos_info", processed)
+                    self.assertIn("pos_info", processed_pos)
 
                     # Should have CDSL lookups
-                    self.assertIn("cdsl_lookups", processed)
-                    self.assertTrue(len(processed["cdsl_lookups"]) > 0)
+                    self.assertIn("cdsl_lookups", processed_pos)
+                    self.assertTrue(len(processed_pos["cdsl_lookups"]) > 0)
 
                     # Verify each lookup has required fields
-                    for lookup in processed["cdsl_lookups"]:
+                    for lookup in processed_pos["cdsl_lookups"]:
                         self.assertIn("iast", lookup)
                         self.assertIn("slp1", lookup)
                         self.assertIn("cdsl_key", lookup)
@@ -184,17 +203,20 @@ class TestHeritageCdslIntegration(unittest.TestCase):
                 try:
                     # Process the Heritage response
                     processed = self.bridge.process_heritage_response_for_cdsl(response)
+                    self.assertIsInstance(processed, dict)
+                    self.assertNotIn("error", processed)
+                    processed_pos = cast(HeritagePOSResult, processed)
 
                     # For each headword, verify CDSL lookup structure
-                    for lookup in processed["cdsl_lookups"]:
+                    for lookup in processed_pos["cdsl_lookups"]:
                         headword = lookup["iast"]
                         slp1_key = lookup["slp1"]
                         cdsl_key = lookup["cdsl_key"]
                         pos = lookup["pos"]
 
                         # Verify data integrity
-                        if "headwords_only" in processed and processed["headwords_only"]:
-                            self.assertEqual(headword, processed["headwords_only"][0])
+                        if "headwords_only" in processed_pos and processed_pos["headwords_only"]:
+                            self.assertEqual(headword, processed_pos["headwords_only"][0])
                         self.assertEqual(slp1_key.lower(), cdsl_key)
                         self.assertIsInstance(pos, str)
 
@@ -211,8 +233,13 @@ class TestHeritageCdslIntegration(unittest.TestCase):
         """Test error handling for various scenarios"""
         # Test empty response
         result = self.bridge.process_heritage_response_for_cdsl("")
-        self.assertIn("error", result)
-        self.assertIn("No headwords found", result["error"])
+        self.assertIsInstance(result, dict)
+        result_map = cast(dict[str, object], result)
+        self.assertIn("error", result_map)
+        error_text = result_map.get("error")
+        self.assertIsInstance(error_text, str)
+        error_text_str = cast(str, error_text)
+        self.assertIn("No headwords found", error_text_str)
 
         # Test malformed response
         malformed_responses = [
@@ -258,31 +285,46 @@ class TestHeritageWorkflowExamples(unittest.TestCase):
 
         # Step 2: Encoding bridge detects devanagari
         result = bridge.search_heritage_and_lookup_cdsl(user_input, "MW")
-        detected_encoding = result["encoding_conversions"]["detected_encoding"]
+        self.assertIsInstance(result, dict)
+        result_map = cast(dict[str, object], result)
+        encoding_conversions = result_map.get("encoding_conversions")
+        self.assertIsInstance(encoding_conversions, dict)
+        enc_map = cast(dict[str, object], encoding_conversions)
+        detected_encoding = enc_map.get("detected_encoding")
+        self.assertIsInstance(detected_encoding, str)
         self.assertEqual(detected_encoding, "devanagari")
 
         # Step 3: Convert to Velthuis
-        velthuis = result["encoding_conversions"]["velthuis"]
-        self.assertEqual(velthuis, "agni")
+        velthuis_obj = enc_map.get("velthuis")
+        self.assertIsInstance(velthuis_obj, str)
+        self.assertEqual(velthuis_obj, "agni")
 
         # Step 4: Heritage URL construction
-        heritage_url = result["heritage_search"]["url"]
+        heritage_search_obj = result_map.get("heritage_search")
+        self.assertIsInstance(heritage_search_obj, dict)
+        heritage_url_obj = cast(dict[str, object], heritage_search_obj).get("url")
+        self.assertIsInstance(heritage_url_obj, str)
+        heritage_url = cast(str, heritage_url_obj)
         self.assertIn("agni", heritage_url)
         self.assertIn("t=VH", heritage_url)
 
         # Step 5-6: Process Heritage response format
         heritage_response = "agni [ m. ] fire"
         processed = bridge.process_heritage_response_for_cdsl(heritage_response)
+        self.assertIsInstance(processed, dict)
+        processed_map = cast(dict[str, object], processed)
+        self.assertNotIn("error", processed_map)
+        processed_pos = cast(HeritagePOSResult, processed_map)
 
         # Step 7: Extract headwords
-        self.assertEqual(processed["headwords_only"], ["agni"])
+        self.assertEqual(processed_pos["headwords_only"], ["agni"])
 
         # Step 8: CDSL key conversion
-        cdsl_key = processed["cdsl_lookups"][0]["cdsl_key"]
+        cdsl_key = processed_pos["cdsl_lookups"][0]["cdsl_key"]
         self.assertEqual(cdsl_key, "agni")
 
         # Step 9: Verify CDSL query structure
-        cdsl_query = processed["cdsl_lookups"][0]["cdsl_query"]
+        cdsl_query = processed_pos["cdsl_lookups"][0]["cdsl_query"]
         self.assertIn("key_normalized", cdsl_query)
         self.assertIn("'agni'", cdsl_query)
 
@@ -294,15 +336,18 @@ class TestHeritageWorkflowExamples(unittest.TestCase):
         response = "agni [ m. ] fire deva [ m. ] god mitra [ m. ] friend"
 
         processed = bridge.process_heritage_response_for_cdsl(response)
+        processed_map = cast(dict[str, object], processed)
+        self.assertNotIn("error", processed_map)
+        processed_pos = cast(HeritagePOSResult, processed_map)
 
         # Should extract all three entries
-        self.assertEqual(len(processed["extracted_headwords_pos"]), 3)
-        self.assertEqual(processed["headwords_only"], ["agni", "deva", "mitra"])
+        self.assertEqual(len(processed_pos["extracted_headwords_pos"]), 3)
+        self.assertEqual(processed_pos["headwords_only"], ["agni", "deva", "mitra"])
 
         # Should have POS info for each
-        self.assertEqual(processed["pos_info"]["agni"], "m.")
-        self.assertEqual(processed["pos_info"]["deva"], "m.")
-        self.assertEqual(processed["pos_info"]["mitra"], "m.")
+        self.assertEqual(processed_pos["pos_info"]["agni"], "m.")
+        self.assertEqual(processed_pos["pos_info"]["deva"], "m.")
+        self.assertEqual(processed_pos["pos_info"]["mitra"], "m.")
 
         # Should have corresponding CDSL lookups
-        self.assertEqual(len(processed["cdsl_lookups"]), 3)
+        self.assertEqual(len(processed_pos["cdsl_lookups"]), 3)

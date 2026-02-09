@@ -7,9 +7,10 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import duckdb
+
+from langnet.types import JSONMapping
 
 from .core import IndexerBase, IndexStatus
 
@@ -81,15 +82,20 @@ def _get_text(element: ET.Element, tag: str) -> str:
 
 
 class CtsUrnIndexer(IndexerBase):
-    def __init__(self, output_path: Path, config: dict[str, Any] | None = None):
+    def __init__(self, output_path: Path, config: JSONMapping | None = None):
         super().__init__(output_path, config)
         config = config or {}
-        self.perseus_dir = Path(
-            config.get("perseus_dir") or config.get("source_dir") or Path.home() / "perseus"
-        ).expanduser()
-        self.legacy_dir = (
-            Path(config.get("legacy_dir")) if config and config.get("legacy_dir") else Path.home() / "langnet-tools" / "diogenes" / "Classics-Data"
-        )
+        perseus_value = config.get("perseus_dir") or config.get("source_dir")
+        if isinstance(perseus_value, (str, Path)):
+            self.perseus_dir = Path(perseus_value).expanduser()
+        else:
+            self.perseus_dir = Path.home() / "perseus"
+
+        legacy_value = config.get("legacy_dir") if config else None
+        if isinstance(legacy_value, (str, Path)):
+            self.legacy_dir = Path(legacy_value)
+        else:
+            self.legacy_dir = Path.home() / "langnet-tools" / "diogenes" / "Classics-Data"
         self.force_rebuild = config.get("force_rebuild", False)
         self.wipe_existing = config.get("wipe_existing", True)
         self.include_legacy = config.get("include_legacy", True)
@@ -133,7 +139,8 @@ class CtsUrnIndexer(IndexerBase):
 
         if not latin_root.exists() and not greek_root.exists():
             raise FileNotFoundError(
-                f"Expected Perseus corpora under {self.perseus_dir}, found neither latinLit nor greekLit"
+                f"Expected Perseus corpora under {self.perseus_dir}, "
+                "found neither latinLit nor greekLit"
             )
 
         for root, namespace, language in (
@@ -146,8 +153,9 @@ class CtsUrnIndexer(IndexerBase):
             corpus_entries, corpus_editions = self._collect_corpus(root, namespace, language)
             self._entries.extend(corpus_entries)
             self._editions.extend(corpus_editions)
+            parsed_counts = (len(corpus_entries), len(corpus_editions))
             logger.info(
-                f"Parsed {len(corpus_entries)} works and {len(corpus_editions)} editions from {root}"
+                "Parsed %s works and %s editions from %s", parsed_counts[0], parsed_counts[1], root
             )
 
         if not self._entries:
@@ -175,7 +183,9 @@ class CtsUrnIndexer(IndexerBase):
                 authors[author_id] = {
                     "author_urn": urn,
                     "author_name": _get_text(root, "groupname") or author_id,
-                    "language": root.attrib.get("{http://www.w3.org/XML/1998/namespace}lang", language)
+                    "language": root.attrib.get(
+                        "{http://www.w3.org/XML/1998/namespace}lang", language
+                    )
                     or language,
                 }
             except Exception as exc:  # noqa: BLE001
@@ -194,7 +204,10 @@ class CtsUrnIndexer(IndexerBase):
                 author_info = authors.get(author_id, {})
                 author_name = author_info.get("author_name") or author_id or author_urn
                 work_title = _get_text(root, "title") or work_urn
-                lang = root.attrib.get("{http://www.w3.org/XML/1998/namespace}lang", language) or language
+                lang = (
+                    root.attrib.get("{http://www.w3.org/XML/1998/namespace}lang", language)
+                    or language
+                )
                 work_ref = _normalize_work_reference(work_urn)
 
                 entry = WorkEntry(
@@ -211,9 +224,9 @@ class CtsUrnIndexer(IndexerBase):
 
                 for ed in root.findall("ti:edition", TI):
                     edition_urn = ed.attrib.get("urn", "")
-                    edition_lang = ed.attrib.get(
-                        "{http://www.w3.org/XML/1998/namespace}lang", lang
-                    ) or lang
+                    edition_lang = (
+                        ed.attrib.get("{http://www.w3.org/XML/1998/namespace}lang", lang) or lang
+                    )
                     label = _get_text(ed, "label")
                     description = _get_text(ed, "description")
                     edition = EditionEntry(
@@ -290,8 +303,8 @@ class CtsUrnIndexer(IndexerBase):
             works.extend(self._parse_idt_files(data_dir, authors, is_greek))
         return works
 
-    def _parse_auth_file(self, auth_file: Path) -> dict[str, Any]:
-        authors = {}
+    def _parse_auth_file(self, auth_file: Path) -> dict[str, dict[str, str]]:
+        authors: dict[str, dict[str, str]] = {}
         try:
             with open(auth_file, "rb") as f:
                 data = f.read()
@@ -326,74 +339,99 @@ class CtsUrnIndexer(IndexerBase):
         logger.info(f"Parsed {len(authors)} authors from {auth_file}")
         return authors
 
-    def _parse_idt_files(self, data_dir: Path, authors: dict[str, Any], is_greek: bool) -> list[WorkEntry]:
+    def _parse_idt_files(
+        self, data_dir: Path, authors: dict[str, dict[str, str]], is_greek: bool
+    ) -> list[WorkEntry]:
         works: list[WorkEntry] = []
         for idt_path in data_dir.glob("*.idt"):
-            try:
-                stem = idt_path.stem
-                if stem.startswith("doccan"):
-                    continue
-                num_match = re.search(r"(\d+)", stem)
-                if not num_match:
-                    continue
-                num = num_match.group(1)
-
-                prefix = "tlg" if is_greek else "phi"
-                author_id = f"{prefix}{num.zfill(4)}"
-
-                # Fallback to legacy prefix if not found in authors
-                alt_ids = [author_id]
-                if not is_greek:
-                    alt_ids.append(f"lat{num.zfill(4)}")
-                author = None
-                for aid in alt_ids:
-                    if aid in authors:
-                        author = authors[aid]
-                        author_id = aid if aid.startswith("phi") or aid.startswith("tlg") else author_id
-                        break
-                if author is None:
-                    # Unknown author; still attempt to parse works with minimal metadata
-                    author = {
-                        "name": stem,
-                        "language": "grc" if is_greek else "lat",
-                        "namespace": "greekLit" if is_greek else "latinLit",
-                    }
-
-                author_name, work_titles = self._extract_work_title_from_idt(idt_path)
-                if len(work_titles) == 0:
-                    continue
-
-                for work_idx, title in enumerate(work_titles, start=1):
-                    work_num_str = f"{prefix}{work_idx:03d}"
-                    cts_urn = f"urn:cts:{author['namespace']}:{author_id}.{work_num_str}"
-                    works.append(
-                        WorkEntry(
-                            author_id=author_id,
-                            author_urn="",
-                            author_name=author_name or author["name"],
-                            work_urn=cts_urn,
-                            work_title=title,
-                            language=author.get("language", "lat"),
-                            namespace=author.get("namespace", "latinLit"),
-                            work_reference=f"{author_id}_{work_idx}",
-                            source_path=idt_path,
-                        )
-                    )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(f"Failed to parse {idt_path}: {exc}")
-                continue
+            works.extend(self._parse_single_idt(idt_path, authors, is_greek))
         logger.info(f"Parsed {len(works)} legacy works from {data_dir}")
         return works
 
+    def _parse_single_idt(
+        self, idt_path: Path, authors: dict[str, dict[str, str]], is_greek: bool
+    ) -> list[WorkEntry]:
+        try:
+            stem = idt_path.stem
+            if stem.startswith("doccan"):
+                return []
+            num_match = re.search(r"(\d+)", stem)
+            if not num_match:
+                return []
+            num = num_match.group(1)
+
+            prefix = "tlg" if is_greek else "phi"
+            author_id = f"{prefix}{num.zfill(4)}"
+            author = self._resolve_author_metadata(authors, author_id, is_greek, stem)
+            author_id = author.get("resolved_id", author_id)
+
+            author_name, work_titles = self._extract_work_title_from_idt(idt_path)
+            if not work_titles:
+                return []
+
+            works: list[WorkEntry] = []
+            for work_idx, title in enumerate(work_titles, start=1):
+                work_num_str = f"{prefix}{work_idx:03d}"
+                cts_urn = f"urn:cts:{author['namespace']}:{author_id}.{work_num_str}"
+                works.append(
+                    WorkEntry(
+                        author_id=author_id,
+                        author_urn="",
+                        author_name=author_name or author["name"],
+                        work_urn=cts_urn,
+                        work_title=title,
+                        language=author.get("language", "lat"),
+                        namespace=author.get("namespace", "latinLit"),
+                        work_reference=f"{author_id}_{work_idx}",
+                        source_path=idt_path,
+                    )
+                )
+            return works
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Failed to parse {idt_path}: {exc}")
+            return []
+
+    def _resolve_author_metadata(
+        self, authors: dict[str, dict[str, str]], author_id: str, is_greek: bool, stem: str
+    ) -> dict[str, str]:
+        alt_ids = [author_id]
+        if not is_greek:
+            alt_ids.append(f"lat{author_id[3:]}")
+        for aid in alt_ids:
+            if aid in authors:
+                author = dict(authors[aid])
+                author["resolved_id"] = aid if aid.startswith(("phi", "tlg")) else author_id
+                return author
+        return {
+            "name": stem,
+            "language": "grc" if is_greek else "lat",
+            "namespace": "greekLit" if is_greek else "latinLit",
+            "resolved_id": author_id,
+        }
+
     def _extract_work_title_from_idt(self, idt_path: Path) -> tuple[str, list[str]]:
         """Minimal parser for binary .idt files to recover author + work titles."""
-        try:
-            with open(idt_path, "rb") as f:
-                data = f.read()
-        except OSError as exc:
-            logger.warning(f"Could not read {idt_path}: {exc}")
+        data = self._read_idt_file(idt_path)
+        if data is None:
             return "", []
 
+        author_name, work_titles = self._scan_idt_entries(data)
+        if not author_name:
+            author_name = idt_path.stem
+        if not work_titles:
+            return author_name, [idt_path.stem]
+
+        return author_name, work_titles
+
+    def _read_idt_file(self, idt_path: Path) -> bytes | None:
+        try:
+            with open(idt_path, "rb") as f:
+                return f.read()
+        except OSError as exc:
+            logger.warning(f"Could not read {idt_path}: {exc}")
+            return None
+
+    def _scan_idt_entries(self, data: bytes) -> tuple[str, list[str]]:
         author_name = ""
         work_titles: list[str] = []
         i = 0
@@ -418,11 +456,6 @@ class CtsUrnIndexer(IndexerBase):
                     continue
 
             i += 1
-
-        if not author_name:
-            author_name = idt_path.stem
-        if not work_titles:
-            return author_name, [idt_path.stem]
 
         return author_name, work_titles
 
@@ -449,9 +482,9 @@ class CtsUrnIndexer(IndexerBase):
             "language TEXT, namespace TEXT, author_urn TEXT)"
         )
         self._connection.execute(
-            "CREATE TABLE works (work_urn TEXT PRIMARY KEY, canon_id TEXT, author_id TEXT, work_title TEXT, "
-            "work_reference TEXT, cts_urn TEXT, language TEXT, namespace TEXT, source_path TEXT, "
-            "FOREIGN KEY (author_id) REFERENCES author_index(author_id))"
+            "CREATE TABLE works (work_urn TEXT PRIMARY KEY, canon_id TEXT, author_id TEXT, "
+            "work_title TEXT, work_reference TEXT, cts_urn TEXT, language TEXT, namespace TEXT, "
+            "source_path TEXT, FOREIGN KEY (author_id) REFERENCES author_index(author_id))"
         )
         self._connection.execute(
             "CREATE TABLE editions (edition_urn TEXT PRIMARY KEY, work_urn TEXT, label TEXT, "
@@ -499,7 +532,14 @@ class CtsUrnIndexer(IndexerBase):
             )
 
         edition_data = [
-            (ed.edition_urn, ed.work_urn, ed.label, ed.description, ed.language, str(ed.source_path))
+            (
+                ed.edition_urn,
+                ed.work_urn,
+                ed.label,
+                ed.description,
+                ed.language,
+                str(ed.source_path),
+            )
             for ed in self._editions
             if ed.edition_urn
         ]
@@ -509,7 +549,10 @@ class CtsUrnIndexer(IndexerBase):
             )
 
         logger.info(
-            f"Inserted {len(seen_authors)} authors, {len(self._entries)} works, {len(edition_data)} editions"
+            "Inserted %s authors, %s works, %s editions",
+            len(seen_authors),
+            len(self._entries),
+            len(edition_data),
         )
 
     def _create_indexes_duckdb(self) -> None:
@@ -547,7 +590,7 @@ class CtsUrnIndexer(IndexerBase):
         logger.info(f"Validation passed: {author_count} authors, {work_count} works")
         return True
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> JSONMapping:
         stats = {
             "type": "cts_urn",
             "format": "duckdb",
@@ -566,21 +609,18 @@ class CtsUrnIndexer(IndexerBase):
                 stats["work_count"] = result[0] if result else 0
                 result = self._connection.execute("SELECT COUNT(*) FROM editions").fetchone()
                 stats["edition_count"] = result[0] if result else 0
-                stats["perseus_count"] = (
-                    self._connection.execute(
-                        "SELECT COUNT(*) FROM works WHERE source_path LIKE '%perseus%'"
-                    ).fetchone()[0]
-                )
-                stats["legacy_count"] = (
-                    self._connection.execute(
-                        "SELECT COUNT(*) FROM works WHERE source_path LIKE '%Classics-Data%'"
-                    ).fetchone()[0]
-                )
-                stats["supplement_count"] = (
-                    self._connection.execute(
-                        "SELECT COUNT(*) FROM works WHERE source_path = 'supplemental'"
-                    ).fetchone()[0]
-                )
+                perseus_result = self._connection.execute(
+                    "SELECT COUNT(*) FROM works WHERE source_path LIKE '%perseus%'"
+                ).fetchone()
+                stats["perseus_count"] = perseus_result[0] if perseus_result else 0
+                legacy_result = self._connection.execute(
+                    "SELECT COUNT(*) FROM works WHERE source_path LIKE '%Classics-Data%'"
+                ).fetchone()
+                stats["legacy_count"] = legacy_result[0] if legacy_result else 0
+                supplement_result = self._connection.execute(
+                    "SELECT COUNT(*) FROM works WHERE source_path = 'supplemental'"
+                ).fetchone()
+                stats["supplement_count"] = supplement_result[0] if supplement_result else 0
                 result = self._connection.execute(
                     "SELECT value FROM indexer_config WHERE key = 'build_date'"
                 ).fetchone()
@@ -597,7 +637,11 @@ class CtsUrnIndexer(IndexerBase):
         editions = stats.get("edition_count")
         size = stats["size_mb"]
         logger.info(
-            f"CTS URN Index Stats: Authors={authors}, Works={works}, Editions={editions}, Size={size:.2f} MB"
+            "CTS URN Index Stats: Authors=%s, Works=%s, Editions=%s, Size=%.2f MB",
+            authors,
+            works,
+            editions,
+            size,
         )
 
     def cleanup(self) -> None:

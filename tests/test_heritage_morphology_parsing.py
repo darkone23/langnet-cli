@@ -46,11 +46,11 @@ class TestHeritageMorphologyParser(unittest.TestCase):
         self.assertEqual(solution["total_words"], 1)
 
         analysis = solution["analyses"][0]
-        self.assertEqual(analysis.word, "yoga")
-        self.assertEqual(analysis.pos, "noun")
-        self.assertEqual(analysis.gender, "masculine")
-        self.assertEqual(analysis.number, "singular")
-        self.assertEqual(analysis.case, "vocative")
+        self.assertEqual(analysis["word"], "yoga")
+        self.assertEqual(analysis["pos"], "noun")
+        self.assertEqual(analysis["gender"], "masculine")
+        self.assertEqual(analysis["number"], "singular")
+        self.assertEqual(analysis["case"], "vocative")
 
     def test_unknown_analysis(self):
         """Test parsing of unknown analysis patterns"""
@@ -62,11 +62,11 @@ class TestHeritageMorphologyParser(unittest.TestCase):
         solution = result["solutions"][0]
         analysis = solution["analyses"][0]
 
-        self.assertEqual(analysis.word, "agni")
-        self.assertEqual(analysis.pos, "unknown")
-        self.assertIsNone(analysis.gender)
-        self.assertIsNone(analysis.number)
-        self.assertIsNone(analysis.case)
+        self.assertEqual(analysis["word"], "agni")
+        self.assertEqual(analysis["pos"], "unknown")
+        self.assertIsNone(analysis["gender"])
+        self.assertIsNone(analysis["number"])
+        self.assertIsNone(analysis["case"])
 
     def test_verb_form_analysis(self):
         """Test parsing of verb forms with person/tense/mood"""
@@ -78,13 +78,13 @@ class TestHeritageMorphologyParser(unittest.TestCase):
         solution = result["solutions"][0]
         analysis = solution["analyses"][0]
 
-        self.assertEqual(analysis.word, "bhavati")
-        self.assertEqual(analysis.pos, "verb")
-        self.assertEqual(analysis.person, 3)
-        self.assertEqual(analysis.number, "singular")
-        self.assertEqual(analysis.tense, "present")
-        self.assertEqual(analysis.voice, "active")
-        self.assertEqual(analysis.mood, "indicative")
+        self.assertEqual(analysis["word"], "bhavati")
+        self.assertEqual(analysis["pos"], "verb")
+        self.assertEqual(analysis["person"], 3)
+        self.assertEqual(analysis["number"], "singular")
+        self.assertEqual(analysis["tense"], "present")
+        self.assertEqual(analysis["voice"], "active")
+        self.assertEqual(analysis["mood"], "indicative")
 
     def test_multiple_solution_sections(self):
         """Parser should respect multiple solution blocks in HTML"""
@@ -101,17 +101,17 @@ class TestHeritageMorphologyParser(unittest.TestCase):
         self.assertEqual(first_solution["solution_number"], 1)
         self.assertEqual(len(first_solution["analyses"]), 1)
         first_analysis = first_solution["analyses"][0]
-        self.assertEqual(first_analysis.word, "agni")
-        self.assertEqual(first_analysis.case, "accusative")
-        self.assertEqual(first_analysis.gender, "masculine")
-        self.assertEqual(first_analysis.number, "dual")
+        self.assertEqual(first_analysis["word"], "agni")
+        self.assertEqual(first_analysis["case"], "accusative")
+        self.assertEqual(first_analysis["gender"], "masculine")
+        self.assertEqual(first_analysis["number"], "dual")
 
         second_solution = result["solutions"][1]
         self.assertEqual(second_solution["solution_number"], 2)
         self.assertEqual(len(second_solution["analyses"]), 1)
         second_analysis = second_solution["analyses"][0]
-        self.assertEqual(second_analysis.case, "vocative")
-        self.assertEqual(second_analysis.number, "dual")
+        self.assertEqual(second_analysis["case"], "vocative")
+        self.assertEqual(second_analysis["number"], "dual")
 
 
 class TestHeritageHTMLExtractor(unittest.TestCase):

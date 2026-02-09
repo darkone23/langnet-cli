@@ -21,7 +21,6 @@ import re
 import unicodedata
 
 import betacode.conv
-
 import duckdb
 
 from langnet.heritage.abbr import HERITAGE_ABBR_MAP
@@ -31,6 +30,8 @@ logger = logging.getLogger(__name__)
 MIN_AUTHOR_NAME_LENGTH = 3
 MIN_WORK_TITLE_LENGTH = 4
 MIN_ABBREV_LENGTH = 2
+MIN_HINT_TOKENS = 2
+HINT_DISPLAY_OVERRIDES = {"arat": "Aratea (Phaenomena)"}
 
 # Allowlisted non-CTS abbreviations for dictionary citations, scoped by language.
 # Keys inside each map are normalized (lowercase, alphanumeric) forms.
@@ -210,7 +211,7 @@ class CTSUrnMapper:
             return ""
         stop_tokens = {"ib", "ibid", "id", "idem"}
         tokens = [t for t in re.split("[ \t,.;:()]+", citation_text) if t]
-        if len(tokens) >= 2:
+        if len(tokens) >= MIN_HINT_TOKENS:
             candidate = self._normalize_abbrev_key(tokens[1])
             if candidate in stop_tokens:
                 return ""
@@ -234,7 +235,11 @@ class CTSUrnMapper:
             if converted != cleaned:
                 return converted
         except Exception as exc:  # noqa: BLE001
-            logger.debug("betacode_to_unicode_failed", text=text, error=str(exc))
+            logger.debug(
+                "betacode_to_unicode_failed text=%s error=%s",
+                text,
+                str(exc),
+            )
 
         return text
 
@@ -277,10 +282,13 @@ class CTSUrnMapper:
             norm_title = self._normalize_abbrev_key(work_title)
             if not norm_title:
                 continue
-            if hint_key in norm_title or norm_title.startswith(hint_key) or hint_key.startswith(norm_title):
-                if best is None or len(norm_title) < best_len:
-                    best = (author_name, work_title, cts_urn)
-                    best_len = len(norm_title)
+            if (
+                hint_key in norm_title
+                or norm_title.startswith(hint_key)
+                or hint_key.startswith(norm_title)
+            ) and (best is None or len(norm_title) < best_len):
+                best = (author_name, work_title, cts_urn)
+                best_len = len(norm_title)
         return best
 
     def map_citation_to_urn(self, citation) -> str | None:
@@ -494,7 +502,6 @@ class CTSUrnMapper:
             return None
 
         hint_key = self._extract_hint_from_citation_text(citation_text)
-        hint_display_overrides = {"arat": "Aratea (Phaenomena)"}
         author_num, _work_num = self._parse_urn_components(urn)
 
         def _lookup(urn_candidate: str):
@@ -526,19 +533,8 @@ class CTSUrnMapper:
 
         try:
             row = _lookup(urn)
-            if row and hint_key:
-                norm_title = self._normalize_abbrev_key(row[1] or "")
-                if hint_key and norm_title and hint_key not in norm_title and not norm_title.startswith(hint_key):
-                    hinted = self._lookup_work_by_hint(author_num, hint_key)
-                    if hinted:
-                        hinted_title_norm = self._normalize_abbrev_key(hinted[1] or "")
-                        if hinted[2] == urn:
-                            row = (hinted[0], hinted[1])
-                        else:
-                            row = (row[0], hint_display_overrides.get(hint_key, hint_key.title()))
-                    else:
-                        # Use hint as a display fallback when we cannot find a matching work title
-                        row = (row[0], hint_display_overrides.get(hint_key, hint_key.title()))
+            resolved_author_num = author_num or ""
+            row = self._resolve_row_with_hint(row, hint_key, resolved_author_num, urn)
 
             if not row and hint_key:
                 hinted = self._lookup_work_by_hint(author_num, hint_key)
@@ -549,12 +545,44 @@ class CTSUrnMapper:
                 return None
 
             author_name, work_title = row
-            author_name = self._maybe_betacode_to_unicode(author_name)
-            work_title = self._maybe_betacode_to_unicode(work_title)
+            author_name = self._maybe_betacode_to_unicode(author_name) or ""
+            work_title = self._maybe_betacode_to_unicode(work_title) or ""
             return {"author": author_name, "work": work_title}
         except Exception as e:
             logger.debug(f"URN metadata lookup failed: {e}")
             return None
+
+    def convert_to_citation(self, urn: str) -> dict[str, str] | None:
+        """Convert a CTS URN to a minimal citation payload."""
+        if not urn:
+            return None
+        metadata = self.get_urn_metadata(urn) or {}
+        if not metadata:
+            return {"urn": urn}
+        return {"urn": urn, "author": metadata.get("author", ""), "work": metadata.get("work", "")}
+
+    def _resolve_row_with_hint(
+        self,
+        row: tuple[str, str] | None,
+        hint_key: str,
+        author_num: str,
+        urn: str,
+    ) -> tuple[str, str] | None:
+        if not (row and hint_key):
+            return row
+
+        norm_title = self._normalize_abbrev_key(row[1] or "")
+        if hint_key in norm_title or norm_title.startswith(hint_key):
+            return row
+
+        hinted = self._lookup_work_by_hint(author_num, hint_key)
+        if hinted:
+            hinted_title_norm = self._normalize_abbrev_key(hinted[1] or "")
+            if hinted[2] == urn or hint_key in hinted_title_norm:
+                return (hinted[0], hinted[1])
+
+        # Use hint as a display fallback when we cannot find a matching work title
+        return (row[0], HINT_DISPLAY_OVERRIDES.get(hint_key, hint_key.title()))
 
     def get_abbreviation_metadata(
         self, citation_id: str | None, citation_text: str | None = None, language: str | None = None
@@ -635,3 +663,6 @@ class CTSUrnMapper:
             return author, work
 
         return "", ""
+
+
+MIN_HINT_TOKENS = 2

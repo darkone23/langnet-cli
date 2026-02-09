@@ -65,23 +65,17 @@ class GreekNormalizer(LanguageNormalizer):
 
         return False
 
-    def to_canonical(self, text: str, source_encoding: str) -> str:
+    def to_canonical(self, text: str, source_encoding: str) -> tuple[str, dict | None]:
         """Convert Greek text to Unicode canonical form."""
         if source_encoding == Encoding.UNICODE.value:
-            # Already Unicode, return as-is
-            return text
+            return text, None
+        if source_encoding == Encoding.BETAcode.value:
+            return self._betacode_to_unicode(text), None
+        if source_encoding == Encoding.ASCII.value:
+            return self._ascii_to_unicode(text), None
 
-        elif source_encoding == Encoding.BETAcode.value:
-            # Convert betacode to Unicode
-            return self._betacode_to_unicode(text)
-
-        elif source_encoding == Encoding.ASCII.value:
-            # Convert ASCII Greek to Unicode (simple heuristic)
-            return self._ascii_to_unicode(text)
-
-        else:
-            logger.warning(f"Unknown encoding {source_encoding}, returning as-is")
-            return text
+        logger.warning(f"Unknown encoding {source_encoding}, returning as-is")
+        return text, None
 
     def _betacode_to_unicode(self, betacode: str) -> str:
         """Convert betacode to Unicode Greek."""
@@ -317,7 +311,7 @@ class GreekNormalizer(LanguageNormalizer):
         encoding = self.detect_encoding(query)
 
         # Convert to canonical form (Unicode)
-        canonical_text = self.to_canonical(query, encoding)
+        canonical_text, canonical_meta = self.to_canonical(query, encoding)
 
         # Generate alternate forms
         alternates = self.generate_alternates(canonical_text)

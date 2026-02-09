@@ -1,5 +1,5 @@
 import re
-from typing import Any
+from typing import cast
 
 import structlog
 from bs4 import BeautifulSoup
@@ -10,6 +10,14 @@ from .encoding_service import EncodingService
 from .models import HeritageMorphologyResult, HeritageSolution, HeritageWordAnalysis
 from .parameters import HeritageParameterBuilder
 from .parsers import MorphologyParser
+from .types import (
+    CombinedAnalysis,
+    HeritageDictionaryLookup,
+    MorphologyAnalysisDict,
+    MorphologyParseResult,
+    MorphologySolutionDict,
+    WordAnalysisBundle,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -21,7 +29,21 @@ class HeritageDictionaryService:
         self.scl = SanskritCologneLexicon()
         self.morphology_client = HeritageHTTPClient()
 
-    def lookup_word(self, word: str, dict_id: str = "MW") -> dict[str, Any]:
+    def _normalize_for_sktreader(self, text: str, encoding: str | None) -> tuple[str, str]:
+        """Normalize inputs for sktreader requests while preserving original text."""
+        target_encoding = "velthuis"
+        try:
+            from indic_transliteration.detect import detect  # noqa: PLC0415
+            from indic_transliteration.sanscript import VELTHUIS, transliterate  # noqa: PLC0415
+
+            detected = encoding or EncodingService.detect_encoding(text) or "ascii"
+            source_scheme = detect(text) or detected
+            normalized = transliterate(text, source_scheme, VELTHUIS)
+            return normalized, target_encoding
+        except Exception:
+            return text, target_encoding
+
+    def lookup_word(self, word: str, dict_id: str = "MW") -> HeritageDictionaryLookup:
         """Look up a word in the CDSL dictionary"""
         try:
             result = self.scl.lookup_ascii(word)
@@ -49,9 +71,9 @@ class HeritageDictionaryService:
 
     def analyze_word(
         self, word: str, encoding: str | None = None, max_solutions: int | None = None
-    ) -> dict[str, Any]:
+    ) -> WordAnalysisBundle:
         """Analyze a word with both morphology and dictionary lookup"""
-        results = {
+        results: WordAnalysisBundle = {
             "word": word,
             "morphology": None,
             "dictionary": None,
@@ -72,14 +94,24 @@ class HeritageDictionaryService:
             parsed_morphology = self._parse_morphology_response(morph_result)
             results["morphology"] = parsed_morphology
 
-            if parsed_morphology and parsed_morphology.get("lemma"):
-                lemma = parsed_morphology["lemma"]
-                dict_results = self.lookup_word(lemma)
-                results["dictionary"] = dict_results
+            if parsed_morphology:
+                # Extract lemma from first solution if available
+                lemma = None
+                solutions = parsed_morphology.get("solutions", [])
+                if solutions:
+                    first_solution = solutions[0]
+                    analyses = first_solution.get("analyses", [])
+                    if analyses:
+                        first_analysis = analyses[0]
+                        lemma = first_analysis.get("lemma")
 
-                results["combined_analysis"] = self._combine_analysis(
-                    parsed_morphology, dict_results
-                )
+                if lemma:
+                    dict_results = self.lookup_word(lemma)
+                    results["dictionary"] = dict_results
+
+                    results["combined_analysis"] = self._combine_analysis(
+                        parsed_morphology, dict_results
+                    )
 
         except Exception as e:
             logger.error("Word analysis failed", word=word, error=str(e))
@@ -87,89 +119,118 @@ class HeritageDictionaryService:
 
         return results
 
-    def _parse_morphology_response(self, html_content: str) -> dict[str, Any] | None:
+    def _parse_morphology_response(self, html_content: str) -> MorphologyParseResult | None:
         """Parse morphology response from Heritage Platform"""
         try:
             soup = BeautifulSoup(html_content, "html.parser")
-
-            morphology_data: dict[str, Any] = {
-                "analyses": [],
-                "lemma": None,
-                "pos": None,
+            morphology_data: MorphologyParseResult = {
+                "solutions": [],
+                "word_analyses": [],
+                "total_solutions": 0,
+                "encoding": "velthuis",
+                "metadata": {},
             }
-
-            # Look for latin12 spans which contain the morphology results
-            latin_spans = soup.find_all("span", class_="latin12")
-
-            for span in latin_spans:
-                span_text = span.get_text(strip=True)
-                pattern = r"\[([^\]]+)\]\{([^}]*)\}"
-                matches = re.findall(pattern, span_text)
-
-                for match in matches:
-                    headword, analysis = match
-                    morphology_data["analyses"].append(
-                        {
-                            "headword": headword,
-                            "analysis": analysis,
-                        }
-                    )
-
-                    if not morphology_data["lemma"]:
-                        morphology_data["lemma"] = headword
-
-                    if analysis and not morphology_data["pos"]:
-                        morphology_data["pos"] = analysis
-
-            # Also check for navy links which contain lemmas
-            if not morphology_data["analyses"]:
-                navy_links = soup.find_all("a", class_="navy")
-                for link in navy_links:
-                    lemma_tag = link.find("i")
-                    if lemma_tag:
-                        lemma = lemma_tag.get_text(strip=True)
-                        # Try to find grammatical info near the link
-                        parent_text = link.parent.get_text() if link.parent else ""
-                        grammar_match = re.search(r"\{(.+?)\}", parent_text)
-                        grammar = grammar_match.group(1) if grammar_match else ""
-
-                        morphology_data["analyses"].append({"headword": lemma, "analysis": grammar})
-
-                        if not morphology_data["lemma"]:
-                            morphology_data["lemma"] = lemma
-
-                        if grammar and not morphology_data["pos"]:
-                            morphology_data["pos"] = grammar
-
-            return morphology_data if morphology_data["analyses"] else None
-
+            self._collect_latin_spans(soup, morphology_data)
+            if not morphology_data["solutions"]:
+                self._collect_navy_links(soup, morphology_data)
+            if morphology_data["solutions"]:
+                morphology_data["total_solutions"] = len(morphology_data["solutions"])
+                return morphology_data
+            return None
         except Exception as e:
             logger.error("Morphology parsing failed", error=str(e))
             return None
 
+    def _collect_latin_spans(
+        self, soup: BeautifulSoup, morphology_data: MorphologyParseResult
+    ) -> None:
+        """Extract analysis data from latin12 spans."""
+        latin_spans = soup.find_all("span", class_="latin12")
+        for span in latin_spans:
+            span_text = span.get_text(strip=True)
+            pattern = r"\[([^\]]+)\]\{([^}]*)\}"
+            matches = re.findall(pattern, span_text)
+
+            for headword, analysis in matches:
+                morphology_data["solutions"].append(
+                    {
+                        "type": "morphological_analysis",
+                        "solution_number": len(morphology_data["solutions"]) + 1,
+                        "analyses": [{"word": headword, "analysis": analysis}],
+                        "total_words": 1,
+                        "score": 0.0,
+                        "metadata": {},
+                    }
+                )
+
+    def _collect_navy_links(
+        self, soup: BeautifulSoup, morphology_data: MorphologyParseResult
+    ) -> None:
+        """Fallback extraction from Navy links."""
+        navy_links = soup.find_all("a", class_="navy")
+        for link in navy_links:
+            lemma_tag = link.find("i")
+            if not lemma_tag:
+                continue
+            lemma = lemma_tag.get_text(strip=True)
+            parent_text = link.parent.get_text() if link.parent else ""
+            grammar_match = re.search(r"\{(.+?)\}", parent_text)
+            grammar = grammar_match.group(1) if grammar_match else ""
+            morphology_data["solutions"].append(
+                {
+                    "type": "morphological_analysis",
+                    "solution_number": len(morphology_data["solutions"]) + 1,
+                    "analyses": [{"word": lemma, "analysis": grammar}],
+                    "total_words": 1,
+                    "score": 0.0,
+                    "metadata": {},
+                }
+            )
+
     def _combine_analysis(
-        self, morphology: dict[str, Any], dictionary: dict[str, Any]
-    ) -> dict[str, Any]:
+        self, morphology: MorphologyParseResult, dictionary: HeritageDictionaryLookup
+    ) -> CombinedAnalysis:
         """Combine morphology and dictionary results"""
         return {
-            "lemma": morphology.get("lemma"),
-            "pos": morphology.get("pos"),
-            "morphology_analyses": morphology.get("analyses", []),
+            "lemma": next(
+                (
+                    analysis.get("lemma")
+                    for solution in morphology.get("solutions", [])
+                    for analysis in solution.get("analyses", [])
+                    if analysis.get("lemma")
+                ),
+                None,
+            ),
+            "pos": next(
+                (
+                    analysis.get("pos")
+                    for solution in morphology.get("solutions", [])
+                    for analysis in solution.get("analyses", [])
+                    if analysis.get("pos")
+                ),
+                None,
+            ),
+            "morphology_analyses": [
+                analysis
+                for solution in morphology.get("solutions", [])
+                for analysis in solution.get("analyses", [])
+            ],
             "dictionary_entries": dictionary.get("entries", []),
             "transliteration": dictionary.get("transliteration", {}),
             "root": dictionary.get("root"),
         }
 
-    def lookup_dictionary(self, term: str, dict_id: str = "MW") -> dict[str, Any]:
+    def lookup_dictionary(self, term: str, dict_id: str = "MW") -> HeritageDictionaryLookup:
         """Look up a term in the dictionary"""
         try:
             result = self.scl.lookup_ascii(term)
 
-            dict_results = {
-                "term": term,
+            dict_results: HeritageDictionaryLookup = {
+                "word": term,
                 "dict_id": dict_id,
                 "entries": result.get("dictionaries", {}).get(dict_id.lower(), []),
                 "transliteration": result.get("transliteration", {}),
+                "root": result.get("root"),
             }
 
             return dict_results
@@ -177,10 +238,11 @@ class HeritageDictionaryService:
         except Exception as e:
             logger.error("Dictionary lookup failed", term=term, error=str(e))
             return {
-                "term": term,
+                "word": term,
                 "dict_id": dict_id,
                 "error": str(e),
                 "entries": [],
+                "transliteration": {},
             }
 
 
@@ -287,7 +349,9 @@ class HeritageMorphologyService:
         # If we got solutions, return immediately even if the HTML contained warning markers.
         if has_solutions:
             return self._build_morphology_result(
-                text=normalized_text, parsed_data=parsed_data, processing_time=0.0
+                text=text,  # Use original text, not normalized
+                parsed_data=parsed_data,
+                processing_time=0.0,
             )
 
         # Check if result indicates unknown/error
@@ -308,7 +372,7 @@ class HeritageMorphologyService:
                     parsed_fallback = self.parser.parse(fallback_html)
                     if parsed_fallback.get("solutions"):
                         result = self._build_morphology_result(
-                            text=normalized_text,
+                            text=text,  # Use original text, not normalized
                             parsed_data=parsed_fallback,
                             processing_time=0.0,
                         )
@@ -330,7 +394,9 @@ class HeritageMorphologyService:
 
         # If no fallback or fallback didn't work, return parsed (possibly empty) result
         return self._build_morphology_result(
-            text=normalized_text, parsed_data=parsed_data, processing_time=0.0
+            text=text,  # Use original text, not normalized
+            parsed_data=parsed_data,
+            processing_time=0.0,
         )
 
     def _is_unknown_result(self, html_content: str) -> bool:
@@ -357,28 +423,47 @@ class HeritageMorphologyService:
         """
         target_encoding = "velthuis"
         try:
-            from indic_transliteration.sanscript import VELTHUIS, transliterate  # noqa: PLC0415
             from indic_transliteration.detect import detect  # noqa: PLC0415
+            from indic_transliteration.sanscript import VELTHUIS, transliterate  # noqa: PLC0415
 
             detected = encoding or EncodingService.detect_encoding(text) or "ascii"
             source_scheme = detect(text) or detected
             normalized = transliterate(text, source_scheme, VELTHUIS)
             return normalized, target_encoding
         except Exception:
-            # Best effort fallback: leave text as-is, still mark encoding as velthuis to avoid DN/IAST params.
+            # Best effort fallback: leave text as-is while marking encoding as Velthuis
+            # to avoid DN/IAST params.
             return text, target_encoding
 
     def _build_morphology_result(
-        self, text: str, parsed_data: dict[str, Any], processing_time: float
+        self, text: str, parsed_data: MorphologyParseResult, processing_time: float
     ) -> HeritageMorphologyResult:
         """Convert parsed data to structured result"""
 
-        solutions = []
-        for solution_data in parsed_data.get("solutions", []):
-            solution = self._build_solution(solution_data)
-            solutions.append(solution)
+        solutions = [
+            self._build_solution(solution_data)
+            for solution_data in parsed_data.get("solutions", [])
+        ]
+        word_analyses_raw = parsed_data.get("word_analyses", [])
+        word_analyses = [self._build_word_analysis(entry) for entry in word_analyses_raw]
 
-        word_analyses = parsed_data.get("word_analyses", [])
+        # DEBUG: Log what we're storing as input_text
+        logger.warning(
+            "DEBUG: Building morphology result with input_text",
+            input_text_to_store=text,
+            input_text_repr=repr(text),
+            original_parameter=text,
+            solutions_count=len(solutions),
+        )
+
+        # DEBUG: Log what we're storing as input_text
+        logger.warning(
+            "DEBUG: Building morphology result with input_text",
+            input_text_to_store=text,
+            input_text_repr=repr(text),
+            original_parameter=text,
+            solutions_count=len(solutions),
+        )
 
         return HeritageMorphologyResult(
             input_text=text,
@@ -390,15 +475,14 @@ class HeritageMorphologyService:
             metadata=parsed_data.get("metadata", {}),
         )
 
-    def _build_solution(self, solution_data: dict[str, Any]) -> HeritageSolution:
+    def _build_solution(self, solution_data: MorphologySolutionDict) -> HeritageSolution:
         """Convert solution data to structured solution"""
 
         analyses = []
         # Handle new parser format which returns HeritageWordAnalysis objects directly
         for entry_data in solution_data.get("analyses", solution_data.get("entries", [])):
-            if hasattr(entry_data, "word"):  # HeritageWordAnalysis object
-                # Convert HeritageWordAnalysis to dict for compatibility
-                analysis_dict = {
+            if isinstance(entry_data, HeritageWordAnalysis):
+                analysis_dict: MorphologyAnalysisDict = {
                     "word": entry_data.word,
                     "lemma": entry_data.lemma,
                     "root": entry_data.root,
@@ -414,8 +498,12 @@ class HeritageMorphologyService:
                     "meaning": entry_data.meaning,
                 }
                 analysis = self._build_word_analysis(analysis_dict)
-            else:  # Dictionary format (legacy)
-                analysis = self._build_word_analysis(entry_data)
+            elif isinstance(entry_data, dict):
+                analysis_dict = cast(MorphologyAnalysisDict, entry_data)
+                analysis = self._build_word_analysis(analysis_dict)
+            else:
+                logger.debug("Skipping unsupported analysis entry", entry_type=type(entry_data))
+                continue
             analyses.append(analysis)
 
         return HeritageSolution(
@@ -426,7 +514,7 @@ class HeritageMorphologyService:
             metadata=solution_data.get("metadata", {}),
         )
 
-    def _build_word_analysis(self, entry_data: dict[str, Any]) -> HeritageWordAnalysis:
+    def _build_word_analysis(self, entry_data: MorphologyAnalysisDict) -> HeritageWordAnalysis:
         """Convert entry data to word analysis"""
 
         return HeritageWordAnalysis(
@@ -445,7 +533,7 @@ class HeritageMorphologyService:
             meaning=self._parse_meanings(entry_data),
         )
 
-    def _parse_int(self, value: Any) -> int | None:
+    def _parse_int(self, value: int | str | None) -> int | None:
         """Parse integer value safely"""
         if value is None:
             return None
@@ -454,19 +542,20 @@ class HeritageMorphologyService:
         except (ValueError, TypeError):
             return None
 
-    def _parse_meanings(self, entry_data: dict[str, Any]) -> list[str]:
+    def _parse_meanings(self, entry_data: MorphologyAnalysisDict) -> list[str]:
         """Parse meaning/definition list"""
         meanings = []
 
-        meaning_fields = ["meaning", "definition", "definitions", "sense"]
-
-        for field in meaning_fields:
-            if field in entry_data:
-                value = entry_data[field]
-                if isinstance(value, list):
-                    meanings.extend(value)
-                elif isinstance(value, str):
-                    meanings.append(value)
+        for value in (
+            entry_data.get("meaning"),
+            entry_data.get("definition"),
+            entry_data.get("definitions"),
+            entry_data.get("sense"),
+        ):
+            if isinstance(value, list):
+                meanings.extend(value)
+            elif isinstance(value, str):
+                meanings.append(value)
 
         return meanings if meanings else []
 

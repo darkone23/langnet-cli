@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 import structlog
 
@@ -84,8 +84,7 @@ class LangnetWiringConfig:
         _default_heritage_morphology_factory
     )
     normalization_pipeline_factory: (
-        Callable[[LangnetSettings], NormalizationPipeline | None]
-        | None
+        Callable[[LangnetSettings], NormalizationPipeline | None] | None
     ) = _default_normalization_factory
     sanskrit_normalizer_factory: Callable[
         [LangnetSettings, HeritageHTTPClient | None, NormalizationPipeline | None],

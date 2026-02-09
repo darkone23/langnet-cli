@@ -16,10 +16,7 @@ class HeritageBackendAdapter(BaseBackendAdapter):
         entries: list[DictionaryEntry] = []
 
         combined = (
-            data.get("combined_analysis")
-            or data.get("combined")
-            or data.get("dictionary")
-            or {}
+            data.get("combined_analysis") or data.get("combined") or data.get("dictionary") or {}
         )
         dict_entries = combined.get("dictionary_entries") or combined.get("entries") or []
         canonical_payload = data.get("canonical") or {}

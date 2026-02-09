@@ -4,11 +4,12 @@ Indexer utilities and common functionality.
 
 import json
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import duckdb
+
+from langnet.types import JSONMapping
 
 from .core import IndexStatus, IndexType
 
@@ -27,9 +28,17 @@ class IndexStats:
     status: IndexStatus
     last_accessed: str | None = None
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary."""
-        return asdict(self)
+    def to_dict(self) -> dict[str, str | float | int | None]:
+        """Convert to a JSON-serializable dictionary."""
+        return {
+            "index_type": self.index_type.value,
+            "name": self.name,
+            "size_mb": self.size_mb,
+            "entry_count": self.entry_count,
+            "build_date": self.build_date,
+            "status": self.status.value,
+            "last_accessed": self.last_accessed,
+        }
 
 
 class IndexManager:
@@ -39,7 +48,7 @@ class IndexManager:
         self.config_dir = config_dir
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.indexes_file = config_dir / "indexes.json"
-        self._indexes: dict[str, dict[str, Any]] = {}
+        self._indexes: dict[str, JSONMapping] = {}
         self._load_indexes()
 
     def _load_indexes(self) -> None:
@@ -63,7 +72,7 @@ class IndexManager:
             logger.error(f"Error saving indexes: {e}")
 
     def register_index(
-        self, name: str, index_type: IndexType, path: Path, config: dict[str, Any] | None = None
+        self, name: str, index_type: IndexType, path: Path, config: JSONMapping | None = None
     ) -> None:
         """Register a new index."""
         self._indexes[name] = {
@@ -76,7 +85,7 @@ class IndexManager:
         self._save_indexes()
         logger.info(f"Registered index: {name}")
 
-    def get_index_config(self, name: str) -> dict[str, Any] | None:
+    def get_index_config(self, name: str) -> JSONMapping | None:
         """Get index configuration."""
         if name in self._indexes:
             self._indexes[name]["last_accessed"] = str(Path().cwd())
@@ -84,7 +93,7 @@ class IndexManager:
             return self._indexes[name]
         return None
 
-    def list_indexes(self) -> list[dict[str, Any]]:
+    def list_indexes(self) -> list[JSONMapping]:
         """List all registered indexes."""
         return list(self._indexes.values())
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Protocol
 
 import structlog
 
@@ -9,7 +10,7 @@ from langnet.cologne.core import to_slp1 as cdsl_to_slp1
 from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.encoding_service import EncodingService
 from langnet.normalization import NormalizationPipeline
-from langnet.normalization.models import CanonicalQuery, Encoding
+from langnet.normalization.models import CanonicalQuery
 
 logger = structlog.get_logger(__name__)
 
@@ -23,13 +24,25 @@ class SanskritNormalizationResult:
     input_form: str
 
 
+class NormalizationPipelineProtocol(Protocol):
+    _initialized: bool
+
+    def initialize(self) -> None: ...
+
+    def normalize_query(self, language: str, query: str) -> CanonicalQuery: ...
+
+
+class HeritageClientProtocol(Protocol):
+    def fetch_canonical_via_sktsearch(self, word: str) -> Mapping[str, str] | None: ...
+
+
 class SanskritQueryNormalizer:
     """Normalize Sanskrit queries into Heritage and SLP1 forms with fallbacks."""
 
     def __init__(
         self,
-        heritage_client: HeritageHTTPClient | None = None,
-        normalization_pipeline: NormalizationPipeline | None = None,
+        heritage_client: HeritageHTTPClient | HeritageClientProtocol | None = None,
+        normalization_pipeline: NormalizationPipeline | NormalizationPipelineProtocol | None = None,
     ):
         self.heritage_client = heritage_client
         self.normalization_pipeline = normalization_pipeline
@@ -114,7 +127,11 @@ class SanskritQueryNormalizer:
 
     def _canonical_from_heritage(self, word: str) -> str | None:
         try:
-            canonical = self.heritage_client.fetch_canonical_via_sktsearch(word)  # type: ignore[operator]
+            canonical = (
+                self.heritage_client.fetch_canonical_via_sktsearch(word)
+                if self.heritage_client
+                else None
+            )
             canon_text = canonical.get("canonical_text") if canonical else None
             return canon_text or None
         except Exception as exc:  # noqa: BLE001
@@ -211,4 +228,4 @@ class SanskritQueryNormalizer:
     @staticmethod
     def _looks_mangled_slp1(text: str) -> bool:
         """Detect obvious transliteration artifacts like digits/quotes in SLP1 output."""
-        return any(ch.isdigit() or ch in {"\"", "'"} for ch in text)
+        return any(ch.isdigit() or ch in {'"', "'"} for ch in text)

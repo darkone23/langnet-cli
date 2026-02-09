@@ -42,7 +42,6 @@ from langnet.indexer.utils import get_index_manager
 from langnet.logging import setup_logging
 from langnet.validation import (
     LANG_ALIASES,
-    VALID_LANGUAGES,
     validate_query,
     validate_tool_request,
 )
@@ -170,48 +169,65 @@ def _normalize_entry_text(text: str) -> str:
     return " ".join(str(text).split())
 
 
+def _extract_entry_list(result: dict | list) -> list | None:
+    if isinstance(result, list):
+        return result
+    if isinstance(result, dict):
+        entries = result.get("entries")
+        if isinstance(entries, list):
+            return entries
+    return None
+
+
+def _normalized_definitions(entry: dict) -> set[str]:
+    defs = entry.get("definitions") or []
+    return {
+        _normalize_entry_text(d.get("definition", ""))
+        for d in defs
+        if isinstance(d, dict) and d.get("definition")
+    }
+
+
+def _prune_duplicate_blocks(entry: dict, norm_defs: set[str]) -> None:
+    blocks = entry.get("dictionary_blocks")
+    if not isinstance(blocks, list):
+        return
+
+    filtered_blocks = []
+    for block in blocks:
+        if not isinstance(block, dict):
+            filtered_blocks.append(block)
+            continue
+        norm_block = _normalize_entry_text(block.get("entry", ""))
+        if norm_block in norm_defs:
+            continue
+        filtered_blocks.append(block)
+    entry["dictionary_blocks"] = filtered_blocks
+
+
+def _strip_cltk_metadata(entry: dict) -> None:
+    if entry.get("source") != "cltk":
+        return
+    metadata = entry.get("metadata")
+    if isinstance(metadata, dict) and "lewis_1890_lines" in metadata:
+        new_meta = dict(metadata)
+        new_meta.pop("lewis_1890_lines", None)
+        entry["metadata"] = new_meta
+
+
 def _simplify_table_output(result: dict | list) -> dict | list:
     """Trim obviously duplicate payload for human display (table mode only)."""
-    entries: list | None
-    if isinstance(result, list):
-        entries = result
-    elif isinstance(result, dict):
-        entries = result.get("entries")
-    else:
-        return result
-    if not isinstance(entries, list):
+    entries = _extract_entry_list(result)
+    if entries is None:
         return result
 
     for entry in entries:
         if not isinstance(entry, dict):
             continue
 
-        defs = entry.get("definitions") or []
-        norm_defs = {
-            _normalize_entry_text(d.get("definition", ""))
-            for d in defs
-            if isinstance(d, dict) and d.get("definition")
-        }
-
-        blocks = entry.get("dictionary_blocks")
-        if isinstance(blocks, list):
-            filtered_blocks = []
-            for block in blocks:
-                if not isinstance(block, dict):
-                    filtered_blocks.append(block)
-                    continue
-                norm_block = _normalize_entry_text(block.get("entry", ""))
-                if norm_block in norm_defs:
-                    continue
-                filtered_blocks.append(block)
-            entry["dictionary_blocks"] = filtered_blocks
-
-        if entry.get("source") == "cltk":
-            metadata = entry.get("metadata")
-            if isinstance(metadata, dict) and "lewis_1890_lines" in metadata:
-                new_meta = dict(metadata)
-                new_meta.pop("lewis_1890_lines", None)
-                entry["metadata"] = new_meta
+        norm_defs = _normalized_definitions(entry)
+        _prune_duplicate_blocks(entry, norm_defs)
+        _strip_cltk_metadata(entry)
 
     return result
 
@@ -938,7 +954,7 @@ def indexer():
 )
 @click.option("--force", is_flag=True, help="Force rebuild even if index exists")
 @click.option("--config-dir", type=click.Path(), help="Configuration directory")
-def build_cts_index(
+def build_cts_index(  # noqa: PLR0913 - CLI signature needs explicit options
     perseus_dir: str,
     output: str | None,
     wipe: bool,

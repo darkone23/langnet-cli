@@ -223,7 +223,7 @@ class Frequency(Enum):
     INSCRIPTION = "I"  # Only found in inscriptions
     UNKNOWN = "X"
 
-    @staticmethod
+    @classmethod
     def from_code(cls, code: str):
         # Handle cases where code might be None or whitespace
         if not code or code.strip() == "":
@@ -245,7 +245,7 @@ class LatinAge(Enum):
     GENERAL = "X"  # Used throughout ages
     UNKNOWN = "UNKNOWN"
 
-    @staticmethod
+    @classmethod
     def from_code(cls, code: str):
         if not code:
             return cls.UNKNOWN
@@ -267,7 +267,7 @@ class PartOfSpeech(Enum):
     PRONOUN = "PRON"
     UNKNOWN = "UNKNOWN"
 
-    @staticmethod
+    @classmethod
     def from_code(cls, code: str):
         if not code:
             return cls.UNKNOWN
@@ -323,28 +323,27 @@ def enrich_codeline_data(data: dict) -> dict:
     Returns a NEW CodelineData object with readable English strings
     substituted for the raw Whitaker's codes.
     """
-    # Create a shallow copy so we don't mutate the original object in place
-    # (Good practice to avoid side effects)
-    # new_data = dataclasses.replace(data)
     new_data = data.copy()
-    # asdict(data)
+    _enrich_frequency_field(new_data)
+    _enrich_age_field(new_data)
+    _enrich_source_field(new_data)
+    raw_pos_code = _enrich_pos_code_field(new_data)
+    _enrich_pos_form_field(new_data, raw_pos_code)
+    return new_data
 
-    # print("before xform")
-    # print(new_data)
 
-    # 1. Enrich Frequency
+def _enrich_frequency_field(new_data: dict) -> None:
     raw_freq = new_data.get("freq", "").strip().upper()
     if raw_freq and _external_enums and "Frequency" in _external_enums:
         try:
             freq_enum = _external_enums["Frequency"]
             freq_value = freq_enum[raw_freq]
             new_data["freq"] = freq_value.value
+            return
         except KeyError:
-            # If code not in enum, keep original
             pass
-    elif raw_freq:
-        # Fallback mapping
-        FREQ_MAP_FALLBACK = {
+    if raw_freq:
+        freq_map_fallback = {
             "A": "Very Frequent",
             "B": "Frequent",
             "C": "Common",
@@ -355,21 +354,21 @@ def enrich_codeline_data(data: dict) -> dict:
             "M": "Graffiti",
             "N": "Plinius",
         }
-        new_data["freq"] = FREQ_MAP_FALLBACK.get(raw_freq, raw_freq)
+        new_data["freq"] = freq_map_fallback.get(raw_freq, raw_freq)
 
-    # 2. Enrich Age
+
+def _enrich_age_field(new_data: dict) -> None:
     raw_age = new_data.get("age", "").strip().upper()
     if raw_age and _external_enums and "Age" in _external_enums:
         try:
             age_enum = _external_enums["Age"]
             age_value = age_enum[raw_age]
             new_data["age"] = age_value.value
+            return
         except KeyError:
-            # If code not in enum, keep original
             pass
-    elif raw_age:
-        # Fallback mapping
-        AGE_MAP_FALLBACK = {
+    if raw_age:
+        age_map_fallback = {
             "A": "Archaic",
             "B": "Early",
             "C": "Classical",
@@ -380,21 +379,21 @@ def enrich_codeline_data(data: dict) -> dict:
             "H": "Modern",
             "X": "DEFAULT",
         }
-        new_data["age"] = AGE_MAP_FALLBACK.get(raw_age, raw_age)
+        new_data["age"] = age_map_fallback.get(raw_age, raw_age)
 
-    # 3. Enrich Source
+
+def _enrich_source_field(new_data: dict) -> None:
     raw_source = new_data.get("source", "").strip().upper()
     if raw_source and _external_enums and "Source" in _external_enums:
         try:
             source_enum = _external_enums["Source"]
             source_value = source_enum[raw_source]
             new_data["source"] = source_value.value
+            return
         except KeyError:
-            # If code not in enum, keep original
             pass
-    elif raw_source:
-        # Create fallback mapping if external enums not available
-        SOURCE_MAP_FALLBACK = {
+    if raw_source:
+        source_map_fallback = {
             "A": "Unused 1",
             "B": "C.H.Beeson, A Primer of Medieval Latin, 1925 (Bee)",
             "C": "Charles Beard, Cassell's Latin Dictionary 1892 (CAS)",
@@ -422,67 +421,40 @@ def enrich_codeline_data(data: dict) -> dict:
             "Y": "Temp special code",
             "Z": "Sent by user",
         }
-        new_data["source"] = SOURCE_MAP_FALLBACK.get(raw_source, raw_source)
+        new_data["source"] = source_map_fallback.get(raw_source, raw_source)
 
-    # 4. Enrich Part of Speech (POS)
-    # We need to remember the RAW code for contextual parsing
+
+def _enrich_pos_code_field(new_data: dict) -> str:
     raw_pos_code = new_data.get("pos_code", "").strip().upper()
-    enriched_pos_code = None
-
     if raw_pos_code:
-        code = PartOfSpeech.from_code(PartOfSpeech, raw_pos_code)
+        code = PartOfSpeech.from_code(raw_pos_code)
         if isinstance(code, PartOfSpeech):
-            enriched_pos_code = POS_MAP.get(code.value, raw_pos_code)
-            new_data["pos_code"] = enriched_pos_code
+            new_data["pos_code"] = POS_MAP.get(code.value, raw_pos_code)
+    return raw_pos_code
 
-    # 5. Enrich 'pos_form' based on what the POS was
-    # Whitaker's reuses this field (Gender for Nouns, Conjugation for Verbs, Case for Prepositions)
+
+def _enrich_pos_form_field(new_data: dict, raw_pos_code: str) -> None:
     raw_pos_form = new_data.get("pos_form", "").strip().upper()
-
-    if raw_pos_form and raw_pos_code:
-        form = raw_pos_form
-
-        if raw_pos_code == "N":  # Noun - Form is GENDER
-            new_data["pos_form"] = GENDER_MAP.get(form, form)
-
-        elif raw_pos_code == "V":  # Verb - Form is CONJUGATION
-            new_data["pos_form"] = f"{form} Conjugation"
-
-        elif raw_pos_code == "ADJ":  # Adjective - Form could be DECLENSION or COMPARISON
-            # Check if form is a comparison degree (COMP/SUPER/POS)
-            if form in DEGREE_MAP:
-                new_data["pos_form"] = DEGREE_MAP.get(form, form)
-            else:
-                # Otherwise it's a declension number
-                new_data["pos_form"] = f"{form} Declension"
-
-        elif raw_pos_code == "ADV":  # Adverb - Form is COMPARISON
-            # ADJ, ADV, and some others use comparison codes
-            new_data["pos_form"] = DEGREE_MAP.get(form, form)
-
-        elif raw_pos_code == "PREP":  # Preposition - Form is CASE
-            new_data["pos_form"] = CASE_MAP.get(form, form)
-
-        elif raw_pos_code == "PRON":  # Pronoun - Form could be TYPE or DECLENSION
-            # Check if form is a pronoun type (PERS, REFLEX, DEMONS, etc.)
-            if form in PRONOUN_TYPE_MAP:
-                new_data["pos_form"] = PRONOUN_TYPE_MAP.get(form, form)
-            else:
-                # Otherwise it's a declension number
-                new_data["pos_form"] = f"{form} Declension"
-
-        elif raw_pos_code == "NUM":  # Numeral - Form could be TYPE or DECLENSION
-            # Check if form is a numeral type (CARD, ORD, DIST, ADVERB)
-            if form in NUMERAL_TYPE_MAP:
-                new_data["pos_form"] = NUMERAL_TYPE_MAP.get(form, form)
-            else:
-                # Otherwise it's a declension number
-                new_data["pos_form"] = f"{form} Declension"
-
-        elif raw_pos_code == "CONJ" or raw_pos_code == "INTERJ":  # Conjunction - Usually no form
-            new_data["pos_form"] = None
-
-    return new_data
+    if not (raw_pos_form and raw_pos_code):
+        return
+    form = raw_pos_form
+    if raw_pos_code == "N":
+        new_data["pos_form"] = GENDER_MAP.get(form, form)
+    elif raw_pos_code == "V":
+        new_data["pos_form"] = f"{form} Conjugation"
+    elif raw_pos_code == "ADJ":
+        comparison = DEGREE_MAP.get(form)
+        new_data["pos_form"] = comparison if comparison else f"{form} Declension"
+    elif raw_pos_code == "ADV":
+        new_data["pos_form"] = DEGREE_MAP.get(form, form)
+    elif raw_pos_code == "PREP":
+        new_data["pos_form"] = CASE_MAP.get(form, form)
+    elif raw_pos_code == "PRON":
+        new_data["pos_form"] = PRONOUN_TYPE_MAP.get(form, f"{form} Declension")
+    elif raw_pos_code == "NUM":
+        new_data["pos_form"] = NUMERAL_TYPE_MAP.get(form, f"{form} Declension")
+    elif raw_pos_code in {"CONJ", "INTERJ"}:
+        new_data["pos_form"] = None
 
 
 def _enrich_term_data(data: dict) -> dict:

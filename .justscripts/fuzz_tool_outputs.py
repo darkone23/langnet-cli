@@ -47,7 +47,9 @@ TOOL_CATALOG: dict = {
             "morphology": {"langs": ["san"], "default_words": {"san": ["agni", "yoga"]}},
             "canonical": {
                 "langs": ["san"],
-                "default_words": {"san": ["agnii", "agnim", "agnina", "agni", "veda", "krishna", "shiva"]},
+                "default_words": {
+                    "san": ["agnii", "agnim", "agnina", "agni", "veda", "krishna", "shiva"]
+                },
             },
             # "lemmatize": {
             #     "langs": ["san"],
@@ -283,7 +285,11 @@ def _run_target(target: FuzzTarget, mode: FuzzMode, validate: bool) -> FuzzResul
             unified_summary = _summarize_raw({"entries": entries})
             unified_ok = bool(entries) or target.allow_empty or not validate
             unified_sources = sorted(
-                {entry.get("source") for entry in entries if entry.get("source")}
+                {
+                    src
+                    for src in (entry.get("source") for entry in entries if isinstance(entry, dict))
+                    if isinstance(src, str)
+                }
             )
             source_present = target.tool in unified_sources
             if target.compare_optional and not source_present:
@@ -362,6 +368,53 @@ def _save_results(save_path: Path, results: list[FuzzResult]) -> None:
     print(f"Saved {len(results)} per-target results to {save_path}/ (summary.json)")
 
 
+def _parse_word_override(words: str | None) -> list[str] | None:
+    if not words:
+        return None
+    return [w.strip() for w in words.split(",") if w.strip()]
+
+
+def _build_status_parts(result: FuzzResult, target: FuzzTarget, mode: str) -> list[str]:
+    status_parts = [f"{target.tool}:{target.action}:{target.lang}:{target.word}"]
+    if mode in ("tool", "compare"):
+        if result.tool_ok:
+            status_parts.append("tool=ok")
+        elif result.tool_ok is False:
+            error_detail = f" ({result.tool_error})" if result.tool_error else ""
+            status_parts.append(f"tool=error{error_detail}")
+        else:
+            status_parts.append("tool=skip")
+
+    if mode in ("query", "compare"):
+        if result.unified_error is not None:
+            status_parts.append(f"query=error ({result.unified_error})")
+        elif result.source_present is True:
+            status_parts.append("query=has-source")
+        elif result.source_present is False and target.compare_optional:
+            status_parts.append("query=optional-missing")
+        elif result.source_present is False:
+            status_parts.append("query=missing")
+        elif result.unified_ok:
+            status_parts.append("query=ok")
+        else:
+            status_parts.append("query=skip")
+    return status_parts
+
+
+def _collect_failures(results: list[FuzzResult], mode: str) -> list[FuzzResult]:
+    failures: list[FuzzResult] = []
+    for result in results:
+        if mode in ("tool", "compare") and result.tool_ok is False:
+            failures.append(result)
+            continue
+        if mode in ("query", "compare") and result.unified_error:
+            failures.append(result)
+            continue
+        if mode == "query" and result.unified_ok is False:
+            failures.append(result)
+    return failures
+
+
 def run_from_args(argv: list[str]) -> int:
     """Entry point callable from scripts or CLI."""
     args = _parse_args(argv)
@@ -370,10 +423,7 @@ def run_from_args(argv: list[str]) -> int:
         _print_catalog()
         return 0
 
-    word_override = None
-    if args.words:
-        word_override = [w.strip() for w in args.words.split(",") if w.strip()]
-
+    word_override = _parse_word_override(args.words)
     targets = list(_iter_targets(args.tool, args.action, args.lang, word_override))
     if not targets:
         print("No targets matched the provided filters. Use --list to see options.")
@@ -383,32 +433,7 @@ def run_from_args(argv: list[str]) -> int:
     for target in targets:
         result = _run_target(target, mode=args.mode, validate=args.validate)
         results.append(result)
-        status_parts = [f"{target.tool}:{target.action}:{target.lang}:{target.word}"]
-
-        if args.mode in ("tool", "compare"):
-            if result.tool_ok:
-                status_parts.append("tool=ok")
-            elif result.tool_ok is False:
-                status_parts.append(
-                    f"tool=error{'' if not result.tool_error else f' ({result.tool_error})'}"
-                )
-            else:
-                status_parts.append("tool=skip")
-
-        if args.mode in ("query", "compare"):
-            if result.unified_error is not None:
-                status_parts.append(f"query=error ({result.unified_error})")
-            elif result.source_present is True:
-                status_parts.append("query=has-source")
-            elif result.source_present is False and target.compare_optional:
-                status_parts.append("query=optional-missing")
-            elif result.source_present is False:
-                status_parts.append("query=missing")
-            elif result.unified_ok:
-                status_parts.append("query=ok")
-            else:
-                status_parts.append("query=skip")
-
+        status_parts = _build_status_parts(result, target, args.mode)
         print(" -> ".join(status_parts))
 
     if args.save is not None:
@@ -418,17 +443,7 @@ def run_from_args(argv: list[str]) -> int:
     if not args.validate:
         return 0
 
-    failures: list[FuzzResult] = []
-    for r in results:
-        if args.mode in ("tool", "compare") and r.tool_ok is False:
-            failures.append(r)
-            continue
-        if args.mode in ("query", "compare") and r.unified_error:
-            failures.append(r)
-            continue
-        if args.mode == "query" and r.unified_ok is False:
-            failures.append(r)
-
+    failures = _collect_failures(results, args.mode)
     return 1 if failures else 0
 
 

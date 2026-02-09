@@ -1,5 +1,6 @@
 import re
-from typing import Any
+from collections.abc import Callable
+from typing import TypedDict
 
 from indic_transliteration.sanscript import (
     DEVANAGARI,
@@ -10,6 +11,29 @@ from indic_transliteration.sanscript import (
     WX,
     transliterate,
 )
+
+from langnet.types import JSONMapping
+
+
+class HeritageLookup(TypedDict):
+    iast: str
+    slp1: str
+    cdsl_key: str
+    cdsl_query: str
+    pos: str
+
+
+class HeritagePOSResult(TypedDict):
+    heritage_response_text: str
+    extracted_headwords_pos: list[tuple[str, str]]
+    headwords_only: list[str]
+    pos_info: dict[str, str]
+    cdsl_lookups: list[HeritageLookup]
+
+
+class HeritageErrorResult(TypedDict):
+    error: str
+
 
 # Try to import indic_transliteration library
 try:
@@ -22,7 +46,7 @@ try:
     WX_AVAILABLE = WX
 except ImportError:
     HAS_INDIC_TRANSLIT = False
-    transliterate: Any | None = None
+    transliterate: Callable[[str, str, str], str] | None = None
     DEVANAGARI_AVAILABLE = None
     VELTHUIS_AVAILABLE = None
     ITRANS_AVAILABLE = None
@@ -471,9 +495,9 @@ class HeritageCdslBridge:
     def __init__(self):
         self.encoding_service = EncodingService()
 
-    def search_heritage_and_lookup_cdsl(self, query: str, lexicon: str = "MW") -> dict[str, Any]:
+    def search_heritage_and_lookup_cdsl(self, query: str, lexicon: str = "MW") -> JSONMapping:
         """Search Heritage Platform and lookup results in CDSL"""
-        results = {
+        results: JSONMapping = {
             "query": query,
             "heritage_search": None,
             "cdsl_lookup": None,
@@ -516,7 +540,9 @@ class HeritageCdslBridge:
 
         return results
 
-    def process_heritage_response_for_cdsl(self, heritage_response_text: str) -> dict[str, Any]:
+    def process_heritage_response_for_cdsl(
+        self, heritage_response_text: str
+    ) -> HeritagePOSResult | HeritageErrorResult:
         """Process Heritage Platform response and convert headwords for CDSL lookup"""
         try:
             # Extract headwords and POS from Heritage response
@@ -536,11 +562,14 @@ class HeritageCdslBridge:
                     headword = simple_matches[0]
                     matches = [(headword, "unknown")]
                 else:
-                    return {"error": "No headwords found in Heritage response"}
+                    error_result: HeritageErrorResult = {
+                        "error": "No headwords found in Heritage response"
+                    }
+                    return error_result
 
             # Convert each headword to SLP1 for CDSL lookup
-            cdsl_lookups = []
-            pos_info = {}
+            cdsl_lookups: list[HeritageLookup] = []
+            pos_info: dict[str, str] = {}
 
             for headword, pos in matches:
                 # Clean up POS (remove extra spaces)
@@ -568,13 +597,15 @@ class HeritageCdslBridge:
                 # Store POS info
                 pos_info[headword] = pos_clean
 
-            return {
+            success_result: HeritagePOSResult = {
                 "heritage_response_text": heritage_response_text,
                 "extracted_headwords_pos": matches,
                 "headwords_only": [headword for headword, _ in matches],
                 "pos_info": pos_info,
                 "cdsl_lookups": cdsl_lookups,
             }
+            return success_result
 
         except Exception as e:
-            return {"error": str(e)}
+            error_result: HeritageErrorResult = {"error": str(e)}
+            return error_result

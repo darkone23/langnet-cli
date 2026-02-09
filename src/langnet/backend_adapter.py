@@ -11,4 +11,3 @@ from langnet.adapters import (  # noqa: F401
     WhitakersBackendAdapter,
 )
 from langnet.adapters.registry import CompositeAdapter, LanguageAdapterRegistry  # noqa: F401
-

@@ -392,7 +392,7 @@ class AuthTabParser:
 
                 if lang and lang in self.LANGUAGE_CODES:
                     lang_code = lang
-                elif lang:  # Any remaining lang code might be genre info
+                elif lang:  # Remaining lang code might be genre info
                     # Check if it looks like a genre
                     genre_patterns = [
                         "Hist",

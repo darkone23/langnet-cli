@@ -88,6 +88,7 @@ class TestCanonicalQuery(unittest.TestCase):
         self.assertIn("testing", all_forms)
         self.assertEqual(len(all_forms), EXPECTED_ALTERNATE_COUNT)
 
+
 def test_validation_errors(self):
     """Test validation catches invalid inputs."""
     # Test alternate forms validation

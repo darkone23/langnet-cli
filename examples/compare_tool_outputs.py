@@ -8,16 +8,41 @@ detecting schema changes, and generating adapter fixes.
 import difflib
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Mapping, Optional, Sequence, TypedDict, cast
 
 import click
 import structlog
 from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
+from langnet.types import JSONMapping, JSONValue
 
 logger = structlog.get_logger(__name__)
 console = Console()
+
+
+class AdapterImpact(TypedDict):
+    high_impact: bool
+    medium_impact: bool
+    low_impact: bool
+    required_changes: list[str]
+
+
+class SchemaDriftError(TypedDict):
+    error: str
+
+
+class SchemaDrift(TypedDict):
+    tool: str
+    action: str
+    old_fixture: str
+    new_fixture: str
+    timestamp_old: float
+    timestamp_new: float
+    structural_changes: list[Mapping[str, Any]]
+    field_changes: list[Mapping[str, Any]]
+    breaking_changes: list[str]
+    adapter_impact: AdapterImpact
 
 
 class ToolOutputComparator:
@@ -26,7 +51,7 @@ class ToolOutputComparator:
     def __init__(self, fixture_dir: str = "tests/fixtures/raw_tool_outputs"):
         self.fixture_dir = Path(fixture_dir)
 
-    def compare_raw_to_unified(self, tool: str, action: str, word: str) -> Dict[str, Any]:
+    def compare_raw_to_unified(self, tool: str, action: str, word: str) -> JSONMapping:
         """Compare raw tool output with unified schema output for a specific word.
 
         Args:
@@ -65,7 +90,7 @@ class ToolOutputComparator:
 
         return comparison
 
-    def detect_schema_drift(self, tool: str, action: str) -> Dict[str, Any]:
+    def detect_schema_drift(self, tool: str, action: str) -> SchemaDrift | SchemaDriftError:
         """Detect schema changes between old and new fixture versions.
 
         Args:
@@ -79,7 +104,8 @@ class ToolOutputComparator:
         fixture_files = list(fixture_dir.glob(f"*_{action}*.json"))
 
         if len(fixture_files) < 2:
-            return {"error": "Need at least 2 fixture versions to detect drift"}
+            error_result: SchemaDriftError = {"error": "Need at least 2 fixture versions to detect drift"}
+            return error_result
 
         # Sort by modification time to get old and new versions
         fixture_files.sort(key=lambda x: x.stat().st_mtime)
@@ -92,22 +118,24 @@ class ToolOutputComparator:
         with open(new_fixture, "r", encoding="utf-8") as f:
             new_data = json.load(f)
 
-        drift = {
+        drift: SchemaDrift = {
             "tool": tool,
             "action": action,
             "old_fixture": old_fixture.name,
             "new_fixture": new_fixture.name,
             "timestamp_old": old_fixture.stat().st_mtime,
             "timestamp_new": new_fixture.stat().st_mtime,
-            "structural_changes": self._find_structural_changes(old_data, new_data),
-            "field_changes": self._find_field_changes(old_data, new_data),
+            "structural_changes": _as_list_of_mappings(self._find_structural_changes(old_data, new_data)),
+            "field_changes": _as_list_of_mappings(self._find_field_changes(old_data, new_data)),
             "breaking_changes": self._detect_breaking_changes(old_data, new_data),
             "adapter_impact": self._assess_adapter_impact(old_data, new_data),
         }
 
         return drift
 
-    def generate_adapter_fixes(self, tool: str, schema_changes: Dict[str, Any]) -> List[str]:
+    def generate_adapter_fixes(
+        self, tool: str, schema_changes: JSONMapping | SchemaDrift
+    ) -> list[str]:
         """Generate code suggestions for adapter fixes based on schema changes.
 
         Args:
@@ -119,38 +147,48 @@ class ToolOutputComparator:
         """
         fixes = []
 
-        if schema_changes.get("breaking_changes"):
+        breaking_changes = _as_list_of_str(schema_changes.get("breaking_changes"))  # type: ignore[arg-type]
+
+        if breaking_changes:
             fixes.append("# BREAKING DETECTED - Adapter needs major update")
             fixes.append("# Consider implementing a new adapter version")
 
-            for change in schema_changes["breaking_changes"]:
+            for change in breaking_changes:
                 fixes.append(f"# Breaking change: {change}")
 
-        if schema_changes.get("structural_changes"):
+        structural_changes = _as_list_of_mappings(schema_changes.get("structural_changes"))  # type: ignore[arg-type]
+
+        if structural_changes:
             fixes.append("# STRUCTURAL CHANGES DETECTED")
             fixes.append("# Update adapter mapping logic:")
 
-            for change in schema_changes["structural_changes"]:
-                if change["type"] == "field_renamed":
+            for change in structural_changes:
+                change_type = change.get("type")
+                if change_type == "field_renamed":
                     fixes.append(
-                        f"#  - Field '{change['old_path']}' renamed to '{change['new_path']}'"
+                        f"#  - Field '{change.get('old_path')}' renamed to '{change.get('new_path')}'"
                     )
-                elif change["type"] == "field_added":
-                    fixes.append(f"#  - New field '{change['path']}' added")
-                elif change["type"] == "field_removed":
-                    fixes.append(f"#  - Field '{change['path']}' removed")
+                elif change_type == "field_added":
+                    fixes.append(f"#  - New field '{change.get('path')}' added")
+                elif change_type == "field_removed":
+                    fixes.append(f"#  - Field '{change.get('path')}' removed")
 
-        if schema_changes.get("field_changes"):
+        field_changes = _as_list_of_mappings(schema_changes.get("field_changes"))  # type: ignore[arg-type]
+
+        if field_changes:
             fixes.append("# FIELD CHANGES DETECTED")
             fixes.append("# Update field extraction logic:")
 
-            for change in schema_changes["field_changes"]:
-                if change["type"] == "type_changed":
+            for change in field_changes:
+                change_type = change.get("type")
+                if change_type == "type_changed":
                     fixes.append(
-                        f"#  - Field '{change['path']}' type changed from {change['old_type']} to {change['new_type']}"
+                        f"#  - Field '{change.get('path')}' type changed from {change.get('old_type')} to {change.get('new_type')}"
                     )
-                elif change["type"] == "value_changed":
-                    fixes.append(f"#  - Field '{change['path']}' value changed significantly")
+                elif change_type == "value_changed":
+                    fixes.append(
+                        f"#  - Field '{change.get('path')}' value changed significantly"
+                    )
 
         return fixes
 
@@ -167,7 +205,7 @@ class ToolOutputComparator:
 
         return None
 
-    def _get_unified_output(self, tool: str, word: str) -> Optional[Dict[str, Any]]:
+    def _get_unified_output(self, tool: str, word: str) -> Optional[JSONMapping]:
         """Get unified schema output (mock implementation for now)."""
         # In real implementation, this would call the API
         # For now, return a mock structure
@@ -184,7 +222,7 @@ class ToolOutputComparator:
             "source": tool,
         }
 
-    def _analyze_structure(self, data: Any, path: str = "") -> Dict[str, Any]:
+    def _analyze_structure(self, data: JSONValue, path: str = "") -> JSONMapping:
         """Analyze JSON structure recursively."""
         if isinstance(data, dict):
             return {
@@ -210,7 +248,9 @@ class ToolOutputComparator:
                 "value": str(data)[:100] if str(data) else "empty",
             }
 
-    def _find_key_differences(self, raw: Any, unified: Any, path: str = "") -> List[Dict[str, Any]]:
+    def _find_key_differences(
+        self, raw: JSONValue, unified: JSONValue, path: str = ""
+    ) -> list[JSONMapping]:
         """Find key-level differences between raw and unified data."""
         differences = []
 
@@ -245,7 +285,7 @@ class ToolOutputComparator:
 
         return differences
 
-    def _find_missing_fields(self, raw: Any, unified: Any, path: str = "") -> List[str]:
+    def _find_missing_fields(self, raw: JSONValue, unified: JSONValue, path: str = "") -> list[str]:
         """Find fields present in unified but missing from raw."""
         missing = []
 
@@ -262,7 +302,7 @@ class ToolOutputComparator:
 
         return missing
 
-    def _find_extra_fields(self, raw: Any, unified: Any, path: str = "") -> List[str]:
+    def _find_extra_fields(self, raw: JSONValue, unified: JSONValue, path: str = "") -> list[str]:
         """Find fields present in raw but missing from unified."""
         extra = []
 
@@ -279,7 +319,7 @@ class ToolOutputComparator:
 
         return extra
 
-    def _generate_adapter_suggestions(self, raw: Any, unified: Any) -> List[str]:
+    def _generate_adapter_suggestions(self, raw: JSONValue, unified: JSONValue) -> list[str]:
         """Generate adapter improvement suggestions."""
         suggestions = []
 
@@ -299,7 +339,9 @@ class ToolOutputComparator:
 
         return suggestions
 
-    def _find_structural_changes(self, old: Any, new: Any, path: str = "") -> List[Dict[str, Any]]:
+    def _find_structural_changes(
+        self, old: JSONValue, new: JSONValue, path: str = ""
+    ) -> list[JSONMapping]:
         """Find structural changes between old and new data."""
         changes = []
 
@@ -337,7 +379,9 @@ class ToolOutputComparator:
 
         return changes
 
-    def _find_field_changes(self, old: Any, new: Any, path: str = "") -> List[Dict[str, Any]]:
+    def _find_field_changes(
+        self, old: JSONValue, new: JSONValue, path: str = ""
+    ) -> list[JSONMapping]:
         """Find field-level changes between old and new data."""
         changes = []
 
@@ -373,7 +417,7 @@ class ToolOutputComparator:
 
         return changes
 
-    def _detect_breaking_changes(self, old: Any, new: Any) -> List[str]:
+    def _detect_breaking_changes(self, old: JSONValue, new: JSONValue) -> list[str]:
         """Detect breaking changes that would break adapter compatibility."""
         breaking = []
 
@@ -396,9 +440,9 @@ class ToolOutputComparator:
 
         return breaking
 
-    def _assess_adapter_impact(self, old: Any, new: Any) -> Dict[str, Any]:
+    def _assess_adapter_impact(self, old: JSONValue, new: JSONValue) -> AdapterImpact:
         """Assess the impact of changes on existing adapters."""
-        impact: Dict[str, Any] = {
+        impact: AdapterImpact = {
             "high_impact": False,
             "medium_impact": False,
             "low_impact": False,
@@ -417,7 +461,7 @@ class ToolOutputComparator:
             impact["medium_impact"] = True
             impact["required_changes"].extend(
                 [
-                    change["path"]
+                    str(change.get("path", ""))
                     for change in structural_changes
                     if change["type"] in ["field_added", "field_removed"]
                 ]
@@ -428,7 +472,11 @@ class ToolOutputComparator:
         if field_changes:
             impact["low_impact"] = True
             impact["required_changes"].extend(
-                [change["path"] for change in field_changes if change["type"] == "value_changed"]
+                [
+                    str(change.get("path", ""))
+                    for change in field_changes
+                    if change["type"] == "value_changed"
+                ]
             )
 
         return impact
@@ -471,15 +519,25 @@ def compare_tool_outputs(tool: str, action: str, word: str, generate_fixes: bool
         # Detect schema drift for tool/action
         drift = comparator.detect_schema_drift(tool, action)
 
-        if "error" in drift:
+        if isinstance(drift, dict) and "error" in drift:
             click.echo(f"[red]Error: {drift['error']}[/]")
             return
 
+        if not isinstance(drift, dict):
+            click.echo("[red]Unexpected drift result[/]")
+            return
+
+        if "breaking_changes" not in drift or "structural_changes" not in drift or "field_changes" not in drift:
+            click.echo("[red]Schema drift payload missing expected keys[/]")
+            return
+
+        drift_payload: SchemaDrift = cast(SchemaDrift, drift)
+
         # Display drift analysis
-        _display_drift(drift, console)
+        _display_drift(drift_payload, console)
 
         if generate_fixes:
-            fixes = comparator.generate_adapter_fixes(tool, drift)
+            fixes = comparator.generate_adapter_fixes(tool, drift_payload)
             click.echo("\n[yellow]Adapter Fix Suggestions:[/]")
             for fix in fixes:
                 click.echo(f"  {fix}")
@@ -487,64 +545,92 @@ def compare_tool_outputs(tool: str, action: str, word: str, generate_fixes: bool
         # Save results to file if requested
         if output:
             with open(output, "w", encoding="utf-8") as f:
-                json.dump(drift, f, indent=2, ensure_ascii=False)
+                json.dump(drift_payload, f, indent=2, ensure_ascii=False)
             click.echo(f"[green]Results saved to: {output}[/]")
 
 
-def _display_comparison(result: Dict[str, Any], console: Console):
+def _display_comparison(result: JSONMapping, console: Console):
     """Display comparison results in a formatted way."""
-    console.print(f"[bold]Comparison: {result['tool']}/{result['action']} - {result['word']}[/]")
+    tool = str(result.get("tool", ""))
+    action = str(result.get("action", ""))
+    word = str(result.get("word", ""))
+    console.print(f"[bold]Comparison: {tool}/{action} - {word}[/]")
 
     # Display key differences
-    if result.get("key_differences"):
+    key_differences = _as_list_of_mappings(result.get("key_differences"))
+    if key_differences:
         console.print("\n[yellow]Key Differences:[/]")
-        for diff in result["key_differences"]:
-            console.print(f"  • {diff['type']}: {diff['path']}")
+        for diff in key_differences:
+            diff_type = diff.get("type", "unknown")
+            path = diff.get("path", "")
+            console.print(f"  • {diff_type}: {path}")
 
     # Display missing fields
-    if result.get("missing_fields"):
+    missing_fields = _as_list_of_str(result.get("missing_fields"))
+    if missing_fields:
         console.print("\n[red]Missing Fields in Raw Output:[/]")
-        for field in result["missing_fields"]:
+        for field in missing_fields:
             console.print(f"  • {field}")
 
     # Display extra fields
-    if result.get("extra_fields"):
+    extra_fields = _as_list_of_str(result.get("extra_fields"))
+    if extra_fields:
         console.print("\n[blue]Extra Fields in Raw Output:[/]")
-        for field in result["extra_fields"]:
+        for field in extra_fields:
             console.print(f"  • {field}")
 
     # Display adapter suggestions
-    if result.get("adapter_suggestions"):
+    adapter_suggestions = _as_list_of_str(result.get("adapter_suggestions"))
+    if adapter_suggestions:
         console.print("\n[green]Adapter Suggestions:[/]")
-        for suggestion in result["adapter_suggestions"]:
+        for suggestion in adapter_suggestions:
             console.print(f"  • {suggestion}")
 
 
-def _display_drift(drift: Dict[str, Any], console: Console):
+def _display_drift(drift: SchemaDrift | SchemaDriftError, console: Console):
     """Display schema drift analysis."""
-    console.print(f"[bold]Schema Drift Analysis: {drift['tool']}/{drift['action']}[/]")
+    if isinstance(drift, dict) and "error" in drift:
+        console.print(f"[red]Error: {drift['error']}[/]")
+        return
+
+    tool = str(drift.get("tool", ""))
+    action = str(drift.get("action", ""))
+    console.print(f"[bold]Schema Drift Analysis: {tool}/{action}[/]")
 
     # Display file information
     console.print(f"\n[yellow]File Comparison:[/]")
-    console.print(f"  Old: {drift['old_fixture']} ({drift['timestamp_old']})")
-    console.print(f"  New: {drift['new_fixture']} ({drift['timestamp_new']})")
+    console.print(f"  Old: {drift.get('old_fixture')} ({drift.get('timestamp_old')})")
+    console.print(f"  New: {drift.get('new_fixture')} ({drift.get('timestamp_new')})")
 
     # Display breaking changes
-    if drift.get("breaking_changes"):
+    breaking_changes = _as_list_of_str(drift.get("breaking_changes"))
+    if breaking_changes:
         console.print(f"\n[red]Breaking Changes:[/]")
-        for change in drift["breaking_changes"]:
+        for change in breaking_changes:
             console.print(f"  • {change}")
 
     # Display adapter impact
     impact = drift.get("adapter_impact", {})
-    if impact:
+    if isinstance(impact, dict):
         console.print(f"\n[yellow]Adapter Impact:[/]")
-        if impact["high_impact"]:
+        if bool(impact.get("high_impact")):
             console.print("  🚨 High impact - immediate action required")
-        if impact["medium_impact"]:
+        if bool(impact.get("medium_impact")):
             console.print("  ⚠️  Medium impact - adapter updates needed")
-        if impact["low_impact"]:
+        if bool(impact.get("low_impact")):
             console.print("  📝 Low impact - minor adjustments required")
+
+
+def _as_list_of_str(value: JSONValue | object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if isinstance(item, (str, int, float, bool))]
+    return []
+
+
+def _as_list_of_mappings(value: JSONValue | object) -> list[Mapping[str, Any]]:
+    if isinstance(value, list):
+        return [cast(Mapping[str, Any], item) for item in value if isinstance(item, Mapping)]
+    return []
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ Tests for Sanskrit canonicalization and normalization.
 import os
 import sys
 import unittest
+from typing import cast
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -42,9 +43,12 @@ class TestSanskritCanonicalization(unittest.TestCase):
         result = normalizer.normalize("agni")
 
         self.assertEqual(result.canonical_text, "agnii")
-        self.assertTrue(any("agnI" == alt for alt in result.alternate_forms))
-        self.assertIsNotNone(result.enrichment_metadata)
-        self.assertEqual(result.enrichment_metadata.get("canonical_text"), "agnii")
+        self.assertTrue(any(alt == "agnI" for alt in result.alternate_forms))
+        metadata = result.enrichment_metadata
+        if metadata is None:
+            self.fail("Expected enrichment_metadata to be populated")
+        metadata_map = cast(dict[str, object], metadata)
+        self.assertEqual(metadata_map.get("canonical_text"), "agnii")
         self.assertIn("Canonical match", " ".join(result.normalization_notes))
 
     def test_sktsearch_canonicalization_and_slp1_vrika(self):
@@ -52,9 +56,12 @@ class TestSanskritCanonicalization(unittest.TestCase):
         result = normalizer.normalize("vrika")
 
         self.assertEqual(result.canonical_text, "v.rka")
-        self.assertTrue(any("vfka" == alt for alt in result.alternate_forms))
-        self.assertIsNotNone(result.enrichment_metadata)
-        self.assertEqual(result.enrichment_metadata.get("canonical_text"), "v.rka")
+        self.assertTrue(any(alt == "vfka" for alt in result.alternate_forms))
+        metadata = result.enrichment_metadata
+        if metadata is None:
+            self.fail("Expected enrichment_metadata to be populated")
+        metadata_map = cast(dict[str, object], metadata)
+        self.assertEqual(metadata_map.get("canonical_text"), "v.rka")
         self.assertIn("Canonical match", " ".join(result.normalization_notes))
 
     def test_iast_fallback_to_velthuis_when_sktsearch_empty(self):
@@ -64,4 +71,4 @@ class TestSanskritCanonicalization(unittest.TestCase):
 
         self.assertEqual(result.canonical_text, "agnii")
         # Should still provide an slp1 alternate even without Heritage help
-        self.assertTrue(any("agnI" == alt for alt in result.alternate_forms))
+        self.assertTrue(any(alt == "agnI" for alt in result.alternate_forms))

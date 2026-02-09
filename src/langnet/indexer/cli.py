@@ -124,7 +124,9 @@ def build_cts_urn(
             perseus = stats.get("perseus_count", "?")
             legacy = stats.get("legacy_count", "?")
             supplements = stats.get("supplement_count", "?")
-            click.echo(f"    Perseus: {perseus} | Legacy gaps: {legacy} | Supplemental: {supplements}")
+            click.echo(
+                f"    Perseus: {perseus} | Legacy gaps: {legacy} | Supplemental: {supplements}"
+            )
         else:
             click.echo("❌ Failed to build CTS URN index")
             return 1

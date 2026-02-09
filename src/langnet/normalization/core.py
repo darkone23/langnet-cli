@@ -5,6 +5,8 @@ Core normalization pipeline and abstract interfaces.
 import logging
 from abc import ABC, abstractmethod
 
+from langnet.types import JSONMapping
+
 from .models import CanonicalQuery, Encoding, Language
 
 logger = logging.getLogger(__name__)
@@ -21,8 +23,8 @@ class LanguageNormalizer(ABC):
         pass
 
     @abstractmethod
-    def to_canonical(self, text: str, source_encoding: str) -> str:
-        """Convert text to canonical form."""
+    def to_canonical(self, text: str, source_encoding: str) -> tuple[str, JSONMapping | None]:
+        """Convert text to canonical form with optional metadata."""
         pass
 
     @abstractmethod
@@ -64,21 +66,21 @@ class NormalizationPipeline:
 
             self.register_handler(Language.LATIN, LatinNormalizer())
         except Exception as exc:  # noqa: BLE001
-            logger.warning("latin_normalizer_unavailable", error=str(exc))
+            logger.warning("latin_normalizer_unavailable: %s", exc)
 
         try:
             from langnet.normalization.greek import GreekNormalizer  # noqa: PLC0415
 
             self.register_handler(Language.GREEK, GreekNormalizer())
         except Exception as exc:  # noqa: BLE001
-            logger.warning("greek_normalizer_unavailable", error=str(exc))
+            logger.warning("greek_normalizer_unavailable: %s", exc)
 
         try:
             from langnet.normalization.sanskrit import SanskritNormalizer  # noqa: PLC0415
 
             self.register_handler(Language.SANSKRIT, SanskritNormalizer())
         except Exception as exc:  # noqa: BLE001
-            logger.warning("sanskrit_normalizer_unavailable", error=str(exc))
+            logger.warning("sanskrit_normalizer_unavailable: %s", exc)
 
         self._initialized = True
         logger.info("Normalization pipeline initialized")

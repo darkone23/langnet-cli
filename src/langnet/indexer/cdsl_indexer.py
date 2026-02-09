@@ -6,7 +6,8 @@ This indexer builds search indexes for CDSL Sanskrit dictionary data.
 
 import logging
 from pathlib import Path
-from typing import Any
+
+from langnet.types import JSONMapping
 
 from .core import IndexerBase, IndexStatus
 
@@ -16,10 +17,10 @@ logger = logging.getLogger(__name__)
 class CdslIndexer(IndexerBase):
     """CDSL dictionary search indexer."""
 
-    def __init__(self, output_path: Path, config: dict[str, Any] | None = None):
+    def __init__(self, output_path: Path, config: JSONMapping | None = None):
         super().__init__(output_path, config)
         self.source_dir = (
-            Path(config.get("source_dir", "/path/to/cdsl/data"))
+            Path(str(config.get("source_dir", "/path/to/cdsl/data")))
             if config
             else Path("/path/to/cdsl/data")
         )
@@ -36,7 +37,7 @@ class CdslIndexer(IndexerBase):
         logger.info("CDSL indexer validation not yet implemented")
         return False
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> JSONMapping:
         """Get CDSL index statistics."""
         return {
             "type": "cdsl",

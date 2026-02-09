@@ -8,9 +8,9 @@ or "grammar" (pure grammatical tags) to avoid over-expansion.
 
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
-import json
 from pathlib import Path
 from typing import Literal
 
@@ -42,8 +42,8 @@ def _parse_abbreviations_from_markdown() -> dict[str, dict[str, str]]:
     except Exception:
         return mapping
 
-    for line in content:
-        line = line.strip()
+    for raw_line in content:
+        line = raw_line.strip()
         if not line.startswith("**"):
             continue
         match = ABBR_LINE_RE.match(line)

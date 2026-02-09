@@ -6,9 +6,9 @@ across all language backends (Diogenes, CDSL, Heritage Platform, Whitaker's Word
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
 from enum import Enum
-from typing import Any
+
+from langnet.types import JSONMapping
 
 
 class CitationType(str, Enum):
@@ -110,7 +110,7 @@ class TextReference:
         # Fallback to original text
         return self.text
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> JSONMapping:
         """Convert to dictionary for serialization"""
         return {
             "type": self.type.value,
@@ -138,31 +138,56 @@ class TextReference:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "TextReference":
+    def from_dict(cls, data: JSONMapping) -> "TextReference":
         """Create from dictionary for deserialization"""
+        text_value = data.get("text")
+        text = text_value if isinstance(text_value, str) else str(text_value)
+        work_value = data.get("work")
+        author_value = data.get("author")
+        book_value = data.get("book")
+        chapter_value = data.get("chapter")
+        section_value = data.get("section")
+        line_value = data.get("line")
+        verse_value = data.get("verse")
+        page_value = data.get("page")
+        stanza_value = data.get("stanza")
+        canto_value = data.get("canto")
+        url_value = data.get("url")
+        cts_value = data.get("cts_urn")
+        doi_value = data.get("doi")
+        explanation_value = data.get("explanation")
+        context_value = data.get("context")
+        significance_value = data.get("significance")
+
         return cls(
-            type=CitationType(data["type"]),
-            text=data["text"],
-            work=data.get("work"),
-            author=data.get("author"),
-            book=data.get("book"),
-            chapter=data.get("chapter"),
-            section=data.get("section"),
-            line=data.get("line"),
-            verse=data.get("verse"),
-            page=data.get("page"),
-            stanza=data.get("stanza"),
-            canto=data.get("canto"),
+            type=CitationType(str(data["type"])),
+            text=text,
+            work=str(work_value) if work_value is not None else None,
+            author=str(author_value) if author_value is not None else None,
+            book=str(book_value) if book_value is not None else None,
+            chapter=str(chapter_value) if chapter_value is not None else None,
+            section=str(section_value) if section_value is not None else None,
+            line=str(line_value) if line_value is not None else None,
+            verse=str(verse_value) if verse_value is not None else None,
+            page=str(page_value) if page_value is not None else None,
+            stanza=str(stanza_value) if stanza_value is not None else None,
+            canto=str(canto_value) if canto_value is not None else None,
             numbering_system=NumberingSystem(data.get("numbering_system", "standard")),
-            edition=data.get("edition"),
-            version=data.get("version"),
-            language=data.get("language"),
-            url=data.get("url"),
-            cts_urn=data.get("cts_urn"),
-            doi=data.get("doi"),
-            explanation=data.get("explanation"),
-            context=data.get("context"),
-            significance=data.get("significance"),
+            edition=str(data["edition"])
+            if "edition" in data and data["edition"] is not None
+            else None,
+            version=str(data["version"])
+            if "version" in data and data["version"] is not None
+            else None,
+            language=str(data["language"])
+            if "language" in data and data["language"] is not None
+            else None,
+            url=str(url_value) if url_value is not None else None,
+            cts_urn=str(cts_value) if cts_value is not None else None,
+            doi=str(doi_value) if doi_value is not None else None,
+            explanation=str(explanation_value) if explanation_value is not None else None,
+            context=str(context_value) if context_value is not None else None,
+            significance=str(significance_value) if significance_value is not None else None,
         )
 
 
@@ -206,7 +231,7 @@ class Citation:
         """Get the primary text reference (first one)"""
         return self.references[0] if self.references else None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> JSONMapping:
         """Convert to dictionary for serialization"""
         return {
             "references": [ref.to_dict() for ref in self.references],
@@ -229,32 +254,38 @@ class Citation:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Citation":
+    def from_dict(cls, data: JSONMapping) -> "Citation":
         """Create from dictionary for deserialization"""
-        references = [TextReference.from_dict(ref) for ref in data.get("references", [])]
+        refs_raw = data.get("references")
+        references: list[TextReference] = []
+        if isinstance(refs_raw, list):
+            for ref in refs_raw:
+                if isinstance(ref, dict):
+                    references.append(TextReference.from_dict(ref))
+
+        def _optional_str(key: str) -> str | None:
+            value = data.get(key)
+            return value if isinstance(value, str) else None
 
         # created_at_str = data.get("created_at")
         # created_at = datetime.fromisoformat(created_at_str) if created_at_str else datetime.now()
 
-        updated_at_str = data.get("updated_at")
-        updated_at = datetime.fromisoformat(updated_at_str) if updated_at_str else None
-
         return cls(
             references=references,
-            abbreviation=data.get("abbreviation"),
-            full_name=data.get("full_name"),
-            short_title=data.get("short_title"),
-            description=data.get("description"),
-            date=data.get("date"),
-            publisher=data.get("publisher"),
-            place=data.get("place"),
-            author=data.get("author"),
-            editor=data.get("editor"),
-            source_language=data.get("source_language"),
-            target_language=data.get("target_language"),
-            relationship=data.get("relationship"),
+            abbreviation=_optional_str("abbreviation"),
+            full_name=_optional_str("full_name"),
+            short_title=_optional_str("short_title"),
+            description=_optional_str("description"),
+            date=_optional_str("date"),
+            publisher=_optional_str("publisher"),
+            place=_optional_str("place"),
+            author=_optional_str("author"),
+            editor=_optional_str("editor"),
+            source_language=_optional_str("source_language"),
+            target_language=_optional_str("target_language"),
+            relationship=_optional_str("relationship"),
             # confidence=data.get("confidence", 1.0),
-            importance=data.get("importance"),
+            importance=_optional_str("importance"),
             # created_at=created_at,
             # updated_at=updated_at,
         )

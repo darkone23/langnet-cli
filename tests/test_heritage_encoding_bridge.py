@@ -6,11 +6,16 @@ Test suite for Heritage Platform ↔ CDSL encoding bridge
 import os
 import sys
 import unittest
+from typing import cast
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from langnet.heritage.encoding_service import EncodingService, HeritageCdslBridge
+from langnet.heritage.encoding_service import (
+    EncodingService,
+    HeritageCdslBridge,
+    HeritagePOSResult,
+)
 
 
 class TestHeritageEncodingBridge(unittest.TestCase):
@@ -33,24 +38,50 @@ class TestHeritageEncodingBridge(unittest.TestCase):
             with self.subTest(query=query):
                 try:
                     result = self.bridge.search_heritage_and_lookup_cdsl(query, "MW")
+                    self.assertIsInstance(result, dict)
+                    result_map = cast(dict[str, object], result)
 
                     # Verify result structure
-                    self.assertIn("encoding_conversions", result)
-                    self.assertIn("heritage_search", result)
-                    self.assertIn("cdsl_lookup", result)
+                    self.assertIn("encoding_conversions", result_map)
+                    self.assertIn("heritage_search", result_map)
+                    self.assertIn("cdsl_lookup", result_map)
+                    self.assertIsInstance(result_map["encoding_conversions"], dict)
+                    self.assertIsInstance(result_map["heritage_search"], dict)
+                    self.assertIsInstance(result_map["cdsl_lookup"], dict)
 
                     # Verify encoding detection
-                    self.assertIn("detected_encoding", result["encoding_conversions"])
-                    self.assertTrue(len(result["encoding_conversions"]["detected_encoding"]) > 0)
+                    enc_obj = result_map.get("encoding_conversions")
+                    self.assertIsInstance(enc_obj, dict)
+                    enc = cast(dict[str, object], enc_obj)
+                    self.assertIn("detected_encoding", enc)
+                    detected_encoding = enc.get("detected_encoding")
+                    if not isinstance(detected_encoding, str):
+                        self.fail("detected_encoding should be a string")
+                    detected_encoding_str = cast(str, detected_encoding)
+                    self.assertTrue(len(detected_encoding_str) > 0)
 
                     # Verify Heritage search info
-                    self.assertIn("url", result["heritage_search"])
-                    self.assertTrue(len(result["heritage_search"]["url"]) > 0)
+                    heritage_search_obj = result_map.get("heritage_search")
+                    self.assertIsInstance(heritage_search_obj, dict)
+                    heritage_search = cast(dict[str, object], heritage_search_obj)
+                    self.assertIn("url", heritage_search)
+                    heritage_url = heritage_search.get("url")
+                    if not isinstance(heritage_url, str):
+                        self.fail("heritage_search.url should be a string")
+                    heritage_url_str = cast(str, heritage_url)
+                    self.assertTrue(len(heritage_url_str) > 0)
 
                     # Verify CDSL lookup info
-                    self.assertIn("slp1_key", result["cdsl_lookup"])
-                    self.assertIn("cdsl_query", result["cdsl_lookup"])
-                    self.assertTrue(len(result["cdsl_lookup"]["slp1_key"]) > 0)
+                    cdsl_lookup_obj = result_map.get("cdsl_lookup")
+                    self.assertIsInstance(cdsl_lookup_obj, dict)
+                    cdsl_lookup = cast(dict[str, object], cdsl_lookup_obj)
+                    self.assertIn("slp1_key", cdsl_lookup)
+                    self.assertIn("cdsl_query", cdsl_lookup)
+                    slp1_key = cdsl_lookup.get("slp1_key")
+                    if not isinstance(slp1_key, str):
+                        self.fail("cdsl_lookup.slp1_key should be a string")
+                    slp1_key_str = cast(str, slp1_key)
+                    self.assertTrue(len(slp1_key_str) > 0)
 
                 except Exception as e:
                     # For tests that require actual server, we allow exceptions
@@ -63,19 +94,21 @@ class TestHeritageEncodingBridge(unittest.TestCase):
 
         try:
             processed = self.bridge.process_heritage_response_for_cdsl(heritage_response)
+            self.assertNotIn("error", processed)
+            processed_result: HeritagePOSResult = processed  # type: ignore[assignment]
 
             # Verify basic structure
-            self.assertIn("extracted_headwords_pos", processed)
-            self.assertIn("cdsl_lookups", processed)
-            self.assertIn("headwords_only", processed)
+            self.assertIn("extracted_headwords_pos", processed_result)
+            self.assertIn("cdsl_lookups", processed_result)
+            self.assertIn("headwords_only", processed_result)
 
             # Verify headword extraction
-            self.assertEqual(len(processed["extracted_headwords_pos"]), 3)
-            self.assertEqual(processed["headwords_only"], ["jātu", "agni", "deva"])
+            self.assertEqual(len(processed_result["extracted_headwords_pos"]), 3)
+            self.assertEqual(processed_result["headwords_only"], ["jātu", "agni", "deva"])
 
             # Verify CDSL lookups
-            self.assertEqual(len(processed["cdsl_lookups"]), 3)
-            for lookup in processed["cdsl_lookups"]:
+            self.assertEqual(len(processed_result["cdsl_lookups"]), 3)
+            for lookup in processed_result["cdsl_lookups"]:
                 self.assertIn("iast", lookup)
                 self.assertIn("slp1", lookup)
                 self.assertIn("cdsl_query", lookup)
@@ -97,18 +130,23 @@ class TestHeritageEncodingBridge(unittest.TestCase):
             self.assertIn("encoding_conversions", result)
             self.assertIn("heritage_search", result)
             self.assertIn("cdsl_lookup", result)
+            self.assertIsInstance(result["encoding_conversions"], dict)
+            self.assertIsInstance(result["heritage_search"], dict)
+            self.assertIsInstance(result["cdsl_lookup"], dict)
 
             # Step 2: Simulate Heritage response
             heritage_result = "jātu [ Ind. ]"
             processed = self.bridge.process_heritage_response_for_cdsl(heritage_result)
+            self.assertNotIn("error", processed)
+            processed_result: HeritagePOSResult = processed  # type: ignore[assignment]
 
             # Verify processing
-            self.assertIn("extracted_headwords_pos", processed)
-            self.assertIn("cdsl_lookups", processed)
-            self.assertEqual(len(processed["extracted_headwords_pos"]), 1)
-            self.assertEqual(len(processed["cdsl_lookups"]), 1)
+            self.assertIn("extracted_headwords_pos", processed_result)
+            self.assertIn("cdsl_lookups", processed_result)
+            self.assertEqual(len(processed_result["extracted_headwords_pos"]), 1)
+            self.assertEqual(len(processed_result["cdsl_lookups"]), 1)
 
-            lookup = processed["cdsl_lookups"][0]
+            lookup = processed_result["cdsl_lookups"][0]
             self.assertIn("iast", lookup)
             self.assertIn("slp1", lookup)
             self.assertIn("cdsl_query", lookup)
@@ -135,17 +173,19 @@ class TestHeritageEncodingBridge(unittest.TestCase):
 
         # Step 5: Process response
         processed = self.bridge.process_heritage_response_for_cdsl(heritage_response)
+        self.assertNotIn("error", processed)
+        processed_result: HeritagePOSResult = processed  # type: ignore[assignment]
 
         # Verify results
-        self.assertIn("extracted_headwords_pos", processed)
-        self.assertEqual(len(processed["extracted_headwords_pos"]), 1)
-        self.assertEqual(processed["headwords_only"], ["agni"])
+        self.assertIn("extracted_headwords_pos", processed_result)
+        self.assertEqual(len(processed_result["extracted_headwords_pos"]), 1)
+        self.assertEqual(processed_result["headwords_only"], ["agni"])
 
         # Verify CDSL lookup structure
-        self.assertIn("cdsl_lookups", processed)
-        self.assertEqual(len(processed["cdsl_lookups"]), 1)
+        self.assertIn("cdsl_lookups", processed_result)
+        self.assertEqual(len(processed_result["cdsl_lookups"]), 1)
 
-        lookup = processed["cdsl_lookups"][0]
+        lookup = processed_result["cdsl_lookups"][0]
         self.assertIn("iast", lookup)
         self.assertIn("slp1", lookup)
         self.assertIn("cdsl_query", lookup)
@@ -196,8 +236,13 @@ class TestHeritageEncodingBridge(unittest.TestCase):
                     result = self.bridge.process_heritage_response_for_cdsl(invalid_input)
                     # Should return a dict, possibly with error key
                     self.assertIsInstance(result, dict)
-                    if "error" in result:
-                        self.assertIsInstance(result["error"], str)
+                    combined_result = cast(dict[str, object], result)
+                    if "error" in combined_result:
+                        err = combined_result["error"]
+                        self.assertIsInstance(err, str)
+                    else:
+                        pos_result = cast(HeritagePOSResult, combined_result)
+                        self.assertIn("extracted_headwords_pos", pos_result)
                 except Exception as e:
                     # Should handle exceptions gracefully
                     self.assertIsInstance(e, Exception)

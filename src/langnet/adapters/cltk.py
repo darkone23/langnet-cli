@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import structlog
 
-from langnet.schema import Citation, DictionaryDefinition, DictionaryEntry, MorphologyInfo
+from langnet.schema import DictionaryDefinition, DictionaryEntry, MorphFeatures, MorphologyInfo
 
-from .base import BaseBackendAdapter, DiogenesLanguages
+from .base import BaseBackendAdapter
 
 logger = structlog.get_logger(__name__)
 
@@ -17,20 +17,23 @@ class CLTKBackendAdapter(BaseBackendAdapter):
         if not isinstance(data, dict):
             return entries
 
-        # 1) Sanskrit/other CLTK pipelines may return a "results" list of morphology dicts
         if isinstance(data.get("results"), list):
-            for res in data["results"]:
-                entries.append(self._adapt_generic_result(res, language, word))
-            return [e for e in entries if e]
-
-        # 2) Latin Lewis & Short lookup (headword + dictionary lines)
-        if "lewis_1890_lines" in data:
+            entries.extend(
+                [
+                    entry
+                    for entry in (
+                        self._adapt_generic_result(res, language, word) for res in data["results"]
+                    )
+                    if entry
+                ]
+            )
+        elif "lewis_1890_lines" in data:
             lines = data.get("lewis_1890_lines") or []
             unique_lines: list[str] = []
             seen_lines: set[str] = set()
             for line in lines:
                 normalized = " ".join(str(line).split())
-                if normalized in seen_lines:
+                if not normalized or normalized in seen_lines:
                     continue
                 seen_lines.add(normalized)
                 unique_lines.append(line)
@@ -43,7 +46,9 @@ class CLTKBackendAdapter(BaseBackendAdapter):
                 )
                 for line in unique_lines
             ]
-            morph_features = {"ipa": data.get("ipa")} if data.get("ipa") else {}
+            morph_features: MorphFeatures = (
+                {"ipa": str(data.get("ipa"))} if data.get("ipa") is not None else {}
+            )
             morphology = MorphologyInfo(
                 lemma=headword,
                 pos="unknown",
@@ -56,46 +61,42 @@ class CLTKBackendAdapter(BaseBackendAdapter):
                     word=word,
                     definitions=definitions,
                     morphology=morphology,
-                    metadata=data,
+                    metadata={k: v for k, v in data.items() if k != "lewis_1890_lines"},
                 )
             )
-            return entries
-
-        # 3) Greek spaCy morphology result (or similar morphology-only payload)
-        if {"lemma", "pos", "morphological_features"} <= data.keys():
+        elif {"lemma", "pos", "morphological_features"} <= data.keys():
             features = data.get("morphological_features") or {}
             if not features and not (data.get("lemma") or data.get("pos")):
                 return entries
-            if not self._is_plausible_spacy_payload(data, features):
-                return entries
-            morphology = MorphologyInfo(
-                lemma=data.get("lemma") or word,
-                pos=data.get("pos") or "unknown",
-                features=features,
-            )
-            entries.append(
-                DictionaryEntry(
-                    source=data.get("source") or ("spacy" if language in {"grc", "grk"} else "cltk"),
-                    language=language,
-                    word=word,
-                    definitions=[],
-                    morphology=morphology,
-                    metadata=dict(data),
+            if self._is_plausible_spacy_payload(data, features):
+                morphology = MorphologyInfo(
+                    lemma=data.get("lemma") or word,
+                    pos=data.get("pos") or "unknown",
+                    features=features,
                 )
-            )
-            return entries
+                entries.append(
+                    DictionaryEntry(
+                        source=data.get("source")
+                        or ("spacy" if language in {"grc", "grk"} else "cltk"),
+                        language=language,
+                        word=word,
+                        definitions=[],
+                        morphology=morphology,
+                        metadata=dict(data),
+                    )
+                )
 
         return entries
 
     def _adapt_generic_result(self, res: dict, language: str, word: str) -> DictionaryEntry:
         headword = res.get("headword") or res.get("canonical_form") or word
-        morphology = res.get("morphology") or {}
+        morphology_raw = res.get("morphology") or {}
         morph_info = None
-        if isinstance(morphology, dict):
+        if isinstance(morphology_raw, dict):
             morph_info = MorphologyInfo(
                 lemma=headword,
-                pos=morphology.get("pos") or "unknown",
-                features=morphology,
+                pos=morphology_raw.get("pos") or "unknown",
+                features=self._stringify_features(morphology_raw),
             )
 
         definitions: list[DictionaryDefinition] = []
@@ -129,3 +130,12 @@ class CLTKBackendAdapter(BaseBackendAdapter):
             return any(key in features for key in ("Case", "Gender", "Number"))
         # Default: keep if there is at least some morphological signal
         return bool(features)
+
+    @staticmethod
+    def _stringify_features(features: dict) -> MorphFeatures:
+        clean: MorphFeatures = {}
+        for key, value in features.items():
+            if value is None:
+                continue
+            clean[str(key)] = str(value)
+        return clean

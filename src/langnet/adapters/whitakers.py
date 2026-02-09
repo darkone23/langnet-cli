@@ -6,7 +6,6 @@ from langnet.citation.cts_urn import CTSUrnMapper
 from langnet.foster.latin import (
     FOSTER_LATIN_CASES,
     FOSTER_LATIN_GENDERS,
-    FOSTER_LATIN_MISCELLANEOUS,
     FOSTER_LATIN_NUMBERS,
     FOSTER_LATIN_TENSES,
 )
@@ -137,9 +136,19 @@ class WhitakersBackendAdapter(BaseBackendAdapter):
         if cts_urns:
             mapper = CTSUrnMapper()
             for urn in cts_urns:
-                citation = mapper.convert_to_citation(urn)
-                if citation:
-                    citations.append(citation)
+                citation_meta = mapper.convert_to_citation(urn)
+                if citation_meta is None:
+                    continue
+                urn_value = citation_meta.get("urn")
+                author_value = citation_meta.get("author")
+                work_value = citation_meta.get("work")
+                citations.append(
+                    Citation(
+                        url=urn_value if isinstance(urn_value, str) else None,
+                        author=author_value if isinstance(author_value, str) else None,
+                        title=work_value if isinstance(work_value, str) else None,
+                    )
+                )
         return citations
 
     def _convert_foster_codes(self, entry: dict) -> dict:

@@ -5,15 +5,18 @@ Sanskrit normalization with Heritage Platform enrichment.
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import cast
 
 from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.encoding_service import EncodingService
+from langnet.types import JSONMapping
 
 from .core import LanguageNormalizer
 from .models import CanonicalQuery, Encoding, Language
 
 logger = logging.getLogger(__name__)
+MIN_TOKENS_FOR_CANONICAL = 2
+EXTENDED_ASCII_THRESHOLD = 127
 
 
 @dataclass
@@ -173,18 +176,22 @@ class SanskritNormalizer(LanguageNormalizer):
 
         return False
 
-    def to_canonical(self, text: str, source_encoding: str) -> tuple[str, dict[str, Any] | None]:
+    def to_canonical(self, text: str, source_encoding: str) -> tuple[str, JSONMapping | None]:
         """
         Convert Sanskrit text to canonical Velthuis using Heritage Platform lookup.
 
         Returns the canonical text and any metadata gathered during lookup.
         """
-        canonical_metadata: dict[str, Any] | None = None
+        canonical_metadata: JSONMapping | None = None
 
         try:
             lookup_text = text
             # Normalize non-ASCII scripts to Velthuis before hitting sktsearch.
-            if source_encoding not in {Encoding.ASCII.value, Encoding.VELTHUIS.value, Encoding.HK.value}:
+            if source_encoding not in {
+                Encoding.ASCII.value,
+                Encoding.VELTHUIS.value,
+                Encoding.HK.value,
+            }:
                 lookup_text = self._to_velthuis(text, source_encoding)
 
             if " " in lookup_text:
@@ -195,13 +202,13 @@ class SanskritNormalizer(LanguageNormalizer):
             canonical_result = self._canonical_via_sktsearch(lookup_text)
 
             if canonical_result and canonical_result.get("canonical_text"):
-                canonical_metadata = canonical_result
+                canonical_metadata = cast(JSONMapping, canonical_result)
                 return canonical_result["canonical_text"], canonical_metadata
 
             # Fallback: try fetch_canonical_sanskrit for MW entries
             fallback_result = self.heritage_client.fetch_canonical_sanskrit(lookup_text)
             if fallback_result["canonical_sanskrit"]:
-                canonical_metadata = fallback_result
+                canonical_metadata = cast(JSONMapping, fallback_result)
                 return fallback_result["canonical_sanskrit"], canonical_metadata
 
             # If Heritage lookup fails, use basic conversion logic
@@ -236,7 +243,7 @@ class SanskritNormalizer(LanguageNormalizer):
             logger.warning(f"Unknown encoding {source_encoding}, returning as-is")
             return sanitized.lower()
 
-    def _canonical_via_sktsearch(self, text: str) -> dict[str, Any] | None:
+    def _canonical_via_sktsearch(self, text: str) -> JSONMapping | None:
         """Hit sktsearch once to avoid duplicated lookups across code paths."""
         if not self.heritage_client:
             return None
@@ -244,28 +251,31 @@ class SanskritNormalizer(LanguageNormalizer):
         try:
             canonical_result = self.heritage_client.fetch_canonical_via_sktsearch(text)
             if canonical_result.get("canonical_text"):
-                return canonical_result
+                return cast(JSONMapping, canonical_result)
         except Exception as exc:  # noqa: BLE001
             logger.debug("sktsearch_canonical_failed for %s: %s", text, exc)
         return None
 
-    def _canonicalize_phrase_via_sktsearch(self, text: str) -> tuple[str | None, dict[str, Any] | None]:
+    def _canonicalize_phrase_via_sktsearch(
+        self, text: str
+    ) -> tuple[str | None, JSONMapping | None]:
         """
         When sktsearch cannot handle full phrases, try canonicalizing tokens individually.
         Returns joined canonical tokens when at least one token is enriched.
         """
         tokens = [tok for tok in re.split(r"\s+", text.strip()) if tok]
-        if len(tokens) < 2 or not self.heritage_client:
+        if len(tokens) < MIN_TOKENS_FOR_CANONICAL or not self.heritage_client:
             return None, None
 
         canonical_tokens: list[str] = []
-        token_meta: list[dict[str, Any]] = []
+        token_meta: list[JSONMapping] = []
         enriched = False
 
         for tok in tokens:
             tok_result = self._canonical_via_sktsearch(tok) or {}
-            canon_tok = tok_result.get("canonical_text") or tok
-            if tok_result.get("canonical_text"):
+            canon_value = tok_result.get("canonical_text")
+            canon_tok = str(canon_value) if canon_value is not None else tok
+            if canon_value:
                 enriched = True
             canonical_tokens.append(canon_tok)
             if tok_result:
@@ -288,7 +298,6 @@ class SanskritNormalizer(LanguageNormalizer):
             from indic_transliteration.sanscript import (  # noqa: PLC0415
                 DEVANAGARI,
                 HK,
-                ITRANS,
                 IAST,
                 SLP1,
                 VELTHUIS,
@@ -310,12 +319,17 @@ class SanskritNormalizer(LanguageNormalizer):
             logger.debug("velthuis_transliteration_failed: %s", exc)
             return text.lower()
 
-    def generate_alternates(self, canonical_text: str, source_encoding: str | None = None) -> list[str]:
+    def generate_alternates(
+        self, canonical_text: str, source_encoding: str | None = None
+    ) -> list[str]:
         """Generate alternate forms for different tools."""
         alternates = []
 
         encoding_for_variants = source_encoding or self.detect_encoding(canonical_text)
-        if encoding_for_variants in {Encoding.IAST.value, Encoding.DEVANAGARI.value} and canonical_text.isascii():
+        if (
+            encoding_for_variants in {Encoding.IAST.value, Encoding.DEVANAGARI.value}
+            and canonical_text.isascii()
+        ):
             encoding_for_variants = Encoding.VELTHUIS.value
 
         if canonical_text:
@@ -465,7 +479,7 @@ class SanskritNormalizer(LanguageNormalizer):
         if canonical_meta and canonical_meta.get("match_method"):
             notes.append(f"Canonical match: {canonical_meta.get('match_method')}")
 
-        enrichment_payload: dict[str, Any] | None = None
+        enrichment_payload: JSONMapping | None = None
         if canonical_meta or enrichment_metadata:
             enrichment_payload = {}
             if canonical_meta:
@@ -521,7 +535,7 @@ class SanskritNormalizer(LanguageNormalizer):
 
         return sanskrit_score >= MIN_SANSKRIT_CONFIDENCE
 
-    def _enrich_with_heritage(self, query: str) -> dict[str, Any] | None:
+    def _enrich_with_heritage(self, query: str) -> JSONMapping | None:
         """Enrich a bare ASCII query using Heritage Platform canonical lookup."""
         try:
             client = self.heritage_client
@@ -549,7 +563,7 @@ class SanskritNormalizer(LanguageNormalizer):
                 return enrichment
 
             # Fallback: try MW dictionary lookup
-            mw_result = client.fetch_canonical_sanskrit(query, lexicon="MW")
+            mw_result = client.fetch_canonical_sanskrit(query)
             if mw_result["canonical_sanskrit"]:
                 enrichment = {
                     "source": "heritage_mw",
@@ -586,11 +600,8 @@ class SanskritNormalizer(LanguageNormalizer):
         """
         variants: list[str] = []
         try:
-            from indic_transliteration.detect import detect  # noqa: PLC0415
             from indic_transliteration.sanscript import (  # noqa: PLC0415
                 DEVANAGARI,
-                HK,
-                ITRANS,
                 IAST,
                 SLP1,
                 VELTHUIS,
@@ -601,7 +612,9 @@ class SanskritNormalizer(LanguageNormalizer):
             src_scheme = VELTHUIS
             if source_encoding == Encoding.SLP1.value:
                 src_scheme = SLP1
-            elif source_encoding == Encoding.IAST.value and any(ord(c) > 127 for c in canonical_text):
+            elif source_encoding == Encoding.IAST.value and any(
+                ord(c) > EXTENDED_ASCII_THRESHOLD for c in canonical_text
+            ):
                 src_scheme = IAST
             elif source_encoding == Encoding.DEVANAGARI.value:
                 src_scheme = DEVANAGARI

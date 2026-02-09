@@ -4,9 +4,19 @@ Extracts structured text content for Lark parsing
 """
 
 import re
-from typing import Any
+from typing import TypedDict, cast
 
 from bs4 import BeautifulSoup
+
+from .types import MorphologyPattern, MorphologySegment, MorphologySolutionDict
+
+
+class _SolutionBlock(TypedDict):
+    number: int
+    patterns: list[tuple[str, str, str]]
+    color: str | None
+    raw_text: str
+    segments: list[MorphologySegment]
 
 
 class HeritageHTMLExtractor:
@@ -15,46 +25,50 @@ class HeritageHTMLExtractor:
     def __init__(self):
         self.pattern = r"\[([^\]]+)\]\{([^}]+)\}"
 
-    def extract_solutions(self, html_content: str) -> list[dict[str, Any]]:
+    def extract_solutions(self, html_content: str) -> list[MorphologySolutionDict]:
         """Extract solution data from HTML content using Heritage layout hints."""
         soup = BeautifulSoup(html_content, "html.parser")
 
         # Prefer explicit "Solution" sections when present
-        solutions: list[dict[str, Any]] = []
+        solutions: list[MorphologySolutionDict] = []
         for block in self._extract_solution_blocks(soup):
-            patterns = [{"word": w, "analysis": a} for w, a, _ in block["patterns"]]
-            solutions.append(
-                {
-                    "type": "morphological_analysis",
-                    "solution_number": block["number"],
-                    "patterns": patterns,
-                    "total_words": len(patterns),
-                    "score": 0.0,
-                    "metadata": {
-                        "color": block["color"],
-                        "raw_text": block["raw_text"],
-                    },
-                }
-            )
+            pattern_entries = block["patterns"]
+            pattern_dicts = [{"word": str(w), "analysis": str(a)} for w, a, _ in pattern_entries]
+            patterns = cast(list[MorphologyPattern], pattern_dicts)
+            solution: MorphologySolutionDict = {
+                "type": "morphological_analysis",
+                "solution_number": block["number"],
+                "patterns": patterns,
+                "total_words": len(patterns),
+                "score": 0.0,
+                "metadata": {
+                    "color": block["color"],
+                    "raw_text": block["raw_text"],
+                },
+            }
+            solutions.append(solution)
 
         # Fallback to loose table extraction if no solution markers were found
         if not solutions:
             loose_patterns = self._extract_loose_patterns(soup)
             if loose_patterns:
-                patterns = [{"word": w, "analysis": a} for w, a, _ in loose_patterns]
-                solutions.append(
-                    {
-                        "type": "morphological_analysis",
-                        "solution_number": 1,
-                        "patterns": patterns,
-                        "total_words": len(patterns),
-                        "score": 0.0,
-                        "metadata": {
-                            "color": None,
-                            "raw_text": "\n".join(raw for _, _, raw in loose_patterns),
-                        },
-                    }
-                )
+                pattern_entries = loose_patterns
+                pattern_dicts = [
+                    {"word": str(w), "analysis": str(a)} for w, a, _ in pattern_entries
+                ]
+                patterns = cast(list[MorphologyPattern], pattern_dicts)
+                loose_solution: MorphologySolutionDict = {
+                    "type": "morphological_analysis",
+                    "solution_number": 1,
+                    "patterns": patterns,
+                    "total_words": len(patterns),
+                    "score": 0.0,
+                    "metadata": {
+                        "color": None,
+                        "raw_text": "\n".join(raw for _, _, raw in loose_patterns),
+                    },
+                }
+                solutions.append(loose_solution)
 
         return solutions
 
@@ -69,7 +83,7 @@ class HeritageHTMLExtractor:
         else:
             return str(element)
 
-    def extract_metadata(self, html_content: str) -> dict[str, Any]:
+    def extract_metadata(self, html_content: str) -> dict[str, int | str]:
         """Extract metadata from HTML content"""
         soup = BeautifulSoup(html_content, "html.parser")
         all_text = soup.get_text()
@@ -136,9 +150,9 @@ class HeritageHTMLExtractor:
         lines.extend(f"[{word}]{{{analysis}}}" for word, analysis, _ in loose_patterns)
         return "\n".join(lines)
 
-    def _extract_solution_blocks(self, soup) -> list[dict[str, Any]]:
+    def _extract_solution_blocks(self, soup) -> list[_SolutionBlock]:
         """Return solution blocks with number, patterns, color class, and raw text."""
-        blocks: list[dict[str, Any]] = []
+        blocks: list[_SolutionBlock] = []
 
         for span in soup.find_all("span"):
             text = span.get_text()
@@ -180,28 +194,32 @@ class HeritageHTMLExtractor:
 
         return blocks
 
-    def _collect_segments(self, start_span, next_solution_span) -> list[dict[str, Any]]:
+    def _collect_segments(self, start_span, next_solution_span) -> list[MorphologySegment]:
         """Collect span text/class between current solution marker and the next one."""
-        segments: list[dict[str, Any]] = []
+        segments: list[MorphologySegment] = []
         current = start_span.next_sibling
         while current and current != next_solution_span:
             if getattr(current, "name", None) == "span":
                 segments.append(
                     {
-                        "class": (current.get("class") or [None])[0],
+                        "css_class": (current.get("class") or [None])[0],
                         "text": current.get_text(strip=True),
                     }
                 )
             current = current.next_sibling
         return segments
 
-    def _collect_inline_patterns(self, start_span, next_solution_span) -> list[tuple[str, str, str]]:
+    def _collect_inline_patterns(
+        self, start_span, next_solution_span
+    ) -> list[tuple[str, str, str]]:
         """Collect latin12 patterns between solution markers when no table exists."""
         patterns: list[tuple[str, str, str]] = []
         current = start_span.next_sibling
         seen: set[str] = set()
         while current and current != next_solution_span:
-            if getattr(current, "name", None) == "span" and "latin12" in (current.get("class") or []):
+            if getattr(current, "name", None) == "span" and "latin12" in (
+                current.get("class") or []
+            ):
                 span_text = current.get_text(strip=True)
                 match = re.search(self.pattern, span_text)
                 if match:
@@ -224,7 +242,7 @@ class HeritageHTMLExtractor:
         return None
 
     def _collect_patterns(self, container) -> list[tuple[str, str, str]]:
-        """Collect unique (word, analysis, raw_text) triples from latin12 spans within a container."""
+        """Collect (word, analysis, raw_text) triples from latin12 spans in a container."""
         if container is None:
             return []
 
@@ -308,7 +326,7 @@ def extract_heritage_text(html_content: str) -> str:
     return extractor.extract_plain_text(html_content)
 
 
-def extract_heritage_solutions(html_content: str) -> list[dict[str, Any]]:
+def extract_heritage_solutions(html_content: str) -> list[MorphologySolutionDict]:
     """Extract structured solutions from Heritage HTML"""
     extractor = HeritageHTMLExtractor()
     return extractor.extract_solutions(html_content)

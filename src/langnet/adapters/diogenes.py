@@ -1,13 +1,43 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import TypedDict, cast
+
 import structlog
 
 from langnet.citation.cts_urn import CTSUrnMapper
 from langnet.schema import DictionaryBlock, DictionaryDefinition, DictionaryEntry, MorphologyInfo
+from langnet.types import JSONMapping, JSONValue
 
-from .base import BaseBackendAdapter, DiogenesLanguages
+from .base import BaseBackendAdapter
 
 logger = structlog.get_logger(__name__)
+
+
+class _MergedAggregate(TypedDict):
+    definitions: list[DictionaryDefinition]
+    blocks: list[DictionaryBlock]
+    norm_index: dict[str, int]
+    chunk_types: set[str]
+    terms: set[str]
+
+
+@dataclass
+class _CollectionContext:
+    language: str
+    word: str
+    aggregated: dict[str, _MergedAggregate]
+    seen_blocks: set[tuple[str, str, str]]
+
+
+@dataclass
+class _BlockBuildContext:
+    entry_text: str
+    entry_id: str
+    citations: dict[str, str]
+    original_citations: dict[str, str]
+    citation_details: dict[str, dict[str, str]] | None
+    block_metadata: JSONMapping
 
 
 class DiogenesBackendAdapter(BaseBackendAdapter):
@@ -16,55 +46,84 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
     def __init__(self):
         self._cts_mapper = CTSUrnMapper()
 
-    def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
+    def adapt(self, data: dict[str, object], language: str, word: str) -> list[DictionaryEntry]:
         entries: list[DictionaryEntry] = []
         morphology = self._extract_perseus_morphology(data, word)
-        aggregated: dict[str, dict] = {
-            "merged": {
-                "definitions": [],
-                "blocks": [],
-                "norm_index": {},
-                "chunk_types": set(),
-                "terms": set(),
-            }
+        merged: _MergedAggregate = {
+            "definitions": [],
+            "blocks": [],
+            "norm_index": {},
+            "chunk_types": set(),
+            "terms": set(),
         }
+        aggregated: dict[str, _MergedAggregate] = {"merged": merged}
         seen_blocks: set[tuple[str, str, str]] = set()
         if morphology:
             aggregated["merged"]["chunk_types"].add("PerseusAnalysisHeader")
 
-        for chunk in data.get("chunks", []):
-            chunk_type = (
-                chunk.get("chunk_type")
-                or ("PerseusAnalysisHeader" if chunk.get("morphology") else None)
-                or ("DiogenesMatchingReference" if chunk.get("definitions") else None)
-            )
+        context = _CollectionContext(
+            language=language,
+            word=word,
+            aggregated=aggregated,
+            seen_blocks=seen_blocks,
+        )
+
+        chunks_raw = data.get("chunks")
+        if not isinstance(chunks_raw, list):
+            return entries
+
+        chunks: list[dict[str, object]] = [
+            cast(dict[str, object], c) for c in chunks_raw if isinstance(c, dict)
+        ]
+        for chunk in chunks:
+            chunk_type_val = chunk.get("chunk_type")
+            chunk_type: str | None = chunk_type_val if isinstance(chunk_type_val, str) else None
+            if not chunk_type:
+                if chunk.get("morphology"):
+                    chunk_type = "PerseusAnalysisHeader"
+                elif chunk.get("definitions"):
+                    chunk_type = "DiogenesMatchingReference"
             if chunk_type in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
                 self._collect_definition_chunk(
                     chunk,
-                    language,
-                    word,
-                    morphology,
                     chunk_type,
-                    aggregated,
-                    seen_blocks,
+                    context,
                 )
             else:
                 # Skip unknown/empty chunks to avoid placeholder entries
                 continue
 
         payload = aggregated["merged"]
+        # Preserve order: PerseusAnalysisHeader first, then DiogenesMatchingReference
+        chunk_types_list = []
+        if "PerseusAnalysisHeader" in payload["chunk_types"]:
+            chunk_types_list.append("PerseusAnalysisHeader")
+        if "DiogenesMatchingReference" in payload["chunk_types"]:
+            chunk_types_list.append("DiogenesMatchingReference")
+        if "DiogenesFuzzyReference" in payload["chunk_types"]:
+            chunk_types_list.append("DiogenesFuzzyReference")
+
+        # Preserve order: PerseusAnalysisHeader first, then DiogenesMatchingReference
+        chunk_types_list = []
+        if "PerseusAnalysisHeader" in payload["chunk_types"]:
+            chunk_types_list.append("PerseusAnalysisHeader")
+        if "DiogenesMatchingReference" in payload["chunk_types"]:
+            chunk_types_list.append("DiogenesMatchingReference")
+        if "DiogenesFuzzyReference" in payload["chunk_types"]:
+            chunk_types_list.append("DiogenesFuzzyReference")
+
         metadata = {
-            "chunk_types": sorted(payload["chunk_types"]),
+            "chunk_types": chunk_types_list,
             "terms": sorted(payload["terms"]) if payload["terms"] else None,
         }
 
-        if payload["definitions"] or payload["blocks"] or morphology:
+        if payload["blocks"] or morphology:
             entries.append(
                 DictionaryEntry(
                     source="diogenes",
                     language=language,
                     word=word,
-                    definitions=payload["definitions"],
+                    definitions=[],  # Don't duplicate block content in definitions
                     morphology=morphology,
                     metadata=metadata,
                     dictionary_blocks=payload["blocks"],
@@ -73,133 +132,221 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
 
         return entries
 
-    def _extract_perseus_morphology(self, data: dict, fallback_word: str) -> MorphologyInfo | None:
-        chunks = data.get("chunks", [])
+    def _extract_perseus_morphology(
+        self, data: dict[str, object], fallback_word: str
+    ) -> MorphologyInfo | None:
+        chunks_raw = data.get("chunks")
+        if not isinstance(chunks_raw, list):
+            return None
+        chunks: list[dict[str, object]] = [
+            cast(dict[str, object], c) for c in chunks_raw if isinstance(c, dict)
+        ]
         for chunk in chunks:
             has_morph = bool(chunk.get("morphology"))
             if chunk.get("chunk_type") == "PerseusAnalysisHeader" or has_morph:
-                morph = chunk.get("morphology", {})
-                morphs = morph.get("morphs") or []
+                morph_data = chunk.get("morphology", {})
+                if not isinstance(morph_data, dict):
+                    continue
+                morph: dict[str, object] = cast(dict[str, object], morph_data)
+                morphs_raw = morph.get("morphs")
+                morphs: list[dict[str, object]] = (
+                    [cast(dict[str, object], m) for m in morphs_raw if isinstance(m, dict)]
+                    if isinstance(morphs_raw, list)
+                    else []
+                )
                 if morphs:
                     first = morphs[0]
-                    tags = first.get("tags", [])
-                    lemma = first.get("stem", [fallback_word])
-                    lemma_text = lemma[0] if isinstance(lemma, list) and lemma else fallback_word
+                    tags_raw = first.get("tags")
+                    tags = [str(tag) for tag in tags_raw] if isinstance(tags_raw, list) else []
+                    lemma_raw = first.get("stem")
+                    lemma_candidates = lemma_raw if isinstance(lemma_raw, list) else None
+                    lemma_text = lemma_candidates[0] if lemma_candidates else fallback_word
+                    foster_codes = first.get("foster_codes")
+                    foster_clean: list[str] | dict[str, str] | None = None
+                    if isinstance(foster_codes, list):
+                        foster_clean = [str(code) for code in foster_codes]
+                    elif isinstance(foster_codes, dict):
+                        foster_clean = {str(k): str(v) for k, v in foster_codes.items()}
                     return MorphologyInfo(
                         lemma=lemma_text,
                         pos=tags[0] if tags else "unknown",
-                        features={"tags": tags, "raw": morphs},
-                        foster_codes=first.get("foster_codes"),
+                        features={
+                            "tags": tags,
+                            "raw": [self._normalize_morph_entry(m) for m in morphs],
+                        },
+                        foster_codes=foster_clean,
                     )
         return None
 
     def _collect_definition_chunk(
         self,
-        chunk: dict,
-        language: str,
-        word: str,
-        morphology: MorphologyInfo | None,
+        chunk: dict[str, object],
         chunk_type: str | None,
-        aggregated: dict[str, dict],
-        seen_blocks: set[tuple[str, str, str]],
+        context: _CollectionContext,
     ) -> None:
-        diogenes_definitions = chunk.get("definitions") or {}
-        term = diogenes_definitions.get("term") or word
-        blocks_data = diogenes_definitions.get("blocks") or []
+        diogenes_definitions_raw = chunk.get("definitions") or {}
+        if not isinstance(diogenes_definitions_raw, dict):
+            return
+        diogenes_definitions: dict[str, object] = cast(dict[str, object], diogenes_definitions_raw)
+        term_val = diogenes_definitions.get("term")
+        term = term_val if isinstance(term_val, str) else context.word
+        blocks_data_raw = diogenes_definitions.get("blocks") or []
+        if not isinstance(blocks_data_raw, list):
+            return
+        blocks_data: list[dict[str, object]] = [
+            cast(dict[str, object], block) for block in blocks_data_raw if isinstance(block, dict)
+        ]
 
         blocks: list[DictionaryBlock] = []
-        definitions: list[DictionaryDefinition] = []
-        merged = aggregated.get("merged")
+        merged = context.aggregated["merged"]
         norm_index: dict[str, int] = merged.get("norm_index", {})
 
         for block in blocks_data:
-            entry_text = block.get("entry") or term
+            entry_val = block.get("entry")
+            entry_text = entry_val if isinstance(entry_val, str) else term
             entry_id = str(block.get("entryid") or entry_text)
             block_key = (term, entry_id, entry_text)
-            if block_key in seen_blocks:
+            if self._already_seen_block(block_key, context.seen_blocks):
                 continue
-            seen_blocks.add(block_key)
             normalized_entry = " ".join(entry_text.split())
             existing_idx = norm_index.get(normalized_entry)
-            citations = block.get("citations") or {}
-            original_citations = block.get("original_citations") or {}
-            citation_details = self._enrich_citations(citations, language)
-            if original_citations == citations:
-                original_citations = {}
-            block_metadata = {}
-            if block.get("heading"):
-                block_metadata["heading"] = block["heading"]
-            if block.get("diogenes_warning"):
-                block_metadata["diogenes_warning"] = block["diogenes_warning"]
-            for meta_key in ("pos", "foster_codes", "source"):
-                if block.get(meta_key):
-                    block_metadata[meta_key] = block[meta_key]
-            if block.get("metadata"):
-                block_metadata.update(block["metadata"])
+
+            citations_raw = block.get("citations") or {}
+            citations = (
+                {str(k): str(v) for k, v in citations_raw.items()}
+                if isinstance(citations_raw, dict)
+                else {}
+            )
+            original_citations_raw = block.get("original_citations") or {}
+            original_citations = (
+                {str(k): str(v) for k, v in original_citations_raw.items()}
+                if isinstance(original_citations_raw, dict)
+                else {}
+            )
+            original_citations = self._strip_duplicate_originals(citations, original_citations)
+            citation_details = self._enrich_citations(citations, context.language)
+            block_metadata = self._build_block_metadata(block)
+            block_ctx = _BlockBuildContext(
+                entry_text=entry_text,
+                entry_id=entry_id,
+                citations=citations,
+                original_citations=original_citations,
+                citation_details=citation_details,
+                block_metadata=block_metadata,
+            )
 
             if existing_idx is not None:
-                # Merge citations/metadata into existing block/definition to avoid duplicates.
-                existing_block = merged["blocks"][existing_idx]
-                existing_block.citations = {**(existing_block.citations or {}), **citations}
-                existing_block.original_citations = {
-                    **(existing_block.original_citations or {}),
-                    **original_citations,
-                }
-                existing_block.citation_details = {
-                    **(existing_block.citation_details or {}),
-                    **(citation_details or {}),
-                }
-                if block_metadata:
-                    existing_block.metadata = {**(existing_block.metadata or {}), **block_metadata}
-
-                existing_def = merged["definitions"][existing_idx]
-                if isinstance(existing_def.metadata, dict):
-                    merged_md = existing_def.metadata
-                    merged_md["citations"] = {**(merged_md.get("citations") or {}), **citations}
-                    merged_md["citation_details"] = {
-                        **(merged_md.get("citation_details") or {}),
-                        **(citation_details or {}),
-                    }
-                    if block_metadata:
-                        merged_md["block_metadata"] = {
-                            **(merged_md.get("block_metadata") or {}),
-                            **block_metadata,
-                        }
-                    existing_def.metadata = merged_md
+                self._merge_existing_block(merged, existing_idx, block_ctx)
                 continue
 
-            blocks.append(
-                DictionaryBlock(
-                    entry=entry_text,
-                    entryid=entry_id,
-                    citations=citations,
-                    original_citations=original_citations,
-                    citation_details=citation_details or {},
-                    metadata=block_metadata,
-                )
-            )
-            definitions.append(
-                DictionaryDefinition(
-                    definition=entry_text,
-                    pos=self._extract_pos_from_entry(entry_text),
-                    metadata={
-                        "entryid": entry_id,
-                        "citations": citations or {},
-                        "citation_details": citation_details or {},
-                        "block_metadata": block_metadata or {},
-                    },
-                )
-            )
+            block_obj = self._create_block(block_ctx)
+            blocks.append(block_obj)
             norm_index[normalized_entry] = len(merged["blocks"]) + len(blocks) - 1
 
         merged.setdefault("norm_index", {})
-        merged["definitions"].extend(definitions)
         merged["blocks"].extend(blocks)
         if chunk_type:
             merged["chunk_types"].add(chunk_type)
-        term_value = term or word
+        term_value = term or context.word
         if term_value:
             merged["terms"].add(term_value)
+
+    @staticmethod
+    def _already_seen_block(
+        block_key: tuple[str, str, str],
+        seen_blocks: set[tuple[str, str, str]],
+    ) -> bool:
+        if block_key in seen_blocks:
+            return True
+        seen_blocks.add(block_key)
+        return False
+
+    @staticmethod
+    def _strip_duplicate_originals(
+        citations: dict[str, str], original_citations: dict[str, str]
+    ) -> dict[str, str]:
+        if original_citations == citations:
+            return {}
+        return original_citations
+
+    @staticmethod
+    def _build_block_metadata(
+        block: dict[str, object],
+    ) -> JSONMapping:
+        block_metadata: JSONMapping = {}
+        heading = block.get("heading")
+        if heading:
+            block_metadata["heading"] = str(heading)
+        diogenes_warning = block.get("diogenes_warning")
+        if diogenes_warning:
+            block_metadata["diogenes_warning"] = str(diogenes_warning)
+        for meta_key in ("pos", "foster_codes", "source"):
+            if meta_key in block:
+                block_metadata[meta_key] = DiogenesBackendAdapter._json_value(block.get(meta_key))
+        metadata_raw = block.get("metadata")
+        if isinstance(metadata_raw, dict):
+            for key, value in metadata_raw.items():
+                block_metadata[str(key)] = DiogenesBackendAdapter._json_value(value)
+        return block_metadata
+
+    @staticmethod
+    def _json_value(value: object) -> JSONValue:
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            return value
+        if isinstance(value, list):
+            return [DiogenesBackendAdapter._json_value(item) for item in value]
+        if isinstance(value, dict):
+            return {str(k): DiogenesBackendAdapter._json_value(v) for k, v in value.items()}
+        return str(value)
+
+    @staticmethod
+    def _normalize_morph_entry(entry: dict[str, object]) -> dict[str, str | list[str] | None]:
+        normalized: dict[str, str | list[str] | None] = {}
+        for key, value in entry.items():
+            if isinstance(value, list):
+                normalized[key] = [str(v) for v in value]
+            elif isinstance(value, dict):
+                normalized[key] = [f"{k}:{v}" for k, v in value.items()]
+            elif value is None:
+                normalized[key] = None
+            else:
+                normalized[key] = str(value)
+        return normalized
+
+    def _create_block(self, block_ctx: _BlockBuildContext) -> DictionaryBlock:
+        block_obj = DictionaryBlock(
+            entry=block_ctx.entry_text,
+            entryid=block_ctx.entry_id,
+            citations=block_ctx.citations,
+            original_citations=block_ctx.original_citations,
+            citation_details=block_ctx.citation_details or {},
+            metadata=block_ctx.block_metadata,
+        )
+        return block_obj
+
+    def _merge_existing_block(
+        self,
+        merged: _MergedAggregate,
+        existing_idx: int,
+        block_ctx: _BlockBuildContext,
+    ) -> None:
+        existing_block = merged["blocks"][existing_idx]
+        existing_block.citations = {**(existing_block.citations or {}), **block_ctx.citations}
+        existing_block.original_citations = {
+            **(existing_block.original_citations or {}),
+            **block_ctx.original_citations,
+        }
+        existing_block.citation_details = {
+            **(existing_block.citation_details or {}),
+            **(block_ctx.citation_details or {}),
+        }
+        if block_ctx.block_metadata:
+            existing_block.metadata = {
+                **(existing_block.metadata or {}),
+                **block_ctx.block_metadata,
+            }
+
+        # No need to update definitions since we're not creating them
 
     def _enrich_citations(self, citations: dict, language: str) -> dict[str, dict[str, str]]:
         """Add author/work metadata for CTS URNs and known abbreviations."""
@@ -222,24 +369,31 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                 details[urn] = {"text": citation_text}
                 continue
 
-            display = info.get("display") or ""
-            if not display:
-                author = info.get("author")
-                work = info.get("work")
-                if author and work:
-                    display = f"{author} - {work}"
-                elif author:
-                    display = author
-                elif work:
-                    display = work
-                else:
-                    display = citation_text
-
+            display = self._build_display(info, citation_text, urn)
             details[urn] = {
                 "text": citation_text,
-                "author": info.get("author"),
-                "work": info.get("work"),
+                "author": info.get("author") or "",
+                "work": info.get("work") or "",
                 "display": display,
-                "kind": info.get("kind") or ("cts" if urn.startswith("urn:cts") else "abbreviation"),
+                "kind": info.get("kind")
+                or ("cts" if urn.startswith("urn:cts") else "abbreviation"),
             }
         return details
+
+    @staticmethod
+    def _build_display(info: dict[str, str], citation_text: str, urn: str) -> str:
+        display = info.get("display") or ""
+        if display:
+            return display
+
+        author = info.get("author") or ""
+        work = info.get("work") or ""
+        if author and work:
+            return f"{author} - {work}"
+        if author:
+            return author
+        if work:
+            return work
+        if urn.startswith("urn:cts"):
+            return citation_text
+        return citation_text

@@ -1,10 +1,19 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Protocol
 
 import structlog
 
 logger = structlog.get_logger(__name__)
+
+if TYPE_CHECKING:
+    from cltk.lemmatize.lat import LatinBackoffLemmatizer
+    from cltk.lexicon.lat import LatinLewisLexicon
+    from cltk.phonology.lat.transcription import Transcriber
+else:  # pragma: no cover - runtime imports handled dynamically
+    LatinBackoffLemmatizer = object  # type: ignore[misc,assignment]
+    LatinLewisLexicon = object  # type: ignore[misc,assignment]
+    Transcriber = object  # type: ignore[misc,assignment]
 
 
 @dataclass
@@ -19,14 +28,21 @@ class GreekMorphologyResult:
     text: str
     lemma: str
     pos: str
-    morphological_features: dict
+    morphological_features: dict[str, str | list[str]]
 
 
 @dataclass
 class SanskritMorphologyResult:
     lemma: str
     pos: str
-    morphological_features: dict
+    morphological_features: dict[str, str | list[str]]
+
+
+class _SanskritNLP(Protocol):
+    def analyze(self, text: str): ...
+
+
+MIN_LEMMA_TUPLE_LENGTH = 2
 
 
 class ClassicsToolkit:
@@ -39,12 +55,12 @@ class ClassicsToolkit:
 
     _cltk_available: bool = False
     _spacy_available: bool = False
-    _lat_corpus: Any | None = None
-    _latdict: Any | None = None
-    _latlemma: Any | None = None
-    _latxform: Any | None = None
-    _grc_spacy_model: Any | None = None
-    _san_cltk_nlp: Any | None = None
+    _lat_corpus: object | None = None
+    _latdict: LatinLewisLexicon | None = None
+    _latlemma: LatinBackoffLemmatizer | None = None
+    _latxform: Transcriber | None = None
+    _grc_spacy_model: object | None = None
+    _san_cltk_nlp: _SanskritNLP | None = None
 
     def __new__(cls):
         if cls._singleton_instance is None:
@@ -140,7 +156,7 @@ class ClassicsToolkit:
     def jvsub(self):
         return self._jvsub
 
-    def latin_query(self, word) -> LatinQueryResult:
+    def latin_query(self, word: str) -> LatinQueryResult:
         if not self._cltk_available:
             return LatinQueryResult(
                 headword="cltk_unavailable",
@@ -148,22 +164,50 @@ class ClassicsToolkit:
                 lewis_1890_lines=["CLTK module not available"],
             )
 
+        latlemma = self._latlemma
+        latdict = self._latdict
+        latxform = self._latxform
+        if latlemma is None or latdict is None or latxform is None:
+            raise RuntimeError("Latin resources not initialized")
+
+        assert latlemma is not None and latdict is not None and latxform is not None
+
         try:
-            assert self._latlemma is not None
-            assert self._latdict is not None
-            assert self._latxform is not None
-            (query, stem) = self._latlemma.lemmatize([word])[0]
-            results = self._latdict.lookup(word)
+            lemma_candidates = latlemma.lemmatize([word])
+            lemma_list = (
+                list(lemma_candidates) if isinstance(lemma_candidates, (list, tuple)) else []
+            )
+            first_lemma = lemma_list[0] if lemma_list else (word, word)
+            if isinstance(first_lemma, tuple) and len(first_lemma) >= MIN_LEMMA_TUPLE_LENGTH:
+                stem = first_lemma[1]
+            else:
+                stem = word
+
+            lookup_result = latdict.lookup(word)
+            results_list = (
+                lookup_result
+                if isinstance(lookup_result, list)
+                else [lookup_result]
+                if isinstance(lookup_result, str) and lookup_result
+                else []
+            )
             transcription = ""
             try:
-                transcription = self._latxform.transcribe(word)
+                transcription = latxform.transcribe(word)
             except Exception as e:
                 logger.debug("transcription_failed", word=word, error=str(e))
-            if not results:
-                results = self._latdict.lookup(stem)
+            if not results_list:
+                stem_lookup = latdict.lookup(stem)
+                results_list = (
+                    stem_lookup
+                    if isinstance(stem_lookup, list)
+                    else [stem_lookup]
+                    if isinstance(stem_lookup, str) and stem_lookup
+                    else []
+                )
             if not transcription:
                 try:
-                    transcription = self._latxform.transcribe(stem)
+                    transcription = latxform.transcribe(stem)
                 except Exception as e:
                     logger.debug("stem_transcription_failed", stem=stem, error=str(e))
                     pass
@@ -172,7 +216,7 @@ class ClassicsToolkit:
 
             # Keep the raw Lewis & Short text rather than collapsing whitespace so
             # downstream consumers can show the full entry without losing structure.
-            l_lines = [results] if results else []
+            l_lines = [result for result in results_list if isinstance(result, str)]
 
             return LatinQueryResult(
                 headword=stem,
@@ -187,7 +231,7 @@ class ClassicsToolkit:
                 lewis_1890_lines=[f"Error: {str(e)}"],
             )
 
-    def greek_morphology_query(self, word) -> GreekMorphologyResult:
+    def greek_morphology_query(self, word: str) -> GreekMorphologyResult:
         if not getattr(self, "_spacy_imported", False):
             return GreekMorphologyResult(
                 text=word,
@@ -237,7 +281,8 @@ class ClassicsToolkit:
             )
 
     def sanskrit_morphology_query(self, word: str) -> SanskritMorphologyResult:
-        if self._san_cltk_nlp is None:
+        nlp = self._san_cltk_nlp
+        if nlp is None:
             return SanskritMorphologyResult(
                 lemma="cltk_unavailable",
                 pos="",
@@ -245,7 +290,7 @@ class ClassicsToolkit:
             )
 
         try:
-            cltk_doc = self._san_cltk_nlp.analyze(text=word)
+            cltk_doc = nlp.analyze(text=word)
 
             if cltk_doc.sentences and cltk_doc.sentences[0] and len(cltk_doc.sentences[0]) > 0:
                 token = cltk_doc.sentences[0][0]

@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Any
+
+from langnet.types import JSONMapping
 
 
 @dataclass
@@ -29,7 +30,7 @@ class HeritageSolution:
     analyses: list[HeritageWordAnalysis]
     total_words: int
     score: float = 0.0
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JSONMapping = field(default_factory=dict)
 
 
 @dataclass
@@ -47,7 +48,7 @@ class HeritageDictionaryEntry:
     stem: str | None = None
     root: str | None = None
     frequency: int | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JSONMapping = field(default_factory=dict)
 
 
 @dataclass
@@ -70,11 +71,11 @@ class HeritageMorphologyResult:
 
     input_text: str
     solutions: list[HeritageSolution]
-    word_analyses: list[dict[str, Any]]
+    word_analyses: list[HeritageWordAnalysis]
     total_solutions: int
     encoding: str = "velthuis"
     processing_time: float = 0.0
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JSONMapping = field(default_factory=dict)
 
 
 @dataclass
@@ -97,7 +98,7 @@ class HeritageDeclensionResult:
     number: str
     forms: list[str]
     table: list[list[str]]
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JSONMapping = field(default_factory=dict)
 
 
 @dataclass
@@ -110,7 +111,7 @@ class HeritageConjugationResult:
     number: str
     forms: list[str]
     table: list[list[str]]
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JSONMapping = field(default_factory=dict)
 
 
 @dataclass

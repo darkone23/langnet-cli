@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import functools
+import logging
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Mapping
 
 from dotenv import load_dotenv
 
@@ -17,7 +19,7 @@ class Environment(str, Enum):
     PROD = "prod"
 
     @classmethod
-    def from_env(cls, value: str | None) -> "Environment":
+    def from_env(cls, value: str | None) -> Environment:
         if not value:
             return cls.DEV
         normalized = value.lower()
@@ -60,7 +62,7 @@ class LangnetSettings:
     warmup_backends: bool = True
 
     @classmethod
-    def from_env(cls, env: Mapping[str, str]) -> "LangnetSettings":
+    def from_env(cls, env: Mapping[str, str]) -> LangnetSettings:
         environment = Environment.from_env(env.get("LANGNET_ENV"))
         diogenes_url = env.get("DIOGENES_URL", "http://localhost:8888/")
         heritage_url = env.get("HERITAGE_URL", "http://localhost:48080")
@@ -68,9 +70,7 @@ class LangnetSettings:
         cdsl_dict_dir = Path(env.get("CDSL_DICT_DIR") or (Path.home() / "cdsl_data" / "dict"))
         cdsl_db_dir = Path(env.get("CDSL_DB_DIR") or (Path.home() / "cdsl_data" / "db"))
         http_timeout = _coerce_timeout(env.get("HTTP_TIMEOUT"), default=30)
-        enable_normalization = _parse_bool(
-            env.get("LANGNET_ENABLE_NORMALIZATION"), default=True
-        )
+        enable_normalization = _parse_bool(env.get("LANGNET_ENABLE_NORMALIZATION"), default=True)
         warmup_default = environment != Environment.TEST
         warmup_backends = _parse_bool(env.get("LANGNET_WARMUP_BACKENDS"), warmup_default)
 
@@ -98,12 +98,12 @@ class LangnetSettings:
 
     @property
     def log_level_value(self) -> int:
-        import logging  # delayed import to avoid configuration at module load
-
         return getattr(logging, self.log_level.upper(), logging.INFO)
 
 
-_settings_cache: LangnetSettings | None = None
+@functools.lru_cache(maxsize=1)
+def _default_settings() -> LangnetSettings:
+    return load_settings()
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> LangnetSettings:
@@ -114,11 +114,8 @@ def load_settings(env: Mapping[str, str] | None = None) -> LangnetSettings:
 
 
 def get_settings(env_override: Mapping[str, str] | None = None) -> LangnetSettings:
-    global _settings_cache
     if env_override is None:
-        if _settings_cache is None:
-            _settings_cache = load_settings()
-        return _settings_cache
+        return _default_settings()
     return load_settings(env_override)
 
 

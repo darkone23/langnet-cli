@@ -252,11 +252,7 @@ def _parse_references(body, result: dict):
         # Handle n="..." attribute (implied continuation from previous reference)
         if "n" in ls.attrib and ls.attrib["n"]:
             implied_prefix = ls.attrib["n"].strip()
-            if source_text:
-                # Combine: "RV." + "ii, 41, 16" = "RV. ii, 41, 16"
-                source_text = f"{implied_prefix} {source_text}"
-            else:
-                source_text = implied_prefix
+            source_text = f"{implied_prefix} {source_text}" if source_text else implied_prefix
 
         if source_text:
             references.append({"source": source_text, "type": "lexicon"})
@@ -369,27 +365,28 @@ def parse_grammatical_info(xml_data: str) -> dict:
     if grammar_tags:
         result["grammar_tags"] = grammar_tags
 
-    # Extract sanskrit_form preferring explicit body forms over key1 fallback
+    _populate_sanskrit_form(result, root, body)
+
+    return result
+
+
+def _populate_sanskrit_form(result: dict, root, body) -> None:
+    """Populate sanskrit_form preferring explicit body forms over header fallbacks."""
     header = root.find("h")
     if header is not None:
         key2_elem = header.find("key2")
-        if key2_elem is not None and key2_elem.text and key2_elem.text.strip():
-            sanskrit_form = key2_elem.text.strip()
-            if sanskrit_form:
-                result["sanskrit_form"] = sanskrit_form
+        key2_value = key2_elem.text.strip() if key2_elem is not None and key2_elem.text else ""
+        if key2_value:
+            result["sanskrit_form"] = key2_value
 
-    # Prefer body form if header lacked key2
     if "sanskrit_form" not in result:
         sanskrit_form = _find_sanskrit_form(body)
         if sanskrit_form:
             result["sanskrit_form"] = sanskrit_form
 
-    # Fallback to key1 if nothing else provided a value
     if "sanskrit_form" not in result and header is not None:
         key1_elem = header.find("key1")
         if key1_elem is not None and key1_elem.text:
             sanskrit_form = key1_elem.text.strip()
             if sanskrit_form:
                 result["sanskrit_form"] = sanskrit_form
-
-    return result

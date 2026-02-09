@@ -1,7 +1,8 @@
 import time
-import traceback
 import uuid
-from typing import Any
+from collections.abc import Callable
+from contextlib import AbstractContextManager
+from typing import cast
 
 import cattrs
 import orjson
@@ -15,6 +16,7 @@ from langnet.config import get_settings
 from langnet.core import LangnetWiring, build_langnet_wiring
 from langnet.health import run_health_checks
 from langnet.logging import scoped_context, setup_logging
+from langnet.types import JSONMapping
 from langnet.validation import validate_query, validate_tool_request
 
 logger = structlog.get_logger(__name__)
@@ -24,7 +26,8 @@ json_converter = cattrs.Converter(omit_if_default=True)
 settings = get_settings()
 setup_logging(settings.log_level_value)
 
-def _request_context(request: Request):
+
+def _request_context(request: Request) -> AbstractContextManager[None]:
     request_id = (
         request.headers.get("x-request-id")
         or request.headers.get("x-correlation-id")
@@ -40,7 +43,7 @@ def _request_context(request: Request):
 def _ensure_wiring(request: Request) -> LangnetWiring:
     if not hasattr(request.app.state, "wiring"):
         request.app.state.wiring = build_langnet_wiring(settings=settings)
-    return request.app.state.wiring
+    return cast(LangnetWiring, request.app.state.wiring)
 
 
 # from langnet.citation.models import CitationCollection, Citation, TextReference, CitationType
@@ -52,14 +55,14 @@ class ORJsonResponse(Response):
 
     def __init__(
         self,
-        content: Any,
+        content: object,
         status_code: int = 200,
-        headers: dict | None = None,
+        headers: dict[str, str] | None = None,
         **kwargs,
     ):
         super().__init__(content, status_code=status_code, headers=headers, **kwargs)
 
-    def render(self, content: Any) -> bytes:
+    def render(self, content: object) -> bytes:
         return orjson.dumps(content)
 
 
@@ -74,7 +77,7 @@ async def health_check(request: Request):
             if hasattr(request.app.state, "wiring"):
                 cache = getattr(request.app.state.wiring.engine, "cache", None)
                 if cache and hasattr(cache, "get_stats"):
-                    cache_stats_provider = cache.get_stats
+                    cache_stats_provider = cast(Callable[[], JSONMapping], cache.get_stats)
             health = run_health_checks(settings, cache_stats_provider=cache_stats_provider)
             return ORJsonResponse(health)
         except Exception as e:
@@ -97,11 +100,14 @@ async def query_api(request: Request):
     with _request_context(request):
         if request.method == "POST":
             form_data = await request.form()
-            lang = form_data.get("l")
-            word = form_data.get("s")
+            raw_lang = form_data.get("l")
+            raw_word = form_data.get("s")
         else:
-            lang = request.query_params.get("l")
-            word = request.query_params.get("s")
+            raw_lang = request.query_params.get("l")
+            raw_word = request.query_params.get("s")
+
+        lang = str(raw_lang) if isinstance(raw_lang, str) else None
+        word = str(raw_word) if isinstance(raw_word, str) else None
 
         validation_error, normalized_lang = validate_query(lang, word)
         if validation_error:

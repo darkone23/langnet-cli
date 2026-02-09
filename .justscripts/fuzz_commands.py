@@ -42,7 +42,7 @@ def list_targets():
     default=None,
     help="Save JSON summary (optional path, defaults to examples/debug/fuzz_results.json)",
 )
-def run(tool, action, lang, words, validate, mode, save):
+def run(tool, action, lang, words, validate, mode, save):  # noqa: PLR0913 - CLI entrypoint
     """Run fuzzing for selected targets."""
     args: list[str] = []
     if tool:

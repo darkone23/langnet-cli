@@ -62,19 +62,18 @@ class LatinNormalizer(LanguageNormalizer):
         macron_chars = set("āēīōūȳĀĒĪŪȲ")
         return any(c in macron_chars for c in text)
 
-    def to_canonical(self, text: str, source_encoding: str) -> str:
+    def to_canonical(self, text: str, source_encoding: str) -> tuple[str, dict | None]:
         """Convert Latin text to ASCII canonical form (no macrons)."""
         if source_encoding == Encoding.UNICODE.value:
             # Strip macrons
-            return self._strip_macrons(text)
+            return self._strip_macrons(text), None
 
-        elif source_encoding == Encoding.ASCII.value:
+        if source_encoding == Encoding.ASCII.value:
             # Already ASCII, return as-is (lowercase)
-            return text.lower()
+            return text.lower(), None
 
-        else:
-            # Unknown encoding, try to strip macrons anyway
-            return self._strip_macrons(text).lower()
+        # Unknown encoding, try to strip macrons anyway
+        return self._strip_macrons(text).lower(), None
 
     def _strip_macrons(self, text: str) -> str:
         """Remove macrons from Latin text."""
@@ -163,7 +162,7 @@ class LatinNormalizer(LanguageNormalizer):
         encoding = self.detect_encoding(query)
 
         # Convert to canonical form (strip macrons for ASCII)
-        canonical_text = self.to_canonical(query, encoding)
+        canonical_text, canonical_meta = self.to_canonical(query, encoding)
 
         # Generate alternate forms
         alternates = self.generate_alternates(canonical_text)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import cast
 
 import cattrs
 import structlog
@@ -17,15 +17,19 @@ from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.morphology import (
     HeritageMorphologyService,  # TODO: not sure why this is not just in heritage client?
 )
+from langnet.heritage.types import CanonicalResult
 from langnet.normalization import NormalizationPipeline
-from langnet.whitakers_words.core import WhitakersWords
+from langnet.types import JSONMapping
 from langnet.validation import validate_tool_request
+from langnet.whitakers_words.core import WhitakersWords
 
 try:  # structlog contextvars may be missing in some environments
     from structlog.contextvars import get_contextvars  # type: ignore
 except Exception:  # pragma: no cover
+
     def get_contextvars():
         return {}
+
 
 logger = structlog.get_logger(__name__)
 
@@ -134,10 +138,10 @@ class LanguageEngineConfig:
     whitakers: WhitakersWords
     cltk: ClassicsToolkit
     cdsl: SanskritCologneLexicon
-    heritage_morphology: Optional[HeritageMorphologyService] = None
-    heritage_client: Optional[HeritageHTTPClient] = None
-    normalization_pipeline: Optional[NormalizationPipeline] = None
-    sanskrit_normalizer: Optional[SanskritQueryNormalizer] = None
+    heritage_morphology: HeritageMorphologyService | None = None
+    heritage_client: HeritageHTTPClient | None = None
+    normalization_pipeline: NormalizationPipeline | None = None
+    sanskrit_normalizer: SanskritQueryNormalizer | None = None
     enable_normalization: bool = True
 
 
@@ -158,13 +162,13 @@ class LanguageEngine:
         if not self.sanskrit_normalizer:
             self.sanskrit_normalizer = SanskritQueryNormalizer(
                 heritage_client=self.heritage_client,
-                normalization_pipeline=self.normalization_pipeline if self.enable_normalization else None,
+                normalization_pipeline=self.normalization_pipeline
+                if self.enable_normalization
+                else None,
             )
         return self.sanskrit_normalizer
 
-    def _normalize_sanskrit_word(
-        self, word: str
-    ) -> tuple[str, str, list[str], list[str] | None]:
+    def _normalize_sanskrit_word(self, word: str) -> tuple[str, str, list[str], list[str] | None]:
         normalizer = self._get_sanskrit_normalizer()
         normalized = normalizer.normalize(word)
         heritage_form = normalized.canonical_heritage
@@ -183,13 +187,13 @@ class LanguageEngine:
         return self._get_sanskrit_normalizer()._looks_mangled_slp1(text)  # type: ignore[attr-defined]
 
     @staticmethod
-    def _backend_error(backend: str, exc: Exception) -> dict[str, Any]:
+    def _backend_error(backend: str, exc: Exception) -> JSONMapping:
         ctx = {}
         try:
             ctx = get_contextvars()
         except Exception:
             ctx = {}
-        envelope: dict[str, Any] = {"backend": backend, "message": str(exc)}
+        envelope: JSONMapping = {"backend": backend, "message": str(exc)}
         if ctx.get("request_id"):
             envelope["request_id"] = ctx["request_id"]
         return {"error": envelope}
@@ -285,7 +289,7 @@ class LanguageEngine:
             logger.warning("heritage_morphology_service_not_available")
             return None
 
-        result: dict[str, Any] = {}
+        result: JSONMapping = {}
 
         # Perform morphological analysis
         try:
@@ -333,9 +337,11 @@ class LanguageEngine:
         # Fetch canonical form and lemmatization from Heritage HTTP endpoints
         if self.heritage_client:
             try:
-                canonical_result = self.heritage_client.fetch_canonical_sanskrit(word)
+                canonical_result: CanonicalResult | None = (
+                    self.heritage_client.fetch_canonical_sanskrit(word)
+                )
                 if canonical_result:
-                    result["canonical"] = canonical_result
+                    result["canonical"] = cast(JSONMapping, canonical_result)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("heritage_canonical_failed", word=word, error=str(exc))
 

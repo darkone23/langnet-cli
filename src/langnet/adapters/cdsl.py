@@ -59,11 +59,16 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                     word=word,
                     definitions=definitions,
                     morphology=morphology,
-                    metadata={"dict": dict_name, "dictionary": dict_name, "count": len(dict_entries)},
+                    metadata={
+                        "dict": dict_name,
+                        "dictionary": dict_name,
+                        "count": len(dict_entries),
+                    },
                 )
             )
 
-        # Preserve source visibility even when no entries matched to avoid losing CDSL in unified output
+        # Preserve source visibility even when no entries matched
+        # to avoid losing CDSL in unified output
         if not entries:
             canonical_form = data.get("canonical_form") or word
             transliteration = data.get("transliteration")

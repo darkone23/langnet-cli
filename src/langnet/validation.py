@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 VALID_LANGUAGES = {"lat", "grc", "san"}
 LANG_ALIASES = {"grk": "grc"}
@@ -24,9 +24,8 @@ def normalize_language(lang: str | None) -> str:
     if lang in LANG_ALIASES:
         lang = LANG_ALIASES[lang]
     if lang not in VALID_LANGUAGES:
-        raise ValueError(
-            f"Invalid language: {lang}. Must be one of: {', '.join(sorted(VALID_LANGUAGES | set(LANG_ALIASES)))}"
-        )
+        valid_langs = ", ".join(sorted(VALID_LANGUAGES | set(LANG_ALIASES)))
+        raise ValueError(f"Invalid language: {lang}. Must be one of: {valid_langs}")
     return lang
 
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
 
 import duckdb
 import requests
@@ -12,8 +12,12 @@ import structlog
 from langnet.config import LangnetSettings
 from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.config import HeritageConfig
+from langnet.types import JSONMapping
 
 logger = structlog.get_logger(__name__)
+HEALTHY_STATUS = 200
+NOT_FOUND_STATUS = 404
+DEGRADED_THRESHOLD = 500
 
 
 @dataclass
@@ -21,10 +25,10 @@ class ComponentStatus:
     status: str
     message: str | None = None
     duration_ms: float | None = None
-    details: dict[str, Any] | None = None
+    details: JSONMapping | None = None
 
-    def as_dict(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {"status": self.status}
+    def as_dict(self) -> JSONMapping:
+        payload: JSONMapping = {"status": self.status}
         if self.message:
             payload["message"] = self.message
         if self.duration_ms is not None:
@@ -51,7 +55,7 @@ def check_diogenes(
         params = {"do": "parse", "lang": "lat", "q": "amo"}
         try:
             response = requester(url, params=params, timeout=timeout)
-            if response.status_code == 200:
+            if response.status_code == HEALTHY_STATUS:
                 return ComponentStatus(
                     status="healthy", details={"status_code": response.status_code}
                 )
@@ -83,19 +87,20 @@ def check_heritage(
         for url in (primary_url, fallback_url):
             try:
                 response = requester(url, timeout=timeout)
-                attempted.append((url, response.status_code))
-                if response.status_code == 200:
+                status_code = int(getattr(response, "status_code", 0) or 0)
+                attempted.append((url, status_code))
+                if status_code == HEALTHY_STATUS:
                     return ComponentStatus(
                         status="healthy",
-                        details={"status_code": response.status_code, "endpoint": url},
+                        details={"status_code": status_code, "endpoint": url},
                     )
-                if response.status_code == 404:
+                if status_code == NOT_FOUND_STATUS:
                     continue
-                level = "degraded" if response.status_code < 500 else "error"
+                level = "degraded" if status_code < DEGRADED_THRESHOLD else "error"
                 return ComponentStatus(
                     status=level,
-                    message=f"HTTP {response.status_code} from Heritage",
-                    details={"status_code": response.status_code, "endpoint": url},
+                    message=f"HTTP {status_code} from Heritage",
+                    details={"status_code": status_code, "endpoint": url},
                 )
             except requests.Timeout as exc:
                 return ComponentStatus(status="error", message=f"Heritage timeout: {exc}")
@@ -128,7 +133,7 @@ def check_cdsl(db_dir: Path, dict_dir: Path | None = None) -> ComponentStatus:
         except Exception as exc:  # noqa: BLE001
             return ComponentStatus(status="error", message=f"CDSL index error: {exc}")
 
-        details: dict[str, Any] = {"db_path": str(db_dir)}
+        details: JSONMapping = {"db_path": str(db_dir)}
         if dict_dir:
             details["dict_dir"] = str(dict_dir)
 
@@ -144,11 +149,11 @@ def check_cltk() -> ComponentStatus:
             from cltk.languages.utils import get_lang  # noqa: PLC0415
 
             get_lang("lat")
-            return ComponentStatus(status="healthy", details={"version": getattr(cltk, "__version__", "")})
-        except ImportError as exc:
             return ComponentStatus(
-                status="missing", message=f"CLTK module not installed: {exc}"
+                status="healthy", details={"version": getattr(cltk, "__version__", "")}
             )
+        except ImportError as exc:
+            return ComponentStatus(status="missing", message=f"CLTK module not installed: {exc}")
         except Exception as exc:  # noqa: BLE001
             return ComponentStatus(status="degraded", message=f"CLTK issue: {exc}")
 
@@ -164,7 +169,10 @@ def check_spacy(model_name: str = "grc_odycy_joint_sm") -> ComponentStatus:
                 spacy.load(model_name)
                 return ComponentStatus(
                     status="healthy",
-                    details={"model": model_name, "spacy_version": getattr(spacy, "__version__", "")},
+                    details={
+                        "model": model_name,
+                        "spacy_version": getattr(spacy, "__version__", ""),
+                    },
                 )
             except OSError as exc:
                 return ComponentStatus(
@@ -192,7 +200,7 @@ def check_whitakers() -> ComponentStatus:
     return _time_call(_check)
 
 
-def check_cache(stats_provider: Callable[[], dict[str, Any]] | None = None) -> ComponentStatus:
+def check_cache(stats_provider: Callable[[], JSONMapping] | None = None) -> ComponentStatus:
     def _check() -> ComponentStatus:
         if stats_provider is None:
             return ComponentStatus(
@@ -219,16 +227,20 @@ def overall_status(components: dict[str, ComponentStatus]) -> str:
 
 def run_health_checks(
     settings: LangnetSettings,
-    cache_stats_provider: Callable[[], dict[str, Any]] | None = None,
+    cache_stats_provider: Callable[[], JSONMapping] | None = None,
     requester: Callable[..., requests.Response] = requests.get,
-) -> dict[str, Any]:
+) -> JSONMapping:
     components = {
-        "diogenes": check_diogenes(settings.diogenes_url, settings.http_timeout, requester=requester),
+        "diogenes": check_diogenes(
+            settings.diogenes_url, settings.http_timeout, requester=requester
+        ),
         "cltk": check_cltk(),
         "spacy": check_spacy(),
         "whitakers": check_whitakers(),
         "cdsl": check_cdsl(settings.cdsl_db_dir, settings.cdsl_dict_dir),
-        "heritage": check_heritage(settings.heritage_url, settings.http_timeout, requester=requester),
+        "heritage": check_heritage(
+            settings.heritage_url, settings.http_timeout, requester=requester
+        ),
         "cache": check_cache(cache_stats_provider),
     }
     return {

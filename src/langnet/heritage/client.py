@@ -1,14 +1,13 @@
 import logging
 import re
 import time
-from typing import Any
 from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
 
 from .config import heritage_config
-from .parameters import HeritageParameterBuilder
+from .types import CanonicalResult
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +23,7 @@ class HeritageHTTPClient:
         self.config = config or heritage_config
         self.last_request_time = 0
         self.min_request_delay = 0.1  # 100ms between requests to avoid overwhelming
+        self.session: requests.Session | None = None
 
     def __enter__(self):
         """Context manager entry - no-op for now"""
@@ -41,7 +41,9 @@ class HeritageHTTPClient:
             time.sleep(self.min_request_delay - time_since_last)
         self.last_request_time = time.time()
 
-    def build_cgi_url(self, script_name: str, params: dict[str, Any] | None = None) -> str:
+    def build_cgi_url(
+        self, script_name: str, params: dict[str, str | int | float | bool | None] | None = None
+    ) -> str:
         """Build complete CGI script URL with semicolon-separated parameters"""
         base_url = self.config.base_url.rstrip("/")
         # Heritage hosts sktsearch at /cgi-bin/sktsearch (without /skt/)
@@ -64,7 +66,7 @@ class HeritageHTTPClient:
     def fetch_cgi_script(
         self,
         script_name: str,
-        params: dict[str, Any] | None = None,
+        params: dict[str, str | int | float | bool | None] | None = None,
         timeout: int | None = None,
     ) -> str:
         """Fetch response from CGI script"""
@@ -108,7 +110,7 @@ class HeritageHTTPClient:
         self,
         query: str,
         timeout: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> CanonicalResult:
         """Fetch canonical Sanskrit form from sktsearch.
 
         Uses Heritage's sktsearch CGI to get the canonical Devanagari
@@ -129,9 +131,8 @@ class HeritageHTTPClient:
             if not isinstance(href, str):
                 continue
             if "/skt/DICO/" in href or "/skt/MW" in href:
-                link_text = link.get_text(strip=True)
                 # NB: this only returns the first when there are likely multiple
-                # potential_devanagari = transliterate(link_text, IAST, DEVANAGARI)
+                # potential_devanagari = transliterate(link.get_text(strip=True), IAST, DEVANAGARI)
                 # Extract the canonical part after H_
                 canonical_part = ""
                 if "H_" in href:
@@ -151,21 +152,27 @@ class HeritageHTTPClient:
             "bare_query": bare_query,
             "canonical_sanskrit": None,
             "match_method": "not_found",
+            "entry_url": "",
         }
 
     def fetch_canonical_via_sktsearch(
         self, query: str, timeout: int | None = None
-    ) -> dict[str, Any]:
+    ) -> CanonicalResult:
         """Backward-compatible wrapper for canonical Sanskrit lookup via sktsearch."""
-        canonical = self.fetch_canonical_sanskrit(query, timeout=timeout)
+        canonical: CanonicalResult = self.fetch_canonical_sanskrit(query, timeout=timeout)
 
-        return {
+        match_method = canonical.get("match_method") or "not_found"
+        entry_url = canonical.get("entry_url") or ""
+
+        canonical_result: CanonicalResult = {
             "original_query": canonical.get("original_query", query),
             "bare_query": canonical.get("bare_query", query),
             "canonical_text": canonical.get("canonical_sanskrit"),
-            "match_method": canonical.get("match_method"),
-            "entry_url": canonical.get("entry_url"),
+            "canonical_sanskrit": canonical.get("canonical_sanskrit"),
+            "match_method": match_method,
+            "entry_url": entry_url,
         }
+        return canonical_result
 
 
 class HeritageAPIError(Exception):

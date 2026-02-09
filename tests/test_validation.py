@@ -2,7 +2,6 @@ import unittest
 
 from langnet.validation import (
     LANG_ALIASES,
-    VALID_LANGUAGES,
     normalize_language,
     validate_query,
     validate_tool_request,
@@ -16,6 +15,8 @@ class ValidationTests(unittest.TestCase):
     def test_validate_query_missing_word(self):
         error, lang = validate_query("lat", "")
         self.assertIsNone(lang)
+        self.assertIsNotNone(error)
+        assert error is not None
         self.assertIn("Search term cannot be empty", error)
 
     def test_validate_tool_request_success(self):
@@ -24,10 +25,14 @@ class ValidationTests(unittest.TestCase):
 
     def test_validate_tool_request_rejects_unknown_tool(self):
         error = validate_tool_request("unknown", "parse", "lat", "amo")
+        self.assertIsNotNone(error)
+        assert error is not None
         self.assertIn("Invalid tool", error)
 
     def test_validate_tool_request_rejects_bad_action(self):
         error = validate_tool_request("whitakers", "parse", "lat", "amo")
+        self.assertIsNotNone(error)
+        assert error is not None
         self.assertIn("Invalid action", error)
 
 

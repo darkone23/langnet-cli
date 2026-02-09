@@ -1,8 +1,8 @@
 import unittest
 
 from langnet.engine.sanskrit_normalizer import (
-    SanskritQueryNormalizer,
     SanskritNormalizationResult,
+    SanskritQueryNormalizer,
 )
 from langnet.normalization.models import CanonicalQuery, Encoding, Language
 

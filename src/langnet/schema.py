@@ -7,7 +7,9 @@ in this format for consistent API responses.
 """
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TypeAlias
+
+from langnet.types import JSONMapping
 
 
 @dataclass
@@ -31,7 +33,7 @@ class DictionaryDefinition:
     etymology: str | None = None  # Etymology information (√root, from X, etc.)
     examples: list[str] = field(default_factory=list)  # Example usages
     citations: list[Citation] = field(default_factory=list)  # Source references
-    metadata: dict[str, Any] = field(default_factory=dict)  # Backend-specific raw data
+    metadata: JSONMapping = field(default_factory=dict)  # Backend-specific raw data
 
 
 @dataclass
@@ -47,7 +49,13 @@ class DictionaryBlock:
     citation_details: dict[str, dict[str, str]] = field(
         default_factory=dict
     )  # Metadata (author/work/display)
-    metadata: dict[str, Any] = field(default_factory=dict)  # POS/foster and other enrichment data
+    metadata: JSONMapping = field(default_factory=dict)  # POS/foster and other enrichment data
+
+
+MorphFeature: TypeAlias = (
+    str | list[str] | list[dict[str, str | list[str] | None]] | dict[str, str | list[str]]
+)
+MorphFeatures: TypeAlias = dict[str, MorphFeature]
 
 
 @dataclass
@@ -56,7 +64,7 @@ class MorphologyInfo:
 
     lemma: str
     pos: str
-    features: dict[str, str]  # Morphological features (case, tense, etc.)
+    features: MorphFeatures  # Morphological features (case, tense, etc.)
     foster_codes: list[str] | dict[str, str] | None = None  # Foster functional grammar codes
     declension: str | None = None  # Noun/adjective declension (1st, 2nd, 3rd, etc.)
     conjugation: str | None = None  # Verb conjugation (1st, 2nd, 3rd, 4th, etc.)
@@ -81,5 +89,5 @@ class DictionaryEntry:
     definitions: list[DictionaryDefinition] = field(default_factory=list)  # Dictionary definitions
     morphology: MorphologyInfo | None = None
     source: str = ""  # Backend name ('heritage', 'cdsl', 'whitakers', etc.)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: JSONMapping = field(default_factory=dict)
     dictionary_blocks: list[DictionaryBlock] = field(default_factory=list)  # Raw dictionary blocks
