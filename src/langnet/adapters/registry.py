@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from .cdsl import CDSLBackendAdapter
 from .cltk import CLTKBackendAdapter
 from .diogenes import DiogenesBackendAdapter
@@ -44,14 +46,48 @@ class GreekAdapter:
         self.diogenes_adapter = diogenes_adapter
         self.cltk_adapter = cltk_adapter
 
-    def adapt(self, data: dict, language: str, word: str):
+    @staticmethod
+    def _call_adapter(adapter, data: dict, language: str, word: str, timings):
+        try:
+            return adapter.adapt(data, language, word, timings=timings)  # type: ignore[arg-type]
+        except TypeError:
+            return adapter.adapt(data, language, word)
+
+    def _time(self, timings: dict[str, float] | None, name: str, func):
+        if timings is None:
+            return func()
+        start = time.perf_counter()
+        try:
+            return func()
+        finally:
+            timings[name] = (time.perf_counter() - start) * 1000
+
+    def adapt(self, data: dict, language: str, word: str, timings: dict[str, float] | None = None):
         entries = []
         if "diogenes" in data:
-            entries.extend(self.diogenes_adapter.adapt(data["diogenes"], language, word))
+            entries.extend(
+                self._time(
+                    timings,
+                    "adapt_diogenes",
+                    lambda: self._call_adapter(self.diogenes_adapter, data["diogenes"], language, word, timings),
+                )
+            )
         if "spacy" in data:
-            entries.extend(self.cltk_adapter.adapt(data["spacy"], language, word))
+            entries.extend(
+                self._time(
+                    timings,
+                    "adapt_spacy",
+                    lambda: self._call_adapter(self.cltk_adapter, data["spacy"], language, word, timings),
+                )
+            )
         if "cltk" in data:
-            entries.extend(self.cltk_adapter.adapt(data["cltk"], language, word))
+            entries.extend(
+                self._time(
+                    timings,
+                    "adapt_cltk",
+                    lambda: self._call_adapter(self.cltk_adapter, data["cltk"], language, word, timings),
+                )
+            )
         return entries
 
 
@@ -61,14 +97,48 @@ class LatinAdapter:
         self.whitakers_adapter = whitakers_adapter
         self.cltk_adapter = cltk_adapter
 
-    def adapt(self, data: dict, language: str, word: str):
+    @staticmethod
+    def _call_adapter(adapter, data: dict, language: str, word: str, timings):
+        try:
+            return adapter.adapt(data, language, word, timings=timings)  # type: ignore[arg-type]
+        except TypeError:
+            return adapter.adapt(data, language, word)
+
+    def _time(self, timings: dict[str, float] | None, name: str, func):
+        if timings is None:
+            return func()
+        start = time.perf_counter()
+        try:
+            return func()
+        finally:
+            timings[name] = (time.perf_counter() - start) * 1000
+
+    def adapt(self, data: dict, language: str, word: str, timings: dict[str, float] | None = None):
         entries = []
         if "whitakers" in data:
-            entries.extend(self.whitakers_adapter.adapt(data["whitakers"], language, word))
+            entries.extend(
+                self._time(
+                    timings,
+                    "adapt_whitakers",
+                    lambda: self._call_adapter(self.whitakers_adapter, data["whitakers"], language, word, timings),
+                )
+            )
         if "diogenes" in data:
-            entries.extend(self.diogenes_adapter.adapt(data["diogenes"], language, word))
+            entries.extend(
+                self._time(
+                    timings,
+                    "adapt_diogenes",
+                    lambda: self._call_adapter(self.diogenes_adapter, data["diogenes"], language, word, timings),
+                )
+            )
         if "cltk" in data:
-            entries.extend(self.cltk_adapter.adapt(data["cltk"], language, word))
+            entries.extend(
+                self._time(
+                    timings,
+                    "adapt_cltk",
+                    lambda: self._call_adapter(self.cltk_adapter, data["cltk"], language, word, timings),
+                )
+            )
         return entries
 
 
@@ -78,12 +148,46 @@ class SanskritAdapter:
         self.cdsl_adapter = cdsl_adapter
         self.cltk_adapter = cltk_adapter
 
-    def adapt(self, data: dict, language: str, word: str):
+    @staticmethod
+    def _call_adapter(adapter, data: dict, language: str, word: str, timings):
+        try:
+            return adapter.adapt(data, language, word, timings=timings)  # type: ignore[arg-type]
+        except TypeError:
+            return adapter.adapt(data, language, word)
+
+    def _time(self, timings: dict[str, float] | None, name: str, func):
+        if timings is None:
+            return func()
+        start = time.perf_counter()
+        try:
+            return func()
+        finally:
+            timings[name] = (time.perf_counter() - start) * 1000
+
+    def adapt(self, data: dict, language: str, word: str, timings: dict[str, float] | None = None):
         entries = []
         if "heritage" in data:
-            entries.extend(self.heritage_adapter.adapt(data["heritage"], language, word))
+            entries.extend(
+                self._time(
+                    timings,
+                    "adapt_heritage",
+                    lambda: self._call_adapter(self.heritage_adapter, data["heritage"], language, word, timings),
+                )
+            )
         if "cdsl" in data:
-            entries.extend(self.cdsl_adapter.adapt(data["cdsl"], language, word))
+            entries.extend(
+                self._time(
+                    timings,
+                    "adapt_cdsl",
+                    lambda: self._call_adapter(self.cdsl_adapter, data["cdsl"], language, word, timings),
+                )
+            )
         if "cltk" in data:
-            entries.extend(self.cltk_adapter.adapt(data["cltk"], language, word))
+            entries.extend(
+                self._time(
+                    timings,
+                    "adapt_cltk",
+                    lambda: self._call_adapter(self.cltk_adapter, data["cltk"], language, word, timings),
+                )
+            )
         return entries

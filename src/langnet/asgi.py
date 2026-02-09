@@ -98,6 +98,7 @@ async def cache_stats_api(request: Request):
 
 async def query_api(request: Request):
     with _request_context(request):
+        request_start = time.perf_counter()
         if request.method == "POST":
             form_data = await request.form()
             raw_lang = form_data.get("l")
@@ -116,15 +117,39 @@ async def query_api(request: Request):
         lang = normalized_lang or lang
 
         try:
+            wiring_start = time.perf_counter()
             wiring: LangnetWiring = _ensure_wiring(request)
+            wiring_ms = (time.perf_counter() - wiring_start) * 1000
         except Exception as e:
             return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
 
         try:
+            handle_start = time.perf_counter()
             result = wiring.engine.handle_query(lang, word)
+            handle_ms = (time.perf_counter() - handle_start) * 1000
 
             # Unstructure DictionaryEntry objects to dicts (omits None fields)
             result_dict = [json_converter.unstructure(entry) for entry in result]
+            total_ms = (time.perf_counter() - request_start) * 1000
+
+            timings_payload = {
+                "wiring_ms": round(wiring_ms, 3),
+                "handle_query_ms": round(handle_ms, 3),
+                "total_ms": round(total_ms, 3),
+            }
+            for entry in result_dict:
+                if not isinstance(entry, dict):
+                    continue
+                if "metadata" in entry and isinstance(entry["metadata"], dict):
+                    entry["metadata"].pop("timings_ms", None)
+                    entry["metadata"].pop("request_timings_ms", None)
+
+            logger.info(
+                "query_timings",
+                lang=lang,
+                word=word,
+                request_timings=timings_payload,
+            )
 
             return ORJsonResponse(result_dict)
         except Exception as e:

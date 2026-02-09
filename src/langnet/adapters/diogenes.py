@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import time
 from typing import TypedDict, cast
 
 import structlog
@@ -46,9 +47,16 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
     def __init__(self):
         self._cts_mapper = CTSUrnMapper()
 
-    def adapt(self, data: dict[str, object], language: str, word: str) -> list[DictionaryEntry]:
+    def adapt(
+        self, data: dict[str, object], language: str, word: str, timings: dict[str, float] | None = None
+    ) -> list[DictionaryEntry]:
+        overall_start = time.perf_counter() if timings is not None else None
         entries: list[DictionaryEntry] = []
-        morphology = self._extract_perseus_morphology(data, word)
+        morphology = self._time_section(
+            "adapt_diogenes_morphology_extract",
+            timings,
+            lambda: self._extract_perseus_morphology(data, word),
+        )
         merged: _MergedAggregate = {
             "definitions": [],
             "blocks": [],
@@ -75,7 +83,7 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         chunks: list[dict[str, object]] = [
             cast(dict[str, object], c) for c in chunks_raw if isinstance(c, dict)
         ]
-        for chunk in chunks:
+        def process_chunk(chunk: dict[str, object]):
             chunk_type_val = chunk.get("chunk_type")
             chunk_type: str | None = chunk_type_val if isinstance(chunk_type_val, str) else None
             if not chunk_type:
@@ -88,10 +96,11 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                     chunk,
                     chunk_type,
                     context,
+                    timings,
                 )
-            else:
-                # Skip unknown/empty chunks to avoid placeholder entries
-                continue
+
+        for chunk in chunks:
+            self._time_section("adapt_diogenes_chunk", timings, lambda c=chunk: process_chunk(c))
 
         payload = aggregated["merged"]
         # Preserve order: PerseusAnalysisHeader first, then DiogenesMatchingReference
@@ -130,7 +139,29 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                 )
             )
 
+        if overall_start is not None:
+            timings["adapt_diogenes_internal"] = (time.perf_counter() - overall_start) * 1000
+            diogenes_timings = {
+                k: v for k, v in timings.items() if k.startswith("adapt_diogenes")
+            }
+            diogenes_timings["chunk_count"] = len(chunks)
+            logger.info(
+                "diogenes_adapter_timings",
+                word=word,
+                language=language,
+                timings=diogenes_timings,
+            )
         return entries
+
+    @staticmethod
+    def _time_section(name: str, timings: dict[str, float] | None, func):
+        if timings is None:
+            return func()
+        start = time.perf_counter()
+        try:
+            return func()
+        finally:
+            timings[name] = timings.get(name, 0.0) + (time.perf_counter() - start) * 1000
 
     def _extract_perseus_morphology(
         self, data: dict[str, object], fallback_word: str
@@ -183,6 +214,7 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         chunk: dict[str, object],
         chunk_type: str | None,
         context: _CollectionContext,
+        timings: dict[str, float] | None = None,
     ) -> None:
         diogenes_definitions_raw = chunk.get("definitions") or {}
         if not isinstance(diogenes_definitions_raw, dict):
@@ -224,7 +256,11 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                 else {}
             )
             original_citations = self._strip_duplicate_originals(citations, original_citations)
-            citation_details = self._enrich_citations(citations, context.language)
+            citation_details = self._time_section(
+                "adapt_diogenes_enrich_citations",
+                timings,
+                lambda: self._enrich_citations(citations, context.language),
+            )
             block_metadata = self._build_block_metadata(block)
             block_ctx = _BlockBuildContext(
                 entry_text=entry_text,
@@ -236,10 +272,18 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             )
 
             if existing_idx is not None:
-                self._merge_existing_block(merged, existing_idx, block_ctx)
+                self._time_section(
+                    "adapt_diogenes_merge_block",
+                    timings,
+                    lambda: self._merge_existing_block(merged, existing_idx, block_ctx),
+                )
                 continue
 
-            block_obj = self._create_block(block_ctx)
+            block_obj = self._time_section(
+                "adapt_diogenes_create_block",
+                timings,
+                lambda: self._create_block(block_ctx),
+            )
             blocks.append(block_obj)
             norm_index[normalized_entry] = len(merged["blocks"]) + len(blocks) - 1
 

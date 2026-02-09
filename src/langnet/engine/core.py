@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from typing import cast
 
@@ -198,11 +199,22 @@ class LanguageEngine:
             envelope["request_id"] = ctx["request_id"]
         return {"error": envelope}
 
-    def _query_greek(self, word: str, _cattrs_converter) -> dict:
+    def _record_timing(self, timings: dict[str, float], name: str, func):
+        start = time.perf_counter()
+        try:
+            return func()
+        finally:
+            timings[name] = (time.perf_counter() - start) * 1000
+
+    def _query_greek(self, word: str, _cattrs_converter, timings: dict[str, float]) -> dict:
         result: dict = {}
         try:
-            result["diogenes"] = _cattrs_converter.unstructure(
-                self.diogenes.parse_word(word, DiogenesLanguages.GREEK)
+            result["diogenes"] = self._record_timing(
+                timings,
+                "diogenes",
+                lambda: _cattrs_converter.unstructure(
+                    self.diogenes.parse_word(word, DiogenesLanguages.GREEK)
+                ),
             )
         except Exception as e:
             logger.error("backend_failed", backend="diogenes", error=str(e))
@@ -210,48 +222,67 @@ class LanguageEngine:
         try:
             if self.cltk.spacy_is_available():
                 logger.debug("spacy_available", word=word)
-                spacy_result = self.cltk.greek_morphology_query(word)
+                spacy_result = self._record_timing(
+                    timings, "spacy", lambda: self.cltk.greek_morphology_query(word)
+                )
                 result["spacy"] = _cattrs_converter.unstructure(spacy_result)
             else:
                 logger.debug("spacy_unavailable", word=word)
+                timings.setdefault("spacy", 0.0)
         except Exception as e:
             logger.error("backend_failed", backend="spacy", error=str(e))
             result["spacy"] = self._backend_error("spacy", e)
         return result
 
-    def _query_latin(self, word: str, _cattrs_converter) -> dict:
+    def _query_latin(self, word: str, _cattrs_converter, timings: dict[str, float]) -> dict:
         tokenized = [word]
         result = {}
         try:
-            dg_result = self.diogenes.parse_word(word, DiogenesLanguages.LATIN)
+            dg_result = self._record_timing(
+                timings,
+                "diogenes",
+                lambda: self.diogenes.parse_word(word, DiogenesLanguages.LATIN),
+            )
             result["diogenes"] = _cattrs_converter.unstructure(dg_result)
         except Exception as e:
             logger.error("backend_failed", backend="diogenes", error=str(e))
             result["diogenes"] = self._backend_error("diogenes", e)
         try:
-            ww_result = self.whitakers.words(tokenized)
+            ww_result = self._record_timing(
+                timings, "whitakers", lambda: self.whitakers.words(tokenized)
+            )
             result["whitakers"] = _cattrs_converter.unstructure(ww_result)
         except Exception as e:
             logger.error("backend_failed", backend="whitakers", error=str(e))
             result["whitakers"] = self._backend_error("whitakers", e)
         try:
-            cltk_result = self.cltk.latin_query(word)
+            cltk_result = self._record_timing(
+                timings, "cltk", lambda: self.cltk.latin_query(word)
+            )
             result["cltk"] = _cattrs_converter.unstructure(cltk_result)
         except Exception as e:
             logger.error("backend_failed", backend="cltk", error=str(e))
             result["cltk"] = self._backend_error("cltk", e)
         return result
 
-    def _query_sanskrit(self, word: str, _cattrs_converter) -> dict:
+    def _query_sanskrit(self, word: str, _cattrs_converter, timings: dict[str, float]) -> dict:
         result = {}
 
-        normalized: SanskritNormalizationResult = self._get_sanskrit_normalizer().normalize(word)
+        normalized: SanskritNormalizationResult = self._record_timing(
+            timings,
+            "sanskrit_normalize",
+            lambda: self._get_sanskrit_normalizer().normalize(word),
+        )
         canonical = normalized.canonical_heritage
         canonical_slp1 = normalized.canonical_slp1
         slp1_candidates = normalized.slp1_candidates
         canonical_tokens = normalized.canonical_tokens
 
-        heritage_result = self._query_sanskrit_heritage(canonical, _cattrs_converter)
+        heritage_result = self._record_timing(
+            timings,
+            "heritage",
+            lambda: self._query_sanskrit_heritage(canonical, _cattrs_converter, timings),
+        )
         if heritage_result:
             result["heritage"] = heritage_result
 
@@ -260,7 +291,9 @@ class LanguageEngine:
             cdsl_result = None
             for candidate in [canonical_slp1, *slp1_candidates]:
                 try:
-                    cdsl_result = self.cdsl.lookup_ascii(candidate)
+                    cdsl_result = self._record_timing(
+                        timings, "cdsl", lambda: self.cdsl.lookup_ascii(candidate)
+                    )
                     break
                 except Exception as exc:  # noqa: BLE001
                     cdsl_lookup_error = exc
@@ -284,7 +317,9 @@ class LanguageEngine:
         result["input_form"] = word
         return result
 
-    def _query_sanskrit_heritage(self, word: str, _cattrs_converter) -> dict | None:
+    def _query_sanskrit_heritage(
+        self, word: str, _cattrs_converter, timings: dict[str, float]
+    ) -> dict | None:
         if not self.heritage_morphology:
             logger.warning("heritage_morphology_service_not_available")
             return None
@@ -298,8 +333,12 @@ class LanguageEngine:
                 if self.sanskrit_normalizer
                 else "velthuis"
             )
-            morphology_result = self.heritage_morphology.analyze_word(
-                word, encoding=morphology_encoding
+            morphology_result = self._record_timing(
+                timings,
+                "heritage_morphology",
+                lambda: self.heritage_morphology.analyze_word(
+                    word, encoding=morphology_encoding
+                ),
             )
         except Exception as exc:  # noqa: BLE001
             logger.error("backend_failed", backend="heritage_morphology", error=str(exc))
@@ -337,8 +376,10 @@ class LanguageEngine:
         # Fetch canonical form and lemmatization from Heritage HTTP endpoints
         if self.heritage_client:
             try:
-                canonical_result: CanonicalResult | None = (
-                    self.heritage_client.fetch_canonical_sanskrit(word)
+                canonical_result: CanonicalResult | None = self._record_timing(
+                    timings,
+                    "heritage_canonical",
+                    lambda: self.heritage_client.fetch_canonical_sanskrit(word),
                 )
                 if canonical_result:
                     result["canonical"] = cast(JSONMapping, canonical_result)
@@ -349,34 +390,55 @@ class LanguageEngine:
 
     def handle_query(self, lang, word):
         """Handle queries using the universal schema with structured DictionaryEntry objects."""
+        overall_start = time.perf_counter()
         lang = LangnetLanguageCodes.get_for_input(lang)
         logger.debug("universal_query_started", lang=lang, word=word)
 
         # Get raw backend results
         _cattrs_converter = self._cattrs_converter
 
+        timings: dict[str, float] = {}
+
         if lang == LangnetLanguageCodes.Greek:
             logger.debug("routing_to_greek_backends", lang=lang, word=word)
-            raw_result = self._query_greek(word, _cattrs_converter)
+            raw_result = self._query_greek(word, _cattrs_converter, timings)
         elif lang == LangnetLanguageCodes.Latin:
             logger.debug("routing_to_latin_backends", lang=lang, word=word)
-            raw_result = self._query_latin(word, _cattrs_converter)
+            raw_result = self._query_latin(word, _cattrs_converter, timings)
         elif lang == LangnetLanguageCodes.Sanskrit:
             logger.debug("routing_to_sanskrit_backends", lang=lang, word=word)
-            raw_result = self._query_sanskrit(word, _cattrs_converter)
+            raw_result = self._query_sanskrit(word, _cattrs_converter, timings)
         else:
             raise NotImplementedError(f"Do not know how to handle {lang}")
 
+        raw_result["_timings"] = timings
+
         # Apply Foster functional mapping before adapting to universal schema
+        foster_start = time.perf_counter()
         try:
             raw_result = apply_foster_view(raw_result)
         except Exception as exc:  # noqa: BLE001
             logger.warning("apply_foster_view_failed", error=str(exc))
+        timings["foster_view"] = (time.perf_counter() - foster_start) * 1000
 
         # Convert to universal schema
+        adapt_start = time.perf_counter()
         adapter_registry = LanguageAdapterRegistry()
         adapter = adapter_registry.get_adapter(lang)
-        unified_result = adapter.adapt(raw_result, lang, word)
+        # Pass timings to adapters that support it for finer attribution.
+        try:
+            unified_result = adapter.adapt(raw_result, lang, word, timings=timings)  # type: ignore[arg-type]
+        except TypeError:
+            unified_result = adapter.adapt(raw_result, lang, word)
+        timings["adapt_unified"] = (time.perf_counter() - adapt_start) * 1000
+        timings["handle_query_total"] = (time.perf_counter() - overall_start) * 1000
+
+        logger.info(
+            "handle_query_timings",
+            lang=lang,
+            word=word,
+            timings={k: round(v, 3) for k, v in timings.items()},
+        )
 
         logger.debug("universal_query_completed", lang=lang, word=word, entries=len(unified_result))
         return unified_result
