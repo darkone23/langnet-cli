@@ -552,6 +552,58 @@ class CTSUrnMapper:
             logger.debug(f"URN metadata lookup failed: {e}")
             return None
 
+    def get_urn_metadata_bulk(self, urn_text_map: dict[str, str | None]) -> dict[str, dict[str, str]]:
+        """
+        Fetch CTS metadata for multiple URNs in one query when possible.
+
+        Falls back to per-URN lookup for any that aren't found exactly.
+        """
+        if not urn_text_map:
+            return {}
+
+        conn = self._get_connection()
+        if not conn:
+            return {}
+
+        results: dict[str, dict[str, str]] = {}
+        urns = list(urn_text_map.keys())
+        try:
+            cursor = conn.cursor()
+            values_clause = ",".join("(?)" for _ in urns)
+            rows = cursor.execute(
+                f"""
+                WITH input(urn_input) AS (VALUES {values_clause})
+                SELECT urn_input, meta.author_name, meta.work_title
+                FROM input
+                LEFT JOIN LATERAL (
+                    SELECT a.author_name, w.work_title
+                    FROM works w
+                    JOIN author_index a ON w.author_id = a.author_id
+                    WHERE urn_input = w.cts_urn OR urn_input LIKE w.cts_urn || '%'
+                    ORDER BY (urn_input = w.cts_urn) DESC, LENGTH(w.cts_urn) DESC
+                    LIMIT 1
+                ) meta ON TRUE
+                """,
+                urns,
+            ).fetchall()
+            for urn_input, author_name, work_title in rows:
+                if author_name is None or work_title is None:
+                    continue
+                results[urn_input] = {
+                    "author": self._maybe_betacode_to_unicode(author_name) or "",
+                    "work": self._maybe_betacode_to_unicode(work_title) or "",
+                }
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("bulk_urn_lookup_failed error=%s", str(exc))
+
+        missing = [urn for urn in urns if urn not in results]
+        for urn in missing:
+            meta = self.get_urn_metadata(urn, urn_text_map.get(urn))
+            if meta:
+                results[urn] = meta
+
+        return results
+
     def convert_to_citation(self, urn: str) -> dict[str, str] | None:
         """Convert a CTS URN to a minimal citation payload."""
         if not urn:

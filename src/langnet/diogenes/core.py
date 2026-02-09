@@ -8,7 +8,7 @@ import betacode.conv
 import cattrs
 import requests
 import structlog
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, FeatureNotFound, Tag
 
 from langnet.citation.cts_urn import CTSUrnMapper
 
@@ -166,6 +166,8 @@ class DiogenesLanguages:
 class DiogenesScraper:
     "data refinement layer and client for diogenes"
 
+    _PARSER_PREFERENCE = ("lxml", "html5lib", "html.parser")
+
     def __init__(self, base_url: str | None = None):
         self.base_url = base_url
 
@@ -174,6 +176,14 @@ class DiogenesScraper:
 
         if not self.base_url.endswith("/"):
             self.base_url += "/"
+
+    def _make_soup(self, html: str) -> BeautifulSoup:
+        for parser in self._PARSER_PREFERENCE:
+            try:
+                return BeautifulSoup(html, parser)
+            except FeatureNotFound:
+                continue
+        return BeautifulSoup(html, "html.parser")
 
     def __diogenes_parse_url(self, word, lang):
         url = f"{self.base_url}Perseus.cgi?do=parse&lang={lang}&q={word}"
@@ -397,7 +407,7 @@ class DiogenesScraper:
             return ":".join([str(i).zfill(2) for i in indent_history])
 
         def insert_block(block: BeautifulSoup):
-            block_copy = BeautifulSoup(f"{block}", "html5lib")
+            block_copy = self._make_soup(f"{block}")
             node_id = shift_cursor(block)
             blocks.append(dict(indentid=node_id, soup=block_copy))
 
@@ -638,7 +648,7 @@ class DiogenesScraper:
             logger.debug("parse_word_documents", count=len(documents))
             chunk_types = []
             for doc in documents:
-                soup = BeautifulSoup(doc, "html5lib")
+                soup = self._make_soup(doc)
                 chunk = self.get_next_chunk(result, soup)
                 chunk_types.append(chunk["chunk_type"])
                 self.process_chunk(result, chunk)

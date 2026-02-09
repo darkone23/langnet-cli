@@ -397,11 +397,14 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         if not citations:
             return {}
 
+        cts_urns = {urn: citation_text for urn, citation_text in citations.items() if urn.startswith("urn:cts")}
+        cts_metadata = self._cts_mapper.get_urn_metadata_bulk(cts_urns) if cts_urns else {}
+
         details: dict[str, dict[str, str]] = {}
         for urn, citation_text in citations.items():
             info: dict[str, str] | None = None
             if urn.startswith("urn:cts"):
-                info = self._cts_mapper.get_urn_metadata(urn, citation_text)
+                info = cts_metadata.get(urn)
                 if info:
                     info = {**info, "kind": "cts"}
             if not info:
