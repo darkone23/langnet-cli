@@ -1,5 +1,7 @@
 # Langnet CLI - Architecture & Technical Reference
 
+Roadmap/TODO are now tracked in `docs/plans`; see `docs/plans/active` and `docs/plans/todo` for current status.
+
 This document provides a comprehensive technical overview of the langnet-cli architecture, implementation details, and system design.
 
 ## 🏗️ System Architecture
@@ -342,4 +344,4 @@ logger.error("Backend timeout", backend="diogenes", error=error)
 ---
 
 *For development setup and workflow, see [DEVELOPER.md](../DEVELOPER.md)*  
-*For current status and roadmap, see [ROADMAP.md](../ROADMAP.md)*
+*For current status and roadmap, see plan files under `docs/plans` (active/todo). Legacy roadmap archived.*

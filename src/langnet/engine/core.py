@@ -19,6 +19,13 @@ from langnet.heritage.morphology import (
 )
 from langnet.normalization import NormalizationPipeline
 from langnet.whitakers_words.core import WhitakersWords
+from langnet.validation import validate_tool_request
+
+try:  # structlog contextvars may be missing in some environments
+    from structlog.contextvars import get_contextvars  # type: ignore
+except Exception:  # pragma: no cover
+    def get_contextvars():
+        return {}
 
 logger = structlog.get_logger(__name__)
 
@@ -147,6 +154,46 @@ class LanguageEngine:
         self.enable_normalization = config.enable_normalization
         self._cattrs_converter = cattrs.Converter(omit_if_default=True)
 
+    def _get_sanskrit_normalizer(self) -> SanskritQueryNormalizer:
+        if not self.sanskrit_normalizer:
+            self.sanskrit_normalizer = SanskritQueryNormalizer(
+                heritage_client=self.heritage_client,
+                normalization_pipeline=self.normalization_pipeline if self.enable_normalization else None,
+            )
+        return self.sanskrit_normalizer
+
+    def _normalize_sanskrit_word(
+        self, word: str
+    ) -> tuple[str, str, list[str], list[str] | None]:
+        normalizer = self._get_sanskrit_normalizer()
+        normalized = normalizer.normalize(word)
+        heritage_form = normalized.canonical_heritage
+        canonical_slp1 = normalized.canonical_slp1
+        slp1_candidates = list(normalized.slp1_candidates)
+        if canonical_slp1 and canonical_slp1 not in slp1_candidates:
+            slp1_candidates.insert(0, canonical_slp1)
+        return heritage_form, canonical_slp1, slp1_candidates, normalized.canonical_tokens
+
+    def _detect_heritage_encoding(self, word: str) -> str:
+        normalizer = self._get_sanskrit_normalizer()
+        return normalizer.detect_heritage_encoding(word)
+
+    def _looks_mangled_slp1(self, text: str) -> bool:
+        # Delegate to the normalizer heuristic to keep behavior in sync.
+        return self._get_sanskrit_normalizer()._looks_mangled_slp1(text)  # type: ignore[attr-defined]
+
+    @staticmethod
+    def _backend_error(backend: str, exc: Exception) -> dict[str, Any]:
+        ctx = {}
+        try:
+            ctx = get_contextvars()
+        except Exception:
+            ctx = {}
+        envelope: dict[str, Any] = {"backend": backend, "message": str(exc)}
+        if ctx.get("request_id"):
+            envelope["request_id"] = ctx["request_id"]
+        return {"error": envelope}
+
     def _query_greek(self, word: str, _cattrs_converter) -> dict:
         result: dict = {}
         try:
@@ -155,7 +202,7 @@ class LanguageEngine:
             )
         except Exception as e:
             logger.error("backend_failed", backend="diogenes", error=str(e))
-            result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
+            result["diogenes"] = self._backend_error("diogenes", e)
         try:
             if self.cltk.spacy_is_available():
                 logger.debug("spacy_available", word=word)
@@ -165,7 +212,7 @@ class LanguageEngine:
                 logger.debug("spacy_unavailable", word=word)
         except Exception as e:
             logger.error("backend_failed", backend="spacy", error=str(e))
-            result["spacy"] = {"error": f"Spacy unavailable: {str(e)}"}
+            result["spacy"] = self._backend_error("spacy", e)
         return result
 
     def _query_latin(self, word: str, _cattrs_converter) -> dict:
@@ -176,31 +223,25 @@ class LanguageEngine:
             result["diogenes"] = _cattrs_converter.unstructure(dg_result)
         except Exception as e:
             logger.error("backend_failed", backend="diogenes", error=str(e))
-            result["diogenes"] = {"error": f"Diogenes unavailable: {str(e)}"}
+            result["diogenes"] = self._backend_error("diogenes", e)
         try:
             ww_result = self.whitakers.words(tokenized)
             result["whitakers"] = _cattrs_converter.unstructure(ww_result)
         except Exception as e:
             logger.error("backend_failed", backend="whitakers", error=str(e))
-            result["whitakers"] = {"error": f"Whitakers unavailable: {str(e)}"}
+            result["whitakers"] = self._backend_error("whitakers", e)
         try:
             cltk_result = self.cltk.latin_query(word)
             result["cltk"] = _cattrs_converter.unstructure(cltk_result)
         except Exception as e:
             logger.error("backend_failed", backend="cltk", error=str(e))
-            result["cltk"] = {"error": f"CLTK unavailable: {str(e)}"}
+            result["cltk"] = self._backend_error("cltk", e)
         return result
 
     def _query_sanskrit(self, word: str, _cattrs_converter) -> dict:
         result = {}
 
-        normalizer = self.sanskrit_normalizer or SanskritQueryNormalizer(
-            heritage_client=self.heritage_client,
-            normalization_pipeline=self.normalization_pipeline if self.enable_normalization else None,
-        )
-        self.sanskrit_normalizer = normalizer
-
-        normalized: SanskritNormalizationResult = normalizer.normalize(word)
+        normalized: SanskritNormalizationResult = self._get_sanskrit_normalizer().normalize(word)
         canonical = normalized.canonical_heritage
         canonical_slp1 = normalized.canonical_slp1
         slp1_candidates = normalized.slp1_candidates
@@ -227,7 +268,7 @@ class LanguageEngine:
                 raise cdsl_lookup_error or RuntimeError("CDSL lookup failed for all candidates")
         except Exception as e:  # noqa: BLE001
             logger.error("backend_failed", backend="cdsl", error=str(e))
-            result["cdsl"] = {"error": f"CDSL unavailable: {str(e)}"}
+            result["cdsl"] = self._backend_error("cdsl", e)
 
         result["canonical_form"] = canonical_slp1 or canonical
         result["canonical_slp1"] = canonical_slp1
@@ -263,51 +304,31 @@ class LanguageEngine:
         if morphology_result:
             result["morphology"] = _cattrs_converter.unstructure(morphology_result)
 
-            # If we have a lemma, look it up in the dictionary
             if morphology_result.solutions and morphology_result.solutions[0].analyses:
-                # Extract lemma from first solution's first analysis
                 first_analysis = morphology_result.solutions[0].analyses[0]
-                lemma = first_analysis.lemma if first_analysis.lemma else None
-                if lemma:
-                    dict_result = None
-                    dict_source = None
-                    try:
-                        if self.cdsl:
-                            cdsl_lookup = self.cdsl.lookup_ascii(lemma)
-                            entries: list[dict] = []
-                            for entry_list in cdsl_lookup.get("dictionaries", {}).values():
-                                if isinstance(entry_list, list):
-                                    entries.extend(entry_list)
-                            if entries:
-                                dict_result = {
-                                    "entries": entries,
-                                    "transliteration": cdsl_lookup.get("transliteration", {}),
-                                    "dictionary": "cdsl",
-                                }
-                                dict_source = "cdsl"
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning("cdsl_dictionary_lookup_failed", lemma=lemma, error=str(exc))
-
-                    if dict_result:
-                        result["dictionary"] = _cattrs_converter.unstructure(dict_result)
-                        result["dictionary_source"] = dict_source
-
-                        combined = {
-                            "lemma": lemma,
-                            "pos": first_analysis.pos if first_analysis.pos else "unknown",
-                            "morphology_analyses": [
-                                {
-                                    "word": analysis.word,
-                                    "lemma": analysis.lemma,
-                                    "pos": analysis.pos,
-                                }
-                                for analysis in morphology_result.solutions[0].analyses
-                            ],
-                            "dictionary_entries": dict_result.get("entries", []),
-                            "dictionary_source": dict_source,
-                            "transliteration": dict_result.get("transliteration", {}),
+                analyses = morphology_result.solutions[0].analyses
+                result["combined"] = {
+                    "lemma": first_analysis.lemma or word,
+                    "pos": first_analysis.pos or "unknown",
+                    "morphology_analyses": [
+                        {
+                            "word": analysis.word,
+                            "lemma": analysis.lemma,
+                            "pos": analysis.pos,
+                            "features": {
+                                "case": analysis.case,
+                                "gender": analysis.gender,
+                                "number": analysis.number,
+                                "person": analysis.person,
+                                "tense": analysis.tense,
+                                "voice": analysis.voice,
+                                "mood": analysis.mood,
+                                "stem": analysis.stem,
+                            },
                         }
-                        result["combined"] = combined
+                        for analysis in analyses
+                    ],
+                }
 
         # Fetch canonical form and lemmatization from Heritage HTTP endpoints
         if self.heritage_client:
@@ -495,29 +516,6 @@ class LanguageEngine:
         heritage_form, canonical_slp1, slp1_candidates, canonical_tokens = (
             self._normalize_sanskrit_word(query)
         )
-
-        # Ensure we always have at least one SLP1 candidate even if normalization is minimal.
-        try:
-            from langnet.heritage.encoding_service import EncodingService  # noqa: PLC0415
-            from indic_transliteration.sanscript import IAST, SLP1, transliterate  # noqa: PLC0415
-            from indic_transliteration.detect import detect  # noqa: PLC0415
-
-            enc = EncodingService.detect_encoding(query)
-            if enc != "slp1":
-                if any(ord(c) > 127 for c in query):
-                    src = IAST
-                else:
-                    src = detect(query) or enc
-                fallback_slp1 = transliterate(query, src, SLP1)
-                slp1_candidates.append(fallback_slp1)
-        except Exception:
-            pass
-
-        # Always include a transliteration of the original query using the CDSL helper (covers shiva -> siva/ziva).
-        try:
-            slp1_candidates.append(cdsl_to_slp1(query))
-        except Exception:
-            pass
 
         # Build a candidate list preferring clean SLP1 forms first.
         dedup: list[str] = []

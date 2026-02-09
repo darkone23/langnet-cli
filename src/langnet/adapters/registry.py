@@ -63,10 +63,10 @@ class LatinAdapter:
 
     def adapt(self, data: dict, language: str, word: str):
         entries = []
-        if "diogenes" in data:
-            entries.extend(self.diogenes_adapter.adapt(data["diogenes"], language, word))
         if "whitakers" in data:
             entries.extend(self.whitakers_adapter.adapt(data["whitakers"], language, word))
+        if "diogenes" in data:
+            entries.extend(self.diogenes_adapter.adapt(data["diogenes"], language, word))
         if "cltk" in data:
             entries.extend(self.cltk_adapter.adapt(data["cltk"], language, word))
         return entries

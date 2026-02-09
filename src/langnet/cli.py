@@ -40,7 +40,12 @@ from langnet.indexer.core import IndexType
 from langnet.indexer.cts_urn_indexer import CtsUrnIndexer
 from langnet.indexer.utils import get_index_manager
 from langnet.logging import setup_logging
-from langnet.validation import LANG_ALIASES, VALID_LANGUAGES, validate_query
+from langnet.validation import (
+    LANG_ALIASES,
+    VALID_LANGUAGES,
+    validate_query,
+    validate_tool_request,
+)
 
 BODY_PREVIEW_LENGTH = 100
 
@@ -161,6 +166,56 @@ def _show_sanskrit_warning(result: dict | list) -> None:
         console.print(f"[yellow]Warning: {result['_warning']}[/]")
 
 
+def _normalize_entry_text(text: str) -> str:
+    return " ".join(str(text).split())
+
+
+def _simplify_table_output(result: dict | list) -> dict | list:
+    """Trim obviously duplicate payload for human display (table mode only)."""
+    entries: list | None
+    if isinstance(result, list):
+        entries = result
+    elif isinstance(result, dict):
+        entries = result.get("entries")
+    else:
+        return result
+    if not isinstance(entries, list):
+        return result
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+
+        defs = entry.get("definitions") or []
+        norm_defs = {
+            _normalize_entry_text(d.get("definition", ""))
+            for d in defs
+            if isinstance(d, dict) and d.get("definition")
+        }
+
+        blocks = entry.get("dictionary_blocks")
+        if isinstance(blocks, list):
+            filtered_blocks = []
+            for block in blocks:
+                if not isinstance(block, dict):
+                    filtered_blocks.append(block)
+                    continue
+                norm_block = _normalize_entry_text(block.get("entry", ""))
+                if norm_block in norm_defs:
+                    continue
+                filtered_blocks.append(block)
+            entry["dictionary_blocks"] = filtered_blocks
+
+        if entry.get("source") == "cltk":
+            metadata = entry.get("metadata")
+            if isinstance(metadata, dict) and "lewis_1890_lines" in metadata:
+                new_meta = dict(metadata)
+                new_meta.pop("lewis_1890_lines", None)
+                entry["metadata"] = new_meta
+
+    return result
+
+
 def _format_result_with_foster(result: dict | list) -> dict | list:
     if isinstance(result, list):
         return result
@@ -194,7 +249,12 @@ def main():
     setup_logging(settings.log_level_value)
 
 
-def _verify_impl(api_url: str, socket_timeout: float = 1.0, http_timeout: float = 30.0):
+def _verify_impl(
+    api_url: str,
+    socket_timeout: float = 1.0,
+    http_timeout: float = 30.0,
+    output: str = "table",
+):
     """Core verification logic shared by verify and health commands."""
     parsed = urlparse(api_url)
     host = parsed.hostname or "localhost"
@@ -213,19 +273,37 @@ def _verify_impl(api_url: str, socket_timeout: float = 1.0, http_timeout: float 
         status = health_data.get("status", "unknown")
         components = health_data.get("components", {})
 
-        table = Table(title="Backend Status")
-        table.add_column("Backend", style="cyan")
-        table.add_column("Status", style="green")
-        table.add_column("Details", style="yellow")
+        if output == "json":
+            sys.stdout.write(orjson.dumps(health_data, option=orjson.OPT_INDENT_2).decode("utf-8"))
+            sys.stdout.flush()
+        else:
+            table = Table(title="Backend Status")
+            table.add_column("Backend", style="cyan")
+            table.add_column("Status", style="green")
+            table.add_column("Message", style="yellow")
+            table.add_column("Duration (ms)", style="magenta")
 
-        for name, info in components.items():
-            comp_status = info.get("status", "unknown")
-            message = info.get("message", "")
-            status_style = "green" if comp_status == "healthy" else "red"
-            table.add_row(name.title(), f"[{status_style}]{comp_status}[/]", message)
+            for name, info in components.items():
+                comp_status = info.get("status", "unknown")
+                message = info.get("message", "") or ""
+                duration = info.get("duration_ms")
+                duration_display = f"{duration:.1f}" if isinstance(duration, (int, float)) else ""
+                status_style = (
+                    "green"
+                    if comp_status == "healthy"
+                    else "yellow"
+                    if comp_status in {"degraded", "not_configured", "missing"}
+                    else "red"
+                )
+                table.add_row(
+                    name.title(),
+                    f"[{status_style}]{comp_status}[/]",
+                    message,
+                    duration_display,
+                )
 
-        console.print(table)
-        console.print(f"\nOverall: [bold]{status}[/]")
+            console.print(table)
+            console.print(f"\nOverall: [bold]{status}[/]")
 
         if status != "healthy":
             sys.exit(1)
@@ -274,7 +352,7 @@ def verify(api_url: str, socket_timeout: float, timeout: float, output: str):
         langnet verify --api-url http://host:8000
         langnet verify --timeout 60              # longer timeout
     """
-    _verify_impl(api_url, socket_timeout, timeout)
+    _verify_impl(api_url, socket_timeout, timeout, output)
 
 
 @main.command(name="query")
@@ -333,6 +411,7 @@ def query(lang: str, word: str, api_url: str, output: str):
         else:
             result = orjson.loads(response.text)
             result = _format_result_with_foster(result)
+            result = _simplify_table_output(result)
 
             pprint(result)
     except requests.RequestException as e:

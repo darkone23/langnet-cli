@@ -15,24 +15,75 @@ class HeritageBackendAdapter(BaseBackendAdapter):
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries: list[DictionaryEntry] = []
 
-        combined = data.get("combined_analysis") or data.get("dictionary") or {}
+        combined = (
+            data.get("combined_analysis")
+            or data.get("combined")
+            or data.get("dictionary")
+            or {}
+        )
         dict_entries = combined.get("dictionary_entries") or combined.get("entries") or []
+        canonical_payload = data.get("canonical") or {}
+        lemmatize_payload = data.get("lemmatize") or {}
 
-        morphology = None
-        if combined:
-            morph_pos = combined.get("pos")
-            analyses = combined.get("morphology_analyses") or []
-            if not morph_pos and analyses and isinstance(analyses[0], dict):
-                morph_pos = analyses[0].get("analysis")
-            lemma = combined.get("lemma") or word
-            morph_features = {"analyses": analyses}
-            morphology = MorphologyInfo(
-                lemma=lemma,
-                pos=self._extract_pos_from_entry(morph_pos or ""),
-                features=morph_features,
+        morphology = self._build_morphology(data.get("morphology"), combined, word)
+        definitions = self._build_definitions(dict_entries)
+
+        if morphology or definitions:
+            entry_metadata = {}
+            if data.get("morphology"):
+                entry_metadata["morphology_raw"] = data.get("morphology")
+            if combined:
+                entry_metadata["combined"] = combined
+
+            entries.append(
+                DictionaryEntry(
+                    source="heritage",
+                    language=language,
+                    word=word,
+                    definitions=definitions,
+                    morphology=morphology,
+                    metadata=entry_metadata,
+                )
             )
 
-        definitions = []
+        # Canonical-only or lemmatize-only responses should still produce an entry so callers
+        # see the normalized form instead of an empty result.
+        if not entries and (canonical_payload or lemmatize_payload):
+            lemma = (
+                lemmatize_payload.get("lemma")
+                or canonical_payload.get("canonical_text")
+                or canonical_payload.get("canonical_sanskrit")
+                or word
+            )
+            metadata = {}
+            if canonical_payload:
+                metadata["canonical"] = canonical_payload
+            if lemmatize_payload:
+                metadata["lemmatize"] = lemmatize_payload
+
+            entries.append(
+                DictionaryEntry(
+                    source="heritage",
+                    language=language,
+                    word=word,
+                    definitions=[],
+                    morphology=MorphologyInfo(
+                        lemma=lemma,
+                        pos=self._extract_pos_from_entry(lemmatize_payload.get("grammar", "")),
+                        features={"analyses": lemmatize_payload.get("analyses") or []},
+                    ),
+                    metadata={
+                        **metadata,
+                        "canonical_form": lemma,
+                        "input_form": word,
+                    },
+                )
+            )
+
+        return entries
+
+    def _build_definitions(self, dict_entries: list[dict]) -> list[DictionaryDefinition]:
+        definitions: list[DictionaryDefinition] = []
         for entry in dict_entries:
             definition_text = entry.get("meaning") or entry.get("analysis") or str(entry)
             definitions.append(
@@ -42,33 +93,53 @@ class HeritageBackendAdapter(BaseBackendAdapter):
                     metadata={
                         "lemma": entry.get("headword") or entry.get("lemma"),
                         "dictionary": entry.get("dict_id") or entry.get("dictionary"),
+                        "dict": entry.get("dict_id") or entry.get("dictionary"),
                         "grammar_tags": entry.get("grammar_tags"),
                     },
                 )
             )
+        return definitions
 
-        morph = data.get("morphology") or combined.get("morphology_analyses")
-        if isinstance(morph, dict) and morph.get("analyses"):
-            entries.append(
-                DictionaryEntry(
-                    source="heritage",
-                    language=language,
-                    word=word,
-                    definitions=definitions,
-                    morphology=morphology,
-                    metadata={"morphology": morph, "combined": combined},
+    def _build_morphology(
+        self, morphology_data: dict | None, combined: dict, fallback_word: str
+    ) -> MorphologyInfo | None:
+        if isinstance(morphology_data, dict):
+            solutions = morphology_data.get("solutions") or []
+            analyses = []
+            if solutions and isinstance(solutions[0], dict):
+                analyses = solutions[0].get("analyses") or []
+            if morphology_data.get("analyses"):  # legacy shape
+                analyses = morphology_data.get("analyses")
+
+            if analyses:
+                first = analyses[0] if isinstance(analyses[0], dict) else {}
+                lemma = first.get("lemma") or combined.get("lemma") or fallback_word
+                pos_hint = (
+                    first.get("pos")
+                    or first.get("analysis")
+                    or combined.get("pos")
+                    or fallback_word
                 )
-            )
-        elif definitions:
-            entries.append(
-                DictionaryEntry(
-                    source="heritage",
-                    language=language,
-                    word=word,
-                    definitions=definitions,
-                    morphology=morphology,
-                    metadata={"combined": combined},
+                features = {"analyses": analyses}
+                encoding = morphology_data.get("encoding")
+                if encoding:
+                    features["encoding"] = encoding
+                foster_codes = first.get("foster_codes")
+                return MorphologyInfo(
+                    lemma=lemma,
+                    pos=self._extract_pos_from_entry(pos_hint),
+                    features=features,
+                    foster_codes=foster_codes,
                 )
+
+        analyses = combined.get("morphology_analyses") if isinstance(combined, dict) else None
+        if analyses:
+            pos_hint = combined.get("pos") or ""
+            lemma = combined.get("lemma") or fallback_word
+            return MorphologyInfo(
+                lemma=lemma,
+                pos=self._extract_pos_from_entry(pos_hint),
+                features={"analyses": analyses},
             )
 
-        return entries
+        return None

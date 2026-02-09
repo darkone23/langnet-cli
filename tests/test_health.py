@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest import mock
 
 from langnet.config import LangnetSettings
+import langnet.health as langnet_health
 from langnet.health import (
     ComponentStatus,
     check_cdsl,
@@ -85,6 +86,15 @@ class HealthCheckTests(unittest.TestCase):
         components = {
             "a": ComponentStatus("healthy"),
             "b": ComponentStatus("missing"),
+        }
+        self.assertEqual(overall_status(components), "degraded")
+
+    def test_cache_not_configured_marks_degraded(self):
+        cache_status = langnet_health.check_cache()
+        self.assertEqual(cache_status.status, "not_configured")
+        components = {
+            "a": ComponentStatus("healthy"),
+            "cache": cache_status,
         }
         self.assertEqual(overall_status(components), "degraded")
 

@@ -2,43 +2,31 @@
 
 Audience: backend devs QA’ing recent Sanskrit normalization/hit-rate fixes.
 
-## What changed
-- Heritage inputs are coerced to Velthuis before `sktreader`, avoiding encoding misfires (IAST/Deva/ASCII all routed to VH).
-- Heritage parser now captures inline `latin12` segments between solution markers, so compounds (e.g., `yogaanuzaasanam`) retain decomposition instead of being dropped.
-- CDSL lookup builds a clean SLP1 candidate list (filters mangled forms with quotes/digits), retries candidates, and attaches canonical metadata.
-- Normalizer uses sktsearch canonical first; generates alternates in SLP1/IAST/Deva; guardrails keep `sktlemmatizer` out.
-- CDSL adapter now emits a single entry per dictionary with canonical/input forms attached; metadata carries canonical hints instead of duplicating payloads.
-- Sanskrit canonicalization handles multi-token queries by canonicalizing each token via sktsearch before hitting tools; SLP1 fallback mapping now keeps vocalic ṛ/ḷ vowels.
-- Diogenes citation metadata attempts betacode → Unicode cleanup for Greek abbreviations/citations.
+## What changed (concise)
+- Heritage inputs coerced to Velthuis; compounds preserved.
+- CDSL lookup cleans SLP1 candidates and attaches canonical metadata.
+- Normalizer prefers sktsearch canonical; multi-token canonicalization keeps vocalic ṛ/ḷ.
+- CDSL adapter emits one entry per dictionary with canonical hints.
 
-## Quick verification commands
-1) Compound parsing (Heritage):
-   - `just cli tool heritage morphology --query yogaanuzaasanam`
-   - Expect solutions present with segments showing `yoga a | a → ā anuśāsanam`; no “unknown” error.
+## Quick verification (minimal)
+- `just cli tool heritage morphology --query yogaanuzaasanam` (compounds preserved).
+- `just cli tool cdsl lookup --query "anuśāsana" --output json` (clean transliteration, canonical_form set).
+- `just cli tool heritage canonical --query agni` / `vrika` (canonical_text populated).
+- `just test tests.test_sanskrit_canonicalization tests.test_forbidden_terms`.
 
-2) Diacritic lookup (CDSL hit-rate):
-   - `just cli tool cdsl lookup --query "anuśāsana" --output json`
-   - Expect MW entry with transliteration `anuzAsana` (no stray quotes/digits), `canonical_form` populated.
+## Edge cases
+- `just cli query san agni` → one CDSL entry with canonical hint; no duplicates.
+- `just cli query san "atha yogaanuzaasanam"` → no crash; canonical tokens present.
+- `just cli query grc ousia` → Greek citation text in Unicode (not betacode).
 
-3) Canonicalization sanity:
-   - `just cli tool heritage canonical --query agni` → canonical_text `agnii`
-   - `just cli tool heritage canonical --query vrika` → canonical_text `v.rka`
+## Closeout checklist (to move to completed)
+- Multi-word Sanskrit tokenization: add fixture for phrases where sktsearch returns empty but we still pass through safely.
+- CDSL long-vowel fidelity: fixture proving SLP1 is preserved (no lowercasing loss).
+- Canonical hints: surfaced to CLI/API users when canonical != input.
+- Heritage enrichment: abbreviations/CTS applied or explicitly deferred with doc note.
+- Spot fuzz: record outputs for `san agni`, `san yogaanuzaasanam`, `grc ousia` after changes.
 
-4) Regression smoke (tests):
-   - `just test tests.test_sanskrit_canonicalization tests.test_forbidden_terms`
-   - `just test tests.test_normalization tests.test_normalization_standalone`
-
-## Recent edge cases to spot-check
-- `just cli query san agni` should return one CDSL entry (with `canonical_hint`) rather than repeated copies.
-- `just cli query san "atha yogaanuzaasanam"` should not crash; canonical tokens should appear and the first token should still resolve.
-- `just cli query grc ousia` should show Greek citation text (Zosimus) in Unicode rather than raw betacode.
-
-## Known gaps to watch
-- Multi-word phrases still need tokenization; sktsearch returns empty for full phrases.
-- CDSL long-vowel fidelity not fixture-tested; SLP1 lowercasing risk unverified for edge cases.
-- Canonical hints not yet surfaced to end users in CLI/API.
-- Heritage abbreviation/CTS enrichment still pending.
-
-## Logs/metadata to inspect
-- Heritage morphology responses now include `metadata.segments` per solution (compound decomposition).
-- CDSL raw includes `canonical_form`, `canonical_form_candidates`, `input_form` for debugging lookup path.
+## Definition of done
+- All checklist items landed with tests/fixtures and short doc note.
+- `just cli tool heritage morphology --query yogaanuzaasanam` and `cdsl lookup --query "anuśāsana"` succeed with canonical metadata.
+- Regression guard: fuzz/spot outputs attached to pickup notes; server restarted (`just restart-server`) after backend changes.

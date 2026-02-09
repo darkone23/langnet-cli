@@ -1,6 +1,6 @@
 # Maintainability & Decoupling Plan
 
-Context: Following `docs/technical/MAINTAINABILITY_REVIEW.md`, this plan tracks file-by-file improvements to reduce coupling, make backends swappable, and harden observability/test hygiene.
+Context: Following `docs/technical/MAINTAINABILITY_STATUS.md`, this plan tracks file-by-file improvements to reduce coupling, make backends swappable, and harden observability/test hygiene.
 
 ## Goals
 - Replace fragile singletons with injectable wiring and validated settings.
@@ -51,4 +51,4 @@ Context: Following `docs/technical/MAINTAINABILITY_REVIEW.md`, this plan tracks 
 ## Deliverables
 - Updated modules per phases, passing fast tests; integration tests gated by service availability.
 - Docs refreshed (developer guide + architecture notes) to match new wiring/config and health behaviors.
-- Changelogs in `docs/technical/MAINTAINABILITY_REVIEW.md` as work lands.
+- Changelogs in `docs/technical/MAINTAINABILITY_STATUS.md` as work lands.

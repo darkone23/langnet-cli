@@ -47,12 +47,12 @@ TOOL_CATALOG: dict = {
             "morphology": {"langs": ["san"], "default_words": {"san": ["agni", "yoga"]}},
             "canonical": {
                 "langs": ["san"],
-                "default_words": {"san": ["agnii", "agnim", "agnina", "agni", "veda"]},
+                "default_words": {"san": ["agnii", "agnim", "agnina", "agni", "veda", "krishna", "shiva"]},
             },
-            "lemmatize": {
-                "langs": ["san"],
-                "default_words": {"san": ["agnim", "yogena", "agnina"]},
-            },
+            # "lemmatize": {
+            #     "langs": ["san"],
+            #     "default_words": {"san": ["agnim", "yogena", "agnina"]},
+            # },
         }
     },
     "cdsl": {

@@ -15,23 +15,22 @@ Finish the Sanskrit canonicalization flow so all Sanskrit tools (Heritage, CDSL,
 - CDSL path still lowercases SLP1 internally; long-vowel fidelity for lookups is unverified.
 - Docs/fixtures not updated for the canonical flow.
 
-## Next steps
-1) **Assert canonical propagation** (@auditor)
-   - Add integration tests: `cli tool heritage lemmatize --query agni/vrika` surface canonical inputs; CDSL lookups recorded with SLP1 (`vfka`).
-   - Verify returned entries carry `canonical_form` + `input_form` consistently (heritage + cdsl).
+## Closeout path (to move to completed)
+1) **Canonical propagation tests (P0, @auditor/@coder)**
+   - Add integration tests: `cli tool heritage lemmatize --query agni/vrika` surface canonical inputs; CDSL lookup records SLP1 (`vfka`).
+   - Assert returned entries carry `canonical_form` + `input_form` for heritage + cdsl.
 
-2) **Surface canonical to users** (@coder)
-   - Add CLI/API hint when canonical differs (e.g., `agni → agnii / agnI`), keeping output noise minimal.
+2) **User-facing canonical hint (P1, @coder)**
+   - CLI/API outputs show canonical when it differs (`agni → agnii / agnI`) without noisy banners; guarded behind a small toggle if needed.
 
-3) **Fidelity checks for CDSL** (@coder)
-   - Audit/lint CDSL lookup path to avoid destructive lowercasing of SLP1 where it harms long vowels; add a fixture if adjustments are needed.
+3) **CDSL fidelity (P1, @coder)**
+   - Remove destructive lowercasing of SLP1; add fixture proving long-vowel preservation.
 
-4) **Docs & fixtures** (@scribe)
-   - Update README/DEVELOPER and sample fixtures (agni, vrika, vrika → vfka) to describe canonical pipeline and metadata.
+4) **Docs/fixtures refresh (P2, @scribe)**
+   - README/DEVELOPER + sample fixtures (agni, vrika, vrika→vfka) describe the canonical pipeline/metadata.
 
-## Verification checklist
-- `just cli tool heritage morphology --query vrika` returns lemma.
-- `just cli tool heritage lemmatize --query vrika` returns lemma/grammar from sktreader.
-- `just cli tool heritage lemmatize --query agni` succeeds (canonicalized).
-- `just cli tool cdsl lookup --query vrika` hits SLP1 form and returns entries.
-- Tests: add/green for normalization + integration as above.
+## Definition of done
+- Above items landed with tests/fixtures and docs updated.
+- `just cli tool heritage morphology --query vrika` + `heritage lemmatize --query agni/vrika` pass with canonical metadata.
+- `just cli tool cdsl lookup --query vrika` uses SLP1 form and returns entries with canonical hints.
+- `just test tests.test_sanskrit_canonicalization tests.test_forbidden_terms` green; regression fuzz spot-checks recorded in pickup notes.

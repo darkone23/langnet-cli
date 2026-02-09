@@ -451,7 +451,7 @@ When adding support for new dictionaries, morphological analyzers, or lexicon so
 - **Type checker**: `ty check`
 - **Linter**: `ruff check`
 
-See [ROADMAP.md](../ROADMAP.md) for detailed roadmap and current priorities.
+See plan files under `docs/plans/` for detailed roadmap and current priorities (legacy roadmap archived).
 
 ## AI-Assisted Development
 

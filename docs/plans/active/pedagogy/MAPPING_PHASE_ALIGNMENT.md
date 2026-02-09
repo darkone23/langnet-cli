@@ -8,7 +8,7 @@
 - @coder: implement backend adapter changes and canonical wiring.
 - @auditor: sanity-check payloads against pedagogy and TODO items.
 
-## Current Gaps (from fuzz sanity check + docs/TODO.md)
+## Current Gaps (from fuzz sanity check)
 - Functional grammar mapping absent (cases/voice/tense/person not translated to Foster functions).
 - Diogenes: senses sometimes broken; citations not normalized to CTS URNs; dictionary blocks not pedagogy-filtered.
 - Heritage: canonical/lemmatize results not surfaced in unified entries; sktsearch not always applied; no DICO integration.
@@ -99,3 +99,10 @@
 - Run `just fuzz-compare` and manual spot checks: `lat lupus`, `grc logos`, `san agni`, `san yogena`; confirm foster_codes present and aligned with functions and canonical forms.
 - Verify citation normalization (CTS URN present + readable display) in Diogenes outputs.
 - Ensure dictionary entries keep raw tags while exposing foster_codes; no raw HTML leakage from Heritage/CDSL.
+
+## Closeout path (to move to completed)
+- **P0**: Lock mapping rules (above) into code comments/tests; foster_codes wired for Diogenes + Whitaker/CLTK + Heritage/CDSL.
+- **P1**: Canonical + citation carriage end-to-end in `/api/q` payloads (canonical_form present; normalized + original citations preserved).
+- **P1**: Universal schema grouping (canonical_form + lemma) with pedagogy-first ordering; “good” payloads captured.
+- **P2**: `docs/PEDAGOGICAL_PHILOSOPHY.md` refreshed with examples (lat lupus, grc logos, san agni/yogena) showing foster codes/canonical/citations.
+- **Regression guard**: `just fuzz-compare` refreshed; spot-check notes placed in pickup doc; raw metadata kept alongside foster codes.

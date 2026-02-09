@@ -5,12 +5,8 @@ This directory contains README files for individual components within the langne
 ## Available Components
 
 ### Language Processing Backends
-- **[cologne-README.md](cologne-README.md)** - Cologne Digital Sanskrit Dictionary interface
-- **[diogenes-README.md](diogenes-README.md)** - Diogenes Perseus interface for classical texts
-- **[engine-README.md](engine-README.md)** - Core language processing engine
-- **[whitakers-words-README.md](whitakers-words-README.md)** - Whitaker's Words Latin dictionary parser
-- **[MAINTAINABILITY_REVIEW.md](MAINTAINABILITY_REVIEW.md)** - Current audit and forward plan pointer
-- **[MAINTAINABILITY_HANDOFF.md](MAINTAINABILITY_HANDOFF.md)** - Latest progress + remaining work for maintainability initiative
+- **[backend/README.md](backend/README.md)** - Index for backend docs (engine, Diogenes, Cologne, Whitaker's Words)
+- **[MAINTAINABILITY_STATUS.md](MAINTAINABILITY_STATUS.md)** - Consolidated status for maintainability/decoupling
 
 ## Component Overview
 

@@ -26,6 +26,14 @@ class CLTKBackendAdapter(BaseBackendAdapter):
         # 2) Latin Lewis & Short lookup (headword + dictionary lines)
         if "lewis_1890_lines" in data:
             lines = data.get("lewis_1890_lines") or []
+            unique_lines: list[str] = []
+            seen_lines: set[str] = set()
+            for line in lines:
+                normalized = " ".join(str(line).split())
+                if normalized in seen_lines:
+                    continue
+                seen_lines.add(normalized)
+                unique_lines.append(line)
             headword = data.get("headword") or word
             definitions = [
                 DictionaryDefinition(
@@ -33,7 +41,7 @@ class CLTKBackendAdapter(BaseBackendAdapter):
                     pos=self._extract_pos_from_entry(line),
                     metadata={"source": "lewis_1890"},
                 )
-                for line in lines
+                for line in unique_lines
             ]
             morph_features = {"ipa": data.get("ipa")} if data.get("ipa") else {}
             morphology = MorphologyInfo(
@@ -55,10 +63,15 @@ class CLTKBackendAdapter(BaseBackendAdapter):
 
         # 3) Greek spaCy morphology result (or similar morphology-only payload)
         if {"lemma", "pos", "morphological_features"} <= data.keys():
+            features = data.get("morphological_features") or {}
+            if not features and not (data.get("lemma") or data.get("pos")):
+                return entries
+            if not self._is_plausible_spacy_payload(data, features):
+                return entries
             morphology = MorphologyInfo(
                 lemma=data.get("lemma") or word,
                 pos=data.get("pos") or "unknown",
-                features=data.get("morphological_features") or {},
+                features=features,
             )
             entries.append(
                 DictionaryEntry(
@@ -67,7 +80,7 @@ class CLTKBackendAdapter(BaseBackendAdapter):
                     word=word,
                     definitions=[],
                     morphology=morphology,
-                    metadata=data,
+                    metadata=dict(data),
                 )
             )
             return entries
@@ -103,3 +116,16 @@ class CLTKBackendAdapter(BaseBackendAdapter):
             morphology=morph_info,
             metadata=res,
         )
+
+    @staticmethod
+    def _is_plausible_spacy_payload(data: dict, features: dict) -> bool:
+        """Filter obviously noisy spaCy payloads."""
+        pos = (data.get("pos") or "").upper()
+        if pos in {"X", "PUNCT", "SYM"}:
+            return False
+        if pos in {"VERB", "AUX"}:
+            return any(key in features for key in ("VerbForm", "Mood", "Tense", "Voice"))
+        if pos in {"NOUN", "PROPN", "ADJ"}:
+            return any(key in features for key in ("Case", "Gender", "Number"))
+        # Default: keep if there is at least some morphological signal
+        return bool(features)

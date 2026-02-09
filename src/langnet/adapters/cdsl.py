@@ -63,4 +63,38 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                 )
             )
 
+        # Preserve source visibility even when no entries matched to avoid losing CDSL in unified output
+        if not entries:
+            canonical_form = data.get("canonical_form") or word
+            transliteration = data.get("transliteration")
+            entries.append(
+                DictionaryEntry(
+                    source="cdsl",
+                    language=language,
+                    word=word,
+                    definitions=[
+                        DictionaryDefinition(
+                            definition="No specific entries found",
+                            pos="unknown",
+                            metadata={
+                                "input_form": data.get("input_form", word),
+                                "canonical_form": canonical_form,
+                                "dictionaries": dictionaries,
+                            },
+                        )
+                    ],
+                    morphology=MorphologyInfo(
+                        lemma=canonical_form,
+                        pos="unknown",
+                        features={},
+                    ),
+                    metadata={
+                        "input_form": data.get("input_form", word),
+                        "canonical_form": canonical_form,
+                        "dictionaries": dictionaries,
+                        **({"transliteration": transliteration} if transliteration else {}),
+                    },
+                )
+            )
+
         return entries

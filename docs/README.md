@@ -17,8 +17,7 @@ This directory contains the complete documentation for langnet-cli, organized by
 - **[technical/opencode/](technical/opencode/)** - AI development patterns and multi-model workflows
 
 ### 📊 Project Status
-- **[ROADMAP.md](ROADMAP.md)** - Current implementation status and roadmap
-- **[plans/](plans/)** - Active, completed, and future development plans
+- **[plans/](plans/)** - Active, completed, and future development plans (roadmap consolidated there)
 
 ### 🎓 Educational Approach
 - **[PEDAGOGICAL_PHILOSOPHY.md](PEDAGOGICAL_PHILOSOPHY.md)** - Educational philosophy and Foster functional grammar
@@ -134,9 +133,9 @@ See **[../AGENTS.md](../AGENTS.md)** and **[technical/opencode/](technical/openc
 ## 📊 Project Status
 
 - **State**: Actively developed; requires local Heritage, Diogenes, and Whitaker's Words services for most features.
-- **Known gaps**: Diogenes sense extraction and CTS URN enrichment are flaky, Sanskrit canonicalization/DICO integration are incomplete, CDSL definitions often include SLP1 artifacts, and universal schema + fuzzy search are still in design (see `docs/TODO.md`).
+- **Known gaps**: Diogenes sense extraction and CTS URN enrichment are flaky, Sanskrit canonicalization/DICO integration are incomplete, CDSL definitions often include SLP1 artifacts, and universal schema + fuzzy search are still in design (see `docs/plans/active/roadmap/TODO.md`).
 - **Validation**: Tests and linting were not run during this audit; many suites depend on the external services above. Use `devenv shell langnet-cli -- just test` and `devenv shell langnet-cli -- just lint-all` once dependencies are available.
-- **Planning**: Active plans live under `docs/plans/active/` with backlog items in `docs/plans/todo/`; see `docs/ROADMAP.md` for high-level targets.
+- **Planning**: Active plans live under `docs/plans/active/` with backlog items in `docs/plans/todo/`; roadmap/TODO are consolidated there (legacy files archived).
 
 ## 🆘 Getting Help
 
