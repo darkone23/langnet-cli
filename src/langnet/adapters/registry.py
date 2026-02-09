@@ -69,7 +69,9 @@ class GreekAdapter:
                 self._time(
                     timings,
                     "adapt_diogenes",
-                    lambda: self._call_adapter(self.diogenes_adapter, data["diogenes"], language, word, timings),
+                    lambda: self._call_adapter(
+                        self.diogenes_adapter, data["diogenes"], language, word, timings
+                    ),
                 )
             )
         if "spacy" in data:
@@ -77,7 +79,9 @@ class GreekAdapter:
                 self._time(
                     timings,
                     "adapt_spacy",
-                    lambda: self._call_adapter(self.cltk_adapter, data["spacy"], language, word, timings),
+                    lambda: self._call_adapter(
+                        self.cltk_adapter, data["spacy"], language, word, timings
+                    ),
                 )
             )
         if "cltk" in data:
@@ -85,7 +89,9 @@ class GreekAdapter:
                 self._time(
                     timings,
                     "adapt_cltk",
-                    lambda: self._call_adapter(self.cltk_adapter, data["cltk"], language, word, timings),
+                    lambda: self._call_adapter(
+                        self.cltk_adapter, data["cltk"], language, word, timings
+                    ),
                 )
             )
         return entries
@@ -120,7 +126,9 @@ class LatinAdapter:
                 self._time(
                     timings,
                     "adapt_whitakers",
-                    lambda: self._call_adapter(self.whitakers_adapter, data["whitakers"], language, word, timings),
+                    lambda: self._call_adapter(
+                        self.whitakers_adapter, data["whitakers"], language, word, timings
+                    ),
                 )
             )
         if "diogenes" in data:
@@ -128,7 +136,9 @@ class LatinAdapter:
                 self._time(
                     timings,
                     "adapt_diogenes",
-                    lambda: self._call_adapter(self.diogenes_adapter, data["diogenes"], language, word, timings),
+                    lambda: self._call_adapter(
+                        self.diogenes_adapter, data["diogenes"], language, word, timings
+                    ),
                 )
             )
         if "cltk" in data:
@@ -136,7 +146,9 @@ class LatinAdapter:
                 self._time(
                     timings,
                     "adapt_cltk",
-                    lambda: self._call_adapter(self.cltk_adapter, data["cltk"], language, word, timings),
+                    lambda: self._call_adapter(
+                        self.cltk_adapter, data["cltk"], language, word, timings
+                    ),
                 )
             )
         return entries
@@ -171,7 +183,9 @@ class SanskritAdapter:
                 self._time(
                     timings,
                     "adapt_heritage",
-                    lambda: self._call_adapter(self.heritage_adapter, data["heritage"], language, word, timings),
+                    lambda: self._call_adapter(
+                        self.heritage_adapter, data["heritage"], language, word, timings
+                    ),
                 )
             )
         if "cdsl" in data:
@@ -179,7 +193,9 @@ class SanskritAdapter:
                 self._time(
                     timings,
                     "adapt_cdsl",
-                    lambda: self._call_adapter(self.cdsl_adapter, data["cdsl"], language, word, timings),
+                    lambda: self._call_adapter(
+                        self.cdsl_adapter, data["cdsl"], language, word, timings
+                    ),
                 )
             )
         if "cltk" in data:
@@ -187,7 +203,9 @@ class SanskritAdapter:
                 self._time(
                     timings,
                     "adapt_cltk",
-                    lambda: self._call_adapter(self.cltk_adapter, data["cltk"], language, word, timings),
+                    lambda: self._call_adapter(
+                        self.cltk_adapter, data["cltk"], language, word, timings
+                    ),
                 )
             )
         return entries

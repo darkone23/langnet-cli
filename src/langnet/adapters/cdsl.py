@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import structlog
 
+from langnet.citation.cts_urn import CTSUrnMapper
 from langnet.schema import DictionaryDefinition, DictionaryEntry, MorphologyInfo
 
 from .base import BaseBackendAdapter
@@ -12,6 +13,9 @@ logger = structlog.get_logger(__name__)
 class CDSLBackendAdapter(BaseBackendAdapter):
     """Adapter for CDSL dictionary responses."""
 
+    def __init__(self):
+        self._cts_mapper = CTSUrnMapper()
+
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries: list[DictionaryEntry] = []
         dictionaries = data.get("dictionaries", {})
@@ -21,6 +25,7 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                 continue
 
             definitions: list[DictionaryDefinition] = []
+            all_references: list[str] = []
             lemma = word
             pos = "unknown"
             features: dict = {}
@@ -28,11 +33,25 @@ class CDSLBackendAdapter(BaseBackendAdapter):
             for entry in dict_entries:
                 definition_text = entry.get("meaning") or entry.get("data") or str(entry)
                 entry_pos = self._extract_pos_from_entry(entry.get("pos") or definition_text)
+                references = self._dedupe_preserve_order(
+                    [r for r in entry.get("references") or [] if isinstance(r, str)]
+                )
+                reference_details = self._expand_references(references, language)
+                all_references.extend(references)
                 definitions.append(
                     DictionaryDefinition(
                         definition=str(definition_text),
                         pos=entry_pos,
-                        metadata={"dict": dict_name, "id": entry.get("id")},
+                        metadata={
+                            "dict": dict_name,
+                            "id": entry.get("id"),
+                            **({"references": references} if references else {}),
+                            **(
+                                {"reference_details": reference_details}
+                                if reference_details
+                                else {}
+                            ),
+                        },
                     )
                 )
                 if entry.get("sanskrit_form"):
@@ -52,6 +71,7 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                 gender=features.get("gender"),
             )
 
+            unique_references = self._dedupe_preserve_order(all_references)
             entries.append(
                 DictionaryEntry(
                     source="cdsl",
@@ -63,6 +83,7 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                         "dict": dict_name,
                         "dictionary": dict_name,
                         "count": len(dict_entries),
+                        **({"references": unique_references} if unique_references else {}),
                     },
                 )
             )
@@ -103,3 +124,37 @@ class CDSLBackendAdapter(BaseBackendAdapter):
             )
 
         return entries
+
+    def _expand_references(
+        self, references: list[str], language: str
+    ) -> list[dict[str, str | None]]:
+        """Expand Heritage-style abbreviations into richer metadata for display."""
+        expanded: list[dict[str, str | None]] = []
+        if not references:
+            return expanded
+
+        for ref in references:
+            if not isinstance(ref, str):
+                continue
+            meta = self._cts_mapper.get_abbreviation_metadata(
+                citation_id=ref, citation_text=ref, language=language
+            )
+            if meta:
+                # Drop language marker to keep payload concise; language is on the entry.
+                cleaned_meta = {k: v for k, v in meta.items() if k != "language"}
+                expanded.append({"abbreviation": ref, **cleaned_meta})
+            else:
+                expanded.append({"abbreviation": ref})
+
+        return expanded
+
+    @staticmethod
+    def _dedupe_preserve_order(items: list[str]) -> list[str]:
+        """Remove duplicates while preserving original order."""
+        seen = set()
+        unique: list[str] = []
+        for item in items:
+            if item not in seen:
+                seen.add(item)
+                unique.append(item)
+        return unique

@@ -994,6 +994,11 @@
     "long_name": "Ramayana",
     "kind": "source"
   },
+  "l": {
+    "display": "L.",
+    "long_name": "Lexicographers",
+    "kind": "source"
+  },
   "rv": {
     "display": "RV.",
     "long_name": "Rgveda Samhitā",

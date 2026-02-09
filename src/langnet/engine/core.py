@@ -256,9 +256,7 @@ class LanguageEngine:
             logger.error("backend_failed", backend="whitakers", error=str(e))
             result["whitakers"] = self._backend_error("whitakers", e)
         try:
-            cltk_result = self._record_timing(
-                timings, "cltk", lambda: self.cltk.latin_query(word)
-            )
+            cltk_result = self._record_timing(timings, "cltk", lambda: self.cltk.latin_query(word))
             result["cltk"] = _cattrs_converter.unstructure(cltk_result)
         except Exception as e:
             logger.error("backend_failed", backend="cltk", error=str(e))
@@ -336,9 +334,7 @@ class LanguageEngine:
             morphology_result = self._record_timing(
                 timings,
                 "heritage_morphology",
-                lambda: self.heritage_morphology.analyze_word(
-                    word, encoding=morphology_encoding
-                ),
+                lambda: self.heritage_morphology.analyze_word(word, encoding=morphology_encoding),
             )
         except Exception as exc:  # noqa: BLE001
             logger.error("backend_failed", backend="heritage_morphology", error=str(exc))

@@ -6,6 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import cast
 
+from langnet.adapters.cdsl import CDSLBackendAdapter
 from langnet.citation.models import Citation, CitationCollection, CitationType, TextReference
 from langnet.cologne.core import (
     CdslIndex,
@@ -335,6 +336,58 @@ class TestSanskritDictionaryResponse(unittest.TestCase):
         self.assertEqual(entry.grammar_tags["declension"], "A")
         assert entry.references is not None
         self.assertEqual(len(entry.references), 1)
+
+
+class TestCdslAdapter(unittest.TestCase):
+    def test_reference_expansions_are_local_and_deduped(self):
+        adapter = CDSLBackendAdapter()
+        data = {
+            "dictionaries": {
+                "mw": [
+                    {
+                        "id": "890",
+                        "meaning": "meaning with repeated references",
+                        "references": ["L.", "Sūryas.", "L."],
+                    },
+                    {
+                        "id": "891",
+                        "meaning": "second definition",
+                        "references": ["Gārhapatya"],
+                    },
+                ]
+            }
+        }
+
+        entries = adapter.adapt(data, language="san", word="agni")
+        self.assertEqual(len(entries), 1)
+        entry = entries[0]
+
+        self.assertIn("references", entry.metadata)
+        self.assertEqual(entry.metadata["references"], ["L.", "Sūryas.", "Gārhapatya"])
+        self.assertNotIn("reference_details", entry.metadata)
+
+        self.assertEqual(len(entry.definitions), 2)
+
+        first_def = entry.definitions[0]
+        self.assertEqual(first_def.metadata["references"], ["L.", "Sūryas."])
+        self.assertEqual(
+            [detail["abbreviation"] for detail in first_def.metadata["reference_details"]],
+            ["L.", "Sūryas."],
+        )
+        for detail in first_def.metadata["reference_details"]:
+            self.assertNotIn("language", detail)
+
+        second_def = entry.definitions[1]
+        self.assertEqual(second_def.metadata["references"], ["Gārhapatya"])
+        self.assertEqual(
+            [detail["abbreviation"] for detail in second_def.metadata["reference_details"]],
+            ["Gārhapatya"],
+        )
+        self.assertEqual(second_def.metadata["reference_details"][0]["display"], "Gārhapatya")
+        self.assertEqual(
+            second_def.metadata["reference_details"][0]["long_name"],
+            "Gārhapatya sacred fire",
+        )
 
 
 if __name__ == "__main__":

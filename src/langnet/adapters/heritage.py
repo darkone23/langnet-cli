@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import structlog
 
+from langnet.citation.cts_urn import CTSUrnMapper
 from langnet.schema import DictionaryDefinition, DictionaryEntry, MorphologyInfo
 
 from .base import BaseBackendAdapter
@@ -11,6 +12,9 @@ logger = structlog.get_logger(__name__)
 
 class HeritageBackendAdapter(BaseBackendAdapter):
     """Adapter for Heritage Platform morphology/dictionary responses."""
+
+    def __init__(self):
+        self._cts_mapper = CTSUrnMapper()
 
     def adapt(self, data: dict, language: str, word: str) -> list[DictionaryEntry]:
         entries: list[DictionaryEntry] = []
@@ -92,6 +96,7 @@ class HeritageBackendAdapter(BaseBackendAdapter):
                         "dictionary": entry.get("dict_id") or entry.get("dictionary"),
                         "dict": entry.get("dict_id") or entry.get("dictionary"),
                         "grammar_tags": entry.get("grammar_tags"),
+                        **self._build_reference_metadata(entry),
                     },
                 )
             )
@@ -140,3 +145,26 @@ class HeritageBackendAdapter(BaseBackendAdapter):
             )
 
         return None
+
+    def _build_reference_metadata(self, entry: dict) -> dict:
+        """Expand Heritage/CSDL-style reference abbreviations for clarity."""
+        references = entry.get("references") or []
+        if not references:
+            return {}
+
+        reference_details = []
+        for ref in references:
+            if not isinstance(ref, str):
+                continue
+            meta = self._cts_mapper.get_abbreviation_metadata(
+                citation_id=ref, citation_text=ref, language="san"
+            )
+            if meta:
+                reference_details.append({"abbreviation": ref, **meta})
+            else:
+                reference_details.append({"abbreviation": ref})
+
+        metadata = {"references": references}
+        if reference_details:
+            metadata["reference_details"] = reference_details
+        return metadata

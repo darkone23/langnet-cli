@@ -68,6 +68,7 @@ NON_CTS_ABBREVIATIONS: dict[str, dict[str, dict[str, str]]] = {
         "garhapatya": {"display": "Gārhapatya", "long_name": "Gārhapatya sacred fire"},
         "ahavaniya": {"display": "Āhavanīya", "long_name": "Āhavanīya sacred fire"},
         "dakshina": {"display": "Dakṣiṇa", "long_name": "Dakṣiṇa sacred fire"},
+        "daksina": {"display": "Dakṣiṇa", "long_name": "Dakṣiṇa sacred fire"},
         "suryas": {"display": "Sūryas.", "long_name": "Sūryas collection"},
         "sun": {"display": "Sūryas.", "long_name": "Sūryas collection"},
     },
@@ -552,7 +553,9 @@ class CTSUrnMapper:
             logger.debug(f"URN metadata lookup failed: {e}")
             return None
 
-    def get_urn_metadata_bulk(self, urn_text_map: dict[str, str | None]) -> dict[str, dict[str, str]]:
+    def get_urn_metadata_bulk(
+        self, urn_text_map: dict[str, str | None]
+    ) -> dict[str, dict[str, str]]:
         """
         Fetch CTS metadata for multiple URNs in one query when possible.
 

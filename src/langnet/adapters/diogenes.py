@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import time
+from dataclasses import dataclass
 from typing import TypedDict, cast
 
 import structlog
@@ -48,7 +48,11 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         self._cts_mapper = CTSUrnMapper()
 
     def adapt(
-        self, data: dict[str, object], language: str, word: str, timings: dict[str, float] | None = None
+        self,
+        data: dict[str, object],
+        language: str,
+        word: str,
+        timings: dict[str, float] | None = None,
     ) -> list[DictionaryEntry]:
         overall_start = time.perf_counter() if timings is not None else None
         entries: list[DictionaryEntry] = []
@@ -83,6 +87,7 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         chunks: list[dict[str, object]] = [
             cast(dict[str, object], c) for c in chunks_raw if isinstance(c, dict)
         ]
+
         def process_chunk(chunk: dict[str, object]):
             chunk_type_val = chunk.get("chunk_type")
             chunk_type: str | None = chunk_type_val if isinstance(chunk_type_val, str) else None
@@ -141,9 +146,7 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
 
         if overall_start is not None:
             timings["adapt_diogenes_internal"] = (time.perf_counter() - overall_start) * 1000
-            diogenes_timings = {
-                k: v for k, v in timings.items() if k.startswith("adapt_diogenes")
-            }
+            diogenes_timings = {k: v for k, v in timings.items() if k.startswith("adapt_diogenes")}
             diogenes_timings["chunk_count"] = len(chunks)
             logger.info(
                 "diogenes_adapter_timings",
@@ -397,7 +400,11 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         if not citations:
             return {}
 
-        cts_urns = {urn: citation_text for urn, citation_text in citations.items() if urn.startswith("urn:cts")}
+        cts_urns = {
+            urn: citation_text
+            for urn, citation_text in citations.items()
+            if urn.startswith("urn:cts")
+        }
         cts_metadata = self._cts_mapper.get_urn_metadata_bulk(cts_urns) if cts_urns else {}
 
         details: dict[str, dict[str, str]] = {}
