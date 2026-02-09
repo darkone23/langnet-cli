@@ -74,6 +74,7 @@ class HealthCheckTests(unittest.TestCase):
             mock.patch("langnet.health.check_whitakers", return_value=ComponentStatus("healthy")),
             mock.patch("langnet.health.check_cdsl", return_value=ComponentStatus("healthy")),
             mock.patch("langnet.health.check_heritage", return_value=ComponentStatus("healthy")),
+            mock.patch("langnet.health.check_cache", return_value=ComponentStatus("healthy")),
         ):
             health = run_health_checks(settings)
 

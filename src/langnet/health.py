@@ -192,6 +192,22 @@ def check_whitakers() -> ComponentStatus:
     return _time_call(_check)
 
 
+def check_cache(stats_provider: Callable[[], dict[str, Any]] | None = None) -> ComponentStatus:
+    def _check() -> ComponentStatus:
+        if stats_provider is None:
+            return ComponentStatus(
+                status="not_configured",
+                message="Cache stats unavailable; wire a stats_provider to enable",
+            )
+        try:
+            stats = stats_provider()
+            return ComponentStatus(status="healthy", details=stats)
+        except Exception as exc:  # noqa: BLE001
+            return ComponentStatus(status="error", message=f"Cache stats error: {exc}")
+
+    return _time_call(_check)
+
+
 def overall_status(components: dict[str, ComponentStatus]) -> str:
     statuses = {name: comp.status for name, comp in components.items()}
     if any(status in {"error", "unreachable"} for status in statuses.values()):
@@ -203,6 +219,7 @@ def overall_status(components: dict[str, ComponentStatus]) -> str:
 
 def run_health_checks(
     settings: LangnetSettings,
+    cache_stats_provider: Callable[[], dict[str, Any]] | None = None,
     requester: Callable[..., requests.Response] = requests.get,
 ) -> dict[str, Any]:
     components = {
@@ -212,6 +229,7 @@ def run_health_checks(
         "whitakers": check_whitakers(),
         "cdsl": check_cdsl(settings.cdsl_db_dir, settings.cdsl_dict_dir),
         "heritage": check_heritage(settings.heritage_url, settings.http_timeout, requester=requester),
+        "cache": check_cache(cache_stats_provider),
     }
     return {
         "status": overall_status(components),

@@ -8,7 +8,6 @@ import sys
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
-
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -17,6 +16,7 @@ from langnet.heritage.encoding_service import HeritageCdslBridge
 
 class TestHeritageCdslIntegration(unittest.TestCase):
     """Test suite for complete Heritage Platform + CDSL integration"""
+    integration = True
 
     def setUp(self):
         """Setup test fixtures"""

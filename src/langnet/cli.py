@@ -1164,9 +1164,6 @@ def tool_query(ctx, **kwargs):  # noqa: PLR0913
 
 def _tool_query_with_context(context: ToolQueryContext):
     """Generic tool query implementation."""
-    # import json
-    # from pathlib import Path
-
     url = f"{DEFAULT_API_URL}/api/tool/{context.tool}/{context.action}"
     params = {}
 
@@ -1178,6 +1175,13 @@ def _tool_query_with_context(context: ToolQueryContext):
         params["dict"] = context.dict_name
 
     # Make the request
+    validation_error = validate_tool_request(
+        context.tool, context.action, context.lang, context.query, context.dict_name
+    )
+    if validation_error:
+        console.print(f"[red]Error: {validation_error}[/]")
+        sys.exit(1)
+
     try:
         response = requests.post(url, params=params)
         response.raise_for_status()

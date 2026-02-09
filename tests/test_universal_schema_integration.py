@@ -57,6 +57,7 @@ class BackendAdapterRegistry:
 
 
 class TestUniversalSchemaComprehensive(unittest.TestCase):
+    integration = True
     """Complete end-to-end testing of universal schema implementation."""
 
     def setUp(self):

@@ -20,6 +20,7 @@ def get_first_entry_by_source(entries, source):
 
 
 class TestGreekSpacyIntegration(unittest.TestCase):
+    integration = True
     def setUp(self):
         self.wiring = LangnetWiring(LangnetWiringConfig(warmup_backends=False))
 
@@ -40,6 +41,7 @@ class TestGreekSpacyIntegration(unittest.TestCase):
 
 
 class TestLatinQueryIntegration(unittest.TestCase):
+    integration = True
     def setUp(self):
         self.wiring = LangnetWiring(LangnetWiringConfig(warmup_backends=False))
 

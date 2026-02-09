@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class TestHeritagePlatformIntegration(unittest.TestCase):
+    integration = True
     """Integration tests with real Heritage Platform API."""
 
     def setUp(self):

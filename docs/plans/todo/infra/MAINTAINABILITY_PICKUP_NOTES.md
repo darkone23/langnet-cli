@@ -12,8 +12,12 @@ Quick guidance for anyone executing the tasks in `MAINTAINABILITY_DECOUPLING_PLA
   - Fast/unit: maintain/run the “fast” target (unit/schema tests that don’t need services).
   - Integration: mark tests needing external services; keep them opt-in.
   - Fuzz: for adapter/normalizer changes, run `just fuzz-tools` (per backend) or `just fuzz-query` and diff outputs; only update fixtures with clear rationale.
+- **Targets**: `just test-fast` runs nose2 with `-A '!integration'`. Integration suites are still under `just test`.
 - **Smoke API**: After wiring/health changes, hit `/api/health` and `/api/q` (lat/grc/san) or run `langnet-cli verify` inside devenv.
 - **Docs**: Update `docs/technical/*` and the plan as phases land; note any fixture updates.
 - **Health probes**: `/api/health` now calls `src/langnet/health.py`. Extend there (cache stats, degraded messaging) rather than inlining logic in ASGI/CLI.
+- **Adapters**: Split complete. Use `src/langnet/adapters/*` for backend-specific changes; legacy `src/langnet/backend_adapter.py` is just a shim. Adapters now emit full universal-schema entries (definitions + morphology + dictionary blocks) for `diogenes`, `whitakers`, `cltk|spacy`, `heritage`, `cdsl`.
+- **Fuzzing**: Harness expects a running API server (default http://localhost:8000). Current `just fuzz-query` artifacts under `examples/debug/fuzz_results_query/` need refresh; rerun with server up before judging outputs.
 - **Hygiene**: No `__pycache__` or ad-hoc artifacts checked in; put scratch/debug outputs under `examples/debug`.
 - **Safety**: Don’t revert existing workspace changes unless explicitly instructed; avoid destructive git commands.
+- **Server refresh**: After backend changes, restart the API with `just restart-server` before manual curl/fuzz checks.

@@ -37,6 +37,10 @@ test-all:
 test *args:
     nose2 -s tests --config tests/nose2.cfg {{ args }}
 
+# Fast unit/contract tests (skips integration-tagged tests)
+test-fast:
+    nose2 -s tests --config tests/nose2.cfg -A '!integration'
+
 # Format code with ruff
 ruff-format:
     ruff format src/ tests/ ./.justscripts/

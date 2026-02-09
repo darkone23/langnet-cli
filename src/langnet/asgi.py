@@ -70,7 +70,12 @@ async def health_check(request: Request):
         except Exception as e:
             return ORJsonResponse({"error": f"Startup failed: {str(e)}"}, status_code=503)
         try:
-            health = run_health_checks(settings)
+            cache_stats_provider = None
+            if hasattr(request.app.state, "wiring"):
+                cache = getattr(request.app.state.wiring.engine, "cache", None)
+                if cache and hasattr(cache, "get_stats"):
+                    cache_stats_provider = cache.get_stats
+            health = run_health_checks(settings, cache_stats_provider=cache_stats_provider)
             return ORJsonResponse(health)
         except Exception as e:
             return ORJsonResponse({"error": str(e)}, status_code=500)
@@ -78,9 +83,11 @@ async def health_check(request: Request):
 
 async def cache_stats_api(request: Request):
     try:
-        # TODO: Add cache support when available
-        # stats = request.app.state.wiring.engine.cache.get_stats()
-        stats = {"message": "Cache stats not implemented yet"}
+        cache = getattr(request.app.state.wiring.engine, "cache", None)
+        if cache and hasattr(cache, "get_stats"):
+            stats = cache.get_stats()
+        else:
+            stats = {"message": "Cache stats not configured"}
         return ORJsonResponse(stats)
     except Exception as e:
         return ORJsonResponse({"error": str(e)}, status_code=500)

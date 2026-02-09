@@ -4,7 +4,7 @@ from typing import Any, Optional
 import cattrs
 import structlog
 
-from langnet.backend_adapter import LanguageAdapterRegistry
+from langnet.adapters.registry import LanguageAdapterRegistry
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.diogenes.core import DiogenesLanguages, DiogenesScraper
