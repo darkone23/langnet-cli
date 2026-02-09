@@ -321,6 +321,8 @@ class LanguageEngine:
         if not self.heritage_morphology:
             logger.warning("heritage_morphology_service_not_available")
             return None
+        assert self.heritage_morphology is not None
+        heritage_morphology = self.heritage_morphology
 
         result: JSONMapping = {}
 
@@ -334,7 +336,7 @@ class LanguageEngine:
             morphology_result = self._record_timing(
                 timings,
                 "heritage_morphology",
-                lambda: self.heritage_morphology.analyze_word(word, encoding=morphology_encoding),
+                lambda: heritage_morphology.analyze_word(word, encoding=morphology_encoding),
             )
         except Exception as exc:  # noqa: BLE001
             logger.error("backend_failed", backend="heritage_morphology", error=str(exc))
@@ -371,11 +373,13 @@ class LanguageEngine:
 
         # Fetch canonical form and lemmatization from Heritage HTTP endpoints
         if self.heritage_client:
+            assert self.heritage_client is not None
+            heritage_client = self.heritage_client
             try:
                 canonical_result: CanonicalResult | None = self._record_timing(
                     timings,
                     "heritage_canonical",
-                    lambda: self.heritage_client.fetch_canonical_sanskrit(word),
+                    lambda: heritage_client.fetch_canonical_sanskrit(word),
                 )
                 if canonical_result:
                     result["canonical"] = cast(JSONMapping, canonical_result)

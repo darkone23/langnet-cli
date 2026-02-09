@@ -124,7 +124,7 @@ class TestSanskritEngineLemmatizationFallback(unittest.TestCase):
             self.assertIn("dictionary", cdsl_result)
 
     def test_engine_uses_cdsl_for_sanskrit(self):
-        result = self.engine._query_sanskrit("agni", self.engine._cattrs_converter)
+        result = self.engine._query_sanskrit("agni", self.engine._cattrs_converter, timings={})
         self.assertIn("cdsl", result)
         cdsl_result = result["cdsl"]
         self.assertIn("dictionaries", cdsl_result)

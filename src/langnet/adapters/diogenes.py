@@ -80,58 +80,20 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             seen_blocks=seen_blocks,
         )
 
-        chunks_raw = data.get("chunks")
-        if not isinstance(chunks_raw, list):
+        chunks = self._normalize_chunks(data.get("chunks"))
+        if not chunks:
             return entries
 
-        chunks: list[dict[str, object]] = [
-            cast(dict[str, object], c) for c in chunks_raw if isinstance(c, dict)
-        ]
-
-        def process_chunk(chunk: dict[str, object]):
-            chunk_type_val = chunk.get("chunk_type")
-            chunk_type: str | None = chunk_type_val if isinstance(chunk_type_val, str) else None
-            if not chunk_type:
-                if chunk.get("morphology"):
-                    chunk_type = "PerseusAnalysisHeader"
-                elif chunk.get("definitions"):
-                    chunk_type = "DiogenesMatchingReference"
-            if chunk_type in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
-                self._collect_definition_chunk(
-                    chunk,
-                    chunk_type,
-                    context,
-                    timings,
-                )
-
-        for chunk in chunks:
-            self._time_section("adapt_diogenes_chunk", timings, lambda c=chunk: process_chunk(c))
+        self._process_chunks(chunks, context, timings)
 
         payload = aggregated["merged"]
-        # Preserve order: PerseusAnalysisHeader first, then DiogenesMatchingReference
-        chunk_types_list = []
-        if "PerseusAnalysisHeader" in payload["chunk_types"]:
-            chunk_types_list.append("PerseusAnalysisHeader")
-        if "DiogenesMatchingReference" in payload["chunk_types"]:
-            chunk_types_list.append("DiogenesMatchingReference")
-        if "DiogenesFuzzyReference" in payload["chunk_types"]:
-            chunk_types_list.append("DiogenesFuzzyReference")
-
-        # Preserve order: PerseusAnalysisHeader first, then DiogenesMatchingReference
-        chunk_types_list = []
-        if "PerseusAnalysisHeader" in payload["chunk_types"]:
-            chunk_types_list.append("PerseusAnalysisHeader")
-        if "DiogenesMatchingReference" in payload["chunk_types"]:
-            chunk_types_list.append("DiogenesMatchingReference")
-        if "DiogenesFuzzyReference" in payload["chunk_types"]:
-            chunk_types_list.append("DiogenesFuzzyReference")
-
         metadata = {
-            "chunk_types": chunk_types_list,
+            "chunk_types": self._ordered_chunk_types(payload["chunk_types"]),
             "terms": sorted(payload["terms"]) if payload["terms"] else None,
         }
 
         if payload["blocks"] or morphology:
+            self._prune_morphology_duplicates(morphology)
             entries.append(
                 DictionaryEntry(
                     source="diogenes",
@@ -144,7 +106,7 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                 )
             )
 
-        if overall_start is not None:
+        if overall_start is not None and timings is not None:
             timings["adapt_diogenes_internal"] = (time.perf_counter() - overall_start) * 1000
             diogenes_timings = {k: v for k, v in timings.items() if k.startswith("adapt_diogenes")}
             diogenes_timings["chunk_count"] = len(chunks)
@@ -298,6 +260,54 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         if term_value:
             merged["terms"].add(term_value)
 
+    def _process_chunks(
+        self,
+        chunks: list[dict[str, object]],
+        context: _CollectionContext,
+        timings: dict[str, float] | None,
+    ) -> None:
+        for chunk in chunks:
+            chunk_type = self._detect_chunk_type(chunk)
+            if chunk_type in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
+                self._time_section(
+                    "adapt_diogenes_chunk",
+                    timings,
+                    lambda c=chunk, ct=chunk_type: self._collect_definition_chunk(
+                        c, ct, context, timings
+                    ),
+                )
+            elif chunk.get("morphology"):
+                context.aggregated["merged"]["chunk_types"].add("PerseusAnalysisHeader")
+
+    def _ordered_chunk_types(self, chunk_types: set[str]) -> list[str]:
+        ordered: list[str] = []
+        for kind in (
+            "PerseusAnalysisHeader",
+            "DiogenesMatchingReference",
+            "DiogenesFuzzyReference",
+        ):
+            if kind in chunk_types:
+                ordered.append(kind)
+        return ordered
+
+    @staticmethod
+    def _detect_chunk_type(chunk: dict[str, object]) -> str | None:
+        chunk_type_val = chunk.get("chunk_type")
+        chunk_type: str | None = chunk_type_val if isinstance(chunk_type_val, str) else None
+        if chunk_type:
+            return chunk_type
+        if chunk.get("morphology"):
+            return "PerseusAnalysisHeader"
+        if chunk.get("definitions"):
+            return "DiogenesMatchingReference"
+        return None
+
+    @staticmethod
+    def _normalize_chunks(chunks_raw: object) -> list[dict[str, object]]:
+        if not isinstance(chunks_raw, list):
+            return []
+        return [cast(dict[str, object], c) for c in chunks_raw if isinstance(c, dict)]
+
     @staticmethod
     def _already_seen_block(
         block_key: tuple[str, str, str],
@@ -327,12 +337,16 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
         diogenes_warning = block.get("diogenes_warning")
         if diogenes_warning:
             block_metadata["diogenes_warning"] = str(diogenes_warning)
-        for meta_key in ("pos", "foster_codes", "source"):
+        # Avoid duplicating morphology payload (tags/foster_codes) in metadata; morphology lives on
+        # the entry. Keep only lightweight block descriptors.
+        for meta_key in ("pos", "source"):
             if meta_key in block:
                 block_metadata[meta_key] = DiogenesBackendAdapter._json_value(block.get(meta_key))
         metadata_raw = block.get("metadata")
         if isinstance(metadata_raw, dict):
             for key, value in metadata_raw.items():
+                if str(key) in {"tags", "foster_codes", "morphology", "morphs"}:
+                    continue
                 block_metadata[str(key)] = DiogenesBackendAdapter._json_value(value)
         return block_metadata
 
@@ -350,6 +364,8 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
     def _normalize_morph_entry(entry: dict[str, object]) -> dict[str, str | list[str] | None]:
         normalized: dict[str, str | list[str] | None] = {}
         for key, value in entry.items():
+            if key in {"tags", "foster_codes"}:
+                continue
             if isinstance(value, list):
                 normalized[key] = [str(v) for v in value]
             elif isinstance(value, dict):
@@ -359,6 +375,26 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             else:
                 normalized[key] = str(value)
         return normalized
+
+    @staticmethod
+    def _prune_morphology_duplicates(morphology: MorphologyInfo | None) -> None:
+        """Drop duplicate tag/foster fields from raw morphology."""
+        if not morphology:
+            return
+
+        raw = morphology.features.get("raw")
+        if not isinstance(raw, list):
+            return
+
+        cleaned_raw: list[dict[str, object]] = []
+        for entry in raw:
+            if not isinstance(entry, dict):
+                continue
+            cleaned_raw.append(
+                {k: v for k, v in entry.items() if k not in {"tags", "foster_codes"}}
+            )
+        cleaned_typed = cast(list[dict[str, str | list[str] | None]], cleaned_raw)
+        morphology.features["raw"] = cleaned_typed
 
     def _create_block(self, block_ctx: _BlockBuildContext) -> DictionaryBlock:
         block_obj = DictionaryBlock(

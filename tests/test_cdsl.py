@@ -370,24 +370,23 @@ class TestCdslAdapter(unittest.TestCase):
 
         first_def = entry.definitions[0]
         self.assertEqual(first_def.metadata["references"], ["L.", "Sūryas."])
+        first_details = cast(list[dict[str, str | None]], first_def.metadata["reference_details"])
         self.assertEqual(
-            [detail["abbreviation"] for detail in first_def.metadata["reference_details"]],
+            [detail["abbreviation"] for detail in first_details],
             ["L.", "Sūryas."],
         )
-        for detail in first_def.metadata["reference_details"]:
+        for detail in first_details:
             self.assertNotIn("language", detail)
 
         second_def = entry.definitions[1]
         self.assertEqual(second_def.metadata["references"], ["Gārhapatya"])
+        second_details = cast(list[dict[str, str | None]], second_def.metadata["reference_details"])
         self.assertEqual(
-            [detail["abbreviation"] for detail in second_def.metadata["reference_details"]],
+            [detail["abbreviation"] for detail in second_details],
             ["Gārhapatya"],
         )
-        self.assertEqual(second_def.metadata["reference_details"][0]["display"], "Gārhapatya")
-        self.assertEqual(
-            second_def.metadata["reference_details"][0]["long_name"],
-            "Gārhapatya sacred fire",
-        )
+        self.assertEqual(second_details[0]["display"], "Gārhapatya")
+        self.assertEqual(second_details[0]["long_name"], "Gārhapatya sacred fire")
 
 
 if __name__ == "__main__":
