@@ -49,6 +49,8 @@ class MorphologySolutionDict(TypedDict, total=False):
     total_words: int
     score: float
     metadata: JSONMapping
+    sandhi: JSONMapping
+    is_compound: bool
 
 
 class MorphologyParseResult(TypedDict):

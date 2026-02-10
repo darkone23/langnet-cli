@@ -21,6 +21,10 @@ class HeritageWordAnalysis:
     stem: str = ""
     meaning: list[str] = field(default_factory=list)
     dictionary_url: str | None = None
+    compound_role: str | None = None  # initial/final/medial when parsed from compounds
+    color: str | None = None
+    color_meaning: str | None = None
+    foster_codes: JSONMapping = field(default_factory=dict)  # Foster grammar codes
 
 
 @dataclass
@@ -32,6 +36,8 @@ class HeritageSolution:
     total_words: int
     score: float = 0.0
     metadata: JSONMapping = field(default_factory=dict)
+    sandhi: list[JSONMapping] | None = None
+    is_compound: bool = False
 
 
 @dataclass

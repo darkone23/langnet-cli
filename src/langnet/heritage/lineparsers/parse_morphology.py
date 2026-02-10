@@ -72,6 +72,8 @@ POS_MAP = {
     "pron": "pronoun",
     "adv": "adverb",
     "part": "participle",
+    "ind": "indeclinable",
+    "inde": "indeclinable",
 }
 
 CASE_CODE_INDEX = 1
@@ -175,6 +177,7 @@ class MorphologyTransformer(Transformer):
             mood=features.get("mood"),
             stem=features.get("stem", ""),
             meaning=[],  # Not available in morphology responses
+            compound_role=features.get("compound_role"),
         )
 
     def _parse_analysis_code(self, code):
@@ -190,6 +193,7 @@ class MorphologyTransformer(Transformer):
             "mood": None,
             "stem": "",
             "root": "",
+            "compound_role": None,
         }
 
         if not code or code == "?":
@@ -198,6 +202,22 @@ class MorphologyTransformer(Transformer):
         # When multiple analyses are separated by '|', use the first alternative
         if "|" in code:
             code = code.split("|", 1)[0].strip()
+
+        # Heritage compound markers (e.g., iic. = initial compound member)
+        compound_markers = {
+            "iic": "initial",
+            "ifc": "final",
+        }
+        code_lower = code.lower().rstrip(".")
+        if code_lower in {"ind", "inde"}:
+            features["pos"] = "indeclinable"
+            return features
+        for marker, role in compound_markers.items():
+            if code_lower.startswith(marker):
+                features["compound_role"] = role
+                if features["pos"] and features["pos"].startswith("unknown"):
+                    features["pos"] = "compound_member"
+                return features
 
         # Check for text-based descriptions (e.g., "m. sg. voc.")
         if "." in code and " " in code:

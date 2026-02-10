@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from typing import cast
+
 import structlog
 
 from langnet.citation.cts_urn import CTSUrnMapper
 from langnet.schema import DictionaryDefinition, DictionaryEntry, MorphologyInfo
+from langnet.types import JSONValue
 
 from .base import BaseBackendAdapter
 
@@ -92,8 +95,12 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                     metadata={
                         "dict": dict_name,
                         "id": entry.get("id"),
-                        **({"reference_details": reference_details} if reference_details else {}),
-                        **({"notes": notes} if notes else {}),
+                        **(
+                            {"reference_details": cast(JSONValue, reference_details)}
+                            if reference_details
+                            else {}
+                        ),
+                        **({"notes": cast(JSONValue, notes)} if notes else {}),
                     },
                 )
             )
@@ -220,9 +227,9 @@ class CDSLBackendAdapter(BaseBackendAdapter):
             resolved = {**last_concrete}
             # Preserve ibid token as abbreviation, carry display from anchor.
             resolved["abbreviation"] = "ib."
-            resolved.setdefault(
-                "display", last_concrete.get("display") or last_concrete.get("abbreviation")
-            )
+            display_val = last_concrete.get("display") or last_concrete.get("abbreviation")
+            if display_val:
+                resolved["display"] = display_val
             if ibid_locator:
                 resolved["locator"] = ibid_locator
             return resolved, last_concrete
@@ -244,8 +251,12 @@ class CDSLBackendAdapter(BaseBackendAdapter):
         text: str,
         locator: str | None,
         meta: dict[str, str] | None,
-    ) -> dict[str, str]:
-        """Build the reference detail dictionary from parsed components."""
+    ) -> dict[str, str] | None:
+        """Build the reference detail dictionary from parsed components.
+
+        Returns None if the reference appears to be a grammatical annotation
+        rather than a source citation (e.g., clipped French words like "variante (").
+        """
         detail: dict[str, str] = {}
         detail["abbreviation"] = source if source else text
 
@@ -253,12 +264,20 @@ class CDSLBackendAdapter(BaseBackendAdapter):
             detail["locator"] = locator
 
         if meta:
-            detail.update({k: v for k, v in meta.items() if k != "language"})
-            if source and "display" not in detail:
-                detail["display"] = source
+            # Check if long_name looks like a clipped French word (ends with "(", incomplete)
+            long_name = meta.get("long_name", "")
+            if long_name and (long_name.endswith("(") or long_name.endswith(" ")):
+                # This looks like a grammatical annotation, not a source
+                return None
 
-        if source and "display" not in detail:
-            detail["display"] = source
+            # Add metadata fields except language and long_name (which we handle separately)
+            detail.update({k: v for k, v in meta.items() if k not in ("language", "long_name")})
+            # Only set display if we have valid metadata with a proper long_name
+            # that is different from the abbreviation (i.e., an actual expansion)
+            if long_name and long_name != detail["abbreviation"]:
+                detail["display"] = long_name
+            # Note: long_name is only included when it differs from display
+            # This avoids redundancy in the output
 
         return detail
 

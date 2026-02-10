@@ -403,8 +403,9 @@ class TestCdslAdapter(unittest.TestCase):
             [detail["abbreviation"] for detail in second_details],
             ["Gārhapatya"],
         )
-        self.assertEqual(second_details[0]["display"], "Gārhapatya")
-        self.assertEqual(second_details[0]["long_name"], "Gārhapatya sacred fire")
+        self.assertEqual(second_details[0]["display"], "Gārhapatya sacred fire")
+        # long_name is omitted when it equals display to avoid redundancy
+        self.assertNotIn("long_name", second_details[0])
 
     def test_reference_ibid_resolves_to_prior_reference(self):
         adapter = CDSLBackendAdapter()
@@ -429,7 +430,8 @@ class TestCdslAdapter(unittest.TestCase):
         )
         self.assertEqual(len(ref_details), 3)
         self.assertEqual(ref_details[0]["abbreviation"], "Mahabh.")
-        self.assertEqual(ref_details[0]["display"], "Mahabh.")
+        # When long_name equals abbreviation, display should not be present
+        self.assertNotIn("display", ref_details[0])
         self.assertEqual(ref_details[1]["abbreviation"], "ib.")
         self.assertNotIn("locator", ref_details[1])
         self.assertEqual(ref_details[1]["display"], "Mahabh.")

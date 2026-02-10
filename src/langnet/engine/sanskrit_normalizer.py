@@ -73,7 +73,8 @@ class SanskritQueryNormalizer:
             slp1_form = self._velthuis_to_slp1_basic(heritage_form)
 
         try:
-            cdsl_slp1 = cdsl_to_slp1(heritage_form)
+            # Heritage returns Velthuis, so explicitly convert to SLP1
+            cdsl_slp1 = cdsl_to_slp1(heritage_form, source_encoding="velthuis")
             if cdsl_slp1:
                 slp1_candidates.append(cdsl_slp1)
                 slp1_form = cdsl_slp1

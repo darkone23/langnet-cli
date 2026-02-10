@@ -5,6 +5,7 @@ from typing import TypedDict
 from indic_transliteration.sanscript import (
     DEVANAGARI,
     HK,
+    IAST,
     ITRANS,
     SLP1,
     VELTHUIS,
@@ -12,6 +13,7 @@ from indic_transliteration.sanscript import (
     transliterate,
 )
 
+from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.types import JSONMapping
 
 
@@ -41,6 +43,7 @@ try:
     DEVANAGARI_AVAILABLE = DEVANAGARI
     VELTHUIS_AVAILABLE = VELTHUIS
     ITRANS_AVAILABLE = ITRANS
+    IAST_AVAILABLE = IAST
     SLP1_AVAILABLE = SLP1
     HK_AVAILABLE = HK
     WX_AVAILABLE = WX
@@ -50,6 +53,7 @@ except ImportError:
     DEVANAGARI_AVAILABLE = None
     VELTHUIS_AVAILABLE = None
     ITRANS_AVAILABLE = None
+    IAST_AVAILABLE = None
     SLP1_AVAILABLE = None
     HK_AVAILABLE = None
     WX_AVAILABLE = None
@@ -145,38 +149,29 @@ class EncodingService:
         return "ascii"
 
     @staticmethod
+    def _clean_velthuis(velthuis_text: str) -> str:
+        """Clean up Velthuis text by fixing library conversion bugs.
+
+        The indic_transliteration library has bugs in Velthuis conversion:
+        - ś (palatal sibilant) becomes "s instead of z
+        - We need to convert these artifacts to proper Heritage Velthuis
+        """
+        # Fix the quote artifact: "s should be z (palatal sibilant ś)
+        cleaned = velthuis_text.replace('"s', "z")
+        cleaned = cleaned.replace('"S', "z")  # Just in case
+
+        return cleaned
+
+    @staticmethod
     def to_velthuis(text: str, source_encoding: str | None = None) -> str:
-        """Convert text to Velthuis encoding (for Heritage Platform)"""
-        if not HAS_INDIC_TRANSLIT or not transliterate:
-            # Fallback to simple conversion
-            return EncodingService._fallback_to_velthuis(text)
+        """Convert text to Velthuis encoding (for Heritage Platform).
 
-        # Auto-detect source encoding if not provided
-        if source_encoding is None:
-            source_encoding = EncodingService.detect_encoding(text)
-
-        try:
-            if source_encoding == "devanagari" and DEVANAGARI_AVAILABLE and VELTHUIS_AVAILABLE:
-                return transliterate(text, DEVANAGARI_AVAILABLE, VELTHUIS_AVAILABLE)
-            elif source_encoding == "itrans" and ITRANS_AVAILABLE and VELTHUIS_AVAILABLE:
-                return transliterate(text, ITRANS_AVAILABLE, VELTHUIS_AVAILABLE)
-            elif source_encoding == "iast" and ITRANS_AVAILABLE and VELTHUIS_AVAILABLE:
-                # Treat IAST same as ITRANS for conversion purposes
-                return transliterate(text, ITRANS_AVAILABLE, VELTHUIS_AVAILABLE)
-            elif source_encoding == "slp1" and SLP1_AVAILABLE and VELTHUIS_AVAILABLE:
-                return transliterate(text, SLP1_AVAILABLE, VELTHUIS_AVAILABLE)
-            else:
-                # Try to convert from whatever encoding was detected
-                detected = EncodingService.detect_encoding(text)
-                if (
-                    detected in [DEVANAGARI_AVAILABLE, ITRANS_AVAILABLE, SLP1_AVAILABLE]
-                    and VELTHUIS_AVAILABLE
-                ):
-                    return transliterate(text, detected, VELTHUIS_AVAILABLE)
-                else:
-                    return text
-        except Exception:
-            return EncodingService._fallback_to_velthuis(text)
+        Uses Heritage-compatible converter to match the exact format
+        expected by the Heritage Platform.
+        """
+        # Use Heritage-compatible converter which handles IAST and Devanagari
+        # This avoids bugs in the indic_transliteration library
+        return to_heritage_velthuis(text)
 
     @staticmethod
     def to_slp1(text: str, source_encoding: str | None = None) -> str:

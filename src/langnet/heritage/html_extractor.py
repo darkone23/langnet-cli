@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from typing import TypedDict, cast
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from .types import MorphologyPattern, MorphologySegment, MorphologySolutionDict
 
@@ -128,6 +128,25 @@ class HeritageHTMLExtractor:
         match = re.search(r"\[[^\]]+\]\{[^}]+\}", text)
         return match.group(0) if match else None
 
+    def _extract_pattern_from_span(self, span) -> _PatternEntry | None:
+        """Extract pattern and URL from a latin12 span."""
+        span_text = span.get_text(strip=True)
+        match = re.search(self.pattern, span_text)
+        if not match:
+            return None
+
+        word = match.group(1).strip()
+        analysis = match.group(2).strip()
+
+        url: str | None = None
+        for link in span.find_all("a", class_="navy"):
+            href = link.get("href")
+            if href and isinstance(href, str):
+                url = href
+                break
+
+        return _PatternEntry(word, analysis, match.group(0), url)
+
     def _get_innermost_pattern_tables(self, soup):
         """Find innermost pattern tables (those without nested pattern tables)"""
         pattern_tables = soup.find_all("table")
@@ -179,27 +198,18 @@ class HeritageHTMLExtractor:
 
             solution_number = int(solution_match.group(1))
             table = self._find_solution_table(span)
-            next_solution = None
-            for candidate in span.find_all_next("span"):
-                if candidate is span:
-                    continue
-                if candidate.get_text() and "Solution" in candidate.get_text():
-                    next_solution = candidate
-                    break
-
-            patterns = self._collect_patterns(table) if table else []
-            if not patterns:
-                patterns.extend(self._collect_inline_patterns(span, next_solution))
+            next_solution = self._find_next_solution_marker(span)
+            patterns = self._collect_all_patterns(span, table, next_solution)
             segments = self._collect_segments(span, next_solution)
+
             if patterns:
+                unique_patterns = self._deduplicate_patterns(patterns)
+                raw_text = self._build_raw_text(patterns, segments)
                 color = self._table_color(table) if table else None
-                raw_text = "\n".join(entry.raw_text for entry in patterns) or " ".join(
-                    seg["text"] for seg in segments if seg.get("text")
-                )
                 blocks.append(
                     {
                         "number": solution_number,
-                        "patterns": patterns,
+                        "patterns": unique_patterns,
                         "color": color,
                         "raw_text": raw_text,
                         "segments": segments,
@@ -208,18 +218,106 @@ class HeritageHTMLExtractor:
 
         return blocks
 
+    def _find_next_solution_marker(self, span: Tag) -> Tag | None:
+        """Find the next solution marker after the given span."""
+        for candidate in span.find_all_next("span"):
+            if candidate is span:
+                continue
+            if candidate.get_text() and "Solution" in candidate.get_text():
+                return candidate
+        return None
+
+    def _collect_all_patterns(self, span, table, next_solution) -> list[_PatternEntry]:
+        """Collect all patterns from table and inline sources."""
+        patterns = self._collect_patterns(table) if table else []
+        patterns.extend(self._collect_patterns_between(span, next_solution))
+        if not patterns:
+            patterns.extend(self._collect_inline_patterns(span, next_solution))
+        return patterns
+
+    @staticmethod
+    def _deduplicate_patterns(patterns: list[_PatternEntry]) -> list[_PatternEntry]:
+        """Deduplicate patterns while preserving order."""
+        seen_keys: set[str] = set()
+        unique_patterns: list[_PatternEntry] = []
+        for p in patterns:
+            key = f"{p.word}||{p.analysis}"
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            unique_patterns.append(p)
+        return unique_patterns
+
+    @staticmethod
+    def _build_raw_text(patterns: list[_PatternEntry], segments: list[MorphologySegment]) -> str:
+        """Build raw text from patterns or segments."""
+        if patterns:
+            return "\n".join(entry.raw_text for entry in patterns)
+        return " ".join(text for seg in segments if (text := seg.get("text")))
+
+    def _collect_patterns_between(self, start_span, next_solution_span) -> list[_PatternEntry]:
+        """Collect latin12 patterns between two solution markers, scanning all descendants."""
+        patterns: list[_PatternEntry] = []
+        seen: set[str] = set()
+
+        current = start_span.next_sibling
+        while current and current != next_solution_span:
+            if getattr(current, "find_all", None):
+                for span in current.find_all("span", class_="latin12"):
+                    entry = self._extract_pattern_from_span(span)
+                    if not entry:
+                        continue
+                    key = f"{entry.word}||{entry.analysis}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    patterns.append(entry)
+            current = current.next_sibling
+
+        return patterns
+
+    # Metadata patterns to filter out from segments
+    _METADATA_PATTERNS = [
+        r"solutions?\s+kept",
+        r"filtering\s+efficiency",
+        r"additional\s+candidate",
+        r"^\d+$",  # Standalone numbers (like "2" or "8")
+        r"^\d+%$",  # Percentages like "100%"
+        r"%$",  # Anything ending with %
+    ]
+
+    def _is_metadata_text(self, text: str) -> bool:
+        """Check if text is metadata rather than a word/segment."""
+        if not text:
+            return True
+        text_lower = text.lower()
+        return any(re.search(pattern, text_lower) for pattern in self._METADATA_PATTERNS)
+
     def _collect_segments(self, start_span, next_solution_span) -> list[MorphologySegment]:
         """Collect span text/class between current solution marker and the next one."""
         segments: list[MorphologySegment] = []
-        current = start_span.next_sibling
-        while current and current != next_solution_span:
-            if getattr(current, "name", None) == "span":
+
+        def collect_from(node):
+            if getattr(node, "name", None) == "span":
+                text = node.get_text(strip=True)
+                # Skip metadata text
+                if self._is_metadata_text(text):
+                    return
                 segments.append(
                     {
-                        "css_class": (current.get("class") or [None])[0],
-                        "text": current.get_text(strip=True),
+                        "css_class": (node.get("class") or [None])[0],
+                        "text": text,
                     }
                 )
+            for child in getattr(node, "children", []) or []:
+                # Stop if we hit the next solution marker
+                if child == next_solution_span:
+                    return
+                collect_from(child)
+
+        current = start_span.next_sibling
+        while current and current != next_solution_span:
+            collect_from(current)
             current = current.next_sibling
         return segments
 
@@ -232,22 +330,12 @@ class HeritageHTMLExtractor:
             if getattr(current, "name", None) == "span" and "latin12" in (
                 current.get("class") or []
             ):
-                span_text = current.get_text(strip=True)
-                match = re.search(self.pattern, span_text)
-                if match:
-                    word = match.group(1).strip()
-                    analysis = match.group(2).strip()
-                    key = f"{word}||{analysis}"
+                entry = self._extract_pattern_from_span(current)
+                if entry:
+                    key = f"{entry.word}||{entry.analysis}"
                     if key not in seen:
                         seen.add(key)
-                        # Extract URL from navy links within this span
-                        url: str | None = None
-                        for link in current.find_all("a", class_="navy"):
-                            href = link.get("href")
-                            if href and isinstance(href, str):
-                                url = href
-                                break
-                        patterns.append(_PatternEntry(word, analysis, match.group(0), url))
+                        patterns.append(entry)
             current = current.next_sibling
         return patterns
 

@@ -8,7 +8,7 @@ from typing import cast
 import duckdb
 import structlog
 from indic_transliteration.detect import detect
-from indic_transliteration.sanscript import DEVANAGARI, SLP1, transliterate
+from indic_transliteration.sanscript import DEVANAGARI, HK, IAST, SLP1, transliterate
 
 from langnet.config import config
 from langnet.types import JSONMapping
@@ -52,9 +52,149 @@ def normalize_key(key: str) -> str:
     return key.lower().strip()
 
 
-def to_slp1(text: str) -> str:
-    src = detect(text)
-    return transliterate(text, src, SLP1).lower()
+def _velthuis_to_slp1_direct(text: str) -> str:
+    """Convert Velthuis to SLP1 using Heritage conventions.
+
+    Heritage VH: z=ś, .s=ṣ, .m=ṃ, .h=ḥ, ~n=ñ, .t=ṭ, .d=ḍ, .n=ṇ
+    """
+    if not text:
+        return text
+
+    result = text
+
+    # Fix library artifacts: "s should be z (Heritage's ś)
+    result = result.replace('"s', "z")
+    result = result.replace('"S', "z")
+
+    # Process longest sequences first to avoid partial replacements
+    # Long vowels
+    result = result.replace("aa", "A")
+    result = result.replace("ii", "I")
+    result = result.replace("uu", "U")
+
+    # Vocalic liquids (long forms first)
+    result = result.replace(".rr", "RR")
+    result = result.replace(".r", "R")
+    result = result.replace(".ll", "LL")
+    result = result.replace(".l", "L")
+
+    # Anusvara/visarga
+    result = result.replace(".m", "M")
+    result = result.replace(".h", "H")
+
+    # Sibilants: z=ś, .s=ṣ -> SLP1 z, S
+    result = result.replace(".s", "S")
+
+    # Other dotted consonants
+    result = result.replace(".t", "w")  # ṭ
+    result = result.replace(".d", "q")  # ḍ
+    result = result.replace(".n", "R")  # ṇ (retroflex n)
+
+    # Nasals
+    result = result.replace("~n", "Y")  # ñ (palatal)
+    result = result.replace('"n', "N")  # ṅ (velar)
+
+    # Avagraha
+    result = result.replace(".a", "'")
+
+    return result
+
+
+def _slp1_safe_lower(text: str) -> str:
+    """
+    Lowercase text while preserving SLP1 encoding.
+
+    SLP1 uses uppercase letters for special sounds that should not be lowercased:
+    A=ā, I=ī, U=ū, R=ṛ, M=ṃ, H=ḥ, S=ṣ, etc.
+
+    Only lowercase if the text doesn't contain SLP1-specific characters.
+    """
+    # SLP1-specific characters that should remain uppercase
+    slp1_specific = "AIURMH"
+    if any(ch in text for ch in slp1_specific):
+        return text
+    return text.lower()
+
+
+def _try_transliterate_from_scheme(text: str, scheme: str) -> str | None:
+    """Try to transliterate text from a specific scheme to SLP1."""
+    scheme_map = {
+        "hk": HK,
+        "iast": IAST,
+        "devanagari": DEVANAGARI,
+        "deva": DEVANAGARI,
+    }
+    src_scheme = scheme_map.get(scheme)
+    if src_scheme:
+        try:
+            result = transliterate(text, src_scheme, SLP1)
+            return _slp1_safe_lower(result)
+        except Exception:
+            return _slp1_safe_lower(text)
+    return None
+
+
+def _is_slp1_format(text: str) -> bool:
+    """Check if text appears to already be in SLP1 format."""
+    # SLP1 uses: A=ā, I=ī, U=ū, R=ṛ, M=ṃ, H=ḥ, z=ś, S=ṣ
+    # But z and S could be other schemes, so we look for the capital letters
+    return any(ch in text for ch in "AIURMH")
+
+
+def _is_velthuis_format(text: str) -> bool:
+    """Check if text appears to be in Velthuis format."""
+    # Velthuis uses: z=ś, aa=ā, ii=ī, uu=ū, .m=ṃ, .h=ḥ, ~n=ñ, etc.
+    return any(ch in text for ch in ".~") or any(
+        substr in text for substr in ["aa", "ii", "uu", "z"]
+    )
+
+
+def _try_auto_detect_and_convert(text: str) -> str:
+    """Try to auto-detect encoding and convert to SLP1."""
+    try:
+        src = detect(text)
+        if src and src != "slp1":
+            result = transliterate(text, src, SLP1)
+            return _slp1_safe_lower(result)
+    except Exception:
+        pass
+    return _slp1_safe_lower(text)
+
+
+def to_slp1(text: str, source_encoding: str | None = None) -> str:
+    """
+    Convert text to SLP1 encoding.
+
+    Args:
+        text: The text to convert
+        source_encoding: Optional source encoding (e.g., 'velthuis', 'hk', 'iast', 'devanagari').
+                        If provided, uses explicit conversion instead of auto-detection.
+                        Use this when you know the encoding (e.g., Heritage returns Velthuis).
+
+    Returns:
+        Text in SLP1 encoding (lowercase)
+    """
+    if not text or _is_slp1_format(text):
+        return text
+
+    # If source encoding is explicitly specified, use it
+    if source_encoding:
+        source_encoding_lower = source_encoding.lower()
+
+        # Use our custom Velthuis converter to avoid library bugs
+        if source_encoding_lower in ("velthuis", "vh"):
+            return _velthuis_to_slp1_direct(text)
+
+        result = _try_transliterate_from_scheme(text, source_encoding_lower)
+        if result is not None:
+            return result
+
+    # Check if it's Velthuis (Heritage Platform format)
+    if _is_velthuis_format(text):
+        return _velthuis_to_slp1_direct(text)
+
+    # Fall back to auto-detection for other schemes
+    return _try_auto_detect_and_convert(text)
 
 
 def parse_batch(args) -> tuple[list, list]:
@@ -504,16 +644,40 @@ class SanskritCologneLexicon:
                     root["meaning"] = entry.etymology.get("meaning")
                 break
 
+        # Convert to SLP1 for consistent internal representation
         slp1_term = to_slp1(data)
+
+        # The indic_transliteration library has z and S swapped in SLP1.
+        # Standard: z=ś (palatal), S=ṣ (retroflex)
+        # Library:   z=ṣ (retroflex), S=ś (palatal)
+        # We need to swap them for correct display conversion.
+        def _swap_slp1_zS(text: str) -> str:
+            """Swap z and S to work around library's swapped mapping."""
+            # Use temporary placeholder to avoid double-swapping
+            return text.replace("z", "\x00").replace("S", "z").replace("\x00", "S")
+
+        slp1_for_display = _swap_slp1_zS(slp1_term)
+
         try:
-            deva_term = transliterate(slp1_term, SLP1, DEVANAGARI)
+            deva_term = transliterate(slp1_for_display, SLP1, DEVANAGARI)
         except Exception:
             deva_term = data
 
+        # Generate proper IAST and HK representations from SLP1
+        try:
+            iast_term = transliterate(slp1_for_display, SLP1, IAST)
+        except Exception:
+            iast_term = data
+
+        try:
+            hk_term = transliterate(slp1_for_display, SLP1, HK)
+        except Exception:
+            hk_term = data
+
         transliteration = SanskritTransliteration(
             input=data,
-            iast=slp1_term,
-            hk=slp1_term,
+            iast=iast_term,
+            hk=hk_term,
             devanagari=deva_term,
         )
 
