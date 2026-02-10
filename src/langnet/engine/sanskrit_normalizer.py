@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol
 
 import structlog
+from indic_transliteration.detect import detect
+from indic_transliteration.sanscript import DEVANAGARI, SLP1, VELTHUIS, transliterate
 
 from langnet.cologne.core import to_slp1 as cdsl_to_slp1
 from langnet.heritage.client import HeritageHTTPClient
@@ -62,6 +65,24 @@ class SanskritQueryNormalizer:
         if heritage_form == word and self.heritage_client:
             heritage_form = self._canonical_from_heritage(word) or heritage_form
 
+        slp1_form, slp1_candidates = self._build_slp1_forms(
+            word, heritage_form, slp1_form, slp1_candidates
+        )
+
+        slp1_candidates = self._build_variant_candidates(slp1_candidates)
+        slp1_candidates = self._deduplicate_candidates(slp1_candidates)
+
+        return SanskritNormalizationResult(
+            canonical_heritage=heritage_form,
+            canonical_slp1=slp1_form,
+            slp1_candidates=slp1_candidates,
+            canonical_tokens=canonical_tokens,
+            input_form=word,
+        )
+
+    def _build_slp1_forms(
+        self, word: str, heritage_form: str, slp1_form: str, slp1_candidates: list[str]
+    ) -> tuple[str, list[str]]:
         if slp1_form == word:
             slp1_form = self._to_slp1(heritage_form)
         if not slp1_candidates:
@@ -73,7 +94,6 @@ class SanskritQueryNormalizer:
             slp1_form = self._velthuis_to_slp1_basic(heritage_form)
 
         try:
-            # Heritage returns Velthuis, so explicitly convert to SLP1
             cdsl_slp1 = cdsl_to_slp1(heritage_form, source_encoding="velthuis")
             if cdsl_slp1:
                 slp1_candidates.append(cdsl_slp1)
@@ -81,17 +101,31 @@ class SanskritQueryNormalizer:
         except Exception:
             pass
 
-        # Deduplicate while preserving order
-        seen: set[str] = set()
-        slp1_candidates = [c for c in slp1_candidates if c and not (c in seen or seen.add(c))]
+        self._add_devanagari_candidate(heritage_form, slp1_form, slp1_candidates)
 
-        return SanskritNormalizationResult(
-            canonical_heritage=heritage_form,
-            canonical_slp1=slp1_form,
-            slp1_candidates=slp1_candidates,
-            canonical_tokens=canonical_tokens,
-            input_form=word,
-        )
+        return slp1_form, slp1_candidates
+
+    def _add_devanagari_candidate(
+        self, heritage_form: str, slp1_form: str, slp1_candidates: list[str]
+    ) -> None:
+        try:
+            source_slp1 = slp1_form if slp1_form else heritage_form
+            devanagari_form = transliterate(source_slp1, SLP1, DEVANAGARI)
+            if devanagari_form:
+                slp1_candidates.append(devanagari_form)
+        except Exception:
+            pass
+
+    def _build_variant_candidates(self, slp1_candidates: list[str]) -> list[str]:
+        all_candidates = []
+        for candidate in slp1_candidates:
+            all_candidates.append(candidate)
+            all_candidates.extend(self._generate_slp1_variants(candidate))
+        return all_candidates
+
+    def _deduplicate_candidates(self, slp1_candidates: list[str]) -> list[str]:
+        seen: set[str] = set()
+        return [c for c in slp1_candidates if c and not (c in seen or seen.add(c))]
 
     def _run_pipeline(self, word: str) -> CanonicalQuery | None:
         if not self.normalization_pipeline:
@@ -157,13 +191,6 @@ class SanskritQueryNormalizer:
     def _to_slp1(text: str) -> str:
         """Transliterate Sanskrit text to SLP1 for CDSL/ASCII backends."""
         try:
-            from indic_transliteration.detect import detect  # noqa: PLC0415
-            from indic_transliteration.sanscript import (  # noqa: PLC0415
-                SLP1,
-                VELTHUIS,
-                transliterate,
-            )
-
             src = detect(text)
             looks_velthuis = any(ch in text for ch in [".", "~", "aa", "ii", "uu"])
             src_scheme = VELTHUIS if looks_velthuis else src
@@ -174,11 +201,6 @@ class SanskritQueryNormalizer:
     @staticmethod
     def _first_slp1_alternate(alternates: list[str]) -> str | None:
         """Return the first SLP1-looking alternate if present."""
-        try:
-            from indic_transliteration.detect import detect  # noqa: PLC0415
-        except Exception:
-            return None
-
         for alt in alternates:
             try:
                 if detect(alt) == "slp1":
@@ -190,11 +212,6 @@ class SanskritQueryNormalizer:
     @staticmethod
     def _slp1_candidates_from_alternates(alternates: list[str]) -> list[str]:
         candidates: list[str] = []
-        try:
-            from indic_transliteration.detect import detect  # noqa: PLC0415
-        except Exception:
-            return candidates
-
         for alt in alternates:
             try:
                 if detect(alt) == "slp1":
@@ -230,3 +247,54 @@ class SanskritQueryNormalizer:
     def _looks_mangled_slp1(text: str) -> bool:
         """Detect obvious transliteration artifacts like digits/quotes in SLP1 output."""
         return any(ch.isdigit() or ch in {'"', "'"} for ch in text)
+
+    @staticmethod
+    def _generate_slp1_variants(text: str) -> list[str]:
+        """Generate variant SLP1 interpretations for ambiguous ASCII input.
+
+        ASCII transliteration is ambiguous:
+        - 'sh' could be z (ś/palatal), S (ṣ/retroflex), or s (dental)
+        - 'r' before consonant could be ṛ (vocalic r = f in SLP1)
+        - 'ri' could be r+i or ṛ (f in SLP1) + following vowel
+        """
+        variants: list[str] = [text]  # Always include original
+
+        text_lower = text.lower()
+
+        # Generate 'sh' variants (palatal vs retroflex)
+        if "sh" in text_lower:
+            # Try palatal interpretation (z)
+            variants.append(text_lower.replace("sh", "z"))
+            # Try retroflex interpretation (S)
+            variants.append(text_lower.replace("sh", "S"))
+
+        # Generate variants for vocalic ṛ (SLP1 'f') interpretation
+        # Pattern: consonant + 'r' or 'ri' + consonant
+        # Examples: krishna -> kfSna (kṛṣṇa), kripa -> kfpa (kṛpā)
+
+        # Try to identify potential vocalic ṛ positions
+        # Look for 'r' or 'ri' between consonants where it might be ṛ
+        for pattern in [
+            r"([kgcjtdnpbmyrlvw])ri([szSZkgcjtdnpbmyrlv])",  # 'cri' pattern
+            r"([kgcjtdnpbmyrlvw])r([szSZkgcjtdnpbmyrlv])",  # 'cr' pattern
+        ]:
+            if re.search(pattern, text_lower):
+                # Replace 'ri' or 'r' with 'f' (vocalic ṛ in SLP1)
+                variant = re.sub(
+                    r"([kgcjtdnpbmyrlvw])ri([szSZkgcjtdnpbmyrlv])", r"\1f\2", text_lower
+                )
+                variant = re.sub(r"([kgcjtdnpbmyrlvw])r([szSZkgcjtdnpbmyrlv])", r"\1f\2", variant)
+                if variant not in variants:
+                    variants.append(variant)
+
+        # Generate dental 's' variants for CDSL compatibility
+        # CDSL uses simplified keys where z (palatal) and S (retroflex) both map to s
+        dental_variants = []
+        for variant in list(variants):  # Use list() to avoid modifying during iteration
+            if "z" in variant or "S" in variant:
+                dental = variant.replace("z", "s").replace("S", "s")
+                if dental not in variants and dental not in dental_variants:
+                    dental_variants.append(dental)
+        variants.extend(dental_variants)
+
+        return list(dict.fromkeys(variants))  # Deduplicate while preserving order

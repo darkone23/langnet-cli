@@ -105,12 +105,12 @@ def _slp1_safe_lower(text: str) -> str:
     Lowercase text while preserving SLP1 encoding.
 
     SLP1 uses uppercase letters for special sounds that should not be lowercased:
-    A=ā, I=ī, U=ū, R=ṛ, M=ṃ, H=ḥ, S=ṣ, etc.
+    A=ā, I=ī, U=ū, R=ṛ, M=ṃ, H=ḥ, S=ṣ (retroflex), z=ś (palatal), etc.
 
     Only lowercase if the text doesn't contain SLP1-specific characters.
     """
     # SLP1-specific characters that should remain uppercase
-    slp1_specific = "AIURMH"
+    slp1_specific = "AIURMHSz"
     if any(ch in text for ch in slp1_specific):
         return text
     return text.lower()

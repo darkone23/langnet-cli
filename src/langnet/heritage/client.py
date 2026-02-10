@@ -126,26 +126,35 @@ class HeritageHTTPClient:
         html_content = self.fetch_cgi_script("sktsearch", params=params, timeout=timeout)
         soup = BeautifulSoup(html_content, "html.parser")
 
+        # Collect all matching candidates to prefer the last one (often the base form)
+        candidates = []
         for link in soup.find_all("a", href=True):
             href = link.get("href")
             if not isinstance(href, str):
                 continue
             if "/skt/DICO/" in href or "/skt/MW" in href:
-                # NB: this only returns the first when there are likely multiple
-                # potential_devanagari = transliterate(link.get_text(strip=True), IAST, DEVANAGARI)
                 # Extract the canonical part after H_
                 canonical_part = ""
                 if "H_" in href:
                     canonical_part = href.split("H_")[-1]
-                elif "#" in href:
-                    canonical_part = href.split("#")[-1]
-                return {
-                    "original_query": query,
-                    "bare_query": bare_query,
-                    "canonical_sanskrit": canonical_part,
-                    "match_method": "sktsearch",
-                    "entry_url": href,
-                }
+                if canonical_part:  # Only add if we found a valid canonical form
+                    candidates.append(
+                        {
+                            "canonical_sanskrit": canonical_part,
+                            "entry_url": href,
+                        }
+                    )
+
+        # Prefer the last candidate (often the base form, e.g., kṛṣṇa over kṛṣṇā)
+        if len(candidates) > 0:
+            last = candidates[-1]
+            return {
+                "original_query": query,
+                "bare_query": bare_query,
+                "canonical_sanskrit": last["canonical_sanskrit"],
+                "match_method": "sktsearch",
+                "entry_url": last["entry_url"],
+            }
 
         return {
             "original_query": query,

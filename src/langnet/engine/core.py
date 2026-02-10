@@ -284,26 +284,9 @@ class LanguageEngine:
         if heritage_result:
             result["heritage"] = heritage_result
 
-        try:
-            cdsl_lookup_error: Exception | None = None
-            cdsl_result = None
-            for candidate in [canonical_slp1, *slp1_candidates]:
-                try:
-                    cdsl_result = self._record_timing(
-                        timings, "cdsl", lambda: self.cdsl.lookup_ascii(candidate)
-                    )
-                    break
-                except Exception as exc:  # noqa: BLE001
-                    cdsl_lookup_error = exc
-                    continue
-
-            if cdsl_result:
-                result["cdsl"] = _cattrs_converter.unstructure(cdsl_result)
-            else:
-                raise cdsl_lookup_error or RuntimeError("CDSL lookup failed for all candidates")
-        except Exception as e:  # noqa: BLE001
-            logger.error("backend_failed", backend="cdsl", error=str(e))
-            result["cdsl"] = self._backend_error("cdsl", e)
+        cdsl_result = self._query_sanskrit_cdsl(canonical_slp1, slp1_candidates, timings)
+        if cdsl_result:
+            result["cdsl"] = _cattrs_converter.unstructure(cdsl_result)
 
         result["canonical_form"] = canonical_slp1 or canonical
         result["canonical_slp1"] = canonical_slp1
@@ -314,6 +297,45 @@ class LanguageEngine:
             result["canonical_tokens"] = canonical_tokens
         result["input_form"] = word
         return result
+
+    def _query_sanskrit_cdsl(
+        self, canonical_slp1: str, slp1_candidates: list[str], timings: dict[str, float]
+    ) -> dict | None:
+        try:
+            cdsl_lookup_error: Exception | None = None
+            cdsl_result = None
+            for candidate in [canonical_slp1, *slp1_candidates]:
+                try:
+                    lookup_result = self._record_timing(
+                        timings, "cdsl", lambda: self.cdsl.lookup_ascii(candidate)
+                    )
+                    dictionaries = lookup_result.get("dictionaries", {})
+                    mw_entries = dictionaries.get("mw", [])
+                    ap90_entries = dictionaries.get("ap90", [])
+                    if mw_entries or ap90_entries:
+                        cdsl_result = lookup_result
+                        break
+                except Exception as exc:  # noqa: BLE001
+                    cdsl_lookup_error = exc
+                    continue
+
+            if cdsl_result is None:
+                all_candidates = [canonical_slp1, *slp1_candidates]
+                if all_candidates:
+                    try:
+                        cdsl_result = self._record_timing(
+                            timings, "cdsl", lambda: self.cdsl.lookup_ascii(all_candidates[-1])
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        cdsl_lookup_error = exc
+
+            if cdsl_result:
+                return cdsl_result
+            else:
+                raise cdsl_lookup_error or RuntimeError("CDSL lookup failed for all candidates")
+        except Exception as e:  # noqa: BLE001
+            logger.error("backend_failed", backend="cdsl", error=str(e))
+            return None
 
     def _query_sanskrit_heritage(
         self, word: str, _cattrs_converter, timings: dict[str, float]
@@ -585,36 +607,9 @@ class LanguageEngine:
             self._normalize_sanskrit_word(query)
         )
 
-        # Build a candidate list preferring clean SLP1 forms first.
-        dedup: list[str] = []
-        for c in [canonical_slp1, *slp1_candidates]:
-            if c and c not in dedup:
-                dedup.append(c)
-        candidate_list = [c for c in dedup if not self._looks_mangled_slp1(c)]
-        if not candidate_list:
-            candidate_list = dedup
-        # Normalize casing so mixed-case headwords (e.g., Siva/) still match CDSL keys.
-        candidate_list = [c.lower() for c in candidate_list]
-        # Deduplicate again after lowercasing while preserving order
-        seen_lower: set[str] = set()
-        candidate_list = [
-            c for c in candidate_list if c and not (c in seen_lower or seen_lower.add(c))
-        ]
+        candidate_list = self._build_cdsl_candidate_list(canonical_slp1, slp1_candidates)
+        cdsl_result = self._execute_cdsl_lookup(candidate_list, query)
 
-        cdsl_result = None
-        last_error: Exception | None = None
-        for candidate in candidate_list:
-            try:
-                cdsl_result = self.cdsl.lookup_ascii(candidate)
-                break
-            except Exception as exc:  # noqa: BLE001
-                last_error = exc
-                continue
-
-        if cdsl_result is None:
-            raise last_error or RuntimeError(f"CDSL lookup failed for {query}")
-
-        # Attach canonical forms for caller visibility
         cdsl_result["canonical_form"] = canonical_slp1 or heritage_form
         cdsl_result["canonical_form_candidates"] = [
             c for c in [canonical_slp1, *slp1_candidates] if c
@@ -624,6 +619,50 @@ class LanguageEngine:
             cdsl_result["canonical_tokens"] = canonical_tokens
 
         return self._cattrs_converter.unstructure(cdsl_result)
+
+    def _build_cdsl_candidate_list(
+        self, canonical_slp1: str, slp1_candidates: list[str]
+    ) -> list[str]:
+        dedup: list[str] = []
+        for c in [canonical_slp1, *slp1_candidates]:
+            if c and c not in dedup:
+                dedup.append(c)
+        candidate_list = [c for c in dedup if not self._looks_mangled_slp1(c)]
+        if not candidate_list:
+            candidate_list = dedup
+        candidate_list = [c.lower() for c in candidate_list]
+        seen_lower: set[str] = set()
+        candidate_list = [
+            c for c in candidate_list if c and not (c in seen_lower or seen_lower.add(c))
+        ]
+        return candidate_list
+
+    def _execute_cdsl_lookup(self, candidate_list: list[str], query: str) -> dict:
+        cdsl_result = None
+        last_error: Exception | None = None
+        for candidate in candidate_list:
+            try:
+                result = self.cdsl.lookup_ascii(candidate)
+                dictionaries = result.get("dictionaries", {})
+                mw_entries = dictionaries.get("mw", [])
+                ap90_entries = dictionaries.get("ap90", [])
+                if mw_entries or ap90_entries:
+                    cdsl_result = result
+                    break
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                continue
+
+        if cdsl_result is None and candidate_list:
+            try:
+                cdsl_result = self.cdsl.lookup_ascii(candidate_list[-1])
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+
+        if cdsl_result is None:
+            raise last_error or RuntimeError(f"CDSL lookup failed for {query}")
+
+        return cdsl_result
 
     def _get_cltk_raw(self, lang: str, query: str, action: str) -> dict:
         """Get raw data from CLTK backend."""
