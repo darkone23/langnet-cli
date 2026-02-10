@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 from langnet.types import JSONMapping
+
+if TYPE_CHECKING:
+    from langnet.heritage.models import HeritageWordAnalysis
 
 
 class MorphologyPattern(TypedDict):
@@ -16,6 +19,8 @@ class MorphologySegment(TypedDict, total=False):
 
 
 class MorphologyAnalysisDict(TypedDict, total=False):
+    """Dict representation of morphology analysis - used only at parse boundaries."""
+
     word: str
     lemma: str
     root: str
@@ -34,10 +39,12 @@ class MorphologyAnalysisDict(TypedDict, total=False):
 
 
 class MorphologySolutionDict(TypedDict, total=False):
+    """Solution dict - analyses are always HeritageWordAnalysis objects."""
+
     type: str
     solution_number: int
-    analyses: list[MorphologyAnalysisDict]
-    entries: list[MorphologyAnalysisDict]
+    analyses: list[HeritageWordAnalysis]
+    entries: list[HeritageWordAnalysis]
     patterns: list[MorphologyPattern]
     total_words: int
     score: float
@@ -45,8 +52,10 @@ class MorphologySolutionDict(TypedDict, total=False):
 
 
 class MorphologyParseResult(TypedDict):
+    """Parse result - word_analyses are always HeritageWordAnalysis objects."""
+
     solutions: list[MorphologySolutionDict]
-    word_analyses: list[MorphologyAnalysisDict]
+    word_analyses: list[HeritageWordAnalysis]
     total_solutions: int
     encoding: str
     metadata: JSONMapping
@@ -62,9 +71,11 @@ class HeritageDictionaryLookup(TypedDict, total=False):
 
 
 class CombinedAnalysis(TypedDict, total=False):
+    """Combined analysis - morphology_analyses are always HeritageWordAnalysis objects."""
+
     lemma: str | None
     pos: str | None
-    morphology_analyses: list[MorphologyAnalysisDict]
+    morphology_analyses: list[HeritageWordAnalysis]
     dictionary_entries: list[JSONMapping]
     transliteration: JSONMapping
     root: str | None

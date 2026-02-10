@@ -226,11 +226,12 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                 lambda: self._enrich_citations(citations, context.language),
             )
             block_metadata = self._build_block_metadata(block)
+            # Keep enriched details for display; drop raw citation lists to reduce payload noise.
             block_ctx = _BlockBuildContext(
                 entry_text=entry_text,
                 entry_id=entry_id,
-                citations=citations,
-                original_citations=original_citations,
+                citations={},
+                original_citations={},
                 citation_details=citation_details,
                 block_metadata=block_metadata,
             )

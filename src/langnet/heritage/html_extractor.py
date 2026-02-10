@@ -4,6 +4,7 @@ Extracts structured text content for Lark parsing
 """
 
 import re
+from dataclasses import dataclass
 from typing import TypedDict, cast
 
 from bs4 import BeautifulSoup
@@ -11,9 +12,19 @@ from bs4 import BeautifulSoup
 from .types import MorphologyPattern, MorphologySegment, MorphologySolutionDict
 
 
+@dataclass
+class _PatternEntry:
+    """A pattern entry extracted from HTML with word, analysis, raw text, and optional URL."""
+
+    word: str
+    analysis: str
+    raw_text: str
+    url: str | None = None
+
+
 class _SolutionBlock(TypedDict):
     number: int
-    patterns: list[tuple[str, str, str]]
+    patterns: list[_PatternEntry]
     color: str | None
     raw_text: str
     segments: list[MorphologySegment]
@@ -33,7 +44,10 @@ class HeritageHTMLExtractor:
         solutions: list[MorphologySolutionDict] = []
         for block in self._extract_solution_blocks(soup):
             pattern_entries = block["patterns"]
-            pattern_dicts = [{"word": str(w), "analysis": str(a)} for w, a, _ in pattern_entries]
+            pattern_dicts = [
+                {"word": entry.word, "analysis": entry.analysis, "dictionary_url": entry.url}
+                for entry in pattern_entries
+            ]
             patterns = cast(list[MorphologyPattern], pattern_dicts)
             solution: MorphologySolutionDict = {
                 "type": "morphological_analysis",
@@ -52,9 +66,9 @@ class HeritageHTMLExtractor:
         if not solutions:
             loose_patterns = self._extract_loose_patterns(soup)
             if loose_patterns:
-                pattern_entries = loose_patterns
                 pattern_dicts = [
-                    {"word": str(w), "analysis": str(a)} for w, a, _ in pattern_entries
+                    {"word": entry.word, "analysis": entry.analysis, "dictionary_url": entry.url}
+                    for entry in loose_patterns
                 ]
                 patterns = cast(list[MorphologyPattern], pattern_dicts)
                 loose_solution: MorphologySolutionDict = {
@@ -65,7 +79,7 @@ class HeritageHTMLExtractor:
                     "score": 0.0,
                     "metadata": {
                         "color": None,
-                        "raw_text": "\n".join(raw for _, _, raw in loose_patterns),
+                        "raw_text": "\n".join(entry.raw_text for entry in loose_patterns),
                     },
                 }
                 solutions.append(loose_solution)
@@ -142,12 +156,12 @@ class HeritageHTMLExtractor:
                 solution_number = block["number"]
                 patterns = block["patterns"]
                 lines.append(f"Solution {solution_number}")
-                lines.extend(f"[{word}]{{{analysis}}}" for word, analysis, _ in patterns)
+                lines.extend(f"[{entry.word}]{{{entry.analysis}}}" for entry in patterns)
             return "\n".join(lines)
 
         # Fallback: collect any pattern-bearing tables/spans we can find
         loose_patterns = self._extract_loose_patterns(soup)
-        lines.extend(f"[{word}]{{{analysis}}}" for word, analysis, _ in loose_patterns)
+        lines.extend(f"[{entry.word}]{{{entry.analysis}}}" for entry in loose_patterns)
         return "\n".join(lines)
 
     def _extract_solution_blocks(self, soup) -> list[_SolutionBlock]:
@@ -179,7 +193,7 @@ class HeritageHTMLExtractor:
             segments = self._collect_segments(span, next_solution)
             if patterns:
                 color = self._table_color(table) if table else None
-                raw_text = "\n".join(raw for _, _, raw in patterns) or " ".join(
+                raw_text = "\n".join(entry.raw_text for entry in patterns) or " ".join(
                     seg["text"] for seg in segments if seg.get("text")
                 )
                 blocks.append(
@@ -209,11 +223,9 @@ class HeritageHTMLExtractor:
             current = current.next_sibling
         return segments
 
-    def _collect_inline_patterns(
-        self, start_span, next_solution_span
-    ) -> list[tuple[str, str, str]]:
+    def _collect_inline_patterns(self, start_span, next_solution_span) -> list[_PatternEntry]:
         """Collect latin12 patterns between solution markers when no table exists."""
-        patterns: list[tuple[str, str, str]] = []
+        patterns: list[_PatternEntry] = []
         current = start_span.next_sibling
         seen: set[str] = set()
         while current and current != next_solution_span:
@@ -228,7 +240,14 @@ class HeritageHTMLExtractor:
                     key = f"{word}||{analysis}"
                     if key not in seen:
                         seen.add(key)
-                        patterns.append((word, analysis, match.group(0)))
+                        # Extract URL from navy links within this span
+                        url: str | None = None
+                        for link in current.find_all("a", class_="navy"):
+                            href = link.get("href")
+                            if href and isinstance(href, str):
+                                url = href
+                                break
+                        patterns.append(_PatternEntry(word, analysis, match.group(0), url))
             current = current.next_sibling
         return patterns
 
@@ -241,12 +260,12 @@ class HeritageHTMLExtractor:
             table = table.find_next("table")
         return None
 
-    def _collect_patterns(self, container) -> list[tuple[str, str, str]]:
-        """Collect (word, analysis, raw_text) triples from latin12 spans in a container."""
+    def _collect_patterns(self, container) -> list[_PatternEntry]:
+        """Collect _PatternEntry objects from latin12 spans in a container."""
         if container is None:
             return []
 
-        patterns: list[tuple[str, str, str]] = []
+        patterns: list[_PatternEntry] = []
         seen: set[str] = set()
 
         for span in container.find_all("span", class_="latin12"):
@@ -261,22 +280,31 @@ class HeritageHTMLExtractor:
             if key in seen:
                 continue
             seen.add(key)
-            patterns.append((word, analysis, match.group(0)))
+
+            # Extract URL from navy links within this span
+            url: str | None = None
+            for link in span.find_all("a", class_="navy"):
+                href = link.get("href")
+                if href and isinstance(href, str):
+                    url = href
+                    break
+
+            patterns.append(_PatternEntry(word, analysis, match.group(0), url))
 
         return patterns
 
-    def _extract_loose_patterns(self, soup) -> list[tuple[str, str, str]]:
+    def _extract_loose_patterns(self, soup) -> list[_PatternEntry]:
         """Extract patterns when no explicit solution sections are present."""
-        patterns: list[tuple[str, str, str]] = []
+        patterns: list[_PatternEntry] = []
         seen: set[str] = set()
 
         for table in self._get_innermost_pattern_tables(soup):
-            for word, analysis, raw_text in self._collect_patterns(table):
-                key = f"{word}||{analysis}"
+            for entry in self._collect_patterns(table):
+                key = f"{entry.word}||{entry.analysis}"
                 if key in seen:
                     continue
                 seen.add(key)
-                patterns.append((word, analysis, raw_text or f"[{word}]{{{analysis}}}"))
+                patterns.append(entry)
 
         if not patterns:
             for span in soup.find_all("span", class_="latin12"):
@@ -290,7 +318,14 @@ class HeritageHTMLExtractor:
                 if key in seen:
                     continue
                 seen.add(key)
-                patterns.append((word, analysis, match.group(0)))
+                # Extract URL from navy links within this span
+                url: str | None = None
+                for link in span.find_all("a", class_="navy"):
+                    href = link.get("href")
+                    if href and isinstance(href, str):
+                        url = href
+                        break
+                patterns.append(_PatternEntry(word, analysis, match.group(0), url))
 
         return patterns
 

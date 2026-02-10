@@ -36,6 +36,42 @@ class TestDiogenesAdapter(unittest.TestCase):
         self.assertNotIn("foster_codes", first_raw)
         self.assertNotIn("tags", first_raw)
 
+    def test_dictionary_block_hides_raw_citations(self):
+        adapter = DiogenesBackendAdapter()
+        data = {
+            "chunks": [
+                {
+                    "chunk_type": "DiogenesMatchingReference",
+                    "definitions": {
+                        "term": "sedat",
+                        "blocks": [
+                            {
+                                "entry": "sedat entry",
+                                "entryid": "1",
+                                "citations": {
+                                    "urn:cts:latinLit:phi1294.phi002:1.1": "Verg. A. 1.1"
+                                },
+                                "original_citations": {
+                                    "Verg. A. 1.1": "urn:cts:latinLit:phi1294.phi002:1.1"
+                                },
+                            }
+                        ],
+                    },
+                }
+            ]
+        }
+
+        entries = adapter.adapt(data, language="lat", word="sedat", timings={})
+        self.assertEqual(len(entries), 1)
+        blocks = entries[0].dictionary_blocks
+        self.assertEqual(len(blocks), 1)
+        block = blocks[0]
+        # Raw citation lists are omitted
+        self.assertEqual(block.citations, {})
+        self.assertEqual(block.original_citations, {})
+        # Details remain populated for consumers
+        self.assertIn("urn:cts:latinLit:phi1294.phi002:1.1", block.citation_details)
+
 
 if __name__ == "__main__":
     unittest.main()

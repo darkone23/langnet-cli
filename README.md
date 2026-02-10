@@ -44,6 +44,7 @@ After code changes, restart your long-running server process so Python modules r
 - **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** - Installation and first queries
 - **[docs/DEVELOPER.md](docs/DEVELOPER.md)** - Development setup and workflow
 - **[docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md)** - Educational approach
+- **[docs/OUTPUT_GUIDE.md](docs/OUTPUT_GUIDE.md)** - How to read CLI/API JSON (pedagogy-first)
 - **[docs/technical/](docs/technical/)** - Technical reference docs
 - **[AGENTS.md](AGENTS.md)** - Multi-model AI personas and workflows
 
@@ -60,6 +61,6 @@ This project uses multi-model AI-assisted development via OpenRouter. See `AGENT
 ## Current Status and Known Gaps
 
 - External services are required for most functionality; without them `langnet-cli verify` and queries will fail.
-- Several open issues remain: Diogenes sense extraction and CTS URN enrichment are flaky, Sanskrit canonicalization and DICO dictionary integration are not complete, CDSL outputs often contain SLP1 artifacts, and the universal schema/fuzzy search are still in design (see `docs/TODO.md`).
-- Tests and health checks expect the services above; they have not been run in this workspace during this audit. Use `just test` and `just lint-all` inside `devenv shell langnet-cli` if your environment has all dependencies.
-- Planning docs live under `docs/plans/`; active work is tracked in `docs/plans/active/` and ideas in `docs/plans/todo/`.
+- Several open issues remain: Diogenes sense extraction and CTS URN enrichment are flaky, Sanskrit canonicalization and DICO dictionary integration are not complete, CDSL outputs often contain SLP1 artifacts, and the universal schema/fuzzy search are still in design (see `docs/plans/` for status).
+- Tests and health checks expect the services above; they have not been run in this workspace during this audit. Use `just test` and `just lint-all` inside `devenv shell langnet-cli` if your environment has all dependencies, and restart long-lived servers after code changes.
+- Planning docs live under `docs/plans/`; active ideas are tracked in `docs/plans/todo/` and consolidated roadmap items are in `docs/ROADMAP.md`.

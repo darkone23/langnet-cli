@@ -20,6 +20,7 @@ class HeritageWordAnalysis:
     mood: str | None = None
     stem: str = ""
     meaning: list[str] = field(default_factory=list)
+    dictionary_url: str | None = None
 
 
 @dataclass

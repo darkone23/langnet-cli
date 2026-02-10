@@ -60,6 +60,7 @@ class TestFosterApply(unittest.TestCase):
         self.assertEqual(foster_codes["tense"], "TIME_NOW")
         self.assertEqual(foster_codes["gender"], "MALE")
         self.assertEqual(foster_codes["number"], "SINGLE")
+        self.assertEqual(foster_codes["case"], "NAMING")
 
     def test_apply_foster_view_sanskrit(self):
         result = {
@@ -79,6 +80,41 @@ class TestFosterApply(unittest.TestCase):
         self.assertEqual(foster_codes["case"], "NAMING")
         self.assertEqual(foster_codes["gender"], "MALE")
         self.assertEqual(foster_codes["number"], "SINGLE")
+
+    def test_apply_foster_view_sanskrit_gender_from_entry(self):
+        result = {
+            "dictionaries": {
+                "mw": [
+                    {
+                        "id": "2",
+                        "meaning": "proper noun",
+                        "gender": ["masculine"],
+                    }
+                ]
+            }
+        }
+        modified = apply_foster_view(result)
+        self.assertIn("foster_codes", modified["dictionaries"]["mw"][0])
+        foster_codes = modified["dictionaries"]["mw"][0]["foster_codes"]
+        self.assertEqual(foster_codes["gender"], "MALE")
+        self.assertNotIn("case", foster_codes)  # only gender available
+
+    def test_apply_foster_view_sanskrit_vocative(self):
+        result = {
+            "dictionaries": {
+                "mw": [
+                    {
+                        "id": "3",
+                        "meaning": "address",
+                        "grammar_tags": {"case": "voc.", "number": "pl"},
+                    }
+                ]
+            }
+        }
+        modified = apply_foster_view(result)
+        foster_codes = modified["dictionaries"]["mw"][0]["foster_codes"]
+        self.assertEqual(foster_codes["case"], "OH")
+        self.assertEqual(foster_codes["number"], "GROUP")
 
     def test_apply_foster_view_unmapped_tags_unchanged(self):
         result = {

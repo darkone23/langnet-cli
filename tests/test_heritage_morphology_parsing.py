@@ -43,9 +43,9 @@ class TestHeritageMorphologyParser(unittest.TestCase):
         self.assertEqual(len(result["solutions"]), 1)
 
         solution = result["solutions"][0]
-        self.assertEqual(solution["total_words"], 1)
+        self.assertEqual(solution["total_words"], 1)  # type: ignore[index]
 
-        analysis = solution["analyses"][0]
+        analysis = solution["analyses"][0]  # type: ignore[index]
         self.assertEqual(analysis.word, "yoga")
         self.assertEqual(analysis.pos, "noun")
         self.assertEqual(analysis.gender, "masculine")
@@ -60,7 +60,7 @@ class TestHeritageMorphologyParser(unittest.TestCase):
 
         self.assertEqual(result["total_solutions"], 1)
         solution = result["solutions"][0]
-        analysis = solution["analyses"][0]
+        analysis = solution["analyses"][0]  # type: ignore[index]
 
         self.assertEqual(analysis.word, "agni")
         self.assertEqual(analysis.pos, "unknown")
@@ -76,7 +76,7 @@ class TestHeritageMorphologyParser(unittest.TestCase):
 
         self.assertEqual(result["total_solutions"], 1)
         solution = result["solutions"][0]
-        analysis = solution["analyses"][0]
+        analysis = solution["analyses"][0]  # type: ignore[index]
 
         self.assertEqual(analysis.word, "bhavati")
         self.assertEqual(analysis.pos, "verb")
@@ -98,18 +98,18 @@ class TestHeritageMorphologyParser(unittest.TestCase):
         self.assertEqual(len(result["solutions"]), 2)
 
         first_solution = result["solutions"][0]
-        self.assertEqual(first_solution["solution_number"], 1)
-        self.assertEqual(len(first_solution["analyses"]), 1)
-        first_analysis = first_solution["analyses"][0]
+        self.assertEqual(first_solution["solution_number"], 1)  # type: ignore[index]
+        self.assertEqual(len(first_solution["analyses"]), 1)  # type: ignore[index]
+        first_analysis = first_solution["analyses"][0]  # type: ignore[index]
         self.assertEqual(first_analysis.word, "agni")
         self.assertEqual(first_analysis.case, "accusative")
         self.assertEqual(first_analysis.gender, "masculine")
         self.assertEqual(first_analysis.number, "dual")
 
         second_solution = result["solutions"][1]
-        self.assertEqual(second_solution["solution_number"], 2)
-        self.assertEqual(len(second_solution["analyses"]), 1)
-        second_analysis = second_solution["analyses"][0]
+        self.assertEqual(second_solution["solution_number"], 2)  # type: ignore[index]
+        self.assertEqual(len(second_solution["analyses"]), 1)  # type: ignore[index]
+        second_analysis = second_solution["analyses"][0]  # type: ignore[index]
         self.assertEqual(second_analysis.case, "vocative")
         self.assertEqual(second_analysis.number, "dual")
 
@@ -165,8 +165,8 @@ class TestMorphologyReducer(unittest.TestCase):
         self.assertEqual(len(result), 1)
         solution = result[0]
         self.assertIsInstance(solution, dict)
-        self.assertEqual(solution["total_words"], 1)
-        analyses = solution["analyses"]
+        self.assertEqual(solution["total_words"], 1)  # type: ignore[index]
+        analyses = solution["analyses"]  # type: ignore[index]
         self.assertEqual(len(analyses), 1)
         self.assertEqual(analyses[0].word, "yoga")
 

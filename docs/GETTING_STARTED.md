@@ -48,6 +48,8 @@ devenv shell langnet-cli -- langnet-cli query grc ἄνθρωπος
 devenv shell langnet-cli -- langnet-cli query san dharma
 ```
 
+To learn how to consume the JSON output (what fields to show learners first, where references and Foster functions live), see **[docs/OUTPUT_GUIDE.md](OUTPUT_GUIDE.md)**.
+
 ### Health Checks
 ```bash
 devenv shell langnet-cli -- langnet-cli verify          # Check all backends

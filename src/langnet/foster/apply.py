@@ -162,17 +162,17 @@ def _get_sanskrit_entries(result: dict) -> list:
 def _map_sanskrit_tags(grammar_tags: dict) -> dict:
     foster_codes = {}
 
-    case_val = str(grammar_tags.get("case", ""))
+    case_val = _normalize_sanskrit_tag(str(grammar_tags.get("case", "")))
     case_mapped = _map_tag_to_foster(case_val, [FOSTER_SANSKRIT_CASES])
     if case_mapped:
         foster_codes["case"] = case_mapped
 
-    gender_val = str(grammar_tags.get("gender", ""))
+    gender_val = _normalize_sanskrit_tag(str(grammar_tags.get("gender", "")))
     gender_mapped = _map_tag_to_foster(gender_val, [FOSTER_SANSKRIT_GENDERS])
     if gender_mapped:
         foster_codes["gender"] = gender_mapped
 
-    number_val = str(grammar_tags.get("number", ""))
+    number_val = _normalize_sanskrit_tag(str(grammar_tags.get("number", "")))
     number_mapped = _map_tag_to_foster(number_val, [FOSTER_SANSKRIT_NUMBERS])
     if number_mapped:
         foster_codes["number"] = number_mapped
@@ -185,9 +185,17 @@ def _apply_to_sanskrit(result: dict) -> None:
     for entry in entries:
         if not isinstance(entry, dict):
             continue
-        grammar_tags = entry.get("grammar_tags")
-        if not isinstance(grammar_tags, dict):
-            continue
+        grammar_tags = (
+            entry.get("grammar_tags") if isinstance(entry.get("grammar_tags"), dict) else {}
+        )
+
+        # Some CDSL entries expose gender outside grammar_tags (e.g., ["masculine"])
+        if "gender" not in grammar_tags and "gender" in entry:
+            gender_val = entry["gender"]
+            if isinstance(gender_val, list) and gender_val:
+                grammar_tags["gender"] = _normalize_sanskrit_tag(str(gender_val[0]))
+            elif isinstance(gender_val, str):
+                grammar_tags["gender"] = _normalize_sanskrit_tag(gender_val)
 
         foster_codes = _map_sanskrit_tags(grammar_tags)
         if foster_codes:
@@ -211,9 +219,10 @@ def _apply_to_heritage(result: dict) -> None:
         for analysis in analyses:
             if not isinstance(analysis, dict):
                 continue
-            features = (
-                analysis.get("features") if isinstance(analysis.get("features"), dict) else {}
-            )
+            # Use features key if present, otherwise use analysis dict directly
+            features = analysis.get("features")
+            if not isinstance(features, dict):
+                features = analysis
             foster_codes = _map_sanskrit_tags(features)
             if foster_codes:
                 analysis["foster_codes"] = foster_codes
@@ -225,3 +234,61 @@ def apply_foster_view(result: dict) -> dict:
     _apply_to_sanskrit(result)
     _apply_to_heritage(result)
     return result
+
+
+def _normalize_sanskrit_tag(value: str) -> str:
+    """Collapse verbose Sanskrit tags into short codes the Foster map understands."""
+    normalized = value.strip().lower().rstrip(".")
+    # Collapse multiple spaces (e.g., "vocative case")
+    normalized = " ".join(normalized.split())
+    gender_map = {
+        "masculine": "m",
+        "feminine": "f",
+        "neuter": "n",
+        "m": "m",
+        "f": "f",
+        "n": "n",
+    }
+    number_map = {
+        "singular": "sg",
+        "dual": "du",
+        "plural": "pl",
+        "sg": "sg",
+        "du": "du",
+        "pl": "pl",
+    }
+    case_map = {  # Accept both numeric and text forms
+        "1": "1",
+        "nom": "1",
+        "nominative": "1",
+        "2": "2",
+        "gen": "2",
+        "genitive": "2",
+        "3": "3",
+        "inst": "3",
+        "instrumental": "3",
+        "dat": "4",
+        "dative": "4",
+        "4": "4",
+        "acc": "5",
+        "accusative": "5",
+        "5": "5",
+        "abl": "6",
+        "ablative": "6",
+        "6": "6",
+        "loc": "7",
+        "locative": "7",
+        "7": "7",
+        "voc": "8",
+        "vocative": "8",
+        "vocative case": "8",
+        "calling": "8",
+        "8": "8",
+    }
+    if normalized in gender_map:
+        return gender_map[normalized]
+    if normalized in number_map:
+        return number_map[normalized]
+    if normalized in case_map:
+        return case_map[normalized]
+    return normalized

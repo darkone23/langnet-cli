@@ -25,6 +25,7 @@ from langnet.cologne.parser import (
     parse_xml_entry,
 )
 from langnet.config import config
+from langnet.foster.apply import apply_foster_view
 
 
 class TestCdslModels(unittest.TestCase):
@@ -110,6 +111,26 @@ class TestCdslParser(unittest.TestCase):
         headwords = extract_headwords(entry)
         self.assertEqual(len(headwords), 1)
         self.assertEqual(headwords[0], ("agni", "agni", True))
+
+    def test_adapter_preserves_sanskrit_foster_codes(self):
+        adapter = CDSLBackendAdapter()
+        raw = {
+            "dictionaries": {
+                "mw": [
+                    {
+                        "meaning": "a deity",
+                        "grammar_tags": {"case": "vocative case", "number": "pl"},
+                        "foster_codes": {"case": "OH", "number": "GROUP"},
+                    }
+                ]
+            }
+        }
+        enriched = apply_foster_view(raw)
+        entries = adapter.adapt(enriched, language="san", word="shiva")
+        self.assertEqual(len(entries), 1)
+        morph = entries[0].morphology
+        assert morph is not None
+        self.assertEqual(morph.foster_codes, {"case": "OH", "number": "GROUP"})
 
 
 class TestCdslCore(unittest.TestCase):
@@ -362,14 +383,12 @@ class TestCdslAdapter(unittest.TestCase):
         self.assertEqual(len(entries), 1)
         entry = entries[0]
 
-        self.assertIn("references", entry.metadata)
-        self.assertEqual(entry.metadata["references"], ["L.", "Sūryas.", "Gārhapatya"])
+        self.assertNotIn("references", entry.metadata)
         self.assertNotIn("reference_details", entry.metadata)
 
         self.assertEqual(len(entry.definitions), 2)
 
         first_def = entry.definitions[0]
-        self.assertEqual(first_def.metadata["references"], ["L.", "Sūryas."])
         first_details = cast(list[dict[str, str | None]], first_def.metadata["reference_details"])
         self.assertEqual(
             [detail["abbreviation"] for detail in first_details],
@@ -379,7 +398,6 @@ class TestCdslAdapter(unittest.TestCase):
             self.assertNotIn("language", detail)
 
         second_def = entry.definitions[1]
-        self.assertEqual(second_def.metadata["references"], ["Gārhapatya"])
         second_details = cast(list[dict[str, str | None]], second_def.metadata["reference_details"])
         self.assertEqual(
             [detail["abbreviation"] for detail in second_details],
@@ -387,6 +405,84 @@ class TestCdslAdapter(unittest.TestCase):
         )
         self.assertEqual(second_details[0]["display"], "Gārhapatya")
         self.assertEqual(second_details[0]["long_name"], "Gārhapatya sacred fire")
+
+    def test_reference_ibid_resolves_to_prior_reference(self):
+        adapter = CDSLBackendAdapter()
+        data = {
+            "dictionaries": {
+                "mw": [
+                    {
+                        "id": "1",
+                        "meaning": "has ibid references",
+                        "references": ["Mahabh.", "ib.", "ib. 3.12"],
+                    }
+                ]
+            }
+        }
+
+        entries = adapter.adapt(data, language="san", word="agni")
+        entry = entries[0]
+        self.assertEqual(len(entry.definitions), 1)
+
+        ref_details = cast(
+            list[dict[str, str]], entry.definitions[0].metadata.get("reference_details")
+        )
+        self.assertEqual(len(ref_details), 3)
+        self.assertEqual(ref_details[0]["abbreviation"], "Mahabh.")
+        self.assertEqual(ref_details[0]["display"], "Mahabh.")
+        self.assertEqual(ref_details[1]["abbreviation"], "ib.")
+        self.assertNotIn("locator", ref_details[1])
+        self.assertEqual(ref_details[1]["display"], "Mahabh.")
+        self.assertEqual(ref_details[2]["abbreviation"], "ib.")
+        self.assertEqual(ref_details[2]["locator"], "3.12")
+        self.assertEqual(ref_details[2]["display"], "Mahabh.")
+
+    def test_reference_ibid_cross_definition(self):
+        adapter = CDSLBackendAdapter()
+        data = {
+            "dictionaries": {
+                "mw": [
+                    {"id": "1", "meaning": "first", "references": ["Mahabh."]},
+                    {"id": "2", "meaning": "second", "references": ["ib. 4.2"]},
+                ]
+            }
+        }
+
+        entries = adapter.adapt(data, language="san", word="agni")
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(len(entries[0].definitions), 2)
+
+        first = entries[0].definitions[0]
+        second = entries[0].definitions[1]
+
+        first_details = cast(list[dict[str, str]], first.metadata["reference_details"])
+        self.assertEqual(first_details[0]["abbreviation"], "Mahabh.")
+
+        second_details = cast(list[dict[str, str]], second.metadata["reference_details"])
+        self.assertEqual(len(second_details), 1)
+        self.assertEqual(second_details[0]["abbreviation"], "ib.")
+        self.assertEqual(second_details[0]["display"], "Mahabh.")
+        self.assertEqual(second_details[0]["locator"], "4.2")
+
+    def test_reference_ibid_detected_from_text_when_references_missing(self):
+        adapter = CDSLBackendAdapter()
+        data = {
+            "dictionaries": {
+                "mw": [
+                    {"id": "1", "meaning": "first", "references": ["MBh. 1.1"]},
+                    {"id": "2", "meaning": "of the wife of Aṅgiras, ib."},
+                ]
+            }
+        }
+
+        entries = adapter.adapt(data, language="san", word="agni")
+        self.assertEqual(len(entries), 1)
+        second_details = cast(
+            list[dict[str, str]], entries[0].definitions[1].metadata["reference_details"]
+        )
+        self.assertEqual(len(second_details), 1)
+        self.assertEqual(second_details[0]["abbreviation"], "ib.")
+        self.assertEqual(second_details[0]["display"], "MBh.")
 
 
 if __name__ == "__main__":

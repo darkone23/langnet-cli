@@ -1,5 +1,4 @@
 import re
-from typing import cast
 
 import structlog
 from bs4 import BeautifulSoup
@@ -13,7 +12,6 @@ from .parsers import MorphologyParser
 from .types import (
     CombinedAnalysis,
     HeritageDictionaryLookup,
-    MorphologyAnalysisDict,
     MorphologyParseResult,
     MorphologySolutionDict,
     WordAnalysisBundle,
@@ -103,7 +101,7 @@ class HeritageDictionaryService:
                     analyses = first_solution.get("analyses", [])
                     if analyses:
                         first_analysis = analyses[0]
-                        lemma = first_analysis.get("lemma")
+                        lemma = first_analysis.lemma
 
                 if lemma:
                     dict_results = self.lookup_word(lemma)
@@ -152,11 +150,19 @@ class HeritageDictionaryService:
             matches = re.findall(pattern, span_text)
 
             for headword, analysis in matches:
+                word_analysis = HeritageWordAnalysis(
+                    word=headword,
+                    lemma=headword,
+                    root="",
+                    pos="unknown",
+                    stem="",
+                    meaning=[],
+                )
                 morphology_data["solutions"].append(
                     {
                         "type": "morphological_analysis",
                         "solution_number": len(morphology_data["solutions"]) + 1,
-                        "analyses": [{"word": headword, "analysis": analysis}],
+                        "analyses": [word_analysis],
                         "total_words": 1,
                         "score": 0.0,
                         "metadata": {},
@@ -173,14 +179,19 @@ class HeritageDictionaryService:
             if not lemma_tag:
                 continue
             lemma = lemma_tag.get_text(strip=True)
-            parent_text = link.parent.get_text() if link.parent else ""
-            grammar_match = re.search(r"\{(.+?)\}", parent_text)
-            grammar = grammar_match.group(1) if grammar_match else ""
+            word_analysis = HeritageWordAnalysis(
+                word=lemma,
+                lemma=lemma,
+                root="",
+                pos="unknown",
+                stem="",
+                meaning=[],
+            )
             morphology_data["solutions"].append(
                 {
                     "type": "morphological_analysis",
                     "solution_number": len(morphology_data["solutions"]) + 1,
-                    "analyses": [{"word": lemma, "analysis": grammar}],
+                    "analyses": [word_analysis],
                     "total_words": 1,
                     "score": 0.0,
                     "metadata": {},
@@ -194,19 +205,19 @@ class HeritageDictionaryService:
         return {
             "lemma": next(
                 (
-                    analysis.get("lemma")
+                    analysis.lemma
                     for solution in morphology.get("solutions", [])
                     for analysis in solution.get("analyses", [])
-                    if analysis.get("lemma")
+                    if analysis.lemma
                 ),
                 None,
             ),
             "pos": next(
                 (
-                    analysis.get("pos")
+                    analysis.pos
                     for solution in morphology.get("solutions", [])
                     for analysis in solution.get("analyses", [])
-                    if analysis.get("pos")
+                    if analysis.pos
                 ),
                 None,
             ),
@@ -445,7 +456,26 @@ class HeritageMorphologyService:
             for solution_data in parsed_data.get("solutions", [])
         ]
         word_analyses_raw = parsed_data.get("word_analyses", [])
-        word_analyses = [self._build_word_analysis(entry) for entry in word_analyses_raw]
+        word_analyses = [
+            entry
+            if isinstance(entry, HeritageWordAnalysis)
+            else HeritageWordAnalysis(
+                word=entry.get("word", ""),
+                lemma=entry.get("lemma", entry.get("word", "")),
+                root=entry.get("root", ""),
+                pos=entry.get("pos", ""),
+                case=entry.get("case"),
+                gender=entry.get("gender"),
+                number=entry.get("number"),
+                person=self._parse_int(entry.get("person")),
+                tense=entry.get("tense"),
+                voice=entry.get("voice"),
+                mood=entry.get("mood"),
+                stem=entry.get("stem", ""),
+                meaning=entry.get("meaning", []),
+            )
+            for entry in word_analyses_raw
+        ]
 
         # DEBUG: Log what we're storing as input_text
         logger.warning(
@@ -479,32 +509,32 @@ class HeritageMorphologyService:
         """Convert solution data to structured solution"""
 
         analyses = []
-        # Handle new parser format which returns HeritageWordAnalysis objects directly
+        # Convert all entries to HeritageWordAnalysis
         for entry_data in solution_data.get("analyses", solution_data.get("entries", [])):
             if isinstance(entry_data, HeritageWordAnalysis):
-                analysis_dict: MorphologyAnalysisDict = {
-                    "word": entry_data.word,
-                    "lemma": entry_data.lemma,
-                    "root": entry_data.root,
-                    "pos": entry_data.pos,
-                    "case": entry_data.case,
-                    "gender": entry_data.gender,
-                    "number": entry_data.number,
-                    "person": entry_data.person,
-                    "tense": entry_data.tense,
-                    "voice": entry_data.voice,
-                    "mood": entry_data.mood,
-                    "stem": entry_data.stem,
-                    "meaning": entry_data.meaning,
-                }
-                analysis = self._build_word_analysis(analysis_dict)
+                analyses.append(entry_data)
             elif isinstance(entry_data, dict):
-                analysis_dict = cast(MorphologyAnalysisDict, entry_data)
-                analysis = self._build_word_analysis(analysis_dict)
+                # Convert dict to HeritageWordAnalysis
+                analyses.append(
+                    HeritageWordAnalysis(
+                        word=entry_data.get("word", ""),
+                        lemma=entry_data.get("lemma", entry_data.get("word", "")),
+                        root=entry_data.get("root", ""),
+                        pos=entry_data.get("pos", ""),
+                        case=entry_data.get("case"),
+                        gender=entry_data.get("gender"),
+                        number=entry_data.get("number"),
+                        person=self._parse_int(entry_data.get("person")),
+                        tense=entry_data.get("tense"),
+                        voice=entry_data.get("voice"),
+                        mood=entry_data.get("mood"),
+                        stem=entry_data.get("stem", ""),
+                        meaning=entry_data.get("meaning", []),
+                    )
+                )
             else:
                 logger.debug("Skipping unsupported analysis entry", entry_type=type(entry_data))
                 continue
-            analyses.append(analysis)
 
         return HeritageSolution(
             type=solution_data.get("type", "morphological"),
@@ -512,25 +542,6 @@ class HeritageMorphologyService:
             total_words=len(analyses),
             score=solution_data.get("score", 0.0),
             metadata=solution_data.get("metadata", {}),
-        )
-
-    def _build_word_analysis(self, entry_data: MorphologyAnalysisDict) -> HeritageWordAnalysis:
-        """Convert entry data to word analysis"""
-
-        return HeritageWordAnalysis(
-            word=entry_data.get("word", ""),
-            lemma=entry_data.get("lemma", entry_data.get("word", "")),
-            root=entry_data.get("root", ""),
-            pos=entry_data.get("pos", ""),
-            case=entry_data.get("case"),
-            gender=entry_data.get("gender"),
-            number=entry_data.get("number"),
-            person=self._parse_int(entry_data.get("person")),
-            tense=entry_data.get("tense"),
-            voice=entry_data.get("voice"),
-            mood=entry_data.get("mood"),
-            stem=entry_data.get("stem", ""),
-            meaning=self._parse_meanings(entry_data),
         )
 
     def _parse_int(self, value: int | str | None) -> int | None:
@@ -541,23 +552,6 @@ class HeritageMorphologyService:
             return int(value)
         except (ValueError, TypeError):
             return None
-
-    def _parse_meanings(self, entry_data: MorphologyAnalysisDict) -> list[str]:
-        """Parse meaning/definition list"""
-        meanings = []
-
-        for value in (
-            entry_data.get("meaning"),
-            entry_data.get("definition"),
-            entry_data.get("definitions"),
-            entry_data.get("sense"),
-        ):
-            if isinstance(value, list):
-                meanings.extend(value)
-            elif isinstance(value, str):
-                meanings.append(value)
-
-        return meanings if meanings else []
 
     def analyze_word(self, word: str, **kwargs) -> HeritageMorphologyResult:
         """Analyze a single word"""

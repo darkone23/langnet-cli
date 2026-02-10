@@ -35,6 +35,14 @@ This document provides a comprehensive technical overview of the langnet-cli arc
      └────────────┘  └─────────┘ └─────────┘ └─────────┘
 ```
 
+### Request lifecycle (CLI and API)
+1. **Normalization:** Sanskrit inputs pass through the `SanskritQueryNormalizer` (encoding detection, canonical SLP1, tokenization). Greek/Latin inputs are passed through unchanged.
+2. **Validation:** `LanguageEngine` validates language codes and shapes the tool request.
+3. **Backend fan-out:** Each backend runs independently (`Diogenes`, `Whitaker's Words`, `CLTK`, `CDSL`, `Heritage`). Timings are captured per backend.
+4. **Pedagogy enrichment:** Foster functional grammar is attached in `morphology.features.foster` and `metadata.foster_codes` where available.
+5. **Deduplication:** References are de-duplicated and kept next to the senses they describe; morphology `raw` blocks are pruned of non-morphological keys (`tags`, `foster_codes`) to keep schema stable.
+6. **Serialization:** Results are structured via `cattrs` and returned to CLI or Starlette (`/api/q`) using `ORJSONResponse`.
+
 ### Core Components
 
 #### 1. CLI Interface (`src/langnet/cli.py`)
