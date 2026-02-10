@@ -241,11 +241,11 @@ class TestLatinNormalizer(unittest.TestCase):
     def test_canonical_conversion(self):
         """Test conversion to canonical form."""
         # Test Unicode input (should strip macrons)
-        canonical = self.normalizer.to_canonical("cēdō", Encoding.UNICODE.value)
+        canonical, _meta = self.normalizer.to_canonical("cēdō", Encoding.UNICODE.value)
         self.assertEqual(canonical, "cedo")
 
         # Test ASCII input (should remain unchanged)
-        canonical = self.normalizer.to_canonical("cedo", Encoding.ASCII.value)
+        canonical, _meta = self.normalizer.to_canonical("cedo", Encoding.ASCII.value)
         self.assertEqual(canonical, "cedo")
 
     def test_alternate_forms_generation(self):

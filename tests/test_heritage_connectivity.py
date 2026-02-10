@@ -91,8 +91,8 @@ class TestHeritageConnectivity(unittest.TestCase):
             result = service.analyze("योगेन", encoding="velthuis", max_solutions=2)
 
             # Verify the result structure
-            # Input text now reflects the normalized Velthuis form sent to Heritage
-            self.assertEqual(result.input_text, "yogena")
+            # Input text reflects the original user input we analyzed
+            self.assertEqual(result.input_text, "योगेन")
             self.assertEqual(result.total_solutions, 2)
             self.assertIsInstance(result.processing_time, float)
 

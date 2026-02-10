@@ -194,7 +194,6 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
             cast(dict[str, object], block) for block in blocks_data_raw if isinstance(block, dict)
         ]
 
-        blocks: list[DictionaryBlock] = []
         merged = context.aggregated["merged"]
         norm_index: dict[str, int] = merged.get("norm_index", {})
 
@@ -249,11 +248,12 @@ class DiogenesBackendAdapter(BaseBackendAdapter):
                 timings,
                 lambda: self._create_block(block_ctx),
             )
-            blocks.append(block_obj)
-            norm_index[normalized_entry] = len(merged["blocks"]) + len(blocks) - 1
+            # Append directly to the merged list so norm_index stays in lockstep with the
+            # real block positions; staging in a temp list made merge-by-index brittle.
+            merged["blocks"].append(block_obj)
+            norm_index[normalized_entry] = len(merged["blocks"]) - 1
 
         merged.setdefault("norm_index", {})
-        merged["blocks"].extend(blocks)
         if chunk_type:
             merged["chunk_types"].add(chunk_type)
         term_value = term or context.word
