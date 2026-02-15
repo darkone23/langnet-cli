@@ -1,0 +1,35 @@
+{
+  "target": {
+    "tool": "cltk",
+    "action": "morphology",
+    "lang": "grc",
+    "word": "anthropos",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "greek_morphology": {
+      "text": "anthropos",
+      "lemma": "anthropos",
+      "pos": "NOUN",
+      "morphological_features": {
+        "Case": "Acc",
+        "Gender": "Fem",
+        "Number": "Sing"
+      }
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "greek_morphology": 4
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

@@ -1,0 +1,472 @@
+{
+  "target": {
+    "tool": "cdsl",
+    "action": "lookup",
+    "lang": "san",
+    "word": "yoga",
+    "dict_name": "mw",
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "transliteration": {
+      "input": "yoga",
+      "iast": "yoga",
+      "hk": "yoga",
+      "devanagari": "\u092f\u094b\u0917"
+    },
+    "dictionaries": {
+      "mw": [
+        {
+          "id": "172001",
+          "meaning": "yoga   &c. See pp. 856, 858.",
+          "sanskrit_form": "yoga"
+        },
+        {
+          "id": "172324",
+          "meaning": "yo/ga   m. (\u221a 1. yuj; ifc. f(A). ) the act of yoking, joining, attaching, harnessing, putting to (of horses), RV.; MBh.",
+          "pos": "m.",
+          "gender": [
+            "masculine"
+          ],
+          "sanskrit_form": "yo/ga",
+          "etymology": {
+            "type": "verb_root"
+          },
+          "grammar_tags": {
+            "declension": "A"
+          },
+          "references": [
+            "RV.",
+            "MBh."
+          ]
+        },
+        {
+          "id": "172325",
+          "meaning": "a yoke, team, vehicle, conveyance, \u015aBr.; Kau\u015b.; MBh.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "\u015aBr.",
+            "Kau\u015b.",
+            "MBh."
+          ]
+        },
+        {
+          "id": "172326",
+          "meaning": "employment, use, application, performance, RV. &c. &c.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "RV."
+          ]
+        },
+        {
+          "id": "172327",
+          "meaning": "equipping or arraying (of an army), MBh.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "MBh."
+          ]
+        },
+        {
+          "id": "172328",
+          "meaning": "fixing (of an arrow on the bow-string), ib.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "ib."
+          ]
+        },
+        {
+          "id": "172329",
+          "meaning": "putting on (of armour), L.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "L."
+          ]
+        },
+        {
+          "id": "172330",
+          "meaning": "a remedy, cure, Su\u015br.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Su\u015br."
+          ]
+        },
+        {
+          "id": "172331",
+          "meaning": "a means, expedient, device, way, manner, method, MBh.; K\u0101v. &c.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "MBh.",
+            "K\u0101v."
+          ]
+        },
+        {
+          "id": "172332",
+          "meaning": "a supernatural means, charm, incantation, magical art, ib.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "ib."
+          ]
+        },
+        {
+          "id": "172333",
+          "meaning": "a trick, stratagem, fraud, deceit, Mn.; Kath\u0101s. (cf. yoga-nanda)",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Mn.",
+            "Kath\u0101s."
+          ]
+        },
+        {
+          "id": "172334",
+          "meaning": "undertaking, business, work, RV.; AV.; TS.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "RV.",
+            "AV.",
+            "TS."
+          ]
+        },
+        {
+          "id": "172335",
+          "meaning": "acquisition, gain, profit, wealth, property, ib.; Kau\u015b.; MBh.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "ib.",
+            "Kau\u015b.",
+            "MBh."
+          ]
+        },
+        {
+          "id": "172336",
+          "meaning": "occasion, opportunity, K\u0101m.; M\u0101rkP.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "K\u0101m.",
+            "M\u0101rkP."
+          ]
+        },
+        {
+          "id": "172337",
+          "meaning": "any junction, union, combination, contact with (instr. with or without saha, or comp.), MBh.; K\u0101v. &c. (yogam \u221a i, to agree, consent, acquiesce in anything, R.)",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "MBh.",
+            "K\u0101v.",
+            "R."
+          ]
+        },
+        {
+          "id": "172338",
+          "meaning": "mixing of various materials, mixture, MBh.; R.; VarB\u1e5bS.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "MBh.",
+            "R.",
+            "VarB\u1e5bS."
+          ]
+        },
+        {
+          "id": "172339",
+          "meaning": "partaking of, possessing (instr. or comp.), Mn.; R.; Hariv.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Mn.",
+            "R.",
+            "Hariv."
+          ]
+        },
+        {
+          "id": "172340",
+          "meaning": "connection, relation (yogAt, yogena and yoga-tas ifc. in consequence of, on account of, by reason of, according to, through), K\u0101ty\u015ar.; \u015avetUp.; Mn. &c.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "K\u0101ty\u015ar.",
+            "\u015avetUp.",
+            "Mn."
+          ]
+        },
+        {
+          "id": "172341",
+          "meaning": "putting together, arrangement, disposition, regular succession, K\u0101\u1e6dh.  \u015arS.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "K\u0101\u1e6dh.",
+            "\u015arS."
+          ]
+        },
+        {
+          "id": "172342",
+          "meaning": "fitting together, fitness, propriety, suitability (\u00b0gena ind. and -tas ind. suitably, fitly, duly, in the right manner), MBh.; K\u0101v. &c.",
+          "pos": "ind.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "MBh.",
+            "K\u0101v."
+          ]
+        },
+        {
+          "id": "172343",
+          "meaning": "exertion, endeavour, zeal, diligence, industry, care, attention (\u00b0yoga-tas ind. strenuously, assiduously; pUrRena yogena, with all one's powers, with overflowing zeal), Mn.; MBh. &c.",
+          "pos": "ind.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Mn.",
+            "MBh."
+          ]
+        },
+        {
+          "id": "172344",
+          "meaning": "application or concentration of the thoughts, abstract contemplation, meditation, (esp.) self-concentration, abstract meditation and mental abstraction practised as a system (as taught by Pata\u00f1jali and called the Yoga philosophy; it is the second of the two S\u0101\u1e43khya systems, its chief aim being to teach the means by which the human spirit may attain complete union with \u012a\u015bvara or the Supreme Spirit; in the practice of self-concentration it is closely connected with Buddhism), Up.; MBh.; K\u0101v. &c. (IW. 92)",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Up.",
+            "MBh.",
+            "K\u0101v.",
+            "IW. 92",
+            "Pata\u00f1jali",
+            "Yoga",
+            "S\u0101\u1e43khya",
+            "\u012a\u015bvara"
+          ]
+        },
+        {
+          "id": "172345",
+          "meaning": "any simple act or rite conducive to Yoga or abstract meditation, Sarvad.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Sarvad.",
+            "Yoga"
+          ]
+        },
+        {
+          "id": "172346",
+          "meaning": "Yoga personified (as the son of Dharma and Kriy\u0101), BhP.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "BhP.",
+            "Dharma",
+            "Kriy\u0101"
+          ]
+        },
+        {
+          "id": "172347",
+          "meaning": "a follower of the Yoga system, MBh.; \u015aa\u1e43k.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "MBh.",
+            "\u015aa\u1e43k.",
+            "Yoga"
+          ]
+        },
+        {
+          "id": "172348",
+          "meaning": "(in S\u0101\u1e43khya) the union of soul with matter (one of the 10 M\u016blik\u0101rth\u0101s or radical facts), Tattvas.",
+          "sanskrit_form": "yo/ga",
+          "etymology": {
+            "type": "verb_root"
+          },
+          "references": [
+            "Tattvas.",
+            "S\u0101\u1e43khya",
+            "M\u016blik\u0101rth\u0101"
+          ]
+        },
+        {
+          "id": "172349",
+          "meaning": "(with P\u0101\u015bupatas) the union of the individual soul with the universal soul, Kul\u0101r\u1e47.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Kul\u0101r\u1e47.",
+            "P\u0101\u015bupata"
+          ]
+        },
+        {
+          "id": "172350",
+          "meaning": "(with P\u0101\u00f1car\u0101tras) devotion, pious seeking after God, Sarvad.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Sarvad.",
+            "P\u0101\u00f1car\u0101tra"
+          ]
+        },
+        {
+          "id": "172351",
+          "meaning": "(with Jainas) contact or mixing with the outer world, ib.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "ib.",
+            "Jaina"
+          ]
+        },
+        {
+          "id": "172352",
+          "meaning": "(in astron.) conjunction, lucky conjuncture, L\u0101\u1e6dy.; VarB\u1e5bS.; MBh. &c.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "L\u0101\u1e6dy.",
+            "VarB\u1e5bS.",
+            "MBh."
+          ]
+        },
+        {
+          "id": "172353",
+          "meaning": "a constellation, asterism (these, with the moon, are called cAndra-yogAH and are 13 in number; without the moon they are called Ka-yogAH, or nABasa-yogAH), VarB\u1e5bS.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "VarB\u1e5bS."
+          ]
+        },
+        {
+          "id": "172354",
+          "meaning": "the leading or principal star of a lunar asterism, W.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "W."
+          ]
+        },
+        {
+          "id": "172355",
+          "meaning": "N. of a variable division of time (during which the joint motion in longitude of the sun and moon amounts to 13 degrees 20 minutes; there are 27 such Yogas beginning with Vi\u1e63kambha and ending with Vaidh\u1e5bti), ib.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "ib.",
+            "Yoga",
+            "Vi\u1e63kambha",
+            "Vaidh\u1e5bti"
+          ]
+        },
+        {
+          "id": "172356",
+          "meaning": "(in arithm.) addition, sum, total, S\u016bryas.; MBh.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "S\u016bryas.",
+            "MBh."
+          ]
+        },
+        {
+          "id": "172357",
+          "meaning": "(in gram.) the connection of words together, syntactical dependence of a word, construction, Nir.; Su\u015br. (ifc. = dependent on, ruled by, P\u0101\u1e47. ii, 2, 8, V\u0101rtt. 1)",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Nir.",
+            "Su\u015br.",
+            "P\u0101\u1e47. ii, 2, 8"
+          ]
+        },
+        {
+          "id": "172358",
+          "meaning": "a combined or concentrated grammatical rule or aphorism, P\u0101\u1e47., Sch.; Siddh. (cf. yoga-viBAga)",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "P\u0101\u1e47.",
+            "Siddh."
+          ]
+        },
+        {
+          "id": "172359",
+          "meaning": "the connection of a word with its root, original or etymological meaning (as opp. to rUQi, q.v.), Nir.; Prat\u0101p.; K\u0101ty\u015ar., Sch.",
+          "sanskrit_form": "yo/ga",
+          "etymology": {
+            "type": "verb_root"
+          },
+          "references": [
+            "Nir.",
+            "Prat\u0101p.",
+            "K\u0101ty\u015ar."
+          ]
+        },
+        {
+          "id": "172360",
+          "meaning": "a violator of confidence, spy, L.",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "L."
+          ]
+        },
+        {
+          "id": "172361",
+          "meaning": "N. of a Sch. on the Param\u0101rthas\u0101ra",
+          "sanskrit_form": "yo/ga",
+          "references": [
+            "Param\u0101rthas\u0101ra"
+          ]
+        },
+        {
+          "id": "172362",
+          "meaning": "yo/gA   (A), f. N. of a \u015aakti, Pa\u00f1car.",
+          "pos": "f.",
+          "gender": [
+            "feminine"
+          ],
+          "sanskrit_form": "yo/gA",
+          "references": [
+            "Pa\u00f1car.",
+            "\u015aakti"
+          ]
+        },
+        {
+          "id": "172363",
+          "meaning": "of P\u012bvar\u012b (daughter of the Pit\u1e5bs called Barhi\u1e63ads), Hariv.",
+          "sanskrit_form": "yo/gA",
+          "references": [
+            "Hariv.",
+            "P\u012bvar\u012b",
+            "Pit\u1e5b",
+            "Barhi\u1e63ad"
+          ]
+        },
+        {
+          "id": "172914",
+          "meaning": "1. yOga   m. (fr. yoga) a follower of the Yoga system of philosophy, L.",
+          "pos": "m.",
+          "gender": [
+            "masculine"
+          ],
+          "sanskrit_form": "yOga",
+          "references": [
+            "L.",
+            "Yoga"
+          ]
+        },
+        {
+          "id": "172915",
+          "meaning": "2. yOga   V\u1e5bddhi form of yuga in comp.",
+          "sanskrit_form": "yOga",
+          "references": [
+            "V\u1e5bddhi"
+          ]
+        }
+      ],
+      "ap90": []
+    },
+    "root": {
+      "type": "verb_root",
+      "root": null
+    },
+    "canonical_form": "yoga",
+    "canonical_form_candidates": [
+      "yoga",
+      "yoga"
+    ],
+    "input_form": "yoga"
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "transliteration": 4,
+    "dictionaries": 2,
+    "root": 2,
+    "canonical_form": 4,
+    "canonical_form_candidates": 2,
+    "input_form": 4
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

@@ -1,0 +1,1728 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "lat",
+    "word": "vir",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "vir",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "man",
+          "pos": "noun",
+          "metadata": {
+            "type": "sense"
+          }
+        },
+        {
+          "definition": "husband",
+          "pos": "noun",
+          "metadata": {
+            "type": "sense"
+          }
+        },
+        {
+          "definition": "hero",
+          "pos": "unknown",
+          "metadata": {
+            "type": "sense"
+          }
+        },
+        {
+          "definition": "person of courage, honor, and nobility",
+          "pos": "noun",
+          "metadata": {
+            "type": "sense"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "vir, viri",
+        "pos": "noun",
+        "features": {
+          "declension": "2nd",
+          "part_of_speech": "Noun",
+          "case": "Nominative",
+          "number": "Singular",
+          "gender": "Masculine",
+          "variant": "3"
+        },
+        "declension": "2nd",
+        "number": "Singular",
+        "case": "Nominative",
+        "gender": "Masculine"
+      },
+      "source": "whitakers",
+      "metadata": {
+        "raw_lines": [
+          "vir                  N      2 3 NOM S M                 ",
+          "vir                  N      2 3 VOC S M                 ",
+          "vir, viri  N (2nd) M   [XXXAX]  ",
+          "man; husband; hero; person of courage, honor, and nobility;"
+        ],
+        "senses": [
+          "man",
+          "husband",
+          "hero",
+          "person of courage, honor, and nobility"
+        ],
+        "terms": [
+          {
+            "term": "vir",
+            "part_of_speech": "Noun",
+            "declension": "2",
+            "case": "Nominative",
+            "number": "Singular",
+            "gender": "Masculine",
+            "variant": "3"
+          },
+          {
+            "term": "vir",
+            "part_of_speech": "Noun",
+            "declension": "2",
+            "case": "Vocative",
+            "number": "Singular",
+            "gender": "Masculine",
+            "variant": "3"
+          }
+        ],
+        "codeline": {
+          "term": "vir, viri",
+          "freq": "Very Frequent",
+          "declension": "2nd",
+          "pos_form": "Masculine",
+          "pos_code": "Noun"
+        }
+      }
+    },
+    {
+      "word": "vir",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "vir, v\u012dri (gen. plur. vir\u016bm, Enn. ap. Charis. p. 251 P., or Ann. v. 280 Vahl.; id. ap. Fest. p. 257 M\u00fcll., or Ann. v. 394 Vahl.; Verg. A. 6, 553 al.), m. Sanscr. vira, hero; the root is in O. H. Germ. weralt; Angl.Sax. veruld; Engl. world, i. e. age or generation of men, a male person, a man (opp. femina; cf. mas).",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00",
+            "citations": {
+              "urn:cts:latinLit:phi1236.phi001:page=257": "Fest. p. 257",
+              "urn:cts:latinLit:phi0690.phi003:6:553": "Verg. A. 6, 553"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi1236.phi001:page=257": {
+                "text": "Fest. p. 257",
+                "author": "Sex. Pompeius Festus",
+                "work": "P",
+                "display": "Sex. Pompeius Festus - P",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:6:553": {
+                "text": "Verg. A. 6, 553",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "I.  In gen.: virum me natam vellem, Ter. Phorm. 792: deque viro factus (mirabile') femina, Ov. M. 3, 326: ambiguus fuerit modo vir, modo femina Sithon, id. ib. 4, 280: mulier conjuncta viro, Lucr. 5, 1012: vir mulierque, Tib. 2, 2, 2: sapientissimorum nostrae civitatis virorum disputatio, Cic. Rep. 1, 8, 13: vir prudens, id. ib. 1, 12, 18: clari viri, id. Fam. 6, 6, 12: vir clarus et honoratus, id. Sen. 7, 22: praestantior, id. ib. 23, 84: bonus et sapiens et legibus parens, id. Fin. 3, 19, 64; cf. id. Off. 3, 15, 64; v. bonus: optimi (opp. homines improbi), id. Cael. 5, 12: fortis, id. Fin. 3, 8, 29; id. Rep. 1, 3, 5: turpissimus, Sall. J. 85, 42: nefandus, Verg. A. 4, 498.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00",
+            "citations": {
+              "urn:cts:latinLit:phi0134.phi004:792": "Ter. Phorm. 792",
+              "urn:cts:latinLit:phi0959.phi006:3:326": "Ov. M. 3, 326",
+              "urn:cts:latinLit:phi0959.phi006:4:280": "id. ib. 4, 280",
+              "urn:cts:latinLit:phi0550.phi001:5:1012": "Lucr. 5, 1012",
+              "urn:cts:latinLit:phi0660.phi001:2:2:2": "Tib. 2, 2, 2",
+              "urn:cts:latinLit:phi0474.phi043:1:8:13": "Cic. Rep. 1, 8, 13",
+              "urn:cts:latinLit:phi0474.phi043:1:12:18": "id. ib. 1, 12, 18",
+              "urn:cts:latinLit:phi0474.phi056:6:6:12": "id. Fam. 6, 6, 12",
+              "urn:cts:latinLit:phi0474.phi051:7:22": "id. Sen. 7, 22",
+              "urn:cts:latinLit:phi0474.phi051:23:84": "id. ib. 23, 84",
+              "urn:cts:latinLit:phi0474.phi048:3:19:64": "id. Fin. 3, 19, 64",
+              "urn:cts:latinLit:phi0474.phi055:3:15:64": "id. Off. 3, 15, 64",
+              "urn:cts:latinLit:phi0474.phi024:5:12": "id. Cael. 5, 12",
+              "urn:cts:latinLit:phi0474.phi048:3:8:29": "id. Fin. 3, 8, 29",
+              "urn:cts:latinLit:phi0474.phi043:1:3:5": "id. Rep. 1, 3, 5",
+              "urn:cts:latinLit:phi0631.phi002:85:42": "Sall. J. 85, 42",
+              "urn:cts:latinLit:phi0690.phi003:4:498": "Verg. A. 4, 498"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0134.phi004:792": {
+                "text": "Ter. Phorm. 792",
+                "author": "Terence",
+                "work": "Phormio",
+                "display": "Terence - Phormio",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi006:3:326": {
+                "text": "Ov. M. 3, 326",
+                "author": "Ovid",
+                "work": "Metamorphoses",
+                "display": "Ovid - Metamorphoses",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi006:4:280": {
+                "text": "id. ib. 4, 280",
+                "author": "Ovid",
+                "work": "Metamorphoses",
+                "display": "Ovid - Metamorphoses",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0550.phi001:5:1012": {
+                "text": "Lucr. 5, 1012",
+                "author": "Lucretius",
+                "work": "De Rerum Natura",
+                "display": "Lucretius - De Rerum Natura",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0660.phi001:2:2:2": {
+                "text": "Tib. 2, 2, 2",
+                "author": "Tibullus",
+                "work": "Elegiae",
+                "display": "Tibullus - Elegiae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi043:1:8:13": {
+                "text": "Cic. Rep. 1, 8, 13",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Republica",
+                "display": "Cicero, Marcus Tullius - De Republica",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi043:1:12:18": {
+                "text": "id. ib. 1, 12, 18",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Republica",
+                "display": "Cicero, Marcus Tullius - De Republica",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:6:6:12": {
+                "text": "id. Fam. 6, 6, 12",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi051:7:22": {
+                "text": "id. Sen. 7, 22",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Senectute",
+                "display": "Cicero, Marcus Tullius - De Senectute",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi051:23:84": {
+                "text": "id. ib. 23, 84",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Senectute",
+                "display": "Cicero, Marcus Tullius - De Senectute",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi048:3:19:64": {
+                "text": "id. Fin. 3, 19, 64",
+                "author": "Cicero, Marcus Tullius",
+                "work": "de Finibus Bonorum et Malorum",
+                "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi055:3:15:64": {
+                "text": "id. Off. 3, 15, 64",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Officiis",
+                "display": "Cicero, Marcus Tullius - De Officiis",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi024:5:12": {
+                "text": "id. Cael. 5, 12",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro M. Caelio",
+                "display": "Cicero, Marcus Tullius - Pro M. Caelio",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi048:3:8:29": {
+                "text": "id. Fin. 3, 8, 29",
+                "author": "Cicero, Marcus Tullius",
+                "work": "de Finibus Bonorum et Malorum",
+                "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi043:1:3:5": {
+                "text": "id. Rep. 1, 3, 5",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Republica",
+                "display": "Cicero, Marcus Tullius - De Republica",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0631.phi002:85:42": {
+                "text": "Sall. J. 85, 42",
+                "author": "Sallust",
+                "work": "J",
+                "display": "Sallust - J",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:4:498": {
+                "text": "Verg. A. 4, 498",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "II.  In partic.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "A.  A man as related to a woman, a husband, maritus (very freq.): is (Juppiter) amare occepit Alcumenam clam virum, Plaut. Am. prol. 107; 111; 134; 1, 3, 4 (502); Ter. Hec. 516: quem (vultum) dicitur Xanthippe praedicare solita in viro suo fuisse, Cic. Tusc. 3, 15, 31; id. Verr. 5, 31, 82; id. Cael. 13, 32; id. Fam. 7, 23, 4; Liv. 1, 46, 6; Hor. C. 2, 18, 28; 3, 3, 68; id. S. 1, 2, 127 al.; Ov. M. 1, 146; Petr. 111; Quint. 5, 10, 62; 5, 11, 28; 7, 1, 28; Suet. Aug. 69; id. Calig. 25; id. Claud. 29; id. Ner. 35; id. Dom. 22 al.\u2014Transf., of animals, the male, mate, etc., Verg. E. 7, 7; Ov. M. 1, 660; Mart. 3, 93, 11; Sol. 23.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:00",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi001:107": "Plaut. Am. prol. 107",
+              "urn:cts:latinLit:phi0119.phi001:111": "111",
+              "urn:cts:latinLit:phi0119.phi001:134": "134",
+              "urn:cts:latinLit:phi0119.phi001:502": "1, 3, 4 (502)",
+              "urn:cts:latinLit:phi0134.phi005:516": "Ter. Hec. 516",
+              "urn:cts:latinLit:phi0474.phi049:3:15:31": "Cic. Tusc. 3, 15, 31",
+              "urn:cts:latinLit:phi0474.phi005:2:5:82": "id. Verr. 5, 31, 82",
+              "urn:cts:latinLit:phi0474.phi024:13:32": "id. Cael. 13, 32",
+              "urn:cts:latinLit:phi0474.phi056:7:23:4": "id. Fam. 7, 23, 4",
+              "urn:cts:latinLit:phi0914.phi001:1:46:6": "Liv. 1, 46, 6",
+              "urn:cts:latinLit:phi0893.phi001:2:18:28": "Hor. C. 2, 18, 28",
+              "urn:cts:latinLit:phi0893.phi001:3:3:68": "3, 3, 68",
+              "urn:cts:latinLit:phi0893.phi004:1:2:127": "id. S. 1, 2, 127",
+              "urn:cts:latinLit:phi0959.phi006:1:146": "Ov. M. 1, 146",
+              "urn:cts:latinLit:phi1002.phi001:5:10:62": "Quint. 5, 10, 62",
+              "urn:cts:latinLit:phi1002.phi001:5:11:28": "5, 11, 28",
+              "urn:cts:latinLit:phi1002.phi001:7:1:28": "7, 1, 28",
+              "urn:cts:latinLit:phi1348.phi001:life=aug.:69": "Suet. Aug. 69",
+              "urn:cts:latinLit:phi1348.phi001:life=cal.:25": "id. Calig. 25",
+              "urn:cts:latinLit:phi1348.phi001:life=cl.:29": "id. Claud. 29",
+              "urn:cts:latinLit:phi1348.phi001:life=nero:35": "id. Ner. 35",
+              "urn:cts:latinLit:phi1348.phi001:life=dom.:22": "id. Dom. 22",
+              "urn:cts:latinLit:phi0690.phi001:7:7": "Verg. E. 7, 7",
+              "urn:cts:latinLit:phi0959.phi006:1:660": "Ov. M. 1, 660",
+              "urn:cts:latinLit:phi1294.phi002:3:93:11": "Mart. 3, 93, 11"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi001:107": {
+                "text": "Plaut. Am. prol. 107",
+                "author": "Plautus, Titus Maccius",
+                "work": "Amphitruo",
+                "display": "Plautus, Titus Maccius - Amphitruo",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi001:111": {
+                "text": "111",
+                "author": "Plautus, Titus Maccius",
+                "work": "Amphitruo",
+                "display": "Plautus, Titus Maccius - Amphitruo",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi001:134": {
+                "text": "134",
+                "author": "Plautus, Titus Maccius",
+                "work": "Amphitruo",
+                "display": "Plautus, Titus Maccius - Amphitruo",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi001:502": {
+                "text": "1, 3, 4 (502)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Amphitruo",
+                "display": "Plautus, Titus Maccius - Amphitruo",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi005:516": {
+                "text": "Ter. Hec. 516",
+                "author": "Terence",
+                "work": "Hecyra",
+                "display": "Terence - Hecyra",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi049:3:15:31": {
+                "text": "Cic. Tusc. 3, 15, 31",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi005:2:5:82": {
+                "text": "id. Verr. 5, 31, 82",
+                "author": "Cicero, Marcus Tullius",
+                "work": "In C. Verrem",
+                "display": "Cicero, Marcus Tullius - In C. Verrem",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi024:13:32": {
+                "text": "id. Cael. 13, 32",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro M. Caelio",
+                "display": "Cicero, Marcus Tullius - Pro M. Caelio",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:7:23:4": {
+                "text": "id. Fam. 7, 23, 4",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:1:46:6": {
+                "text": "Liv. 1, 46, 6",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi001:2:18:28": {
+                "text": "Hor. C. 2, 18, 28",
+                "author": "Horace",
+                "work": "Carmina",
+                "display": "Horace - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi001:3:3:68": {
+                "text": "3, 3, 68",
+                "author": "Horace",
+                "work": "Carmina",
+                "display": "Horace - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi004:1:2:127": {
+                "text": "id. S. 1, 2, 127",
+                "author": "Horace",
+                "work": "Satires",
+                "display": "Horace - Satires",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi006:1:146": {
+                "text": "Ov. M. 1, 146",
+                "author": "Ovid",
+                "work": "Metamorphoses",
+                "display": "Ovid - Metamorphoses",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:5:10:62": {
+                "text": "Quint. 5, 10, 62",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:5:11:28": {
+                "text": "5, 11, 28",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:7:1:28": {
+                "text": "7, 1, 28",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1348.phi001:life=aug.:69": {
+                "text": "Suet. Aug. 69",
+                "author": "Suetonius",
+                "work": "Aug",
+                "display": "Suetonius - Aug",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1348.phi001:life=cal.:25": {
+                "text": "id. Calig. 25",
+                "author": "Suetonius",
+                "work": "Calig",
+                "display": "Suetonius - Calig",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1348.phi001:life=cl.:29": {
+                "text": "id. Claud. 29",
+                "author": "Suetonius",
+                "work": "Claud",
+                "display": "Suetonius - Claud",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1348.phi001:life=nero:35": {
+                "text": "id. Ner. 35",
+                "author": "Suetonius",
+                "work": "Ner",
+                "display": "Suetonius - Ner",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1348.phi001:life=dom.:22": {
+                "text": "id. Dom. 22",
+                "author": "Suetonius",
+                "work": "Dom",
+                "display": "Suetonius - Dom",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi001:7:7": {
+                "text": "Verg. E. 7, 7",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Eclogues",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi006:1:660": {
+                "text": "Ov. M. 1, 660",
+                "author": "Ovid",
+                "work": "Metamorphoses",
+                "display": "Ovid - Metamorphoses",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1294.phi002:3:93:11": {
+                "text": "Mart. 3, 93, 11",
+                "author": "Martial",
+                "work": "Epigrammata",
+                "display": "Martial - Epigrammata",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "B.  A man (opp. a boy): pueri hoc possunt, viri non potuerunt? Cic. Tusc. 2, 14, 34: ex toto non sic pueri ut viri curari debent, Cels. 3, 7 fin.: pueroque viroque, Ov. M. 13, 397: neque eos (pueros) prius in urbem redire, quam viri facti essent, statuit, Just. 3, 3, 7: cum essem parvulus ... quando factus sum vir, etc., Vulg. 1 Cor. 13, 11.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi049:2:14:34": "Cic. Tusc. 2, 14, 34",
+              "urn:cts:latinLit:phi0836.phi002:3:7": "Cels. 3, 7 fin.",
+              "urn:cts:latinLit:phi0959.phi006:13:397": "Ov. M. 13, 397",
+              "urn:cts:latinLit:phi2806.phi001:3:3:7": "Just. 3, 3, 7",
+              "urn:cts:greekLit:tlg0031.tlg007:13:11": "Vulg. 1 Cor. 13, 11"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi049:2:14:34": {
+                "text": "Cic. Tusc. 2, 14, 34",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0836.phi002:3:7": {
+                "text": "Cels. 3, 7 fin.",
+                "author": "Celsus, Aulus Cornelius",
+                "work": "De Medicina",
+                "display": "Celsus, Aulus Cornelius - De Medicina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi006:13:397": {
+                "text": "Ov. M. 13, 397",
+                "author": "Ovid",
+                "work": "Metamorphoses",
+                "display": "Ovid - Metamorphoses",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi2806.phi001:3:3:7": {
+                "text": "Just. 3, 3, 7",
+                "author": "Iustinianus",
+                "work": "Digesta Iustiniani",
+                "display": "Iustinianus - Digesta Iustiniani",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0031.tlg007:13:11": {
+                "text": "Vulg. 1 Cor. 13, 11",
+                "author": "New Testament",
+                "work": "1 Corinthians",
+                "display": "New Testament - 1 Corinthians",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "C.  Pregn., a man, a man of courage, principle, or honor, one who deserves the name of a man: Marius rusticanus vir, sed plane vir, cum secaretur, vetuit se alligari ... Ita et tulit dolorem, ut vir; et, ut homo, majorem ferre sine caus\u0101 necessari\u0101 noluit, Cic. Tusc. 2, 22, 53; cf. id. Fam. 5, 17, 3: cum is jam se corroboravisset ac vir inter viros esset, id. Cael. 5, 11: te oro, te colligas virumque praebeas, id. Fam. 5, 18, 1: si vir esse volet, praeclara \u03c3\u03c5\u03bd\u03bf\u03b4\u03af\u03b1, id. Att. 10, 7, 2: tum viro et gubernatore opus est, Liv. 24, 8, 1; 1, 41, 3; 1, 46, 6; 2, 38, 6 et saep.: si quid in Flacco viri est, Non feret, Hor. Epod. 15, 12.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:02",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi049:2:22:53": "Cic. Tusc. 2, 22, 53",
+              "urn:cts:latinLit:phi0474.phi056:5:17:3": "id. Fam. 5, 17, 3",
+              "urn:cts:latinLit:phi0474.phi024:5:11": "id. Cael. 5, 11",
+              "urn:cts:latinLit:phi0474.phi056:5:18:1": "id. Fam. 5, 18, 1",
+              "urn:cts:latinLit:phi0474.phi057:10:7:2": "id. Att. 10, 7, 2",
+              "urn:cts:latinLit:phi0914.phi001:24:8:1": "Liv. 24, 8, 1",
+              "urn:cts:latinLit:phi0914.phi001:1:41:3": "1, 41, 3",
+              "urn:cts:latinLit:phi0914.phi001:1:46:6": "1, 46, 6",
+              "urn:cts:latinLit:phi0914.phi001:2:38:6": "2, 38, 6",
+              "urn:cts:latinLit:phi0893.phi003:15:12": "Hor. Epod. 15, 12"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi049:2:22:53": {
+                "text": "Cic. Tusc. 2, 22, 53",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:5:17:3": {
+                "text": "id. Fam. 5, 17, 3",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi024:5:11": {
+                "text": "id. Cael. 5, 11",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro M. Caelio",
+                "display": "Cicero, Marcus Tullius - Pro M. Caelio",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:5:18:1": {
+                "text": "id. Fam. 5, 18, 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:10:7:2": {
+                "text": "id. Att. 10, 7, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:24:8:1": {
+                "text": "Liv. 24, 8, 1",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:1:41:3": {
+                "text": "1, 41, 3",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:1:46:6": {
+                "text": "1, 46, 6",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:2:38:6": {
+                "text": "2, 38, 6",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi003:15:12": {
+                "text": "Hor. Epod. 15, 12",
+                "author": "Horace",
+                "work": "Epodi",
+                "display": "Horace - Epodi",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "D.  In milit. lang.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:03",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "1.  In gen., like our man, for soldier (syn. miles): dispertiti viri, dispertiti ordines, Plaut. Am. 1, 1, 65 (217); cf.: boat Caelum fremitu virum, id. ib. 1, 1, 78 (230): vir unus cum viro congrediendo, T. Manlius, M. Valerius, quantum Gallicam rabiem vinceret Romana virtus, docuerunt, Liv. 38, 17, 8.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:03:00",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi001:217": "Plaut. Am. 1, 1, 65 (217)",
+              "urn:cts:latinLit:phi0119.phi001:230": "id. ib. 1, 1, 78 (230)",
+              "urn:cts:latinLit:phi0914.phi001:38:17:8": "Liv. 38, 17, 8"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi001:217": {
+                "text": "Plaut. Am. 1, 1, 65 (217)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Amphitruo",
+                "display": "Plautus, Titus Maccius - Amphitruo",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi001:230": {
+                "text": "id. ib. 1, 1, 78 (230)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Amphitruo",
+                "display": "Plautus, Titus Maccius - Amphitruo",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:38:17:8": {
+                "text": "Liv. 38, 17, 8",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "2.  In partic., as opposed to the cavalry, a foot-soldier (syn. pedes): equites virique, Liv. 21, 27, 1: magn\u0101 voce trahens equitemque virosque, Sil. 9, 559: passim turmaeque virique, etc., Petr. 123.\u2014Hence, prov.: equis viris, or viris equisque, with horse and foot, i. e. with might and main; v. equus.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:03:01",
+            "citations": {
+              "urn:cts:latinLit:phi0914.phi001:21:27:1": "Liv. 21, 27, 1",
+              "urn:cts:latinLit:phi1345.phi001:9:559": "Sil. 9, 559"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0914.phi001:21:27:1": {
+                "text": "Liv. 21, 27, 1",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1345.phi001:9:559": {
+                "text": "Sil. 9, 559",
+                "author": "Silius Italicus, Tiberius Catius",
+                "work": "Punica",
+                "display": "Silius Italicus, Tiberius Catius - Punica",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "E.  With emphasis in place of a pronoun of reference, is, ille, etc.: fletusque et conploratio fregere tandem virum, Liv. 2, 40, 9: hae tantae viri virtutes, id. 21, 4, 9; Sall. J. 9, 3.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:04",
+            "citations": {
+              "urn:cts:latinLit:phi0914.phi001:2:40:9": "Liv. 2, 40, 9",
+              "urn:cts:latinLit:phi0914.phi001:21:4:9": "id. 21, 4, 9",
+              "urn:cts:latinLit:phi0631.phi002:9:3": "Sall. J. 9, 3"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0914.phi001:2:40:9": {
+                "text": "Liv. 2, 40, 9",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:21:4:9": {
+                "text": "id. 21, 4, 9",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0631.phi002:9:3": {
+                "text": "Sall. J. 9, 3",
+                "author": "Sallust",
+                "work": "J",
+                "display": "Sallust - J",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "F.  Distributively, each man, every man: vir virum legit, of choosing a senator, Suet. Aug. 35: vir cum viro congrediaris, Liv. 22, 14, 14: legitque virum vir, singled out (in battle), Verg. A. 11, 632 (an imitation of Hom. Il. 4, 472: \u1f00\u03bd\u1f74\u03c1 \u03b4 \u1f04\u03bd\u03b4\u1fe4 \u1f10\u03b4\u03bd\u03bf\u03c0\u03ac\u03bb\u03b9\u03b6\u03b5\u03bd): cum vir virum legisset, i. e. a companion in battle, Liv. 9, 39, 5; cf., in a sarcastic transfer-: ille (Clodius), qui semper secum scorta, semper exoletos, semper lupas ducebat, tum neminem, nisi ut virum a viro lectum esse diceres, Cic. Mil. 21, 55.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:02",
+            "citations": {
+              "urn:cts:latinLit:phi1348.phi001:life=aug.:35": "Suet. Aug. 35",
+              "urn:cts:latinLit:phi0914.phi001:22:14:14": "Liv. 22, 14, 14",
+              "urn:cts:latinLit:phi0690.phi003:11:632": "Verg. A. 11, 632",
+              "urn:cts:latinLit:phi0914.phi001:9:39:5": "Liv. 9, 39, 5",
+              "urn:cts:latinLit:phi0474.phi031:21:55": "Cic. Mil. 21, 55"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi1348.phi001:life=aug.:35": {
+                "text": "Suet. Aug. 35",
+                "author": "Suetonius",
+                "work": "Aug",
+                "display": "Suetonius - Aug",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:22:14:14": {
+                "text": "Liv. 22, 14, 14",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:11:632": {
+                "text": "Verg. A. 11, 632",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:9:39:5": {
+                "text": "Liv. 9, 39, 5",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi031:21:55": {
+                "text": "Cic. Mil. 21, 55",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro T. Annio Milone",
+                "display": "Cicero, Marcus Tullius - Pro T. Annio Milone",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "G.  Human beings (poet. homines, opp. pecudes), Ov. M. 1, 286; cf. Verg. A. 6, 553.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:03",
+            "citations": {
+              "urn:cts:latinLit:phi0959.phi006:1:286": "Ov. M. 1, 286",
+              "urn:cts:latinLit:phi0690.phi003:6:553": "Verg. A. 6, 553"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0959.phi006:1:286": {
+                "text": "Ov. M. 1, 286",
+                "author": "Ovid",
+                "work": "Metamorphoses",
+                "display": "Ovid - Metamorphoses",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:6:553": {
+                "text": "Verg. A. 6, 553",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "H.  Manhood, virility (poet. and very rare): ut relicta sensit sibi membra sine viro, Cat. 63, 6: ferro mollita juventus Atque exsecta virum, Luc. 10, 134.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:04",
+            "citations": {
+              "urn:cts:latinLit:phi0472.phi001:63:6": "Cat. 63, 6",
+              "urn:cts:latinLit:phi0917.phi001:10:134": "Luc. 10, 134"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0472.phi001:63:6": {
+                "text": "Cat. 63, 6",
+                "author": "Catullus",
+                "work": "Carmina",
+                "display": "Catullus - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0917.phi001:10:134": {
+                "text": "Luc. 10, 134",
+                "author": "Lucan",
+                "work": "Civil War",
+                "display": "Lucan - Civil War",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        }
+      ],
+      "source": "diogenes",
+      "metadata": {
+        "chunk_types": [
+          "DiogenesMatchingReference"
+        ],
+        "terms": [
+          "v\u012dr"
+        ]
+      },
+      "dictionary_blocks": [
+        {
+          "entry": "vir, v\u012dri (gen. plur. vir\u016bm, Enn. ap. Charis. p. 251 P., or Ann. v. 280 Vahl.; id. ap. Fest. p. 257 M\u00fcll., or Ann. v. 394 Vahl.; Verg. A. 6, 553 al.), m. Sanscr. vira, hero; the root is in O. H. Germ. weralt; Angl.Sax. veruld; Engl. world, i. e. age or generation of men, a male person, a man (opp. femina; cf. mas).",
+          "entryid": "00",
+          "citations": {
+            "urn:cts:latinLit:phi1236.phi001:page=257": "Fest. p. 257",
+            "urn:cts:latinLit:phi0690.phi003:6:553": "Verg. A. 6, 553"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi1236.phi001:page=257": "Fest. p. 257",
+            "urn:cts:latinLit:phi0690.phi003:6:553": "Verg. A. 6, 553"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi1236.phi001:page=257": {
+              "text": "Fest. p. 257",
+              "author": "Sex. Pompeius Festus",
+              "work": "P",
+              "display": "Sex. Pompeius Festus - P",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:6:553": {
+              "text": "Verg. A. 6, 553",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "I.  In gen.: virum me natam vellem, Ter. Phorm. 792: deque viro factus (mirabile') femina, Ov. M. 3, 326: ambiguus fuerit modo vir, modo femina Sithon, id. ib. 4, 280: mulier conjuncta viro, Lucr. 5, 1012: vir mulierque, Tib. 2, 2, 2: sapientissimorum nostrae civitatis virorum disputatio, Cic. Rep. 1, 8, 13: vir prudens, id. ib. 1, 12, 18: clari viri, id. Fam. 6, 6, 12: vir clarus et honoratus, id. Sen. 7, 22: praestantior, id. ib. 23, 84: bonus et sapiens et legibus parens, id. Fin. 3, 19, 64; cf. id. Off. 3, 15, 64; v. bonus: optimi (opp. homines improbi), id. Cael. 5, 12: fortis, id. Fin. 3, 8, 29; id. Rep. 1, 3, 5: turpissimus, Sall. J. 85, 42: nefandus, Verg. A. 4, 498.\u2014",
+          "entryid": "00:00",
+          "citations": {
+            "urn:cts:latinLit:phi0134.phi004:792": "Ter. Phorm. 792",
+            "urn:cts:latinLit:phi0959.phi006:3:326": "Ov. M. 3, 326",
+            "urn:cts:latinLit:phi0959.phi006:4:280": "id. ib. 4, 280",
+            "urn:cts:latinLit:phi0550.phi001:5:1012": "Lucr. 5, 1012",
+            "urn:cts:latinLit:phi0660.phi001:2:2:2": "Tib. 2, 2, 2",
+            "urn:cts:latinLit:phi0474.phi043:1:8:13": "Cic. Rep. 1, 8, 13",
+            "urn:cts:latinLit:phi0474.phi043:1:12:18": "id. ib. 1, 12, 18",
+            "urn:cts:latinLit:phi0474.phi056:6:6:12": "id. Fam. 6, 6, 12",
+            "urn:cts:latinLit:phi0474.phi051:7:22": "id. Sen. 7, 22",
+            "urn:cts:latinLit:phi0474.phi051:23:84": "id. ib. 23, 84",
+            "urn:cts:latinLit:phi0474.phi048:3:19:64": "id. Fin. 3, 19, 64",
+            "urn:cts:latinLit:phi0474.phi055:3:15:64": "id. Off. 3, 15, 64",
+            "urn:cts:latinLit:phi0474.phi024:5:12": "id. Cael. 5, 12",
+            "urn:cts:latinLit:phi0474.phi048:3:8:29": "id. Fin. 3, 8, 29",
+            "urn:cts:latinLit:phi0474.phi043:1:3:5": "id. Rep. 1, 3, 5",
+            "urn:cts:latinLit:phi0631.phi002:85:42": "Sall. J. 85, 42",
+            "urn:cts:latinLit:phi0690.phi003:4:498": "Verg. A. 4, 498"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0134.phi004:792": "Ter. Phorm. 792",
+            "urn:cts:latinLit:phi0959.phi006:3:326": "Ov. M. 3, 326",
+            "urn:cts:latinLit:phi0959.phi006:4:280": "id. ib. 4, 280",
+            "urn:cts:latinLit:phi0550.phi001:5:1012": "Lucr. 5, 1012",
+            "urn:cts:latinLit:phi0660.phi001:2:2:2": "Tib. 2, 2, 2",
+            "urn:cts:latinLit:phi0474.phi043:1:8:13": "Cic. Rep. 1, 8, 13",
+            "urn:cts:latinLit:phi0474.phi043:1:12:18": "id. ib. 1, 12, 18",
+            "urn:cts:latinLit:phi0474.phi056:6:6:12": "id. Fam. 6, 6, 12",
+            "urn:cts:latinLit:phi0474.phi051:7:22": "id. Sen. 7, 22",
+            "urn:cts:latinLit:phi0474.phi051:23:84": "id. ib. 23, 84",
+            "urn:cts:latinLit:phi0474.phi048:3:19:64": "id. Fin. 3, 19, 64",
+            "urn:cts:latinLit:phi0474.phi055:3:15:64": "id. Off. 3, 15, 64",
+            "urn:cts:latinLit:phi0474.phi024:5:12": "id. Cael. 5, 12",
+            "urn:cts:latinLit:phi0474.phi048:3:8:29": "id. Fin. 3, 8, 29",
+            "urn:cts:latinLit:phi0474.phi043:1:3:5": "id. Rep. 1, 3, 5",
+            "urn:cts:latinLit:phi0631.phi002:85:42": "Sall. J. 85, 42",
+            "urn:cts:latinLit:phi0690.phi003:4:498": "Verg. A. 4, 498"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0134.phi004:792": {
+              "text": "Ter. Phorm. 792",
+              "author": "Terence",
+              "work": "Phormio",
+              "display": "Terence - Phormio",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi006:3:326": {
+              "text": "Ov. M. 3, 326",
+              "author": "Ovid",
+              "work": "Metamorphoses",
+              "display": "Ovid - Metamorphoses",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi006:4:280": {
+              "text": "id. ib. 4, 280",
+              "author": "Ovid",
+              "work": "Metamorphoses",
+              "display": "Ovid - Metamorphoses",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0550.phi001:5:1012": {
+              "text": "Lucr. 5, 1012",
+              "author": "Lucretius",
+              "work": "De Rerum Natura",
+              "display": "Lucretius - De Rerum Natura",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0660.phi001:2:2:2": {
+              "text": "Tib. 2, 2, 2",
+              "author": "Tibullus",
+              "work": "Elegiae",
+              "display": "Tibullus - Elegiae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi043:1:8:13": {
+              "text": "Cic. Rep. 1, 8, 13",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Republica",
+              "display": "Cicero, Marcus Tullius - De Republica",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi043:1:12:18": {
+              "text": "id. ib. 1, 12, 18",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Republica",
+              "display": "Cicero, Marcus Tullius - De Republica",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:6:6:12": {
+              "text": "id. Fam. 6, 6, 12",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi051:7:22": {
+              "text": "id. Sen. 7, 22",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Senectute",
+              "display": "Cicero, Marcus Tullius - De Senectute",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi051:23:84": {
+              "text": "id. ib. 23, 84",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Senectute",
+              "display": "Cicero, Marcus Tullius - De Senectute",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi048:3:19:64": {
+              "text": "id. Fin. 3, 19, 64",
+              "author": "Cicero, Marcus Tullius",
+              "work": "de Finibus Bonorum et Malorum",
+              "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi055:3:15:64": {
+              "text": "id. Off. 3, 15, 64",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Officiis",
+              "display": "Cicero, Marcus Tullius - De Officiis",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi024:5:12": {
+              "text": "id. Cael. 5, 12",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro M. Caelio",
+              "display": "Cicero, Marcus Tullius - Pro M. Caelio",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi048:3:8:29": {
+              "text": "id. Fin. 3, 8, 29",
+              "author": "Cicero, Marcus Tullius",
+              "work": "de Finibus Bonorum et Malorum",
+              "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi043:1:3:5": {
+              "text": "id. Rep. 1, 3, 5",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Republica",
+              "display": "Cicero, Marcus Tullius - De Republica",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0631.phi002:85:42": {
+              "text": "Sall. J. 85, 42",
+              "author": "Sallust",
+              "work": "J",
+              "display": "Sallust - J",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:4:498": {
+              "text": "Verg. A. 4, 498",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "II.  In partic.",
+          "entryid": "00:01"
+        },
+        {
+          "entry": "A.  A man as related to a woman, a husband, maritus (very freq.): is (Juppiter) amare occepit Alcumenam clam virum, Plaut. Am. prol. 107; 111; 134; 1, 3, 4 (502); Ter. Hec. 516: quem (vultum) dicitur Xanthippe praedicare solita in viro suo fuisse, Cic. Tusc. 3, 15, 31; id. Verr. 5, 31, 82; id. Cael. 13, 32; id. Fam. 7, 23, 4; Liv. 1, 46, 6; Hor. C. 2, 18, 28; 3, 3, 68; id. S. 1, 2, 127 al.; Ov. M. 1, 146; Petr. 111; Quint. 5, 10, 62; 5, 11, 28; 7, 1, 28; Suet. Aug. 69; id. Calig. 25; id. Claud. 29; id. Ner. 35; id. Dom. 22 al.\u2014Transf., of animals, the male, mate, etc., Verg. E. 7, 7; Ov. M. 1, 660; Mart. 3, 93, 11; Sol. 23.\u2014",
+          "entryid": "00:01:00",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi001:107": "Plaut. Am. prol. 107",
+            "urn:cts:latinLit:phi0119.phi001:111": "111",
+            "urn:cts:latinLit:phi0119.phi001:134": "134",
+            "urn:cts:latinLit:phi0119.phi001:502": "1, 3, 4 (502)",
+            "urn:cts:latinLit:phi0134.phi005:516": "Ter. Hec. 516",
+            "urn:cts:latinLit:phi0474.phi049:3:15:31": "Cic. Tusc. 3, 15, 31",
+            "urn:cts:latinLit:phi0474.phi005:2:5:82": "id. Verr. 5, 31, 82",
+            "urn:cts:latinLit:phi0474.phi024:13:32": "id. Cael. 13, 32",
+            "urn:cts:latinLit:phi0474.phi056:7:23:4": "id. Fam. 7, 23, 4",
+            "urn:cts:latinLit:phi0914.phi001:1:46:6": "Liv. 1, 46, 6",
+            "urn:cts:latinLit:phi0893.phi001:2:18:28": "Hor. C. 2, 18, 28",
+            "urn:cts:latinLit:phi0893.phi001:3:3:68": "3, 3, 68",
+            "urn:cts:latinLit:phi0893.phi004:1:2:127": "id. S. 1, 2, 127",
+            "urn:cts:latinLit:phi0959.phi006:1:146": "Ov. M. 1, 146",
+            "urn:cts:latinLit:phi1002.phi001:5:10:62": "Quint. 5, 10, 62",
+            "urn:cts:latinLit:phi1002.phi001:5:11:28": "5, 11, 28",
+            "urn:cts:latinLit:phi1002.phi001:7:1:28": "7, 1, 28",
+            "urn:cts:latinLit:phi1348.phi001:life=aug.:69": "Suet. Aug. 69",
+            "urn:cts:latinLit:phi1348.phi001:life=cal.:25": "id. Calig. 25",
+            "urn:cts:latinLit:phi1348.phi001:life=cl.:29": "id. Claud. 29",
+            "urn:cts:latinLit:phi1348.phi001:life=nero:35": "id. Ner. 35",
+            "urn:cts:latinLit:phi1348.phi001:life=dom.:22": "id. Dom. 22",
+            "urn:cts:latinLit:phi0690.phi001:7:7": "Verg. E. 7, 7",
+            "urn:cts:latinLit:phi0959.phi006:1:660": "Ov. M. 1, 660",
+            "urn:cts:latinLit:phi1294.phi002:3:93:11": "Mart. 3, 93, 11"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi001:107": "Plaut. Am. prol. 107",
+            "urn:cts:latinLit:phi0119.phi001:111": "111",
+            "urn:cts:latinLit:phi0119.phi001:134": "134",
+            "urn:cts:latinLit:phi0119.phi001:502": "1, 3, 4 (502)",
+            "urn:cts:latinLit:phi0134.phi005:516": "Ter. Hec. 516",
+            "urn:cts:latinLit:phi0474.phi049:3:15:31": "Cic. Tusc. 3, 15, 31",
+            "urn:cts:latinLit:phi0474.phi005:2:5:82": "id. Verr. 5, 31, 82",
+            "urn:cts:latinLit:phi0474.phi024:13:32": "id. Cael. 13, 32",
+            "urn:cts:latinLit:phi0474.phi056:7:23:4": "id. Fam. 7, 23, 4",
+            "urn:cts:latinLit:phi0914.phi001:1:46:6": "Liv. 1, 46, 6",
+            "urn:cts:latinLit:phi0893.phi001:2:18:28": "Hor. C. 2, 18, 28",
+            "urn:cts:latinLit:phi0893.phi001:3:3:68": "3, 3, 68",
+            "urn:cts:latinLit:phi0893.phi004:1:2:127": "id. S. 1, 2, 127",
+            "urn:cts:latinLit:phi0959.phi006:1:146": "Ov. M. 1, 146",
+            "urn:cts:latinLit:phi1002.phi001:5:10:62": "Quint. 5, 10, 62",
+            "urn:cts:latinLit:phi1002.phi001:5:11:28": "5, 11, 28",
+            "urn:cts:latinLit:phi1002.phi001:7:1:28": "7, 1, 28",
+            "urn:cts:latinLit:phi1348.phi001:life=aug.:69": "Suet. Aug. 69",
+            "urn:cts:latinLit:phi1348.phi001:life=cal.:25": "id. Calig. 25",
+            "urn:cts:latinLit:phi1348.phi001:life=cl.:29": "id. Claud. 29",
+            "urn:cts:latinLit:phi1348.phi001:life=nero:35": "id. Ner. 35",
+            "urn:cts:latinLit:phi1348.phi001:life=dom.:22": "id. Dom. 22",
+            "urn:cts:latinLit:phi0690.phi001:7:7": "Verg. E. 7, 7",
+            "urn:cts:latinLit:phi0959.phi006:1:660": "Ov. M. 1, 660",
+            "urn:cts:latinLit:phi1294.phi002:3:93:11": "Mart. 3, 93, 11"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi001:107": {
+              "text": "Plaut. Am. prol. 107",
+              "author": "Plautus, Titus Maccius",
+              "work": "Amphitruo",
+              "display": "Plautus, Titus Maccius - Amphitruo",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi001:111": {
+              "text": "111",
+              "author": "Plautus, Titus Maccius",
+              "work": "Amphitruo",
+              "display": "Plautus, Titus Maccius - Amphitruo",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi001:134": {
+              "text": "134",
+              "author": "Plautus, Titus Maccius",
+              "work": "Amphitruo",
+              "display": "Plautus, Titus Maccius - Amphitruo",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi001:502": {
+              "text": "1, 3, 4 (502)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Amphitruo",
+              "display": "Plautus, Titus Maccius - Amphitruo",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi005:516": {
+              "text": "Ter. Hec. 516",
+              "author": "Terence",
+              "work": "Hecyra",
+              "display": "Terence - Hecyra",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi049:3:15:31": {
+              "text": "Cic. Tusc. 3, 15, 31",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi005:2:5:82": {
+              "text": "id. Verr. 5, 31, 82",
+              "author": "Cicero, Marcus Tullius",
+              "work": "In C. Verrem",
+              "display": "Cicero, Marcus Tullius - In C. Verrem",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi024:13:32": {
+              "text": "id. Cael. 13, 32",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro M. Caelio",
+              "display": "Cicero, Marcus Tullius - Pro M. Caelio",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:7:23:4": {
+              "text": "id. Fam. 7, 23, 4",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:1:46:6": {
+              "text": "Liv. 1, 46, 6",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi001:2:18:28": {
+              "text": "Hor. C. 2, 18, 28",
+              "author": "Horace",
+              "work": "Carmina",
+              "display": "Horace - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi001:3:3:68": {
+              "text": "3, 3, 68",
+              "author": "Horace",
+              "work": "Carmina",
+              "display": "Horace - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi004:1:2:127": {
+              "text": "id. S. 1, 2, 127",
+              "author": "Horace",
+              "work": "Satires",
+              "display": "Horace - Satires",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi006:1:146": {
+              "text": "Ov. M. 1, 146",
+              "author": "Ovid",
+              "work": "Metamorphoses",
+              "display": "Ovid - Metamorphoses",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:5:10:62": {
+              "text": "Quint. 5, 10, 62",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:5:11:28": {
+              "text": "5, 11, 28",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:7:1:28": {
+              "text": "7, 1, 28",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1348.phi001:life=aug.:69": {
+              "text": "Suet. Aug. 69",
+              "author": "Suetonius",
+              "work": "Aug",
+              "display": "Suetonius - Aug",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1348.phi001:life=cal.:25": {
+              "text": "id. Calig. 25",
+              "author": "Suetonius",
+              "work": "Calig",
+              "display": "Suetonius - Calig",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1348.phi001:life=cl.:29": {
+              "text": "id. Claud. 29",
+              "author": "Suetonius",
+              "work": "Claud",
+              "display": "Suetonius - Claud",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1348.phi001:life=nero:35": {
+              "text": "id. Ner. 35",
+              "author": "Suetonius",
+              "work": "Ner",
+              "display": "Suetonius - Ner",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1348.phi001:life=dom.:22": {
+              "text": "id. Dom. 22",
+              "author": "Suetonius",
+              "work": "Dom",
+              "display": "Suetonius - Dom",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi001:7:7": {
+              "text": "Verg. E. 7, 7",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Eclogues",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi006:1:660": {
+              "text": "Ov. M. 1, 660",
+              "author": "Ovid",
+              "work": "Metamorphoses",
+              "display": "Ovid - Metamorphoses",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1294.phi002:3:93:11": {
+              "text": "Mart. 3, 93, 11",
+              "author": "Martial",
+              "work": "Epigrammata",
+              "display": "Martial - Epigrammata",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "B.  A man (opp. a boy): pueri hoc possunt, viri non potuerunt? Cic. Tusc. 2, 14, 34: ex toto non sic pueri ut viri curari debent, Cels. 3, 7 fin.: pueroque viroque, Ov. M. 13, 397: neque eos (pueros) prius in urbem redire, quam viri facti essent, statuit, Just. 3, 3, 7: cum essem parvulus ... quando factus sum vir, etc., Vulg. 1 Cor. 13, 11.\u2014",
+          "entryid": "00:01:01",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi049:2:14:34": "Cic. Tusc. 2, 14, 34",
+            "urn:cts:latinLit:phi0836.phi002:3:7": "Cels. 3, 7 fin.",
+            "urn:cts:latinLit:phi0959.phi006:13:397": "Ov. M. 13, 397",
+            "urn:cts:latinLit:phi2806.phi001:3:3:7": "Just. 3, 3, 7",
+            "urn:cts:greekLit:tlg0031.tlg007:13:11": "Vulg. 1 Cor. 13, 11"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi049:2:14:34": "Cic. Tusc. 2, 14, 34",
+            "urn:cts:latinLit:phi0836.phi002:3:7": "Cels. 3, 7 fin.",
+            "urn:cts:latinLit:phi0959.phi006:13:397": "Ov. M. 13, 397",
+            "urn:cts:latinLit:phi2806.phi001:3:3:7": "Just. 3, 3, 7",
+            "urn:cts:greekLit:tlg0031.tlg007:13:11": "Vulg. 1 Cor. 13, 11"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi049:2:14:34": {
+              "text": "Cic. Tusc. 2, 14, 34",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0836.phi002:3:7": {
+              "text": "Cels. 3, 7 fin.",
+              "author": "Celsus, Aulus Cornelius",
+              "work": "De Medicina",
+              "display": "Celsus, Aulus Cornelius - De Medicina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi006:13:397": {
+              "text": "Ov. M. 13, 397",
+              "author": "Ovid",
+              "work": "Metamorphoses",
+              "display": "Ovid - Metamorphoses",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi2806.phi001:3:3:7": {
+              "text": "Just. 3, 3, 7",
+              "author": "Iustinianus",
+              "work": "Digesta Iustiniani",
+              "display": "Iustinianus - Digesta Iustiniani",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0031.tlg007:13:11": {
+              "text": "Vulg. 1 Cor. 13, 11",
+              "author": "New Testament",
+              "work": "1 Corinthians",
+              "display": "New Testament - 1 Corinthians",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "C.  Pregn., a man, a man of courage, principle, or honor, one who deserves the name of a man: Marius rusticanus vir, sed plane vir, cum secaretur, vetuit se alligari ... Ita et tulit dolorem, ut vir; et, ut homo, majorem ferre sine caus\u0101 necessari\u0101 noluit, Cic. Tusc. 2, 22, 53; cf. id. Fam. 5, 17, 3: cum is jam se corroboravisset ac vir inter viros esset, id. Cael. 5, 11: te oro, te colligas virumque praebeas, id. Fam. 5, 18, 1: si vir esse volet, praeclara \u03c3\u03c5\u03bd\u03bf\u03b4\u03af\u03b1, id. Att. 10, 7, 2: tum viro et gubernatore opus est, Liv. 24, 8, 1; 1, 41, 3; 1, 46, 6; 2, 38, 6 et saep.: si quid in Flacco viri est, Non feret, Hor. Epod. 15, 12.\u2014",
+          "entryid": "00:01:02",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi049:2:22:53": "Cic. Tusc. 2, 22, 53",
+            "urn:cts:latinLit:phi0474.phi056:5:17:3": "id. Fam. 5, 17, 3",
+            "urn:cts:latinLit:phi0474.phi024:5:11": "id. Cael. 5, 11",
+            "urn:cts:latinLit:phi0474.phi056:5:18:1": "id. Fam. 5, 18, 1",
+            "urn:cts:latinLit:phi0474.phi057:10:7:2": "id. Att. 10, 7, 2",
+            "urn:cts:latinLit:phi0914.phi001:24:8:1": "Liv. 24, 8, 1",
+            "urn:cts:latinLit:phi0914.phi001:1:41:3": "1, 41, 3",
+            "urn:cts:latinLit:phi0914.phi001:1:46:6": "1, 46, 6",
+            "urn:cts:latinLit:phi0914.phi001:2:38:6": "2, 38, 6",
+            "urn:cts:latinLit:phi0893.phi003:15:12": "Hor. Epod. 15, 12"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi049:2:22:53": "Cic. Tusc. 2, 22, 53",
+            "urn:cts:latinLit:phi0474.phi056:5:17:3": "id. Fam. 5, 17, 3",
+            "urn:cts:latinLit:phi0474.phi024:5:11": "id. Cael. 5, 11",
+            "urn:cts:latinLit:phi0474.phi056:5:18:1": "id. Fam. 5, 18, 1",
+            "urn:cts:latinLit:phi0474.phi057:10:7:2": "id. Att. 10, 7, 2",
+            "urn:cts:latinLit:phi0914.phi001:24:8:1": "Liv. 24, 8, 1",
+            "urn:cts:latinLit:phi0914.phi001:1:41:3": "1, 41, 3",
+            "urn:cts:latinLit:phi0914.phi001:1:46:6": "1, 46, 6",
+            "urn:cts:latinLit:phi0914.phi001:2:38:6": "2, 38, 6",
+            "urn:cts:latinLit:phi0893.phi003:15:12": "Hor. Epod. 15, 12"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi049:2:22:53": {
+              "text": "Cic. Tusc. 2, 22, 53",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:5:17:3": {
+              "text": "id. Fam. 5, 17, 3",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi024:5:11": {
+              "text": "id. Cael. 5, 11",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro M. Caelio",
+              "display": "Cicero, Marcus Tullius - Pro M. Caelio",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:5:18:1": {
+              "text": "id. Fam. 5, 18, 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:10:7:2": {
+              "text": "id. Att. 10, 7, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:24:8:1": {
+              "text": "Liv. 24, 8, 1",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:1:41:3": {
+              "text": "1, 41, 3",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:1:46:6": {
+              "text": "1, 46, 6",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:2:38:6": {
+              "text": "2, 38, 6",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi003:15:12": {
+              "text": "Hor. Epod. 15, 12",
+              "author": "Horace",
+              "work": "Epodi",
+              "display": "Horace - Epodi",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "D.  In milit. lang.",
+          "entryid": "00:01:03"
+        },
+        {
+          "entry": "1.  In gen., like our man, for soldier (syn. miles): dispertiti viri, dispertiti ordines, Plaut. Am. 1, 1, 65 (217); cf.: boat Caelum fremitu virum, id. ib. 1, 1, 78 (230): vir unus cum viro congrediendo, T. Manlius, M. Valerius, quantum Gallicam rabiem vinceret Romana virtus, docuerunt, Liv. 38, 17, 8.\u2014",
+          "entryid": "00:01:03:00",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi001:217": "Plaut. Am. 1, 1, 65 (217)",
+            "urn:cts:latinLit:phi0119.phi001:230": "id. ib. 1, 1, 78 (230)",
+            "urn:cts:latinLit:phi0914.phi001:38:17:8": "Liv. 38, 17, 8"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi001:217": "Plaut. Am. 1, 1, 65 (217)",
+            "urn:cts:latinLit:phi0119.phi001:230": "id. ib. 1, 1, 78 (230)",
+            "urn:cts:latinLit:phi0914.phi001:38:17:8": "Liv. 38, 17, 8"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi001:217": {
+              "text": "Plaut. Am. 1, 1, 65 (217)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Amphitruo",
+              "display": "Plautus, Titus Maccius - Amphitruo",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi001:230": {
+              "text": "id. ib. 1, 1, 78 (230)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Amphitruo",
+              "display": "Plautus, Titus Maccius - Amphitruo",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:38:17:8": {
+              "text": "Liv. 38, 17, 8",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "2.  In partic., as opposed to the cavalry, a foot-soldier (syn. pedes): equites virique, Liv. 21, 27, 1: magn\u0101 voce trahens equitemque virosque, Sil. 9, 559: passim turmaeque virique, etc., Petr. 123.\u2014Hence, prov.: equis viris, or viris equisque, with horse and foot, i. e. with might and main; v. equus.\u2014",
+          "entryid": "00:01:03:01",
+          "citations": {
+            "urn:cts:latinLit:phi0914.phi001:21:27:1": "Liv. 21, 27, 1",
+            "urn:cts:latinLit:phi1345.phi001:9:559": "Sil. 9, 559"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0914.phi001:21:27:1": "Liv. 21, 27, 1",
+            "urn:cts:latinLit:phi1345.phi001:9:559": "Sil. 9, 559"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0914.phi001:21:27:1": {
+              "text": "Liv. 21, 27, 1",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1345.phi001:9:559": {
+              "text": "Sil. 9, 559",
+              "author": "Silius Italicus, Tiberius Catius",
+              "work": "Punica",
+              "display": "Silius Italicus, Tiberius Catius - Punica",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "E.  With emphasis in place of a pronoun of reference, is, ille, etc.: fletusque et conploratio fregere tandem virum, Liv. 2, 40, 9: hae tantae viri virtutes, id. 21, 4, 9; Sall. J. 9, 3.\u2014",
+          "entryid": "00:01:04",
+          "citations": {
+            "urn:cts:latinLit:phi0914.phi001:2:40:9": "Liv. 2, 40, 9",
+            "urn:cts:latinLit:phi0914.phi001:21:4:9": "id. 21, 4, 9",
+            "urn:cts:latinLit:phi0631.phi002:9:3": "Sall. J. 9, 3"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0914.phi001:2:40:9": "Liv. 2, 40, 9",
+            "urn:cts:latinLit:phi0914.phi001:21:4:9": "id. 21, 4, 9",
+            "urn:cts:latinLit:phi0631.phi002:9:3": "Sall. J. 9, 3"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0914.phi001:2:40:9": {
+              "text": "Liv. 2, 40, 9",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:21:4:9": {
+              "text": "id. 21, 4, 9",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0631.phi002:9:3": {
+              "text": "Sall. J. 9, 3",
+              "author": "Sallust",
+              "work": "J",
+              "display": "Sallust - J",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "F.  Distributively, each man, every man: vir virum legit, of choosing a senator, Suet. Aug. 35: vir cum viro congrediaris, Liv. 22, 14, 14: legitque virum vir, singled out (in battle), Verg. A. 11, 632 (an imitation of Hom. Il. 4, 472: \u1f00\u03bd\u1f74\u03c1 \u03b4 \u1f04\u03bd\u03b4\u1fe4 \u1f10\u03b4\u03bd\u03bf\u03c0\u03ac\u03bb\u03b9\u03b6\u03b5\u03bd): cum vir virum legisset, i. e. a companion in battle, Liv. 9, 39, 5; cf., in a sarcastic transfer-: ille (Clodius), qui semper secum scorta, semper exoletos, semper lupas ducebat, tum neminem, nisi ut virum a viro lectum esse diceres, Cic. Mil. 21, 55.\u2014",
+          "entryid": "00:02",
+          "citations": {
+            "urn:cts:latinLit:phi1348.phi001:life=aug.:35": "Suet. Aug. 35",
+            "urn:cts:latinLit:phi0914.phi001:22:14:14": "Liv. 22, 14, 14",
+            "urn:cts:latinLit:phi0690.phi003:11:632": "Verg. A. 11, 632",
+            "urn:cts:latinLit:phi0914.phi001:9:39:5": "Liv. 9, 39, 5",
+            "urn:cts:latinLit:phi0474.phi031:21:55": "Cic. Mil. 21, 55"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi1348.phi001:life=aug.:35": "Suet. Aug. 35",
+            "urn:cts:latinLit:phi0914.phi001:22:14:14": "Liv. 22, 14, 14",
+            "urn:cts:latinLit:phi0690.phi003:11:632": "Verg. A. 11, 632",
+            "urn:cts:latinLit:phi0914.phi001:9:39:5": "Liv. 9, 39, 5",
+            "urn:cts:latinLit:phi0474.phi031:21:55": "Cic. Mil. 21, 55"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi1348.phi001:life=aug.:35": {
+              "text": "Suet. Aug. 35",
+              "author": "Suetonius",
+              "work": "Aug",
+              "display": "Suetonius - Aug",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:22:14:14": {
+              "text": "Liv. 22, 14, 14",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:11:632": {
+              "text": "Verg. A. 11, 632",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:9:39:5": {
+              "text": "Liv. 9, 39, 5",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi031:21:55": {
+              "text": "Cic. Mil. 21, 55",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro T. Annio Milone",
+              "display": "Cicero, Marcus Tullius - Pro T. Annio Milone",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "G.  Human beings (poet. homines, opp. pecudes), Ov. M. 1, 286; cf. Verg. A. 6, 553.\u2014",
+          "entryid": "00:03",
+          "citations": {
+            "urn:cts:latinLit:phi0959.phi006:1:286": "Ov. M. 1, 286",
+            "urn:cts:latinLit:phi0690.phi003:6:553": "Verg. A. 6, 553"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0959.phi006:1:286": "Ov. M. 1, 286",
+            "urn:cts:latinLit:phi0690.phi003:6:553": "Verg. A. 6, 553"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0959.phi006:1:286": {
+              "text": "Ov. M. 1, 286",
+              "author": "Ovid",
+              "work": "Metamorphoses",
+              "display": "Ovid - Metamorphoses",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:6:553": {
+              "text": "Verg. A. 6, 553",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "H.  Manhood, virility (poet. and very rare): ut relicta sensit sibi membra sine viro, Cat. 63, 6: ferro mollita juventus Atque exsecta virum, Luc. 10, 134.",
+          "entryid": "00:04",
+          "citations": {
+            "urn:cts:latinLit:phi0472.phi001:63:6": "Cat. 63, 6",
+            "urn:cts:latinLit:phi0917.phi001:10:134": "Luc. 10, 134"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0472.phi001:63:6": "Cat. 63, 6",
+            "urn:cts:latinLit:phi0917.phi001:10:134": "Luc. 10, 134"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0472.phi001:63:6": {
+              "text": "Cat. 63, 6",
+              "author": "Catullus",
+              "work": "Carmina",
+              "display": "Catullus - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0917.phi001:10:134": {
+              "text": "Luc. 10, 134",
+              "author": "Lucan",
+              "work": "Civil War",
+              "display": "Lucan - Civil War",
+              "kind": "cts"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "word": "vir",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "vir vir\u012b, gen plur. vir\u014drum (poet. also vir\u016bm, Ct., V., O.), m a male person, adult male, man (opp. mulier, femina): virum me natum vellem, T.: Deque viro factus (mirabile!) femina, O.: clari viri: consularis: turpissimus, S.: nefandus, V.: hoc pueri possunt, viri non potuerunt?: pueroque viroque, O.\u2014In war, a man, soldier: vir unus cum viro congrediendo, etc., L.\u2014With emphasis for a pronoun of reference: fletusque et conploratio fregere tandem virum, L.: grati\u0101 viri permotus flexit animum, S.\u2014Repeated distributively, each one . . . another, man . . . man: vir cum viro congrediaris, L.: legitque virum vir, singled out (for attack), V.: cum vir virum legisset, i. e. a companion in battle, L.\u2014Plur, human beings: flumina simul pecudesque virosque rapiunt, O.; opp. Caelicolae, V.\u2014A man, husband: quid viro meo respondebo Misera? T.: vir matris: angebatur Tullia nihil materiae in viro esse, etc., L.: Et uxor et vir, H.: Imminet exitio vir coniugis, O.\u2014Of animals, the male, mate: Vir gregis ipse caper, V. \u2014A man, man of courage, worthy man: tulit dolorem, ut vir; et, ut homo, etc.: tum viro et gubernatore opus est, L.: si quid in Flacco viri est, Non feret, H.\u2014Plur, foot-soldiers, infantry: ripam equites virique obtinentes, L.\u2014Manhood, virility: membra sine viro, Ct.",
+          "pos": "noun",
+          "metadata": {
+            "source": "lewis_1890"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "vir",
+        "pos": "unknown",
+        "features": {
+          "ipa": "'w\u026ar"
+        }
+      },
+      "source": "cltk",
+      "metadata": {
+        "headword": "vir",
+        "ipa": "'w\u026ar",
+        "lewis_1890_lines": [
+          "vir vir\u012b, gen plur. vir\u014drum (poet. also vir\u016bm, Ct., V., O.), m a male person, adult male, man (opp. mulier, femina): virum me natum vellem, T.: Deque viro factus (mirabile!) femina, O.: clari viri: consularis: turpissimus, S.: nefandus, V.: hoc pueri possunt, viri non potuerunt?: pueroque viroque, O.\u2014In war, a man, soldier: vir unus cum viro congrediendo, etc., L.\u2014With emphasis for a pronoun of reference: fletusque et conploratio fregere tandem virum, L.: grati\u0101 viri permotus flexit animum, S.\u2014Repeated distributively, each one . . . another, man . . . man: vir cum viro congrediaris, L.: legitque virum vir, singled out (for attack), V.: cum vir virum legisset, i. e. a companion in battle, L.\u2014Plur, human beings: flumina simul pecudesque virosque rapiunt, O.; opp. Caelicolae, V.\u2014A man, husband: quid viro meo respondebo Misera? T.: vir matris: angebatur Tullia nihil materiae in viro esse, etc., L.: Et uxor et vir, H.: Imminet exitio vir coniugis, O.\u2014Of animals, the male, mate: Vir gregis ipse caper, V. \u2014A man, man of courage, worthy man: tulit dolorem, ut vir; et, ut homo, etc.: tum viro et gubernatore opus est, L.: si quid in Flacco viri est, Non feret, H.\u2014Plur, foot-soldiers, infantry: ripam equites virique obtinentes, L.\u2014Manhood, virility: membra sine viro, Ct."
+        ]
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 3
+  },
+  "unified_sources": [
+    "cltk",
+    "diogenes",
+    "whitakers"
+  ],
+  "source_present": true
+}

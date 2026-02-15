@@ -1,0 +1,75 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "morphology",
+    "lang": "san",
+    "word": "yoga",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "morphology": {
+      "input_text": "yoga",
+      "solutions": [
+        {
+          "type": "morphological_analysis",
+          "analyses": [
+            {
+              "word": "yoga",
+              "lemma": "yoga",
+              "root": "",
+              "pos": "noun",
+              "case": "vocative",
+              "gender": "masculine",
+              "number": "singular"
+            }
+          ],
+          "total_words": 1,
+          "metadata": {
+            "color": "lawngreen_back",
+            "raw_text": "[yoga]{m. sg. voc.}",
+            "segments": {
+              "data": [
+                {
+                  "css_class": "blue",
+                  "text": "yoga"
+                },
+                {
+                  "css_class": "magenta",
+                  "text": "1"
+                },
+                {
+                  "css_class": "blue",
+                  "text": "solution kept among"
+                },
+                {
+                  "css_class": "magenta",
+                  "text": "1"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "word_analyses": [],
+      "total_solutions": 1,
+      "metadata": {
+        "solutions_kept": 1,
+        "total_available": 1
+      }
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "morphology": 5
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

@@ -1,0 +1,57 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "grc",
+    "word": "agathos",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "chunks": [
+      {
+        "logeion": "https://logeion.uchicago.edu/\u03b1\u03b3\u03b1\u03c4\u03b7\u03bf\u03c2"
+      },
+      {
+        "reference_id": "327383",
+        "definitions": {
+          "blocks": [
+            {
+              "entry": "\u1f00\u03b3\u03b1\u03c4\u03cc\u03c2, \u03ae, \u03cc\u03bd",
+              "entryid": "00"
+            },
+            {
+              "entry": "= \u1f00\u03b3\u03b1\u03c3\u03c4\u03cc\u03c2, v.l. in h.Ap. 515, (\u1f00\u03b3\u1fb1-) Theoc. 1.126.",
+              "entryid": "00:00",
+              "citations": {
+                "urn:cts:greekLit:tlg0013.tlg003:515": "h.Ap. 515",
+                "urn:cts:greekLit:tlg0005.tlg001:1:126": "Theoc. 1.126"
+              }
+            }
+          ],
+          "term": "\u1f00\u03b3\u1fb0\u03c4\u03cc\u03c2"
+        }
+      }
+    ],
+    "dg_parsed": true,
+    "chunk_types": [
+      "NoMatchFoundHeader",
+      "DiogenesFuzzyReference"
+    ]
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "chunks": 2,
+    "dg_parsed": 1,
+    "chunk_types": 2
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

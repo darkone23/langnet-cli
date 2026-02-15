@@ -1,0 +1,139 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "grc",
+    "word": "agathos",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "agathos",
+      "language": "grc",
+      "definitions": [
+        {
+          "definition": "\u1f00\u03b3\u03b1\u03c4\u03cc\u03c2, \u03ae, \u03cc\u03bd",
+          "pos": "unknown",
+          "metadata": {
+            "entryid": "00",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "= \u1f00\u03b3\u03b1\u03c3\u03c4\u03cc\u03c2, v.l. in h.Ap. 515, (\u1f00\u03b3\u1fb1-) Theoc. 1.126.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00",
+            "citations": {
+              "urn:cts:greekLit:tlg0013.tlg003:515": "h.Ap. 515",
+              "urn:cts:greekLit:tlg0005.tlg001:1:126": "Theoc. 1.126"
+            },
+            "citation_details": {
+              "urn:cts:greekLit:tlg0013.tlg003:515": {
+                "text": "h.Ap. 515",
+                "author": "Homeric Hymns",
+                "work": "Hymn 3 to Delian and Pythian Apollo",
+                "display": "Homeric Hymns - Hymn 3 to Delian and Pythian Apollo",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0005.tlg001:1:126": {
+                "text": "Theoc. 1.126",
+                "author": "Theocritus",
+                "work": "\u0395\u1f30\u03b4\u03cd\u03bb\u03bb\u03b9\u03b1",
+                "display": "Theocritus - \u0395\u1f30\u03b4\u03cd\u03bb\u03bb\u03b9\u03b1",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        }
+      ],
+      "source": "diogenes",
+      "metadata": {
+        "chunk_types": [
+          "DiogenesMatchingReference"
+        ],
+        "terms": [
+          "\u1f00\u03b3\u1fb0\u03c4\u03cc\u03c2"
+        ]
+      },
+      "dictionary_blocks": [
+        {
+          "entry": "\u1f00\u03b3\u03b1\u03c4\u03cc\u03c2, \u03ae, \u03cc\u03bd",
+          "entryid": "00"
+        },
+        {
+          "entry": "= \u1f00\u03b3\u03b1\u03c3\u03c4\u03cc\u03c2, v.l. in h.Ap. 515, (\u1f00\u03b3\u1fb1-) Theoc. 1.126.",
+          "entryid": "00:00",
+          "citations": {
+            "urn:cts:greekLit:tlg0013.tlg003:515": "h.Ap. 515",
+            "urn:cts:greekLit:tlg0005.tlg001:1:126": "Theoc. 1.126"
+          },
+          "original_citations": {
+            "urn:cts:greekLit:tlg0013.tlg003:515": "h.Ap. 515",
+            "urn:cts:greekLit:tlg0005.tlg001:1:126": "Theoc. 1.126"
+          },
+          "citation_details": {
+            "urn:cts:greekLit:tlg0013.tlg003:515": {
+              "text": "h.Ap. 515",
+              "author": "Homeric Hymns",
+              "work": "Hymn 3 to Delian and Pythian Apollo",
+              "display": "Homeric Hymns - Hymn 3 to Delian and Pythian Apollo",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0005.tlg001:1:126": {
+              "text": "Theoc. 1.126",
+              "author": "Theocritus",
+              "work": "\u0395\u1f30\u03b4\u03cd\u03bb\u03bb\u03b9\u03b1",
+              "display": "Theocritus - \u0395\u1f30\u03b4\u03cd\u03bb\u03bb\u03b9\u03b1",
+              "kind": "cts"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "word": "agathos",
+      "language": "grc",
+      "morphology": {
+        "lemma": "agathos",
+        "pos": "NOUN",
+        "features": {
+          "Case": "Acc",
+          "Gender": "Neut",
+          "Number": "Plur"
+        }
+      },
+      "source": "spacy",
+      "metadata": {
+        "text": "agathos",
+        "lemma": "agathos",
+        "pos": "NOUN",
+        "morphological_features": {
+          "Case": "Acc",
+          "Gender": "Neut",
+          "Number": "Plur"
+        }
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 2
+  },
+  "unified_sources": [
+    "diogenes",
+    "spacy"
+  ],
+  "source_present": true
+}

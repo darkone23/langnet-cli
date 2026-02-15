@@ -1,36 +1,40 @@
-# Semantic Reduction: Current Status & Iteration Plan
+# Semantic Reduction: codesketch Status
 
 **Date**: 2026-02-15  
-**Status**: Phase 2 implemented; tests present (not executed in this environment)  
-**Priority**: HIGH
+**Status**: Reference implementation in codesketch/
+**Priority**: Reference only - see v2-implementation-master-plan.md for new architecture
 
-## Executive Summary
+## Purpose
 
-Phases 0-2 are complete. The semantic reduction pipeline can:
+This document describes the **working sketch** implementation in `codesketch/src/langnet/semantic_reducer/`. This code can be studied and ported, but the new implementation will follow the V2 architecture.
+
+## What exists in codesketch/
+
+The semantic reduction pipeline in codesketch can:
 1. Extract WSUs from all adapters (CDSL, Diogenes, Heritage, Whitakers)
 2. Build similarity matrices using Stanza English lemmatization
 3. Cluster WSUs into SenseBuckets using greedy agglomerative algorithm
 4. Produce multi-witness buckets for related glosses
 
-**Test Coverage**: 80 tests passing
+**Test Coverage**: 80 tests passing (in codesketch)
 
-## Completed Phases
+## Implementation in codesketch/
 
-### ✅ Phase 0: Schema Enhancement
+### Phase 0: Schema Enhancement
 - `DictionaryDefinition` enhanced with `source_ref`, `domains`, `register`, `confidence`
 - CDSL adapter populates `source_ref` from MW/AP90 entry IDs
 - 13 tests passing
 
-### ✅ Phase 1: WSU Extraction
-- `src/langnet/semantic_reducer/types.py` - WSU, SenseBucket, Mode, Source
-- `src/langnet/semantic_reducer/normalizer.py` - Gloss normalization + Stanza lemmatization
-- `src/langnet/semantic_reducer/wsu_extractor.py` - Extraction + CDSL preprocessing
+### Phase 1: WSU Extraction
+- `codesketch/src/langnet/semantic_reducer/types.py` - WSU, SenseBucket, Mode, Source
+- `codesketch/src/langnet/semantic_reducer/normalizer.py` - Gloss normalization + Stanza lemmatization
+- `codesketch/src/langnet/semantic_reducer/wsu_extractor.py` - Extraction + CDSL preprocessing
 - 48 tests passing
 
-### ✅ Phase 2: Clustering Pipeline
-- `src/langnet/semantic_reducer/similarity.py` - Numpy similarity matrix
-- `src/langnet/semantic_reducer/clusterer.py` - Greedy agglomerative clustering
-- `src/langnet/semantic_reducer/pipeline.py` - Full pipeline orchestrator
+### Phase 2: Clustering Pipeline
+- `codesketch/src/langnet/semantic_reducer/similarity.py` - Numpy similarity matrix
+- `codesketch/src/langnet/semantic_reducer/clusterer.py` - Greedy agglomerative clustering
+- `codesketch/src/langnet/semantic_reducer/pipeline.py` - Full pipeline orchestrator
 - 32 tests passing
 
 ## Current Performance
@@ -157,7 +161,7 @@ for s in get_bucket_summary(buckets)[:3]:
 
 - `docs/plans/active/semantic-reduction/semantic-reduction-gaps.md` - Detailed gap analysis
 - `docs/plans/completed/semantic-reduction/semantic-reduction-phase2.md` - Phase 2 completion notes
-- `docs/technical/design/03-classifier-and-reducer.md` - Original design spec
+- `docs/technical/design/classifier-and-reducer.md` - Original design spec
 
 ---
 Evidence: `src/langnet/semantic_reducer/` contains extractor/similarity/clusterer/pipeline modules, and `tests/test_semantic_reduction_clustering.py` exercises the pipeline; command execution was not run here because the `just` runner was not invoked in this shell. Run `just test tests.test_semantic_reduction_clustering` (inside `devenv shell langnet-cli`) to validate in a prepared environment.

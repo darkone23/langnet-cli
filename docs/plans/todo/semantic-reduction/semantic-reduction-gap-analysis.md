@@ -11,7 +11,7 @@ The semantic reduction pipeline design assumes a data structure that **does not 
 
 ## Current Architecture vs Design Assumptions
 
-### **Design Assumption (03-classifier-and-reducer.md)**
+### **Design Assumption (classifier-and-reducer.md)**
 ```json
 {
   "source": "MW",

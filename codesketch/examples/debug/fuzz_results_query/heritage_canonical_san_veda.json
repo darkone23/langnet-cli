@@ -1,0 +1,461 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "canonical",
+    "lang": "san",
+    "word": "veda",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "veda",
+      "language": "san",
+      "morphology": {
+        "lemma": "vedha",
+        "pos": "noun",
+        "features": {
+          "analyses": [
+            {
+              "word": "vedha",
+              "lemma": "vedha",
+              "root": "",
+              "pos": "noun",
+              "case": "vocative",
+              "gender": "masculine",
+              "number": "singular"
+            }
+          ]
+        }
+      },
+      "source": "heritage",
+      "metadata": {
+        "morphology_raw": {
+          "input_text": "vedha",
+          "solutions": [
+            {
+              "type": "morphological_analysis",
+              "analyses": [
+                {
+                  "word": "vedha",
+                  "lemma": "vedha",
+                  "root": "",
+                  "pos": "noun",
+                  "case": "vocative",
+                  "gender": "masculine",
+                  "number": "singular"
+                }
+              ],
+              "total_words": 1,
+              "metadata": {
+                "color": "lawngreen_back",
+                "raw_text": "[vedha]{m. sg. voc.}",
+                "segments": [
+                  {
+                    "class": "blue",
+                    "text": "vedha"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "solution kept among"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "3"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "Filtering efficiency:"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "100%"
+                  },
+                  {
+                    "class": "red",
+                    "text": "Additional candidate solutions"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "morphological_analysis",
+              "analyses": [
+                {
+                  "word": "u",
+                  "lemma": "u",
+                  "root": "",
+                  "pos": "unknown(i)"
+                }
+              ],
+              "total_words": 1,
+              "metadata": {
+                "color": "lawngreen_back",
+                "raw_text": "[u]{ind.}",
+                "segments": [
+                  {
+                    "class": "blue",
+                    "text": "u"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "u"
+                  },
+                  {
+                    "class": "green",
+                    "text": "|"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "e"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "\u2192"
+                  },
+                  {
+                    "class": "red",
+                    "text": "ve"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "edha"
+                  }
+                ]
+              }
+            }
+          ],
+          "word_analyses": [],
+          "total_solutions": 2,
+          "metadata": {
+            "solutions_kept": 1,
+            "total_available": 3
+          }
+        },
+        "combined": {
+          "lemma": "vedha",
+          "pos": "noun",
+          "morphology_analyses": [
+            {
+              "word": "vedha",
+              "lemma": "vedha",
+              "pos": "noun",
+              "features": {
+                "case": "vocative",
+                "gender": "masculine",
+                "number": "singular",
+                "person": null,
+                "tense": null,
+                "voice": null,
+                "mood": null,
+                "stem": ""
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "word": "veda",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "1. veda   m. (fr. \u221a 1. vid, q.v.) knowledge, true or sacred knowledge or lore, knowledge of ritual, RV.; AitBr.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "205647"
+          }
+        },
+        {
+          "definition": "N. of certain celebrated works which constitute the basis of the first period of the Hind\u016b religion (these works were primarily three, viz. 1. the \u1e5ag-veda, 2. the Yajur-veda [of which there are, however, two divisions See tEttirIya-saMhitA, vAjasaneyi-saMhitA], 3. the S\u0101ma-veda ; these three works are sometimes called collectively trayI, \u2018the triple Vidy\u0101\u2019 or \u2018threefold knowledge\u2019, but the \u1e5ag-veda is really the only original work of the three, and much the most ancient [the oldest of its hymns being assigned by some who rely on certain astronomical calculations to a period between 4000 and 2500 B.C., before the settlement of the \u0100ryans in India; and by others who adopt a different reckoning to a period between 1400 and 1000 B.C., when the \u0100ryans had settled down in the Panj\u0101b]; subsequently a fourth Veda was added, called the Atharva-veda, which was probably not completely accepted till after Manu, as his law-book often speaks of the three Vedas-calling them trayam brahma sanAtanam, \u2018the triple eternal Veda\u2019, but only once [xi, 33] mentions the revelation made to Atharvan and A\u1e45giras, without, however, calling it by the later name of Atharva-veda; each of the four Vedas has two distinct parts, viz. 1. Mantra, i.e. words of prayer and adoration often addressed either to fire or to some form of the sun or to some form of the air, sky, wind &c., and praying for health, wealth, long life, cattle, offspring, victory, and even forgiveness of sins, and 2. Br\u0101hma\u1e47a, consisting of Vidhi and Artha-v\u0101da, i.e. directions for the detail of the ceremonies at which the Mantras were to be used and explanations of the legends &c. connected with the Mantras [see brAhmaRa, viDi], both these portions being termed Sruti, revelation orally communicated by the Deity, and heard but not composed or written down by men [cf. IW. 24 &c.], although it is certain that both Mantras and Br\u0101hma\u1e47as were compositions spread over a considerable period, much of the latter being comparatively modern; as the Vedas are properly three, so the Mantras are properly of three forms, 1. \u1e5ac, which are verses of praise in metre, and intended for loud recitation; 2. Yajus, which are in prose, and intended for recitation in a lower tone at sacrifices; 3. S\u0101man, which are in metre, and intended for chanting at the Soma or Moon-plant ceremonies, the Mantras of the fourth or Atharva-veda having no special name; but it must be borne in mind that the Yajur and S\u0101ma-veda hymns, especially the latter, besides their own Mantras, borrow largely from the \u1e5ag-veda; the Yajur-veda and S\u0101ma-veda being in fact not so much collections of prayers and hymns as special prayer- and hymn-books intended as manuals for the Adhvaryu and Udg\u0101t\u1e5b priests respectively [see yajur-veda, sAma-veda]; the Atharva-veda, on the other hand, is, like the \u1e5ag-veda, a real collection of original hymns mixed up with incantations, borrowing little from the \u1e5ag and having no direct relation to sacrifices, but supposed by mere recitation to produce long life, to cure diseases, to effect the ruin of enemies &c.; each of the four Vedas seems to have passed through numerous \u015a\u0101kh\u0101s or schools, giving rise to various recensions of the text, though the \u1e5ag-veda is only preserved in the \u015a\u0101kala recension, while a second recension, that of the Bh\u0101\u1e63kalas, is only known by name; a tradition makes Vy\u0101sa the compiler and arranger of the Vedas in their present form: they each have an Index or Anukrama\u1e47\u012b [q.v.], the principal work of this kind being the general Index or Sarv\u0101nukrama\u1e47\u012b [q.v.]; out of the Br\u0101hma\u1e47a portion of the Veda grew two other departments of Vedic literature, sometimes included under the general name Veda, viz. the strings of aphoristic rules, called S\u016btras [q.v.], and the mystical treatises on the nature of God and the relation of soul and matter, called Upani\u1e63ad [q.v.], which were appended to the \u0100ra\u1e47yakas [q.v.], and became the real Veda of thinking Hind\u016bs, leading to the Dar\u015banas or systems of philosophy; in the later literature the name of \u2018fifth Veda\u2019 is accorded to the Itih\u0101sas or legendary epic poems and to the Pur\u0101\u1e47as, and certain secondary Vedas or Upa-vedas [q.v.] are enumerated; the Ved\u0101\u1e45gas or works serving as limbs [for preserving the integrity] of the Veda are explained under vedANga below: the only other works included under the head of Veda being the Pari\u015bi\u1e63\u1e6das, which supply rules for the ritual omitted in the S\u016btras; in the B\u1e5bhad-\u0101ra\u1e47yaka Upani\u1e63ad the Vedas are represented as the breathings of Brahm\u0101, while in some of the Pur\u0101\u1e47as the four Vedas are said to have issued out of the four mouths of the four-faced Brahm\u0101 and in the Vi\u1e63\u1e47u-Pur\u0101\u1e47a the Veda and Vi\u1e63\u1e47u are identified), RTL. 7 &c.; IW. 5; 24 &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "205648"
+          }
+        },
+        {
+          "definition": "N. of the number \u2018four\u2019, VarB\u1e5bS.  \u015arutab.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "205649"
+          }
+        },
+        {
+          "definition": "feeling, perception, \u015aBr.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "205650"
+          }
+        },
+        {
+          "definition": "= vftta (v.l. vitta), L. (cf. 2. veda).",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "205651"
+          }
+        },
+        {
+          "definition": "2. veda   m. (fr. \u221a 3. vid) finding, obtaining, acquisition (see su-v\u00b0)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206079"
+          }
+        },
+        {
+          "definition": "property, goods, \u0100\u015bvG\u1e5b.",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "206080"
+          }
+        },
+        {
+          "definition": "3. veda/   m. (perhaps connected with \u221a 1. ve, to weave or bind together) a tuft or bunch of strong grass (Ku\u015ba or Mu\u00f1ja) made into a broom (and used for sweeping, making up the sacrificial fire &c., in rites), AV. MS. Br.; \u015arS.; Mn.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206094"
+          }
+        },
+        {
+          "definition": "4. veda   m. N. of a pupil of \u0100yoda, MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206147"
+          }
+        },
+        {
+          "definition": "vedA   f. N. of a river, VP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206148"
+          }
+        },
+        {
+          "definition": "1. ve/Da   mfn. (\u221a viD) = veDas, pious, faithful, AV. (v.l.)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206157"
+          }
+        },
+        {
+          "definition": "2. veDa   m. (\u221a vyaD) penetration, piercing, breaking through, breach, opening, perforation, VarB\u1e5bS.; R\u0101jat.; Sarvad.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206171"
+          }
+        },
+        {
+          "definition": "hitting (a mark), MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206172"
+          }
+        },
+        {
+          "definition": "puncturing, wounding, a wound, Su\u015br.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206173"
+          }
+        },
+        {
+          "definition": "a partic. disease of horses, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "206174"
+          }
+        },
+        {
+          "definition": "hole, excavation, VarB\u1e5bS.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206175"
+          }
+        },
+        {
+          "definition": "the depth of an excavation, depth, Car. (also in measurement, Col.)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206176"
+          }
+        },
+        {
+          "definition": "intrusion, disturbance, V\u0101stuv.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206177"
+          }
+        },
+        {
+          "definition": "fixing the position of the sun or of the stars, VarB\u1e5bS.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206178"
+          }
+        },
+        {
+          "definition": "mixture of fluids, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "206179"
+          }
+        },
+        {
+          "definition": "a partic. process to which quicksilver is subjected, Sarvad.",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "206180"
+          }
+        },
+        {
+          "definition": "a partic. measure or division of time (= 100 Tru\u1e6dis = 1/3 Lava), Pur.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206181"
+          }
+        },
+        {
+          "definition": "N. of a son of Ananta, VahniP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206182"
+          }
+        },
+        {
+          "definition": "veDA   f. a mystical N. of the letter m, Up.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206183"
+          }
+        },
+        {
+          "definition": "1. vEda   See bEda.",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "206935"
+          }
+        },
+        {
+          "definition": "2. vEda   mf(I)n. (fr. vida) relating to or connected with a wise man, learned, knowing, W.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "206936"
+          }
+        },
+        {
+          "definition": "vEda   m. a wise man, MW.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "206937"
+          }
+        },
+        {
+          "definition": "vEDa   mf(I)n. (fr. viDi) enjoined by rule or precept, prescribed, legal (-tva n.), TS., Sch.; K\u0101ty\u015ar., Sch. &c.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "207184"
+          }
+        },
+        {
+          "definition": "veDa ,   &c. See 2. veDa, p. 1018, col. 1.",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "208673"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "veDa",
+        "pos": "unknown",
+        "features": {
+          "gender": [
+            "masculine"
+          ],
+          "declension": "I"
+        },
+        "gender": [
+          "masculine"
+        ]
+      },
+      "source": "cdsl",
+      "metadata": {
+        "dict": "mw",
+        "dictionary": "mw",
+        "count": 29
+      }
+    },
+    {
+      "word": "veda",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "vEDa  a. (DI f.), vEDika a. (kI f.) [viDita AgataH aR Wak vA] 1  Conformable to rule, settled, fixed, ritual. 2 Legal, lawful.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "ap90",
+            "id": "27073"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "vEDa",
+        "pos": "unknown",
+        "features": {}
+      },
+      "source": "cdsl",
+      "metadata": {
+        "dict": "ap90",
+        "dictionary": "ap90",
+        "count": 1
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 3
+  },
+  "unified_sources": [
+    "cdsl",
+    "heritage"
+  ],
+  "source_present": true
+}

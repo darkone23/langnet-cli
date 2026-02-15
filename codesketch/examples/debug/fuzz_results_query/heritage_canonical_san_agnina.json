@@ -1,0 +1,153 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "canonical",
+    "lang": "san",
+    "word": "agnina",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "agnina",
+      "language": "san",
+      "morphology": {
+        "lemma": "agnina",
+        "pos": "noun",
+        "features": {
+          "analyses": [
+            {
+              "word": "agnina",
+              "lemma": "agnina",
+              "root": "",
+              "pos": "unknown"
+            }
+          ]
+        }
+      },
+      "source": "heritage",
+      "metadata": {
+        "morphology_raw": {
+          "input_text": "agnina",
+          "solutions": [
+            {
+              "type": "morphological_analysis",
+              "analyses": [
+                {
+                  "word": "agnina",
+                  "lemma": "agnina",
+                  "root": "",
+                  "pos": "unknown"
+                }
+              ],
+              "total_words": 1,
+              "metadata": {
+                "color": "grey_back",
+                "raw_text": "[agnina]{?}",
+                "segments": [
+                  {
+                    "class": "blue",
+                    "text": "agnina"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "solution kept among"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  }
+                ]
+              }
+            }
+          ],
+          "word_analyses": [],
+          "total_solutions": 1,
+          "metadata": {
+            "solutions_kept": 1,
+            "total_available": 1
+          }
+        },
+        "combined": {
+          "lemma": "agnina",
+          "pos": "unknown",
+          "morphology_analyses": [
+            {
+              "word": "agnina",
+              "lemma": "agnina",
+              "pos": "unknown",
+              "features": {
+                "case": null,
+                "gender": null,
+                "number": null,
+                "person": null,
+                "tense": null,
+                "voice": null,
+                "mood": null,
+                "stem": ""
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "word": "agnina",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "No specific entries found",
+          "pos": "unknown",
+          "metadata": {
+            "input_form": "agnina",
+            "canonical_form": "agnina",
+            "dictionaries": {
+              "mw": [],
+              "ap90": []
+            }
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "agnina",
+        "pos": "unknown",
+        "features": {}
+      },
+      "source": "cdsl",
+      "metadata": {
+        "input_form": "agnina",
+        "canonical_form": "agnina",
+        "dictionaries": {
+          "mw": [],
+          "ap90": []
+        },
+        "transliteration": {
+          "input": "agnina",
+          "iast": "agnina",
+          "hk": "agnina",
+          "devanagari": "\u0905\u0917\u094d\u0928\u093f\u0928"
+        }
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 2
+  },
+  "unified_sources": [
+    "cdsl",
+    "heritage"
+  ],
+  "source_present": true
+}

@@ -1,0 +1,250 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "morphology",
+    "lang": "san",
+    "word": "agni",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "agni",
+      "language": "san",
+      "morphology": {
+        "lemma": "agni",
+        "pos": "noun",
+        "features": {
+          "analyses": [
+            {
+              "word": "agni",
+              "lemma": "agni",
+              "root": "",
+              "pos": "noun",
+              "case": "accusative",
+              "gender": "masculine",
+              "number": "dual"
+            }
+          ]
+        }
+      },
+      "source": "heritage",
+      "metadata": {
+        "morphology_raw": {
+          "input_text": "agnii",
+          "solutions": [
+            {
+              "type": "morphological_analysis",
+              "analyses": [
+                {
+                  "word": "agni",
+                  "lemma": "agni",
+                  "root": "",
+                  "pos": "noun",
+                  "case": "accusative",
+                  "gender": "masculine",
+                  "number": "dual"
+                }
+              ],
+              "total_words": 1,
+              "metadata": {
+                "color": "deep_sky_back",
+                "raw_text": "[agni]{m. du. acc. | m. du. nom.}",
+                "segments": [
+                  {
+                    "class": "blue",
+                    "text": "agn\u012b"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "morphological_analysis",
+              "analyses": [
+                {
+                  "word": "agni",
+                  "lemma": "agni",
+                  "root": "",
+                  "pos": "noun",
+                  "case": "vocative",
+                  "gender": "masculine",
+                  "number": "dual"
+                }
+              ],
+              "total_words": 1,
+              "metadata": {
+                "color": "lawngreen_back",
+                "raw_text": "[agni]{m. du. voc.}",
+                "segments": [
+                  {
+                    "class": "blue",
+                    "text": "agn\u012b"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "2"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "solutions kept among"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "2"
+                  }
+                ]
+              }
+            }
+          ],
+          "word_analyses": [],
+          "total_solutions": 2,
+          "metadata": {
+            "solutions_kept": 2,
+            "total_available": 2
+          }
+        },
+        "combined": {
+          "lemma": "agni",
+          "pos": "noun",
+          "morphology_analyses": [
+            {
+              "word": "agni",
+              "lemma": "agni",
+              "pos": "noun",
+              "features": {
+                "case": "accusative",
+                "gender": "masculine",
+                "number": "dual",
+                "person": null,
+                "tense": null,
+                "voice": null,
+                "mood": null,
+                "stem": ""
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "word": "agni",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "agni/   m. (\u221a ag, U\u1e47.) fire, sacrificial fire (of three kinds, G\u0101rhapatya, \u0100havan\u012bya, and Dak\u1e63i\u1e47a)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "890"
+          }
+        },
+        {
+          "definition": "the number three, S\u016bryas.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "891"
+          }
+        },
+        {
+          "definition": "the god of fire, the fire of the stomach, digestive faculty, gastric fluid",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "892"
+          }
+        },
+        {
+          "definition": "bile, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "893"
+          }
+        },
+        {
+          "definition": "gold, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "894"
+          }
+        },
+        {
+          "definition": "N. of various plants Semecarpus Anacardium, Su\u015br., Plumbago Zeylanica and Rosea, Citrus Acida",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "895"
+          }
+        },
+        {
+          "definition": "mystical substitute for the letter r",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "896"
+          }
+        },
+        {
+          "definition": "in the K\u0101tantra grammar N. of noun-stems ending in i and u",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "897"
+          }
+        },
+        {
+          "definition": "(also) = next, \u0100p\u015ar.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "897"
+          }
+        },
+        {
+          "definition": "agni   [cf. Lat. ign\u00ec-s; Lith. ugni-s; Slav. ognj].",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "897"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "agni",
+        "pos": "noun",
+        "features": {
+          "gender": [
+            "masculine"
+          ]
+        },
+        "gender": [
+          "masculine"
+        ]
+      },
+      "source": "cdsl",
+      "metadata": {
+        "dict": "mw",
+        "dictionary": "mw",
+        "count": 10
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 2
+  },
+  "unified_sources": [
+    "cdsl",
+    "heritage"
+  ],
+  "source_present": true
+}

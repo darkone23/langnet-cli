@@ -1,0 +1,206 @@
+{
+  "target": {
+    "tool": "whitakers",
+    "action": "search",
+    "lang": "lat",
+    "word": "bellum",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "wordlist": [
+      {
+        "raw_lines": [
+          "bell.um              N      2 2 NOM S N                 ",
+          "bell.um              N      2 2 VOC S N                 ",
+          "bell.um              N      2 2 ACC S N                 ",
+          "bellum, belli  N (2nd) N   [XWXAO]  ",
+          "war, warfare; battle, combat, fight; (at/in) (the) war(s); military force, arms"
+        ],
+        "senses": [
+          "war, warfare",
+          "battle, combat, fight",
+          "(at/in) (the) war(s)",
+          "military force, arms"
+        ],
+        "terms": [
+          {
+            "term": "bell.um",
+            "part_of_speech": "Noun",
+            "declension": "2",
+            "case": "Nominative",
+            "number": "Singular",
+            "gender": "Neuter",
+            "variant": "2",
+            "term_analysis": {
+              "stem": "bell",
+              "ending": "um"
+            }
+          },
+          {
+            "term": "bell.um",
+            "part_of_speech": "Noun",
+            "declension": "2",
+            "case": "Vocative",
+            "number": "Singular",
+            "gender": "Neuter",
+            "variant": "2",
+            "term_analysis": {
+              "stem": "bell",
+              "ending": "um"
+            }
+          },
+          {
+            "term": "bell.um",
+            "part_of_speech": "Noun",
+            "declension": "2",
+            "case": "Accusative",
+            "number": "Singular",
+            "gender": "Neuter",
+            "variant": "2",
+            "term_analysis": {
+              "stem": "bell",
+              "ending": "um"
+            }
+          }
+        ],
+        "codeline": {
+          "term": "bellum, belli",
+          "source": "Oxford Latin Dictionary, 1982 (OLD)",
+          "freq": "Very Frequent",
+          "declension": "2nd",
+          "pos_form": "Neuter",
+          "pos_code": "Noun"
+        }
+      },
+      {
+        "raw_lines": [
+          "bell.um              ADJ    1 1 NOM S N POS             ",
+          "bell.um              ADJ    1 1 VOC S N POS             ",
+          "bell.um              ADJ    1 1 ACC S M POS             ",
+          "bell.um              ADJ    1 1 ACC S N POS             ",
+          "bellus, bella -um, bellior -or -us, bellissimus -a -um  ADJ   [XXXBO]  ",
+          "pretty, handsome, charming, pleasant, agreeable, polite; nice, fine, excellent;"
+        ],
+        "senses": [
+          "pretty, handsome, charming, pleasant, agreeable, polite",
+          "nice, fine, excellent"
+        ],
+        "terms": [
+          {
+            "term": "bell.um",
+            "part_of_speech": "Adjective",
+            "declension": "1",
+            "case": "Nominative",
+            "number": "Singular",
+            "gender": "Neuter",
+            "variant": "1",
+            "comparison": "Positive",
+            "term_analysis": {
+              "stem": "bell",
+              "ending": "um"
+            }
+          },
+          {
+            "term": "bell.um",
+            "part_of_speech": "Adjective",
+            "declension": "1",
+            "case": "Vocative",
+            "number": "Singular",
+            "gender": "Neuter",
+            "variant": "1",
+            "comparison": "Positive",
+            "term_analysis": {
+              "stem": "bell",
+              "ending": "um"
+            }
+          },
+          {
+            "term": "bell.um",
+            "part_of_speech": "Adjective",
+            "declension": "1",
+            "case": "Accusative",
+            "number": "Singular",
+            "gender": "Masculine",
+            "variant": "1",
+            "comparison": "Positive",
+            "term_analysis": {
+              "stem": "bell",
+              "ending": "um"
+            }
+          },
+          {
+            "term": "bell.um",
+            "part_of_speech": "Adjective",
+            "declension": "1",
+            "case": "Accusative",
+            "number": "Singular",
+            "gender": "Neuter",
+            "variant": "1",
+            "comparison": "Positive",
+            "term_analysis": {
+              "stem": "bell",
+              "ending": "um"
+            }
+          }
+        ],
+        "codeline": {
+          "term": "bellus, bella -um, bellior -or -us, bellissimus -a -um",
+          "source": "Oxford Latin Dictionary, 1982 (OLD)",
+          "freq": "Frequent",
+          "pos_code": "Adjective"
+        }
+      },
+      {
+        "raw_lines": [
+          "bell.um              N      3 3 GEN P F                 ",
+          "bellis, bellis  N (3rd) F   [XAXNO]    Pliny",
+          "flower (perh. daisy); (white daisy, ox-eye - L+S);"
+        ],
+        "senses": [
+          "flower (perh. daisy)",
+          "(white daisy, ox-eye - L+S)"
+        ],
+        "terms": [
+          {
+            "term": "bell.um",
+            "part_of_speech": "Noun",
+            "declension": "3",
+            "case": "Genitive",
+            "number": "Plural",
+            "gender": "Feminine",
+            "variant": "3",
+            "term_analysis": {
+              "stem": "bell",
+              "ending": "um"
+            }
+          }
+        ],
+        "codeline": {
+          "term": "bellis, bellis",
+          "notes": [
+            "Pliny"
+          ],
+          "source": "Oxford Latin Dictionary, 1982 (OLD)",
+          "freq": "Plinius",
+          "declension": "3rd",
+          "pos_form": "Feminine",
+          "pos_code": "Noun"
+        }
+      }
+    ]
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "wordlist": 3
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

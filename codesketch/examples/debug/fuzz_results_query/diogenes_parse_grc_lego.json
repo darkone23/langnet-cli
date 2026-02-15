@@ -1,0 +1,130 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "grc",
+    "word": "lego",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "lego",
+      "language": "grc",
+      "definitions": [
+        {
+          "definition": "\u03bb\u03ad\u03b3\u03bf\u03c2, \u03b7, \u03bf\u03bd",
+          "pos": "unknown",
+          "metadata": {
+            "entryid": "00",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "lewd, \u03bb\u03ad\u03b3\u03b1\u03b9 \u03b3\u03c5\u03bd\u03b1\u1fd6\u03ba\u03b5\u03c2 Archil. 179.",
+          "pos": "unknown",
+          "metadata": {
+            "entryid": "00:00",
+            "citations": {
+              "urn:cts:greekLit:tlg0232.tlg001:179": "Archil. 179"
+            },
+            "citation_details": {
+              "urn:cts:greekLit:tlg0232.tlg001:179": {
+                "text": "Archil. 179",
+                "author": "Archilochus",
+                "work": "Fragmenta",
+                "display": "Archilochus - Fragmenta",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        }
+      ],
+      "source": "diogenes",
+      "metadata": {
+        "chunk_types": [
+          "DiogenesMatchingReference"
+        ],
+        "terms": [
+          "\u03bb\u03ad\u03b3\u03bf\u03c2"
+        ]
+      },
+      "dictionary_blocks": [
+        {
+          "entry": "\u03bb\u03ad\u03b3\u03bf\u03c2, \u03b7, \u03bf\u03bd",
+          "entryid": "00"
+        },
+        {
+          "entry": "lewd, \u03bb\u03ad\u03b3\u03b1\u03b9 \u03b3\u03c5\u03bd\u03b1\u1fd6\u03ba\u03b5\u03c2 Archil. 179.",
+          "entryid": "00:00",
+          "citations": {
+            "urn:cts:greekLit:tlg0232.tlg001:179": "Archil. 179"
+          },
+          "original_citations": {
+            "urn:cts:greekLit:tlg0232.tlg001:179": "Archil. 179"
+          },
+          "citation_details": {
+            "urn:cts:greekLit:tlg0232.tlg001:179": {
+              "text": "Archil. 179",
+              "author": "Archilochus",
+              "work": "Fragmenta",
+              "display": "Archilochus - Fragmenta",
+              "kind": "cts"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "word": "lego",
+      "language": "grc",
+      "morphology": {
+        "lemma": "lego",
+        "pos": "VERB",
+        "features": {
+          "Aspect": "Perf",
+          "Mood": "Ind",
+          "Number": "Sing",
+          "Person": "1",
+          "Tense": "Past",
+          "VerbForm": "Fin",
+          "Voice": "Act"
+        }
+      },
+      "source": "spacy",
+      "metadata": {
+        "text": "lego",
+        "lemma": "lego",
+        "pos": "VERB",
+        "morphological_features": {
+          "Aspect": "Perf",
+          "Mood": "Ind",
+          "Number": "Sing",
+          "Person": "1",
+          "Tense": "Past",
+          "VerbForm": "Fin",
+          "Voice": "Act"
+        }
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 2
+  },
+  "unified_sources": [
+    "diogenes",
+    "spacy"
+  ],
+  "source_present": true
+}

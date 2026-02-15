@@ -77,7 +77,7 @@ cat src/langnet/whitakers_words/lineparsers/grammars/senses.ebnf
 
 **Why**: WSUs exist for semantic similarity clustering. "Noun" doesn't cluster with "noun" - it's a grammatical category, not semantic content. POS is used for **filtering**, not clustering.
 
-See `docs/technical/design/04-entry-parsing.md` for full rationale.
+See `docs/technical/design/entry-parsing.md` for full rationale.
 
 ## ✅ Success Criteria
 

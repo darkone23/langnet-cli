@@ -1,0 +1,629 @@
+[
+  {
+    "file": "diogenes_parse_lat_lupus.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "lat",
+      "word": "lupus",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "diogenes_parse_lat_arma.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "lat",
+      "word": "arma",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "diogenes_parse_lat_vir.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "lat",
+      "word": "vir",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "diogenes_parse_lat_amo.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "lat",
+      "word": "amo",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "diogenes_parse_lat_sum.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "lat",
+      "word": "sum",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "diogenes_parse_lat_video.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "lat",
+      "word": "video",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "diogenes_parse_grc_logos.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "grc",
+      "word": "logos",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "diogenes_parse_grc_anthropos.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "grc",
+      "word": "anthropos",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "diogenes_parse_grc_agathos.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "grc",
+      "word": "agathos",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "diogenes_parse_grc_lego.json",
+    "target": {
+      "tool": "diogenes",
+      "action": "parse",
+      "lang": "grc",
+      "word": "lego",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "whitakers_search_lat_amo.json",
+    "target": {
+      "tool": "whitakers",
+      "action": "search",
+      "lang": "lat",
+      "word": "amo",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "whitakers_search_lat_bellum.json",
+    "target": {
+      "tool": "whitakers",
+      "action": "search",
+      "lang": "lat",
+      "word": "bellum",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "whitakers_search_lat_lupus.json",
+    "target": {
+      "tool": "whitakers",
+      "action": "search",
+      "lang": "lat",
+      "word": "lupus",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "heritage_morphology_san_agni.json",
+    "target": {
+      "tool": "heritage",
+      "action": "morphology",
+      "lang": "san",
+      "word": "agni",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "heritage_morphology_san_yoga.json",
+    "target": {
+      "tool": "heritage",
+      "action": "morphology",
+      "lang": "san",
+      "word": "yoga",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "heritage_canonical_san_agnii.json",
+    "target": {
+      "tool": "heritage",
+      "action": "canonical",
+      "lang": "san",
+      "word": "agnii",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "heritage_canonical_san_agnim.json",
+    "target": {
+      "tool": "heritage",
+      "action": "canonical",
+      "lang": "san",
+      "word": "agnim",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "heritage_canonical_san_agnina.json",
+    "target": {
+      "tool": "heritage",
+      "action": "canonical",
+      "lang": "san",
+      "word": "agnina",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "heritage_canonical_san_agni.json",
+    "target": {
+      "tool": "heritage",
+      "action": "canonical",
+      "lang": "san",
+      "word": "agni",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "heritage_canonical_san_veda.json",
+    "target": {
+      "tool": "heritage",
+      "action": "canonical",
+      "lang": "san",
+      "word": "veda",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "heritage_canonical_san_krishna.json",
+    "target": {
+      "tool": "heritage",
+      "action": "canonical",
+      "lang": "san",
+      "word": "krishna",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "heritage_canonical_san_shiva.json",
+    "target": {
+      "tool": "heritage",
+      "action": "canonical",
+      "lang": "san",
+      "word": "shiva",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": false
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cdsl_lookup_san_agni.json",
+    "target": {
+      "tool": "cdsl",
+      "action": "lookup",
+      "lang": "san",
+      "word": "agni",
+      "dict_name": "mw",
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cdsl_lookup_san_yoga.json",
+    "target": {
+      "tool": "cdsl",
+      "action": "lookup",
+      "lang": "san",
+      "word": "yoga",
+      "dict_name": "mw",
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cdsl_lookup_san_deva.json",
+    "target": {
+      "tool": "cdsl",
+      "action": "lookup",
+      "lang": "san",
+      "word": "deva",
+      "dict_name": "mw",
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cltk_morphology_lat_amo.json",
+    "target": {
+      "tool": "cltk",
+      "action": "morphology",
+      "lang": "lat",
+      "word": "amo",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cltk_morphology_lat_sum.json",
+    "target": {
+      "tool": "cltk",
+      "action": "morphology",
+      "lang": "lat",
+      "word": "sum",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cltk_morphology_grc_logos.json",
+    "target": {
+      "tool": "cltk",
+      "action": "morphology",
+      "lang": "grc",
+      "word": "logos",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cltk_morphology_grc_anthropos.json",
+    "target": {
+      "tool": "cltk",
+      "action": "morphology",
+      "lang": "grc",
+      "word": "anthropos",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cltk_morphology_san_agni.json",
+    "target": {
+      "tool": "cltk",
+      "action": "morphology",
+      "lang": "san",
+      "word": "agni",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cltk_dictionary_lat_lupus.json",
+    "target": {
+      "tool": "cltk",
+      "action": "dictionary",
+      "lang": "lat",
+      "word": "lupus",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cltk_dictionary_lat_arma.json",
+    "target": {
+      "tool": "cltk",
+      "action": "dictionary",
+      "lang": "lat",
+      "word": "arma",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  },
+  {
+    "file": "cltk_dictionary_lat_amo.json",
+    "target": {
+      "tool": "cltk",
+      "action": "dictionary",
+      "lang": "lat",
+      "word": "amo",
+      "dict_name": null,
+      "allow_empty": false,
+      "compare_optional": true
+    },
+    "mode": "tool",
+    "tool_ok": true,
+    "tool_error": null,
+    "unified_ok": null,
+    "unified_error": null,
+    "source_present": null,
+    "unified_sources": null
+  }
+]

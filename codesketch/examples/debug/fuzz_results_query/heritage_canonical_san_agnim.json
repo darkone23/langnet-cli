@@ -1,0 +1,159 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "canonical",
+    "lang": "san",
+    "word": "agnim",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "agnim",
+      "language": "san",
+      "morphology": {
+        "lemma": "agni",
+        "pos": "noun",
+        "features": {
+          "analyses": [
+            {
+              "word": "agni",
+              "lemma": "agni",
+              "root": "",
+              "pos": "noun",
+              "case": "accusative",
+              "gender": "masculine",
+              "number": "singular"
+            }
+          ]
+        }
+      },
+      "source": "heritage",
+      "metadata": {
+        "morphology_raw": {
+          "input_text": "agnim",
+          "solutions": [
+            {
+              "type": "morphological_analysis",
+              "analyses": [
+                {
+                  "word": "agni",
+                  "lemma": "agni",
+                  "root": "",
+                  "pos": "noun",
+                  "case": "accusative",
+                  "gender": "masculine",
+                  "number": "singular"
+                }
+              ],
+              "total_words": 1,
+              "metadata": {
+                "color": "deep_sky_back",
+                "raw_text": "[agni]{m. sg. acc.}",
+                "segments": [
+                  {
+                    "class": "blue",
+                    "text": "agnim"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "solution kept among"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  }
+                ]
+              }
+            }
+          ],
+          "word_analyses": [],
+          "total_solutions": 1,
+          "metadata": {
+            "solutions_kept": 1,
+            "total_available": 1
+          }
+        },
+        "combined": {
+          "lemma": "agni",
+          "pos": "noun",
+          "morphology_analyses": [
+            {
+              "word": "agni",
+              "lemma": "agni",
+              "pos": "noun",
+              "features": {
+                "case": "accusative",
+                "gender": "masculine",
+                "number": "singular",
+                "person": null,
+                "tense": null,
+                "voice": null,
+                "mood": null,
+                "stem": ""
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "word": "agnim",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "No specific entries found",
+          "pos": "unknown",
+          "metadata": {
+            "input_form": "agnim",
+            "canonical_form": "agnim",
+            "dictionaries": {
+              "mw": [],
+              "ap90": []
+            }
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "agnim",
+        "pos": "unknown",
+        "features": {}
+      },
+      "source": "cdsl",
+      "metadata": {
+        "input_form": "agnim",
+        "canonical_form": "agnim",
+        "dictionaries": {
+          "mw": [],
+          "ap90": []
+        },
+        "transliteration": {
+          "input": "agnim",
+          "iast": "agnim",
+          "hk": "agnim",
+          "devanagari": "\u0905\u0917\u094d\u0928\u093f\u092e\u094d"
+        }
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 2
+  },
+  "unified_sources": [
+    "cdsl",
+    "heritage"
+  ],
+  "source_present": true
+}

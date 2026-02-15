@@ -1,0 +1,98 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "morphology",
+    "lang": "san",
+    "word": "agni",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "morphology": {
+      "input_text": "agnii",
+      "solutions": [
+        {
+          "type": "morphological_analysis",
+          "analyses": [
+            {
+              "word": "agni",
+              "lemma": "agni",
+              "root": "",
+              "pos": "noun",
+              "case": "accusative",
+              "gender": "masculine",
+              "number": "dual"
+            }
+          ],
+          "total_words": 1,
+          "metadata": {
+            "color": "deep_sky_back",
+            "raw_text": "[agni]{m. du. acc. | m. du. nom.}",
+            "segments": [
+              {
+                "class": "blue",
+                "text": "agn\u012b"
+              }
+            ]
+          }
+        },
+        {
+          "type": "morphological_analysis",
+          "analyses": [
+            {
+              "word": "agni",
+              "lemma": "agni",
+              "root": "",
+              "pos": "noun",
+              "case": "vocative",
+              "gender": "masculine",
+              "number": "dual"
+            }
+          ],
+          "total_words": 1,
+          "metadata": {
+            "color": "lawngreen_back",
+            "raw_text": "[agni]{m. du. voc.}",
+            "segments": [
+              {
+                "class": "blue",
+                "text": "agn\u012b"
+              },
+              {
+                "class": "magenta",
+                "text": "2"
+              },
+              {
+                "class": "blue",
+                "text": "solutions kept among"
+              },
+              {
+                "class": "magenta",
+                "text": "2"
+              }
+            ]
+          }
+        }
+      ],
+      "word_analyses": [],
+      "total_solutions": 2,
+      "metadata": {
+        "solutions_kept": 2,
+        "total_available": 2
+      }
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "morphology": 5
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

@@ -1,0 +1,32 @@
+{
+  "target": {
+    "tool": "cltk",
+    "action": "dictionary",
+    "lang": "lat",
+    "word": "amo",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "latin_dictionary": {
+      "headword": "amo",
+      "ipa": "'a.mo\u02d0",
+      "lewis_1890_lines": [
+        "am\u014d \u0101v\u012b, \u0101tus, \u0101re AM-, to love: magis te, quam oculos, T.: unice patriam: dignus amari, V.: non diligi solum, verum etiam amari: a suis et amari et diligi: nescio, ita me di ament, so help me the gods, T.: sic me di amabunt, ut, etc., T.: quam se ipse amans sine rivali! in love with himself: nisi nosmet ipsos valde amabimus. \u2014 To be in love, have an amour: meum gnatum rumor est Amare, T.: insuevit exercitus amare, S. \u2014 Fig., to love, be fond of, find pleasure in: voltum, incessum alicuius: litteras, N.: ea, quae res secundae amant, S.: nemus, H.: amat ianua limen, i. e. is constantly closed, H.: focos, i. e. to make homes, V.: Litus ama, keep close to, V. \u2014 With infin: Hic ames dici pater atque princeps, H. \u2014 Amare aliquem, to be obliged to, be under obligation, have to thank: ecquid nos amas de fidicin\u0101 istac? T.: et in Attilii negotio te amavi: bene facis, merito te amo, T.\u2014Colloq., amabo or amabo te (never vos, etc.), I shall be under obligation to you, and in entreaties, be so good, I pray, I entreat you: id, amabo, adiuta me, T.: cura, amabo te, Ciceronem nostrum: amabo ut illuc transeas, T.: amabo te, ne improbitati meae adsignes, etc.: ego me amavi, was well satisfied with myself. \u2014 Meton., amare with inf, to be fond, be wont, be accustomed: clamore, voltu, aliis omnibus, quae ira fieri amat, S.: Aurum perrumpere amat saxa, H."
+      ]
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "latin_dictionary": 3
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

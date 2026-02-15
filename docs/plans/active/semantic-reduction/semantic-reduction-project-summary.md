@@ -21,9 +21,9 @@
 5. **[semantic-reduction-migration-plan.md](../../todo/semantic-reduction/semantic-reduction-migration-plan.md)** - Step-by-step migration strategy
 
 ### **Design Documents** (in `docs/technical/design/`)
-1. **[01-semantic-structs.md](../../technical/design/01-semantic-structs.md)** - Schema definition ✅
-2. **[02-witness-contracts.md](../../technical/design/02-witness-contracts.md)** - Source contracts ✅  
-3. **[03-classifier-and-reducer.md](../../technical/design/03-classifier-and-reducer.md)** - 4-stage pipeline design ✅
+1. **[semantic-structs.md](../../technical/design/semantic-structs.md)** - Schema definition ✅
+2. **[witness-contracts.md](../../technical/design/witness-contracts.md)** - Source contracts ✅  
+3. **[classifier-and-reducer.md](../../technical/design/classifier-and-reducer.md)** - 4-stage pipeline design ✅
 
 ## Current Architecture Assessment
 

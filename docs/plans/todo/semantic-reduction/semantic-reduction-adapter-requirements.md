@@ -21,7 +21,7 @@ This document defines the Witness Sense Unit (WSU) extraction requirements for e
 
 ## WSU Definition Reference
 
-From `03-classifier-and-reducer.md`:
+From `classifier-and-reducer.md`:
 ```json
 {
   "source": "MW",

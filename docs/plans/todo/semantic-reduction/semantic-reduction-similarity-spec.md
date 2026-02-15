@@ -10,7 +10,7 @@
 
 This document specifies the similarity scoring algorithm for comparing Witness Sense Units (WSUs). This is **Phase 2** of the semantic reduction pipeline, following WSU extraction.
 
-Based on `03-classifier-and-reducer.md` Section 5: "Similarity Graph Construction"
+Based on `classifier-and-reducer.md` Section 5: "Similarity Graph Construction"
 
 ## Algorithm Requirements
 

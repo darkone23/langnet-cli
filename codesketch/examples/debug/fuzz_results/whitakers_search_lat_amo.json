@@ -1,0 +1,64 @@
+{
+  "target": {
+    "tool": "whitakers",
+    "action": "search",
+    "lang": "lat",
+    "word": "amo",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "wordlist": [
+      {
+        "raw_lines": [
+          "am.o                 V      1 1 PRES ACTIVE  IND 1 S    ",
+          "amo, amare, amavi, amatus  V (1st)   [XXXAO]  ",
+          "love, like; fall in love with; be fond of; have a tendency to;"
+        ],
+        "senses": [
+          "love, like",
+          "fall in love with",
+          "be fond of",
+          "have a tendency to"
+        ],
+        "terms": [
+          {
+            "term": "am.o",
+            "part_of_speech": "Verb",
+            "number": "Singular",
+            "variant": "1",
+            "term_analysis": {
+              "stem": "am",
+              "ending": "o"
+            },
+            "conjugation": "1",
+            "tense": "Praesens (Present)",
+            "voice": "Active",
+            "mood": "Indicative",
+            "person": "1"
+          }
+        ],
+        "codeline": {
+          "term": "amo, amare, amavi, amatus",
+          "source": "Oxford Latin Dictionary, 1982 (OLD)",
+          "freq": "Very Frequent",
+          "declension": "1st",
+          "pos_code": "Verb"
+        }
+      }
+    ]
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "wordlist": 1
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

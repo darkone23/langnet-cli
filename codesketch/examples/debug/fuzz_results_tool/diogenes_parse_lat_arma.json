@@ -1,0 +1,378 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "lat",
+    "word": "arma",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "chunks": [
+      {
+        "logeion": "https://logeion.uchicago.edu/arma",
+        "morphology": {
+          "morphs": [
+            {
+              "stem": [
+                "arma"
+              ],
+              "tags": [
+                "neut",
+                "nom",
+                "voc",
+                "acc",
+                "pl"
+              ]
+            },
+            {
+              "stem": [
+                "arma\u0304",
+                "armo"
+              ],
+              "tags": [
+                "pres",
+                "imperat",
+                "act",
+                "2nd",
+                "sg"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "reference_id": "5911157",
+        "definitions": {
+          "blocks": [
+            {
+              "entry": "arma, \u014drum, n. (gen. plur. arm\u016bm, Pac. ap. Cic. Or. 46, 155; Att. ap. Non. p. 495, 23, considered by Cic. in the connection arm\u016bm judicium as less correct than armorum) cf. \u0391\u03a1\u03a9, \u1f00\u03c1\u03b1\u03c1\u03af\u03c3\u03ba\u03c9 = to fit; \u1f04\u03c1\u03b8\u03c1\u03bf\u03bd = joint; \u1f01\u03c1\u03bc\u03cc\u03c2 = armus = joint, shoulder; \u1f00\u03c1\u03c4\u03ac\u03c9 = artio, arto = to fit, to fit in closely; \u1f04\u03c1\u03c4\u03b9\u03bf\u03c2 = fit, exact; artus = close, narrow; ars (artis) = the craft of fitting things; artifex, artificium; Goth. arms = O. H. Germ. aram = Engl. arm; Sanscr. ar = to hit upon, attain; aram = fit, fast; \u012brmas = arm. Curt..",
+              "entryid": "00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi040:46:155": "Cic. Or. 46, 155"
+              }
+            },
+            {
+              "entry": "I.  Lit.",
+              "entryid": "00:00"
+            },
+            {
+              "entry": "A.1.  What is fitted to the body for its protection, defensive armor, as the shield, coat of mail, helmet, etc.: tot milia armorum, detracta corporibus hostium, Liv. 45, 39: induere arma, id. 30, 31: arma his imperata, galea, clipeum, ocreae, lorica, omnia ex aere, id. 1, 43: pictis et auro caelatis refulgens armis, id. 7, 10. \u2014",
+              "entryid": "00:00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0914.phi001:45:39": "Liv. 45, 39",
+                "urn:cts:latinLit:phi0914.phi001:30:31": "id. 30, 31",
+                "urn:cts:latinLit:phi0914.phi001:1:43": "id. 1, 43",
+                "urn:cts:latinLit:phi0914.phi001:7:10": "id. 7, 10"
+              }
+            },
+            {
+              "entry": "2.  Specifically, a shield: at Lausum socii exanimem super arma ferebant, on a shield, Verg. A. 10, 841: caelestia arma, quae ancilia appellantur, Liv. 1, 20 (v. ancile); id. 8, 30; 1, 37; cf. Verg. A. 1, 119 Heyne; Tac. G. 11 Rup.; Plin. Ep. 5, 6, 43: Aeneas se collegit in arma, gathered himself under his shield, Verg. A. 12, 491.\u2014Hence, in a more extended sense",
+              "entryid": "00:00:00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0690.phi003:10:841": "Verg. A. 10, 841",
+                "urn:cts:latinLit:phi0914.phi001:1:20": "Liv. 1, 20",
+                "urn:cts:latinLit:phi0914.phi001:8:30": "id. 8, 30",
+                "urn:cts:latinLit:phi0914.phi001:1:37": "1, 37",
+                "urn:cts:latinLit:phi0690.phi003:1:119": "Verg. A. 1, 119",
+                "urn:cts:latinLit:phi1351.phi002:11": "Tac. G. 11",
+                "urn:cts:latinLit:phi1318.phi001:5:6:43": "Plin. Ep. 5, 6, 43",
+                "urn:cts:latinLit:phi0690.phi003:12:491": "Verg. A. 12, 491"
+              }
+            },
+            {
+              "entry": "B.  Implements of war, arms, both of defence and offence (but of the latter only those which are used in close contest, such as the sword, axe, club; in distinction from tela, which are used in contest at a distance; hence, arma and tela are often contrasted; v. the foll., and cf. Bremi and D\u00e4hne ad Nep. Dat. 11, 3): arma rigent, horrescunt tela, Enn. ap. Macr. S. 6, 4; id. ap. Non. p. 469, 26: arma alia ad tegendum, alia ad nocendum, Cic. Caec. 21: armis condicione positis aut defetigatione abjectis aut victori\u0101 detractis, id. Fam. 6, 2: illum dicis cum armis aureis, Quoius etc., Plaut. Mil. 1, 1, 16 (16): ibi Simul rem et gloriam armis belli repperi, Ter. Heaut. 112: arma antiqua manus, ungues dentesque fuerunt Et lapides, et item, silvarum fragmina, ramei, Lucr. 5, 1283; so, Mutum et turpe pecus (i. e. primeval man), glandem et cubilia propter Unguibus et pugnis, dein fustibus, atque ita porro Pugnabant armis, quae post fabricaverat usus, Hor. S. 1, 3, 100 sqq.: capere, Cic. Rosc. Am. 53, 153; id. Phil. 4, 3, 7; id. Rab. Perd. 6 and 7: sumere, id. Planc. 36, 88 Wund.; id. Tusc. 2, 24, 58; Vulg. Gen. 27, 3; ib. 3 Reg. 22, 30: accipere, ib. Judith, 14, 2: adprehendere, ib. Psa. 34, 2: resumere, Suet. Calig. 48: aptare, Liv. 5, 49: induere, id. 30, 31; Ov. M. 14, 798; id. F. 1, 521; Verg. A. 11, 83; Luc. 1, 126: accingi armis, Verg. A. 6, 184, and Vulg. Jud. 18, 11: armis instructus, ib. Deut. 1, 41; ib. 1 Par. 12, 13: concitare ad arma, Caes. B. G. 7, 42: descendere ad arma, id. ib. 7, 33: vocare ad arma, Cic. Rab. Perd. 7, 21: vocare in arma, Verg. A. 9, 22: ferre contra aliquem, Vell. 2, 56: decernere armis, Cic. Att. 7, 3: armis cum hoste certare, id. Off. 3, 22, 87; so, saevis armis, Verg. A. 12, 890: dimicare armis cum aliquo, Nep. Milt. 1, 2: esse in armis, Caes. B. G. 1, 49; Suet. Caes. 69: ponere, abicere, Cic. Fam. 6, 2: relinquere, Liv. 2, 10: tradere, Nep. Ham. 1, 5; Suet. Vit. 10: amittere, Verg. A. 1, 474: proicere, Vulg. 1 Macc. 5, 43; 7, 44: deripere militibus, Hor. C. 3, 5, 19: dirimere, Luc. 1, 104 et saep.\u2014Hence, arma virosque, per arma, per viros, etc., Liv. 8, 25; 8, 30 al.; v. Burm. ad Verg. A. 1, 1, and cf. Liv. 9, 24: tela et arma: armorum atque telorum portationes, Sall. C. 42, 2; Liv. 1, 25; Col. 12, 3; Tac. G. 29 and 33: armis et castris, prov. (like remis velisque, viris equisque), with vigor, with might and main, Cic. Off. 2, 24, 84.\u2014",
+              "entryid": "00:00:01",
+              "citations": {
+                "urn:cts:latinLit:phi0588.phi001:dat:11:3": "Nep. Dat. 11, 3",
+                "urn:cts:latinLit:stoa0186.stoa001:6:4": "Macr. S. 6, 4",
+                "urn:cts:latinLit:phi0474.phi008:21": "Cic. Caec. 21",
+                "urn:cts:latinLit:phi0474.phi056:6:2": "Cic. Fam. 6, 2",
+                "urn:cts:latinLit:phi0119.phi012:16": "Plaut. Mil. 1, 1, 16 (16)",
+                "urn:cts:latinLit:phi0134.phi002:112": "Ter. Heaut. 112",
+                "urn:cts:latinLit:phi0550.phi001:5:1283": "Lucr. 5, 1283",
+                "urn:cts:latinLit:phi0893.phi004:1:3:100": "Hor. S. 1, 3, 100",
+                "urn:cts:latinLit:phi0474.phi002:53:153": "Cic. Rosc. Am. 53, 153",
+                "urn:cts:latinLit:phi0474.phi035:4:3:7": "id. Phil. 4, 3, 7",
+                "urn:cts:latinLit:phi0474.phi012:chapter=6": "id. Rab. Perd. 6",
+                "urn:cts:latinLit:phi0474.phi028:36:88": "id. Planc. 36, 88",
+                "urn:cts:latinLit:phi0474.phi049:2:24:58": "id. Tusc. 2, 24, 58",
+                "urn:cts:greekLit:tlg0527.tlg001:27:3": "Vulg. Gen. 27, 3",
+                "urn:cts:greekLit:tlg0527.tlg013:22:30": "ib. 3 Reg. 22, 30",
+                "urn:cts:greekLit:tlg0527.tlg027:34:2": "ib. Psa. 34, 2",
+                "urn:cts:latinLit:phi1348.phi001:life=cal.:48": "Suet. Calig. 48",
+                "urn:cts:latinLit:phi0914.phi001:5:49": "Liv. 5, 49",
+                "urn:cts:latinLit:phi0914.phi001:30:31": "id. 30, 31",
+                "urn:cts:latinLit:phi0959.phi006:14:798": "Ov. M. 14, 798",
+                "urn:cts:latinLit:phi0959.phi007:1:521": "id. F. 1, 521",
+                "urn:cts:latinLit:phi0690.phi003:11:83": "Verg. A. 11, 83",
+                "urn:cts:latinLit:phi0917.phi001:1:126": "Luc. 1, 126",
+                "urn:cts:latinLit:phi0690.phi003:6:184": "Verg. A. 6, 184",
+                "urn:cts:greekLit:tlg0031.tlg026:18:11": "Vulg. Jud. 18, 11",
+                "urn:cts:greekLit:tlg0527.tlg005:1:41": "ib. Deut. 1, 41",
+                "urn:cts:greekLit:tlg0527.tlg015:12:13": "ib. 1 Par. 12, 13",
+                "urn:cts:latinLit:phi0448.phi001:7:42": "Caes. B. G. 7, 42",
+                "urn:cts:latinLit:phi0448.phi001:7:33": "id. ib. 7, 33",
+                "urn:cts:latinLit:phi0474.phi012:7:21": "Cic. Rab. Perd. 7, 21",
+                "urn:cts:latinLit:phi0690.phi003:9:22": "Verg. A. 9, 22",
+                "urn:cts:latinLit:phi1044.phi001:2:56": "Vell. 2, 56",
+                "urn:cts:latinLit:phi0474.phi057:7:3": "Cic. Att. 7, 3",
+                "urn:cts:latinLit:phi0474.phi055:3:22:87": "id. Off. 3, 22, 87",
+                "urn:cts:latinLit:phi0690.phi003:12:890": "Verg. A. 12, 890",
+                "urn:cts:latinLit:phi0588.phi001:milt:1:2": "Nep. Milt. 1, 2",
+                "urn:cts:latinLit:phi0448.phi001:1:49": "Caes. B. G. 1, 49",
+                "urn:cts:latinLit:phi1348.phi001:life=jul.:69": "Suet. Caes. 69",
+                "urn:cts:latinLit:phi0914.phi001:2:10": "Liv. 2, 10",
+                "urn:cts:latinLit:phi0588.phi001:ham:1:5": "Nep. Ham. 1, 5",
+                "urn:cts:latinLit:phi1348.phi001:life=vit.:10": "Suet. Vit. 10",
+                "urn:cts:latinLit:phi0690.phi003:1:474": "Verg. A. 1, 474",
+                "urn:cts:greekLit:tlg0527.tlg023:5:43": "Vulg. 1 Macc. 5, 43",
+                "urn:cts:latinLit:phi0893.phi001:3:5:19": "Hor. C. 3, 5, 19",
+                "urn:cts:latinLit:phi0917.phi001:1:104": "Luc. 1, 104",
+                "urn:cts:latinLit:phi0914.phi001:8:25": "Liv. 8, 25",
+                "urn:cts:latinLit:phi0914.phi001:8:30": "8, 30",
+                "urn:cts:latinLit:phi0690.phi003:1:1": "Verg. A. 1, 1",
+                "urn:cts:latinLit:phi0914.phi001:9:24": "Liv. 9, 24",
+                "urn:cts:latinLit:phi0631.phi001:42:2": "Sall. C. 42, 2",
+                "urn:cts:latinLit:phi0914.phi001:1:25": "Liv. 1, 25",
+                "urn:cts:latinLit:phi0845.phi002:12:3": "Col. 12, 3",
+                "urn:cts:latinLit:phi1351.phi002:29": "Tac. G. 29",
+                "urn:cts:latinLit:phi0474.phi055:2:24:84": "Cic. Off. 2, 24, 84"
+              }
+            },
+            {
+              "entry": "II.  Trop., means of protection, defence, weapons: tenere semper arma (sc. eloquentiae), quibus vel tectus ipse esse possis, vel, etc., Cic. de Or. 1, 8, 32: prudentiae, id. ib. 1, 38, 172: senectutis, id. Lael. 4. 9: tectus Vulcaniis armis, id est fortitudine, id. Tusc. 2, 14, 33: eloquentiae, Quint. 5, 12, 21: facundiae, id. 2, 16, 10: justitiae, Vulg. Rom. 6, 13; ib. 2 Cor. 6, 7: arma lucis, ib. Rom. 13, 12: horriferum contra Borean ovis arma ministret, i. e. lanas, Ov. M. 15, 471: haec mihi Stertinius arma (i. e. praecepta) dedit, Hor. S. 2, 3, 297; cf. id. Ep. 1, 16, 67: arma militiae nostrae non carnalia sunt, Vulg. 2 Cor. 10, 4.",
+              "entryid": "00:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi037:1:8:32": "Cic. de Or. 1, 8, 32",
+                "urn:cts:latinLit:phi0474.phi037:1:38:172": "id. ib. 1, 38, 172",
+                "urn:cts:latinLit:phi0474.phi052:chapter=4": "id. Lael. 4",
+                "urn:cts:latinLit:phi0474.phi049:2:14:33": "id. Tusc. 2, 14, 33",
+                "urn:cts:latinLit:phi1002.phi001:5:12:21": "Quint. 5, 12, 21",
+                "urn:cts:latinLit:phi1002.phi001:2:16:10": "id. 2, 16, 10",
+                "urn:cts:greekLit:tlg0031.tlg006:6:13": "Vulg. Rom. 6, 13",
+                "urn:cts:greekLit:tlg0031.tlg008:6:7": "ib. 2 Cor. 6, 7",
+                "urn:cts:greekLit:tlg0031.tlg006:13:12": "ib. Rom. 13, 12",
+                "urn:cts:latinLit:phi0959.phi006:15:471": "Ov. M. 15, 471",
+                "urn:cts:latinLit:phi0893.phi004:2:3:297": "Hor. S. 2, 3, 297",
+                "urn:cts:latinLit:phi0893.phi005:1:16:67": "id. Ep. 1, 16, 67",
+                "urn:cts:greekLit:tlg0031.tlg008:10:4": "Vulg. 2 Cor. 10, 4"
+              }
+            },
+            {
+              "entry": "a.  War (once in opp. to pax, v. infra): silent leges inter arma, Cic. Mil. 4, 10; id. Att. 7, 3, 5: arma civilia, civil war, id. Fam. 2, 16, and Tac. A. 1, 9: civilia arma, id. Agr. 16; id. G. 37 (otherwise, bella civilia, Cic. Off. 1, 25, 86, and Tac. Agr. 13): ab externis armis otium erat, Liv. 3, 14; 9, 1; 3, 69 Drak.; 9, 32; 42, 2; Tac. H. 2, 1 al.: a Rubro Mari arma conatus sit inferre Italiae, Nep. Hann. 2, 1 (for which more freq. bellum inferre alicui, v. infero): ad horrida promptior arma, Ov. M. 1, 126: qui fera nuntiet arma, id. ib. 5, 4; 14, 479: compositis venerantur armis, Hor. C. 4, 14, 52. So the beginning of the Aeneid: Arma virumque cano; cf. Hor. Ep. 1, 19, 7: melius visum Gallos novam gentem pace potius cognosci quam armis, Liv. 5, 35 fin.; cf.: cedant arma togae, Cic. Off. 1, 22, 76.\u2014Also for battle, contest: in arma feror, Verg. A. 2, 337; so id. ib. 2, 655.\u2014",
+              "entryid": "00:01:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi031:4:10": "Cic. Mil. 4, 10",
+                "urn:cts:latinLit:phi0474.phi057:7:3:5": "id. Att. 7, 3, 5",
+                "urn:cts:latinLit:phi0474.phi056:2:16": "id. Fam. 2, 16",
+                "urn:cts:latinLit:phi1351.phi005:1:9": "Tac. A. 1, 9",
+                "urn:cts:latinLit:phi1351.phi001:16": "id. Agr. 16",
+                "urn:cts:latinLit:phi1351.phi002:37": "id. G. 37",
+                "urn:cts:latinLit:phi0474.phi055:1:25:86": "Cic. Off. 1, 25, 86",
+                "urn:cts:latinLit:phi1351.phi001:13": "Tac. Agr. 13",
+                "urn:cts:latinLit:phi0914.phi001:3:14": "Liv. 3, 14",
+                "urn:cts:latinLit:phi0914.phi001:9:1": "9, 1",
+                "urn:cts:latinLit:phi0914.phi001:3:69": "3, 69",
+                "urn:cts:latinLit:phi1351.phi004:2:1": "Tac. H. 2, 1",
+                "urn:cts:latinLit:phi0588.phi001:han:2:1": "Nep. Hann. 2, 1",
+                "urn:cts:latinLit:phi0959.phi006:1:126": "Ov. M. 1, 126",
+                "urn:cts:latinLit:phi0959.phi006:5:4": "id. ib. 5, 4",
+                "urn:cts:latinLit:phi0959.phi006:14:479": "14, 479",
+                "urn:cts:latinLit:phi0893.phi001:4:14:52": "Hor. C. 4, 14, 52",
+                "urn:cts:latinLit:phi0893.phi005:1:19:7": "Hor. Ep. 1, 19, 7",
+                "urn:cts:latinLit:phi0914.phi001:5:35": "Liv. 5, 35",
+                "urn:cts:latinLit:phi0474.phi055:1:22:76": "Cic. Off. 1, 22, 76",
+                "urn:cts:latinLit:phi0690.phi003:2:337": "Verg. A. 2, 337",
+                "urn:cts:latinLit:phi0690.phi003:2:655": "id. ib. 2, 655"
+              }
+            },
+            {
+              "entry": "b.  (Abstr. for concr.) The warriors themselves, soldiers, troops: nulla usquam apparuerunt arma, Liv. 41, 12: nostro supplicio liberemus Romana arma, i. e. Romanum exercitum, id. 9, 9; 21, 26: Hispanias armis non ita redundare, Tac. H. 2, 32: expertem frustra belli et neutra arma secutum, neither party, Ov. M. 5, 91: auxiliaria arma, auxiliaries, auxiliary troops = auxiliares (v. auxiliaris, I.), id. ib. 6, 424; cf. id. ib. 14, 528.\u2014",
+              "entryid": "00:01:00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0914.phi001:41:12": "Liv. 41, 12",
+                "urn:cts:latinLit:phi0914.phi001:9:9": "id. 9, 9",
+                "urn:cts:latinLit:phi0914.phi001:21:26": "21, 26",
+                "urn:cts:latinLit:phi1351.phi004:2:32": "Tac. H. 2, 32",
+                "urn:cts:latinLit:phi0959.phi006:5:91": "Ov. M. 5, 91",
+                "urn:cts:latinLit:phi0959.phi006:6:424": "id. ib. 6, 424",
+                "urn:cts:latinLit:phi0959.phi006:14:528": "id. ib. 14, 528"
+              }
+            },
+            {
+              "entry": "III.  Transf., poet. (like \u1f45\u03c0\u03bb\u03bf\u03bd and \u1f14\u03bd\u03c4\u03b5\u03b1 in Gr.), implements, instruments, tools, utensils, in gen. Of implements for grinding and baking: Cerealia arma, the arms of Ceres, Verg. A. 1, 177 (cf. Hom. Od. 7, 232: \u1f14\u03bd\u03c4\u03b5\u03b1 \u03b4\u03b1\u03b9\u03c4\u03cc\u03c2). \u2014Of implements of agriculture, Ov. M. 11, 35: dicendum est, quae sint duris agrestibus arma, Qu\u012bs sine nec potuere seri nec surgere messes, Verg. G. 1, 160.\u2014Of the equipments, tackle of a ship (mast, sails, rudder, etc.): colligere arma jubet validisque incumbere remis, Verg. A. 5, 15; 6, 353.\u2014Hence used by Ovid for wings: haec umeris arma parata suis, A. A. 2, 50 (cf. in the foll. verse: his patria est adeunda carinis).\u2014And so of other instruments, Mart. 14, 36.",
+              "entryid": "00:02",
+              "citations": {
+                "urn:cts:latinLit:phi0690.phi003:1:177": "Verg. A. 1, 177",
+                "urn:cts:latinLit:phi0959.phi006:11:35": "Ov. M. 11, 35",
+                "urn:cts:latinLit:phi0690.phi002:1:160": "Verg. G. 1, 160",
+                "urn:cts:latinLit:phi0690.phi003:5:15": "Verg. A. 5, 15",
+                "urn:cts:latinLit:phi0690.phi003:6:353": "6, 353",
+                "urn:cts:latinLit:phi1294.phi002:14:36": "Mart. 14, 36"
+              }
+            }
+          ],
+          "term": "arma"
+        }
+      },
+      {
+        "reference_id": "5973090",
+        "definitions": {
+          "blocks": [
+            {
+              "entry": "armo, \u0101vi, \u0101tum, 1, v. a. arma.",
+              "entryid": "00"
+            },
+            {
+              "entry": "I.A.  Lit., to furnish with weapons, to arm, equip, aliquem or aliquem aliqu\u0101 re: cum in pace multitudinem hominum co\u00ebgerit, arm\u0101rit, instruxerit, Cic. Caecin. 12: milites armari jubet, Caes. B. C. 1, 28: ut quemque casus armaverat, sparos aut lanceas portabant, Sall. C. 56, 3: copias, id. J. 13, 2: agrest\u012bsque manus armat sparus, Verg. A. 11, 682: quos e gente suorum armet, Ov. M. 14, 464; 12, 614: milites iis armis armare, Pomp. ap. Cic. Att. 8, 12: nunc tela, nunc saxa, quibus eos adfatim locus ipse armabat, etc., Liv. 9, 35: se spoliis, Verg. A. 2, 395: manus ense, Val. Fl. 2, 182: aliquem facibus, Flor. 3, 12, 13: apes aculeis, Plin. 11, 28, 33, \u00a7 46; so, aliquid aliqu\u0101 re: ferrum armare veneno, Verg. A. 9, 773: calamos veneno, id. ib. 10, 140: pontum vinclis, Manil. 5, 657 al.\u2014Followed by in, contra, adversus: egentes in locupletes, perditi in bonos, servi in dominos armabantur, Cic. Planc. 35; id. Mil. 25; id. Att. 8, 3, 3: delecta juventus contra Milonis impetum armata est, id. Mil. 25; for adversus, v. infra. \u2014That for which one is armed, with in or ad: unanimos armare in proelia fratres, Verg. A. 7, 335: armate viros ad pugnam, Vulg. Num. 31, 3.\u2014",
+              "entryid": "00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi008:chapter=12": "Cic. Caecin. 12",
+                "urn:cts:latinLit:phi0448.phi002:1:28": "Caes. B. C. 1, 28",
+                "urn:cts:latinLit:phi0631.phi001:56:3": "Sall. C. 56, 3",
+                "urn:cts:latinLit:phi0631.phi002:13:2": "id. J. 13, 2",
+                "urn:cts:latinLit:phi0690.phi003:11:682": "Verg. A. 11, 682",
+                "urn:cts:latinLit:phi0959.phi006:14:464": "Ov. M. 14, 464",
+                "urn:cts:latinLit:phi0959.phi006:12:614": "12, 614",
+                "urn:cts:latinLit:phi0474.phi057:8:12": "Cic. Att. 8, 12",
+                "urn:cts:latinLit:phi0914.phi001:9:35": "Liv. 9, 35",
+                "urn:cts:latinLit:phi0690.phi003:2:395": "Verg. A. 2, 395",
+                "urn:cts:latinLit:phi1035.phi001:2:182": "Val. Fl. 2, 182",
+                "urn:cts:latinLit:phi1242.phi001:3:12:13": "Flor. 3, 12, 13",
+                "urn:cts:latinLit:phi0978.phi001:11:46": "Plin. 11, 28, 33, \u00a7 46",
+                "urn:cts:latinLit:phi0690.phi003:9:773": "Verg. A. 9, 773",
+                "urn:cts:latinLit:phi0690.phi003:10:140": "id. ib. 10, 140",
+                "urn:cts:latinLit:phi0926.phi001:5:657": "Manil. 5, 657",
+                "urn:cts:latinLit:phi0474.phi028:chapter=35": "Cic. Planc. 35",
+                "urn:cts:latinLit:phi0474.phi031:chapter=25": "id. Mil. 25",
+                "urn:cts:latinLit:phi0474.phi057:8:3:3": "id. Att. 8, 3, 3",
+                "urn:cts:latinLit:phi0690.phi003:7:335": "Verg. A. 7, 335",
+                "urn:cts:greekLit:tlg0527.tlg004:31:3": "Vulg. Num. 31, 3"
+              }
+            },
+            {
+              "entry": "B.  Trop.",
+              "entryid": "00:01"
+            },
+            {
+              "entry": "1.  To arm, equip, furnish: temeritatem concitatae multitudinis auctoritate public\u0101 armare, Cic. Mil. 1: cogitavit, quibus accusatorem rebus armaret, id. Clu. 67: te ad omnia summum ingenium armavit, Caecil. ap. Cic. Fam. 6, 7: Pompeium senat\u016bs auctoritas, Caesarem militum armavit fiducia, Vell. 2, 49: ferae gentes non telis magis quam suo caelo, suo sidere armantur, Plin. Pan. 12, 3: sese eloquenti\u0101, Cic. Inv. 1, 1: se imprudenti\u0101 alicujus, Nep. Dion, 8, 3: ir\u0101, Ov. M. 13, 544: e\u0101 cogitatione armamini, Vulg. 1 Pet. 4, 1: Archilochum proprio rabies armavit iambo, Hor. A. P. 79: nugis armatus, armed with nonsense, id. Ep. 1, 18, 16: armata dolis mens, Sil. 1, 183; cf. id. 11, 6; 15, 682.\u2014",
+              "entryid": "00:01:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi031:chapter=1": "Cic. Mil. 1",
+                "urn:cts:latinLit:phi0474.phi010:chapter=67": "id. Clu. 67",
+                "urn:cts:latinLit:phi0474.phi056:6:7": "Cic. Fam. 6, 7",
+                "urn:cts:latinLit:phi1044.phi001:2:49": "Vell. 2, 49",
+                "urn:cts:latinLit:phi1318.phi002:12:3": "Plin. Pan. 12, 3",
+                "urn:cts:latinLit:phi0474.phi036:1:1": "Cic. Inv. 1, 1",
+                "urn:cts:latinLit:phi0588.phi001:di:8:3": "Nep. Dion, 8, 3",
+                "urn:cts:latinLit:phi0959.phi006:13:544": "Ov. M. 13, 544",
+                "urn:cts:latinLit:phi0893.phi006:79": "Hor. A. P. 79",
+                "urn:cts:latinLit:phi0893.phi005:1:18:16": "id. Ep. 1, 18, 16",
+                "urn:cts:latinLit:phi1345.phi001:1:183": "Sil. 1, 183",
+                "urn:cts:latinLit:phi1345.phi001:11:6": "id. 11, 6",
+                "urn:cts:latinLit:phi1345.phi001:15:682": "15, 682"
+              }
+            },
+            {
+              "entry": "2.  To excite, stir up, rouse, provoke; constr. with adversus, ad or in: (Hannibal) regem armavit et exercuit adversus Romanos, Nep. Hann. 10, 1: aliquem ad omnia armare, Cic. Fam. 6, 7: Claudii sententia consules armabat in tribunos, Liv. 4, 6; so id. 3, 57: Quid vos in fata parentis Armat? Ov. M. 7, 347: mixtus dolor et pudor armat in hostes, Verg. A. 10, 398: in exitium rei publicae, Flor. 3, 12, 13; 4, 2, 1.\u2014",
+              "entryid": "00:01:01",
+              "citations": {
+                "urn:cts:latinLit:phi0588.phi001:han:10:1": "Nep. Hann. 10, 1",
+                "urn:cts:latinLit:phi0474.phi056:6:7": "Cic. Fam. 6, 7",
+                "urn:cts:latinLit:phi0914.phi001:4:6": "Liv. 4, 6",
+                "urn:cts:latinLit:phi0914.phi001:3:57": "id. 3, 57",
+                "urn:cts:latinLit:phi0959.phi006:7:347": "Ov. M. 7, 347",
+                "urn:cts:latinLit:phi0690.phi003:10:398": "Verg. A. 10, 398",
+                "urn:cts:latinLit:phi1242.phi001:3:12:13": "Flor. 3, 12, 13",
+                "urn:cts:latinLit:phi1242.phi001:4:2:1": "4, 2, 1"
+              }
+            },
+            {
+              "entry": "II.  To furnish with something needful, esp. with the munitions of war, to fit out, equip: ea, quae sunt usui ad armandas naves, ex Hispani\u0101 adportari jubet, Caes. B. G. 5, 1: muri propugnaculis armabantur, Liv. 30, 9: Claudius triremes quadriremesque et undeviginti hominum milia armavit, Tac. A. 12, 56.",
+              "entryid": "00:01:01:00",
+              "citations": {
+                "urn:cts:latinLit:phi0448.phi001:5:1": "Caes. B. G. 5, 1",
+                "urn:cts:latinLit:phi0914.phi001:30:9": "Liv. 30, 9",
+                "urn:cts:latinLit:phi1351.phi005:12:56": "Tac. A. 12, 56"
+              }
+            },
+            {
+              "entry": "\u2014Hence, arm\u0101tus, a, um, P. a., armed, equipped, fitted with armor (opp. inermis, togatus, q. v.); also subst.: arm\u0101tus, i, m., an armed man, a solier, = miles.",
+              "entryid": "01"
+            },
+            {
+              "entry": "A.  Adj.",
+              "entryid": "01:00"
+            },
+            {
+              "entry": "1.  Lit.: armatos, si Latine loqui volumus, quos appellare vere possumus? opinor eos, qui scutis telisque parati ornatique sunt, Cic. Caecin. 21, 60: cum animatus iero satis armatus sum, Att. ap. Non. p. 233, 18; p. 495, 23: armati pergemus, Vulg. Num. 32, 32; ib. Judith, 9, 6: ab dracontis stirpe armat\u0101 exortus, Att. ap. Non. p. 426, 2: armata manus, Lucr. 2, 629; so id. 2, 636; 2, 640; 5, 1297; cf. id. 5, 1292: saepe ipsa plebes armata a patribus secessit, Sall. C. 33, 4: contra injurias armatus ire, id. J. 31, 6: facibus armatus, Liv. 5, 7: armatus falce, Tib. 1, 4, 8: classes armatae, Verg. G. 1, 255: armatus cornu, Plin. 11, 37, 45, \u00a7 128.\u2014",
+              "entryid": "01:00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi008:21:60": "Cic. Caecin. 21, 60",
+                "urn:cts:greekLit:tlg0527.tlg004:32:32": "Vulg. Num. 32, 32",
+                "urn:cts:latinLit:phi0550.phi001:2:629": "Lucr. 2, 629",
+                "urn:cts:latinLit:phi0550.phi001:2:636": "id. 2, 636",
+                "urn:cts:latinLit:phi0550.phi001:2:640": "2, 640",
+                "urn:cts:latinLit:phi0550.phi001:5:1297": "5, 1297",
+                "urn:cts:latinLit:phi0550.phi001:5:1292": "id. 5, 1292",
+                "urn:cts:latinLit:phi0631.phi001:33:4": "Sall. C. 33, 4",
+                "urn:cts:latinLit:phi0631.phi002:31:6": "id. J. 31, 6",
+                "urn:cts:latinLit:phi0914.phi001:5:7": "Liv. 5, 7",
+                "urn:cts:latinLit:phi0660.phi001:1:4:8": "Tib. 1, 4, 8",
+                "urn:cts:latinLit:phi0690.phi002:1:255": "Verg. G. 1, 255",
+                "urn:cts:latinLit:phi0978.phi001:11:128": "Plin. 11, 37, 45, \u00a7 128"
+              }
+            },
+            {
+              "entry": "2.  Meton.: armati anni, i. e. years spent in war, Sil. 11, 591.\u2014Trop.: excitati, erecti, armati animis, armed, furnished, etc., Cic. Phil. 7, 9, 26.\u2014In the sup. only twice, and referring to the pos. armatus in connection with it (comp. and adv. never used), Cic. Caecin. 21, 61 (v. the passage in its connection): tam tibi par sum quam multis armatissimis nudi aut leviter armati, Sen. Ben. 5, 4.\u2014",
+              "entryid": "01:00:01",
+              "citations": {
+                "urn:cts:latinLit:phi1345.phi001:11:591": "Sil. 11, 591",
+                "urn:cts:latinLit:phi0474.phi035:7:9:26": "Cic. Phil. 7, 9, 26",
+                "urn:cts:latinLit:phi0474.phi008:21:61": "Cic. Caecin. 21, 61",
+                "urn:cts:latinLit:phi1017.phi013:5:4": "Sen. Ben. 5, 4"
+              }
+            },
+            {
+              "entry": "B.  Subst.: gravidus armatis equus (sc. Trojanus), Enn. ap. Macr. S. 6, 2 (Trag. v. 97 M\u00fcll.): armatos educere, id. ap. Non. p. 355, 16: navem triremem armatis ornat, Nep. Dion, 9, 2: decem milia armatorum, id. Milt. 5, 1; so Vulg. Exod. 38, 25: armatis in litora expositis, Liv. 37, 28; 42, 51; 9, 24; Suet. Caes. 30.",
+              "entryid": "01:01",
+              "citations": {
+                "urn:cts:latinLit:stoa0186.stoa001:6:2": "Macr. S. 6, 2",
+                "urn:cts:latinLit:phi0588.phi001:di:9:2": "Nep. Dion, 9, 2",
+                "urn:cts:latinLit:phi0588.phi001:milt:5:1": "id. Milt. 5, 1",
+                "urn:cts:greekLit:tlg0527.tlg002:38:25": "Vulg. Exod. 38, 25",
+                "urn:cts:latinLit:phi0914.phi001:37:28": "Liv. 37, 28",
+                "urn:cts:latinLit:phi0914.phi001:42:51": "42, 51",
+                "urn:cts:latinLit:phi0914.phi001:9:24": "9, 24",
+                "urn:cts:latinLit:phi1348.phi001:life=jul.:30": "Suet. Caes. 30"
+              }
+            }
+          ],
+          "term": "armo"
+        }
+      }
+    ],
+    "dg_parsed": true,
+    "chunk_types": [
+      "PerseusAnalysisHeader",
+      "DiogenesMatchingReference",
+      "DiogenesMatchingReference"
+    ]
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "chunks": 3,
+    "dg_parsed": 1,
+    "chunk_types": 3
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

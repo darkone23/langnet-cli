@@ -64,7 +64,7 @@ This document defines what each backend is trusted for and what claims/witness f
 
 ## Tool Fact Types
 
-Each tool emits canonical fact types with tool-specific fields. These are defined in protobuf schemas under `vendor/langnet-spec/schema/tools/`. See `docs/technical/design/05-tool-fact-architecture.md` for the full architecture.
+Each tool emits canonical fact types with tool-specific fields. These are defined in protobuf schemas under `vendor/langnet-spec/schema/tools/`. See `docs/technical/design/tool-fact-architecture.md` for the full architecture.
 
 ### Fact Types by Tool
 
@@ -100,6 +100,6 @@ Every fact must include a `provenance_id` linking to a `ProvenanceRecord` contai
 
 ### Related Documents
 
-- `docs/technical/design/05-tool-fact-architecture.md` - Two-layer proto architecture
+- `docs/technical/design/tool-fact-architecture.md` - Two-layer proto architecture
 - `docs/technical/design/mermaid/tool-fact-flow.md` - Diagrams
 - `docs/plans/active/tool-fact-indexing.md` - Implementation roadmap

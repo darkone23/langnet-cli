@@ -1,0 +1,32 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "canonical",
+    "lang": "san",
+    "word": "agnim",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "canonical": {
+      "original_query": "agnim",
+      "bare_query": "agnim",
+      "canonical_sanskrit": "",
+      "match_method": "sktsearch",
+      "entry_url": "/skt/DICO/index.fr.html"
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "canonical": 5
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

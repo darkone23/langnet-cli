@@ -1,0 +1,30 @@
+{
+  "target": {
+    "tool": "cltk",
+    "action": "morphology",
+    "lang": "san",
+    "word": "agni",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "sanskrit_morphology": {
+      "lemma": "agni",
+      "pos": "",
+      "morphological_features": {}
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "sanskrit_morphology": 3
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

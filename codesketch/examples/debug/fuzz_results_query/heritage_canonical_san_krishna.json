@@ -1,0 +1,654 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "canonical",
+    "lang": "san",
+    "word": "krishna",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "krishna",
+      "language": "san",
+      "morphology": {
+        "lemma": "k\u1e5b\u1e63\u1e47a",
+        "pos": "noun",
+        "features": {
+          "analyses": [
+            {
+              "word": "k\u1e5b\u1e63\u1e47a",
+              "lemma": "k\u1e5b\u1e63\u1e47a",
+              "root": "",
+              "pos": "noun",
+              "case": "nominative",
+              "gender": "feminine",
+              "number": "singular"
+            }
+          ]
+        }
+      },
+      "source": "heritage",
+      "metadata": {
+        "morphology_raw": {
+          "input_text": "k.r.s.naa",
+          "solutions": [
+            {
+              "type": "morphological_analysis",
+              "analyses": [
+                {
+                  "word": "k\u1e5b\u1e63\u1e47a",
+                  "lemma": "k\u1e5b\u1e63\u1e47a",
+                  "root": "",
+                  "pos": "noun",
+                  "case": "nominative",
+                  "gender": "feminine",
+                  "number": "singular"
+                }
+              ],
+              "total_words": 1,
+              "metadata": {
+                "color": "deep_sky_back",
+                "raw_text": "[k\u1e5b\u1e63\u1e47a]{f. sg. nom.}",
+                "segments": [
+                  {
+                    "class": "blue",
+                    "text": "k\u1e5b\u1e63\u1e47\u0101"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "solution kept among"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  }
+                ]
+              }
+            }
+          ],
+          "word_analyses": [],
+          "total_solutions": 1,
+          "metadata": {
+            "solutions_kept": 1,
+            "total_available": 1
+          }
+        },
+        "combined": {
+          "lemma": "k\u1e5b\u1e63\u1e47a",
+          "pos": "noun",
+          "morphology_analyses": [
+            {
+              "word": "k\u1e5b\u1e63\u1e47a",
+              "lemma": "k\u1e5b\u1e63\u1e47a",
+              "pos": "noun",
+              "features": {
+                "case": "nominative",
+                "gender": "feminine",
+                "number": "singular",
+                "person": null,
+                "tense": null,
+                "voice": null,
+                "mood": null,
+                "stem": ""
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "word": "krishna",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "1. kfzRa/   mf(A/)n. black, dark, dark-blue (opposed to Sveta/, Sukla/, ro/hita, and aruRa/), RV.; AV. &c.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "55142"
+          }
+        },
+        {
+          "definition": "wicked, evil, Vop. vii, 82",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "55143"
+          }
+        },
+        {
+          "definition": "kfzRa/   (as), m. (with or without pakza) the dark half of the lunar month from full to new moon, Mn.; Y\u0101j\u00f1.; Bhag.; Su\u015br.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55144"
+          }
+        },
+        {
+          "definition": "the fourth or Kali-yuga, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "55145"
+          }
+        },
+        {
+          "definition": "(kf/zRas), black (the colour) or dark-blue (which is often confounded with black by the Hind\u016bs), L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55146"
+          }
+        },
+        {
+          "definition": "the antelope, RV. x, 94, 5; VS.; TS.; \u015aBr.; BhP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55147"
+          }
+        },
+        {
+          "definition": "a kind of animal feeding on carrion, AV. xi, 2, 2 (kfzRa/)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55148"
+          }
+        },
+        {
+          "definition": "the Indian cuckoo or Kokila (cf. R. ii, 52, 2), L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55149"
+          }
+        },
+        {
+          "definition": "a crow, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "55150"
+          }
+        },
+        {
+          "definition": "Carissa Carandas, L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55151"
+          }
+        },
+        {
+          "definition": "N. of one of the poets of the RV. (descended from A\u1e45giras), RV. viii, 85, 3 and 4; \u015a\u0101\u1e45khBr. xxx, 9",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55152"
+          }
+        },
+        {
+          "definition": "(a son of Devak\u012b and pupil of Ghora \u0100\u1e45girasa), ChUp. iii, 17, 6",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55153"
+          }
+        },
+        {
+          "definition": "N. of a celebrated Avat\u0101r of the god Vi\u1e63\u1e47u, or sometimes identified with Vi\u1e63\u1e47u himself [MBh. v, 2563; xiv, 1589 ff.; Hariv. 2359 &c.] as distinct from his ten Avat\u0101rs or incarnations (in the earlier legends he appears as a great hero and teacher [MBh.; Bhag.]; in the more recent he is deified, and is often represented as a young and amorous shepherd with flowing hair and a flute in his hand; the following are a few particulars of his birth and history as related in Hariv. 3304 ff. and in the Pur\u0101\u1e47as &c.: Vasu-deva, who was a descendant of Yadu and Yay\u0101ti, had two wives, Rohi\u1e47\u012b and Devak\u012b; the latter had eight sons of whom the eighth was K\u1e5b\u1e63\u1e47a; Ka\u1e43sa, king of Mathur\u0101 and cousin of Devak\u012b, was informed by a prediction that one of these sons would kill him; he therefore kept Vasu-deva and his wife in confinement, and slew their first six children; the seventh was Balar\u0101ma who was saved by being abstracted from the womb of Devak\u012b and transferred to that of Rohi\u1e47\u012b; the eighth was K\u1e5b\u1e63\u1e47a who was born with black skin and a peculiar mark on his breast; his father Vasu-deva managed to escape from Mathur\u0101 with the child, and favoured by the gods found a herdsman named Nanda whose wife Ya\u015bo-d\u0101 had just been delivered of a son which Vasu-deva conveyed to Devak\u012b after substituting his own in its place. Nanda with his wife Ya\u015bo-d\u0101 took the infant K\u1e5b\u1e63\u1e47a and settled first in Gokula or Vraja, and afterwards in V\u1e5bnd\u0101vana, where K\u1e5b\u1e63\u1e47a and Bala-r\u0101ma grew up together, roaming in the woods and joining in the sports of the herdsmen's sons ; K\u1e5b\u1e63\u1e47a as a youth contested the sovereignty of Indra, and was victorious over that god, who descended from heaven to praise K\u1e5b\u1e63\u1e47a, and made him lord over the cattle [Hariv. 3787 ff.; 7456 ff.; VP.]; K\u1e5b\u1e63\u1e47a is described as sporting constantly with the Gop\u012bs or shepherdesses [Hariv. 4078 ff.; 8301 ff.; VP.; G\u012bt.] of whom a thousand became his wives, though only eight are specified, R\u0101dh\u0101 being the favourite [Hariv. 6694 ff.; 9177 ff.; VP.]; K\u1e5b\u1e63\u1e47a built and fortified a city called Dv\u0101rak\u0101 in Gujar\u0101t, and thither transported the inhabitants of Mathur\u0101 after killing Ka\u1e43sa; K\u1e5b\u1e63\u1e47a had various wives besides the Gop\u012bs, and by Rukmi\u1e47\u012b had a son Pradyumna who is usually identified with K\u0101ma-deva; with Jains, K\u1e5b\u1e63\u1e47a is one of the nine black Vasu-devas; with Buddhists he is the chief of the black demons, who are the enemies of Buddha and the white demons)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55154"
+          }
+        },
+        {
+          "definition": "N. of an attendant in Skanda's retinue, MBh. ix, 2559",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55155"
+          }
+        },
+        {
+          "definition": "of an Asura, Hariv. 12936; S\u0101y. on RV. i, 101, 1",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55156"
+          }
+        },
+        {
+          "definition": "of a king of the N\u0101gas, MBh. ii, 360; Divy\u0101v. ii",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55157"
+          }
+        },
+        {
+          "definition": "of Arjuna (the most renowned of the P\u0101\u1e47\u1e0du princes, so named apparently from his colour as a child), MBh. iv, 1389",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55158"
+          }
+        },
+        {
+          "definition": "of Vy\u0101sa, MBh.; Hariv. 11089",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "55159"
+          }
+        },
+        {
+          "definition": "of H\u0101rita See -hArita",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "55160"
+          }
+        },
+        {
+          "definition": "of a son of \u015auka by P\u012bvar\u012b (teacher of the Yoga), Hariv. 980 ff.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55161"
+          }
+        },
+        {
+          "definition": "of a pupil of Bharad-v\u0101ja, Kath\u0101s. vii, 15",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "55162"
+          }
+        },
+        {
+          "definition": "of Havir-dh\u0101na, Hariv. 83; VP.; BhP. iv, 24, 8",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55163"
+          }
+        },
+        {
+          "definition": "of a son of Arjuna, Hariv. 1892",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55164"
+          }
+        },
+        {
+          "definition": "of an adopted son of A-sama\u00f1jas, 2039",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55165"
+          }
+        },
+        {
+          "definition": "of a chief of the Andhras, VP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55166"
+          }
+        },
+        {
+          "definition": "of the author of a Comm. on the MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55167"
+          }
+        },
+        {
+          "definition": "of a poet",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "55168"
+          }
+        },
+        {
+          "definition": "of the author of a Comm. on the Day\u0101-bh\u0101ga",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55169"
+          }
+        },
+        {
+          "definition": "of the son of Ke\u015bav\u0101rka and grandson of Jay\u0101ditya",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55170"
+          }
+        },
+        {
+          "definition": "of the father of T\u0101na-bha\u1e6d\u1e6da and uncle of Ra\u1e45ga-n\u0101tha",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55171"
+          }
+        },
+        {
+          "definition": "of the father of D\u0101modara and uncle of Malha\u1e47a",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55172"
+          }
+        },
+        {
+          "definition": "of the father of Prabh\u016bj\u012bka and uncle of Vidy\u0101-dhara",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55173"
+          }
+        },
+        {
+          "definition": "of the father of Madana",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55174"
+          }
+        },
+        {
+          "definition": "of the grammarian R\u0101ma-candra",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55175"
+          }
+        },
+        {
+          "definition": "of the son of V\u0101ru\u1e47endra and father of Lak\u1e63ma\u1e47a",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55176"
+          }
+        },
+        {
+          "definition": "of the father of H\u012bra-bha\u1e6d\u1e6da (author of the Comm. called Carakabh\u0101\u1e63ya, and of the work S\u0101hitya-sudh\u0101-samudra)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55177"
+          }
+        },
+        {
+          "definition": "N. of a hell, VP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55178"
+          }
+        },
+        {
+          "definition": "kfzRa/   (Ss), m. pl. N. of the \u015a\u016bdras in \u015a\u0101lmala-dv\u012bpa, VP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55180"
+          }
+        },
+        {
+          "definition": "kfzRA   (A), f. a kind of leech, Su\u015br.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55181"
+          }
+        },
+        {
+          "definition": "a kind of venomous insect, ib.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55182"
+          }
+        },
+        {
+          "definition": "N. of several plants (Piper longum, L.; the Indigo plant, L.; a grape, L.; a Punar-nav\u0101 with dark blossoms, L.; Gmelina arborea, L.; Nigella indica, L.; Sinapis ramosa, L.; Vernonia anthelminthica, L.; = kAkolI, L.; a sort of S\u0101riv\u0101, L.), Su\u015br.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55183"
+          }
+        },
+        {
+          "definition": "a kind of perfume (= parpawI), Bhpr.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55184"
+          }
+        },
+        {
+          "definition": "N. of Draupad\u012b, MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55185"
+          }
+        },
+        {
+          "definition": "of Durg\u0101, MBh. iv, 184",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "55186"
+          }
+        },
+        {
+          "definition": "of one of the seven tongues of fire, L., Sch.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55187"
+          }
+        },
+        {
+          "definition": "of one of the mothers in Skanda's retinue, MBh. ix, 2640",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55188"
+          }
+        },
+        {
+          "definition": "of a Yogin\u012b, Hcat.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55189"
+          }
+        },
+        {
+          "definition": "(with or without gaNgA) N. of the river Kistna, MBh. xiii, 4888; PadmaP.; N\u0101rP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55190"
+          }
+        },
+        {
+          "definition": "kfzRa/   (a/m), n. blackness, darkness, i, 123, 1 and 9",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55192"
+          }
+        },
+        {
+          "definition": "kfzRa/   m. the black part of the eye, \u015aBr. x, xii, xiii, xiv; Su\u015br.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55193"
+          }
+        },
+        {
+          "definition": "the black spots in the moon, TBr. i, 2, 1, 2",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55194"
+          }
+        },
+        {
+          "definition": "a kind of demon or spirit of darkness, RV. iv, 16, 13",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55195"
+          }
+        },
+        {
+          "definition": "black pepper, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "55196"
+          }
+        },
+        {
+          "definition": "black Agallochum, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "55197"
+          }
+        },
+        {
+          "definition": "iron, L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55198"
+          }
+        },
+        {
+          "definition": "lead, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "55199"
+          }
+        },
+        {
+          "definition": "antimony, L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55200"
+          }
+        },
+        {
+          "definition": "blue vitriol, L.",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "55201"
+          }
+        },
+        {
+          "definition": "kfzRa   [cf. kA/rzRa, &c.; cf. also Russ. \u010dernyi, \u2018black\u2019.]",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55202"
+          }
+        },
+        {
+          "definition": "2. kfzRa   Nom. P. \u00b0zRati, to behave or act like K\u1e5b\u1e63\u1e47a, Vop. xxi, 7.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "55540"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "kfzRa",
+        "pos": "noun",
+        "features": {
+          "declension": "A",
+          "gender": [
+            "masculine"
+          ],
+          "abbreviations": [
+            "pl."
+          ]
+        },
+        "gender": [
+          "masculine"
+        ]
+      },
+      "source": "cdsl",
+      "metadata": {
+        "dict": "mw",
+        "dictionary": "mw",
+        "count": 60
+      }
+    },
+    {
+      "word": "krishna",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "kfzRa  a. [kfz-nak] 1 Black, dark, dark-blue. 2 Wicked, evil. \u2014 zRaH 1 The black colour. 2 The black antelope. 3 A crow. 4 The  (Indian) cuckoo. 5 The dark half of a lunar month (from full to new moon). 6 The Kali age. 7 Vi\u1e63\u1e47u in his eighth incarnation, born as the son of Vasudeva and Devak\u012b. [K\u1e5b\u1e63\u1e47a is the most celebrated hero of Indian mythology and the most popular of all the deities. Though the real son of Vasudeva and Devak\u012b and thus a cousin of Ka\u1e43sa, he was, for all practical purposes, the son of Nanda and Ya\u015bod\u0101 by whom he was brought up and in whose house he spent his childhood. It was here that his divine character began to be gradually discovered, when he easily crushed the most redoubtable demons, such as Baka, P\u016btan\u0101 &c., that were sent to kill him by Ka\u1e43sa, and performed many other feats of  (pb)  surprising strength. The chief companions of his youth were the Gop\u012bs or wives of the cowherds of Gokula, among whom R\u0101dh\u0101 was his special favourite; (cf. Jayadeva's G\u012btagovinda). He killed Ka\u1e43sa, Naraka, Ke\u015bin, Ari\u1e63\u1e6da and a host of other powerful demons. He was a particular friend of Arjuna, to whom he acted as charioteer in the great war, and his staunch support of the cause of the P\u0101\u1e47\u1e0davas was the main cause of the overthrow of the  Kauravas. On several critical occasions, it was K\u1e5b\u1e63\u1e47a's assistance and inventive mind that stood the P\u0101\u1e47\u1e0davas in good stead. After the general destruction of the Y\u0101davas at Prabh\u0101sa, he was killed unintentionally by a hunter named  Jaras who shot him with an arrow  mistaking him at a distance for a deer. He had more than 16000 wives, but  Rukmini and Satyabh\u0101m\u0101, (as also R\u0101dh\u0101) were his favourites. He is said to have been of dark-blue or cloud-like colour; cf. bahiriva malinataraM tava kfzRa manopi  Bavizyati nUna G\u012bt. 8. His son was Pradyumna]. 8 N. of Vy\u0101sa, the reputed author of the Mah\u0101bh\u0101rata. 9 N. of Arjuna. 10 Aloe wood. 11 The Supreme spirit. 12 Black pepper. 13 Iron. \u2014 zRA 1 N. of Draupad\u012b, wife of the P\u0101\u1e47\u1e0davas; Ki. 1. 26. 2 N. of a river in the Deccan that joins the sea at Masulipattam. 3 A kind of poisonous insect. 4 N. of several plants. 5 A grape. 6 A kind of perfume. 7 An epithet of Durg\u0101. 8 One of the 7 tongues of fire. \u2014 zRI A dark night. \u2014 zRaM 1  Blackness, darkness (moral also). 2 Iron. 3 Antimony. 4 The black part of the eye. 5 Black pepper. 6 Lead. 7 An inauspicious act. 8 Money acquired by gambling. Comp. \u2014 aguru n. a kind of sandal-wood. \u2014 acalaH an  epithet of the mountain Raivataka. \u2014 ajinaM the skin of the black  antelope. \u2014 aDvan, -arcis m. an epithet of fire; cf. kfzRavartman. \u2014 ayas n., \u2014 ayasaM, \u2014 AmizaM iron, crude or black iron. \u2014 azwamI, janmAzwamI the 8th day of the dark half of \u015ar\u0101va\u1e47a when K\u1e5b\u1e63\u1e47a was born; also called gokulAzwamI. \u2014 AvAsaH the holy fig-tree. \u2014 udaraH a kind of snake. \u2014 kaMdaM a red lotus. \u2014 karman a. of black deeds, criminal, wicked, depraved, guilty, sinful.   \u2014 kAkaH a raven. \u2014 kAyaH a buffalo. \u2014 kAzWaM a kind of sandal-wood, agallochum.  (pb)  \u2014 kohalaH a gambler. \u2014 gaMgA the river kfzRaveRI. \u2014 gati fire: AyoDate kfzRagatiM sahAyaM R. 6. 42. \u2014 garBAH (f. pl.)  1 the pregnant wives of the demon K\u1e5b\u1e63\u1e47a.  2 waters in the interiors of the clouds. \u2014 goDA a kind of poisonous insect. \u2014 grIvaH N. of \u015aiva. \u2014 caMcukaH a kind of pea. \u2014 caMdraH N. of Vasudeva. \u2014 cara a. what formerly belonged to K\u1e5b\u1e63\u1e47a. \u2014 cUrRaM rust of iron. \u2014 tAmraM a kind of sandal wood. \u2014 tAraH  1 a species of antelope.  2 an antelope (in general). \u2014 dehaH a bee. \u2014 DanaM money got by foul means. \u2014 dvEpAyanaH N. of Vy\u0101sa: tamahamarAgamakfzRa  kfzRadvEpAyanaM vaMde Ve. 1. 4. \u2014 pakzaH the dark half of a lunar month.  2 an epithet of Arjuna. \u2014 padI a female with black feet. \u2014 paviH an epithet of Agni.   \u2014 piMgala a. dark-brown. \u2014 (lA) N. of Durg\u0101. \u2014 mfgaH the black antelope; SfMge  kfzRamfgasya vAmanayanaM kaMqUyamAnAM mfgIM   \u015a. 6. 16. \u2014 muKaH, -vaktraH, -vadanaH the  blackfaced monkey. \u2014 yajurvedaH the  Taittir\u012bya or black Yajurveda. \u2014 yAmaH an epithet of Agni. \u2014 raktaH dark-red colour. \u2014 rUpya = \u00b0cara q. v. \u2014 lavaRaM  1 a kind of black salt.  2 a factitious salt. \u2014 lohaH the loadstone. \u2014 varRaH  1 black colour.  2 N. of R\u0101hu.  3 a \u015a\u016bdra. \u2014 vartman m.  1 fire;   R. 11. 42; Ms. 2. 94.  2 N. of R\u0101hu.  3 a low man, profligate, black-guard. \u2014 vizARA Ved. the horns of the black antelope. \u2014 veRI N. of a river. \u2014 SakuniH a crow. \u2014 SAraH, -sAraH, \u2014 sAraMgaH the spotted antelope;   kfzRasAre dadaccakzustvayi cADijyakArmuke   \u015a. 1. 6, V. 4. 31. \u2014 SfMgaH a buffalo. \u2014 saKaH, -sAraTiH an epithet of Arjuna. \u2014 (KI) cummin seed.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "ap90",
+            "id": "11443"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "kfzRa",
+        "pos": "unknown",
+        "features": {}
+      },
+      "source": "cdsl",
+      "metadata": {
+        "dict": "ap90",
+        "dictionary": "ap90",
+        "count": 1
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 3
+  },
+  "unified_sources": [
+    "cdsl",
+    "heritage"
+  ],
+  "source_present": true
+}

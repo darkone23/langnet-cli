@@ -1,0 +1,39 @@
+{
+  "target": {
+    "tool": "cltk",
+    "action": "morphology",
+    "lang": "grc",
+    "word": "logos",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "greek_morphology": {
+      "text": "logos",
+      "lemma": "logos",
+      "pos": "VERB",
+      "morphological_features": {
+        "Aspect": "Perf",
+        "Mood": "Ind",
+        "Number": "Sing",
+        "Person": "3",
+        "Tense": "Past",
+        "VerbForm": "Fin",
+        "Voice": "Pass"
+      }
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "greek_morphology": 4
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

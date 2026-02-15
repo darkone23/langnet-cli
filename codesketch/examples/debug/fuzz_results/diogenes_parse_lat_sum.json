@@ -1,0 +1,849 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "lat",
+    "word": "sum",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "chunks": [
+      {
+        "logeion": "https://logeion.uchicago.edu/sum",
+        "morphology": {
+          "morphs": [
+            {
+              "stem": [
+                "sum"
+              ],
+              "tags": [
+                "pres",
+                "ind",
+                "act",
+                "1st",
+                "sg"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "reference_id": "70660545",
+        "definitions": {
+          "blocks": [
+            {
+              "entry": "sum, f\u016di, esse (2d pers. \u0115s, but usu. \u0113s in Plaut. and Ter.; old forms, indic. pres. esum for sum, acc. to Varr. L. L. 9, \u00a7 100 M\u00fcll.: essis for es, Att. ap. Non. 200, 30, or Trag. Rel. p. 283 Rib.: simus for sumus, used by Augustus, acc. to Suet. Aug. 87; fut. escit for erit, XII. Tab. ap. Gell. 20, 1, 25: esit, XII. Tab. ap. Fest. s. v. nec, p. 162 M\u00fcll.: escunt for erunt, Cic. Leg. 2, 24, 60, 3, 3, 9; Lucr. 1, 619; perf. f\u016bvimus for fuimus, Enn. ap. Cic. de Or. 3, 42, 168: FVVEIT, C. I. L. 1, 1051: f\u016bit, Plaut. Capt. 3, 4, 23 (555); id. Mil. 3, 1, 159 (754): f\u016berim, id. ib. 4, 8, 54 (1364): f\u016berit, id. As. 4, 1, 37 (782); subj. pres. siem, sies, siet, etc., very freq., esp. in Plaut.; e. g. siem, Am. prol. 57; Ter. And. 586: sies, Plaut. Am. 3, 2, 43 (924); Ter. And. 424: siet, Plaut. Am. prol. 58; Ter. And. 234; Lucr. 3, 101: sient, Plaut. Am. 1, 1, 54 (206); Ter. And. 390; cf. Cic. Or. 47, 157; also, fuam, fuas, etc., regarded by G. Curtius, de Aorist. Lat. Rel. in Studien zur Gr. u. Lat. Gram. 1, 431 sqq., as an aorist: fuam, Plaut. Bacch. 1, 2, 48 (156); id. Mil. 2, 6, 112 (592): fuas, Liv. Andron. ap. Non 111, 13; Plaut. Capt. 2, 3, 71 (431); 2, 3, 83 (443); id. Pers. 1, 1, 52 (52); id. Trin. 2, 1, 32 (254): fuat, Pac. ap. Non. 111, 8; Carm. ap. Liv. 25, 12; Plaut. Am. 3, 4, 2 (985); id. Aul. 2, 2, 56 (233); id. Capt. 2, 2, 10 (260) et saep.; Ter. Hec. 610; Lucr. 4, 639; Verg. A. 10, 108: fuant, Plaut. Bacch. 4, 9, 110 (1034); id. Ep. 5, 1, 13 (619); id. Ps. 4, 3, 12 (1028): fuvisset, Enn. ap. Gell. 12, 4, 4; part. pres. ens, used by Caesar, acc. to Prisc. p. 1140 P.; and by Sergius Flavius, acc. to Quint. 8, 3, 33; fut. inf. f\u014fre for futurum esse, very freq., and so always with partt.; cf. Madv. Gram. \u00a7 108; whence, subj. imperf. forem fores, etc., for essem; esp. in conditional sentences and in the histt., but very rare in Cic.; v. Neue, Formenl. 2, 597 sqq.), v. n. root es; Sanscr. as-mi, and the Greek \u03b5\u03c2-\u03bc\u03b9, whence \u03b5\u1f30\u03bc\u03af\u037e perf. fui; root in Sanscr. bh\u016b, to become; bh\u0101vas, condition; Gr. \u03c6\u03cd\u03c9, to beget; cf.: fetus, futuo, etc., to be, as a verb substantive or a copula.",
+              "entryid": "00",
+              "citations": {
+                "urn:cts:latinLit:phi0684.phi001:9:100": "Varr. L. L. 9, \u00a7 100",
+                "urn:cts:latinLit:phi1348.phi001:life=aug.:87": "Suet. Aug. 87",
+                "urn:cts:latinLit:phi1254.phi001:20:1:25": "Gell. 20, 1, 25",
+                "urn:cts:latinLit:phi0474.phi044:2:24:60:3:3:9": "Cic. Leg. 2, 24, 60, 3, 3, 9",
+                "urn:cts:latinLit:phi0550.phi001:1:619": "Lucr. 1, 619",
+                "urn:cts:latinLit:phi0474.phi037:3:42:168": "Cic. de Or. 3, 42, 168",
+                "urn:cts:latinLit:phi0119.phi005:555": "Plaut. Capt. 3, 4, 23 (555)",
+                "urn:cts:latinLit:phi0119.phi012:754": "id. Mil. 3, 1, 159 (754)",
+                "urn:cts:latinLit:phi0119.phi012:1364": "id. ib. 4, 8, 54 (1364)",
+                "urn:cts:latinLit:phi0119.phi002:782": "id. As. 4, 1, 37 (782)",
+                "urn:cts:latinLit:phi0119.phi001:prol:57": "Am. prol. 57",
+                "urn:cts:latinLit:phi0134.phi001:586": "Ter. And. 586",
+                "urn:cts:latinLit:phi0119.phi001:924": "Plaut. Am. 3, 2, 43 (924)",
+                "urn:cts:latinLit:phi0134.phi001:424": "Ter. And. 424",
+                "urn:cts:latinLit:phi0119.phi001:58": "Plaut. Am. prol. 58",
+                "urn:cts:latinLit:phi0134.phi001:234": "Ter. And. 234",
+                "urn:cts:latinLit:phi0550.phi001:3:101": "Lucr. 3, 101",
+                "urn:cts:latinLit:phi0119.phi001:206": "Plaut. Am. 1, 1, 54 (206)",
+                "urn:cts:latinLit:phi0134.phi001:390": "Ter. And. 390",
+                "urn:cts:latinLit:phi0474.phi040:47:157": "Cic. Or. 47, 157",
+                "urn:cts:latinLit:phi0119.phi004:156": "Plaut. Bacch. 1, 2, 48 (156)",
+                "urn:cts:latinLit:phi0119.phi012:592": "id. Mil. 2, 6, 112 (592)",
+                "urn:cts:latinLit:phi0119.phi005:431": "Plaut. Capt. 2, 3, 71 (431)",
+                "urn:cts:latinLit:phi0119.phi005:443": "2, 3, 83 (443)",
+                "urn:cts:latinLit:phi0119.phi014:52": "id. Pers. 1, 1, 52 (52)",
+                "urn:cts:latinLit:phi0119.phi019:254": "id. Trin. 2, 1, 32 (254)",
+                "urn:cts:latinLit:phi0914.phi001:25:12": "Liv. 25, 12",
+                "urn:cts:latinLit:phi0119.phi001:985": "Plaut. Am. 3, 4, 2 (985)",
+                "urn:cts:latinLit:phi0119.phi003:233": "id. Aul. 2, 2, 56 (233)",
+                "urn:cts:latinLit:phi0119.phi005:260": "id. Capt. 2, 2, 10 (260)",
+                "urn:cts:latinLit:phi0134.phi005:610": "Ter. Hec. 610",
+                "urn:cts:latinLit:phi0550.phi001:4:639": "Lucr. 4, 639",
+                "urn:cts:latinLit:phi0690.phi003:10:108": "Verg. A. 10, 108",
+                "urn:cts:latinLit:phi0119.phi004:1034": "Plaut. Bacch. 4, 9, 110 (1034)",
+                "urn:cts:latinLit:phi0119.phi009:619": "id. Ep. 5, 1, 13 (619)",
+                "urn:cts:latinLit:phi0119.phi016:1028": "id. Ps. 4, 3, 12 (1028)",
+                "urn:cts:latinLit:phi1254.phi001:12:4:4": "Gell. 12, 4, 4",
+                "urn:cts:latinLit:phi1002.phi001:8:3:33": "Quint. 8, 3, 33"
+              }
+            },
+            {
+              "entry": "I.  As a verb substantive, to be.",
+              "entryid": "00:00"
+            },
+            {
+              "entry": "A.  In gen.",
+              "entryid": "00:00:00"
+            },
+            {
+              "entry": "1.  Asserting existence, to be, exist, live: definitionum duo sunt genera prima: unum earum rerum quae sunt: alterum earum quae intelleguntur. Esse ea dico, quae cerni tangive possunt, ut fundum, aedes, parietem, cetera. Non esse rursus ea dico, quae tangi demonstrarive non possunt, cerni tamen animo atque intellegi possunt, ut si usucapionem, si tutelam, etc. ... definias, Cic. Top. 5, 26 sq.: si abest, nullus est, Plaut. Bacch. 2, 2, 16 (194): nunc illut est, quom me fuisse quam esse nimio mavelim, id. Capt. 3, 3, 1 (516): ita paene nulla sibi fuit Phronesium ( = paene mortuus est), id. Truc. 1, 2, 95 (189): omne quod eloquimur sic, ut id aut esse dicamus aut non esse, Cic. de Or. 2, 38, 157: non statim, quod esse manifestum est, etiam quid sit apparet, Quint. 3, 6, 81: est locus, Hesperiam quam mortales perhibebant, Enn. ap. Macr. S. 6, 1 (Ann. v. 23 Vahl.): flumen est Arar, quod, etc., Caes. B. G. 1, 12: homo nequissimus omnium qui sunt, qui fuerunt, qui futuri sunt! Cic. Fam. 11, 21, 1; cf. id. Q. Fr. 1, 1, 15, \u00a7 43: si quos inter societas aut est aut fuit aut futura est, id. Lael. 22, 83: nec enim, dum ero, angar ull\u0101 re, cum omni vacem culp\u0101: et, si non ero, sensu omnino carebo, id. Fam. 6, 3, 4: si modo futuri sumus, erit mihi res opportuna, id. Att. 11, 4, 1: si quando erit civitas, erit profecto nobis locus: sin autem non erit, etc., id. Fam. 2, 16, 6: nolite arbitrari, me cum a vobis discessero, nusquam aut nullum fore, id. Sen. 22, 79: si erit ulla res publica ... sin autem nulla erit, id. Fam. 2, 16, 5: fuimus Troes, fuit Ilium, Verg. A. 2, 325: sive erimus seu nos fata fuisse volunt, Tib. 3, 5, 32: per quinquennia decem fuimus, Prud. Cath. praef. 2.\u2014",
+              "entryid": "00:00:00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi042:5:26": "Cic. Top. 5, 26",
+                "urn:cts:latinLit:phi0119.phi004:194": "Plaut. Bacch. 2, 2, 16 (194)",
+                "urn:cts:latinLit:phi0119.phi005:516": "id. Capt. 3, 3, 1 (516)",
+                "urn:cts:latinLit:phi0119.phi020:189": "id. Truc. 1, 2, 95 (189)",
+                "urn:cts:latinLit:phi0474.phi037:2:38:157": "Cic. de Or. 2, 38, 157",
+                "urn:cts:latinLit:phi1002.phi001:3:6:81": "Quint. 3, 6, 81",
+                "urn:cts:latinLit:stoa0186.stoa001:6:1": "Macr. S. 6, 1",
+                "urn:cts:latinLit:phi0448.phi001:1:12": "Caes. B. G. 1, 12",
+                "urn:cts:latinLit:phi0474.phi056:11:21:1": "Cic. Fam. 11, 21, 1",
+                "urn:cts:latinLit:phi0474.phi058:1:1:43": "id. Q. Fr. 1, 1, 15, \u00a7 43",
+                "urn:cts:latinLit:phi0474.phi052:22:83": "id. Lael. 22, 83",
+                "urn:cts:latinLit:phi0474.phi056:6:3:4": "id. Fam. 6, 3, 4",
+                "urn:cts:latinLit:phi0474.phi057:11:4:1": "id. Att. 11, 4, 1",
+                "urn:cts:latinLit:phi0474.phi056:2:16:6": "id. Fam. 2, 16, 6",
+                "urn:cts:latinLit:phi0474.phi051:22:79": "id. Sen. 22, 79",
+                "urn:cts:latinLit:phi0474.phi056:2:16:5": "id. Fam. 2, 16, 5",
+                "urn:cts:latinLit:phi0690.phi003:2:325": "Verg. A. 2, 325",
+                "urn:cts:latinLit:phi0660.phi002:3:5:32": "Tib. 3, 5, 32"
+              }
+            },
+            {
+              "entry": "2.  Of events, to be, happen, occur, befall, take place: illa (solis defectio) quae fuit regnante Romulo, Cic. Rep. 1, 16, 25: neque enim est periculum, ne, etc., id. ib. 1, 23, 37: amabo, quid tibi est? Ter. Heaut. 404: quid se futurum esset, Liv. 33, 27. \u2014",
+              "entryid": "00:00:00:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi043:1:16:25": "Cic. Rep. 1, 16, 25",
+                "urn:cts:latinLit:phi0474.phi043:1:23:37": "id. ib. 1, 23, 37",
+                "urn:cts:latinLit:phi0134.phi002:404": "Ter. Heaut. 404",
+                "urn:cts:latinLit:phi0914.phi001:33:27": "Liv. 33, 27"
+              }
+            },
+            {
+              "entry": "3.  Of location, to be present, to be at a place.",
+              "entryid": "00:00:00:02"
+            },
+            {
+              "entry": "\u03b1.  With adv., or other expressions of place: cum non liceret quemquam Romae esse, qui, etc., Cic. Verr. 2, 2, 41, \u00a7 100: cum Athenis decem ipsos dies fuissem, id. Fam. 2, 8, 3; id. de Or. 2, 7, 27: cum Africanus constituisset in hortis esse, id. Rep. 1, 9, 14: cum essemus in castris, id. ib. 1, 15: nonne mavis sine periculo tuae domi esse quam cum periculo alienae? id. Fam. 4, 7, 4: vos istic commodissime sperem esse, id. ib. 14, 7, 2: te hic tutissime puto fore, Pompon. ap. Cic. Att. 8, 11, A.\u2014",
+              "entryid": "00:00:00:02:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi005:2:2:100": "Cic. Verr. 2, 2, 41, \u00a7 100",
+                "urn:cts:latinLit:phi0474.phi056:2:8:3": "id. Fam. 2, 8, 3",
+                "urn:cts:latinLit:phi0474.phi037:2:7:27": "id. de Or. 2, 7, 27",
+                "urn:cts:latinLit:phi0474.phi043:1:9:14": "id. Rep. 1, 9, 14",
+                "urn:cts:latinLit:phi0474.phi043:1:15": "id. ib. 1, 15",
+                "urn:cts:latinLit:phi0474.phi056:4:7:4": "id. Fam. 4, 7, 4",
+                "urn:cts:latinLit:phi0474.phi056:14:7:2": "id. ib. 14, 7, 2",
+                "urn:cts:latinLit:phi0474.phi057:8:11": "Cic. Att. 8, 11"
+              }
+            },
+            {
+              "entry": "\u03b2.  Of passages in a book or writing, with in and abl., to be, stand, be written, etc.: deinceps in lege est, ut, etc., Cic. Leg. 2, 16, 40: quid enim in illis (litteris) fuit praeter querelam temporum, id. Fam. 2, 16, 1.\u2014",
+              "entryid": "00:00:00:02:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi044:2:16:40": "Cic. Leg. 2, 16, 40",
+                "urn:cts:latinLit:phi0474.phi056:2:16:1": "id. Fam. 2, 16, 1"
+              }
+            },
+            {
+              "entry": "\u03b3.  Of personal relations, with ad or apud and acc., or cum and abl. of person: cum esset (Sulpicius Gallus) casu apud M. Marcellum, Cic. Rep. 1, 14, 21: eram cum Stoico Diodoto: qui cum habitavisset apud me mecumque vixisset, etc., id. Brut. 90, 309: erat nemo, qu\u012bcum essem libentius quam tecum et pauci, quibuscum essem aeque libenter, id. Fam. 5, 21, 1: qui me admodum diligunt multumque mecum sunt, id. ib. 4, 13, 6; cf. with simul: Smyrnae cum simul essemus complures dies, id. Rep. 1, 8, 13.\u2014Hence, esp.: esse cum aliquo (aliqu\u0101), to be with, i. e. live with, associate with, as husband or wife: cujus soror est cum P. Quintio, Cic. Quint. 24, 77: e\u0101 nocte mecum illa hospitis jussu fuit, Plaut. Merc. 1, 1, 101 (101); Ov. A. A. 3, 664: cum hac (meretrice) si qui adulescens forte fuerit, Cic. Cael. 20, 49; Ov. Am. 2, 8, 27: tum ad me fuerunt, qui, etc., Varr. ap. Non. 133, 28: Curio fuit ad me sane diu, Cic. Att. 10, 4, 8: cum ad me bene mane Dionysius fuit, id. ib. 10, 16, 1; cf.: esse sub uno tecto atque ad eosdem Penates, Liv. 28, 18.\u2014",
+              "entryid": "00:00:00:02:02",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi043:1:14:21": "Cic. Rep. 1, 14, 21",
+                "urn:cts:latinLit:phi0474.phi039:90:309": "id. Brut. 90, 309",
+                "urn:cts:latinLit:phi0474.phi056:5:21:1": "id. Fam. 5, 21, 1",
+                "urn:cts:latinLit:phi0474.phi056:4:13:6": "id. ib. 4, 13, 6",
+                "urn:cts:latinLit:phi0474.phi043:1:8:13": "id. Rep. 1, 8, 13",
+                "urn:cts:latinLit:phi0474.phi001:24:77": "Cic. Quint. 24, 77",
+                "urn:cts:latinLit:phi0119.phi011:101": "Plaut. Merc. 1, 1, 101 (101)",
+                "urn:cts:latinLit:phi0959.phi004:3:664": "Ov. A. A. 3, 664",
+                "urn:cts:latinLit:phi0474.phi024:20:49": "Cic. Cael. 20, 49",
+                "urn:cts:latinLit:phi0959.phi001:2:8:27": "Ov. Am. 2, 8, 27",
+                "urn:cts:latinLit:phi0474.phi057:10:4:8": "Cic. Att. 10, 4, 8",
+                "urn:cts:latinLit:phi0474.phi057:10:16:1": "id. ib. 10, 16, 1",
+                "urn:cts:latinLit:phi0914.phi001:28:18": "Liv. 28, 18"
+              }
+            },
+            {
+              "entry": "4.  Of relations analogous to place, of dress, condition, position, office, etc., to be, live, be found, etc., with in and abl.: cum est in sagis civitas, Cic. Phil. 8, 11, 32: in lax\u0101 tog\u0101, Tib. 2, 3, 78: sive erit in Tyriis, Tyrios laudabis amictus; Sive erit in Cois, Coa decere puta, Ov. A. A. 2, 297: hominem non modo in aere alieno nullo, sed in suis nummis multis esse et semper fuisse, Cic. Verr. 2, 4, 6, \u00a7 11: in servitute, id. Clu. 7, 21: in ill\u0101 opinione populari, id. ib. 51, 142: in magno nomine et glori\u0101, id. Div. 1, 17, 31: in spe, id. Fam. 14, 3, 2: in tant\u0101 moestiti\u0101, id. Phil. 2, 15, 37: in odio, id. Att. 2, 22, 1: in probris, in laudibus, id. Off. 1, 18, 61: in officio, id. ib. 1, 15, 49: in injustiti\u0101, id. ib. 1, 14, 42: in vitio, id. ib. 1, 19, 62; id. Tusc. 3, 9, 19: ne in mor\u0101 quom opus sit, sies, Ter. And. 424: ne in mor\u0101 illi sis, 467: hic in noxia'st, id. Phorm. 266: quae (civitas) una in amore atque in deliciis fuit, Cic. Verr. 2, 4, 1, \u00a7 3: in ingenti periculo, Liv. 5, 47: in pace, id. 31, 29.\u2014So with abl. without in, when qualified by an adj.: (statua) est et fuit tot\u0101 Graeci\u0101 summo propter ingenium honore et nomine, Cic. Verr. 2, 2, 35, \u00a7 87: si quis asperitate e\u0101 est et inmanitate naturae, id. Lael. 23, 87: ne quo periculo proprio existimares esse, id. Fam. 4, 15, 2 (B. and K. ex conj.: in periculo): ego sum spe bon\u0101, id. ib. 12, 28, 3: res nunc difficili loco mihi videtur esse, id. ib. 12, 28, 3: incredibili sum sollicitudine de tu\u0101 valetudine, id. ib. 16, 15, 1; esp. in phrase periculo alicujus esse, to be at the risk of any one: rem illam suo periculo esse, id. Att. 6, 1, 6: ut quae in naves inposuissent, ab hostium tempestatisque vi publico periculo essent, Liv. 23, 49, 2 Weissenb. ad loc.: dare nummos meo periculo, Dig. 46, 1, 24: communi periculo, ib. 13, 6, 21, \u00a7 1 (cf. II. B. 1. \u03b2. infra).\u2014",
+              "entryid": "00:00:00:03",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi035:8:11:32": "Cic. Phil. 8, 11, 32",
+                "urn:cts:latinLit:phi0660.phi001:2:3:78": "Tib. 2, 3, 78",
+                "urn:cts:latinLit:phi0959.phi004:2:297": "Ov. A. A. 2, 297",
+                "urn:cts:latinLit:phi0474.phi005:2:4:11": "Cic. Verr. 2, 4, 6, \u00a7 11",
+                "urn:cts:latinLit:phi0474.phi010:7:21": "id. Clu. 7, 21",
+                "urn:cts:latinLit:phi0474.phi010:51:142": "id. ib. 51, 142",
+                "urn:cts:latinLit:phi0474.phi053:1:17:31": "id. Div. 1, 17, 31",
+                "urn:cts:latinLit:phi0474.phi056:14:3:2": "id. Fam. 14, 3, 2",
+                "urn:cts:latinLit:phi0474.phi035:2:15:37": "id. Phil. 2, 15, 37",
+                "urn:cts:latinLit:phi0474.phi057:2:22:13": "id. Att. 2, 22, 1",
+                "urn:cts:latinLit:phi0474.phi055:1:18:61": "id. Off. 1, 18, 61",
+                "urn:cts:latinLit:phi0474.phi055:1:15:49": "id. ib. 1, 15, 49",
+                "urn:cts:latinLit:phi0474.phi055:1:14:42": "id. ib. 1, 14, 42",
+                "urn:cts:latinLit:phi0474.phi055:1:19:62": "id. ib. 1, 19, 62",
+                "urn:cts:latinLit:phi0474.phi049:3:9:19": "id. Tusc. 3, 9, 19",
+                "urn:cts:latinLit:phi0134.phi001:424": "Ter. And. 424",
+                "urn:cts:latinLit:phi0134.phi001:467": "467",
+                "urn:cts:latinLit:phi0134.phi004:266": "id. Phorm. 266",
+                "urn:cts:latinLit:phi0474.phi005:2:4:3": "Cic. Verr. 2, 4, 1, \u00a7 3",
+                "urn:cts:latinLit:phi0914.phi001:5:47": "Liv. 5, 47",
+                "urn:cts:latinLit:phi0914.phi001:31:29": "id. 31, 29",
+                "urn:cts:latinLit:phi0474.phi005:2:2:87": "Cic. Verr. 2, 2, 35, \u00a7 87",
+                "urn:cts:latinLit:phi0474.phi052:23:87": "id. Lael. 23, 87",
+                "urn:cts:latinLit:phi0474.phi056:4:15:2": "id. Fam. 4, 15, 2",
+                "urn:cts:latinLit:phi0474.phi056:12:28:3": "id. ib. 12, 28, 3",
+                "urn:cts:latinLit:phi0474.phi056:16:15:1": "id. ib. 16, 15, 1",
+                "urn:cts:latinLit:phi0474.phi057:6:1:6": "id. Att. 6, 1, 6",
+                "urn:cts:latinLit:phi0914.phi001:23:49:2": "Liv. 23, 49, 2",
+                "urn:cts:latinLit:phi2806.phi001:46:1:24": "Dig. 46, 1, 24",
+                "urn:cts:latinLit:phi2806.phi001:13:6:21:section=1": "ib. 13, 6, 21, \u00a7 1"
+              }
+            },
+            {
+              "entry": "5.  To depend upon, rest with, with in and abl.: res erat non in opinione dubi\u0101, Cic. Dom. 5, 11: sed totum est in eo, si, etc., id. Att. 2, 22, 5: omnem reliquam spem in impetu esse equitum, Liv. 10, 14, 12: quoniam totum in eo sit, ne contrectentur pocula, Col. 12, 4, 3. \u2014",
+              "entryid": "00:00:00:04",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi020:5:11": "Cic. Dom. 5, 11",
+                "urn:cts:latinLit:phi0474.phi057:2:22:5": "id. Att. 2, 22, 5",
+                "urn:cts:latinLit:phi0914.phi001:10:14:12": "Liv. 10, 14, 12",
+                "urn:cts:latinLit:phi0845.phi002:12:4:3": "Col. 12, 4, 3"
+              }
+            },
+            {
+              "entry": "B.  In partic.",
+              "entryid": "00:00:01"
+            },
+            {
+              "entry": "1.  Esse (est, sunt, etc.) often stands without a subject expressed, or with an indef. subj., as antecedent of a rel.-clause, whose verb may be in the indic. or subj.; the former only when the subject is conceived as particular or limited, and actually existing; the latter always when it is conceived as indefinite; cf. Zumpt, Gram. \u00a7 562 sq.; Roby, Gram. \u00a7 1686 sq.; Madv. Gram. \u00a7 365; but the distinctions usually drawn by grammarians are not always observed by the best writers; and the subjunctive is always admissible, being the prevailing construction after sunt qui in class. prose, and nearly universal in post-Aug. writers: sunt, qui (quae), there are those (people or things) who (that), or simply some.",
+              "entryid": "00:00:01:00"
+            },
+            {
+              "entry": "a.  With indic.",
+              "entryid": "00:00:01:00:00"
+            },
+            {
+              "entry": "\u03b1.  Without subject expressed: mulier mane: sunt Qui volunt te conventam, Plaut. Cist. 4, 2, 37 (707): sunt hic quos credo inter se dicere, id. Cas. prol. 67: sunt quae te volumus percontari, id. Ps. 1, 5, 47 (461): quid est, quod tu gestas tabellas? id. ib. 1, 1, 10 (12): quid est, quod tu me nunc optuere? id. Most. 1, 1, 69 (69); cf.: quid hoc est, quod foris concrepuit? id. ib. 5, 1, 15 (1055): tun' is es, Qui in me aerumnam obsevisti? id. Ep. 4, 1, 34 (559): quid est, quod tuo animo aegre est? id. Cas. 2, 2, 9 (173); id. Cist. 4, 1, 3 (655): at ego est quod volo loqui, id. As. 1, 3, 79 (231): est quod te volo secreto, id. Bacch. 5, 2, 30 (1149): sunt quos scio amicos esse, sunt quos suspicor, id. Trin. 1, 2, 54 (92): ita subitum'st, quod eum conventum volo, id. ib. 5, 2, 51 (1175): sunt quae ego ex te scitari volo, id. Capt. 2, 2, 13 (263): sed est quod suscenset tibi, Ter. And. 448: est quod me transire oportet, id. Hec. 273: quid sit quapropter te jussi, etc., id. ib. 733: sunt item quae appellantur alces, Caes. B. G. 6, 27 init.: (nationes) ex quibus sunt qui ovis vivere existimantur, id. ib. 4, 10 fin.: sunt qui putant posse te non decedere, Cic. Fam. 1, 9, 25: sunt autem, qui putant non numquam complexione oportere supersederi, id. Inv. 1, 40, 72: quamquam sunt, qui propter utilitatem modo petendas putant amicitias, id. ib. 2, 55, 167: sunt autem quae praeterii, id. Att. 10, 4, 11: sunt, qui abducunt a malis ad bona, ut Epicurus. Sunt, qui satis putant ostendere, nihil inopinati accidisse ... Sunt etiam qui haec omnia genera consolandi colligunt, id. Tusc. 3, 31, 76 K\u00fchn. N. cr.: sunt, qui, quod sentiunt, non audent dicere, id. Off. 1, 24, 84: Argiletum sunt qui scripserunt ab Argol\u0101, etc., Varr. L. L. 5, \u00a7 157 M\u00fcll.: sunt qui ita dicunt, Sall. C. 19, 4: sunt qui spiritum non recipiunt sed resorbent, Quint. 11, 3, 55: sunt, quos curriculo pulverem Olympicum Collegisse juvat, Hor. C. 1, 1, 3; cf. id. S. 1, 4, 24: sunt quibus unum opus est, etc., id. C. 1, 7, 5: sunt quibus in satir\u0101 videor nimis acer, id. S. 2, 1, 1: sunt quorum ingenium nova tantum crustula promit, id. ib. 2, 4, 47.\u2014",
+              "entryid": "00:00:01:00:01",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi007:707": "Plaut. Cist. 4, 2, 37 (707)",
+                "urn:cts:latinLit:phi0119.phi006:67": "id. Cas. prol. 67",
+                "urn:cts:latinLit:phi0119.phi016:461": "id. Ps. 1, 5, 47 (461)",
+                "urn:cts:latinLit:phi0119.phi016:12": "id. ib. 1, 1, 10 (12)",
+                "urn:cts:latinLit:phi0119.phi013:69": "id. Most. 1, 1, 69 (69)",
+                "urn:cts:latinLit:phi0119.phi013:1055": "id. ib. 5, 1, 15 (1055)",
+                "urn:cts:latinLit:phi0119.phi009:559": "id. Ep. 4, 1, 34 (559)",
+                "urn:cts:latinLit:phi0119.phi006:173": "id. Cas. 2, 2, 9 (173)",
+                "urn:cts:latinLit:phi0119.phi007:655": "id. Cist. 4, 1, 3 (655)",
+                "urn:cts:latinLit:phi0119.phi002:231": "id. As. 1, 3, 79 (231)",
+                "urn:cts:latinLit:phi0119.phi004:1149": "id. Bacch. 5, 2, 30 (1149)",
+                "urn:cts:latinLit:phi0119.phi019:92": "id. Trin. 1, 2, 54 (92)",
+                "urn:cts:latinLit:phi0119.phi019:1175": "id. ib. 5, 2, 51 (1175)",
+                "urn:cts:latinLit:phi0119.phi005:263": "id. Capt. 2, 2, 13 (263)",
+                "urn:cts:latinLit:phi0134.phi001:448": "Ter. And. 448",
+                "urn:cts:latinLit:phi0134.phi005:273": "id. Hec. 273",
+                "urn:cts:latinLit:phi0134.phi005:733": "id. ib. 733",
+                "urn:cts:latinLit:phi0448.phi001:6:27": "Caes. B. G. 6, 27 init.",
+                "urn:cts:latinLit:phi0448.phi001:4:10": "id. ib. 4, 10",
+                "urn:cts:latinLit:phi0474.phi056:1:9:25": "Cic. Fam. 1, 9, 25",
+                "urn:cts:latinLit:phi0474.phi036:1:40:72": "id. Inv. 1, 40, 72",
+                "urn:cts:latinLit:phi0474.phi036:2:55:167": "id. ib. 2, 55, 167",
+                "urn:cts:latinLit:phi0474.phi057:10:4:11": "id. Att. 10, 4, 11",
+                "urn:cts:latinLit:phi0474.phi049:3:31:76": "id. Tusc. 3, 31, 76",
+                "urn:cts:latinLit:phi0474.phi055:1:24:84": "id. Off. 1, 24, 84",
+                "urn:cts:latinLit:phi0684.phi001:5:157": "Varr. L. L. 5, \u00a7 157",
+                "urn:cts:latinLit:phi0631.phi001:19:4": "Sall. C. 19, 4",
+                "urn:cts:latinLit:phi1002.phi001:11:3:55": "Quint. 11, 3, 55",
+                "urn:cts:latinLit:phi0893.phi001:1:1:3": "Hor. C. 1, 1, 3",
+                "urn:cts:latinLit:phi0893.phi004:1:4:24": "id. S. 1, 4, 24",
+                "urn:cts:latinLit:phi0893.phi001:1:7:5": "id. C. 1, 7, 5",
+                "urn:cts:latinLit:phi0893.phi004:2:1:1": "id. S. 2, 1, 1",
+                "urn:cts:latinLit:phi0893.phi004:2:4:47": "id. ib. 2, 4, 47"
+              }
+            },
+            {
+              "entry": "\u03b2.  With a subject expressed by an indefinite word or clause: sunt alii qui te volturium vocant, Plaut. Trin. 1, 2, 64 (102): est genus hominum qui se primos omnium esse volunt, Ter. Eun. 248: multae sunt causae, quam ob rem cupio abducere, id. ib. 106 Fleck. (Ussing, cupiam): erat quidam eunuchus, quem mercatus fuerat, id. ib. 569: multaeque res sunt in quibus de suis commodis viri boni multa detrahunt, Cic. Lael. 16, 57: sunt ejus aliquot orationes, ex quibus lenitas ejus perspici potest, id. Brut. 48, 177: fuerunt alia genera philosophorum, qui se omnes Socraticos esse dicebant, id. de Or. 3, 17, 62: nonnulli sunt, qui aluerunt, etc., id. Cat. 1, 12, 301: sunt quidam, qui molestas amicitias faciunt, cum ipsi se contemni putant, id. Lael. 20, 72: sunt vestrum, judices, aliquam multi, qui L. Pisonem cognoverunt, id. Verr. 2, 4, 25, \u00a7 56: multae et pecudes et stirpes sunt, quae sine procuratione hominum salvae esse non possunt, id. N. D. 2, 52, 130: sunt bestiae quaedam, in quibus inest aliquid simile virtutis, etc., id. Fin. 5, 14, 38: permulta sunt, quae dici possunt, quare intellegatur, etc., id. Rosc. Am. 33, 94; cf. id. Div. in Caecil. 7, 22; id. Off. 1, 14, 43; 1, 20, 69; id. Div. 1, 54, 123: fuere complures, qui ad Catilinam initio profecti sunt, Sall. C. 39, 5: haec sunt, quae clamores et admirationes in bonis oratoribus efficiunt. Cic. de Or. 1, 33, 152: alia fuere, quae illos magnos fecere, Sall. C. 52, 21.\u2014",
+              "entryid": "00:00:01:00:02",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi019:102": "Plaut. Trin. 1, 2, 64 (102)",
+                "urn:cts:latinLit:phi0134.phi003:248": "Ter. Eun. 248",
+                "urn:cts:latinLit:phi0134.phi003:106": "id. ib. 106",
+                "urn:cts:latinLit:phi0134.phi003:569": "id. ib. 569",
+                "urn:cts:latinLit:phi0474.phi052:16:57": "Cic. Lael. 16, 57",
+                "urn:cts:latinLit:phi0474.phi039:48:177": "id. Brut. 48, 177",
+                "urn:cts:latinLit:phi0474.phi037:3:17:62": "id. de Or. 3, 17, 62",
+                "urn:cts:latinLit:phi0474.phi013:1:12:301": "id. Cat. 1, 12, 301",
+                "urn:cts:latinLit:phi0474.phi052:20:72": "id. Lael. 20, 72",
+                "urn:cts:latinLit:phi0474.phi005:2:4:56": "id. Verr. 2, 4, 25, \u00a7 56",
+                "urn:cts:latinLit:phi0474.phi050:2:52:130": "id. N. D. 2, 52, 130",
+                "urn:cts:latinLit:phi0474.phi048:5:14:38": "id. Fin. 5, 14, 38",
+                "urn:cts:latinLit:phi0474.phi002:33:94": "id. Rosc. Am. 33, 94",
+                "urn:cts:latinLit:phi0474.phi004:7:22": "id. Div. in Caecil. 7, 22",
+                "urn:cts:latinLit:phi0474.phi055:1:14:43": "id. Off. 1, 14, 43",
+                "urn:cts:latinLit:phi0474.phi055:1:20:69": "1, 20, 69",
+                "urn:cts:latinLit:phi0474.phi053:1:54:123": "id. Div. 1, 54, 123",
+                "urn:cts:latinLit:phi0631.phi001:39:5": "Sall. C. 39, 5",
+                "urn:cts:latinLit:phi0474.phi037:1:33:152": "Cic. de Or. 1, 33, 152",
+                "urn:cts:latinLit:phi0631.phi001:52:21": "Sall. C. 52, 21"
+              }
+            },
+            {
+              "entry": "b.  With. subj.: sunt, qui discessum animi a corpore putent esse mortem; sunt qui nullum censeant fieri discessum, Cic. Tusc. 1, 9, 18: sunt qui in rebus contrariis parum sibi constent, id. Off. 1, 21, 71: de impudenti\u0101 singulari sunt qui mirentur, id. Verr. 2, 1, 2, \u00a7 6: est eisdem de rebus quod dici potest subtilius, id. Tusc. 3, 15, 32: praesto est qui neget rem ullam percipi esse sensibus, id. Ac. 2 (Luc.), 32, 101: quicquid est quod deceat, id, etc., id. Off. 1, 27, 94: sunt qui nolint tetigisse nisi illas, etc., Hor. S. 1, 2, 28: sunt qui Crustis et pomis viduas venentur avaras, id. Ep. 1, 1, 78: vestes Gaetulo murice tinctas Sunt qui non habeant, est qui non curet habere, id. ib. 2, 2, 182 et saep.\u2014",
+              "entryid": "00:00:01:00:02:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi049:1:9:18": "Cic. Tusc. 1, 9, 18",
+                "urn:cts:latinLit:phi0474.phi055:1:21:71": "id. Off. 1, 21, 71",
+                "urn:cts:latinLit:phi0474.phi005:2:1:6": "id. Verr. 2, 1, 2, \u00a7 6",
+                "urn:cts:latinLit:phi0474.phi049:3:15:32": "id. Tusc. 3, 15, 32",
+                "urn:cts:latinLit:phi0474.phi046:32:101": "id. Ac. 2 (Luc.), 32, 101",
+                "urn:cts:latinLit:phi0474.phi055:1:27:94": "id. Off. 1, 27, 94",
+                "urn:cts:latinLit:phi0893.phi004:1:2:28": "Hor. S. 1, 2, 28",
+                "urn:cts:latinLit:phi0893.phi005:1:1:78": "id. Ep. 1, 1, 78",
+                "urn:cts:latinLit:phi0893.phi005:2:2:182": "id. ib. 2, 2, 182"
+              }
+            },
+            {
+              "entry": "\u03b2.  With a more or less indefinite expression of the subject: sunt quidam e nostris, qui haec subtilius velint tradere et negent satis esse, etc., Cic. Fam. 1, 9, 31: rarum est quoddam genus eorum, qui se a corpore avocent, id. Div. 1, 49, 111: quotus igitur est quisque qui somniis pareat? id. ib. 2, 60, 125; id. de Or. 2, 50, 196: solus est hic, qui numquam rationes ad aerarium referat, id. Verr. 2, 1, 38, \u00a7 98: quae quibusdam admirabilia videntur, permulti sunt, qui pro nihilo putent, id. Lael. 23, 86: erat nemo in quem ea suspicio conveniret, id. Rosc. Am. 23, 65, cf.: quis enim miles fuit, qui Brundisii illam non viderit? quis, qui nescierit, etc., id. Phil. 2, 25, 61: sit aliquis, qui nihil mali habeat, id. Tusc. 1, 35, 85: sunt nonnullae disciplinae, quae officium omne pervertant, id. Off. 1, 2, 5: est quaedam animi sanitas quae in insipientem quoque cadat, id. Tusc. 4, 13, 30: Syracusis lex est de religione, quae jubeat, id. Verr. 2, 2, 51, \u00a7 126: unus est qui curet constanti\u0101 magis quam consilio, id. Att. 1, 18, 7: si est una ex omnibus quae sese moveat, id. Rep. 6, 26, 28: multi sunt, qui non acerbum judicent vivere, sed supervacuum, Sen. Ep. 24, 26: erant sententiae quae castra Vari oppugnanda censerent, Caes. B. C. 2, 30: fuere cives qui seque remque publicam obstinatis animis perditum irent, Sall. C. 36, 4: sunt verba et voces, quibus hunc lenire dolorem Possis, Hor. Ep. 1, 1, 34: sunt delicta tamen, quibus ignovisse velimus, id. A. P. 347.\u2014 *",
+              "entryid": "00:00:01:00:03",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi056:1:9:31": "Cic. Fam. 1, 9, 31",
+                "urn:cts:latinLit:phi0474.phi053:1:49:111": "id. Div. 1, 49, 111",
+                "urn:cts:latinLit:phi0474.phi053:2:60:125": "id. ib. 2, 60, 125",
+                "urn:cts:latinLit:phi0474.phi037:2:50:196": "id. de Or. 2, 50, 196",
+                "urn:cts:latinLit:phi0474.phi005:2:1:98": "id. Verr. 2, 1, 38, \u00a7 98",
+                "urn:cts:latinLit:phi0474.phi052:23:86": "id. Lael. 23, 86",
+                "urn:cts:latinLit:phi0474.phi002:23:65": "id. Rosc. Am. 23, 65",
+                "urn:cts:latinLit:phi0474.phi035:2:25:61": "id. Phil. 2, 25, 61",
+                "urn:cts:latinLit:phi0474.phi049:1:35:85": "id. Tusc. 1, 35, 85",
+                "urn:cts:latinLit:phi0474.phi055:1:2:5": "id. Off. 1, 2, 5",
+                "urn:cts:latinLit:phi0474.phi049:4:13:30": "id. Tusc. 4, 13, 30",
+                "urn:cts:latinLit:phi0474.phi005:2:2:126": "id. Verr. 2, 2, 51, \u00a7 126",
+                "urn:cts:latinLit:phi0474.phi057:1:18:7": "id. Att. 1, 18, 7",
+                "urn:cts:latinLit:phi0474.phi043:6:26:28": "id. Rep. 6, 26, 28",
+                "urn:cts:latinLit:phi1017.phi015:24:26": "Sen. Ep. 24, 26",
+                "urn:cts:latinLit:phi0448.phi002:2:30": "Caes. B. C. 2, 30",
+                "urn:cts:latinLit:phi0631.phi001:36:4": "Sall. C. 36, 4",
+                "urn:cts:latinLit:phi0893.phi005:1:1:34": "Hor. Ep. 1, 1, 34",
+                "urn:cts:latinLit:phi0893.phi006:347": "id. A. P. 347"
+              }
+            },
+            {
+              "entry": "c.  Poet.: est, quibus (acc. to the Gr. \u1f14\u03c3\u03c4\u03b9\u03bd \u03bf\u1f37\u03c2): est quibus Eleae concurrit palma quadrigae: est quibus in celeres gloria nata pedes, Prop. 3, 9 (4, 8), 17.\u2014",
+              "entryid": "00:00:01:00:03:00",
+              "citations": {
+                "urn:cts:latinLit:phi0620.phi001:3:9:17": "Prop. 3, 9 (4, 8), 17"
+              }
+            },
+            {
+              "entry": "2.  With dat., to belong or pertain to; or, rendering the dative as the subject of the verb, to have (possess, = the Fr. \u00eatre \u00e0 used of property, and of permanent conditions or characteristics, not of temporary states, feelings, etc.; cf. Krebs, Antibarb. p. 417 sq.): aliquid reperiret, fingeret fallacias, Unde esset adulescenti, amicae quod daret, Ter. Heaut. 534: nomen Mercurio'st mihi, Plaut. Am. prol. 19: nisi jam tum esset honos eloquentiae, Cic. Brut. 10, 40: est igitur homini cum deo similitudo, id. Leg. 1, 8, 25: familiaritas, quae mihi cum eo est, id. Att. 8. 3, 2: privatus illis census erat brevis, Hor. C. 2, 15, 13; cf.: Trojae et huic loco nomen est, Liv. 1, 1, 5: Hecyra est huic nomen fabulae, Ter. Hec. 1: cui saltationi Titius nomen esset, Cic. Brut. 62, 225: cui (fonti) nomen Arethusa est, id. Verr. 2, 4, 53, \u00a7 118: Scipio, cui post Africano fuit cognomen, Liv. 25, 2, 6.\u2014With ellips. of dat. (poet.): nec rubor est emisse palam (sc. ei), nor is she ashamed, Ov. A. A. 3, 167: neque testimonii dictio est (sc. servo), has no right to be a witness, Ter. Phorm. 293.\u2014",
+              "entryid": "00:00:01:01",
+              "citations": {
+                "urn:cts:latinLit:phi0134.phi002:534": "Ter. Heaut. 534",
+                "urn:cts:latinLit:phi0119.phi001:19": "Plaut. Am. prol. 19",
+                "urn:cts:latinLit:phi0474.phi039:10:40": "Cic. Brut. 10, 40",
+                "urn:cts:latinLit:phi0474.phi044:1:8:25": "id. Leg. 1, 8, 25",
+                "urn:cts:latinLit:phi0474.phi057:chapter=8": "id. Att. 8",
+                "urn:cts:latinLit:phi0893.phi001:2:15:13": "Hor. C. 2, 15, 13",
+                "urn:cts:latinLit:phi0914.phi001:1:1:5": "Liv. 1, 1, 5",
+                "urn:cts:latinLit:phi0134.phi005:1": "Ter. Hec. 1",
+                "urn:cts:latinLit:phi0474.phi039:62:225": "Cic. Brut. 62, 225",
+                "urn:cts:latinLit:phi0474.phi005:2:4:118": "id. Verr. 2, 4, 53, \u00a7 118",
+                "urn:cts:latinLit:phi0914.phi001:25:2:6": "Liv. 25, 2, 6",
+                "urn:cts:latinLit:phi0959.phi004:3:167": "Ov. A. A. 3, 167",
+                "urn:cts:latinLit:phi0134.phi004:293": "Ter. Phorm. 293"
+              }
+            },
+            {
+              "entry": "b.  Esse alicui cum aliquo, to have to do with, to be connected with a person: tecum nihil rei nobis, Demipho, est, Ter. Phorm. 421: sibi cum ill\u0101 mim\u0101 posthac nihil futurum, Cic. Phil. 2, 31, 77: jussit bona proscribi ejus, qu\u012bcum familiaritas fuerat, societas erat, id. Quint. 6, 25: si mihi tecum minus esset, quam est cum tuis omnibus, id. Fam. 15, 10, 2.\u2014",
+              "entryid": "00:00:01:01:00",
+              "citations": {
+                "urn:cts:latinLit:phi0134.phi004:421": "Ter. Phorm. 421",
+                "urn:cts:latinLit:phi0474.phi035:2:31:77": "Cic. Phil. 2, 31, 77",
+                "urn:cts:latinLit:phi0474.phi001:6:25": "id. Quint. 6, 25",
+                "urn:cts:latinLit:phi0474.phi056:15:10:2": "id. Fam. 15, 10, 2"
+              }
+            },
+            {
+              "entry": "3.  Esse with certain prepp. and their cases (cf. also I. A. 2. 3. 4. supra).",
+              "entryid": "00:00:01:02"
+            },
+            {
+              "entry": "\u03b1.  Esse ab aliquo, to be of a person, to be the servant, disciple, adherent, partisan, etc., of: es ne tu an non es ab illo milite e Macedoni\u0101? do you belong to? Plaut. Ps. 2, 2, 21 (614): ab Andri\u0101 est ancilla haec, Ter. And. 461; 756: erat enim ab isto Aristotele, Cic. de Or. 2, 38, 160: sed vide ne hoc, Scaevola, totum sit a me, makes for me, id. de Or. 1, 13, 55 (cf. ab, I. B. 3., II. B. 2. o.). \u2014",
+              "entryid": "00:00:01:02:00",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi016:614": "Plaut. Ps. 2, 2, 21 (614)",
+                "urn:cts:latinLit:phi0134.phi001:461": "Ter. And. 461",
+                "urn:cts:latinLit:phi0134.phi001:756": "756",
+                "urn:cts:latinLit:phi0474.phi037:2:38:160": "Cic. de Or. 2, 38, 160",
+                "urn:cts:latinLit:phi0474.phi037:1:13:55": "id. de Or. 1, 13, 55"
+              }
+            },
+            {
+              "entry": "\u03b2.  Esse pro aliquo, to be in favor of, make for: (judicia) partim nihil contra Habitum valere, partim etiam pro hoc esse, Cic. Clu. 32, 88.\u2014",
+              "entryid": "00:00:01:02:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi010:32:88": "Cic. Clu. 32, 88"
+              }
+            },
+            {
+              "entry": "\u03b3.  Esse ex aliqu\u0101 re, to consist of, be made up of: (creticus) qui est ex long\u0101 et brevi et long\u0101, Cic. de Or. 3, 47, 183; cf.: duo extremi chorei sunt, id est, e singulis longis et brevibus, id. Or. 63, 212: etsi temeritas ex tribus brevibus et long\u0101 est, id. ib. 63, 214; 64, 215 (v. also 6. infra). \u2014",
+              "entryid": "00:00:01:02:02",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi037:3:47:183": "Cic. de Or. 3, 47, 183",
+                "urn:cts:latinLit:phi0474.phi040:63:212": "id. Or. 63, 212",
+                "urn:cts:latinLit:phi0474.phi040:63:214": "id. ib. 63, 214"
+              }
+            },
+            {
+              "entry": "4.  Euphem., in perf. tempp., of one who has died or a thing that has perished, to be no more, to be gone, departed, dead (poet.): horresco misera, mentio quoties fit partionis: Ita paene tibi fuit Phronesium, i. e. had almost died, Plaut. Truc. 1, 2, 92 (186): nunc illud est, cum me fuisse quam esse nimio mavelim, id. Capt. 3, 3, 1 (516): sive erimus, seu nos fata fuisse velint, Tib. 3, 5, 32: fuimus Troes, fuit Ilium et ingens Gloria Teucrorum, Verg. A. 2, 325: certus in hospitibus non est amor: errat ut ipsi, Cumque nihil speres firmius esse, fuit, Ov. H. 16, (17), 192.\u2014",
+              "entryid": "00:00:01:03",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi020:186": "Plaut. Truc. 1, 2, 92 (186)",
+                "urn:cts:latinLit:phi0119.phi005:516": "id. Capt. 3, 3, 1 (516)",
+                "urn:cts:latinLit:phi0660.phi002:3:5:32": "Tib. 3, 5, 32",
+                "urn:cts:latinLit:phi0690.phi003:2:325": "Verg. A. 2, 325",
+                "urn:cts:latinLit:phi0959.phi002:16": "Ov. H. 16"
+              }
+            },
+            {
+              "entry": "5.  Pregn., to be real or a fact, to be the case; so esp.: est, esto, it is even so, be it so, such is or let such be the case, granted, well, etc.: quid tibi vis dicam, nisi quod est? Plaut. Ep. 1, 1, 17 (17): sunt ista, Laeli, Cic. Lael. 2, 6: ista esse credere, id. Tusc. 1, 6, 10: est vero, inquit, Africane, id. Fragm. ap. Lact. 1, 18: est ut dicis, inquam, Cic. Fin. 3, 5, 19: sit quidem ut sex milia seminum intereant, Col. 3, 3, 13: esto: ipse nihil est, nihil potest, Cic. Div. in Caecil. 15, 47; cf.: verum esto, id. Fin. 2, 23, 75: esto, Verg. A. 7, 313; 10, 67; Hor. Ep. 1, 1, 81; 1, 17, 37 al.\u2014Hence",
+              "entryid": "00:00:01:04",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi009:17": "Plaut. Ep. 1, 1, 17 (17)",
+                "urn:cts:latinLit:phi0474.phi052:2:6": "Cic. Lael. 2, 6",
+                "urn:cts:latinLit:phi0474.phi049:1:6:10": "id. Tusc. 1, 6, 10",
+                "urn:cts:latinLit:phi0474.phi048:3:5:19": "Cic. Fin. 3, 5, 19",
+                "urn:cts:latinLit:phi0845.phi002:3:3:13": "Col. 3, 3, 13",
+                "urn:cts:latinLit:phi0474.phi004:15:47": "Cic. Div. in Caecil. 15, 47",
+                "urn:cts:latinLit:phi0474.phi048:2:23:75": "id. Fin. 2, 23, 75",
+                "urn:cts:latinLit:phi0690.phi003:7:313": "Verg. A. 7, 313",
+                "urn:cts:latinLit:phi0690.phi003:10:67": "10, 67",
+                "urn:cts:latinLit:phi0893.phi005:1:1:81": "Hor. Ep. 1, 1, 81"
+              }
+            },
+            {
+              "entry": "b.  The connections est ut, ubi, cum, quod, or with a subject-clause, it happens or chances that, it is the case that, there is cause or reason why, there is a time when, it is allowed or permissible that, one may, etc.",
+              "entryid": "00:00:01:04:00"
+            },
+            {
+              "entry": "\u03b1.  Est ut, it is the case or fact, that, etc.: sin est, ut velis Manere illam apud te, dos hic maneat, Ter. Phorm. 925: si est, ut dicat velle se, Redde, id. Hec. 558: si est, culpam ut Antipho in se admiserit, id. Phorm. 270: est, ut id maxime deceat, Cic. Or. 59, 199: quando fuit, ut, quod licet, non liceret? id. Cael. 20, 48: non est igitur, ut mirandum sit, ea praesentiri, etc., id. Div. 1, 56, 128: non erat, ut fieri posset, mirarier umquam, Lucr. 5, 979: futurum esse ut omnes pellerentur, Caes. B. G. 1, 31: non est, ut copia major Ab Jove donari possit tibi, Hor. Ep. 1, 12, 2: est ut viro vir latius ordinet Arbusta sulcis, id. C. 3, 1, 9; Dig. 38, 7, 2.\u2014Cf. esse after a neg., with quin: numquam est enim, quin aliquid memoriae tradere velimus, Auct. Her. 3, 24, 40.\u2014Also, est ut, there is reason, that, etc.: magis est ut ipse moleste ferat errasse se, quam ut, etc., Cic. Cael. 6, 14 fin.: ille erat ut odisset primum defensorem salutis meae, he had good reason for hating id. Mil. 13, 35; cf.: quid erat cur Milo optaret, id. ib. 13, 34: neque est ut putemus ignorari ea ab animalibus, Plin. 18, 1, 1, \u00a7 3. \u2014",
+              "entryid": "00:00:01:04:01",
+              "citations": {
+                "urn:cts:latinLit:phi0134.phi004:925": "Ter. Phorm. 925",
+                "urn:cts:latinLit:phi0134.phi005:558": "id. Hec. 558",
+                "urn:cts:latinLit:phi0134.phi004:270": "id. Phorm. 270",
+                "urn:cts:latinLit:phi0474.phi040:59:199": "Cic. Or. 59, 199",
+                "urn:cts:latinLit:phi0474.phi024:20:48": "id. Cael. 20, 48",
+                "urn:cts:latinLit:phi0474.phi053:1:56:128": "id. Div. 1, 56, 128",
+                "urn:cts:latinLit:phi0550.phi001:5:979": "Lucr. 5, 979",
+                "urn:cts:latinLit:phi0448.phi001:1:31": "Caes. B. G. 1, 31",
+                "urn:cts:latinLit:phi0893.phi005:1:12:2": "Hor. Ep. 1, 12, 2",
+                "urn:cts:latinLit:phi0893.phi001:3:1:9": "id. C. 3, 1, 9",
+                "urn:cts:latinLit:phi2806.phi001:38:7:2": "Dig. 38, 7, 2",
+                "urn:cts:latinLit:phi0474.phi073:3:24:40": "Auct. Her. 3, 24, 40",
+                "urn:cts:latinLit:phi0474.phi024:6:14": "Cic. Cael. 6, 14 fin.",
+                "urn:cts:latinLit:phi0474.phi031:13:35": "id. Mil. 13, 35",
+                "urn:cts:latinLit:phi0474.phi031:13:34": "id. ib. 13, 34",
+                "urn:cts:latinLit:phi0978.phi001:18:3": "Plin. 18, 1, 1, \u00a7 3"
+              }
+            },
+            {
+              "entry": "\u03b2.  Est ubi, sometime or another, sometimes: erit, ubi te ulciscar, si vivo, Plaut. Ps. 5, 2, 26 (1310): est, ubi id isto modo valeat, Cic. Tusc. 5, 8, 23.\u2014",
+              "entryid": "00:00:01:04:02",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi016:1310": "Plaut. Ps. 5, 2, 26 (1310)",
+                "urn:cts:latinLit:phi0474.phi049:5:8:23": "Cic. Tusc. 5, 8, 23"
+              }
+            },
+            {
+              "entry": "\u03b3.  Est cum, sometimes: est cum non est satius, si, etc., Auct. Her. 4, 26, 36.\u2014",
+              "entryid": "00:00:01:04:03",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi073:4:26:36": "Auct. Her. 4, 26, 36"
+              }
+            },
+            {
+              "entry": "\u03b4.  Est quod, there is reason to, I have occasion: est quod visam domum, Plaut. Aul. 2, 2, 26 (203): etsi magis est, quod gratuler tibi quam quod te rogem, I have more reason to, Cic. Att. 16, 5, 2: est quod referam ad consilium: sin, etc., Liv. 30, 31, 9: quod timeas non est, Ov. H. 19, 159: nil est illic quod moremur diutius, Ter. Heaut. 834: non est quod multa loquamur, Hor. Ep. 2, 1, 30.\u2014Cf. with cur: non est cur eorum spes infragatur, Cic. Or. 2, 6: nihil est cur, id. Fam. 6, 20, 1.\u2014",
+              "entryid": "00:00:01:04:04",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi003:203": "Plaut. Aul. 2, 2, 26 (203)",
+                "urn:cts:latinLit:phi0474.phi057:16:5:2": "Cic. Att. 16, 5, 2",
+                "urn:cts:latinLit:phi0914.phi001:30:31:9": "Liv. 30, 31, 9",
+                "urn:cts:latinLit:phi0959.phi002:19:159": "Ov. H. 19, 159",
+                "urn:cts:latinLit:phi0134.phi002:834": "Ter. Heaut. 834",
+                "urn:cts:latinLit:phi0893.phi005:2:1:30": "Hor. Ep. 2, 1, 30",
+                "urn:cts:latinLit:phi0474.phi040:2:6": "Cic. Or. 2, 6",
+                "urn:cts:latinLit:phi0474.phi056:6:20:1": "id. Fam. 6, 20, 1"
+              }
+            },
+            {
+              "entry": "\u03b5.  Est, sit, etc., with infin. in Gr. constr., it is possible, is allowed, permitted, one may, etc. (mostly poet. and post-class.): est qu\u0101dam prodire tenus, si non datur ultra, Hor. Ep. 1, 1, 32: Cato R. R. prooem. \u00a7 1: scire est liberum Ingenium atque animum, Ter. Ad. 828: nec non et Tityon terrae omniparentis alumnum Cernere erat, Verg. A. 6, 596; 8, 676; Sil. 2, 413: neque est te fallere quicquam, Verg. G. 4, 447: unde Plus haurire est, Hor. S. 1, 2, 79: est Gaudia prodentem vultum celare, id. ib. 2, 5, 103: quod versu dicere non est, id. ib. 1, 5, 87: quod tangere non est, Ov. M. 3, 478: quae verbo objecta, verbo negare sit, Liv. 42, 41, 2 Weissenb. ad loc.: ut conjectare erat intentione vultus, Tac. A. 16, 34: est videre argentea vasa, id. G. 5; Val. Max. 2, 6, 8; v. Zumpt, Gram. \u00a7 227.\u2014 With dat.: ne tibi sit frigida saxa adire, Prop. 1, 20, 13; Tib. 1, 6, 24 (32): tu procul a patri\u0101 (nec sit mihi credere tantum!) Alpinas nives Me sine vides, Verg. E. 10, 46: fuerit mihi eguisse aliquando amicitiae tuae, Sall. J. 110, 3; Dig. 46, 3, 72, \u00a7 4.\u2014",
+              "entryid": "00:00:01:04:05",
+              "citations": {
+                "urn:cts:latinLit:phi0893.phi005:1:1:32": "Hor. Ep. 1, 1, 32",
+                "urn:cts:latinLit:phi0022.phi001:1:pr:1": "Cato R. R. prooem. \u00a7 1",
+                "urn:cts:latinLit:phi0134.phi006:828": "Ter. Ad. 828",
+                "urn:cts:latinLit:phi0690.phi003:6:596": "Verg. A. 6, 596",
+                "urn:cts:latinLit:phi0690.phi003:8:676": "8, 676",
+                "urn:cts:latinLit:phi1345.phi001:2:413": "Sil. 2, 413",
+                "urn:cts:latinLit:phi0690.phi002:4:447": "Verg. G. 4, 447",
+                "urn:cts:latinLit:phi0893.phi004:1:2:79": "Hor. S. 1, 2, 79",
+                "urn:cts:latinLit:phi0893.phi004:2:5:103": "id. ib. 2, 5, 103",
+                "urn:cts:latinLit:phi0893.phi004:1:5:87": "id. ib. 1, 5, 87",
+                "urn:cts:latinLit:phi0959.phi006:3:478": "Ov. M. 3, 478",
+                "urn:cts:latinLit:phi0914.phi001:42:41:2": "Liv. 42, 41, 2",
+                "urn:cts:latinLit:phi1351.phi005:16:34": "Tac. A. 16, 34",
+                "urn:cts:latinLit:phi1351.phi002:5": "id. G. 5",
+                "urn:cts:latinLit:phi1038.phi001:2:6:8": "Val. Max. 2, 6, 8",
+                "urn:cts:latinLit:phi0620.phi001:1:20:13": "Prop. 1, 20, 13",
+                "urn:cts:latinLit:phi0660.phi001:1:6:24": "Tib. 1, 6, 24",
+                "urn:cts:latinLit:phi0690.phi001:10:46": "Verg. E. 10, 46",
+                "urn:cts:latinLit:phi0631.phi002:110:3": "Sall. J. 110, 3",
+                "urn:cts:latinLit:phi2806.phi001:46:3:72:section=4": "Dig. 46, 3, 72, \u00a7 4"
+              }
+            },
+            {
+              "entry": "\u03b6.  In eo ease ut, etc., to be in a condition to reach the point that, to be possible, etc., to be about to, on the point of, etc. (impers. or with res, etc., as subj.): cum jam in eo esset, ut in muros evaderet miles, Liv. 2, 17, 5: si viderent in eo jam esse ut urbs caperetur, id. 28, 22, 8: jamque in eo rem fore, ut Romani aut hostes aut domini habendi sint, id. 8, 27, 3: cum res non in eo essent ut, etc., id. 33, 41, 9: non in eo esse Carthaginiensium res, ut, etc., id. 30, 19, 3; 34, 41. \u2014With person. subj. (late Lat.): cum ab Ulixe adducta Iphigenia in eo esset, ut immolaretur, Hyg. Fab. 261. \u2014",
+              "entryid": "00:00:01:04:06",
+              "citations": {
+                "urn:cts:latinLit:phi0914.phi001:2:17:5": "Liv. 2, 17, 5",
+                "urn:cts:latinLit:phi0914.phi001:28:22:8": "id. 28, 22, 8",
+                "urn:cts:latinLit:phi0914.phi001:8:27:3": "id. 8, 27, 3",
+                "urn:cts:latinLit:phi0914.phi001:33:41:9": "id. 33, 41, 9",
+                "urn:cts:latinLit:phi0914.phi001:30:19:3": "id. 30, 19, 3",
+                "urn:cts:latinLit:phi0914.phi001:34:41": "34, 41",
+                "urn:cts:latinLit:phi1263.phi001:261": "Hyg. Fab. 261"
+              }
+            },
+            {
+              "entry": "6.  Like the Engl. to be, for to come, fall, reach, to have arrived, etc. (hence also with in and acc.): ecquid in mentem est tibi, Patrem tibi esse? Plaut. Bacch. 1, 2, 54 (162): nam numero mi in mentem fuit, id. Am. 1, 1, 26 (178): ex eo tempore res esse in vadimonium coepit, Cic. Quint. 5, 22: portus in praedonum fuisse potestatem sciatis, id. Imp. Pomp. 12, 33: ut certior fieret, quo die in Tusculanum essem futurus, id. Att. 15, 4, 2: qui neque in provinciam cum imperio fuerunt, id. Fam. 8, 8, 8: quae ne in potestatem quidem populi Romani esset, Liv. 2, 14, 4: nec prius militibus in conspectum fuisse, Suet. Aug. 16: esse in amicitiam populi Romani dicionemque, Cic. Div. in Caecil. 20, 66; cf.: in eorum potestatem portum futurum, id. Verr. 2, 5, 38, \u00a7 98; v. Gell. 1, 7, 16 sq.; Zumpt, Gram. \u00a7 316.\u2014",
+              "entryid": "00:00:01:05",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi004:162": "Plaut. Bacch. 1, 2, 54 (162)",
+                "urn:cts:latinLit:phi0119.phi001:178": "id. Am. 1, 1, 26 (178)",
+                "urn:cts:latinLit:phi0474.phi001:5:22": "Cic. Quint. 5, 22",
+                "urn:cts:latinLit:phi0474.phi009:12:33": "id. Imp. Pomp. 12, 33",
+                "urn:cts:latinLit:phi0474.phi057:15:4:2": "id. Att. 15, 4, 2",
+                "urn:cts:latinLit:phi0474.phi056:8:8:8": "id. Fam. 8, 8, 8",
+                "urn:cts:latinLit:phi0914.phi001:2:14:4": "Liv. 2, 14, 4",
+                "urn:cts:latinLit:phi1348.phi001:life=aug.:16": "Suet. Aug. 16",
+                "urn:cts:latinLit:phi0474.phi004:20:66": "Cic. Div. in Caecil. 20, 66",
+                "urn:cts:latinLit:phi0474.phi005:2:5:98": "id. Verr. 2, 5, 38, \u00a7 98",
+                "urn:cts:latinLit:phi1254.phi001:1:7:16": "Gell. 1, 7, 16"
+              }
+            },
+            {
+              "entry": "7.  Of time, to pass, elapse (rare but class.): diem scito nullum esse, quo, etc., Cic. Q. Fr. 3, 3, 1.",
+              "entryid": "00:00:01:06",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi058:3:3:1": "Cic. Q. Fr. 3, 3, 1"
+              }
+            },
+            {
+              "entry": "II.  As a copula, to be any thing or in any manner.",
+              "entryid": "00:01"
+            },
+            {
+              "entry": "A.  In gen.",
+              "entryid": "00:01:00"
+            },
+            {
+              "entry": "1.  With an adj., subst., or pron.: et praeclara res est et sumus otiosi, Cic. Lael. 5, 17: quod in homine multo est evidentius, id. ib. 8, 27: sperare videor Scipionis et Laelii amicitiam notam posteritati fore, id. ib. 4, 15: non sum ita hebes, ut istud dicam, id. Tusc. 1, 6, 12: cum, ignorante rege, uter esset Orestes, Pylades Orestem se esse diceret, Orestes autem ita ut erat, Orestem se esse perseveraret, id. Lael. 7, 24: consul autem esse qui potui? etc., id. Rep. 1, 6, 10: nos numerus sumus et fruges consumere nati, are a mere number, Hor. Ep. 1, 2, 27: pars non minima triumphi est victimae praecedentes, Liv. 45, 49: nobile erit Romae pascua vestra forum, Prop. 4 (5), 9, 20: sanguis erant lacrimae, Luc. 9, 811: ego tu sum, tu es ego: unanimi sumus, Plaut. Stich. 5, 4, 49 (731): tuos sum, id. Bacch. 1, 1, 60 (94): domus non ea est, quam parietes nostri cingunt, Cic. Rep. 1, 13, 19: is enim fueram, cui, etc., id. ib. 1, 4, 7.\u2014",
+              "entryid": "00:01:00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi052:5:17": "Cic. Lael. 5, 17",
+                "urn:cts:latinLit:phi0474.phi052:8:27": "id. ib. 8, 27",
+                "urn:cts:latinLit:phi0474.phi052:4:15": "id. ib. 4, 15",
+                "urn:cts:latinLit:phi0474.phi049:1:6:12": "id. Tusc. 1, 6, 12",
+                "urn:cts:latinLit:phi0474.phi052:7:24": "id. Lael. 7, 24",
+                "urn:cts:latinLit:phi0474.phi043:1:6:10": "id. Rep. 1, 6, 10",
+                "urn:cts:latinLit:phi0893.phi005:1:2:27": "Hor. Ep. 1, 2, 27",
+                "urn:cts:latinLit:phi0914.phi001:45:49": "Liv. 45, 49",
+                "urn:cts:latinLit:phi0620.phi001:4:9:20": "Prop. 4 (5), 9, 20",
+                "urn:cts:latinLit:phi0917.phi001:9:811": "Luc. 9, 811",
+                "urn:cts:latinLit:phi0119.phi018:731": "Plaut. Stich. 5, 4, 49 (731)",
+                "urn:cts:latinLit:phi0119.phi004:94": "id. Bacch. 1, 1, 60 (94)",
+                "urn:cts:latinLit:phi0474.phi043:1:13:19": "Cic. Rep. 1, 13, 19",
+                "urn:cts:latinLit:phi0474.phi043:1:4:7": "id. ib. 1, 4, 7"
+              }
+            },
+            {
+              "entry": "2.  Less freq. with adv. (esp. in colloq. language): Am. Satin' tu sanus es? Sos. Sic sum ut vides, Plaut. Am. 2, 1, 57 (607): sic, inquit, est, Cic. Rep. 1, 38, 60: est, inquit, ut dicis, id. ib. 1, 40, 63: quod ita cum sit, id. ib. 1, 45, 69: quia sunt haud procul ab hujus aetatis memori\u0101, id. ib. 1, 1, 1 B. and K.: nec vero habere virtutem satis est, id. ib. 1, 2, 2: frustra id inceptum Volscis fuit. Liv. 2, 25: dato qui bene sit: ego, ubi bene sit, tibi locum lepidum dabo, Plaut. Bacch. 1, 1, 51 (85): apud matrem recte est, Cic. Att. 1, 7: cum in convivio comiter et jucunde fuisses, id. Deiot. 7, 19: omnes hanc quaestionem haud remissius sperant futuram, id. Rosc. Am. 5, 11: dicta impune erant, Tac. A. 1, 72.\u2014Esp.: facile alicubi (in aliqu\u0101 re) esse, with pleasure, glad to be: quod in maritimis facillime sum, Cic. Fam. 2, 16, 2: locum habeo nullum ubi facilius esse possum, id. Att. 13, 26, 2 (on esse with an adverb, v. Haase ap. Reisig, Vorles. p. 394; cf. also bene under bonus fin.).\u2014",
+              "entryid": "00:01:00:01",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi001:607": "Plaut. Am. 2, 1, 57 (607)",
+                "urn:cts:latinLit:phi0474.phi043:1:38:60": "Cic. Rep. 1, 38, 60",
+                "urn:cts:latinLit:phi0474.phi043:1:40:63": "id. ib. 1, 40, 63",
+                "urn:cts:latinLit:phi0474.phi043:1:45:69": "id. ib. 1, 45, 69",
+                "urn:cts:latinLit:phi0474.phi043:1:1:1": "id. ib. 1, 1, 1",
+                "urn:cts:latinLit:phi0474.phi043:1:2:2": "id. ib. 1, 2, 2",
+                "urn:cts:latinLit:phi0914.phi001:2:25": "Liv. 2, 25",
+                "urn:cts:latinLit:phi0119.phi004:85": "Plaut. Bacch. 1, 1, 51 (85)",
+                "urn:cts:latinLit:phi0474.phi057:1:7": "Cic. Att. 1, 7",
+                "urn:cts:latinLit:phi0474.phi034:7:19": "id. Deiot. 7, 19",
+                "urn:cts:latinLit:phi0474.phi002:5:11": "id. Rosc. Am. 5, 11",
+                "urn:cts:latinLit:phi1351.phi005:1:72": "Tac. A. 1, 72",
+                "urn:cts:latinLit:phi0474.phi056:2:16:2": "Cic. Fam. 2, 16, 2",
+                "urn:cts:latinLit:phi0474.phi057:13:26:2": "id. Att. 13, 26, 2"
+              }
+            },
+            {
+              "entry": "B.  In partic.",
+              "entryid": "00:01:01"
+            },
+            {
+              "entry": "1.  With gen. part., to be of, belong to a class, party, etc.: in republic\u0101 ita est versatus, ut semper optimarum partium et esset et existimaretur, Nep. Att. 6, 1: qui ejusdem civitatis fuit, id. Them. 9, 1: qui Romanae partis erant, urbe excesserunt, Liv. 35, 51, 7: ut aut amicorum aut inimicorum Campani simus; si defenditis, vestri, si deseritis, Samnitium erimus, id. 7, 30, 9 sq.\u2014",
+              "entryid": "00:01:01:00",
+              "citations": {
+                "urn:cts:latinLit:phi0588.phi001:att:6:1": "Nep. Att. 6, 1",
+                "urn:cts:latinLit:phi0588.phi001:them:9:1": "id. Them. 9, 1",
+                "urn:cts:latinLit:phi0914.phi001:35:51:7": "Liv. 35, 51, 7",
+                "urn:cts:latinLit:phi0914.phi001:7:30:9": "id. 7, 30, 9"
+              }
+            },
+            {
+              "entry": "2.  With gen. or abl. denoting quality.",
+              "entryid": "00:01:01:01"
+            },
+            {
+              "entry": "\u03b1.  With gen.: nimium me timidum, nullius animi, nullius consilii fuisse confiteor, Cic. Sest. 16, 36: disputatio non mediocris contentionis est, id. de Or. 1, 60, 257: magni judicii, summae etiam facultatis esse debebit, id. Or. 21, 70: (virtus) nec tantarum virium est, ut se ipsa tueatur, id. Tusc. 5, 1, 2; id. Fin. 5, 12, 36: Sulla gentis patriciae nobilis fuit, Sall. J. 95, 3: summi ut sint laboris, Caes. B. G. 4, 2: civitas magnae auctoritatis, id. ib. 5, 54: refer, Cujus fortunae (sit), Hor. Ep. 1, 7, 54: se nullius momenti apud exercitum futurum, Nep. Alcib. 8, 4: qui ejusdem aetatis fuit, id. ib. 11, 1: invicti ad laborem corporis erat, Liv. 9, 16: nec magni certaminis ea dimicatio fuit, id. 21, 60: somni brevissimi erat, Suet. Claud. 33.\u2014So of extent, number, etc.: classis centum navium, Nep. Them. 2, 2; 2, 5: annus trecentarum sexaginta quinque dierum, Suet. Caes. 40.\u2014",
+              "entryid": "00:01:01:01:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi022:16:36": "Cic. Sest. 16, 36",
+                "urn:cts:latinLit:phi0474.phi037:1:60:257": "id. de Or. 1, 60, 257",
+                "urn:cts:latinLit:phi0474.phi040:21:70": "id. Or. 21, 70",
+                "urn:cts:latinLit:phi0474.phi049:5:1:2": "id. Tusc. 5, 1, 2",
+                "urn:cts:latinLit:phi0474.phi048:5:12:36": "id. Fin. 5, 12, 36",
+                "urn:cts:latinLit:phi0631.phi002:95:3": "Sall. J. 95, 3",
+                "urn:cts:latinLit:phi0448.phi001:4:2": "Caes. B. G. 4, 2",
+                "urn:cts:latinLit:phi0448.phi001:5:54": "id. ib. 5, 54",
+                "urn:cts:latinLit:phi0893.phi005:1:7:54": "Hor. Ep. 1, 7, 54",
+                "urn:cts:latinLit:phi0588.phi001:alc:8:4": "Nep. Alcib. 8, 4",
+                "urn:cts:latinLit:phi0588.phi001:alc:11:1": "id. ib. 11, 1",
+                "urn:cts:latinLit:phi0914.phi001:9:16": "Liv. 9, 16",
+                "urn:cts:latinLit:phi0914.phi001:21:60": "id. 21, 60",
+                "urn:cts:latinLit:phi1348.phi001:life=cl.:33": "Suet. Claud. 33",
+                "urn:cts:latinLit:phi0588.phi001:them:2:2": "Nep. Them. 2, 2",
+                "urn:cts:latinLit:phi0588.phi001:them:2:5": "2, 5",
+                "urn:cts:latinLit:phi1348.phi001:life=jul.:40": "Suet. Caes. 40"
+              }
+            },
+            {
+              "entry": "\u03b2.  With abl.: bono animo es, Ter. Eun. 84: jam aetate e\u0101 sum, ut, etc., id. Hec. 737: bellum vari\u0101 victori\u0101 fuit, Sall. J. 5, 1: L. Catilina nobili genere natus fuit magna vi et animi et corporis, set ingenio malo, id. C. 5, 1: Sulla animo ingenti, id. J. 95, 3: esse magn\u0101 grati\u0101, Caes. B. G. 1, 8: tenuissim\u0101 valetudine esse, id. ib. 5, 40: si fuerit is injustus, timidus, hebeti ingenio atque nullo, Cic. Tusc. 5, 15, 45: mir\u0101 sum alacritate ad litigandum, id. Att. 2, 7, 2: bono animo sint et tui et mei familiares, id. Fam. 6, 18, 1: ut bono essent animo, id. Rep. 1, 17, 29: ut uxores eodem jure sint quo viri, id. ib. 1, 43, 67: qui capite et superciliis semper est rasis, id. Rosc. Com. 7, 20: abi, quaere, unde domo quis, Cujus fortunae, quo sit patre quove patrono, Hor. Ep. 1, 7, 54 (cf. I. A. 4. supra). \u2014",
+              "entryid": "00:01:01:01:01",
+              "citations": {
+                "urn:cts:latinLit:phi0134.phi003:84": "Ter. Eun. 84",
+                "urn:cts:latinLit:phi0134.phi005:737": "id. Hec. 737",
+                "urn:cts:latinLit:phi0631.phi002:5:1": "Sall. J. 5, 1",
+                "urn:cts:latinLit:phi0631.phi001:5:1": "id. C. 5, 1",
+                "urn:cts:latinLit:phi0631.phi002:95:3": "id. J. 95, 3",
+                "urn:cts:latinLit:phi0448.phi001:1:8": "Caes. B. G. 1, 8",
+                "urn:cts:latinLit:phi0448.phi001:5:40": "id. ib. 5, 40",
+                "urn:cts:latinLit:phi0474.phi049:5:15:45": "Cic. Tusc. 5, 15, 45",
+                "urn:cts:latinLit:phi0474.phi057:2:7:2": "id. Att. 2, 7, 2",
+                "urn:cts:latinLit:phi0474.phi056:6:18:1": "id. Fam. 6, 18, 1",
+                "urn:cts:latinLit:phi0474.phi043:1:17:29": "id. Rep. 1, 17, 29",
+                "urn:cts:latinLit:phi0474.phi043:1:43:67": "id. ib. 1, 43, 67",
+                "urn:cts:latinLit:phi0474.phi003:7:20": "id. Rosc. Com. 7, 20",
+                "urn:cts:latinLit:phi0893.phi005:1:7:54": "Hor. Ep. 1, 7, 54"
+              }
+            },
+            {
+              "entry": "3.  With gen. or abl. of price or value.",
+              "entryid": "00:01:01:02"
+            },
+            {
+              "entry": "\u03b1.  With gen.: pluris est oculatus testis quam auriti decem, Plaut. Truc. 2, 6, 8 (489): videtur esse quantivis pretii, Ter. And. 856: a me argentum, quanti (servus) est, sumito, id. Ad. 977: si ullo in loco frumentum tanti fuit, quanti iste aestimavit, Cic. Verr. 2, 3, 84, \u00a7 194: ager nunc multo pluris est, quam tunc fuit, id. Rosc. Com. 12, 33: ut quisque, quod plurimi sit, possideat, ita, etc., id. Par. 6, 2, 48: magni erunt mihi tuae litterae, id. Fam. 15, 15, 4: parvi sunt foris arma, nisi, etc., id. Off. 1, 22, 76: an emat denario quod sit mille denari\u016bm, id. ib. 3, 23, 92: parvi pretii est quod nihili est, id. Q. Fr. 1, 2, 4: mea mihi conscientia pluris est quam omnium sermo, is worth more to me, weighs more with me, id. Att. 12, 28, 2: neque pluris pretii cocum quam vilicum habeo, Sall. J. 85, 39: erat (agellus) centum milium numm\u016bm, Plin. Ep. 6, 3, 1. \u2014",
+              "entryid": "00:01:01:02:00",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi020:489": "Plaut. Truc. 2, 6, 8 (489)",
+                "urn:cts:latinLit:phi0134.phi001:856": "Ter. And. 856",
+                "urn:cts:latinLit:phi0134.phi006:977": "id. Ad. 977",
+                "urn:cts:latinLit:phi0474.phi005:2:3:194": "Cic. Verr. 2, 3, 84, \u00a7 194",
+                "urn:cts:latinLit:phi0474.phi003:12:33": "id. Rosc. Com. 12, 33",
+                "urn:cts:latinLit:phi0474.phi047:6:2:48": "id. Par. 6, 2, 48",
+                "urn:cts:latinLit:phi0474.phi056:15:15:4": "id. Fam. 15, 15, 4",
+                "urn:cts:latinLit:phi0474.phi055:1:22:76": "id. Off. 1, 22, 76",
+                "urn:cts:latinLit:phi0474.phi055:3:23:92": "id. ib. 3, 23, 92",
+                "urn:cts:latinLit:phi0474.phi058:1:2:4": "id. Q. Fr. 1, 2, 4",
+                "urn:cts:latinLit:phi0474.phi057:12:28:2": "id. Att. 12, 28, 2",
+                "urn:cts:latinLit:phi0631.phi002:85:39": "Sall. J. 85, 39",
+                "urn:cts:latinLit:phi1318.phi001:6:3:1": "Plin. Ep. 6, 3, 1"
+              }
+            },
+            {
+              "entry": "\u03b2.  With abl.: sextante sal et Romae et per totam Iialiam erat, was worth, stood at, Liv. 29, 37.\u2014",
+              "entryid": "00:01:01:02:01",
+              "citations": {
+                "urn:cts:latinLit:phi0914.phi001:29:37": "Liv. 29, 37"
+              }
+            },
+            {
+              "entry": "4.  With gen. of possession, etc., it belongs, pertains to; or it is the part, property, nature, mark, sign, custom, or duty of, etc.",
+              "entryid": "00:01:01:03"
+            },
+            {
+              "entry": "\u03b1.  In gen.: audiant eos, quorum summa est auctoritas apud, etc., who possess, Cic. Rep. 1, 7, 12: ea ut civitatis Rhodiorum essent, Liv. 37, 55, 5: teneamus eum cursum, qui semper fuit optimi cujusque, Cic. Rep. 1, 2, 3: quamobrem neque sapientis esse accipere habenas, id. ib. 1, 5, 9; id. de Or. 2, 20, 86: sapientis est consilium explicare suum, etc., id. ib. 2, 81, 333: temeritas est florentis aetatis, prudentia senescentis, id. Sen. 6, 20: est adulescentis majores natu vereri, id. Off. 1, 34, 122: Aemilius, cujus tum fasces erant, Liv. 8, 12, 13: tota tribuniciae potestatis erat, id. 3, 48: alterius morientis prope totus exercitus fuit, id. 22, 50: jam me Pompeii totum esse scis, Cic. Fam. 2, 13, 2: hominum, non causarum, toti erant, Liv. 3, 36: plebs novarum, ut solet, rerum atque Hannibalis tota esse, were devoted to, favored, id. 23, 14: Dolopes numquam Aetolorum fuerant: Philippi erant, id. 38, 3: Ptolemaeus propter aetatem alieni arbitrii erat, id. 42, 29: est miserorum ut malevolentes sint, Plaut. Capt. 3, 4, 51 (583): quod alterum divinitatis mihi cujusdam videtur, Cic. de Or. 2, 20, 86: negavit moris esse Graecorum, ut, etc., id. Verr. 2, 1, 26, \u00a7 66: non est gravitatis ac sapientiae tuae, ferre immoderatius casum incommodorum tuorum, id. Fam. 5, 16, 5: est hoc Gallicae consuetudinis, uti, etc., Caes. B. G. 4, 5.\u2014Rarely with pronom. posses.: est tuum, Cato, videre quid agatur, Cic. Mur. 38, 83: fuit meum quidem jam pridem rem publicam lugere, id. Att. 12, 28, 2.\u2014",
+              "entryid": "00:01:01:03:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi043:1:7:12": "Cic. Rep. 1, 7, 12",
+                "urn:cts:latinLit:phi0914.phi001:37:55:5": "Liv. 37, 55, 5",
+                "urn:cts:latinLit:phi0474.phi043:1:2:3": "Cic. Rep. 1, 2, 3",
+                "urn:cts:latinLit:phi0474.phi043:1:5:9": "id. ib. 1, 5, 9",
+                "urn:cts:latinLit:phi0474.phi037:2:20:86": "Cic. de Or. 2, 20, 86",
+                "urn:cts:latinLit:phi0474.phi037:2:81:333": "id. ib. 2, 81, 333",
+                "urn:cts:latinLit:phi0474.phi051:6:20": "id. Sen. 6, 20",
+                "urn:cts:latinLit:phi0474.phi055:1:34:122": "id. Off. 1, 34, 122",
+                "urn:cts:latinLit:phi0914.phi001:8:12:13": "Liv. 8, 12, 13",
+                "urn:cts:latinLit:phi0914.phi001:3:48": "id. 3, 48",
+                "urn:cts:latinLit:phi0914.phi001:22:50": "id. 22, 50",
+                "urn:cts:latinLit:phi0474.phi056:2:13:2": "Cic. Fam. 2, 13, 2",
+                "urn:cts:latinLit:phi0914.phi001:3:36": "Liv. 3, 36",
+                "urn:cts:latinLit:phi0914.phi001:23:14": "id. 23, 14",
+                "urn:cts:latinLit:phi0914.phi001:38:3": "id. 38, 3",
+                "urn:cts:latinLit:phi0914.phi001:42:29": "id. 42, 29",
+                "urn:cts:latinLit:phi0119.phi005:583": "Plaut. Capt. 3, 4, 51 (583)",
+                "urn:cts:latinLit:phi0474.phi005:2:1:66": "id. Verr. 2, 1, 26, \u00a7 66",
+                "urn:cts:latinLit:phi0474.phi056:5:16:5": "id. Fam. 5, 16, 5",
+                "urn:cts:latinLit:phi0448.phi001:4:5": "Caes. B. G. 4, 5",
+                "urn:cts:latinLit:phi0474.phi014:38:83": "Cic. Mur. 38, 83",
+                "urn:cts:latinLit:phi0474.phi057:12:28:2": "id. Att. 12, 28, 2"
+              }
+            },
+            {
+              "entry": "\u03b2.  Esp., with gerundive, to denote tendency, effect, etc.: quae res evertendae rei publicae solerent esse, Cic. Verr. 2, 2, 53, \u00a7 132: regium inperium, quod initio conservandae libertatis fuerat, Sall. C. 6, 7: qui utilia ferrent, quaeque aequandae libertatis essent, Liv. 3, 31, 7: ea prodendi imperii Romani, tradendae Hannibali victoriae esse, id. 27, 9, 12: nihil tam aequandae libertatis esse quam potentissimum quemque posse dicere causam, id. 38, 51, 8: frustrationem eam legis tollendae esse, id. 3, 24, 1 Weissenb. ad loc.; 3, 39, 8; 5, 3, 5; 40, 29, 11.\u2014",
+              "entryid": "00:01:01:03:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi005:2:2:132": "Cic. Verr. 2, 2, 53, \u00a7 132",
+                "urn:cts:latinLit:phi0631.phi001:6:7": "Sall. C. 6, 7",
+                "urn:cts:latinLit:phi0914.phi001:3:31:7": "Liv. 3, 31, 7",
+                "urn:cts:latinLit:phi0914.phi001:27:9:12": "id. 27, 9, 12",
+                "urn:cts:latinLit:phi0914.phi001:38:51:8": "id. 38, 51, 8",
+                "urn:cts:latinLit:phi0914.phi001:3:24:1": "id. 3, 24, 1",
+                "urn:cts:latinLit:phi0914.phi001:3:39:8": "3, 39, 8",
+                "urn:cts:latinLit:phi0914.phi001:5:3:5": "5, 3, 5",
+                "urn:cts:latinLit:phi0914.phi001:40:29:11": "40, 29, 11"
+              }
+            },
+            {
+              "entry": "5.  With dat. of the end, object, purpose, etc.: vitam hanc rusticam tu probro et crimini putas esse oportere, Cic. Rosc. Am. 17, 48: etiam quae esui potuique non sunt, contineri legato, Dig. 33, 9, 3; Gell. 4, 1, 20: ut divites conferrent, qui essent oneri ferendo, Liv. 2, 9: magis vis morbi curae esset, maxime quod, etc., id. 4, 21, 5: cum solvendo aere (i. e. aeri) alieno res publica non esset, id. 31, 13: iniciuntur ea, quae umori extrahendo sunt, Cels. 4, 10 fin.\u2014 Esp. in phrase solvendo esse, to be solvent, able to pay: tu nec solvendo eras, Cic. Phil. 2, 2, 4: cum solvendo civitates non essent, id. Fam. 3, 8, 2 (v. solvo).\u2014",
+              "entryid": "00:01:01:04",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi002:17:48": "Cic. Rosc. Am. 17, 48",
+                "urn:cts:latinLit:phi2806.phi001:33:9:3": "Dig. 33, 9, 3",
+                "urn:cts:latinLit:phi1254.phi001:4:1:20": "Gell. 4, 1, 20",
+                "urn:cts:latinLit:phi0914.phi001:2:9": "Liv. 2, 9",
+                "urn:cts:latinLit:phi0914.phi001:4:21:5": "id. 4, 21, 5",
+                "urn:cts:latinLit:phi0914.phi001:31:13": "id. 31, 13",
+                "urn:cts:latinLit:phi0836.phi002:4:10": "Cels. 4, 10 fin.",
+                "urn:cts:latinLit:phi0474.phi035:2:2:4": "Cic. Phil. 2, 2, 4",
+                "urn:cts:latinLit:phi0474.phi056:3:8:2": "id. Fam. 3, 8, 2"
+              }
+            },
+            {
+              "entry": "6.  With predicative dat. sing., denoting that which the subject is, becomes, appears to be, etc.",
+              "entryid": "00:01:01:05"
+            },
+            {
+              "entry": "\u03b1.  Without second dat. of pers.: auxilio is fuit, Plaut. Am. prol. 94: magis curae'st, id. Bacch. 4, 10, 3 (981); id. Curc. 4, 2, 15 (501); id. As. 1, 3, 23 (175); id. Capt. 5, 2, 13 (966) sq.: cui bono fuerit, Cic. Phil. 2, 14, 35: eo natus sum ut Jugurthae scelerum ostentui essem, Sall. J. 24, 10: cupis me esse nequam; tamen ero frugi bonae, Plaut. Ps. 1, 5, 51 (465): magnoque esse argumento, homines scire pleraque antequam nati sint, quod, etc., Cic. Sen. 21, 78: multi Indicioque sui facti persaepe fuere, Lucr. 4, 1019: ejus rei ipsa verba formulae testimonio sunt, Cic. Rosc. Com. 4, 11: haec res ad levandam annonam impedimento fuit, Liv. 4, 13: cujus rei Demosthenes atque Aeschines possunt esse documento, Quint. 7, 1, 2.\u2014",
+              "entryid": "00:01:01:05:00",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi001:94": "Plaut. Am. prol. 94",
+                "urn:cts:latinLit:phi0119.phi004:981": "id. Bacch. 4, 10, 3 (981)",
+                "urn:cts:latinLit:phi0119.phi008:501": "id. Curc. 4, 2, 15 (501)",
+                "urn:cts:latinLit:phi0119.phi002:175": "id. As. 1, 3, 23 (175)",
+                "urn:cts:latinLit:phi0119.phi005:966": "id. Capt. 5, 2, 13 (966)",
+                "urn:cts:latinLit:phi0474.phi035:2:14:35": "Cic. Phil. 2, 14, 35",
+                "urn:cts:latinLit:phi0631.phi002:24:10": "Sall. J. 24, 10",
+                "urn:cts:latinLit:phi0119.phi016:465": "Plaut. Ps. 1, 5, 51 (465)",
+                "urn:cts:latinLit:phi0474.phi051:21:78": "Cic. Sen. 21, 78",
+                "urn:cts:latinLit:phi0550.phi001:4:1019": "Lucr. 4, 1019",
+                "urn:cts:latinLit:phi0474.phi003:4:11": "Cic. Rosc. Com. 4, 11",
+                "urn:cts:latinLit:phi0914.phi001:4:13": "Liv. 4, 13",
+                "urn:cts:latinLit:phi1002.phi001:7:1:2": "Quint. 7, 1, 2"
+              }
+            },
+            {
+              "entry": "\u03b2.  With second dat. of pers.: obsecro vos ego mi auxilio sitis, Plaut. Aul. 4, 9, 5 (717); id. Ep. 5, 2, 11 (676); id. Most. 1, 2, 68 (151): ne quid Captioni mihi sit, id. ib. 3, 3, 19 (922): mihi cordi est, id. Cist. 1, 1, 110 (110): ubi eris damno molestiae et dedecori saepe fueris, id. As. 3, 2, 25 (569): metuo illaec mihi res ne malo magno fuat, id. Mil. 2, 6, 12 (492): nec Salus nobis saluti jam esse potest, id. Most. 2, 1, 4 (351): bono usui estis nulli, id. Curc. 4, 2, 15 (501): quae sint nobis morbo mortique, Lucr. 6, 1095: quo magis quae agis curae sunt mihi, Ter. Ad. 680: omitto innumerabiles viros, quorum singuli saluti huic civitati fuerunt, Cic. Rep. 1, 1, 1: ut mihi magnae curae tuam vitam ac dignitatem esse scires, Anton. ap. Cic. Att. 10, 8, A fin.: accusant ei, quibus occidi patrem Sex. Roscii bono fuit, Cic. Rosc. Am. 5, 13: haec tam parva civitas praedae tibi et quaestui fuit, id. Verr. 2, 3, 37, \u00a7 85: ea dictitare, quae detrimento, maculae, invidiae, infamiae nobis omnibus esse possint, id. ib. 2, 3, 62, \u00a7 144: minus ea bella curae patribus erant, quam, etc., Liv. 35, 23, 1: sciant patribus aeque curae fuisse, ne, etc., id. 4, 7, 6: si hoc perinde curae est tibi quam illud mihi, Plin. Ep. 6, 8, 9: quantaeque curae tibi fuit, ne quis, etc., id. Pan. 25, 3: quantae sit mihi curae, id. Ep. 6, 8, 2: si judicibus ipsis aut gloriae damnatio rei aut deformitati futura absolutio, Quint. 6, 1, 12.\u2014Rarely with dat. gerund: nec tamen impedimento id rebus gerundis fuit, Liv. 26, 24 (for a full account of this dative, v. Roby, Gram. 2, praef. pp. xxv.-lvi., and \u00a7 1158 sq.).\u2014",
+              "entryid": "00:01:01:05:01",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi003:717": "Plaut. Aul. 4, 9, 5 (717)",
+                "urn:cts:latinLit:phi0119.phi009:676": "id. Ep. 5, 2, 11 (676)",
+                "urn:cts:latinLit:phi0119.phi013:151": "id. Most. 1, 2, 68 (151)",
+                "urn:cts:latinLit:phi0119.phi013:922": "id. ib. 3, 3, 19 (922)",
+                "urn:cts:latinLit:phi0119.phi007:110": "id. Cist. 1, 1, 110 (110)",
+                "urn:cts:latinLit:phi0119.phi002:569": "id. As. 3, 2, 25 (569)",
+                "urn:cts:latinLit:phi0119.phi012:492": "id. Mil. 2, 6, 12 (492)",
+                "urn:cts:latinLit:phi0119.phi013:351": "id. Most. 2, 1, 4 (351)",
+                "urn:cts:latinLit:phi0119.phi008:501": "id. Curc. 4, 2, 15 (501)",
+                "urn:cts:latinLit:phi0550.phi001:6:1095": "Lucr. 6, 1095",
+                "urn:cts:latinLit:phi0134.phi006:680": "Ter. Ad. 680",
+                "urn:cts:latinLit:phi0474.phi043:1:1:1": "Cic. Rep. 1, 1, 1",
+                "urn:cts:latinLit:phi0474.phi057:10:8": "Cic. Att. 10, 8",
+                "urn:cts:latinLit:phi0474.phi002:5:13": "Cic. Rosc. Am. 5, 13",
+                "urn:cts:latinLit:phi0474.phi005:2:3:85": "id. Verr. 2, 3, 37, \u00a7 85",
+                "urn:cts:latinLit:phi0474.phi005:2:3:144": "id. ib. 2, 3, 62, \u00a7 144",
+                "urn:cts:latinLit:phi0914.phi001:35:23:1": "Liv. 35, 23, 1",
+                "urn:cts:latinLit:phi0914.phi001:4:7:6": "id. 4, 7, 6",
+                "urn:cts:latinLit:phi1318.phi001:6:8:9": "Plin. Ep. 6, 8, 9",
+                "urn:cts:latinLit:phi1318.phi002:25:3": "id. Pan. 25, 3",
+                "urn:cts:latinLit:phi1318.phi001:6:8:2": "id. Ep. 6, 8, 2",
+                "urn:cts:latinLit:phi1002.phi001:6:1:12": "Quint. 6, 1, 12",
+                "urn:cts:latinLit:phi0914.phi001:26:24": "Liv. 26, 24"
+              }
+            },
+            {
+              "entry": "7.  Esse ad aliquid, to be of use for, to serve for: vinum murteum est ad alvum crudam, Cato R. R. 125: completae naves taed\u0101 et pice reliquisque rebus quae sunt ad incendia, Caes. B. C. 3, 101: valvae, quae olim ad ornandum templum erant maxime, Cic. Verr. 2, 4, 56, \u00a7 124.\u2014",
+              "entryid": "00:01:01:06",
+              "citations": {
+                "urn:cts:latinLit:phi0022.phi001:125": "Cato R. R. 125",
+                "urn:cts:latinLit:phi0448.phi002:3:101": "Caes. B. C. 3, 101",
+                "urn:cts:latinLit:phi0474.phi005:2:4:124": "Cic. Verr. 2, 4, 56, \u00a7 124"
+              }
+            },
+            {
+              "entry": "8.  Id est or hoc est, with predic.-clause by way of explanatory addition, that is, that is to say; sometimes also with a climax in the sense, which is as much as to say, or which is the same thing: sed domum redeamus, id est ad nostros revertamur, Cic. Brut. 46, 172: quodsi in scen\u0101, id est in contione verum valet, etc., id. Lael. 26, 97: meos amicos, in quibus est studium, in Graeciam mitto, id est ad Graecos ire jubeo, id. Ac. 1, 2, 8: si Epicurum, id est si Democritum probarem, id. ib. 1, 2, 6: ut (sapiens) aegritudine opprimatur, id est miseri\u0101, id. Tusc. 3, 13, 27: a parte negotiali, hoc est \u03c0\u03c1\u03b1\u03b3\u03bc\u03b1\u03c4\u03b9\u03ba\u1fc7, Quint. 3, 7, 1: cum in bona tua invasero, hoc est, cum te docuero, id. 8, 3, 89.\u2014",
+              "entryid": "00:01:01:07",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi039:46:172": "Cic. Brut. 46, 172",
+                "urn:cts:latinLit:phi0474.phi052:26:97": "id. Lael. 26, 97",
+                "urn:cts:latinLit:phi0474.phi045:2:8": "id. Ac. 1, 2, 8",
+                "urn:cts:latinLit:phi0474.phi045:2:6": "id. ib. 1, 2, 6",
+                "urn:cts:latinLit:phi0474.phi049:3:13:27": "id. Tusc. 3, 13, 27",
+                "urn:cts:latinLit:phi1002.phi001:3:7:1": "Quint. 3, 7, 1",
+                "urn:cts:latinLit:phi1002.phi001:8:3:89": "id. 8, 3, 89"
+              }
+            },
+            {
+              "entry": "9.  Poet., with Greek inf. pleonastically: esse dederat monumentum, Verg. A. 5, 572 (cf.: \u03b4\u1ff6\u03ba\u03b5 \u03be\u03b5\u03b9\u03bd\u03b9\u03bf\u03bd \u03b5\u03bd\u03b1\u03b9, Hom. Il. 10, 269).",
+              "entryid": "00:01:01:08",
+              "citations": {
+                "urn:cts:latinLit:phi0690.phi003:5:572": "Verg. A. 5, 572"
+              }
+            }
+          ],
+          "term": "sum"
+        }
+      }
+    ],
+    "dg_parsed": true,
+    "chunk_types": [
+      "PerseusAnalysisHeader",
+      "DiogenesMatchingReference"
+    ]
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "chunks": 2,
+    "dg_parsed": 1,
+    "chunk_types": 2
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

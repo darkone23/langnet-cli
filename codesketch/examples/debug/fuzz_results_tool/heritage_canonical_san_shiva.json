@@ -1,0 +1,32 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "canonical",
+    "lang": "san",
+    "word": "shiva",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "canonical": {
+      "original_query": "shiva",
+      "bare_query": "shiva",
+      "canonical_text": "ziva",
+      "match_method": "sktsearch",
+      "entry_url": "/skt/MW/261.html#H_ziva"
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "canonical": 5
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

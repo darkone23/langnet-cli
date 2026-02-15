@@ -1,0 +1,58 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "grc",
+    "word": "lego",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "chunks": [
+      {
+        "logeion": "https://logeion.uchicago.edu/\u03bb\u03b5\u03b3\u03bf"
+      },
+      {
+        "reference_id": "59527949",
+        "definitions": {
+          "blocks": [
+            {
+              "entry": "\u03bb\u03ad\u03b3\u03bf\u03c2, \u03b7, \u03bf\u03bd",
+              "entryid": "00"
+            },
+            {
+              "entry": "lewd, \u03bb\u03ad\u03b3\u03b1\u03b9 \u03b3\u03c5\u03bd\u03b1\u1fd6\u03ba\u03b5\u03c2 Archil. 179.",
+              "entryid": "00:00",
+              "citations": {
+                "urn:cts:greekLit:tlg0232.tlg001:179": "Archil. 179"
+              }
+            }
+          ],
+          "term": "\u03bb\u03ad\u03b3\u03bf\u03c2"
+        }
+      }
+    ],
+    "dg_parsed": true,
+    "chunk_types": [
+      "NoMatchFoundHeader",
+      "DiogenesFuzzyReference"
+    ],
+    "is_fuzzy_overall": true
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "chunks": 2,
+    "dg_parsed": 1,
+    "chunk_types": 2,
+    "is_fuzzy_overall": 1
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

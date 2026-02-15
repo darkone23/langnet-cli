@@ -3,7 +3,22 @@
 **Status**: Active Plan
 **Date**: 2026-02-15
 **Priority**: HIGH
-**Related**: `05-tool-fact-architecture.md`, `tool-fact-flow.md`
+**Related**: `tool-fact-architecture.md`, `tool-response-pipeline.md`, `tool-fact-flow.md`
+
+## Note
+
+This roadmap should be read alongside `tool-response-pipeline.md`, which defines the 5-stage pipeline:
+
+```
+Tool Call → Raw Response → Extractions → Derivations → Claims
+```
+
+The phases below map to these stages:
+- Phase 1-2: Define proto schemas for all 5 stages
+- Phase 3: Implement extraction and derivation stages
+- Phase 4: Wire pipeline to query flow
+- Phase 5: Build transformation layer (Derivation → Claim)
+- Phase 6: Integration testing
 
 ## Goal
 
@@ -20,10 +35,10 @@ Implement an index-first query architecture where each tool emits canonical fact
 
 ## Prerequisites
 
-- [x] Architecture documented (`05-tool-fact-architecture.md`)
+- [x] Architecture documented (`tool-fact-architecture.md`)
 - [x] Mermaid diagrams created (`tool-fact-flow.md`)
 - [ ] Proto build system verified (`just codegen` works)
-- [ ] Entry parsing layer designed (`04-entry-parsing.md`)
+- [ ] Entry parsing layer designed (`entry-parsing.md`)
 
 ## Phase 1: Proto Schema Definition (2-3 days)
 
@@ -359,7 +374,7 @@ TRANSFORM_RULES = {
 
 ## Related Documents
 
-- `docs/technical/design/05-tool-fact-architecture.md` - Architecture overview
+- `docs/technical/design/tool-fact-architecture.md` - Architecture overview
 - `docs/technical/design/mermaid/tool-fact-flow.md` - Diagrams
-- `docs/technical/design/04-entry-parsing.md` - Entry parsing (prerequisite)
+- `docs/technical/design/entry-parsing.md` - Entry parsing (prerequisite)
 - `docs/technical/backend/tool-capabilities.md` - Per-tool expectations

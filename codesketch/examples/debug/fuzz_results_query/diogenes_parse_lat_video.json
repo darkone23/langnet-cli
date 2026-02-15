@@ -1,0 +1,3497 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "lat",
+    "word": "video",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "video",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "see, look at",
+          "pos": "unknown",
+          "metadata": {
+            "type": "sense"
+          }
+        },
+        {
+          "definition": "consider",
+          "pos": "noun",
+          "metadata": {
+            "type": "sense"
+          }
+        },
+        {
+          "definition": "(PASS) seem, seem good, appear, be seen",
+          "pos": "noun",
+          "metadata": {
+            "type": "sense"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "video, videre, vidi, visus",
+        "pos": "verb",
+        "features": {
+          "declension": "2nd",
+          "part_of_speech": "Verb",
+          "number": "Singular",
+          "variant": "1",
+          "term_analysis": {
+            "stem": "vid",
+            "ending": "eo"
+          },
+          "conjugation": "2",
+          "tense": "Praesens (Present)",
+          "voice": "Active",
+          "mood": "Indicative",
+          "person": "1"
+        },
+        "declension": "2nd",
+        "conjugation": "2",
+        "tense": "Praesens (Present)",
+        "mood": "Indicative",
+        "voice": "Active",
+        "person": "1",
+        "number": "Singular"
+      },
+      "source": "whitakers",
+      "metadata": {
+        "raw_lines": [
+          "vid.eo               V      2 1 PRES ACTIVE  IND 1 S    ",
+          "video, videre, vidi, visus  V (2nd)   [XXXAX]  ",
+          "see, look at; consider; (PASS) seem, seem good, appear, be seen;"
+        ],
+        "senses": [
+          "see, look at",
+          "consider",
+          "(PASS) seem, seem good, appear, be seen"
+        ],
+        "terms": [
+          {
+            "term": "vid.eo",
+            "part_of_speech": "Verb",
+            "number": "Singular",
+            "variant": "1",
+            "term_analysis": {
+              "stem": "vid",
+              "ending": "eo"
+            },
+            "conjugation": "2",
+            "tense": "Praesens (Present)",
+            "voice": "Active",
+            "mood": "Indicative",
+            "person": "1"
+          }
+        ],
+        "codeline": {
+          "term": "video, videre, vidi, visus",
+          "freq": "Very Frequent",
+          "declension": "2nd",
+          "pos_code": "Verb"
+        }
+      }
+    },
+    {
+      "word": "video",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "video, v\u012bdi, v\u012bsum, 2 (viden', i.e. videsne, Plaut. Ep. 2, 2, 37 (217); Ter. Eun. 241; 265; 754; Cat. 61, 98; Tib. 2, 2, 17; Verg. A. 6, 779; inf. viderier, Cic. Dom. 53, 136; Ter. Hec. 759: vid\u0115, Plaut. Ps. 1, 1, 46 (48)), v. a. and n. Sanscr. root vid-, v\u0113da, know; vind\u0101mi, find; cf. v\u0113da-s, sacred book; Gr. root \u1f30\u03b4, \u03dd\u03b9\u03b4-, in \u03b5\u1f36\u03b4\u03bf\u03bd, saw; \u03bf\u1f36\u03b4\u03b1, know; Germ. wissen; Engl. wit, wot, to see, perceive, with the eyes (syn. cerno).",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi009:217": "Plaut. Ep. 2, 2, 37 (217)",
+              "urn:cts:latinLit:phi0134.phi003:241": "Ter. Eun. 241",
+              "urn:cts:latinLit:phi0134.phi003:265": "265",
+              "urn:cts:latinLit:phi0134.phi003:754": "754",
+              "urn:cts:latinLit:phi0472.phi001:61:98": "Cat. 61, 98",
+              "urn:cts:latinLit:phi0660.phi001:2:2:17": "Tib. 2, 2, 17",
+              "urn:cts:latinLit:phi0690.phi003:6:779": "Verg. A. 6, 779",
+              "urn:cts:latinLit:phi0474.phi020:53:136": "Cic. Dom. 53, 136",
+              "urn:cts:latinLit:phi0134.phi005:759": "Ter. Hec. 759",
+              "urn:cts:latinLit:phi0119.phi016:48": "Plaut. Ps. 1, 1, 46 (48)"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi009:217": {
+                "text": "Plaut. Ep. 2, 2, 37 (217)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Epidicus",
+                "display": "Plautus, Titus Maccius - Epidicus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:241": {
+                "text": "Ter. Eun. 241",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:265": {
+                "text": "265",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:754": {
+                "text": "754",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0472.phi001:61:98": {
+                "text": "Cat. 61, 98",
+                "author": "Catullus",
+                "work": "Carmina",
+                "display": "Catullus - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0660.phi001:2:2:17": {
+                "text": "Tib. 2, 2, 17",
+                "author": "Tibullus",
+                "work": "Elegiae",
+                "display": "Tibullus - Elegiae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:6:779": {
+                "text": "Verg. A. 6, 779",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi020:53:136": {
+                "text": "Cic. Dom. 53, 136",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De domo sua ad pontifices",
+                "display": "Cicero, Marcus Tullius - De domo sua ad pontifices",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi005:759": {
+                "text": "Ter. Hec. 759",
+                "author": "Terence",
+                "work": "Hecyra",
+                "display": "Terence - Hecyra",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi016:48": {
+                "text": "Plaut. Ps. 1, 1, 46 (48)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Pseudolus",
+                "display": "Plautus, Titus Maccius - Pseudolus",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "I.  Lit.",
+          "pos": "unknown",
+          "metadata": {
+            "entryid": "00:00",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "A.  In gen.: Ph. Tun' me vidisti? Sc. Atque his quidem oculis. Ph. Carebis, credo, Qui plus vident, quam quod vident. Sc. Numquam hercle deterrebor, Quin viderim id quod viderim, Plaut. Mil. 2, 4, 15 (368) sq.: clare oculis video, id. ib. 3, 1, 35 (630): nos enim ne nunc quidem oculis cernimus ea, quae videmus, etc., Cic. Tusc. 1, 20, 46; id. de Or. 3, 40, 161: Considium, quod non vidisset, pro viso sibi renuntiasse, Caes. B. G. 1, 22 fin.: mulieres et pueri qui visum processerant, Sall. J. 94, 5: ut juvat pastas oves Videre properantes domum! Videre fessos vomerem inversum boves Collo trahentes languido! Hor. Epod. 2, 62 sq.: serpentes atque videres Infernas errare canes, id. S. 1, 8, 35 et saep.\u2014With ut and ind. (po\u00ebt.): viden', ut geminae stant vertice cristae? Verg. A. 6, 779: viden' ut faces Splendidas quatiunt comas? Cat. 61, 77.\u2014With ut and subj.: nonne vides, ut tota tremor pertemptet equorum Corpora? Verg. G. 3, 250: nonne vides ut ... Antennae gemant? Hor. C. 1, 14, 3.\u2014Pass.: ubi sol sex mensibus continuis non videtur, Varr. R. R. 1, 2, 4: a se disertos visos esse multos, Quint. 8, praef. \u00a7 13; cf. id. 12, 1, 21: consulis ante pedes ire viderer eques, Ov. P. 4, 9, 18.\u2014 Absol., to see, i. e. to have the eyes open, to be awake, Verg. E. 6, 21.\u2014Impers. pass.: De. Vide sis modo etiam. Ly. Visum'st, Plaut. Merc. 2, 2, 52 (323); id. As. 3, 3, 95 (685).\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:00",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi012:368": "Plaut. Mil. 2, 4, 15 (368)",
+              "urn:cts:latinLit:phi0119.phi012:630": "id. ib. 3, 1, 35 (630)",
+              "urn:cts:latinLit:phi0474.phi049:1:20:46": "Cic. Tusc. 1, 20, 46",
+              "urn:cts:latinLit:phi0474.phi037:3:40:161": "id. de Or. 3, 40, 161",
+              "urn:cts:latinLit:phi0448.phi001:1:22": "Caes. B. G. 1, 22 fin.",
+              "urn:cts:latinLit:phi0631.phi002:94:5": "Sall. J. 94, 5",
+              "urn:cts:latinLit:phi0893.phi003:2:62": "Hor. Epod. 2, 62",
+              "urn:cts:latinLit:phi0893.phi004:1:8:35": "id. S. 1, 8, 35",
+              "urn:cts:latinLit:phi0690.phi003:6:779": "Verg. A. 6, 779",
+              "urn:cts:latinLit:phi0472.phi001:61:77": "Cat. 61, 77",
+              "urn:cts:latinLit:phi0690.phi002:3:250": "Verg. G. 3, 250",
+              "urn:cts:latinLit:phi0893.phi001:1:14:3": "Hor. C. 1, 14, 3",
+              "urn:cts:latinLit:phi0684.phi002:1:2:4": "Varr. R. R. 1, 2, 4",
+              "urn:cts:latinLit:phi1002.phi001:8:pr:13": "Quint. 8, praef. \u00a7 13",
+              "urn:cts:latinLit:phi1002.phi001:12:1:21": "id. 12, 1, 21",
+              "urn:cts:latinLit:phi0959.phi009:4:9:18": "Ov. P. 4, 9, 18",
+              "urn:cts:latinLit:phi0690.phi001:6:21": "Verg. E. 6, 21",
+              "urn:cts:latinLit:phi0119.phi011:323": "Plaut. Merc. 2, 2, 52 (323)",
+              "urn:cts:latinLit:phi0119.phi002:685": "id. As. 3, 3, 95 (685)"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi012:368": {
+                "text": "Plaut. Mil. 2, 4, 15 (368)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Miles Gloriosus",
+                "display": "Plautus, Titus Maccius - Miles Gloriosus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi012:630": {
+                "text": "id. ib. 3, 1, 35 (630)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Miles Gloriosus",
+                "display": "Plautus, Titus Maccius - Miles Gloriosus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi049:1:20:46": {
+                "text": "Cic. Tusc. 1, 20, 46",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi037:3:40:161": {
+                "text": "id. de Or. 3, 40, 161",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De",
+                "display": "Cicero, Marcus Tullius - De",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0448.phi001:1:22": {
+                "text": "Caes. B. G. 1, 22 fin.",
+                "author": "Julius Caesar",
+                "work": "B",
+                "display": "Julius Caesar - B",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0631.phi002:94:5": {
+                "text": "Sall. J. 94, 5",
+                "author": "Sallust",
+                "work": "J",
+                "display": "Sallust - J",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi003:2:62": {
+                "text": "Hor. Epod. 2, 62",
+                "author": "Horace",
+                "work": "Epodi",
+                "display": "Horace - Epodi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi004:1:8:35": {
+                "text": "id. S. 1, 8, 35",
+                "author": "Horace",
+                "work": "Satires",
+                "display": "Horace - Satires",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:6:779": {
+                "text": "Verg. A. 6, 779",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0472.phi001:61:77": {
+                "text": "Cat. 61, 77",
+                "author": "Catullus",
+                "work": "Carmina",
+                "display": "Catullus - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi002:3:250": {
+                "text": "Verg. G. 3, 250",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Georgics",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Georgics",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi001:1:14:3": {
+                "text": "Hor. C. 1, 14, 3",
+                "author": "Horace",
+                "work": "Carmina",
+                "display": "Horace - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0684.phi002:1:2:4": {
+                "text": "Varr. R. R. 1, 2, 4",
+                "author": "M. Terentius Varro",
+                "work": "Res Rusticae",
+                "display": "M. Terentius Varro - Res Rusticae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:8:pr:13": {
+                "text": "Quint. 8, praef. \u00a7 13",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:12:1:21": {
+                "text": "id. 12, 1, 21",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi009:4:9:18": {
+                "text": "Ov. P. 4, 9, 18",
+                "author": "Ovid",
+                "work": "Ex Ponto",
+                "display": "Ovid - Ex Ponto",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi001:6:21": {
+                "text": "Verg. E. 6, 21",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Eclogues",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi011:323": {
+                "text": "Plaut. Merc. 2, 2, 52 (323)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Mercator",
+                "display": "Plautus, Titus Maccius - Mercator",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi002:685": {
+                "text": "id. As. 3, 3, 95 (685)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Asinaria",
+                "display": "Plautus, Titus Maccius - Asinaria",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "2.  Transf.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:00:00",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "a.  Of things (poet.), to see: (Apenninus) Gallica rura videt, Luc. 2, 429: et casus abies visura marinos, i. e. to experience, Verg. G. 2, 68.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:00:00:00",
+            "citations": {
+              "urn:cts:latinLit:phi0917.phi001:2:429": "Luc. 2, 429",
+              "urn:cts:latinLit:phi0690.phi002:2:68": "Verg. G. 2, 68"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0917.phi001:2:429": {
+                "text": "Luc. 2, 429",
+                "author": "Lucan",
+                "work": "Civil War",
+                "display": "Lucan - Civil War",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi002:2:68": {
+                "text": "Verg. G. 2, 68",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Georgics",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Georgics",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "b.  Of places, etc., to look out on, afford a view of (post-Aug.): triclinium hortum et gestationem videt, Plin. Ep. 2, 17, 13.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:00:00:01",
+            "citations": {
+              "urn:cts:latinLit:phi1318.phi001:2:17:13": "Plin. Ep. 2, 17, 13"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi1318.phi001:2:17:13": {
+                "text": "Plin. Ep. 2, 17, 13",
+                "author": "Pliny, the Younger",
+                "work": "Epistulae",
+                "display": "Pliny, the Younger - Epistulae",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "c.  Of the other senses, to perceive, observe any thing: vidistin' toto sonitus procurrere caelo? Prop. 2, 16 (3, 8), 49: mugire videbis Sub pedibus terram et descendere montibus ornos, Verg. A. 4, 490: tum videres Stridere secret\u0101 divisos aure susurros, Hor. S. 2, 8, 77: naso poljam haec quidem videt plus quam oculis, Plaut. Mil. 4, 6, 44 (1259).\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:00:00:02",
+            "citations": {
+              "urn:cts:latinLit:phi0620.phi001:2:16:49": "Prop. 2, 16 (3, 8), 49",
+              "urn:cts:latinLit:phi0690.phi003:4:490": "Verg. A. 4, 490",
+              "urn:cts:latinLit:phi0893.phi004:2:8:77": "Hor. S. 2, 8, 77",
+              "urn:cts:latinLit:phi0119.phi012:1259": "Plaut. Mil. 4, 6, 44 (1259)"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0620.phi001:2:16:49": {
+                "text": "Prop. 2, 16 (3, 8), 49",
+                "author": "Propertius, Sextus",
+                "work": "Elegiae",
+                "display": "Propertius, Sextus - Elegiae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:4:490": {
+                "text": "Verg. A. 4, 490",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi004:2:8:77": {
+                "text": "Hor. S. 2, 8, 77",
+                "author": "Horace",
+                "work": "Satires",
+                "display": "Horace - Satires",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi012:1259": {
+                "text": "Plaut. Mil. 4, 6, 44 (1259)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Miles Gloriosus",
+                "display": "Plautus, Titus Maccius - Miles Gloriosus",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "B.  In partic., to see on purpose, to look at any thing: vide sis signi quid siet, Plaut. Am. 2, 2, 155 (787); cf.: vide, tali ubi sint, id. Most. 1, 3, 151 (307): illud vide, os ut sibi distorsit carnufex, Ter. Eun. 670: vide, si non os inpudens Videtur, id. ib. 839; cf.: specta me, a threatening expression, Plaut. As. 1, 2, 19 (145) al.: quin tu me vides? only look at me! i. e. see what I have done! Cic. Pis. 25, 61.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:01",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi001:787": "Plaut. Am. 2, 2, 155 (787)",
+              "urn:cts:latinLit:phi0119.phi013:307": "id. Most. 1, 3, 151 (307)",
+              "urn:cts:latinLit:phi0134.phi003:670": "Ter. Eun. 670",
+              "urn:cts:latinLit:phi0134.phi003:839": "id. ib. 839",
+              "urn:cts:latinLit:phi0119.phi002:145": "Plaut. As. 1, 2, 19 (145)",
+              "urn:cts:latinLit:phi0474.phi027:25:61": "Cic. Pis. 25, 61"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi001:787": {
+                "text": "Plaut. Am. 2, 2, 155 (787)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Amphitruo",
+                "display": "Plautus, Titus Maccius - Amphitruo",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi013:307": {
+                "text": "id. Most. 1, 3, 151 (307)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Mostellaria",
+                "display": "Plautus, Titus Maccius - Mostellaria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:670": {
+                "text": "Ter. Eun. 670",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:839": {
+                "text": "id. ib. 839",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi002:145": {
+                "text": "Plaut. As. 1, 2, 19 (145)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Asinaria",
+                "display": "Plautus, Titus Maccius - Asinaria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi027:25:61": {
+                "text": "Cic. Pis. 25, 61",
+                "author": "Cicero, Marcus Tullius",
+                "work": "In L. Calpurnium Pisonem",
+                "display": "Cicero, Marcus Tullius - In L. Calpurnium Pisonem",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "II.  Trop.",
+          "pos": "unknown",
+          "metadata": {
+            "entryid": "00:01",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "A.  In gen., to see with the mind's eye, to perceive, mark, observe, discern, understand, comprehend, be aware, know, etc. (class.; syn. percipio): ad te, ut video, comminus accessit, Cic. Att. 2, 2, 2: quem exitum ego tam video animo, quam ea, quae oculis cernimus, id. Fam. 6, 3, 2: aperte enim adulantem nemo non videt, sees through, detects, id. Lael. 26, 99: si dormientes aliquid animo videre videamur, id. Ac. 2 (Luc.), 40, 125: aliquid in somnis, id. N. D. 1, 29, 82: somnia, id. Div. 2, 71, 147: quod ego, cur nolim, nihil video, id. Fam. 9, 6, 2: nonne vobis videtur is animus qui plus cernat et longius, videre se ad meliora proficisci: ille autem cui obtusior est acies non videre? id. Sen. 23, 83.\u2014With comp., plus, etc.: ut is qui illusus sit plus vidisse videatur, to have seen farther, had more insight, Cic. Lael. 26, 99: videre acutius atque acrius vitia in dicente quam recta, id. de Or. 1, 25, 116: aliena melius videre et dijudicare, Ter. Heaut. 504: cum me vidisse plus fateretur, se speravisse meliora, that I had seen farther, Cic. Phil. 2, 15, 39; cf.: sin autem vos plus in re public\u0101 vidistis, id. Imp. Pomp. 22, 64; cf.: vos universos in consule deligendo plurimum vidisse fateantur, id. Agr. 2, 37, 103: di vatesque eorum in futurum vident, Liv. 6, 12.\u2014With two accs.: quem virum Crassum vidimus, Cic. Sen. 17, 61; cf.: officiorum conjunctione me privatum videbam, id. Brut. 1, 1: cum invidiosum se propter nimias opes viderit, Just. 32, 4, 4.\u2014With ut and ind. (po\u00ebt.): nonne vides, croceos ut Tmolus odores, India mittit ebur, Verg. G. 1, 56.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:00",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi057:2:2:2": "Cic. Att. 2, 2, 2",
+              "urn:cts:latinLit:phi0474.phi056:6:3:2": "id. Fam. 6, 3, 2",
+              "urn:cts:latinLit:phi0474.phi052:26:99": "Cic. Lael. 26, 99",
+              "urn:cts:latinLit:phi0474.phi046:40:125": "id. Ac. 2 (Luc.), 40, 125",
+              "urn:cts:latinLit:phi0474.phi050:1:29:82": "id. N. D. 1, 29, 82",
+              "urn:cts:latinLit:phi0474.phi053:2:71:147": "id. Div. 2, 71, 147",
+              "urn:cts:latinLit:phi0474.phi056:9:6:2": "id. Fam. 9, 6, 2",
+              "urn:cts:latinLit:phi0474.phi051:23:83": "id. Sen. 23, 83",
+              "urn:cts:latinLit:phi0474.phi037:1:25:116": "id. de Or. 1, 25, 116",
+              "urn:cts:latinLit:phi0134.phi002:504": "Ter. Heaut. 504",
+              "urn:cts:latinLit:phi0474.phi035:2:15:39": "Cic. Phil. 2, 15, 39",
+              "urn:cts:latinLit:phi0474.phi009:22:64": "id. Imp. Pomp. 22, 64",
+              "urn:cts:latinLit:phi0474.phi011:2:37:103": "id. Agr. 2, 37, 103",
+              "urn:cts:latinLit:phi0914.phi001:6:12": "Liv. 6, 12",
+              "urn:cts:latinLit:phi0474.phi051:17:61": "Cic. Sen. 17, 61",
+              "urn:cts:latinLit:phi0474.phi039:1:1": "id. Brut. 1, 1",
+              "urn:cts:latinLit:phi2806.phi001:32:4:4": "Just. 32, 4, 4",
+              "urn:cts:latinLit:phi0690.phi002:1:56": "Verg. G. 1, 56"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi057:2:2:2": {
+                "text": "Cic. Att. 2, 2, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:6:3:2": {
+                "text": "id. Fam. 6, 3, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:26:99": {
+                "text": "Cic. Lael. 26, 99",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi046:40:125": {
+                "text": "id. Ac. 2 (Luc.), 40, 125",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Ac",
+                "display": "Cicero, Marcus Tullius - Ac",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi050:1:29:82": {
+                "text": "id. N. D. 1, 29, 82",
+                "author": "Cicero, Marcus Tullius",
+                "work": "de Natura Deorum",
+                "display": "Cicero, Marcus Tullius - de Natura Deorum",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi053:2:71:147": {
+                "text": "id. Div. 2, 71, 147",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Divinatione",
+                "display": "Cicero, Marcus Tullius - De Divinatione",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:9:6:2": {
+                "text": "id. Fam. 9, 6, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi051:23:83": {
+                "text": "id. Sen. 23, 83",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Senectute",
+                "display": "Cicero, Marcus Tullius - De Senectute",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi037:1:25:116": {
+                "text": "id. de Or. 1, 25, 116",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De",
+                "display": "Cicero, Marcus Tullius - De",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi002:504": {
+                "text": "Ter. Heaut. 504",
+                "author": "Terence",
+                "work": "Heautontimorumenos",
+                "display": "Terence - Heautontimorumenos",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi035:2:15:39": {
+                "text": "Cic. Phil. 2, 15, 39",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Philippicae",
+                "display": "Cicero, Marcus Tullius - Philippicae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi009:22:64": {
+                "text": "id. Imp. Pomp. 22, 64",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Imperio Cn. Pompei Ad Quirites",
+                "display": "Cicero, Marcus Tullius - De Imperio Cn. Pompei Ad Quirites",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi011:2:37:103": {
+                "text": "id. Agr. 2, 37, 103",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Lege Agraria",
+                "display": "Cicero, Marcus Tullius - De Lege Agraria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:6:12": {
+                "text": "Liv. 6, 12",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi051:17:61": {
+                "text": "Cic. Sen. 17, 61",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Senectute",
+                "display": "Cicero, Marcus Tullius - De Senectute",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi039:1:1": {
+                "text": "id. Brut. 1, 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Brutus",
+                "display": "Cicero, Marcus Tullius - Brutus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi2806.phi001:32:4:4": {
+                "text": "Just. 32, 4, 4",
+                "author": "Iustinianus",
+                "work": "Digesta Iustiniani",
+                "display": "Iustinianus - Digesta Iustiniani",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi002:1:56": {
+                "text": "Verg. G. 1, 56",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Georgics",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Georgics",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "B.  In partic.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "1.  To look at, look to, consider, to think or reflect upon (cf.: reputo, considero): duae condiciones sunt: utram tu accipias, vide, Plaut. Bacch. 4, 9, 118 (1042): nunc ea videamus, quae contra ab his disputari solent, Cic. Ac. 2 (Luc.), 13, 40: id primum videamus, qu\u0101tenus amor in amiciti\u0101 progredi debeat, id. Lael. 11, 36: sed videamus Herculem ipsum, id. Tusc. 2, 8, 20 Klotz ad loc.: quamobrem et haec videnda et pecuniae fugienda cupiditas, id. Off. 1, 20, 68: te moneo: videas etiam atque etiam et consideres, quid agas, quo progrediare, etc., id. Verr. 2, 5, 68, \u00a7 174: legi Bruti epistolam non prudenter rescriptam: sed ipse viderit, let him see to that himself, id. Att. 12, 21, 1; so, viderit, Ov. A. A. 2, 371; id. Tr. 5, 2, 43; cf.: quam id recte faciam, viderint sapientes, Cic. Lael. 3, 10; and: quae (ars) quam sit facilis, illi viderint, qui, etc.... deinde etiam tu ipse videris, qui eam artem facilem esse dicis, id. de Or. 1, 58, 246: viderint ista officia viri boni, id. Quint. 17, 55.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:00",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi004:1042": "Plaut. Bacch. 4, 9, 118 (1042)",
+              "urn:cts:latinLit:phi0474.phi046:13:40": "Cic. Ac. 2 (Luc.), 13, 40",
+              "urn:cts:latinLit:phi0474.phi052:11:36": "id. Lael. 11, 36",
+              "urn:cts:latinLit:phi0474.phi049:2:8:20": "id. Tusc. 2, 8, 20",
+              "urn:cts:latinLit:phi0474.phi055:1:20:68": "id. Off. 1, 20, 68",
+              "urn:cts:latinLit:phi0474.phi005:2:5:174": "id. Verr. 2, 5, 68, \u00a7 174",
+              "urn:cts:latinLit:phi0474.phi057:12:21:1": "id. Att. 12, 21, 1",
+              "urn:cts:latinLit:phi0959.phi004:2:371": "Ov. A. A. 2, 371",
+              "urn:cts:latinLit:phi0959.phi008:5:2:43": "id. Tr. 5, 2, 43",
+              "urn:cts:latinLit:phi0474.phi052:3:10": "Cic. Lael. 3, 10",
+              "urn:cts:latinLit:phi0474.phi037:1:58:246": "id. de Or. 1, 58, 246",
+              "urn:cts:latinLit:phi0474.phi001:17:55": "id. Quint. 17, 55"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi004:1042": {
+                "text": "Plaut. Bacch. 4, 9, 118 (1042)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Bacchides",
+                "display": "Plautus, Titus Maccius - Bacchides",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi046:13:40": {
+                "text": "Cic. Ac. 2 (Luc.), 13, 40",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Ac",
+                "display": "Cicero, Marcus Tullius - Ac",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:11:36": {
+                "text": "id. Lael. 11, 36",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi049:2:8:20": {
+                "text": "id. Tusc. 2, 8, 20",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi055:1:20:68": {
+                "text": "id. Off. 1, 20, 68",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Officiis",
+                "display": "Cicero, Marcus Tullius - De Officiis",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi005:2:5:174": {
+                "text": "id. Verr. 2, 5, 68, \u00a7 174",
+                "author": "Cicero, Marcus Tullius",
+                "work": "In C. Verrem",
+                "display": "Cicero, Marcus Tullius - In C. Verrem",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:12:21:1": {
+                "text": "id. Att. 12, 21, 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi004:2:371": {
+                "text": "Ov. A. A. 2, 371",
+                "author": "Ovid",
+                "work": "Ars Amatoria",
+                "display": "Ovid - Ars Amatoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi008:5:2:43": {
+                "text": "id. Tr. 5, 2, 43",
+                "author": "Ovid",
+                "work": "Tristia",
+                "display": "Ovid - Tristia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:3:10": {
+                "text": "Cic. Lael. 3, 10",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi037:1:58:246": {
+                "text": "id. de Or. 1, 58, 246",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De",
+                "display": "Cicero, Marcus Tullius - De",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi001:17:55": {
+                "text": "id. Quint. 17, 55",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Quint",
+                "display": "Cicero, Marcus Tullius - Quint",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "2.  To look out for, see to, care for, provide: atque idem (sapiens) ita acrem in omnis partis aciem intendit, ut semper videat sedem sibi ac locum sine molesti\u0101 vivendi, Cic. Tusc. 4, 17, 38: antecesserat Statius, ut prandium nobis videret, i. e. provide, id. Att. 5, 1, 3: dulciculae potionis aliquid videamus et cibi, id. Tusc. 3, 19, 46: aliud lenius (vinum), Ter. Heaut. 459: Philippum dixisse constabat, videndum sibi aliud esse consilium, illo senatu se rem publicam gerere non posse, Cic. de Or. 3, 1, 2: absque eo esset, Recte ego mihi vidissem, Ter. Phorm. 190.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:01",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi049:4:17:38": "Cic. Tusc. 4, 17, 38",
+              "urn:cts:latinLit:phi0474.phi057:5:1:3": "id. Att. 5, 1, 3",
+              "urn:cts:latinLit:phi0474.phi049:3:19:46": "id. Tusc. 3, 19, 46",
+              "urn:cts:latinLit:phi0134.phi002:459": "Ter. Heaut. 459",
+              "urn:cts:latinLit:phi0474.phi037:3:1:2": "Cic. de Or. 3, 1, 2",
+              "urn:cts:latinLit:phi0134.phi004:190": "Ter. Phorm. 190"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi049:4:17:38": {
+                "text": "Cic. Tusc. 4, 17, 38",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:5:1:3": {
+                "text": "id. Att. 5, 1, 3",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi049:3:19:46": {
+                "text": "id. Tusc. 3, 19, 46",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi002:459": {
+                "text": "Ter. Heaut. 459",
+                "author": "Terence",
+                "work": "Heautontimorumenos",
+                "display": "Terence - Heautontimorumenos",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi037:3:1:2": {
+                "text": "Cic. de Or. 3, 1, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De",
+                "display": "Cicero, Marcus Tullius - De",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi004:190": {
+                "text": "Ter. Phorm. 190",
+                "author": "Terence",
+                "work": "Phormio",
+                "display": "Terence - Phormio",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "3.  To take care, see to it, make sure, with final clause: navem idoneam ut habeas, diligenter videbis, Cic. Fam. 16, 1, 2; cf.: videret, ut quam primum tota res transigeretur, id. Quint. 5, 20: ne fortuna mea desit, videte, Liv. 6, 18, 8.\u2014Impers. pass.: videndum est, ne absit benignitas ... tum, ut pro dignitate cuique tribuatur, Cic. Off. 1, 14, 42: ut Latine loquamur, non solum videndum est ut verba efferamus ea, etc., id. de Or. 3, 11, 40; cf.: vos videte, quid aliae faciant isto loco feminae: et ne, cum velitis, exire non liceat, id. Fam. 14, 18, 2.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:02",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi056:16:1:2": "Cic. Fam. 16, 1, 2",
+              "urn:cts:latinLit:phi0474.phi001:5:20": "id. Quint. 5, 20",
+              "urn:cts:latinLit:phi0914.phi001:6:18:8": "Liv. 6, 18, 8",
+              "urn:cts:latinLit:phi0474.phi055:1:14:42": "Cic. Off. 1, 14, 42",
+              "urn:cts:latinLit:phi0474.phi037:3:11:40": "id. de Or. 3, 11, 40",
+              "urn:cts:latinLit:phi0474.phi056:14:18:2": "id. Fam. 14, 18, 2"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi056:16:1:2": {
+                "text": "Cic. Fam. 16, 1, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi001:5:20": {
+                "text": "id. Quint. 5, 20",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Quint",
+                "display": "Cicero, Marcus Tullius - Quint",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:6:18:8": {
+                "text": "Liv. 6, 18, 8",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi055:1:14:42": {
+                "text": "Cic. Off. 1, 14, 42",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Officiis",
+                "display": "Cicero, Marcus Tullius - De Officiis",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi037:3:11:40": {
+                "text": "id. de Or. 3, 11, 40",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De",
+                "display": "Cicero, Marcus Tullius - De",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:14:18:2": {
+                "text": "id. Fam. 14, 18, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "4.  To see, i. e. reach, attain, obtain, enjoy.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:03",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "a.  In gen.: qui suo toto consulatu somnum non viderit, Cic. Fam. 7, 30, 1.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:03:00",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi056:7:30:1": "Cic. Fam. 7, 30, 1"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi056:7:30:1": {
+                "text": "Cic. Fam. 7, 30, 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "b.  Esp., to see, live to see a period or event: ex multis diebus, quos in vit\u0101 celeberrimos laetissimosque viderit, Cic. Lael. 3, 12: utinam eum diem videam, cum, etc., id. Att. 16, 11, 1: duxi uxorem: quam ibi miseriam vidi! Ter. Ad. 867: spero multa vos liberosque vestros in re public\u0101 bona esse visuros, Cic. Mil. 28, 78: multas jam summorum imperatorum clarissimas victorias aetas nostra vidit, id. ib. 28, 77: tantum pro! degeneramus a parentibus nostris, ut praeter quam oram illi Punicas vagari classes dedecus esse imperii sui duxerint, eam nos nunc plenam hostium jam factam videamus, Liv. 22, 14, 6; cf. id. 6, 14, 4.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:03:01",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi052:3:12": "Cic. Lael. 3, 12",
+              "urn:cts:latinLit:phi0474.phi057:16:11:1": "id. Att. 16, 11, 1",
+              "urn:cts:latinLit:phi0134.phi006:867": "Ter. Ad. 867",
+              "urn:cts:latinLit:phi0474.phi031:28:78": "Cic. Mil. 28, 78",
+              "urn:cts:latinLit:phi0474.phi031:28:77": "id. ib. 28, 77",
+              "urn:cts:latinLit:phi0914.phi001:22:14:6": "Liv. 22, 14, 6",
+              "urn:cts:latinLit:phi0914.phi001:6:14:4": "id. 6, 14, 4"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi052:3:12": {
+                "text": "Cic. Lael. 3, 12",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:16:11:1": {
+                "text": "id. Att. 16, 11, 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi006:867": {
+                "text": "Ter. Ad. 867",
+                "author": "Terence",
+                "work": "Adelphi",
+                "display": "Terence - Adelphi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi031:28:78": {
+                "text": "Cic. Mil. 28, 78",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro T. Annio Milone",
+                "display": "Cicero, Marcus Tullius - Pro T. Annio Milone",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi031:28:77": {
+                "text": "id. ib. 28, 77",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro T. Annio Milone",
+                "display": "Cicero, Marcus Tullius - Pro T. Annio Milone",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:22:14:6": {
+                "text": "Liv. 22, 14, 6",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:6:14:4": {
+                "text": "id. 6, 14, 4",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "5.  Pregn., to see, i. e. go to see, visit (colloq.; cf.: viso, inviso): sed Septimium vide et Laenatem, Cic. Att. 12, 14, 1: qu\u0101 re etiam Othonem vide, id. ib. 12, 37, 4: videbis ergo hominem, si voles, id. ib. 4, 12 init.: mane videas Plinium domi, Plin. Ep. 1, 5, 8; Suet. Tib. 7.\u2014Pass., to receive attention, be visited, Amm.14, 7, 10.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:04",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi057:12:14:1": "Cic. Att. 12, 14, 1",
+              "urn:cts:latinLit:phi0474.phi057:12:37:4": "id. ib. 12, 37, 4",
+              "urn:cts:latinLit:phi0474.phi057:4:12": "id. ib. 4, 12",
+              "urn:cts:latinLit:phi1318.phi001:1:5:8": "Plin. Ep. 1, 5, 8",
+              "urn:cts:latinLit:phi1348.phi001:life=tib.:7": "Suet. Tib. 7",
+              "urn:cts:latinLit:stoa0023.stoa001:14:7:10": "Amm.14, 7, 10"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi057:12:14:1": {
+                "text": "Cic. Att. 12, 14, 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:12:37:4": {
+                "text": "id. ib. 12, 37, 4",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:4:12": {
+                "text": "id. ib. 4, 12",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1318.phi001:1:5:8": {
+                "text": "Plin. Ep. 1, 5, 8",
+                "author": "Pliny, the Younger",
+                "work": "Epistulae",
+                "display": "Pliny, the Younger - Epistulae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1348.phi001:life=tib.:7": {
+                "text": "Suet. Tib. 7",
+                "author": "Suetonius",
+                "work": "Tib",
+                "display": "Suetonius - Tib",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:stoa0023.stoa001:14:7:10": {
+                "text": "Amm.14, 7, 10",
+                "author": "Ammianus Marcellinus",
+                "work": "Res Gestae",
+                "display": "Ammianus Marcellinus - Res Gestae",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "6.  Me vide, rely on me, trust me, believe me, a formula of exhortation and assurance (ante-class.), Plaut. Trin. 3, 3, 79 (807) Brix ad loc.; id. Mil. 2, 4, 23 (376) Lorenz ad loc.; id. Rud. 3, 3, 18 (681); id. Merc. 5, 4, 53 (1014); Ter. And. 350; id. Phorm. 711.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:05",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi019:807": "Plaut. Trin. 3, 3, 79 (807)",
+              "urn:cts:latinLit:phi0119.phi012:376": "id. Mil. 2, 4, 23 (376)",
+              "urn:cts:latinLit:phi0119.phi017:681": "id. Rud. 3, 3, 18 (681)",
+              "urn:cts:latinLit:phi0119.phi011:1014": "id. Merc. 5, 4, 53 (1014)",
+              "urn:cts:latinLit:phi0134.phi001:350": "Ter. And. 350",
+              "urn:cts:latinLit:phi0134.phi004:711": "id. Phorm. 711"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi019:807": {
+                "text": "Plaut. Trin. 3, 3, 79 (807)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Trinummus",
+                "display": "Plautus, Titus Maccius - Trinummus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi012:376": {
+                "text": "id. Mil. 2, 4, 23 (376)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Miles Gloriosus",
+                "display": "Plautus, Titus Maccius - Miles Gloriosus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi017:681": {
+                "text": "id. Rud. 3, 3, 18 (681)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Rudens",
+                "display": "Plautus, Titus Maccius - Rudens",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi011:1014": {
+                "text": "id. Merc. 5, 4, 53 (1014)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Mercator",
+                "display": "Plautus, Titus Maccius - Mercator",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi001:350": {
+                "text": "Ter. And. 350",
+                "author": "Terence",
+                "work": "Andria",
+                "display": "Terence - Andria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi004:711": {
+                "text": "id. Phorm. 711",
+                "author": "Terence",
+                "work": "Phormio",
+                "display": "Terence - Phormio",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "7.  Pass., to be looked upon or regarded in any manner, i. e. to seem, appear to be or do any thing: numquam periculi fug\u0101 committendum est, ut imbelles timidique videamur, Cic. Off. 1, 24, 83: ne id, quod speciem haberet honesti, pugnaret cum eo, quod utile videretur, id. ib. 3, 2, 7: multo rem turpiorem fore et iniquiorem visum iri intellegebant, id. Verr. 2, 2, 17, \u00a7 42; cf. id. de Or. 3, 11, 42: ex quo illorum beata mors videtur, horum vita laudabilis, id. Lael. 7, 23.\u2014Parenthet. (cf. c. infra): cum ceteris, ut quidem videor, tum mihi ipse displiceo, Cic. Fam. 4, 13, 3: ea vocabula non, ut videntur, easdem res significant, id. ib. 3, 34, 84.\u2014With dat. of pers.: cetera, quae quibusdam admirabilia videntur, etc., Cic. Lael. 23, 86: digna mihi res cum omnium cognitione tum nostr\u0101 familiaritate visa est, id. ib. 1, 4: idonea mihi Laelii persona visa est, quae, etc., id. ib.: a natur\u0101 mihi videtur potius quam ab indigenti\u0101 orta amicitia, id. ib. 8, 27: quae Aristoni et Pyrrhoni omnino visa sunt pro nihilo, id. Fin. 2, 13, 43: quod idem Scipioni videbatur, id. ib. 4, 14.\u2014Parenthet. (cf. c. infra): quam nostris libris satis diligenter, ut tibi quidem videmur, expressimus, Cic. Att. 8, 11, 1: Philargyrus omnia de te, ut mihi quidem visus est, narravit, id. Fam. 4, 13, 3.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:06",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi055:1:24:83": "Cic. Off. 1, 24, 83",
+              "urn:cts:latinLit:phi0474.phi055:3:2:7": "id. ib. 3, 2, 7",
+              "urn:cts:latinLit:phi0474.phi005:2:2:42": "id. Verr. 2, 2, 17, \u00a7 42",
+              "urn:cts:latinLit:phi0474.phi037:3:11:42": "id. de Or. 3, 11, 42",
+              "urn:cts:latinLit:phi0474.phi052:7:23": "id. Lael. 7, 23",
+              "urn:cts:latinLit:phi0474.phi056:4:13:3": "id. Fam. 4, 13, 3",
+              "urn:cts:latinLit:phi0474.phi056:3:34:84": "id. ib. 3, 34, 84",
+              "urn:cts:latinLit:phi0474.phi052:23:86": "Cic. Lael. 23, 86",
+              "urn:cts:latinLit:phi0474.phi052:1:4": "id. ib.",
+              "urn:cts:latinLit:phi0474.phi052:8:27": "id. ib. 8, 27",
+              "urn:cts:latinLit:phi0474.phi048:2:13:43": "id. Fin. 2, 13, 43",
+              "urn:cts:latinLit:phi0474.phi048:4:14": "id. ib. 4, 14",
+              "urn:cts:latinLit:phi0474.phi057:8:11:1": "Cic. Att. 8, 11, 1"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi055:1:24:83": {
+                "text": "Cic. Off. 1, 24, 83",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Officiis",
+                "display": "Cicero, Marcus Tullius - De Officiis",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi055:3:2:7": {
+                "text": "id. ib. 3, 2, 7",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Officiis",
+                "display": "Cicero, Marcus Tullius - De Officiis",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi005:2:2:42": {
+                "text": "id. Verr. 2, 2, 17, \u00a7 42",
+                "author": "Cicero, Marcus Tullius",
+                "work": "In C. Verrem",
+                "display": "Cicero, Marcus Tullius - In C. Verrem",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi037:3:11:42": {
+                "text": "id. de Or. 3, 11, 42",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De",
+                "display": "Cicero, Marcus Tullius - De",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:7:23": {
+                "text": "id. Lael. 7, 23",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:4:13:3": {
+                "text": "id. Fam. 4, 13, 3",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:3:34:84": {
+                "text": "id. ib. 3, 34, 84",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to his Friends",
+                "display": "Cicero, Marcus Tullius - Letters to his Friends",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:23:86": {
+                "text": "Cic. Lael. 23, 86",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:1:4": {
+                "text": "id. ib.",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Amicitia",
+                "display": "Cicero, Marcus Tullius - De Amicitia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:8:27": {
+                "text": "id. ib. 8, 27",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Amicitia",
+                "display": "Cicero, Marcus Tullius - De Amicitia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi048:2:13:43": {
+                "text": "id. Fin. 2, 13, 43",
+                "author": "Cicero, Marcus Tullius",
+                "work": "de Finibus Bonorum et Malorum",
+                "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi048:4:14": {
+                "text": "id. ib. 4, 14",
+                "author": "Cicero, Marcus Tullius",
+                "work": "de Finibus Bonorum et Malorum",
+                "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:8:11:1": {
+                "text": "Cic. Att. 8, 11, 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b2.  With inf.: de familiari illo tuo videor audisse, Cic. de Or. 2, 10, 40; id. N. D. 1, 21, 58: satis facere rei publicae videmur, si, etc., id. Cat. 1, 1, 2: ut beate vixisse videar, quia, etc., id. Lael. 4, 15: solem e mundo tollere videntur, qui amicitiam e vit\u0101 tollunt, id. ib. 13, 47: videre jam videor populum a senatu disjunctum, id. ib. 12, 41; cf.: te vero, Caecili, quem ad modum sit elusurus, videre jam videor, id. Div. in Caecil. 14, 45: vere videor posse contendere, Nep. Att. 12, 4: audire videor undique congerentes nomina po\u00ebtarum, Quint. 10, 1, 56; Vell. 2, 14, 1; Plin. Ep. 10, 61 (69), 1; id. Pan. 17, 1.\u2014With dat. of pers., Cic. Lael. 14, 51: videor mihi perspicere ipsius animum, id. Fam. 4, 13, 5: hoc mihi videor videre, id. Inv. 2, 57, 171. \u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:06:00",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi037:2:10:40": "Cic. de Or. 2, 10, 40",
+              "urn:cts:latinLit:phi0474.phi050:1:21:58": "id. N. D. 1, 21, 58",
+              "urn:cts:latinLit:phi0474.phi013:1:1:2": "id. Cat. 1, 1, 2",
+              "urn:cts:latinLit:phi0474.phi052:4:15": "id. Lael. 4, 15",
+              "urn:cts:latinLit:phi0474.phi052:13:47": "id. ib. 13, 47",
+              "urn:cts:latinLit:phi0474.phi052:12:41": "id. ib. 12, 41",
+              "urn:cts:latinLit:phi0474.phi004:14:45": "id. Div. in Caecil. 14, 45",
+              "urn:cts:latinLit:phi0588.phi001:att:12:4": "Nep. Att. 12, 4",
+              "urn:cts:latinLit:phi1002.phi001:10:1:56": "Quint. 10, 1, 56",
+              "urn:cts:latinLit:phi1044.phi001:2:14:1": "Vell. 2, 14, 1",
+              "urn:cts:latinLit:phi1318.phi001:10:61": "Plin. Ep. 10, 61",
+              "urn:cts:latinLit:phi1318.phi002:17:1": "id. Pan. 17, 1",
+              "urn:cts:latinLit:phi0474.phi052:14:51": "Cic. Lael. 14, 51",
+              "urn:cts:latinLit:phi0474.phi056:4:13:5": "id. Fam. 4, 13, 5",
+              "urn:cts:latinLit:phi0474.phi036:2:57:171": "id. Inv. 2, 57, 171"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi037:2:10:40": {
+                "text": "Cic. de Or. 2, 10, 40",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De",
+                "display": "Cicero, Marcus Tullius - De",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi050:1:21:58": {
+                "text": "id. N. D. 1, 21, 58",
+                "author": "Cicero, Marcus Tullius",
+                "work": "de Natura Deorum",
+                "display": "Cicero, Marcus Tullius - de Natura Deorum",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi013:1:1:2": {
+                "text": "id. Cat. 1, 1, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "In Catilinam",
+                "display": "Cicero, Marcus Tullius - In Catilinam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:4:15": {
+                "text": "id. Lael. 4, 15",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:13:47": {
+                "text": "id. ib. 13, 47",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Amicitia",
+                "display": "Cicero, Marcus Tullius - De Amicitia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:12:41": {
+                "text": "id. ib. 12, 41",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Amicitia",
+                "display": "Cicero, Marcus Tullius - De Amicitia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi004:14:45": {
+                "text": "id. Div. in Caecil. 14, 45",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Divinatio in Q. Caecilium",
+                "display": "Cicero, Marcus Tullius - Divinatio in Q. Caecilium",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0588.phi001:att:12:4": {
+                "text": "Nep. Att. 12, 4",
+                "author": "Nepos, Cornelius",
+                "work": "Att",
+                "display": "Nepos, Cornelius - Att",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:10:1:56": {
+                "text": "Quint. 10, 1, 56",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1044.phi001:2:14:1": {
+                "text": "Vell. 2, 14, 1",
+                "author": "Velleius Paterculus",
+                "work": "Historia Romana",
+                "display": "Velleius Paterculus - Historia Romana",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1318.phi001:10:61": {
+                "text": "Plin. Ep. 10, 61",
+                "author": "Pliny, the Younger",
+                "work": "Epistulae",
+                "display": "Pliny, the Younger - Epistulae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1318.phi002:17:1": {
+                "text": "id. Pan. 17, 1",
+                "author": "Pliny, the Younger",
+                "work": "Panegyricus",
+                "display": "Pliny, the Younger - Panegyricus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:14:51": {
+                "text": "Cic. Lael. 14, 51",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:4:13:5": {
+                "text": "id. Fam. 4, 13, 5",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi036:2:57:171": {
+                "text": "id. Inv. 2, 57, 171",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Inventione",
+                "display": "Cicero, Marcus Tullius - De Inventione",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b3.  With nom. and inf.: ut exstinctae potius amicitiae quam oppressae esse videantur, Cic. Lael. 21, 78: ut tamquam a praesentibus coram haberi sermo videretur, id. ib. 1, 3: quae (sapientia) videtur in hominem cadere posse, id. ib. 26, 100: visus 'st in somnis pastor ad me adpellere, Att. ap. Cic. Div. 1, 22, 44 B. and K.: ut Aratus ab Jove incipiendum putat, ita nos rite coepturi ab Homero videmur, Quint. 10, 1, 46.\u2014With dat. of pers.: divitior mihi et affluentior videtur esse vera amicitia, Cic. Lael. 16, 58.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:06:00:00",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi052:21:78": "Cic. Lael. 21, 78",
+              "urn:cts:latinLit:phi0474.phi052:1:3": "id. ib. 1, 3",
+              "urn:cts:latinLit:phi0474.phi052:26:100": "id. ib. 26, 100",
+              "urn:cts:latinLit:phi0474.phi053:1:22:44": "Cic. Div. 1, 22, 44",
+              "urn:cts:latinLit:phi1002.phi001:10:1:46": "Quint. 10, 1, 46",
+              "urn:cts:latinLit:phi0474.phi052:16:58": "Cic. Lael. 16, 58"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi052:21:78": {
+                "text": "Cic. Lael. 21, 78",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:1:3": {
+                "text": "id. ib. 1, 3",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Amicitia",
+                "display": "Cicero, Marcus Tullius - De Amicitia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:26:100": {
+                "text": "id. ib. 26, 100",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Amicitia",
+                "display": "Cicero, Marcus Tullius - De Amicitia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi053:1:22:44": {
+                "text": "Cic. Div. 1, 22, 44",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Divinatione",
+                "display": "Cicero, Marcus Tullius - De Divinatione",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:10:1:46": {
+                "text": "Quint. 10, 1, 46",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:16:58": {
+                "text": "Cic. Lael. 16, 58",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Lael",
+                "display": "Cicero, Marcus Tullius - Lael",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b4.  Impers., with acc. and inf. (rare; cf. creditur, in the same constr., and dicitur): non mihi videtur, ad beate vivendum satis posse virtutem, Cic. Tusc. 5, 5, 12: aliis videtur, non incohatam sed perfectam probationem hoc nomen accipere, Quint. 5, 10, 5 Spald.: quae vult videri, se esse prudentiam, Cic. Off. 3, 17, 71: quia videbatur et Limnaeam eodem tempore oppugnari posse, Liv. 36, 13, 9 Weissenb. ad loc.\u2014Absol.: sed mihi contra ea videtur, Sall. J. 85, 2: seque facile, ut mihi videtur, expediunt, Cic. Fin. 1, 20, 66; id. Marcell. 3, 10.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:06:00:01",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi049:5:5:12": "Cic. Tusc. 5, 5, 12",
+              "urn:cts:latinLit:phi1002.phi001:5:10:5": "Quint. 5, 10, 5",
+              "urn:cts:latinLit:phi0474.phi055:3:17:71": "Cic. Off. 3, 17, 71",
+              "urn:cts:latinLit:phi0914.phi001:36:13:9": "Liv. 36, 13, 9",
+              "urn:cts:latinLit:phi0631.phi002:85:2": "Sall. J. 85, 2",
+              "urn:cts:latinLit:phi0474.phi048:1:20:66": "Cic. Fin. 1, 20, 66",
+              "urn:cts:latinLit:phi0474.phi032:3:10": "id. Marcell. 3, 10"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi049:5:5:12": {
+                "text": "Cic. Tusc. 5, 5, 12",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:5:10:5": {
+                "text": "Quint. 5, 10, 5",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi055:3:17:71": {
+                "text": "Cic. Off. 3, 17, 71",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Officiis",
+                "display": "Cicero, Marcus Tullius - De Officiis",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:36:13:9": {
+                "text": "Liv. 36, 13, 9",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0631.phi002:85:2": {
+                "text": "Sall. J. 85, 2",
+                "author": "Sallust",
+                "work": "J",
+                "display": "Sallust - J",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi048:1:20:66": {
+                "text": "Cic. Fin. 1, 20, 66",
+                "author": "Cicero, Marcus Tullius",
+                "work": "de Finibus Bonorum et Malorum",
+                "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi032:3:10": {
+                "text": "id. Marcell. 3, 10",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro M. Marcello",
+                "display": "Cicero, Marcus Tullius - Pro M. Marcello",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "b.  In official decisions, as a guarded opinion instead of a positive declaration: majores nostri voluerunt, quae jurati judices cognovissent, ea non ut esse facta, sed ut videri pronuntiarent, Cic. Ac. 2 (Luc.), 47, 146: fecisse videri pronuntiat, id. Verr. 2, 5, 6, \u00a7 14: cum pontifices decressent, videri posse sine religione eam partem areae mihi restitui, id. Att. 4, 2, 3: consul adjecit Senatusconsultum, Ambraciam non videri vi captam esse, Liv. 38, 44, 6: Scipionis sententiam sequuntur, uti ante certam diem Caesar exercitum dimittat: si non faciat, eum adversus rempublicam facturum videri, Caes. B. C. 1, 2.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:06:01",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi046:47:146": "Cic. Ac. 2 (Luc.), 47, 146",
+              "urn:cts:latinLit:phi0474.phi005:2:5:14": "id. Verr. 2, 5, 6, \u00a7 14",
+              "urn:cts:latinLit:phi0474.phi057:4:2:3": "id. Att. 4, 2, 3",
+              "urn:cts:latinLit:phi0914.phi001:38:44:6": "Liv. 38, 44, 6",
+              "urn:cts:latinLit:phi0448.phi002:1:2": "Caes. B. C. 1, 2"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi046:47:146": {
+                "text": "Cic. Ac. 2 (Luc.), 47, 146",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Ac",
+                "display": "Cicero, Marcus Tullius - Ac",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi005:2:5:14": {
+                "text": "id. Verr. 2, 5, 6, \u00a7 14",
+                "author": "Cicero, Marcus Tullius",
+                "work": "In C. Verrem",
+                "display": "Cicero, Marcus Tullius - In C. Verrem",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:4:2:3": {
+                "text": "id. Att. 4, 2, 3",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:38:44:6": {
+                "text": "Liv. 38, 44, 6",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0448.phi002:1:2": {
+                "text": "Caes. B. C. 1, 2",
+                "author": "Julius Caesar",
+                "work": "B",
+                "display": "Julius Caesar - B",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "c.  Pregn., videtur (alicui), it seems proper, right, or fit, it seems good to any one; he (she, etc.) pleases, likes.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:06:02",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b1.  With dat. of pers.: tibi si videbitur, villis iis utere, quae, etc., Cic. Fam. 14, 7, 3: velim Lentulum puerum visas eique de mancipiis, quae tibi videbitur, attribuas, id. Att. 12, 28, 3: qui imitamur, quos cuique visum est, id. Off. 1, 32, 118: ut consul, quem videretur ei, cum imperio mitteret, qui, etc., Liv. 31, 3, 2; 29, 20, 4: si ei videretur, integram rem ad senatum reiceret, if he pleased, a formula of politeness, Liv. 26, 16, 4 Weissenb. ad loc.; 31, 4, 2: ut, si videretur ei, maturaret venire, id. 34, 46, 5.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:06:02:00",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi056:14:7:3": "Cic. Fam. 14, 7, 3",
+              "urn:cts:latinLit:phi0474.phi057:12:28:3": "id. Att. 12, 28, 3",
+              "urn:cts:latinLit:phi0474.phi055:1:32:118": "id. Off. 1, 32, 118",
+              "urn:cts:latinLit:phi0914.phi001:31:3:2": "Liv. 31, 3, 2",
+              "urn:cts:latinLit:phi0914.phi001:29:20:4": "29, 20, 4",
+              "urn:cts:latinLit:phi0914.phi001:26:16:4": "Liv. 26, 16, 4",
+              "urn:cts:latinLit:phi0914.phi001:31:4:2": "31, 4, 2",
+              "urn:cts:latinLit:phi0914.phi001:34:46:5": "id. 34, 46, 5"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi056:14:7:3": {
+                "text": "Cic. Fam. 14, 7, 3",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:12:28:3": {
+                "text": "id. Att. 12, 28, 3",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi055:1:32:118": {
+                "text": "id. Off. 1, 32, 118",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Officiis",
+                "display": "Cicero, Marcus Tullius - De Officiis",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:31:3:2": {
+                "text": "Liv. 31, 3, 2",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:29:20:4": {
+                "text": "29, 20, 4",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:26:16:4": {
+                "text": "Liv. 26, 16, 4",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:31:4:2": {
+                "text": "31, 4, 2",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:34:46:5": {
+                "text": "id. 34, 46, 5",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b2.  Without dat.: ubi visum est, sub vesperum dispersi discedunt, Caes. B. G. 5, 58: eam quoque, si videtur, correctionem explicabo, Cic. Ac. 1, 9, 35: nunc, si videtur, hoc, illud alias, id. Tusc. 1, 11, 23: M. Num non vis audire, etc.? A. Ut videtur, as you will, id. ib. 1, 32, 77: si videatur, Liv. 6, 25, 2; 26, 22, 7.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01:06:02:01",
+            "citations": {
+              "urn:cts:latinLit:phi0448.phi001:5:58": "Caes. B. G. 5, 58",
+              "urn:cts:latinLit:phi0474.phi045:9:35": "Cic. Ac. 1, 9, 35",
+              "urn:cts:latinLit:phi0474.phi049:1:11:23": "id. Tusc. 1, 11, 23",
+              "urn:cts:latinLit:phi0474.phi049:1:32:77": "id. ib. 1, 32, 77",
+              "urn:cts:latinLit:phi0914.phi001:6:25:2": "Liv. 6, 25, 2",
+              "urn:cts:latinLit:phi0914.phi001:26:22:7": "26, 22, 7"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0448.phi001:5:58": {
+                "text": "Caes. B. G. 5, 58",
+                "author": "Julius Caesar",
+                "work": "B",
+                "display": "Julius Caesar - B",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi045:9:35": {
+                "text": "Cic. Ac. 1, 9, 35",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Academica",
+                "display": "Cicero, Marcus Tullius - Academica",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi049:1:11:23": {
+                "text": "id. Tusc. 1, 11, 23",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi049:1:32:77": {
+                "text": "id. ib. 1, 32, 77",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:6:25:2": {
+                "text": "Liv. 6, 25, 2",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0914.phi001:26:22:7": {
+                "text": "26, 22, 7",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        }
+      ],
+      "source": "diogenes",
+      "metadata": {
+        "chunk_types": [
+          "DiogenesMatchingReference"
+        ],
+        "terms": [
+          "v\u012dd\u0115o"
+        ]
+      },
+      "dictionary_blocks": [
+        {
+          "entry": "video, v\u012bdi, v\u012bsum, 2 (viden', i.e. videsne, Plaut. Ep. 2, 2, 37 (217); Ter. Eun. 241; 265; 754; Cat. 61, 98; Tib. 2, 2, 17; Verg. A. 6, 779; inf. viderier, Cic. Dom. 53, 136; Ter. Hec. 759: vid\u0115, Plaut. Ps. 1, 1, 46 (48)), v. a. and n. Sanscr. root vid-, v\u0113da, know; vind\u0101mi, find; cf. v\u0113da-s, sacred book; Gr. root \u1f30\u03b4, \u03dd\u03b9\u03b4-, in \u03b5\u1f36\u03b4\u03bf\u03bd, saw; \u03bf\u1f36\u03b4\u03b1, know; Germ. wissen; Engl. wit, wot, to see, perceive, with the eyes (syn. cerno).",
+          "entryid": "00",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi009:217": "Plaut. Ep. 2, 2, 37 (217)",
+            "urn:cts:latinLit:phi0134.phi003:241": "Ter. Eun. 241",
+            "urn:cts:latinLit:phi0134.phi003:265": "265",
+            "urn:cts:latinLit:phi0134.phi003:754": "754",
+            "urn:cts:latinLit:phi0472.phi001:61:98": "Cat. 61, 98",
+            "urn:cts:latinLit:phi0660.phi001:2:2:17": "Tib. 2, 2, 17",
+            "urn:cts:latinLit:phi0690.phi003:6:779": "Verg. A. 6, 779",
+            "urn:cts:latinLit:phi0474.phi020:53:136": "Cic. Dom. 53, 136",
+            "urn:cts:latinLit:phi0134.phi005:759": "Ter. Hec. 759",
+            "urn:cts:latinLit:phi0119.phi016:48": "Plaut. Ps. 1, 1, 46 (48)"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi009:217": "Plaut. Ep. 2, 2, 37 (217)",
+            "urn:cts:latinLit:phi0134.phi003:241": "Ter. Eun. 241",
+            "urn:cts:latinLit:phi0134.phi003:265": "265",
+            "urn:cts:latinLit:phi0134.phi003:754": "754",
+            "urn:cts:latinLit:phi0472.phi001:61:98": "Cat. 61, 98",
+            "urn:cts:latinLit:phi0660.phi001:2:2:17": "Tib. 2, 2, 17",
+            "urn:cts:latinLit:phi0690.phi003:6:779": "Verg. A. 6, 779",
+            "urn:cts:latinLit:phi0474.phi020:53:136": "Cic. Dom. 53, 136",
+            "urn:cts:latinLit:phi0134.phi005:759": "Ter. Hec. 759",
+            "urn:cts:latinLit:phi0119.phi016:48": "Plaut. Ps. 1, 1, 46 (48)"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi009:217": {
+              "text": "Plaut. Ep. 2, 2, 37 (217)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Epidicus",
+              "display": "Plautus, Titus Maccius - Epidicus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:241": {
+              "text": "Ter. Eun. 241",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:265": {
+              "text": "265",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:754": {
+              "text": "754",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0472.phi001:61:98": {
+              "text": "Cat. 61, 98",
+              "author": "Catullus",
+              "work": "Carmina",
+              "display": "Catullus - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0660.phi001:2:2:17": {
+              "text": "Tib. 2, 2, 17",
+              "author": "Tibullus",
+              "work": "Elegiae",
+              "display": "Tibullus - Elegiae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:6:779": {
+              "text": "Verg. A. 6, 779",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi020:53:136": {
+              "text": "Cic. Dom. 53, 136",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De domo sua ad pontifices",
+              "display": "Cicero, Marcus Tullius - De domo sua ad pontifices",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi005:759": {
+              "text": "Ter. Hec. 759",
+              "author": "Terence",
+              "work": "Hecyra",
+              "display": "Terence - Hecyra",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi016:48": {
+              "text": "Plaut. Ps. 1, 1, 46 (48)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Pseudolus",
+              "display": "Plautus, Titus Maccius - Pseudolus",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "I.  Lit.",
+          "entryid": "00:00"
+        },
+        {
+          "entry": "A.  In gen.: Ph. Tun' me vidisti? Sc. Atque his quidem oculis. Ph. Carebis, credo, Qui plus vident, quam quod vident. Sc. Numquam hercle deterrebor, Quin viderim id quod viderim, Plaut. Mil. 2, 4, 15 (368) sq.: clare oculis video, id. ib. 3, 1, 35 (630): nos enim ne nunc quidem oculis cernimus ea, quae videmus, etc., Cic. Tusc. 1, 20, 46; id. de Or. 3, 40, 161: Considium, quod non vidisset, pro viso sibi renuntiasse, Caes. B. G. 1, 22 fin.: mulieres et pueri qui visum processerant, Sall. J. 94, 5: ut juvat pastas oves Videre properantes domum! Videre fessos vomerem inversum boves Collo trahentes languido! Hor. Epod. 2, 62 sq.: serpentes atque videres Infernas errare canes, id. S. 1, 8, 35 et saep.\u2014With ut and ind. (po\u00ebt.): viden', ut geminae stant vertice cristae? Verg. A. 6, 779: viden' ut faces Splendidas quatiunt comas? Cat. 61, 77.\u2014With ut and subj.: nonne vides, ut tota tremor pertemptet equorum Corpora? Verg. G. 3, 250: nonne vides ut ... Antennae gemant? Hor. C. 1, 14, 3.\u2014Pass.: ubi sol sex mensibus continuis non videtur, Varr. R. R. 1, 2, 4: a se disertos visos esse multos, Quint. 8, praef. \u00a7 13; cf. id. 12, 1, 21: consulis ante pedes ire viderer eques, Ov. P. 4, 9, 18.\u2014 Absol., to see, i. e. to have the eyes open, to be awake, Verg. E. 6, 21.\u2014Impers. pass.: De. Vide sis modo etiam. Ly. Visum'st, Plaut. Merc. 2, 2, 52 (323); id. As. 3, 3, 95 (685).\u2014",
+          "entryid": "00:00:00",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi012:368": "Plaut. Mil. 2, 4, 15 (368)",
+            "urn:cts:latinLit:phi0119.phi012:630": "id. ib. 3, 1, 35 (630)",
+            "urn:cts:latinLit:phi0474.phi049:1:20:46": "Cic. Tusc. 1, 20, 46",
+            "urn:cts:latinLit:phi0474.phi037:3:40:161": "id. de Or. 3, 40, 161",
+            "urn:cts:latinLit:phi0448.phi001:1:22": "Caes. B. G. 1, 22 fin.",
+            "urn:cts:latinLit:phi0631.phi002:94:5": "Sall. J. 94, 5",
+            "urn:cts:latinLit:phi0893.phi003:2:62": "Hor. Epod. 2, 62",
+            "urn:cts:latinLit:phi0893.phi004:1:8:35": "id. S. 1, 8, 35",
+            "urn:cts:latinLit:phi0690.phi003:6:779": "Verg. A. 6, 779",
+            "urn:cts:latinLit:phi0472.phi001:61:77": "Cat. 61, 77",
+            "urn:cts:latinLit:phi0690.phi002:3:250": "Verg. G. 3, 250",
+            "urn:cts:latinLit:phi0893.phi001:1:14:3": "Hor. C. 1, 14, 3",
+            "urn:cts:latinLit:phi0684.phi002:1:2:4": "Varr. R. R. 1, 2, 4",
+            "urn:cts:latinLit:phi1002.phi001:8:pr:13": "Quint. 8, praef. \u00a7 13",
+            "urn:cts:latinLit:phi1002.phi001:12:1:21": "id. 12, 1, 21",
+            "urn:cts:latinLit:phi0959.phi009:4:9:18": "Ov. P. 4, 9, 18",
+            "urn:cts:latinLit:phi0690.phi001:6:21": "Verg. E. 6, 21",
+            "urn:cts:latinLit:phi0119.phi011:323": "Plaut. Merc. 2, 2, 52 (323)",
+            "urn:cts:latinLit:phi0119.phi002:685": "id. As. 3, 3, 95 (685)"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi012:368": "Plaut. Mil. 2, 4, 15 (368)",
+            "urn:cts:latinLit:phi0119.phi012:630": "id. ib. 3, 1, 35 (630)",
+            "urn:cts:latinLit:phi0474.phi049:1:20:46": "Cic. Tusc. 1, 20, 46",
+            "urn:cts:latinLit:phi0474.phi037:3:40:161": "id. de Or. 3, 40, 161",
+            "urn:cts:latinLit:phi0448.phi001:1:22": "Caes. B. G. 1, 22 fin.",
+            "urn:cts:latinLit:phi0631.phi002:94:5": "Sall. J. 94, 5",
+            "urn:cts:latinLit:phi0893.phi003:2:62": "Hor. Epod. 2, 62",
+            "urn:cts:latinLit:phi0893.phi004:1:8:35": "id. S. 1, 8, 35",
+            "urn:cts:latinLit:phi0690.phi003:6:779": "Verg. A. 6, 779",
+            "urn:cts:latinLit:phi0472.phi001:61:77": "Cat. 61, 77",
+            "urn:cts:latinLit:phi0690.phi002:3:250": "Verg. G. 3, 250",
+            "urn:cts:latinLit:phi0893.phi001:1:14:3": "Hor. C. 1, 14, 3",
+            "urn:cts:latinLit:phi0684.phi002:1:2:4": "Varr. R. R. 1, 2, 4",
+            "urn:cts:latinLit:phi1002.phi001:8:pr:13": "Quint. 8, praef. \u00a7 13",
+            "urn:cts:latinLit:phi1002.phi001:12:1:21": "id. 12, 1, 21",
+            "urn:cts:latinLit:phi0959.phi009:4:9:18": "Ov. P. 4, 9, 18",
+            "urn:cts:latinLit:phi0690.phi001:6:21": "Verg. E. 6, 21",
+            "urn:cts:latinLit:phi0119.phi011:323": "Plaut. Merc. 2, 2, 52 (323)",
+            "urn:cts:latinLit:phi0119.phi002:685": "id. As. 3, 3, 95 (685)"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi012:368": {
+              "text": "Plaut. Mil. 2, 4, 15 (368)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Miles Gloriosus",
+              "display": "Plautus, Titus Maccius - Miles Gloriosus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi012:630": {
+              "text": "id. ib. 3, 1, 35 (630)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Miles Gloriosus",
+              "display": "Plautus, Titus Maccius - Miles Gloriosus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi049:1:20:46": {
+              "text": "Cic. Tusc. 1, 20, 46",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi037:3:40:161": {
+              "text": "id. de Or. 3, 40, 161",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De",
+              "display": "Cicero, Marcus Tullius - De",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0448.phi001:1:22": {
+              "text": "Caes. B. G. 1, 22 fin.",
+              "author": "Julius Caesar",
+              "work": "B",
+              "display": "Julius Caesar - B",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0631.phi002:94:5": {
+              "text": "Sall. J. 94, 5",
+              "author": "Sallust",
+              "work": "J",
+              "display": "Sallust - J",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi003:2:62": {
+              "text": "Hor. Epod. 2, 62",
+              "author": "Horace",
+              "work": "Epodi",
+              "display": "Horace - Epodi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi004:1:8:35": {
+              "text": "id. S. 1, 8, 35",
+              "author": "Horace",
+              "work": "Satires",
+              "display": "Horace - Satires",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:6:779": {
+              "text": "Verg. A. 6, 779",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0472.phi001:61:77": {
+              "text": "Cat. 61, 77",
+              "author": "Catullus",
+              "work": "Carmina",
+              "display": "Catullus - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi002:3:250": {
+              "text": "Verg. G. 3, 250",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Georgics",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Georgics",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi001:1:14:3": {
+              "text": "Hor. C. 1, 14, 3",
+              "author": "Horace",
+              "work": "Carmina",
+              "display": "Horace - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0684.phi002:1:2:4": {
+              "text": "Varr. R. R. 1, 2, 4",
+              "author": "M. Terentius Varro",
+              "work": "Res Rusticae",
+              "display": "M. Terentius Varro - Res Rusticae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:8:pr:13": {
+              "text": "Quint. 8, praef. \u00a7 13",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:12:1:21": {
+              "text": "id. 12, 1, 21",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi009:4:9:18": {
+              "text": "Ov. P. 4, 9, 18",
+              "author": "Ovid",
+              "work": "Ex Ponto",
+              "display": "Ovid - Ex Ponto",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi001:6:21": {
+              "text": "Verg. E. 6, 21",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Eclogues",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi011:323": {
+              "text": "Plaut. Merc. 2, 2, 52 (323)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Mercator",
+              "display": "Plautus, Titus Maccius - Mercator",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi002:685": {
+              "text": "id. As. 3, 3, 95 (685)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Asinaria",
+              "display": "Plautus, Titus Maccius - Asinaria",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "2.  Transf.",
+          "entryid": "00:00:00:00"
+        },
+        {
+          "entry": "a.  Of things (poet.), to see: (Apenninus) Gallica rura videt, Luc. 2, 429: et casus abies visura marinos, i. e. to experience, Verg. G. 2, 68.\u2014",
+          "entryid": "00:00:00:00:00",
+          "citations": {
+            "urn:cts:latinLit:phi0917.phi001:2:429": "Luc. 2, 429",
+            "urn:cts:latinLit:phi0690.phi002:2:68": "Verg. G. 2, 68"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0917.phi001:2:429": "Luc. 2, 429",
+            "urn:cts:latinLit:phi0690.phi002:2:68": "Verg. G. 2, 68"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0917.phi001:2:429": {
+              "text": "Luc. 2, 429",
+              "author": "Lucan",
+              "work": "Civil War",
+              "display": "Lucan - Civil War",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi002:2:68": {
+              "text": "Verg. G. 2, 68",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Georgics",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Georgics",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "b.  Of places, etc., to look out on, afford a view of (post-Aug.): triclinium hortum et gestationem videt, Plin. Ep. 2, 17, 13.\u2014",
+          "entryid": "00:00:00:00:01",
+          "citations": {
+            "urn:cts:latinLit:phi1318.phi001:2:17:13": "Plin. Ep. 2, 17, 13"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi1318.phi001:2:17:13": "Plin. Ep. 2, 17, 13"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi1318.phi001:2:17:13": {
+              "text": "Plin. Ep. 2, 17, 13",
+              "author": "Pliny, the Younger",
+              "work": "Epistulae",
+              "display": "Pliny, the Younger - Epistulae",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "c.  Of the other senses, to perceive, observe any thing: vidistin' toto sonitus procurrere caelo? Prop. 2, 16 (3, 8), 49: mugire videbis Sub pedibus terram et descendere montibus ornos, Verg. A. 4, 490: tum videres Stridere secret\u0101 divisos aure susurros, Hor. S. 2, 8, 77: naso poljam haec quidem videt plus quam oculis, Plaut. Mil. 4, 6, 44 (1259).\u2014",
+          "entryid": "00:00:00:00:02",
+          "citations": {
+            "urn:cts:latinLit:phi0620.phi001:2:16:49": "Prop. 2, 16 (3, 8), 49",
+            "urn:cts:latinLit:phi0690.phi003:4:490": "Verg. A. 4, 490",
+            "urn:cts:latinLit:phi0893.phi004:2:8:77": "Hor. S. 2, 8, 77",
+            "urn:cts:latinLit:phi0119.phi012:1259": "Plaut. Mil. 4, 6, 44 (1259)"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0620.phi001:2:16:49": "Prop. 2, 16 (3, 8), 49",
+            "urn:cts:latinLit:phi0690.phi003:4:490": "Verg. A. 4, 490",
+            "urn:cts:latinLit:phi0893.phi004:2:8:77": "Hor. S. 2, 8, 77",
+            "urn:cts:latinLit:phi0119.phi012:1259": "Plaut. Mil. 4, 6, 44 (1259)"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0620.phi001:2:16:49": {
+              "text": "Prop. 2, 16 (3, 8), 49",
+              "author": "Propertius, Sextus",
+              "work": "Elegiae",
+              "display": "Propertius, Sextus - Elegiae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:4:490": {
+              "text": "Verg. A. 4, 490",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi004:2:8:77": {
+              "text": "Hor. S. 2, 8, 77",
+              "author": "Horace",
+              "work": "Satires",
+              "display": "Horace - Satires",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi012:1259": {
+              "text": "Plaut. Mil. 4, 6, 44 (1259)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Miles Gloriosus",
+              "display": "Plautus, Titus Maccius - Miles Gloriosus",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "B.  In partic., to see on purpose, to look at any thing: vide sis signi quid siet, Plaut. Am. 2, 2, 155 (787); cf.: vide, tali ubi sint, id. Most. 1, 3, 151 (307): illud vide, os ut sibi distorsit carnufex, Ter. Eun. 670: vide, si non os inpudens Videtur, id. ib. 839; cf.: specta me, a threatening expression, Plaut. As. 1, 2, 19 (145) al.: quin tu me vides? only look at me! i. e. see what I have done! Cic. Pis. 25, 61.\u2014",
+          "entryid": "00:00:01",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi001:787": "Plaut. Am. 2, 2, 155 (787)",
+            "urn:cts:latinLit:phi0119.phi013:307": "id. Most. 1, 3, 151 (307)",
+            "urn:cts:latinLit:phi0134.phi003:670": "Ter. Eun. 670",
+            "urn:cts:latinLit:phi0134.phi003:839": "id. ib. 839",
+            "urn:cts:latinLit:phi0119.phi002:145": "Plaut. As. 1, 2, 19 (145)",
+            "urn:cts:latinLit:phi0474.phi027:25:61": "Cic. Pis. 25, 61"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi001:787": "Plaut. Am. 2, 2, 155 (787)",
+            "urn:cts:latinLit:phi0119.phi013:307": "id. Most. 1, 3, 151 (307)",
+            "urn:cts:latinLit:phi0134.phi003:670": "Ter. Eun. 670",
+            "urn:cts:latinLit:phi0134.phi003:839": "id. ib. 839",
+            "urn:cts:latinLit:phi0119.phi002:145": "Plaut. As. 1, 2, 19 (145)",
+            "urn:cts:latinLit:phi0474.phi027:25:61": "Cic. Pis. 25, 61"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi001:787": {
+              "text": "Plaut. Am. 2, 2, 155 (787)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Amphitruo",
+              "display": "Plautus, Titus Maccius - Amphitruo",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi013:307": {
+              "text": "id. Most. 1, 3, 151 (307)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Mostellaria",
+              "display": "Plautus, Titus Maccius - Mostellaria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:670": {
+              "text": "Ter. Eun. 670",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:839": {
+              "text": "id. ib. 839",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi002:145": {
+              "text": "Plaut. As. 1, 2, 19 (145)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Asinaria",
+              "display": "Plautus, Titus Maccius - Asinaria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi027:25:61": {
+              "text": "Cic. Pis. 25, 61",
+              "author": "Cicero, Marcus Tullius",
+              "work": "In L. Calpurnium Pisonem",
+              "display": "Cicero, Marcus Tullius - In L. Calpurnium Pisonem",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "II.  Trop.",
+          "entryid": "00:01"
+        },
+        {
+          "entry": "A.  In gen., to see with the mind's eye, to perceive, mark, observe, discern, understand, comprehend, be aware, know, etc. (class.; syn. percipio): ad te, ut video, comminus accessit, Cic. Att. 2, 2, 2: quem exitum ego tam video animo, quam ea, quae oculis cernimus, id. Fam. 6, 3, 2: aperte enim adulantem nemo non videt, sees through, detects, id. Lael. 26, 99: si dormientes aliquid animo videre videamur, id. Ac. 2 (Luc.), 40, 125: aliquid in somnis, id. N. D. 1, 29, 82: somnia, id. Div. 2, 71, 147: quod ego, cur nolim, nihil video, id. Fam. 9, 6, 2: nonne vobis videtur is animus qui plus cernat et longius, videre se ad meliora proficisci: ille autem cui obtusior est acies non videre? id. Sen. 23, 83.\u2014With comp., plus, etc.: ut is qui illusus sit plus vidisse videatur, to have seen farther, had more insight, Cic. Lael. 26, 99: videre acutius atque acrius vitia in dicente quam recta, id. de Or. 1, 25, 116: aliena melius videre et dijudicare, Ter. Heaut. 504: cum me vidisse plus fateretur, se speravisse meliora, that I had seen farther, Cic. Phil. 2, 15, 39; cf.: sin autem vos plus in re public\u0101 vidistis, id. Imp. Pomp. 22, 64; cf.: vos universos in consule deligendo plurimum vidisse fateantur, id. Agr. 2, 37, 103: di vatesque eorum in futurum vident, Liv. 6, 12.\u2014With two accs.: quem virum Crassum vidimus, Cic. Sen. 17, 61; cf.: officiorum conjunctione me privatum videbam, id. Brut. 1, 1: cum invidiosum se propter nimias opes viderit, Just. 32, 4, 4.\u2014With ut and ind. (po\u00ebt.): nonne vides, croceos ut Tmolus odores, India mittit ebur, Verg. G. 1, 56.\u2014",
+          "entryid": "00:01:00",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi057:2:2:2": "Cic. Att. 2, 2, 2",
+            "urn:cts:latinLit:phi0474.phi056:6:3:2": "id. Fam. 6, 3, 2",
+            "urn:cts:latinLit:phi0474.phi052:26:99": "Cic. Lael. 26, 99",
+            "urn:cts:latinLit:phi0474.phi046:40:125": "id. Ac. 2 (Luc.), 40, 125",
+            "urn:cts:latinLit:phi0474.phi050:1:29:82": "id. N. D. 1, 29, 82",
+            "urn:cts:latinLit:phi0474.phi053:2:71:147": "id. Div. 2, 71, 147",
+            "urn:cts:latinLit:phi0474.phi056:9:6:2": "id. Fam. 9, 6, 2",
+            "urn:cts:latinLit:phi0474.phi051:23:83": "id. Sen. 23, 83",
+            "urn:cts:latinLit:phi0474.phi037:1:25:116": "id. de Or. 1, 25, 116",
+            "urn:cts:latinLit:phi0134.phi002:504": "Ter. Heaut. 504",
+            "urn:cts:latinLit:phi0474.phi035:2:15:39": "Cic. Phil. 2, 15, 39",
+            "urn:cts:latinLit:phi0474.phi009:22:64": "id. Imp. Pomp. 22, 64",
+            "urn:cts:latinLit:phi0474.phi011:2:37:103": "id. Agr. 2, 37, 103",
+            "urn:cts:latinLit:phi0914.phi001:6:12": "Liv. 6, 12",
+            "urn:cts:latinLit:phi0474.phi051:17:61": "Cic. Sen. 17, 61",
+            "urn:cts:latinLit:phi0474.phi039:1:1": "id. Brut. 1, 1",
+            "urn:cts:latinLit:phi2806.phi001:32:4:4": "Just. 32, 4, 4",
+            "urn:cts:latinLit:phi0690.phi002:1:56": "Verg. G. 1, 56"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi057:2:2:2": "Cic. Att. 2, 2, 2",
+            "urn:cts:latinLit:phi0474.phi056:6:3:2": "id. Fam. 6, 3, 2",
+            "urn:cts:latinLit:phi0474.phi052:26:99": "Cic. Lael. 26, 99",
+            "urn:cts:latinLit:phi0474.phi046:40:125": "id. Ac. 2 (Luc.), 40, 125",
+            "urn:cts:latinLit:phi0474.phi050:1:29:82": "id. N. D. 1, 29, 82",
+            "urn:cts:latinLit:phi0474.phi053:2:71:147": "id. Div. 2, 71, 147",
+            "urn:cts:latinLit:phi0474.phi056:9:6:2": "id. Fam. 9, 6, 2",
+            "urn:cts:latinLit:phi0474.phi051:23:83": "id. Sen. 23, 83",
+            "urn:cts:latinLit:phi0474.phi037:1:25:116": "id. de Or. 1, 25, 116",
+            "urn:cts:latinLit:phi0134.phi002:504": "Ter. Heaut. 504",
+            "urn:cts:latinLit:phi0474.phi035:2:15:39": "Cic. Phil. 2, 15, 39",
+            "urn:cts:latinLit:phi0474.phi009:22:64": "id. Imp. Pomp. 22, 64",
+            "urn:cts:latinLit:phi0474.phi011:2:37:103": "id. Agr. 2, 37, 103",
+            "urn:cts:latinLit:phi0914.phi001:6:12": "Liv. 6, 12",
+            "urn:cts:latinLit:phi0474.phi051:17:61": "Cic. Sen. 17, 61",
+            "urn:cts:latinLit:phi0474.phi039:1:1": "id. Brut. 1, 1",
+            "urn:cts:latinLit:phi2806.phi001:32:4:4": "Just. 32, 4, 4",
+            "urn:cts:latinLit:phi0690.phi002:1:56": "Verg. G. 1, 56"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi057:2:2:2": {
+              "text": "Cic. Att. 2, 2, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:6:3:2": {
+              "text": "id. Fam. 6, 3, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:26:99": {
+              "text": "Cic. Lael. 26, 99",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi046:40:125": {
+              "text": "id. Ac. 2 (Luc.), 40, 125",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Ac",
+              "display": "Cicero, Marcus Tullius - Ac",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi050:1:29:82": {
+              "text": "id. N. D. 1, 29, 82",
+              "author": "Cicero, Marcus Tullius",
+              "work": "de Natura Deorum",
+              "display": "Cicero, Marcus Tullius - de Natura Deorum",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi053:2:71:147": {
+              "text": "id. Div. 2, 71, 147",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Divinatione",
+              "display": "Cicero, Marcus Tullius - De Divinatione",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:9:6:2": {
+              "text": "id. Fam. 9, 6, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi051:23:83": {
+              "text": "id. Sen. 23, 83",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Senectute",
+              "display": "Cicero, Marcus Tullius - De Senectute",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi037:1:25:116": {
+              "text": "id. de Or. 1, 25, 116",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De",
+              "display": "Cicero, Marcus Tullius - De",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi002:504": {
+              "text": "Ter. Heaut. 504",
+              "author": "Terence",
+              "work": "Heautontimorumenos",
+              "display": "Terence - Heautontimorumenos",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi035:2:15:39": {
+              "text": "Cic. Phil. 2, 15, 39",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Philippicae",
+              "display": "Cicero, Marcus Tullius - Philippicae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi009:22:64": {
+              "text": "id. Imp. Pomp. 22, 64",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Imperio Cn. Pompei Ad Quirites",
+              "display": "Cicero, Marcus Tullius - De Imperio Cn. Pompei Ad Quirites",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi011:2:37:103": {
+              "text": "id. Agr. 2, 37, 103",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Lege Agraria",
+              "display": "Cicero, Marcus Tullius - De Lege Agraria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:6:12": {
+              "text": "Liv. 6, 12",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi051:17:61": {
+              "text": "Cic. Sen. 17, 61",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Senectute",
+              "display": "Cicero, Marcus Tullius - De Senectute",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi039:1:1": {
+              "text": "id. Brut. 1, 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Brutus",
+              "display": "Cicero, Marcus Tullius - Brutus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi2806.phi001:32:4:4": {
+              "text": "Just. 32, 4, 4",
+              "author": "Iustinianus",
+              "work": "Digesta Iustiniani",
+              "display": "Iustinianus - Digesta Iustiniani",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi002:1:56": {
+              "text": "Verg. G. 1, 56",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Georgics",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Georgics",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "B.  In partic.",
+          "entryid": "00:01:01"
+        },
+        {
+          "entry": "1.  To look at, look to, consider, to think or reflect upon (cf.: reputo, considero): duae condiciones sunt: utram tu accipias, vide, Plaut. Bacch. 4, 9, 118 (1042): nunc ea videamus, quae contra ab his disputari solent, Cic. Ac. 2 (Luc.), 13, 40: id primum videamus, qu\u0101tenus amor in amiciti\u0101 progredi debeat, id. Lael. 11, 36: sed videamus Herculem ipsum, id. Tusc. 2, 8, 20 Klotz ad loc.: quamobrem et haec videnda et pecuniae fugienda cupiditas, id. Off. 1, 20, 68: te moneo: videas etiam atque etiam et consideres, quid agas, quo progrediare, etc., id. Verr. 2, 5, 68, \u00a7 174: legi Bruti epistolam non prudenter rescriptam: sed ipse viderit, let him see to that himself, id. Att. 12, 21, 1; so, viderit, Ov. A. A. 2, 371; id. Tr. 5, 2, 43; cf.: quam id recte faciam, viderint sapientes, Cic. Lael. 3, 10; and: quae (ars) quam sit facilis, illi viderint, qui, etc.... deinde etiam tu ipse videris, qui eam artem facilem esse dicis, id. de Or. 1, 58, 246: viderint ista officia viri boni, id. Quint. 17, 55.\u2014",
+          "entryid": "00:01:01:00",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi004:1042": "Plaut. Bacch. 4, 9, 118 (1042)",
+            "urn:cts:latinLit:phi0474.phi046:13:40": "Cic. Ac. 2 (Luc.), 13, 40",
+            "urn:cts:latinLit:phi0474.phi052:11:36": "id. Lael. 11, 36",
+            "urn:cts:latinLit:phi0474.phi049:2:8:20": "id. Tusc. 2, 8, 20",
+            "urn:cts:latinLit:phi0474.phi055:1:20:68": "id. Off. 1, 20, 68",
+            "urn:cts:latinLit:phi0474.phi005:2:5:174": "id. Verr. 2, 5, 68, \u00a7 174",
+            "urn:cts:latinLit:phi0474.phi057:12:21:1": "id. Att. 12, 21, 1",
+            "urn:cts:latinLit:phi0959.phi004:2:371": "Ov. A. A. 2, 371",
+            "urn:cts:latinLit:phi0959.phi008:5:2:43": "id. Tr. 5, 2, 43",
+            "urn:cts:latinLit:phi0474.phi052:3:10": "Cic. Lael. 3, 10",
+            "urn:cts:latinLit:phi0474.phi037:1:58:246": "id. de Or. 1, 58, 246",
+            "urn:cts:latinLit:phi0474.phi001:17:55": "id. Quint. 17, 55"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi004:1042": "Plaut. Bacch. 4, 9, 118 (1042)",
+            "urn:cts:latinLit:phi0474.phi046:13:40": "Cic. Ac. 2 (Luc.), 13, 40",
+            "urn:cts:latinLit:phi0474.phi052:11:36": "id. Lael. 11, 36",
+            "urn:cts:latinLit:phi0474.phi049:2:8:20": "id. Tusc. 2, 8, 20",
+            "urn:cts:latinLit:phi0474.phi055:1:20:68": "id. Off. 1, 20, 68",
+            "urn:cts:latinLit:phi0474.phi005:2:5:174": "id. Verr. 2, 5, 68, \u00a7 174",
+            "urn:cts:latinLit:phi0474.phi057:12:21:1": "id. Att. 12, 21, 1",
+            "urn:cts:latinLit:phi0959.phi004:2:371": "Ov. A. A. 2, 371",
+            "urn:cts:latinLit:phi0959.phi008:5:2:43": "id. Tr. 5, 2, 43",
+            "urn:cts:latinLit:phi0474.phi052:3:10": "Cic. Lael. 3, 10",
+            "urn:cts:latinLit:phi0474.phi037:1:58:246": "id. de Or. 1, 58, 246",
+            "urn:cts:latinLit:phi0474.phi001:17:55": "id. Quint. 17, 55"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi004:1042": {
+              "text": "Plaut. Bacch. 4, 9, 118 (1042)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Bacchides",
+              "display": "Plautus, Titus Maccius - Bacchides",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi046:13:40": {
+              "text": "Cic. Ac. 2 (Luc.), 13, 40",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Ac",
+              "display": "Cicero, Marcus Tullius - Ac",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:11:36": {
+              "text": "id. Lael. 11, 36",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi049:2:8:20": {
+              "text": "id. Tusc. 2, 8, 20",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi055:1:20:68": {
+              "text": "id. Off. 1, 20, 68",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Officiis",
+              "display": "Cicero, Marcus Tullius - De Officiis",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi005:2:5:174": {
+              "text": "id. Verr. 2, 5, 68, \u00a7 174",
+              "author": "Cicero, Marcus Tullius",
+              "work": "In C. Verrem",
+              "display": "Cicero, Marcus Tullius - In C. Verrem",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:12:21:1": {
+              "text": "id. Att. 12, 21, 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi004:2:371": {
+              "text": "Ov. A. A. 2, 371",
+              "author": "Ovid",
+              "work": "Ars Amatoria",
+              "display": "Ovid - Ars Amatoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi008:5:2:43": {
+              "text": "id. Tr. 5, 2, 43",
+              "author": "Ovid",
+              "work": "Tristia",
+              "display": "Ovid - Tristia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:3:10": {
+              "text": "Cic. Lael. 3, 10",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi037:1:58:246": {
+              "text": "id. de Or. 1, 58, 246",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De",
+              "display": "Cicero, Marcus Tullius - De",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi001:17:55": {
+              "text": "id. Quint. 17, 55",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Quint",
+              "display": "Cicero, Marcus Tullius - Quint",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "2.  To look out for, see to, care for, provide: atque idem (sapiens) ita acrem in omnis partis aciem intendit, ut semper videat sedem sibi ac locum sine molesti\u0101 vivendi, Cic. Tusc. 4, 17, 38: antecesserat Statius, ut prandium nobis videret, i. e. provide, id. Att. 5, 1, 3: dulciculae potionis aliquid videamus et cibi, id. Tusc. 3, 19, 46: aliud lenius (vinum), Ter. Heaut. 459: Philippum dixisse constabat, videndum sibi aliud esse consilium, illo senatu se rem publicam gerere non posse, Cic. de Or. 3, 1, 2: absque eo esset, Recte ego mihi vidissem, Ter. Phorm. 190.\u2014",
+          "entryid": "00:01:01:01",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi049:4:17:38": "Cic. Tusc. 4, 17, 38",
+            "urn:cts:latinLit:phi0474.phi057:5:1:3": "id. Att. 5, 1, 3",
+            "urn:cts:latinLit:phi0474.phi049:3:19:46": "id. Tusc. 3, 19, 46",
+            "urn:cts:latinLit:phi0134.phi002:459": "Ter. Heaut. 459",
+            "urn:cts:latinLit:phi0474.phi037:3:1:2": "Cic. de Or. 3, 1, 2",
+            "urn:cts:latinLit:phi0134.phi004:190": "Ter. Phorm. 190"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi049:4:17:38": "Cic. Tusc. 4, 17, 38",
+            "urn:cts:latinLit:phi0474.phi057:5:1:3": "id. Att. 5, 1, 3",
+            "urn:cts:latinLit:phi0474.phi049:3:19:46": "id. Tusc. 3, 19, 46",
+            "urn:cts:latinLit:phi0134.phi002:459": "Ter. Heaut. 459",
+            "urn:cts:latinLit:phi0474.phi037:3:1:2": "Cic. de Or. 3, 1, 2",
+            "urn:cts:latinLit:phi0134.phi004:190": "Ter. Phorm. 190"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi049:4:17:38": {
+              "text": "Cic. Tusc. 4, 17, 38",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:5:1:3": {
+              "text": "id. Att. 5, 1, 3",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi049:3:19:46": {
+              "text": "id. Tusc. 3, 19, 46",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi002:459": {
+              "text": "Ter. Heaut. 459",
+              "author": "Terence",
+              "work": "Heautontimorumenos",
+              "display": "Terence - Heautontimorumenos",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi037:3:1:2": {
+              "text": "Cic. de Or. 3, 1, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De",
+              "display": "Cicero, Marcus Tullius - De",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi004:190": {
+              "text": "Ter. Phorm. 190",
+              "author": "Terence",
+              "work": "Phormio",
+              "display": "Terence - Phormio",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "3.  To take care, see to it, make sure, with final clause: navem idoneam ut habeas, diligenter videbis, Cic. Fam. 16, 1, 2; cf.: videret, ut quam primum tota res transigeretur, id. Quint. 5, 20: ne fortuna mea desit, videte, Liv. 6, 18, 8.\u2014Impers. pass.: videndum est, ne absit benignitas ... tum, ut pro dignitate cuique tribuatur, Cic. Off. 1, 14, 42: ut Latine loquamur, non solum videndum est ut verba efferamus ea, etc., id. de Or. 3, 11, 40; cf.: vos videte, quid aliae faciant isto loco feminae: et ne, cum velitis, exire non liceat, id. Fam. 14, 18, 2.\u2014",
+          "entryid": "00:01:01:02",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi056:16:1:2": "Cic. Fam. 16, 1, 2",
+            "urn:cts:latinLit:phi0474.phi001:5:20": "id. Quint. 5, 20",
+            "urn:cts:latinLit:phi0914.phi001:6:18:8": "Liv. 6, 18, 8",
+            "urn:cts:latinLit:phi0474.phi055:1:14:42": "Cic. Off. 1, 14, 42",
+            "urn:cts:latinLit:phi0474.phi037:3:11:40": "id. de Or. 3, 11, 40",
+            "urn:cts:latinLit:phi0474.phi056:14:18:2": "id. Fam. 14, 18, 2"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi056:16:1:2": "Cic. Fam. 16, 1, 2",
+            "urn:cts:latinLit:phi0474.phi001:5:20": "id. Quint. 5, 20",
+            "urn:cts:latinLit:phi0914.phi001:6:18:8": "Liv. 6, 18, 8",
+            "urn:cts:latinLit:phi0474.phi055:1:14:42": "Cic. Off. 1, 14, 42",
+            "urn:cts:latinLit:phi0474.phi037:3:11:40": "id. de Or. 3, 11, 40",
+            "urn:cts:latinLit:phi0474.phi056:14:18:2": "id. Fam. 14, 18, 2"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi056:16:1:2": {
+              "text": "Cic. Fam. 16, 1, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi001:5:20": {
+              "text": "id. Quint. 5, 20",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Quint",
+              "display": "Cicero, Marcus Tullius - Quint",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:6:18:8": {
+              "text": "Liv. 6, 18, 8",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi055:1:14:42": {
+              "text": "Cic. Off. 1, 14, 42",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Officiis",
+              "display": "Cicero, Marcus Tullius - De Officiis",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi037:3:11:40": {
+              "text": "id. de Or. 3, 11, 40",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De",
+              "display": "Cicero, Marcus Tullius - De",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:14:18:2": {
+              "text": "id. Fam. 14, 18, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "4.  To see, i. e. reach, attain, obtain, enjoy.",
+          "entryid": "00:01:01:03"
+        },
+        {
+          "entry": "a.  In gen.: qui suo toto consulatu somnum non viderit, Cic. Fam. 7, 30, 1.\u2014",
+          "entryid": "00:01:01:03:00",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi056:7:30:1": "Cic. Fam. 7, 30, 1"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi056:7:30:1": "Cic. Fam. 7, 30, 1"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi056:7:30:1": {
+              "text": "Cic. Fam. 7, 30, 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "b.  Esp., to see, live to see a period or event: ex multis diebus, quos in vit\u0101 celeberrimos laetissimosque viderit, Cic. Lael. 3, 12: utinam eum diem videam, cum, etc., id. Att. 16, 11, 1: duxi uxorem: quam ibi miseriam vidi! Ter. Ad. 867: spero multa vos liberosque vestros in re public\u0101 bona esse visuros, Cic. Mil. 28, 78: multas jam summorum imperatorum clarissimas victorias aetas nostra vidit, id. ib. 28, 77: tantum pro! degeneramus a parentibus nostris, ut praeter quam oram illi Punicas vagari classes dedecus esse imperii sui duxerint, eam nos nunc plenam hostium jam factam videamus, Liv. 22, 14, 6; cf. id. 6, 14, 4.\u2014",
+          "entryid": "00:01:01:03:01",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi052:3:12": "Cic. Lael. 3, 12",
+            "urn:cts:latinLit:phi0474.phi057:16:11:1": "id. Att. 16, 11, 1",
+            "urn:cts:latinLit:phi0134.phi006:867": "Ter. Ad. 867",
+            "urn:cts:latinLit:phi0474.phi031:28:78": "Cic. Mil. 28, 78",
+            "urn:cts:latinLit:phi0474.phi031:28:77": "id. ib. 28, 77",
+            "urn:cts:latinLit:phi0914.phi001:22:14:6": "Liv. 22, 14, 6",
+            "urn:cts:latinLit:phi0914.phi001:6:14:4": "id. 6, 14, 4"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi052:3:12": "Cic. Lael. 3, 12",
+            "urn:cts:latinLit:phi0474.phi057:16:11:1": "id. Att. 16, 11, 1",
+            "urn:cts:latinLit:phi0134.phi006:867": "Ter. Ad. 867",
+            "urn:cts:latinLit:phi0474.phi031:28:78": "Cic. Mil. 28, 78",
+            "urn:cts:latinLit:phi0474.phi031:28:77": "id. ib. 28, 77",
+            "urn:cts:latinLit:phi0914.phi001:22:14:6": "Liv. 22, 14, 6",
+            "urn:cts:latinLit:phi0914.phi001:6:14:4": "id. 6, 14, 4"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi052:3:12": {
+              "text": "Cic. Lael. 3, 12",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:16:11:1": {
+              "text": "id. Att. 16, 11, 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi006:867": {
+              "text": "Ter. Ad. 867",
+              "author": "Terence",
+              "work": "Adelphi",
+              "display": "Terence - Adelphi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi031:28:78": {
+              "text": "Cic. Mil. 28, 78",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro T. Annio Milone",
+              "display": "Cicero, Marcus Tullius - Pro T. Annio Milone",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi031:28:77": {
+              "text": "id. ib. 28, 77",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro T. Annio Milone",
+              "display": "Cicero, Marcus Tullius - Pro T. Annio Milone",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:22:14:6": {
+              "text": "Liv. 22, 14, 6",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:6:14:4": {
+              "text": "id. 6, 14, 4",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "5.  Pregn., to see, i. e. go to see, visit (colloq.; cf.: viso, inviso): sed Septimium vide et Laenatem, Cic. Att. 12, 14, 1: qu\u0101 re etiam Othonem vide, id. ib. 12, 37, 4: videbis ergo hominem, si voles, id. ib. 4, 12 init.: mane videas Plinium domi, Plin. Ep. 1, 5, 8; Suet. Tib. 7.\u2014Pass., to receive attention, be visited, Amm.14, 7, 10.\u2014",
+          "entryid": "00:01:01:04",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi057:12:14:1": "Cic. Att. 12, 14, 1",
+            "urn:cts:latinLit:phi0474.phi057:12:37:4": "id. ib. 12, 37, 4",
+            "urn:cts:latinLit:phi0474.phi057:4:12": "id. ib. 4, 12",
+            "urn:cts:latinLit:phi1318.phi001:1:5:8": "Plin. Ep. 1, 5, 8",
+            "urn:cts:latinLit:phi1348.phi001:life=tib.:7": "Suet. Tib. 7",
+            "urn:cts:latinLit:stoa0023.stoa001:14:7:10": "Amm.14, 7, 10"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi057:12:14:1": "Cic. Att. 12, 14, 1",
+            "urn:cts:latinLit:phi0474.phi057:12:37:4": "id. ib. 12, 37, 4",
+            "urn:cts:latinLit:phi0474.phi057:4:12": "id. ib. 4, 12",
+            "urn:cts:latinLit:phi1318.phi001:1:5:8": "Plin. Ep. 1, 5, 8",
+            "urn:cts:latinLit:phi1348.phi001:life=tib.:7": "Suet. Tib. 7",
+            "urn:cts:latinLit:stoa0023.stoa001:14:7:10": "Amm.14, 7, 10"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi057:12:14:1": {
+              "text": "Cic. Att. 12, 14, 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:12:37:4": {
+              "text": "id. ib. 12, 37, 4",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:4:12": {
+              "text": "id. ib. 4, 12",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1318.phi001:1:5:8": {
+              "text": "Plin. Ep. 1, 5, 8",
+              "author": "Pliny, the Younger",
+              "work": "Epistulae",
+              "display": "Pliny, the Younger - Epistulae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1348.phi001:life=tib.:7": {
+              "text": "Suet. Tib. 7",
+              "author": "Suetonius",
+              "work": "Tib",
+              "display": "Suetonius - Tib",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:stoa0023.stoa001:14:7:10": {
+              "text": "Amm.14, 7, 10",
+              "author": "Ammianus Marcellinus",
+              "work": "Res Gestae",
+              "display": "Ammianus Marcellinus - Res Gestae",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "6.  Me vide, rely on me, trust me, believe me, a formula of exhortation and assurance (ante-class.), Plaut. Trin. 3, 3, 79 (807) Brix ad loc.; id. Mil. 2, 4, 23 (376) Lorenz ad loc.; id. Rud. 3, 3, 18 (681); id. Merc. 5, 4, 53 (1014); Ter. And. 350; id. Phorm. 711.\u2014",
+          "entryid": "00:01:01:05",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi019:807": "Plaut. Trin. 3, 3, 79 (807)",
+            "urn:cts:latinLit:phi0119.phi012:376": "id. Mil. 2, 4, 23 (376)",
+            "urn:cts:latinLit:phi0119.phi017:681": "id. Rud. 3, 3, 18 (681)",
+            "urn:cts:latinLit:phi0119.phi011:1014": "id. Merc. 5, 4, 53 (1014)",
+            "urn:cts:latinLit:phi0134.phi001:350": "Ter. And. 350",
+            "urn:cts:latinLit:phi0134.phi004:711": "id. Phorm. 711"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi019:807": "Plaut. Trin. 3, 3, 79 (807)",
+            "urn:cts:latinLit:phi0119.phi012:376": "id. Mil. 2, 4, 23 (376)",
+            "urn:cts:latinLit:phi0119.phi017:681": "id. Rud. 3, 3, 18 (681)",
+            "urn:cts:latinLit:phi0119.phi011:1014": "id. Merc. 5, 4, 53 (1014)",
+            "urn:cts:latinLit:phi0134.phi001:350": "Ter. And. 350",
+            "urn:cts:latinLit:phi0134.phi004:711": "id. Phorm. 711"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi019:807": {
+              "text": "Plaut. Trin. 3, 3, 79 (807)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Trinummus",
+              "display": "Plautus, Titus Maccius - Trinummus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi012:376": {
+              "text": "id. Mil. 2, 4, 23 (376)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Miles Gloriosus",
+              "display": "Plautus, Titus Maccius - Miles Gloriosus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi017:681": {
+              "text": "id. Rud. 3, 3, 18 (681)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Rudens",
+              "display": "Plautus, Titus Maccius - Rudens",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi011:1014": {
+              "text": "id. Merc. 5, 4, 53 (1014)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Mercator",
+              "display": "Plautus, Titus Maccius - Mercator",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi001:350": {
+              "text": "Ter. And. 350",
+              "author": "Terence",
+              "work": "Andria",
+              "display": "Terence - Andria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi004:711": {
+              "text": "id. Phorm. 711",
+              "author": "Terence",
+              "work": "Phormio",
+              "display": "Terence - Phormio",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "7.  Pass., to be looked upon or regarded in any manner, i. e. to seem, appear to be or do any thing: numquam periculi fug\u0101 committendum est, ut imbelles timidique videamur, Cic. Off. 1, 24, 83: ne id, quod speciem haberet honesti, pugnaret cum eo, quod utile videretur, id. ib. 3, 2, 7: multo rem turpiorem fore et iniquiorem visum iri intellegebant, id. Verr. 2, 2, 17, \u00a7 42; cf. id. de Or. 3, 11, 42: ex quo illorum beata mors videtur, horum vita laudabilis, id. Lael. 7, 23.\u2014Parenthet. (cf. c. infra): cum ceteris, ut quidem videor, tum mihi ipse displiceo, Cic. Fam. 4, 13, 3: ea vocabula non, ut videntur, easdem res significant, id. ib. 3, 34, 84.\u2014With dat. of pers.: cetera, quae quibusdam admirabilia videntur, etc., Cic. Lael. 23, 86: digna mihi res cum omnium cognitione tum nostr\u0101 familiaritate visa est, id. ib. 1, 4: idonea mihi Laelii persona visa est, quae, etc., id. ib.: a natur\u0101 mihi videtur potius quam ab indigenti\u0101 orta amicitia, id. ib. 8, 27: quae Aristoni et Pyrrhoni omnino visa sunt pro nihilo, id. Fin. 2, 13, 43: quod idem Scipioni videbatur, id. ib. 4, 14.\u2014Parenthet. (cf. c. infra): quam nostris libris satis diligenter, ut tibi quidem videmur, expressimus, Cic. Att. 8, 11, 1: Philargyrus omnia de te, ut mihi quidem visus est, narravit, id. Fam. 4, 13, 3.\u2014",
+          "entryid": "00:01:01:06",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi055:1:24:83": "Cic. Off. 1, 24, 83",
+            "urn:cts:latinLit:phi0474.phi055:3:2:7": "id. ib. 3, 2, 7",
+            "urn:cts:latinLit:phi0474.phi005:2:2:42": "id. Verr. 2, 2, 17, \u00a7 42",
+            "urn:cts:latinLit:phi0474.phi037:3:11:42": "id. de Or. 3, 11, 42",
+            "urn:cts:latinLit:phi0474.phi052:7:23": "id. Lael. 7, 23",
+            "urn:cts:latinLit:phi0474.phi056:4:13:3": "id. Fam. 4, 13, 3",
+            "urn:cts:latinLit:phi0474.phi056:3:34:84": "id. ib. 3, 34, 84",
+            "urn:cts:latinLit:phi0474.phi052:23:86": "Cic. Lael. 23, 86",
+            "urn:cts:latinLit:phi0474.phi052:1:4": "id. ib.",
+            "urn:cts:latinLit:phi0474.phi052:8:27": "id. ib. 8, 27",
+            "urn:cts:latinLit:phi0474.phi048:2:13:43": "id. Fin. 2, 13, 43",
+            "urn:cts:latinLit:phi0474.phi048:4:14": "id. ib. 4, 14",
+            "urn:cts:latinLit:phi0474.phi057:8:11:1": "Cic. Att. 8, 11, 1"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi055:1:24:83": "Cic. Off. 1, 24, 83",
+            "urn:cts:latinLit:phi0474.phi055:3:2:7": "id. ib. 3, 2, 7",
+            "urn:cts:latinLit:phi0474.phi005:2:2:42": "id. Verr. 2, 2, 17, \u00a7 42",
+            "urn:cts:latinLit:phi0474.phi037:3:11:42": "id. de Or. 3, 11, 42",
+            "urn:cts:latinLit:phi0474.phi052:7:23": "id. Lael. 7, 23",
+            "urn:cts:latinLit:phi0474.phi056:4:13:3": "id. Fam. 4, 13, 3",
+            "urn:cts:latinLit:phi0474.phi056:3:34:84": "id. ib. 3, 34, 84",
+            "urn:cts:latinLit:phi0474.phi052:23:86": "Cic. Lael. 23, 86",
+            "urn:cts:latinLit:phi0474.phi052:1:4": "id. ib.",
+            "urn:cts:latinLit:phi0474.phi052:8:27": "id. ib. 8, 27",
+            "urn:cts:latinLit:phi0474.phi048:2:13:43": "id. Fin. 2, 13, 43",
+            "urn:cts:latinLit:phi0474.phi048:4:14": "id. ib. 4, 14",
+            "urn:cts:latinLit:phi0474.phi057:8:11:1": "Cic. Att. 8, 11, 1"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi055:1:24:83": {
+              "text": "Cic. Off. 1, 24, 83",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Officiis",
+              "display": "Cicero, Marcus Tullius - De Officiis",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi055:3:2:7": {
+              "text": "id. ib. 3, 2, 7",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Officiis",
+              "display": "Cicero, Marcus Tullius - De Officiis",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi005:2:2:42": {
+              "text": "id. Verr. 2, 2, 17, \u00a7 42",
+              "author": "Cicero, Marcus Tullius",
+              "work": "In C. Verrem",
+              "display": "Cicero, Marcus Tullius - In C. Verrem",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi037:3:11:42": {
+              "text": "id. de Or. 3, 11, 42",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De",
+              "display": "Cicero, Marcus Tullius - De",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:7:23": {
+              "text": "id. Lael. 7, 23",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:4:13:3": {
+              "text": "id. Fam. 4, 13, 3",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:3:34:84": {
+              "text": "id. ib. 3, 34, 84",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to his Friends",
+              "display": "Cicero, Marcus Tullius - Letters to his Friends",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:23:86": {
+              "text": "Cic. Lael. 23, 86",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:1:4": {
+              "text": "id. ib.",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Amicitia",
+              "display": "Cicero, Marcus Tullius - De Amicitia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:8:27": {
+              "text": "id. ib. 8, 27",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Amicitia",
+              "display": "Cicero, Marcus Tullius - De Amicitia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi048:2:13:43": {
+              "text": "id. Fin. 2, 13, 43",
+              "author": "Cicero, Marcus Tullius",
+              "work": "de Finibus Bonorum et Malorum",
+              "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi048:4:14": {
+              "text": "id. ib. 4, 14",
+              "author": "Cicero, Marcus Tullius",
+              "work": "de Finibus Bonorum et Malorum",
+              "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:8:11:1": {
+              "text": "Cic. Att. 8, 11, 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b2.  With inf.: de familiari illo tuo videor audisse, Cic. de Or. 2, 10, 40; id. N. D. 1, 21, 58: satis facere rei publicae videmur, si, etc., id. Cat. 1, 1, 2: ut beate vixisse videar, quia, etc., id. Lael. 4, 15: solem e mundo tollere videntur, qui amicitiam e vit\u0101 tollunt, id. ib. 13, 47: videre jam videor populum a senatu disjunctum, id. ib. 12, 41; cf.: te vero, Caecili, quem ad modum sit elusurus, videre jam videor, id. Div. in Caecil. 14, 45: vere videor posse contendere, Nep. Att. 12, 4: audire videor undique congerentes nomina po\u00ebtarum, Quint. 10, 1, 56; Vell. 2, 14, 1; Plin. Ep. 10, 61 (69), 1; id. Pan. 17, 1.\u2014With dat. of pers., Cic. Lael. 14, 51: videor mihi perspicere ipsius animum, id. Fam. 4, 13, 5: hoc mihi videor videre, id. Inv. 2, 57, 171. \u2014",
+          "entryid": "00:01:01:06:00",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi037:2:10:40": "Cic. de Or. 2, 10, 40",
+            "urn:cts:latinLit:phi0474.phi050:1:21:58": "id. N. D. 1, 21, 58",
+            "urn:cts:latinLit:phi0474.phi013:1:1:2": "id. Cat. 1, 1, 2",
+            "urn:cts:latinLit:phi0474.phi052:4:15": "id. Lael. 4, 15",
+            "urn:cts:latinLit:phi0474.phi052:13:47": "id. ib. 13, 47",
+            "urn:cts:latinLit:phi0474.phi052:12:41": "id. ib. 12, 41",
+            "urn:cts:latinLit:phi0474.phi004:14:45": "id. Div. in Caecil. 14, 45",
+            "urn:cts:latinLit:phi0588.phi001:att:12:4": "Nep. Att. 12, 4",
+            "urn:cts:latinLit:phi1002.phi001:10:1:56": "Quint. 10, 1, 56",
+            "urn:cts:latinLit:phi1044.phi001:2:14:1": "Vell. 2, 14, 1",
+            "urn:cts:latinLit:phi1318.phi001:10:61": "Plin. Ep. 10, 61",
+            "urn:cts:latinLit:phi1318.phi002:17:1": "id. Pan. 17, 1",
+            "urn:cts:latinLit:phi0474.phi052:14:51": "Cic. Lael. 14, 51",
+            "urn:cts:latinLit:phi0474.phi056:4:13:5": "id. Fam. 4, 13, 5",
+            "urn:cts:latinLit:phi0474.phi036:2:57:171": "id. Inv. 2, 57, 171"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi037:2:10:40": "Cic. de Or. 2, 10, 40",
+            "urn:cts:latinLit:phi0474.phi050:1:21:58": "id. N. D. 1, 21, 58",
+            "urn:cts:latinLit:phi0474.phi013:1:1:2": "id. Cat. 1, 1, 2",
+            "urn:cts:latinLit:phi0474.phi052:4:15": "id. Lael. 4, 15",
+            "urn:cts:latinLit:phi0474.phi052:13:47": "id. ib. 13, 47",
+            "urn:cts:latinLit:phi0474.phi052:12:41": "id. ib. 12, 41",
+            "urn:cts:latinLit:phi0474.phi004:14:45": "id. Div. in Caecil. 14, 45",
+            "urn:cts:latinLit:phi0588.phi001:att:12:4": "Nep. Att. 12, 4",
+            "urn:cts:latinLit:phi1002.phi001:10:1:56": "Quint. 10, 1, 56",
+            "urn:cts:latinLit:phi1044.phi001:2:14:1": "Vell. 2, 14, 1",
+            "urn:cts:latinLit:phi1318.phi001:10:61": "Plin. Ep. 10, 61",
+            "urn:cts:latinLit:phi1318.phi002:17:1": "id. Pan. 17, 1",
+            "urn:cts:latinLit:phi0474.phi052:14:51": "Cic. Lael. 14, 51",
+            "urn:cts:latinLit:phi0474.phi056:4:13:5": "id. Fam. 4, 13, 5",
+            "urn:cts:latinLit:phi0474.phi036:2:57:171": "id. Inv. 2, 57, 171"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi037:2:10:40": {
+              "text": "Cic. de Or. 2, 10, 40",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De",
+              "display": "Cicero, Marcus Tullius - De",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi050:1:21:58": {
+              "text": "id. N. D. 1, 21, 58",
+              "author": "Cicero, Marcus Tullius",
+              "work": "de Natura Deorum",
+              "display": "Cicero, Marcus Tullius - de Natura Deorum",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi013:1:1:2": {
+              "text": "id. Cat. 1, 1, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "In Catilinam",
+              "display": "Cicero, Marcus Tullius - In Catilinam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:4:15": {
+              "text": "id. Lael. 4, 15",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:13:47": {
+              "text": "id. ib. 13, 47",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Amicitia",
+              "display": "Cicero, Marcus Tullius - De Amicitia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:12:41": {
+              "text": "id. ib. 12, 41",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Amicitia",
+              "display": "Cicero, Marcus Tullius - De Amicitia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi004:14:45": {
+              "text": "id. Div. in Caecil. 14, 45",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Divinatio in Q. Caecilium",
+              "display": "Cicero, Marcus Tullius - Divinatio in Q. Caecilium",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0588.phi001:att:12:4": {
+              "text": "Nep. Att. 12, 4",
+              "author": "Nepos, Cornelius",
+              "work": "Att",
+              "display": "Nepos, Cornelius - Att",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:10:1:56": {
+              "text": "Quint. 10, 1, 56",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1044.phi001:2:14:1": {
+              "text": "Vell. 2, 14, 1",
+              "author": "Velleius Paterculus",
+              "work": "Historia Romana",
+              "display": "Velleius Paterculus - Historia Romana",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1318.phi001:10:61": {
+              "text": "Plin. Ep. 10, 61",
+              "author": "Pliny, the Younger",
+              "work": "Epistulae",
+              "display": "Pliny, the Younger - Epistulae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1318.phi002:17:1": {
+              "text": "id. Pan. 17, 1",
+              "author": "Pliny, the Younger",
+              "work": "Panegyricus",
+              "display": "Pliny, the Younger - Panegyricus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:14:51": {
+              "text": "Cic. Lael. 14, 51",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:4:13:5": {
+              "text": "id. Fam. 4, 13, 5",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi036:2:57:171": {
+              "text": "id. Inv. 2, 57, 171",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Inventione",
+              "display": "Cicero, Marcus Tullius - De Inventione",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b3.  With nom. and inf.: ut exstinctae potius amicitiae quam oppressae esse videantur, Cic. Lael. 21, 78: ut tamquam a praesentibus coram haberi sermo videretur, id. ib. 1, 3: quae (sapientia) videtur in hominem cadere posse, id. ib. 26, 100: visus 'st in somnis pastor ad me adpellere, Att. ap. Cic. Div. 1, 22, 44 B. and K.: ut Aratus ab Jove incipiendum putat, ita nos rite coepturi ab Homero videmur, Quint. 10, 1, 46.\u2014With dat. of pers.: divitior mihi et affluentior videtur esse vera amicitia, Cic. Lael. 16, 58.\u2014",
+          "entryid": "00:01:01:06:00:00",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi052:21:78": "Cic. Lael. 21, 78",
+            "urn:cts:latinLit:phi0474.phi052:1:3": "id. ib. 1, 3",
+            "urn:cts:latinLit:phi0474.phi052:26:100": "id. ib. 26, 100",
+            "urn:cts:latinLit:phi0474.phi053:1:22:44": "Cic. Div. 1, 22, 44",
+            "urn:cts:latinLit:phi1002.phi001:10:1:46": "Quint. 10, 1, 46",
+            "urn:cts:latinLit:phi0474.phi052:16:58": "Cic. Lael. 16, 58"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi052:21:78": "Cic. Lael. 21, 78",
+            "urn:cts:latinLit:phi0474.phi052:1:3": "id. ib. 1, 3",
+            "urn:cts:latinLit:phi0474.phi052:26:100": "id. ib. 26, 100",
+            "urn:cts:latinLit:phi0474.phi053:1:22:44": "Cic. Div. 1, 22, 44",
+            "urn:cts:latinLit:phi1002.phi001:10:1:46": "Quint. 10, 1, 46",
+            "urn:cts:latinLit:phi0474.phi052:16:58": "Cic. Lael. 16, 58"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi052:21:78": {
+              "text": "Cic. Lael. 21, 78",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:1:3": {
+              "text": "id. ib. 1, 3",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Amicitia",
+              "display": "Cicero, Marcus Tullius - De Amicitia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:26:100": {
+              "text": "id. ib. 26, 100",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Amicitia",
+              "display": "Cicero, Marcus Tullius - De Amicitia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi053:1:22:44": {
+              "text": "Cic. Div. 1, 22, 44",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Divinatione",
+              "display": "Cicero, Marcus Tullius - De Divinatione",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:10:1:46": {
+              "text": "Quint. 10, 1, 46",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:16:58": {
+              "text": "Cic. Lael. 16, 58",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Lael",
+              "display": "Cicero, Marcus Tullius - Lael",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b4.  Impers., with acc. and inf. (rare; cf. creditur, in the same constr., and dicitur): non mihi videtur, ad beate vivendum satis posse virtutem, Cic. Tusc. 5, 5, 12: aliis videtur, non incohatam sed perfectam probationem hoc nomen accipere, Quint. 5, 10, 5 Spald.: quae vult videri, se esse prudentiam, Cic. Off. 3, 17, 71: quia videbatur et Limnaeam eodem tempore oppugnari posse, Liv. 36, 13, 9 Weissenb. ad loc.\u2014Absol.: sed mihi contra ea videtur, Sall. J. 85, 2: seque facile, ut mihi videtur, expediunt, Cic. Fin. 1, 20, 66; id. Marcell. 3, 10.\u2014",
+          "entryid": "00:01:01:06:00:01",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi049:5:5:12": "Cic. Tusc. 5, 5, 12",
+            "urn:cts:latinLit:phi1002.phi001:5:10:5": "Quint. 5, 10, 5",
+            "urn:cts:latinLit:phi0474.phi055:3:17:71": "Cic. Off. 3, 17, 71",
+            "urn:cts:latinLit:phi0914.phi001:36:13:9": "Liv. 36, 13, 9",
+            "urn:cts:latinLit:phi0631.phi002:85:2": "Sall. J. 85, 2",
+            "urn:cts:latinLit:phi0474.phi048:1:20:66": "Cic. Fin. 1, 20, 66",
+            "urn:cts:latinLit:phi0474.phi032:3:10": "id. Marcell. 3, 10"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi049:5:5:12": "Cic. Tusc. 5, 5, 12",
+            "urn:cts:latinLit:phi1002.phi001:5:10:5": "Quint. 5, 10, 5",
+            "urn:cts:latinLit:phi0474.phi055:3:17:71": "Cic. Off. 3, 17, 71",
+            "urn:cts:latinLit:phi0914.phi001:36:13:9": "Liv. 36, 13, 9",
+            "urn:cts:latinLit:phi0631.phi002:85:2": "Sall. J. 85, 2",
+            "urn:cts:latinLit:phi0474.phi048:1:20:66": "Cic. Fin. 1, 20, 66",
+            "urn:cts:latinLit:phi0474.phi032:3:10": "id. Marcell. 3, 10"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi049:5:5:12": {
+              "text": "Cic. Tusc. 5, 5, 12",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:5:10:5": {
+              "text": "Quint. 5, 10, 5",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi055:3:17:71": {
+              "text": "Cic. Off. 3, 17, 71",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Officiis",
+              "display": "Cicero, Marcus Tullius - De Officiis",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:36:13:9": {
+              "text": "Liv. 36, 13, 9",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0631.phi002:85:2": {
+              "text": "Sall. J. 85, 2",
+              "author": "Sallust",
+              "work": "J",
+              "display": "Sallust - J",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi048:1:20:66": {
+              "text": "Cic. Fin. 1, 20, 66",
+              "author": "Cicero, Marcus Tullius",
+              "work": "de Finibus Bonorum et Malorum",
+              "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi032:3:10": {
+              "text": "id. Marcell. 3, 10",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro M. Marcello",
+              "display": "Cicero, Marcus Tullius - Pro M. Marcello",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "b.  In official decisions, as a guarded opinion instead of a positive declaration: majores nostri voluerunt, quae jurati judices cognovissent, ea non ut esse facta, sed ut videri pronuntiarent, Cic. Ac. 2 (Luc.), 47, 146: fecisse videri pronuntiat, id. Verr. 2, 5, 6, \u00a7 14: cum pontifices decressent, videri posse sine religione eam partem areae mihi restitui, id. Att. 4, 2, 3: consul adjecit Senatusconsultum, Ambraciam non videri vi captam esse, Liv. 38, 44, 6: Scipionis sententiam sequuntur, uti ante certam diem Caesar exercitum dimittat: si non faciat, eum adversus rempublicam facturum videri, Caes. B. C. 1, 2.\u2014",
+          "entryid": "00:01:01:06:01",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi046:47:146": "Cic. Ac. 2 (Luc.), 47, 146",
+            "urn:cts:latinLit:phi0474.phi005:2:5:14": "id. Verr. 2, 5, 6, \u00a7 14",
+            "urn:cts:latinLit:phi0474.phi057:4:2:3": "id. Att. 4, 2, 3",
+            "urn:cts:latinLit:phi0914.phi001:38:44:6": "Liv. 38, 44, 6",
+            "urn:cts:latinLit:phi0448.phi002:1:2": "Caes. B. C. 1, 2"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi046:47:146": "Cic. Ac. 2 (Luc.), 47, 146",
+            "urn:cts:latinLit:phi0474.phi005:2:5:14": "id. Verr. 2, 5, 6, \u00a7 14",
+            "urn:cts:latinLit:phi0474.phi057:4:2:3": "id. Att. 4, 2, 3",
+            "urn:cts:latinLit:phi0914.phi001:38:44:6": "Liv. 38, 44, 6",
+            "urn:cts:latinLit:phi0448.phi002:1:2": "Caes. B. C. 1, 2"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi046:47:146": {
+              "text": "Cic. Ac. 2 (Luc.), 47, 146",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Ac",
+              "display": "Cicero, Marcus Tullius - Ac",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi005:2:5:14": {
+              "text": "id. Verr. 2, 5, 6, \u00a7 14",
+              "author": "Cicero, Marcus Tullius",
+              "work": "In C. Verrem",
+              "display": "Cicero, Marcus Tullius - In C. Verrem",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:4:2:3": {
+              "text": "id. Att. 4, 2, 3",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:38:44:6": {
+              "text": "Liv. 38, 44, 6",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0448.phi002:1:2": {
+              "text": "Caes. B. C. 1, 2",
+              "author": "Julius Caesar",
+              "work": "B",
+              "display": "Julius Caesar - B",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "c.  Pregn., videtur (alicui), it seems proper, right, or fit, it seems good to any one; he (she, etc.) pleases, likes.",
+          "entryid": "00:01:01:06:02"
+        },
+        {
+          "entry": "\u03b1.  With dat. of pers.: tibi si videbitur, villis iis utere, quae, etc., Cic. Fam. 14, 7, 3: velim Lentulum puerum visas eique de mancipiis, quae tibi videbitur, attribuas, id. Att. 12, 28, 3: qui imitamur, quos cuique visum est, id. Off. 1, 32, 118: ut consul, quem videretur ei, cum imperio mitteret, qui, etc., Liv. 31, 3, 2; 29, 20, 4: si ei videretur, integram rem ad senatum reiceret, if he pleased, a formula of politeness, Liv. 26, 16, 4 Weissenb. ad loc.; 31, 4, 2: ut, si videretur ei, maturaret venire, id. 34, 46, 5.\u2014",
+          "entryid": "00:01:01:06:02:00",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi056:14:7:3": "Cic. Fam. 14, 7, 3",
+            "urn:cts:latinLit:phi0474.phi057:12:28:3": "id. Att. 12, 28, 3",
+            "urn:cts:latinLit:phi0474.phi055:1:32:118": "id. Off. 1, 32, 118",
+            "urn:cts:latinLit:phi0914.phi001:31:3:2": "Liv. 31, 3, 2",
+            "urn:cts:latinLit:phi0914.phi001:29:20:4": "29, 20, 4",
+            "urn:cts:latinLit:phi0914.phi001:26:16:4": "Liv. 26, 16, 4",
+            "urn:cts:latinLit:phi0914.phi001:31:4:2": "31, 4, 2",
+            "urn:cts:latinLit:phi0914.phi001:34:46:5": "id. 34, 46, 5"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi056:14:7:3": "Cic. Fam. 14, 7, 3",
+            "urn:cts:latinLit:phi0474.phi057:12:28:3": "id. Att. 12, 28, 3",
+            "urn:cts:latinLit:phi0474.phi055:1:32:118": "id. Off. 1, 32, 118",
+            "urn:cts:latinLit:phi0914.phi001:31:3:2": "Liv. 31, 3, 2",
+            "urn:cts:latinLit:phi0914.phi001:29:20:4": "29, 20, 4",
+            "urn:cts:latinLit:phi0914.phi001:26:16:4": "Liv. 26, 16, 4",
+            "urn:cts:latinLit:phi0914.phi001:31:4:2": "31, 4, 2",
+            "urn:cts:latinLit:phi0914.phi001:34:46:5": "id. 34, 46, 5"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi056:14:7:3": {
+              "text": "Cic. Fam. 14, 7, 3",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:12:28:3": {
+              "text": "id. Att. 12, 28, 3",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi055:1:32:118": {
+              "text": "id. Off. 1, 32, 118",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Officiis",
+              "display": "Cicero, Marcus Tullius - De Officiis",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:31:3:2": {
+              "text": "Liv. 31, 3, 2",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:29:20:4": {
+              "text": "29, 20, 4",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:26:16:4": {
+              "text": "Liv. 26, 16, 4",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:31:4:2": {
+              "text": "31, 4, 2",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:34:46:5": {
+              "text": "id. 34, 46, 5",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b2.  Without dat.: ubi visum est, sub vesperum dispersi discedunt, Caes. B. G. 5, 58: eam quoque, si videtur, correctionem explicabo, Cic. Ac. 1, 9, 35: nunc, si videtur, hoc, illud alias, id. Tusc. 1, 11, 23: M. Num non vis audire, etc.? A. Ut videtur, as you will, id. ib. 1, 32, 77: si videatur, Liv. 6, 25, 2; 26, 22, 7.",
+          "entryid": "00:01:01:06:02:01",
+          "citations": {
+            "urn:cts:latinLit:phi0448.phi001:5:58": "Caes. B. G. 5, 58",
+            "urn:cts:latinLit:phi0474.phi045:9:35": "Cic. Ac. 1, 9, 35",
+            "urn:cts:latinLit:phi0474.phi049:1:11:23": "id. Tusc. 1, 11, 23",
+            "urn:cts:latinLit:phi0474.phi049:1:32:77": "id. ib. 1, 32, 77",
+            "urn:cts:latinLit:phi0914.phi001:6:25:2": "Liv. 6, 25, 2",
+            "urn:cts:latinLit:phi0914.phi001:26:22:7": "26, 22, 7"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0448.phi001:5:58": "Caes. B. G. 5, 58",
+            "urn:cts:latinLit:phi0474.phi045:9:35": "Cic. Ac. 1, 9, 35",
+            "urn:cts:latinLit:phi0474.phi049:1:11:23": "id. Tusc. 1, 11, 23",
+            "urn:cts:latinLit:phi0474.phi049:1:32:77": "id. ib. 1, 32, 77",
+            "urn:cts:latinLit:phi0914.phi001:6:25:2": "Liv. 6, 25, 2",
+            "urn:cts:latinLit:phi0914.phi001:26:22:7": "26, 22, 7"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0448.phi001:5:58": {
+              "text": "Caes. B. G. 5, 58",
+              "author": "Julius Caesar",
+              "work": "B",
+              "display": "Julius Caesar - B",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi045:9:35": {
+              "text": "Cic. Ac. 1, 9, 35",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Academica",
+              "display": "Cicero, Marcus Tullius - Academica",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi049:1:11:23": {
+              "text": "id. Tusc. 1, 11, 23",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi049:1:32:77": {
+              "text": "id. ib. 1, 32, 77",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:6:25:2": {
+              "text": "Liv. 6, 25, 2",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0914.phi001:26:22:7": {
+              "text": "26, 22, 7",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "word": "video",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "vide\u014d v\u012bd\u012b, v\u012bsus, \u0113re VID-, to see, discern, perceive: ut oculum, quo bene videret, amitteret: oculis cernere ea, quae videmus, etc.: Considium, quod non vidisset, pro viso sibi renuntiasse, Cs.: serpentes atque videres Infernas errare canes, H.: viden, ut geminae stant vertice cristae? V.: nonne vides ut . . . Antemnae gemant? H.: iam videnti frontem pingit, i. e. awake, V.: et cas\u016bs abies visura marinos, i. e. to experience, V.\u2014To see, look at, observe, note: Illud vide, os ut sibi distorsit carnufex, T.: quin tu me vides? see what I have done! i. e. is not this creditable?: atqui istuc ipsum nil periclist; me vide, look at me, i. e. take courage from me, T.\u2014To perceive, observe, hear: mugire videbis Sub pedibus terram, V.: tum videres Stridere susurros, H.\u2014Pass, to be looked upon, be regarded, seem, appear: numquam periculi fug\u0101 committendum est, ut imbelles timidique videamur: multo rem iniquiorem visum iri intellegebant: cetera, quae quibusdam admirabilia videntur, etc.: idonea mihi Laeli persona visa est, quae, etc.: quod idem Scipioni videbatur: de familiare illo tuo videor audisse: ut beate vixisse videar, quia, etc.: ut exstinctae potius amicitiae quam oppressae videantur: quae (sapientia) videtur in hominem cadere posse: sed mihi contra ea videtur, S.: non mihi videtur, ad beate vivendum satis posse virtutem: quia videbatur et Limnaeum eodem tempore oppugnari posse, L.\u2014In formal decisions, to appear, be decided, be adjudged: voluerunt, ut ea non esse facta, sed ut videri pronuntiarent: consul adiecit senat\u016bs consultum, Ambraciam non videri vi captam esse, L.: uti Caesar exercitum dimittat; si non faciat, eum adversus rem p. facturum videri, Cs.\u2014Fig., of the mind, to see, perceive, mark, observe, discern, understand, comprehend, be aware: ad te, ut video, comminus accessit: aperte enim adulantem nemo non videt, sees through: si dormientes aliquid animo videre videamur: plus vidisse videri, to have had more insight: cum me vidisse plus fateretur, that I had seen further: di vatesve eorum in futurum vident, L.: quem virum Crassum vidimus: nonne vides, croceos ut Tmolus odores, India mittit ebur, V.\u2014 To look at, attend to, consider, think, reflect upon, take note of: nunc ea videamus, quae contra ab his disputari solent: sed videamus Herculem ipsum: legi Bruti epistulam non prudenter rescriptam; sed ipse viderit, let him see to that. Viderit ipse ad aram Confugiam, O.\u2014To look out for, see to, care for, provide, take care, make sure: antecesserat Statius, ut prandium nobis videret. aliud lenius (vinum), T.: navem idoneam ut habeas, diligenter videbis: ne fortuna mea desit, videte, L.\u2014To see, reach, experience, attain, obtain, enjoy: qui suo toto consulatu somnum non viderit: utinam eum diem videam, cum, etc., may live to see: Duxi uxorem; quam ibi miseriam vidi! T.: multas victorias aetas nostra vidit.\u2014To see patiently, bear, permit: tantum degeneramus a patribus nostris, ut eam (oram) nos nunc plenam hostium iam factam Videamus, L.\u2014To see, go to see, visit: sed Septimium vide et Laenatem: videbis ergo hominem, si voles.\u2014Pass, it seems proper,  seems right, seems good: ubi visum est, sub vesperum dispersi discedunt, Cs.: M. num non vis audire, etc.? A. ut videtur, as you will: si videatur, L.: si tibi videbitur, villis iis utere, quae, etc.: si ei videretur, integram rem ad senatum reiceret, if he pleased, L.",
+          "pos": "noun",
+          "metadata": {
+            "source": "lewis_1890"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "video",
+        "pos": "unknown",
+        "features": {
+          "ipa": "'w\u026a.d\u032a\u025b\u0323.jo\u02d0"
+        }
+      },
+      "source": "cltk",
+      "metadata": {
+        "headword": "video",
+        "ipa": "'w\u026a.d\u032a\u025b\u0323.jo\u02d0",
+        "lewis_1890_lines": [
+          "vide\u014d v\u012bd\u012b, v\u012bsus, \u0113re VID-, to see, discern, perceive: ut oculum, quo bene videret, amitteret: oculis cernere ea, quae videmus, etc.: Considium, quod non vidisset, pro viso sibi renuntiasse, Cs.: serpentes atque videres Infernas errare canes, H.: viden, ut geminae stant vertice cristae? V.: nonne vides ut . . . Antemnae gemant? H.: iam videnti frontem pingit, i. e. awake, V.: et cas\u016bs abies visura marinos, i. e. to experience, V.\u2014To see, look at, observe, note: Illud vide, os ut sibi distorsit carnufex, T.: quin tu me vides? see what I have done! i. e. is not this creditable?: atqui istuc ipsum nil periclist; me vide, look at me, i. e. take courage from me, T.\u2014To perceive, observe, hear: mugire videbis Sub pedibus terram, V.: tum videres Stridere susurros, H.\u2014Pass, to be looked upon, be regarded, seem, appear: numquam periculi fug\u0101 committendum est, ut imbelles timidique videamur: multo rem iniquiorem visum iri intellegebant: cetera, quae quibusdam admirabilia videntur, etc.: idonea mihi Laeli persona visa est, quae, etc.: quod idem Scipioni videbatur: de familiare illo tuo videor audisse: ut beate vixisse videar, quia, etc.: ut exstinctae potius amicitiae quam oppressae videantur: quae (sapientia) videtur in hominem cadere posse: sed mihi contra ea videtur, S.: non mihi videtur, ad beate vivendum satis posse virtutem: quia videbatur et Limnaeum eodem tempore oppugnari posse, L.\u2014In formal decisions, to appear, be decided, be adjudged: voluerunt, ut ea non esse facta, sed ut videri pronuntiarent: consul adiecit senat\u016bs consultum, Ambraciam non videri vi captam esse, L.: uti Caesar exercitum dimittat; si non faciat, eum adversus rem p. facturum videri, Cs.\u2014Fig., of the mind, to see, perceive, mark, observe, discern, understand, comprehend, be aware: ad te, ut video, comminus accessit: aperte enim adulantem nemo non videt, sees through: si dormientes aliquid animo videre videamur: plus vidisse videri, to have had more insight: cum me vidisse plus fateretur, that I had seen further: di vatesve eorum in futurum vident, L.: quem virum Crassum vidimus: nonne vides, croceos ut Tmolus odores, India mittit ebur, V.\u2014 To look at, attend to, consider, think, reflect upon, take note of: nunc ea videamus, quae contra ab his disputari solent: sed videamus Herculem ipsum: legi Bruti epistulam non prudenter rescriptam; sed ipse viderit, let him see to that. Viderit ipse ad aram Confugiam, O.\u2014To look out for, see to, care for, provide, take care, make sure: antecesserat Statius, ut prandium nobis videret. aliud lenius (vinum), T.: navem idoneam ut habeas, diligenter videbis: ne fortuna mea desit, videte, L.\u2014To see, reach, experience, attain, obtain, enjoy: qui suo toto consulatu somnum non viderit: utinam eum diem videam, cum, etc., may live to see: Duxi uxorem; quam ibi miseriam vidi! T.: multas victorias aetas nostra vidit.\u2014To see patiently, bear, permit: tantum degeneramus a patribus nostris, ut eam (oram) nos nunc plenam hostium iam factam Videamus, L.\u2014To see, go to see, visit: sed Septimium vide et Laenatem: videbis ergo hominem, si voles.\u2014Pass, it seems proper,  seems right, seems good: ubi visum est, sub vesperum dispersi discedunt, Cs.: M. num non vis audire, etc.? A. ut videtur, as you will: si videatur, L.: si tibi videbitur, villis iis utere, quae, etc.: si ei videretur, integram rem ad senatum reiceret, if he pleased, L."
+        ]
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 3
+  },
+  "unified_sources": [
+    "cltk",
+    "diogenes",
+    "whitakers"
+  ],
+  "source_present": true
+}

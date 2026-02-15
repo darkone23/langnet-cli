@@ -1,0 +1,467 @@
+{
+  "target": {
+    "tool": "cdsl",
+    "action": "lookup",
+    "lang": "san",
+    "word": "deva",
+    "dict_name": "mw",
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "deva",
+      "language": "san",
+      "morphology": {
+        "lemma": "deva",
+        "pos": "noun",
+        "features": {
+          "analyses": [
+            {
+              "word": "deva",
+              "lemma": "deva",
+              "root": "",
+              "pos": "noun",
+              "case": "vocative",
+              "gender": "masculine",
+              "number": "singular"
+            }
+          ]
+        }
+      },
+      "source": "heritage",
+      "metadata": {
+        "morphology_raw": {
+          "input_text": "deva",
+          "solutions": [
+            {
+              "type": "morphological_analysis",
+              "analyses": [
+                {
+                  "word": "deva",
+                  "lemma": "deva",
+                  "root": "",
+                  "pos": "noun",
+                  "case": "vocative",
+                  "gender": "masculine",
+                  "number": "singular"
+                }
+              ],
+              "total_words": 1,
+              "metadata": {
+                "color": "lawngreen_back",
+                "raw_text": "[deva]{m. sg. voc. | n. sg. voc.}",
+                "segments": [
+                  {
+                    "class": "blue",
+                    "text": "deva"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "solution kept among"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  }
+                ]
+              }
+            }
+          ],
+          "word_analyses": [],
+          "total_solutions": 1,
+          "metadata": {
+            "solutions_kept": 1,
+            "total_available": 1
+          }
+        },
+        "combined": {
+          "lemma": "deva",
+          "pos": "noun",
+          "morphology_analyses": [
+            {
+              "word": "deva",
+              "lemma": "deva",
+              "pos": "noun",
+              "features": {
+                "case": "vocative",
+                "gender": "masculine",
+                "number": "singular",
+                "person": null,
+                "tense": null,
+                "voice": null,
+                "mood": null,
+                "stem": ""
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "word": "deva",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "deva/   mf(I)n. (fr. 3. div) heavenly, divine (also said of terrestrial things of high excellence), RV.; AV.; VS.; \u015aBr. (superl. m. deva/-tama, RV. iv, 22, 3 &c.; f. devi-tamA, ii, 41, 16)",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "95518"
+          }
+        },
+        {
+          "definition": "deva/   m. (according to P\u0101\u1e47. iii, 3, 120 de/va) a deity, god, RV. &c. &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95519"
+          }
+        },
+        {
+          "definition": "(rarely applied to) evil demons, AV. iii, 15, 5; TS. iii, 5, 4, 1",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95520"
+          }
+        },
+        {
+          "definition": "(pl. the gods as the heavenly or shining ones; vi/Sve devA/s, all the gods, RV. ii, 3, 4 &c., or a partic. class of deities [see under vi/Sva], often reckoned as 33, either 11 for each of the 3 worlds, RV. i, 139, 11 &c. [cf. tri-daSa], or 8 Vasus, 11 Rudras, and 12 \u0100dityas [to which the 2 A\u015bvins must be added] Br.; cf. also, Divy\u0101v. 68; with Jainas 4 classes, viz. BavanADISa, vyantara, jyotizka, and vEmAnika; devA/nAm pa/tnyas, the wives of the gods, RV.; VS.; Br. [cf. deva-patnI below])",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95521"
+          }
+        },
+        {
+          "definition": "N. of the number 33 (see above), Ga\u1e47it.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95522"
+          }
+        },
+        {
+          "definition": "N. of Indra as the god of the sky and giver of rain, MBh.; R. &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95523"
+          }
+        },
+        {
+          "definition": "a cloud, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "95524"
+          }
+        },
+        {
+          "definition": "(with Jainas) the 22nd Arhat of the future Ut-sarpi\u1e47\u012b",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95525"
+          }
+        },
+        {
+          "definition": "the image of a god, an idol, Vi\u1e63\u1e47.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95526"
+          }
+        },
+        {
+          "definition": "a god on earth or among men, either Br\u0101hman, priest, RV.; AV. (cf. BU-d\u00b0), or king, prince (as a title of honour, esp. in the voc. \u2018your majesty\u2019 or \u2018your honour\u2019; also ifc., e.g. SrI-harza-d\u00b0, vikramANka-d\u00b0, king \u015ar\u012b-h\u00b0 or Vikr\u00b0, and in names as puruzottama-d\u00b0 [lit. having Vi\u1e63\u1e47u as one's deity; cf. atiTi-d\u00b0, AcArya-d\u00b0, pitf-d\u00b0, mAtf-d\u00b0]; rarely preceding the name, e.g. deva-caRqamahAsena, Kath\u0101s. xiii, 48), K\u0101v.; Pa\u00f1c. &c. (cf. kziti-, nara-, &c.)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95527"
+          }
+        },
+        {
+          "definition": "a husband's brother (cf. devf and devara), W.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95528"
+          }
+        },
+        {
+          "definition": "a fool, dolt, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "95529"
+          }
+        },
+        {
+          "definition": "a child, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "95530"
+          }
+        },
+        {
+          "definition": "a man following any partic. line or business, L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95531"
+          }
+        },
+        {
+          "definition": "a spearman, lancer, L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95532"
+          }
+        },
+        {
+          "definition": "emulation, wish to excel or overcome, L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95533"
+          }
+        },
+        {
+          "definition": "sport, play, L.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "95534"
+          }
+        },
+        {
+          "definition": "a sword, Gal.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "95535"
+          }
+        },
+        {
+          "definition": "N. of men, VP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95536"
+          }
+        },
+        {
+          "definition": "of a disciple of N\u0101g\u0101rjuna, MWB. 192",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95537"
+          }
+        },
+        {
+          "definition": "dimin. for devadatta, P\u0101\u1e47. v, 3, 83, V\u0101rtt. 4, Sch.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95538"
+          }
+        },
+        {
+          "definition": "deva/   n. (L.) an organ of sense, Mu\u1e47\u1e0dUp. iii, 1, 8; 2, 7",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95539"
+          }
+        },
+        {
+          "definition": "devA   (A), f. Hibiscus Mutabilis or Marsilea Quadrifolia",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95539"
+          }
+        },
+        {
+          "definition": "deva   [cf. Lat. d\u012bvus, deus; Lit. d\u00eb\u0301vas; Old Pruss. deiwas.]",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "95540"
+          }
+        },
+        {
+          "definition": "1. dE/va or dEva/   mf(I/)n. (fr. deva/) belonging to or coming from the gods, divine, celestial, AV.; Br.; Mn.; MBh. &c.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "sacred to the gods (-tIrTa n. the tips of the fingers, Mn. ii, 59; cf. s.v.; \u00b0vIdik f. the north, L.; cf. 2. diS)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "royal (vAc), R\u0101jat. v, 205",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "depending on fate, fatal, K\u0101v.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "dE/va   m. (with or without vivAha) a form of marriage, the gift of a daughter at a sacrifice to the officiating priest, Mn. iii, 21; 28",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "the knowledge of portents, \u015aa\u1e43k.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "patr. of Atharvan, \u015aBr.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "pl. the attendants of a deity, T\u0101\u1e47\u1e0dBr. xvii, 1, 1",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "dE/va   n. a deity (cf. kula-), BhP. iii, 1, 35 &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "(scil. karman, kArya &c.) a religious offering or rite, Y\u0101j\u00f1.; MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "dE/va   n. divine power or will, destiny, fate, chance (\u00b0vAt ind. by chance, accidentally), AV.; Mn.; MBh. &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96788"
+          }
+        },
+        {
+          "definition": "2. dEva   V\u1e5bddhi form of deva in comp.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "96855"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "dEva",
+        "pos": "noun",
+        "features": {
+          "gender": [
+            "neuter"
+          ],
+          "declension": "I"
+        },
+        "gender": [
+          "neuter"
+        ]
+      },
+      "source": "cdsl",
+      "metadata": {
+        "dict": "mw",
+        "dictionary": "mw",
+        "count": 36
+      }
+    },
+    {
+      "word": "deva",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "deva  a. (vI f.) [div-ac] 1 Divine, celestial; Bg. 11. 11;   Ms. 12. 117. 2 Shining; yajYasya  devamftvijaM Rv. 1. 1. 1. 3 Fit to be  worshipped or honoured. \u2014 vaH 1 A god, deity; eko devaH keSavo vA Sivo vA Bh. 3. 120. 2 (a) The god of rain, an epithet of Indra; as in dvAdaSa  varzARi devo na vavarza. (b) A cloud. 3 A divine man, Br\u0101hma\u1e47a. 4 A king, ruler, as in manuzyadeva. 5 A title affixed to the names of  Br\u0101hma\u1e47as; as in goviMdadeva, puruzottamadeva &c. 6 (In dramas) A title of honour used in addressing a king, (\u2018My lord\u2019, \u2018Your majesty\u2019);   tataSca deva Ve. 4; yaTAjYApayati devaH &c. 7 Quicksilver. 8 The  Supreme Spirit. 9 A fool. 10 A  (pb)  child. 11 A man following any particular business. 12 A lover. 13 Emulation. 14 Sport, play. \u2014 vaM An organ of sense. [cf. L. deus; Gr. deos]. Comp. \u2014 aMSaH a partial  incarnation of god. \u2014 agAraH, -raM a  temple. \u2014 aMganA a celestial damsel, an apsaras. \u2014 atidevaH, -aDidevaH  1 the highest god.  2 an epithet of (1) \u015aiva. (2) Buddha. (3) Vi\u1e63\u1e47u. \u2014 aDipaH  1 an epithet of Indra.  2 the supreme god. \u2014 anucaraH,  \u2014 anuyAyin m. an attendant or follower of a god. \u2014 aMDas n., \u2014 annaM  1 the food of gods, divine food, ambrosia.  2 food that has been first offered to an idol; see Ms. 5. 7 and Kull. thereon. \u2014 aBIzwa a.  1 liked by or dear to gods.  2 sacred or dedicated to a deity. \u2014 (zwA) piper betel. \u2014 araRyaM the garden of gods, the Nandana garden; R. 10. 80. \u2014 ariH a demon. \u2014 arcanaM, -nA the worship of gods. \u2014 AvasaTaH a temple. \u2014 aSvaH an  epithet of uccEHSravas, the horse of  Indra. \u2014 AkrIqaH \u2018the garden of the gods,\u2019 Nandana garden. \u2014 AjIvaH, \u2014 AjIvin m.  1 an attendant upon an idol.  2 a low Br\u0101hma\u1e47a  subsisting by attendance upon an idol and upon the offerings made to it. \u2014 Atman a.  1 consecrated, holy, sacred.  2 of a divine nature. (\u2014 m.)  1 the divine soul.  2 the holy fig-tree. \u2014 AyatanaM a temple;   Ms. 4. 46. \u2014 AyuDaM  1 a divine weapon.  2 rainbow. \u2014 AyuzaM the life-time of a god. \u2014 AlayaH  1 heaven.  2 a temple. \u2014 AvAsaH  1 heaven.  2 the holy fig-tree (aSvatTa).  3 a temple.  4 the Sumeru mountain. \u2014 AhAraH nectar, ambrosia. \u2014 ij a. (nom. sing. devew-q) worshipping the gods. \u2014 ijyaH an epithet of  B\u1e5bhaspati, preceptor of the gods. \u2014 iMdraH  1 an epithet of Indra.  2 of \u015aiva. \u2014 izwa a. dear to gods. \u2014 (zwaH) bdellium. \u2014 (zwA) the wild lime tree. \u2014 ISaH an epithet of (1)  Indra. (2) \u015aiva. (3) Vi\u1e63\u1e47u. (4) Brahman. \u2014 (SI) N. of Durg\u0101; also of Devak\u012b, mother of K\u1e5b\u1e63\u1e47a. \u2014 ISvaraH N. of (1) \u015aiva. (2) Indra. \u2014 udyAnaM  1 divine garden.  2 the Nandana garden.  3 a garden near a temple. \u2014 fziH (devarziH)  1 a  deified saint, divine sage, such as atri,  (pb)  Bfgu, pulastya, aMgiras &c., evaMvAdini devarzO Ku. 6. 84 (i. e. aMgiras).  2 an epithet of N\u0101rada; Bg. 10. 13, 26. \u2014 okas n. the mountain  Sumeru. \u2014 kanyA a celestial damsel, a nymph. \u2014 karman n., \u2014 kAryaM  1 a  religious act or rite.  2 the worship of gods. \u2014 kAzWaM the Devad\u0101ru tree. \u2014 kuwaM a temple. \u2014 kuMqaM a natural spring. \u2014 kulaM  1 a temple.  2 a race of gods.  3 a group of gods. \u2014 kulyA the celestial Ganges.   \u2014 kusumaM cloves. \u2014 KAtaM, -KAtakaM  1 a  natural hollow among mountains.  2 a natural pond or reservoir;   Ms. 4. 203.  3 a pond near a temple. \u00b0bila a cavern, chasm. \u2014 gaRaH a class of gods. \u2014 gaRikA an apsaras; q. v. \u2014 gaMDarvaH an epithet of N\u0101rada. \u2014 (rvaM) a particular mode of singing.   \u2014 garjanaM thunder. \u2014 gAyanaH a celestial chorister, a Gandharva. \u2014 giriH N. of a mountain; Me. 42. \u2014 guruH  1 an epithet of Ka\u015byapa (the father of gods).  2 of B\u1e5bhaspati (the  preceptor of gods). \u2014 guhI an epithet of Sarasvat\u012b or of a place situated on it. \u2014 guhyaM  1 a secret only known by gods.  2 death. \u2014 gfhaM  1 a  temple.  2 the place of a king.  3 a planetary sphere. \u2014 caryA the  worship or service of gods. \u2014 cikitsakO (du.) A\u015bvins, the twin physicians of gods. \u2014 CaMdaH a pearl-necklace having a hundred strings. \u2014 janaH the gods collectively. \u2014 jAtaM a class of gods. \u2014 jAmiH f. a sister of the gods. \u2014 taruH  1 the holy fig-tree.  2 one of the trees of paradise, (i. e. maMdAra, pArijAta, saMtAna, kalpa, and haricaMdana).  3 the tree in a village (cEtyavfkza) where the villagers usually meet. \u2014 tAqaH  1 fire.  2 an epithet of R\u0101hu. \u2014 tAtaH  1 a sacrifice.  2 N. of Ka\u015byapa. \u2014 tAtiH  1 a god.  2 divine service. \u2014 tIrTaM  1 the right moment for the worship of gods.  2 the tips of the fingers sacred to gods. \u2014 datta a.  1 god-given, granted by the gods.  2 given to the gods (as a village, &c.). \u2014 (ttaH)  1 N. of the conch-shell of Arjuna; Bg. 1. 15.  2 a certain person (used in speaking of men indefinitely); devadattaH  pacati, pIno devadatto divA na BuMkte &c.  3 one of the vital airs exhaled in yawning; devadatto vijfMBaRe, \u00b0agrajaH  (pb)  N. of Buddha. \u2014 darSana a. visiting the gods. \u2014 (naH) N. of N\u0101rada. \u2014 dAru m. n. a species of pine;   Ku. 1. 54; R. 2. 36. \u2014 dAsaH a servant or attendant upon a temple. \u2014 (sI)  1 a female in the service of gods or a temple.  2 a courtezan (employed as a dancer in a temple).  3 the wild citron tree. \u2014 dIpaH the eye. \u2014 duMduBiH  1 a divine drum.  2 the holy basil with red flowers.  3 an epithet of Indra. \u2014 dUtaH a divine envoy or messenger, an angel. \u2014 devaH  1 an epithet of Brahman.  2 of \u015aiva; Ku. 1. 52.  3 of Vi\u1e63\u1e47u. \u2014 droRI a procession with idols. \u2014 DarmaH a religious duty or office. \u2014 DAnI the city of Indra. \u2014 nadI  1 the Ganges.  2 any holy river; Ms. 2. 17. \u2014 naMdin m. N. of the door-keeper of Indra. \u2014 nAgarI N. of the character in which Sanskrit is usually written. \u2014 nATaH \u015aiva.   \u2014 nikAyaH \u2018residence of gods\u2019, paradise, heaven. \u2014 niMdakaH a blasphemer, unbeliever, heretic, atheist.   \u2014 nirmita a. \u2018god-created\u2019, natural. \u2014 patiH an epithet of Indra. \u2014 pAdAH \u2018the royal feet or presence,\u2019 an honorific term for a king; devapAdAH pramARam. \u2014 paTaH  1 \u2018heavenly passage\u2019,  heaven, firmament.  2 the milky way. \u2014 paSuH any animal consecrated to a deity. \u2014 pAtraM an epithet of Agni. \u2014 pur, -purI f. an epithet of  Amar\u0101vat\u012b, the city of Indra. \u2014 pUjyaH an epithet of B\u1e5bhaspati. \u2014 pratikftiH f., \u2014 pratimA an idol, the image of a deity. \u2014 praSnaH \u2018consulting deities\u2019, astrology, fortune-telling. \u2014 priyaH \u2018dear to the gods\u2019, an epithet of \u015aiva; devAnAMpriyaH an irreg. comp. meaning  1 a goat.  2 a fool, idiot like a brute beast, as in   tepyatAtparyajYA devAnAMpriyAH K. P.  3 an ascetic (who renounces the world). \u2014 baliH an oblation to the gods. \u2014 brahman m. an epithet of N\u0101rada. \u2014 brAhmaRaH  1 a Br\u0101hma\u1e47a who lives on the  proceeds of a temple.  2 a venerable Br\u0101hma\u1e47a. \u2014 BavanaM  1 the heaven.  2 a temple.  3 the holy fig-tree. \u2014 BU m. a god. (\u2014 f.) heaven. \u2014 BUmiH f. heaven. \u2014 BUtiH f. an epithet of the Ganges. \u2014 BUyaM divinity, godhead. \u2014 Bft m. an epithet  1 of Vi\u1e63\u1e47u.  2 of Indra. \u2014 Bojyam nectar. \u2014 maRiH  (pb)   1 the jewel of Vi\u1e63\u1e47u called   kOstuBa.  2 the sun.  3 a curl of hair on a horse's neck. \u2014 mAtf f. N. of Aditi, mother of gods.   \u2014 mAtfka a. \u2018having the god of rain or clouds as foster-mother,\u2019 watered only by the clouds, depending on rain-water and not on irrigation, deprived of every other kind of water (as a country); deSo  nadyaMbuvfzwyaMbusaMpannavrIhipAlitaH . syAnnadImAtfko devamAtfkaSca yaTAkramaM .. Ak.; cf. also vitanvati kzemamadevamAtfkAH (i. e.   nadImAtfkAH) cirAya tasmin kurabaScakAMsate   Ki. 1. 17. \u2014 mAnakaH the jewel of Vi\u1e63\u1e47u called kOstuBa. \u2014 mAsaH the eighth month of pregnancy. \u2014 muniH a  divine sage. \u2014 yajanaM a sacrificial place, a place where a sacrifice is  performed; devayajanasaMBave sIte U. 4. \u2014 yaji a. making oblations to gods. \u2014 yajYaH a sacrifice to the superior gods made by oblations to fire, or through fire to the gods; (one of the five daily sacrifices of a Br\u0101hma\u1e47a; see Ms. 3. 81, 85; and paMcayajYa also). \u2014 yajyaM, -yajyA a sacrifice. \u2014 yAtrA \u2018an idol-procession\u2019, any sacred festival when the idols are  carried in procession. \u2014 yAnaM, -raTaH a celestial car. \u2014 yugaM  1 the first of the four ages of the world; also called kftayuga.  2 an age of the gods  comprising four ages of men. \u2014 yoniH  1 a superhuman being, a demigod.  2 a being of divine origin.  3 fuel used in kindling fire; (f. also). \u2014 yozA an apsaras. \u2014 rahasyaM a divine mystery. \u2014 rAj, -rAjaH  1 an epithet of Indra.  2 a king.  3 N. of Buddha. \u2014 latA the Navamallik\u0101 or double jasmine plant. \u2014 liMgaM the image or statue of a deity. \u2014 lokaH heaven, paradise; Ms. 4. 182.   \u2014 vaktraM an epithet of fire. \u2014 vartman n. the sky. \u2014 varDakiH, -Silpin m.  Vi\u015bvakarman, the architect of gods.   \u2014 vARI \u2018a divine voice\u2019, a voice from heaven. \u2014 vAhanaH an epithet of Agni. \u2014 vidyA  1 divine science.  2 the science of Nirukta or etymology.   \u2014 viBAgaH the northern hemisphere. \u2014 viS f., \u2014 viSA a deity. \u2014 vItiH food of the gods. \u2014 vfkzaH the Mand\u0101ra tree.   \u2014 vyacas a. Ved. occupied by the gods. \u2014 vrataM  1 a religious observance, any religious vow.  2 the favourite  (pb)  food of the gods. \u2014 (taH) an epithet of  1 Bh\u012b\u1e63ma.  2 K\u0101rtikeya.   \u2014 SatruH a demon. \u2014 SunI an epithet of  Saram\u0101, the bitch of the gods. \u2014 SeKara the damanaka tree. \u2014 SezaM the  remnants of a sacrifice offered to gods. \u2014 SrIH m. a sacrifice. (f.) Lak\u1e63m\u012b. \u2014 SrutaH an epithet of  1 Vi\u1e63\u1e47u.  2 N\u0101rada.  3 a sacred treatise.  4 a god in general. \u2014 saMDa a. divine. \u2014 saBA  1 an assembly of the gods (suDarman).  2 a council of a king, council-chamber.  3 a  gamblinghouse. \u2014 saByaH  1 a gambler.  2 a frequenter of gaming-houses.  3 an attendant on a deity.  4 the keeper of a gambling-house. \u2014 sAyujyaM  identification or unification with a deity conjunction with the gods, deification. \u2014 siMhaH an epithet of \u015aiva. \u2014 suziH a tube or cavity (in the heart) leading to the gods; cf. udAna. \u2014 sfzwA an  intoxicating drink. \u2014 senA  1 the army of gods.  2 N. of the wife of Skanda; skaMdena sAkzAdiva devasenAM   R. 7. 1; (Malli.: \u2014 devasenA = skaMdapatnI; perhaps it merely means \u2018the army of the gods\u2019 personified as Skanda's wife). \u00b0patiH, \u00b0priyaH an epithet of  K\u0101rtikeya. \u2014 svaM \u2018property of gods,\u2019  property applicable to religious  purposes or endowments; yadDanaM  yajYaSIlAnAM devasvaM tadvidurbuDAH Ms. 11. 20, 26. \u00b0apaharaRaM sacrilege. \u2014 havis n. an animal offered to gods at a  sacrifice. \u2014 hUtiH f.  1 invocation of the gods.  2 N. of a daughter of Manu Sv\u0101yambhuva and wife of Kardama. \u2014 heqanaM an offence against the gods. \u2014 hetiH a divine weapon.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "ap90",
+            "id": "15626"
+          }
+        },
+        {
+          "definition": "dEva  a. (vI f.) [devAdAgataH aR]  Relating to gods, caused by or  coming from gods, divine, celestial; saMskftaM nAma dEvI vAganvAKyAtA maharziBiH K\u0101v. 1. 33; dEvInAM mAnuzIRAM ca  pratihartA tvamApadAM R. 1. 60; Y. 2. 235; Bg. 4. 25, 9. 13, 16. 3; Ms. 3. 75. \u2014 vaH (i. e. vivAhaH) One of the eight forms of marriage, that in which the daughter is given away at a sacrifice to the officiating priest; yajYasya ftvije dEvaH Y. 1. 59; (for the eight forms of marriage see udvAha or Ms. 3. 21). \u2014 vaM 1 Fate, destiny, luck, fortune; dEvamavidvAMsaH pramARayaMti Mu. 3; vinA puruzakAreRa dEvamatra na  siDyati \u2018God helps those who help  (pb)  themselves\u2019; dEvaM nihatya kuru  pOruzama tmaSaktyA Pt. 1. 361. (dEvAt by chance, luckily, accidentally). 2 A god, deity. 3 A religious rite or offering, an oblation to gods. 4 A kind of \u015ar\u0101ddha ceremony. 5 Parts of the hands sacred to the gods, i. e. the tips of the fingers; cf.   Ms. 2. 59. \u2014 vI A woman married  according to the form of marriage called daiva q. v. above. Comp. \u2014 atyayaH evil resulting from  unusual natural phenomena. \u2014 aDIna \u2014 Ayatta a. dependent on fate;   dEvAyattaM kule janma madAyattaM tu pOruzaM   Ve. 3. 33. \u2014 ahorAtraH a day of the gods. i. e. the human year. \u2014 upahata a.  illfated, unfortunate; Mu. 6. 8.   \u2014 karnan n. offering oblations to gods. \u2014 kfta a.  1 fated.  2 natural.   \u2014 kovid, -ciMtakaH, -jYaH an astrologer, a fortune-teller; Y. 1. 313;   K\u0101m. 9. 25. \u2014 gatiH f. turn or course of fate; muktAjAlaM ciraparicitaM tyAjito dEvagatyA Me. 96; Pt. 3. 174. \u2014 taMtra a.  dependent on fate. \u2014 dIpaH the eye. \u2014 durvipAkaH hardness of fortune,  adverseness or unpropitiousness of fate, an evil turn of fate; U. 1. 40 \u2014 dozaH badness of fate. \u2014 para a.  1 trusting to fate, a fatalist.  2 fated, predestined. \u2014 praSnaH  1  fortune-telling, astrology.  2 a voice from heaven. \u2014 yugaM \u2018a Yuga of the gods\u2019, said to consist of 12000 divine years, but see Kull. on Ms. 1. 71. \u2014 yogaH a lucky  coincidence, fortuitous combination,  fortune, chance; (dEvayogena, dEvayogAt fortunately, accidentally). \u2014 leKakaH a fortune-teller, an astrologer.   \u2014 vaSaH, -SaM the power of destiny,  subjection to fate. \u2014 vARI  1 a voice from heaven.  2 the Sanskrit language; cf. K\u0101v. 1. 33 quoted above. \u2014 hIna a. ill-fated, unfortunate, unlucky.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "ap90",
+            "id": "15674"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "dEva",
+        "pos": "unknown",
+        "features": {}
+      },
+      "source": "cdsl",
+      "metadata": {
+        "dict": "ap90",
+        "dictionary": "ap90",
+        "count": 2
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 3
+  },
+  "unified_sources": [
+    "cdsl",
+    "heritage"
+  ],
+  "source_present": true
+}

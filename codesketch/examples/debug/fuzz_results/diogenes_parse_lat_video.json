@@ -1,0 +1,376 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "lat",
+    "word": "video",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "chunks": [
+      {
+        "logeion": "https://logeion.uchicago.edu/video",
+        "morphology": {
+          "morphs": [
+            {
+              "stem": [
+                "video\u0304",
+                "video"
+              ],
+              "tags": [
+                "pres",
+                "ind",
+                "act",
+                "1st",
+                "sg"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "reference_id": "78195559",
+        "definitions": {
+          "blocks": [
+            {
+              "entry": "video, v\u012bdi, v\u012bsum, 2 (viden', i.e. videsne, Plaut. Ep. 2, 2, 37 (217); Ter. Eun. 241; 265; 754; Cat. 61, 98; Tib. 2, 2, 17; Verg. A. 6, 779; inf. viderier, Cic. Dom. 53, 136; Ter. Hec. 759: vid\u0115, Plaut. Ps. 1, 1, 46 (48)), v. a. and n. Sanscr. root vid-, v\u0113da, know; vind\u0101mi, find; cf. v\u0113da-s, sacred book; Gr. root \u1f30\u03b4, \u03dd\u03b9\u03b4-, in \u03b5\u1f36\u03b4\u03bf\u03bd, saw; \u03bf\u1f36\u03b4\u03b1, know; Germ. wissen; Engl. wit, wot, to see, perceive, with the eyes (syn. cerno).",
+              "entryid": "00",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi009:217": "Plaut. Ep. 2, 2, 37 (217)",
+                "urn:cts:latinLit:phi0134.phi003:241": "Ter. Eun. 241",
+                "urn:cts:latinLit:phi0134.phi003:265": "265",
+                "urn:cts:latinLit:phi0134.phi003:754": "754",
+                "urn:cts:latinLit:phi0472.phi001:61:98": "Cat. 61, 98",
+                "urn:cts:latinLit:phi0660.phi001:2:2:17": "Tib. 2, 2, 17",
+                "urn:cts:latinLit:phi0690.phi003:6:779": "Verg. A. 6, 779",
+                "urn:cts:latinLit:phi0474.phi020:53:136": "Cic. Dom. 53, 136",
+                "urn:cts:latinLit:phi0134.phi005:759": "Ter. Hec. 759",
+                "urn:cts:latinLit:phi0119.phi016:48": "Plaut. Ps. 1, 1, 46 (48)"
+              }
+            },
+            {
+              "entry": "I.  Lit.",
+              "entryid": "00:00"
+            },
+            {
+              "entry": "A.  In gen.: Ph. Tun' me vidisti? Sc. Atque his quidem oculis. Ph. Carebis, credo, Qui plus vident, quam quod vident. Sc. Numquam hercle deterrebor, Quin viderim id quod viderim, Plaut. Mil. 2, 4, 15 (368) sq.: clare oculis video, id. ib. 3, 1, 35 (630): nos enim ne nunc quidem oculis cernimus ea, quae videmus, etc., Cic. Tusc. 1, 20, 46; id. de Or. 3, 40, 161: Considium, quod non vidisset, pro viso sibi renuntiasse, Caes. B. G. 1, 22 fin.: mulieres et pueri qui visum processerant, Sall. J. 94, 5: ut juvat pastas oves Videre properantes domum! Videre fessos vomerem inversum boves Collo trahentes languido! Hor. Epod. 2, 62 sq.: serpentes atque videres Infernas errare canes, id. S. 1, 8, 35 et saep.\u2014With ut and ind. (po\u00ebt.): viden', ut geminae stant vertice cristae? Verg. A. 6, 779: viden' ut faces Splendidas quatiunt comas? Cat. 61, 77.\u2014With ut and subj.: nonne vides, ut tota tremor pertemptet equorum Corpora? Verg. G. 3, 250: nonne vides ut ... Antennae gemant? Hor. C. 1, 14, 3.\u2014Pass.: ubi sol sex mensibus continuis non videtur, Varr. R. R. 1, 2, 4: a se disertos visos esse multos, Quint. 8, praef. \u00a7 13; cf. id. 12, 1, 21: consulis ante pedes ire viderer eques, Ov. P. 4, 9, 18.\u2014 Absol., to see, i. e. to have the eyes open, to be awake, Verg. E. 6, 21.\u2014Impers. pass.: De. Vide sis modo etiam. Ly. Visum'st, Plaut. Merc. 2, 2, 52 (323); id. As. 3, 3, 95 (685).\u2014",
+              "entryid": "00:00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi012:368": "Plaut. Mil. 2, 4, 15 (368)",
+                "urn:cts:latinLit:phi0119.phi012:630": "id. ib. 3, 1, 35 (630)",
+                "urn:cts:latinLit:phi0474.phi049:1:20:46": "Cic. Tusc. 1, 20, 46",
+                "urn:cts:latinLit:phi0474.phi037:3:40:161": "id. de Or. 3, 40, 161",
+                "urn:cts:latinLit:phi0448.phi001:1:22": "Caes. B. G. 1, 22 fin.",
+                "urn:cts:latinLit:phi0631.phi002:94:5": "Sall. J. 94, 5",
+                "urn:cts:latinLit:phi0893.phi003:2:62": "Hor. Epod. 2, 62",
+                "urn:cts:latinLit:phi0893.phi004:1:8:35": "id. S. 1, 8, 35",
+                "urn:cts:latinLit:phi0690.phi003:6:779": "Verg. A. 6, 779",
+                "urn:cts:latinLit:phi0472.phi001:61:77": "Cat. 61, 77",
+                "urn:cts:latinLit:phi0690.phi002:3:250": "Verg. G. 3, 250",
+                "urn:cts:latinLit:phi0893.phi001:1:14:3": "Hor. C. 1, 14, 3",
+                "urn:cts:latinLit:phi0684.phi002:1:2:4": "Varr. R. R. 1, 2, 4",
+                "urn:cts:latinLit:phi1002.phi001:8:pr:13": "Quint. 8, praef. \u00a7 13",
+                "urn:cts:latinLit:phi1002.phi001:12:1:21": "id. 12, 1, 21",
+                "urn:cts:latinLit:phi0959.phi009:4:9:18": "Ov. P. 4, 9, 18",
+                "urn:cts:latinLit:phi0690.phi001:6:21": "Verg. E. 6, 21",
+                "urn:cts:latinLit:phi0119.phi011:323": "Plaut. Merc. 2, 2, 52 (323)",
+                "urn:cts:latinLit:phi0119.phi002:685": "id. As. 3, 3, 95 (685)"
+              }
+            },
+            {
+              "entry": "2.  Transf.",
+              "entryid": "00:00:00:00"
+            },
+            {
+              "entry": "a.  Of things (poet.), to see: (Apenninus) Gallica rura videt, Luc. 2, 429: et casus abies visura marinos, i. e. to experience, Verg. G. 2, 68.\u2014",
+              "entryid": "00:00:00:00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0917.phi001:2:429": "Luc. 2, 429",
+                "urn:cts:latinLit:phi0690.phi002:2:68": "Verg. G. 2, 68"
+              }
+            },
+            {
+              "entry": "b.  Of places, etc., to look out on, afford a view of (post-Aug.): triclinium hortum et gestationem videt, Plin. Ep. 2, 17, 13.\u2014",
+              "entryid": "00:00:00:00:01",
+              "citations": {
+                "urn:cts:latinLit:phi1318.phi001:2:17:13": "Plin. Ep. 2, 17, 13"
+              }
+            },
+            {
+              "entry": "c.  Of the other senses, to perceive, observe any thing: vidistin' toto sonitus procurrere caelo? Prop. 2, 16 (3, 8), 49: mugire videbis Sub pedibus terram et descendere montibus ornos, Verg. A. 4, 490: tum videres Stridere secret\u0101 divisos aure susurros, Hor. S. 2, 8, 77: naso poljam haec quidem videt plus quam oculis, Plaut. Mil. 4, 6, 44 (1259).\u2014",
+              "entryid": "00:00:00:00:02",
+              "citations": {
+                "urn:cts:latinLit:phi0620.phi001:2:16:49": "Prop. 2, 16 (3, 8), 49",
+                "urn:cts:latinLit:phi0690.phi003:4:490": "Verg. A. 4, 490",
+                "urn:cts:latinLit:phi0893.phi004:2:8:77": "Hor. S. 2, 8, 77",
+                "urn:cts:latinLit:phi0119.phi012:1259": "Plaut. Mil. 4, 6, 44 (1259)"
+              }
+            },
+            {
+              "entry": "B.  In partic., to see on purpose, to look at any thing: vide sis signi quid siet, Plaut. Am. 2, 2, 155 (787); cf.: vide, tali ubi sint, id. Most. 1, 3, 151 (307): illud vide, os ut sibi distorsit carnufex, Ter. Eun. 670: vide, si non os inpudens Videtur, id. ib. 839; cf.: specta me, a threatening expression, Plaut. As. 1, 2, 19 (145) al.: quin tu me vides? only look at me! i. e. see what I have done! Cic. Pis. 25, 61.\u2014",
+              "entryid": "00:00:01",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi001:787": "Plaut. Am. 2, 2, 155 (787)",
+                "urn:cts:latinLit:phi0119.phi013:307": "id. Most. 1, 3, 151 (307)",
+                "urn:cts:latinLit:phi0134.phi003:670": "Ter. Eun. 670",
+                "urn:cts:latinLit:phi0134.phi003:839": "id. ib. 839",
+                "urn:cts:latinLit:phi0119.phi002:145": "Plaut. As. 1, 2, 19 (145)",
+                "urn:cts:latinLit:phi0474.phi027:25:61": "Cic. Pis. 25, 61"
+              }
+            },
+            {
+              "entry": "II.  Trop.",
+              "entryid": "00:01"
+            },
+            {
+              "entry": "A.  In gen., to see with the mind's eye, to perceive, mark, observe, discern, understand, comprehend, be aware, know, etc. (class.; syn. percipio): ad te, ut video, comminus accessit, Cic. Att. 2, 2, 2: quem exitum ego tam video animo, quam ea, quae oculis cernimus, id. Fam. 6, 3, 2: aperte enim adulantem nemo non videt, sees through, detects, id. Lael. 26, 99: si dormientes aliquid animo videre videamur, id. Ac. 2 (Luc.), 40, 125: aliquid in somnis, id. N. D. 1, 29, 82: somnia, id. Div. 2, 71, 147: quod ego, cur nolim, nihil video, id. Fam. 9, 6, 2: nonne vobis videtur is animus qui plus cernat et longius, videre se ad meliora proficisci: ille autem cui obtusior est acies non videre? id. Sen. 23, 83.\u2014With comp., plus, etc.: ut is qui illusus sit plus vidisse videatur, to have seen farther, had more insight, Cic. Lael. 26, 99: videre acutius atque acrius vitia in dicente quam recta, id. de Or. 1, 25, 116: aliena melius videre et dijudicare, Ter. Heaut. 504: cum me vidisse plus fateretur, se speravisse meliora, that I had seen farther, Cic. Phil. 2, 15, 39; cf.: sin autem vos plus in re public\u0101 vidistis, id. Imp. Pomp. 22, 64; cf.: vos universos in consule deligendo plurimum vidisse fateantur, id. Agr. 2, 37, 103: di vatesque eorum in futurum vident, Liv. 6, 12.\u2014With two accs.: quem virum Crassum vidimus, Cic. Sen. 17, 61; cf.: officiorum conjunctione me privatum videbam, id. Brut. 1, 1: cum invidiosum se propter nimias opes viderit, Just. 32, 4, 4.\u2014With ut and ind. (po\u00ebt.): nonne vides, croceos ut Tmolus odores, India mittit ebur, Verg. G. 1, 56.\u2014",
+              "entryid": "00:01:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi057:2:2:2": "Cic. Att. 2, 2, 2",
+                "urn:cts:latinLit:phi0474.phi056:6:3:2": "id. Fam. 6, 3, 2",
+                "urn:cts:latinLit:phi0474.phi052:26:99": "Cic. Lael. 26, 99",
+                "urn:cts:latinLit:phi0474.phi046:40:125": "id. Ac. 2 (Luc.), 40, 125",
+                "urn:cts:latinLit:phi0474.phi050:1:29:82": "id. N. D. 1, 29, 82",
+                "urn:cts:latinLit:phi0474.phi053:2:71:147": "id. Div. 2, 71, 147",
+                "urn:cts:latinLit:phi0474.phi056:9:6:2": "id. Fam. 9, 6, 2",
+                "urn:cts:latinLit:phi0474.phi051:23:83": "id. Sen. 23, 83",
+                "urn:cts:latinLit:phi0474.phi037:1:25:116": "id. de Or. 1, 25, 116",
+                "urn:cts:latinLit:phi0134.phi002:504": "Ter. Heaut. 504",
+                "urn:cts:latinLit:phi0474.phi035:2:15:39": "Cic. Phil. 2, 15, 39",
+                "urn:cts:latinLit:phi0474.phi009:22:64": "id. Imp. Pomp. 22, 64",
+                "urn:cts:latinLit:phi0474.phi011:2:37:103": "id. Agr. 2, 37, 103",
+                "urn:cts:latinLit:phi0914.phi001:6:12": "Liv. 6, 12",
+                "urn:cts:latinLit:phi0474.phi051:17:61": "Cic. Sen. 17, 61",
+                "urn:cts:latinLit:phi0474.phi039:1:1": "id. Brut. 1, 1",
+                "urn:cts:latinLit:phi2806.phi001:32:4:4": "Just. 32, 4, 4",
+                "urn:cts:latinLit:phi0690.phi002:1:56": "Verg. G. 1, 56"
+              }
+            },
+            {
+              "entry": "B.  In partic.",
+              "entryid": "00:01:01"
+            },
+            {
+              "entry": "1.  To look at, look to, consider, to think or reflect upon (cf.: reputo, considero): duae condiciones sunt: utram tu accipias, vide, Plaut. Bacch. 4, 9, 118 (1042): nunc ea videamus, quae contra ab his disputari solent, Cic. Ac. 2 (Luc.), 13, 40: id primum videamus, qu\u0101tenus amor in amiciti\u0101 progredi debeat, id. Lael. 11, 36: sed videamus Herculem ipsum, id. Tusc. 2, 8, 20 Klotz ad loc.: quamobrem et haec videnda et pecuniae fugienda cupiditas, id. Off. 1, 20, 68: te moneo: videas etiam atque etiam et consideres, quid agas, quo progrediare, etc., id. Verr. 2, 5, 68, \u00a7 174: legi Bruti epistolam non prudenter rescriptam: sed ipse viderit, let him see to that himself, id. Att. 12, 21, 1; so, viderit, Ov. A. A. 2, 371; id. Tr. 5, 2, 43; cf.: quam id recte faciam, viderint sapientes, Cic. Lael. 3, 10; and: quae (ars) quam sit facilis, illi viderint, qui, etc.... deinde etiam tu ipse videris, qui eam artem facilem esse dicis, id. de Or. 1, 58, 246: viderint ista officia viri boni, id. Quint. 17, 55.\u2014",
+              "entryid": "00:01:01:00",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi004:1042": "Plaut. Bacch. 4, 9, 118 (1042)",
+                "urn:cts:latinLit:phi0474.phi046:13:40": "Cic. Ac. 2 (Luc.), 13, 40",
+                "urn:cts:latinLit:phi0474.phi052:11:36": "id. Lael. 11, 36",
+                "urn:cts:latinLit:phi0474.phi049:2:8:20": "id. Tusc. 2, 8, 20",
+                "urn:cts:latinLit:phi0474.phi055:1:20:68": "id. Off. 1, 20, 68",
+                "urn:cts:latinLit:phi0474.phi005:2:5:174": "id. Verr. 2, 5, 68, \u00a7 174",
+                "urn:cts:latinLit:phi0474.phi057:12:21:1": "id. Att. 12, 21, 1",
+                "urn:cts:latinLit:phi0959.phi004:2:371": "Ov. A. A. 2, 371",
+                "urn:cts:latinLit:phi0959.phi008:5:2:43": "id. Tr. 5, 2, 43",
+                "urn:cts:latinLit:phi0474.phi052:3:10": "Cic. Lael. 3, 10",
+                "urn:cts:latinLit:phi0474.phi037:1:58:246": "id. de Or. 1, 58, 246",
+                "urn:cts:latinLit:phi0474.phi001:17:55": "id. Quint. 17, 55"
+              }
+            },
+            {
+              "entry": "2.  To look out for, see to, care for, provide: atque idem (sapiens) ita acrem in omnis partis aciem intendit, ut semper videat sedem sibi ac locum sine molesti\u0101 vivendi, Cic. Tusc. 4, 17, 38: antecesserat Statius, ut prandium nobis videret, i. e. provide, id. Att. 5, 1, 3: dulciculae potionis aliquid videamus et cibi, id. Tusc. 3, 19, 46: aliud lenius (vinum), Ter. Heaut. 459: Philippum dixisse constabat, videndum sibi aliud esse consilium, illo senatu se rem publicam gerere non posse, Cic. de Or. 3, 1, 2: absque eo esset, Recte ego mihi vidissem, Ter. Phorm. 190.\u2014",
+              "entryid": "00:01:01:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi049:4:17:38": "Cic. Tusc. 4, 17, 38",
+                "urn:cts:latinLit:phi0474.phi057:5:1:3": "id. Att. 5, 1, 3",
+                "urn:cts:latinLit:phi0474.phi049:3:19:46": "id. Tusc. 3, 19, 46",
+                "urn:cts:latinLit:phi0134.phi002:459": "Ter. Heaut. 459",
+                "urn:cts:latinLit:phi0474.phi037:3:1:2": "Cic. de Or. 3, 1, 2",
+                "urn:cts:latinLit:phi0134.phi004:190": "Ter. Phorm. 190"
+              }
+            },
+            {
+              "entry": "3.  To take care, see to it, make sure, with final clause: navem idoneam ut habeas, diligenter videbis, Cic. Fam. 16, 1, 2; cf.: videret, ut quam primum tota res transigeretur, id. Quint. 5, 20: ne fortuna mea desit, videte, Liv. 6, 18, 8.\u2014Impers. pass.: videndum est, ne absit benignitas ... tum, ut pro dignitate cuique tribuatur, Cic. Off. 1, 14, 42: ut Latine loquamur, non solum videndum est ut verba efferamus ea, etc., id. de Or. 3, 11, 40; cf.: vos videte, quid aliae faciant isto loco feminae: et ne, cum velitis, exire non liceat, id. Fam. 14, 18, 2.\u2014",
+              "entryid": "00:01:01:02",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi056:16:1:2": "Cic. Fam. 16, 1, 2",
+                "urn:cts:latinLit:phi0474.phi001:5:20": "id. Quint. 5, 20",
+                "urn:cts:latinLit:phi0914.phi001:6:18:8": "Liv. 6, 18, 8",
+                "urn:cts:latinLit:phi0474.phi055:1:14:42": "Cic. Off. 1, 14, 42",
+                "urn:cts:latinLit:phi0474.phi037:3:11:40": "id. de Or. 3, 11, 40",
+                "urn:cts:latinLit:phi0474.phi056:14:18:2": "id. Fam. 14, 18, 2"
+              }
+            },
+            {
+              "entry": "4.  To see, i. e. reach, attain, obtain, enjoy.",
+              "entryid": "00:01:01:03"
+            },
+            {
+              "entry": "a.  In gen.: qui suo toto consulatu somnum non viderit, Cic. Fam. 7, 30, 1.\u2014",
+              "entryid": "00:01:01:03:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi056:7:30:1": "Cic. Fam. 7, 30, 1"
+              }
+            },
+            {
+              "entry": "b.  Esp., to see, live to see a period or event: ex multis diebus, quos in vit\u0101 celeberrimos laetissimosque viderit, Cic. Lael. 3, 12: utinam eum diem videam, cum, etc., id. Att. 16, 11, 1: duxi uxorem: quam ibi miseriam vidi! Ter. Ad. 867: spero multa vos liberosque vestros in re public\u0101 bona esse visuros, Cic. Mil. 28, 78: multas jam summorum imperatorum clarissimas victorias aetas nostra vidit, id. ib. 28, 77: tantum pro! degeneramus a parentibus nostris, ut praeter quam oram illi Punicas vagari classes dedecus esse imperii sui duxerint, eam nos nunc plenam hostium jam factam videamus, Liv. 22, 14, 6; cf. id. 6, 14, 4.\u2014",
+              "entryid": "00:01:01:03:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi052:3:12": "Cic. Lael. 3, 12",
+                "urn:cts:latinLit:phi0474.phi057:16:11:1": "id. Att. 16, 11, 1",
+                "urn:cts:latinLit:phi0134.phi006:867": "Ter. Ad. 867",
+                "urn:cts:latinLit:phi0474.phi031:28:78": "Cic. Mil. 28, 78",
+                "urn:cts:latinLit:phi0474.phi031:28:77": "id. ib. 28, 77",
+                "urn:cts:latinLit:phi0914.phi001:22:14:6": "Liv. 22, 14, 6",
+                "urn:cts:latinLit:phi0914.phi001:6:14:4": "id. 6, 14, 4"
+              }
+            },
+            {
+              "entry": "5.  Pregn., to see, i. e. go to see, visit (colloq.; cf.: viso, inviso): sed Septimium vide et Laenatem, Cic. Att. 12, 14, 1: qu\u0101 re etiam Othonem vide, id. ib. 12, 37, 4: videbis ergo hominem, si voles, id. ib. 4, 12 init.: mane videas Plinium domi, Plin. Ep. 1, 5, 8; Suet. Tib. 7.\u2014Pass., to receive attention, be visited, Amm.14, 7, 10.\u2014",
+              "entryid": "00:01:01:04",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi057:12:14:1": "Cic. Att. 12, 14, 1",
+                "urn:cts:latinLit:phi0474.phi057:12:37:4": "id. ib. 12, 37, 4",
+                "urn:cts:latinLit:phi0474.phi057:4:12": "id. ib. 4, 12",
+                "urn:cts:latinLit:phi1318.phi001:1:5:8": "Plin. Ep. 1, 5, 8",
+                "urn:cts:latinLit:phi1348.phi001:life=tib.:7": "Suet. Tib. 7",
+                "urn:cts:latinLit:stoa0023.stoa001:14:7:10": "Amm.14, 7, 10"
+              }
+            },
+            {
+              "entry": "6.  Me vide, rely on me, trust me, believe me, a formula of exhortation and assurance (ante-class.), Plaut. Trin. 3, 3, 79 (807) Brix ad loc.; id. Mil. 2, 4, 23 (376) Lorenz ad loc.; id. Rud. 3, 3, 18 (681); id. Merc. 5, 4, 53 (1014); Ter. And. 350; id. Phorm. 711.\u2014",
+              "entryid": "00:01:01:05",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi019:807": "Plaut. Trin. 3, 3, 79 (807)",
+                "urn:cts:latinLit:phi0119.phi012:376": "id. Mil. 2, 4, 23 (376)",
+                "urn:cts:latinLit:phi0119.phi017:681": "id. Rud. 3, 3, 18 (681)",
+                "urn:cts:latinLit:phi0119.phi011:1014": "id. Merc. 5, 4, 53 (1014)",
+                "urn:cts:latinLit:phi0134.phi001:350": "Ter. And. 350",
+                "urn:cts:latinLit:phi0134.phi004:711": "id. Phorm. 711"
+              }
+            },
+            {
+              "entry": "7.  Pass., to be looked upon or regarded in any manner, i. e. to seem, appear to be or do any thing: numquam periculi fug\u0101 committendum est, ut imbelles timidique videamur, Cic. Off. 1, 24, 83: ne id, quod speciem haberet honesti, pugnaret cum eo, quod utile videretur, id. ib. 3, 2, 7: multo rem turpiorem fore et iniquiorem visum iri intellegebant, id. Verr. 2, 2, 17, \u00a7 42; cf. id. de Or. 3, 11, 42: ex quo illorum beata mors videtur, horum vita laudabilis, id. Lael. 7, 23.\u2014Parenthet. (cf. c. infra): cum ceteris, ut quidem videor, tum mihi ipse displiceo, Cic. Fam. 4, 13, 3: ea vocabula non, ut videntur, easdem res significant, id. ib. 3, 34, 84.\u2014With dat. of pers.: cetera, quae quibusdam admirabilia videntur, etc., Cic. Lael. 23, 86: digna mihi res cum omnium cognitione tum nostr\u0101 familiaritate visa est, id. ib. 1, 4: idonea mihi Laelii persona visa est, quae, etc., id. ib.: a natur\u0101 mihi videtur potius quam ab indigenti\u0101 orta amicitia, id. ib. 8, 27: quae Aristoni et Pyrrhoni omnino visa sunt pro nihilo, id. Fin. 2, 13, 43: quod idem Scipioni videbatur, id. ib. 4, 14.\u2014Parenthet. (cf. c. infra): quam nostris libris satis diligenter, ut tibi quidem videmur, expressimus, Cic. Att. 8, 11, 1: Philargyrus omnia de te, ut mihi quidem visus est, narravit, id. Fam. 4, 13, 3.\u2014",
+              "entryid": "00:01:01:06",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi055:1:24:83": "Cic. Off. 1, 24, 83",
+                "urn:cts:latinLit:phi0474.phi055:3:2:7": "id. ib. 3, 2, 7",
+                "urn:cts:latinLit:phi0474.phi005:2:2:42": "id. Verr. 2, 2, 17, \u00a7 42",
+                "urn:cts:latinLit:phi0474.phi037:3:11:42": "id. de Or. 3, 11, 42",
+                "urn:cts:latinLit:phi0474.phi052:7:23": "id. Lael. 7, 23",
+                "urn:cts:latinLit:phi0474.phi056:4:13:3": "id. Fam. 4, 13, 3",
+                "urn:cts:latinLit:phi0474.phi056:3:34:84": "id. ib. 3, 34, 84",
+                "urn:cts:latinLit:phi0474.phi052:23:86": "Cic. Lael. 23, 86",
+                "urn:cts:latinLit:phi0474.phi052:1:4": "id. ib.",
+                "urn:cts:latinLit:phi0474.phi052:8:27": "id. ib. 8, 27",
+                "urn:cts:latinLit:phi0474.phi048:2:13:43": "id. Fin. 2, 13, 43",
+                "urn:cts:latinLit:phi0474.phi048:4:14": "id. ib. 4, 14",
+                "urn:cts:latinLit:phi0474.phi057:8:11:1": "Cic. Att. 8, 11, 1"
+              }
+            },
+            {
+              "entry": "\u03b2.  With inf.: de familiari illo tuo videor audisse, Cic. de Or. 2, 10, 40; id. N. D. 1, 21, 58: satis facere rei publicae videmur, si, etc., id. Cat. 1, 1, 2: ut beate vixisse videar, quia, etc., id. Lael. 4, 15: solem e mundo tollere videntur, qui amicitiam e vit\u0101 tollunt, id. ib. 13, 47: videre jam videor populum a senatu disjunctum, id. ib. 12, 41; cf.: te vero, Caecili, quem ad modum sit elusurus, videre jam videor, id. Div. in Caecil. 14, 45: vere videor posse contendere, Nep. Att. 12, 4: audire videor undique congerentes nomina po\u00ebtarum, Quint. 10, 1, 56; Vell. 2, 14, 1; Plin. Ep. 10, 61 (69), 1; id. Pan. 17, 1.\u2014With dat. of pers., Cic. Lael. 14, 51: videor mihi perspicere ipsius animum, id. Fam. 4, 13, 5: hoc mihi videor videre, id. Inv. 2, 57, 171. \u2014",
+              "entryid": "00:01:01:06:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi037:2:10:40": "Cic. de Or. 2, 10, 40",
+                "urn:cts:latinLit:phi0474.phi050:1:21:58": "id. N. D. 1, 21, 58",
+                "urn:cts:latinLit:phi0474.phi013:1:1:2": "id. Cat. 1, 1, 2",
+                "urn:cts:latinLit:phi0474.phi052:4:15": "id. Lael. 4, 15",
+                "urn:cts:latinLit:phi0474.phi052:13:47": "id. ib. 13, 47",
+                "urn:cts:latinLit:phi0474.phi052:12:41": "id. ib. 12, 41",
+                "urn:cts:latinLit:phi0474.phi004:14:45": "id. Div. in Caecil. 14, 45",
+                "urn:cts:latinLit:phi0588.phi001:att:12:4": "Nep. Att. 12, 4",
+                "urn:cts:latinLit:phi1002.phi001:10:1:56": "Quint. 10, 1, 56",
+                "urn:cts:latinLit:phi1044.phi001:2:14:1": "Vell. 2, 14, 1",
+                "urn:cts:latinLit:phi1318.phi001:10:61": "Plin. Ep. 10, 61",
+                "urn:cts:latinLit:phi1318.phi002:17:1": "id. Pan. 17, 1",
+                "urn:cts:latinLit:phi0474.phi052:14:51": "Cic. Lael. 14, 51",
+                "urn:cts:latinLit:phi0474.phi056:4:13:5": "id. Fam. 4, 13, 5",
+                "urn:cts:latinLit:phi0474.phi036:2:57:171": "id. Inv. 2, 57, 171"
+              }
+            },
+            {
+              "entry": "\u03b3.  With nom. and inf.: ut exstinctae potius amicitiae quam oppressae esse videantur, Cic. Lael. 21, 78: ut tamquam a praesentibus coram haberi sermo videretur, id. ib. 1, 3: quae (sapientia) videtur in hominem cadere posse, id. ib. 26, 100: visus 'st in somnis pastor ad me adpellere, Att. ap. Cic. Div. 1, 22, 44 B. and K.: ut Aratus ab Jove incipiendum putat, ita nos rite coepturi ab Homero videmur, Quint. 10, 1, 46.\u2014With dat. of pers.: divitior mihi et affluentior videtur esse vera amicitia, Cic. Lael. 16, 58.\u2014",
+              "entryid": "00:01:01:06:00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi052:21:78": "Cic. Lael. 21, 78",
+                "urn:cts:latinLit:phi0474.phi052:1:3": "id. ib. 1, 3",
+                "urn:cts:latinLit:phi0474.phi052:26:100": "id. ib. 26, 100",
+                "urn:cts:latinLit:phi0474.phi053:1:22:44": "Cic. Div. 1, 22, 44",
+                "urn:cts:latinLit:phi1002.phi001:10:1:46": "Quint. 10, 1, 46",
+                "urn:cts:latinLit:phi0474.phi052:16:58": "Cic. Lael. 16, 58"
+              }
+            },
+            {
+              "entry": "\u03b4.  Impers., with acc. and inf. (rare; cf. creditur, in the same constr., and dicitur): non mihi videtur, ad beate vivendum satis posse virtutem, Cic. Tusc. 5, 5, 12: aliis videtur, non incohatam sed perfectam probationem hoc nomen accipere, Quint. 5, 10, 5 Spald.: quae vult videri, se esse prudentiam, Cic. Off. 3, 17, 71: quia videbatur et Limnaeam eodem tempore oppugnari posse, Liv. 36, 13, 9 Weissenb. ad loc.\u2014Absol.: sed mihi contra ea videtur, Sall. J. 85, 2: seque facile, ut mihi videtur, expediunt, Cic. Fin. 1, 20, 66; id. Marcell. 3, 10.\u2014",
+              "entryid": "00:01:01:06:00:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi049:5:5:12": "Cic. Tusc. 5, 5, 12",
+                "urn:cts:latinLit:phi1002.phi001:5:10:5": "Quint. 5, 10, 5",
+                "urn:cts:latinLit:phi0474.phi055:3:17:71": "Cic. Off. 3, 17, 71",
+                "urn:cts:latinLit:phi0914.phi001:36:13:9": "Liv. 36, 13, 9",
+                "urn:cts:latinLit:phi0631.phi002:85:2": "Sall. J. 85, 2",
+                "urn:cts:latinLit:phi0474.phi048:1:20:66": "Cic. Fin. 1, 20, 66",
+                "urn:cts:latinLit:phi0474.phi032:3:10": "id. Marcell. 3, 10"
+              }
+            },
+            {
+              "entry": "b.  In official decisions, as a guarded opinion instead of a positive declaration: majores nostri voluerunt, quae jurati judices cognovissent, ea non ut esse facta, sed ut videri pronuntiarent, Cic. Ac. 2 (Luc.), 47, 146: fecisse videri pronuntiat, id. Verr. 2, 5, 6, \u00a7 14: cum pontifices decressent, videri posse sine religione eam partem areae mihi restitui, id. Att. 4, 2, 3: consul adjecit Senatusconsultum, Ambraciam non videri vi captam esse, Liv. 38, 44, 6: Scipionis sententiam sequuntur, uti ante certam diem Caesar exercitum dimittat: si non faciat, eum adversus rempublicam facturum videri, Caes. B. C. 1, 2.\u2014",
+              "entryid": "00:01:01:06:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi046:47:146": "Cic. Ac. 2 (Luc.), 47, 146",
+                "urn:cts:latinLit:phi0474.phi005:2:5:14": "id. Verr. 2, 5, 6, \u00a7 14",
+                "urn:cts:latinLit:phi0474.phi057:4:2:3": "id. Att. 4, 2, 3",
+                "urn:cts:latinLit:phi0914.phi001:38:44:6": "Liv. 38, 44, 6",
+                "urn:cts:latinLit:phi0448.phi002:1:2": "Caes. B. C. 1, 2"
+              }
+            },
+            {
+              "entry": "c.  Pregn., videtur (alicui), it seems proper, right, or fit, it seems good to any one; he (she, etc.) pleases, likes.",
+              "entryid": "00:01:01:06:02"
+            },
+            {
+              "entry": "\u03b1.  With dat. of pers.: tibi si videbitur, villis iis utere, quae, etc., Cic. Fam. 14, 7, 3: velim Lentulum puerum visas eique de mancipiis, quae tibi videbitur, attribuas, id. Att. 12, 28, 3: qui imitamur, quos cuique visum est, id. Off. 1, 32, 118: ut consul, quem videretur ei, cum imperio mitteret, qui, etc., Liv. 31, 3, 2; 29, 20, 4: si ei videretur, integram rem ad senatum reiceret, if he pleased, a formula of politeness, Liv. 26, 16, 4 Weissenb. ad loc.; 31, 4, 2: ut, si videretur ei, maturaret venire, id. 34, 46, 5.\u2014",
+              "entryid": "00:01:01:06:02:00",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi056:14:7:3": "Cic. Fam. 14, 7, 3",
+                "urn:cts:latinLit:phi0474.phi057:12:28:3": "id. Att. 12, 28, 3",
+                "urn:cts:latinLit:phi0474.phi055:1:32:118": "id. Off. 1, 32, 118",
+                "urn:cts:latinLit:phi0914.phi001:31:3:2": "Liv. 31, 3, 2",
+                "urn:cts:latinLit:phi0914.phi001:29:20:4": "29, 20, 4",
+                "urn:cts:latinLit:phi0914.phi001:26:16:4": "Liv. 26, 16, 4",
+                "urn:cts:latinLit:phi0914.phi001:31:4:2": "31, 4, 2",
+                "urn:cts:latinLit:phi0914.phi001:34:46:5": "id. 34, 46, 5"
+              }
+            },
+            {
+              "entry": "\u03b2.  Without dat.: ubi visum est, sub vesperum dispersi discedunt, Caes. B. G. 5, 58: eam quoque, si videtur, correctionem explicabo, Cic. Ac. 1, 9, 35: nunc, si videtur, hoc, illud alias, id. Tusc. 1, 11, 23: M. Num non vis audire, etc.? A. Ut videtur, as you will, id. ib. 1, 32, 77: si videatur, Liv. 6, 25, 2; 26, 22, 7.",
+              "entryid": "00:01:01:06:02:01",
+              "citations": {
+                "urn:cts:latinLit:phi0448.phi001:5:58": "Caes. B. G. 5, 58",
+                "urn:cts:latinLit:phi0474.phi045:9:35": "Cic. Ac. 1, 9, 35",
+                "urn:cts:latinLit:phi0474.phi049:1:11:23": "id. Tusc. 1, 11, 23",
+                "urn:cts:latinLit:phi0474.phi049:1:32:77": "id. ib. 1, 32, 77",
+                "urn:cts:latinLit:phi0914.phi001:6:25:2": "Liv. 6, 25, 2",
+                "urn:cts:latinLit:phi0914.phi001:26:22:7": "26, 22, 7"
+              }
+            }
+          ],
+          "term": "v\u012dd\u0115o"
+        }
+      }
+    ],
+    "dg_parsed": true,
+    "chunk_types": [
+      "PerseusAnalysisHeader",
+      "DiogenesMatchingReference"
+    ]
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "chunks": 2,
+    "dg_parsed": 1,
+    "chunk_types": 2
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

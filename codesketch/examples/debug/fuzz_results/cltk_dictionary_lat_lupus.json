@@ -1,0 +1,32 @@
+{
+  "target": {
+    "tool": "cltk",
+    "action": "dictionary",
+    "lang": "lat",
+    "word": "lupus",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "latin_dictionary": {
+      "headword": "lupus",
+      "ipa": "'l\u028a.p\u028as",
+      "lewis_1890_lines": [
+        "lupus\n\n\n \u012b, \nm\n\n a wolf: Torva leaena lupum sequitur,\n                lupus ipse capellam, V.: fulvus, O.: Martialis, sacred to Mars, H.: Ambigui, i. e. men in the form of wolves, O.\u2014It was said that a man\n            seen by a wolf before he saw the wolf lost his speech: vox quoque Moerim Iam fugit ipsa;\n            lupi Moerim videre priores, V.\u2014Prov.: lupus in fabul\u0101, talk of the\n            devil, and he appears, T., C.: auribus teneo lupum, i. e.\n            am in great difficulty, T.: Hac urget lupus, hac canis,\n            between two fires, H.: ovem lupo commisti, intrust a sheep\n            to a wolf, T.: tantum curamus frigora, quantum numerum (ovium)\n            lupus, i. e. care not at all, V.\u2014A voracious fish, wolffish, pike,\n            H., V.\u2014A bit armed with points like wolves' teeth (see lupatus): (equus)\n            accipit ore lupos, O.\u2014A hook, grappling iron: lupi\n            ferrei, L."
+      ]
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "latin_dictionary": 3
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

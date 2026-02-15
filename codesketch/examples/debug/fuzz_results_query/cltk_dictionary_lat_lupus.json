@@ -1,0 +1,1029 @@
+{
+  "target": {
+    "tool": "cltk",
+    "action": "dictionary",
+    "lang": "lat",
+    "word": "lupus",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "lupus",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "wolf",
+          "pos": "unknown",
+          "metadata": {
+            "type": "sense"
+          }
+        },
+        {
+          "definition": "grappling iron",
+          "pos": "noun",
+          "metadata": {
+            "type": "sense"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "lupus, lupi",
+        "pos": "noun",
+        "features": {
+          "declension": "2nd",
+          "part_of_speech": "Noun",
+          "case": "Nominative",
+          "number": "Singular",
+          "gender": "Masculine",
+          "variant": "1",
+          "term_analysis": {
+            "stem": "lup",
+            "ending": "us"
+          }
+        },
+        "declension": "2nd",
+        "number": "Singular",
+        "case": "Nominative",
+        "gender": "Masculine"
+      },
+      "source": "whitakers",
+      "metadata": {
+        "raw_lines": [
+          "lup.us               N      2 1 NOM S M                 ",
+          "lupus, lupi  N (2nd) M   [XXXAX]  ",
+          "wolf; grappling iron;"
+        ],
+        "senses": [
+          "wolf",
+          "grappling iron"
+        ],
+        "terms": [
+          {
+            "term": "lup.us",
+            "part_of_speech": "Noun",
+            "declension": "2",
+            "case": "Nominative",
+            "number": "Singular",
+            "gender": "Masculine",
+            "variant": "1",
+            "term_analysis": {
+              "stem": "lup",
+              "ending": "us"
+            }
+          }
+        ],
+        "codeline": {
+          "term": "lupus, lupi",
+          "freq": "Very Frequent",
+          "declension": "2nd",
+          "pos_form": "Masculine",
+          "pos_code": "Noun"
+        }
+      }
+    },
+    {
+      "word": "lupus",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "lupus, i, m. kindred with \u03bb\u03cd\u03ba\u03bf\u03c2; Sanscr. vrika, and our wolf, a wolf.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "I.  Lit.: torva leaena lupum sequitur, lupus ipse capellam, Verg. E. 2, 63; Plin. 10, 63, 88, \u00a7 173; 8, 22, 34, \u00a7 80: Martialis lupus, sacred to Mars, Hor. C. 1, 17, 9; so, Martius, Verg. A. 9, 566: lupus femina for lupa, a she-wolf, Enn. ap. Serv. Verg. A. 2, 355 (Ann. v. 70 Vahl.); id. ap. Non. 378, 18 (ib. v. 73): lupus masculinum (est), quamquam Varro ... lupum feminam dicit, Ennium Pictoremque Fabium secutus, Quint. 1, 6, 12.\u2014According to the belief of the Romans, if a wolf saw a man before the latter saw him, the man became dumb: vox quoque Moerim Jam fugit ipsa; lupi Moerim videre priores, Verg. E. 9, 53; cf. Plin. 8, 22, 34, \u00a7 80.\u2014Prov.: lupus in fabul\u0101 or sermone, said of the appearance of a person when he is spoken of; as we say in English, talk of the devil, and he appears: atque eccum tibi lupum in sermone, Plaut. Stich. 4, 1, 71 (575); Ter. Ad. 537; Serv. Verg. E. 9, 54: de Varrone loquebamur: lupus in fabul\u0101: venit enim ad me, Cic. Att. 13, 33, 4.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00",
+            "citations": {
+              "urn:cts:latinLit:phi0690.phi001:2:63": "Verg. E. 2, 63",
+              "urn:cts:latinLit:phi0978.phi001:10:173": "Plin. 10, 63, 88, \u00a7 173",
+              "urn:cts:latinLit:phi0978.phi001:8:80": "Plin. 8, 22, 34, \u00a7 80",
+              "urn:cts:latinLit:phi0893.phi001:1:17:9": "Hor. C. 1, 17, 9",
+              "urn:cts:latinLit:phi0690.phi003:9:566": "Verg. A. 9, 566",
+              "urn:cts:latinLit:phi1002.phi001:1:6:12": "Quint. 1, 6, 12",
+              "urn:cts:latinLit:phi0690.phi001:9:53": "Verg. E. 9, 53",
+              "urn:cts:latinLit:phi0119.phi018:575": "Plaut. Stich. 4, 1, 71 (575)",
+              "urn:cts:latinLit:phi0134.phi006:537": "Ter. Ad. 537",
+              "urn:cts:latinLit:phi0474.phi057:13:33:4": "Cic. Att. 13, 33, 4"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0690.phi001:2:63": {
+                "text": "Verg. E. 2, 63",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Eclogues",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0978.phi001:10:173": {
+                "text": "Plin. 10, 63, 88, \u00a7 173",
+                "author": "Pliny, the Elder",
+                "work": "Naturalis Historia",
+                "display": "Pliny, the Elder - Naturalis Historia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0978.phi001:8:80": {
+                "text": "Plin. 8, 22, 34, \u00a7 80",
+                "author": "Pliny, the Elder",
+                "work": "Naturalis Historia",
+                "display": "Pliny, the Elder - Naturalis Historia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi001:1:17:9": {
+                "text": "Hor. C. 1, 17, 9",
+                "author": "Horace",
+                "work": "Carmina",
+                "display": "Horace - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:9:566": {
+                "text": "Verg. A. 9, 566",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:1:6:12": {
+                "text": "Quint. 1, 6, 12",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi001:9:53": {
+                "text": "Verg. E. 9, 53",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Eclogues",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi018:575": {
+                "text": "Plaut. Stich. 4, 1, 71 (575)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Stichus",
+                "display": "Plautus, Titus Maccius - Stichus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi006:537": {
+                "text": "Ter. Ad. 537",
+                "author": "Terence",
+                "work": "Adelphi",
+                "display": "Terence - Adelphi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:13:33:4": {
+                "text": "Cic. Att. 13, 33, 4",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b2.  Lupum auribus tenere, to have a wolf by the ears, to be unable to hold and afraid to let go, i. e. to be in a situation of doubt and difficulty, Ter. Phorm. 505; Suet. Tib. 25.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:00",
+            "citations": {
+              "urn:cts:latinLit:phi0134.phi004:505": "Ter. Phorm. 505",
+              "urn:cts:latinLit:phi1348.phi001:life=tib.:25": "Suet. Tib. 25"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0134.phi004:505": {
+                "text": "Ter. Phorm. 505",
+                "author": "Terence",
+                "work": "Phormio",
+                "display": "Terence - Phormio",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1348.phi001:life=tib.:25": {
+                "text": "Suet. Tib. 25",
+                "author": "Suetonius",
+                "work": "Tib",
+                "display": "Suetonius - Tib",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b3.  Hac urget lupus, hac canis angit, on this side the wolf, on that the dog, i. e. to be placed between two fires, Hor. S. 2, 2, 64.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:01",
+            "citations": {
+              "urn:cts:latinLit:phi0893.phi004:2:2:64": "Hor. S. 2, 2, 64"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0893.phi004:2:2:64": {
+                "text": "Hor. S. 2, 2, 64",
+                "author": "Horace",
+                "work": "Satires",
+                "display": "Horace - Satires",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b4.  Lupos apud oves custodes relinquere, Plaut. Ps. 1, 28 (30): ovem lupo committere, to intrust sheep to a wolf, Ter. Eun. 832; cf. o praeclarum custodem ovium, ut aiunt, lupum! Cic. Phil. 3, 11, 27; cf.: plenum montano credis ovile lupo? Ov. A. A. 2, 363.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:02",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi016:30": "Plaut. Ps. 1, 28 (30)",
+              "urn:cts:latinLit:phi0134.phi003:832": "Ter. Eun. 832",
+              "urn:cts:latinLit:phi0474.phi035:3:11:27": "Cic. Phil. 3, 11, 27",
+              "urn:cts:latinLit:phi0959.phi004:2:363": "Ov. A. A. 2, 363"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi016:30": {
+                "text": "Plaut. Ps. 1, 28 (30)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Pseudolus",
+                "display": "Plautus, Titus Maccius - Pseudolus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:832": {
+                "text": "Ter. Eun. 832",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi035:3:11:27": {
+                "text": "Cic. Phil. 3, 11, 27",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Philippicae",
+                "display": "Cicero, Marcus Tullius - Philippicae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi004:2:363": {
+                "text": "Ov. A. A. 2, 363",
+                "author": "Ovid",
+                "work": "Ars Amatoria",
+                "display": "Ovid - Ars Amatoria",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b5.  Lupo agnum eripere, of a difficult undertaking; as in English, to snatch the meat from a dog's mouth, Plaut. Poen. 3, 5, 31 (776).\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:03",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi015:776": "Plaut. Poen. 3, 5, 31 (776)"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi015:776": {
+                "text": "Plaut. Poen. 3, 5, 31 (776)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Poenulus",
+                "display": "Plautus, Titus Maccius - Poenulus",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b6.  Lupus observavit, dum dormitaret canes, of one who watches his opportunity to be unobserved, Plaut. Trin. 1, 2, 133 (171).\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:04",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi019:171": "Plaut. Trin. 1, 2, 133 (171)"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi019:171": {
+                "text": "Plaut. Trin. 1, 2, 133 (171)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Trinummus",
+                "display": "Plautus, Titus Maccius - Trinummus",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b7.  Ov\u012bs ultro fugiat lupus, of a very improbable act, Verg. E. 8, 52.\u2014",
+          "pos": "verb",
+          "metadata": {
+            "entryid": "00:00:05",
+            "citations": {
+              "urn:cts:latinLit:phi0690.phi001:8:52": "Verg. E. 8, 52"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0690.phi001:8:52": {
+                "text": "Verg. E. 8, 52",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Eclogues",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u03b8.  Tantum curamus frigora, quantum numerum (ovium) lupus, i. e. do not care at all, as the wolf does not care whether the number of the sheep is right or not, Verg. E. 7, 51.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00:06",
+            "citations": {
+              "urn:cts:latinLit:phi0690.phi001:7:51": "Verg. E. 7, 51"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0690.phi001:7:51": {
+                "text": "Verg. E. 7, 51",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Eclogues",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "II.  Transf.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "A.  A voracious fish, the wolf-fish or pike, Hor. S. 2, 2, 31; Plin. 9, 54, 79, \u00a7 169; 9, 17, 28, \u00a7 61; Col. 8, 16; Mart. 13, 89; Macr. S. 2, 12 bis.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:00",
+            "citations": {
+              "urn:cts:latinLit:phi0893.phi004:2:2:31": "Hor. S. 2, 2, 31",
+              "urn:cts:latinLit:phi0978.phi001:9:169": "Plin. 9, 54, 79, \u00a7 169",
+              "urn:cts:latinLit:phi0978.phi001:9:61": "9, 17, 28, \u00a7 61",
+              "urn:cts:latinLit:phi0845.phi002:8:16": "Col. 8, 16",
+              "urn:cts:latinLit:phi1294.phi002:13:89": "Mart. 13, 89",
+              "urn:cts:latinLit:stoa0186.stoa001:2:12": "Macr. S. 2, 12"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0893.phi004:2:2:31": {
+                "text": "Hor. S. 2, 2, 31",
+                "author": "Horace",
+                "work": "Satires",
+                "display": "Horace - Satires",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0978.phi001:9:169": {
+                "text": "Plin. 9, 54, 79, \u00a7 169",
+                "author": "Pliny, the Elder",
+                "work": "Naturalis Historia",
+                "display": "Pliny, the Elder - Naturalis Historia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0978.phi001:9:61": {
+                "text": "9, 17, 28, \u00a7 61",
+                "author": "Pliny, the Elder",
+                "work": "Naturalis Historia",
+                "display": "Pliny, the Elder - Naturalis Historia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0845.phi002:8:16": {
+                "text": "Col. 8, 16",
+                "author": "Columella, Lucius Junius Moderatus",
+                "work": "Res Rustica",
+                "display": "Columella, Lucius Junius Moderatus - Res Rustica",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1294.phi002:13:89": {
+                "text": "Mart. 13, 89",
+                "author": "Martial",
+                "work": "Epigrammata",
+                "display": "Martial - Epigrammata",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:stoa0186.stoa001:2:12": {
+                "text": "Macr. S. 2, 12"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "B.  A kind of spider, Plin. 29, 4, 27, \u00a7 85; 11, 24, 28, \u00a7 80.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:00:00",
+            "citations": {
+              "urn:cts:latinLit:phi0978.phi001:29:85": "Plin. 29, 4, 27, \u00a7 85",
+              "urn:cts:latinLit:phi0978.phi001:11:80": "11, 24, 28, \u00a7 80"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0978.phi001:29:85": {
+                "text": "Plin. 29, 4, 27, \u00a7 85",
+                "author": "Pliny, the Elder",
+                "work": "Naturalis Historia",
+                "display": "Pliny, the Elder - Naturalis Historia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0978.phi001:11:80": {
+                "text": "11, 24, 28, \u00a7 80",
+                "author": "Pliny, the Elder",
+                "work": "Naturalis Historia",
+                "display": "Pliny, the Elder - Naturalis Historia",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "C.  A bit armed with points like wolves\u2019 teeth (frena lupata): et placido duros (equus) accipit ore lupos, Ov. Tr. 4, 6, 3; Stat. Ach. 1, 281.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:00:01",
+            "citations": {
+              "urn:cts:latinLit:phi0959.phi008:4:6:3": "Ov. Tr. 4, 6, 3",
+              "urn:cts:latinLit:phi1020.phi003:1:281": "Stat. Ach. 1, 281"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0959.phi008:4:6:3": {
+                "text": "Ov. Tr. 4, 6, 3",
+                "author": "Ovid",
+                "work": "Tristia",
+                "display": "Ovid - Tristia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1020.phi003:1:281": {
+                "text": "Stat. Ach. 1, 281",
+                "author": "\u03c3\u03c4\u03b1\u03c4\u03b9\u03c5\u03c2, \u03c0. \u03c0\u03b1\u03c0\u03b9\u03bd\u03b9\u03c5\u03c2 (\u03c0\u03c5\u03b2\u03bb\u03b9\u03c5\u03c2 \u03c0\u03b1\u03c0\u03b9\u03bd\u03b9\u03c5\u03c2)",
+                "work": "Achilleis",
+                "display": "\u03c3\u03c4\u03b1\u03c4\u03b9\u03c5\u03c2, \u03c0. \u03c0\u03b1\u03c0\u03b9\u03bd\u03b9\u03c5\u03c2 (\u03c0\u03c5\u03b2\u03bb\u03b9\u03c5\u03c2 \u03c0\u03b1\u03c0\u03b9\u03bd\u03b9\u03c5\u03c2) - Achilleis",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "D.  A hook with which things were hoisted: in alios lupi superne ferrei injecti, Liv. 28, 3, 7; Isid. Orig. 23, 15.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:00:02",
+            "citations": {
+              "urn:cts:latinLit:phi0914.phi001:28:3:7": "Liv. 28, 3, 7"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0914.phi001:28:3:7": {
+                "text": "Liv. 28, 3, 7",
+                "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+                "work": "Ab urbe condita",
+                "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "E.  A small handsaw, Pall. 1, 42, 2 (T.).\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:00:03",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "F.  The hop, a plant (Humulus lupulus), Plin. 21, 15, 50, \u00a7 86.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:02",
+            "citations": {
+              "urn:cts:latinLit:phi0978.phi001:21:86": "Plin. 21, 15, 50, \u00a7 86"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0978.phi001:21:86": {
+                "text": "Plin. 21, 15, 50, \u00a7 86",
+                "author": "Pliny, the Elder",
+                "work": "Naturalis Historia",
+                "display": "Pliny, the Elder - Naturalis Historia",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        }
+      ],
+      "source": "diogenes",
+      "metadata": {
+        "chunk_types": [
+          "DiogenesMatchingReference"
+        ],
+        "terms": [
+          "l\u016dpus"
+        ]
+      },
+      "dictionary_blocks": [
+        {
+          "entry": "lupus, i, m. kindred with \u03bb\u03cd\u03ba\u03bf\u03c2; Sanscr. vrika, and our wolf, a wolf.",
+          "entryid": "00"
+        },
+        {
+          "entry": "I.  Lit.: torva leaena lupum sequitur, lupus ipse capellam, Verg. E. 2, 63; Plin. 10, 63, 88, \u00a7 173; 8, 22, 34, \u00a7 80: Martialis lupus, sacred to Mars, Hor. C. 1, 17, 9; so, Martius, Verg. A. 9, 566: lupus femina for lupa, a she-wolf, Enn. ap. Serv. Verg. A. 2, 355 (Ann. v. 70 Vahl.); id. ap. Non. 378, 18 (ib. v. 73): lupus masculinum (est), quamquam Varro ... lupum feminam dicit, Ennium Pictoremque Fabium secutus, Quint. 1, 6, 12.\u2014According to the belief of the Romans, if a wolf saw a man before the latter saw him, the man became dumb: vox quoque Moerim Jam fugit ipsa; lupi Moerim videre priores, Verg. E. 9, 53; cf. Plin. 8, 22, 34, \u00a7 80.\u2014Prov.: lupus in fabul\u0101 or sermone, said of the appearance of a person when he is spoken of; as we say in English, talk of the devil, and he appears: atque eccum tibi lupum in sermone, Plaut. Stich. 4, 1, 71 (575); Ter. Ad. 537; Serv. Verg. E. 9, 54: de Varrone loquebamur: lupus in fabul\u0101: venit enim ad me, Cic. Att. 13, 33, 4.\u2014",
+          "entryid": "00:00",
+          "citations": {
+            "urn:cts:latinLit:phi0690.phi001:2:63": "Verg. E. 2, 63",
+            "urn:cts:latinLit:phi0978.phi001:10:173": "Plin. 10, 63, 88, \u00a7 173",
+            "urn:cts:latinLit:phi0978.phi001:8:80": "Plin. 8, 22, 34, \u00a7 80",
+            "urn:cts:latinLit:phi0893.phi001:1:17:9": "Hor. C. 1, 17, 9",
+            "urn:cts:latinLit:phi0690.phi003:9:566": "Verg. A. 9, 566",
+            "urn:cts:latinLit:phi1002.phi001:1:6:12": "Quint. 1, 6, 12",
+            "urn:cts:latinLit:phi0690.phi001:9:53": "Verg. E. 9, 53",
+            "urn:cts:latinLit:phi0119.phi018:575": "Plaut. Stich. 4, 1, 71 (575)",
+            "urn:cts:latinLit:phi0134.phi006:537": "Ter. Ad. 537",
+            "urn:cts:latinLit:phi0474.phi057:13:33:4": "Cic. Att. 13, 33, 4"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0690.phi001:2:63": "Verg. E. 2, 63",
+            "urn:cts:latinLit:phi0978.phi001:10:173": "Plin. 10, 63, 88, \u00a7 173",
+            "urn:cts:latinLit:phi0978.phi001:8:80": "Plin. 8, 22, 34, \u00a7 80",
+            "urn:cts:latinLit:phi0893.phi001:1:17:9": "Hor. C. 1, 17, 9",
+            "urn:cts:latinLit:phi0690.phi003:9:566": "Verg. A. 9, 566",
+            "urn:cts:latinLit:phi1002.phi001:1:6:12": "Quint. 1, 6, 12",
+            "urn:cts:latinLit:phi0690.phi001:9:53": "Verg. E. 9, 53",
+            "urn:cts:latinLit:phi0119.phi018:575": "Plaut. Stich. 4, 1, 71 (575)",
+            "urn:cts:latinLit:phi0134.phi006:537": "Ter. Ad. 537",
+            "urn:cts:latinLit:phi0474.phi057:13:33:4": "Cic. Att. 13, 33, 4"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0690.phi001:2:63": {
+              "text": "Verg. E. 2, 63",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Eclogues",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0978.phi001:10:173": {
+              "text": "Plin. 10, 63, 88, \u00a7 173",
+              "author": "Pliny, the Elder",
+              "work": "Naturalis Historia",
+              "display": "Pliny, the Elder - Naturalis Historia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0978.phi001:8:80": {
+              "text": "Plin. 8, 22, 34, \u00a7 80",
+              "author": "Pliny, the Elder",
+              "work": "Naturalis Historia",
+              "display": "Pliny, the Elder - Naturalis Historia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi001:1:17:9": {
+              "text": "Hor. C. 1, 17, 9",
+              "author": "Horace",
+              "work": "Carmina",
+              "display": "Horace - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:9:566": {
+              "text": "Verg. A. 9, 566",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:1:6:12": {
+              "text": "Quint. 1, 6, 12",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi001:9:53": {
+              "text": "Verg. E. 9, 53",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Eclogues",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi018:575": {
+              "text": "Plaut. Stich. 4, 1, 71 (575)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Stichus",
+              "display": "Plautus, Titus Maccius - Stichus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi006:537": {
+              "text": "Ter. Ad. 537",
+              "author": "Terence",
+              "work": "Adelphi",
+              "display": "Terence - Adelphi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:13:33:4": {
+              "text": "Cic. Att. 13, 33, 4",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b2.  Lupum auribus tenere, to have a wolf by the ears, to be unable to hold and afraid to let go, i. e. to be in a situation of doubt and difficulty, Ter. Phorm. 505; Suet. Tib. 25.\u2014",
+          "entryid": "00:00:00",
+          "citations": {
+            "urn:cts:latinLit:phi0134.phi004:505": "Ter. Phorm. 505",
+            "urn:cts:latinLit:phi1348.phi001:life=tib.:25": "Suet. Tib. 25"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0134.phi004:505": "Ter. Phorm. 505",
+            "urn:cts:latinLit:phi1348.phi001:life=tib.:25": "Suet. Tib. 25"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0134.phi004:505": {
+              "text": "Ter. Phorm. 505",
+              "author": "Terence",
+              "work": "Phormio",
+              "display": "Terence - Phormio",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1348.phi001:life=tib.:25": {
+              "text": "Suet. Tib. 25",
+              "author": "Suetonius",
+              "work": "Tib",
+              "display": "Suetonius - Tib",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b3.  Hac urget lupus, hac canis angit, on this side the wolf, on that the dog, i. e. to be placed between two fires, Hor. S. 2, 2, 64.\u2014",
+          "entryid": "00:00:01",
+          "citations": {
+            "urn:cts:latinLit:phi0893.phi004:2:2:64": "Hor. S. 2, 2, 64"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0893.phi004:2:2:64": "Hor. S. 2, 2, 64"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0893.phi004:2:2:64": {
+              "text": "Hor. S. 2, 2, 64",
+              "author": "Horace",
+              "work": "Satires",
+              "display": "Horace - Satires",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b4.  Lupos apud oves custodes relinquere, Plaut. Ps. 1, 28 (30): ovem lupo committere, to intrust sheep to a wolf, Ter. Eun. 832; cf. o praeclarum custodem ovium, ut aiunt, lupum! Cic. Phil. 3, 11, 27; cf.: plenum montano credis ovile lupo? Ov. A. A. 2, 363.\u2014",
+          "entryid": "00:00:02",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi016:30": "Plaut. Ps. 1, 28 (30)",
+            "urn:cts:latinLit:phi0134.phi003:832": "Ter. Eun. 832",
+            "urn:cts:latinLit:phi0474.phi035:3:11:27": "Cic. Phil. 3, 11, 27",
+            "urn:cts:latinLit:phi0959.phi004:2:363": "Ov. A. A. 2, 363"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi016:30": "Plaut. Ps. 1, 28 (30)",
+            "urn:cts:latinLit:phi0134.phi003:832": "Ter. Eun. 832",
+            "urn:cts:latinLit:phi0474.phi035:3:11:27": "Cic. Phil. 3, 11, 27",
+            "urn:cts:latinLit:phi0959.phi004:2:363": "Ov. A. A. 2, 363"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi016:30": {
+              "text": "Plaut. Ps. 1, 28 (30)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Pseudolus",
+              "display": "Plautus, Titus Maccius - Pseudolus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:832": {
+              "text": "Ter. Eun. 832",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi035:3:11:27": {
+              "text": "Cic. Phil. 3, 11, 27",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Philippicae",
+              "display": "Cicero, Marcus Tullius - Philippicae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi004:2:363": {
+              "text": "Ov. A. A. 2, 363",
+              "author": "Ovid",
+              "work": "Ars Amatoria",
+              "display": "Ovid - Ars Amatoria",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b5.  Lupo agnum eripere, of a difficult undertaking; as in English, to snatch the meat from a dog's mouth, Plaut. Poen. 3, 5, 31 (776).\u2014",
+          "entryid": "00:00:03",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi015:776": "Plaut. Poen. 3, 5, 31 (776)"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi015:776": "Plaut. Poen. 3, 5, 31 (776)"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi015:776": {
+              "text": "Plaut. Poen. 3, 5, 31 (776)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Poenulus",
+              "display": "Plautus, Titus Maccius - Poenulus",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b6.  Lupus observavit, dum dormitaret canes, of one who watches his opportunity to be unobserved, Plaut. Trin. 1, 2, 133 (171).\u2014",
+          "entryid": "00:00:04",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi019:171": "Plaut. Trin. 1, 2, 133 (171)"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi019:171": "Plaut. Trin. 1, 2, 133 (171)"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi019:171": {
+              "text": "Plaut. Trin. 1, 2, 133 (171)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Trinummus",
+              "display": "Plautus, Titus Maccius - Trinummus",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b7.  Ov\u012bs ultro fugiat lupus, of a very improbable act, Verg. E. 8, 52.\u2014",
+          "entryid": "00:00:05",
+          "citations": {
+            "urn:cts:latinLit:phi0690.phi001:8:52": "Verg. E. 8, 52"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0690.phi001:8:52": "Verg. E. 8, 52"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0690.phi001:8:52": {
+              "text": "Verg. E. 8, 52",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Eclogues",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u03b8.  Tantum curamus frigora, quantum numerum (ovium) lupus, i. e. do not care at all, as the wolf does not care whether the number of the sheep is right or not, Verg. E. 7, 51.\u2014",
+          "entryid": "00:00:06",
+          "citations": {
+            "urn:cts:latinLit:phi0690.phi001:7:51": "Verg. E. 7, 51"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0690.phi001:7:51": "Verg. E. 7, 51"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0690.phi001:7:51": {
+              "text": "Verg. E. 7, 51",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Eclogues",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "II.  Transf.",
+          "entryid": "00:01"
+        },
+        {
+          "entry": "A.  A voracious fish, the wolf-fish or pike, Hor. S. 2, 2, 31; Plin. 9, 54, 79, \u00a7 169; 9, 17, 28, \u00a7 61; Col. 8, 16; Mart. 13, 89; Macr. S. 2, 12 bis.\u2014",
+          "entryid": "00:01:00",
+          "citations": {
+            "urn:cts:latinLit:phi0893.phi004:2:2:31": "Hor. S. 2, 2, 31",
+            "urn:cts:latinLit:phi0978.phi001:9:169": "Plin. 9, 54, 79, \u00a7 169",
+            "urn:cts:latinLit:phi0978.phi001:9:61": "9, 17, 28, \u00a7 61",
+            "urn:cts:latinLit:phi0845.phi002:8:16": "Col. 8, 16",
+            "urn:cts:latinLit:phi1294.phi002:13:89": "Mart. 13, 89",
+            "urn:cts:latinLit:stoa0186.stoa001:2:12": "Macr. S. 2, 12"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0893.phi004:2:2:31": "Hor. S. 2, 2, 31",
+            "urn:cts:latinLit:phi0978.phi001:9:169": "Plin. 9, 54, 79, \u00a7 169",
+            "urn:cts:latinLit:phi0978.phi001:9:61": "9, 17, 28, \u00a7 61",
+            "urn:cts:latinLit:phi0845.phi002:8:16": "Col. 8, 16",
+            "urn:cts:latinLit:phi1294.phi002:13:89": "Mart. 13, 89",
+            "urn:cts:latinLit:stoa0186.stoa001:2:12": "Macr. S. 2, 12"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0893.phi004:2:2:31": {
+              "text": "Hor. S. 2, 2, 31",
+              "author": "Horace",
+              "work": "Satires",
+              "display": "Horace - Satires",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0978.phi001:9:169": {
+              "text": "Plin. 9, 54, 79, \u00a7 169",
+              "author": "Pliny, the Elder",
+              "work": "Naturalis Historia",
+              "display": "Pliny, the Elder - Naturalis Historia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0978.phi001:9:61": {
+              "text": "9, 17, 28, \u00a7 61",
+              "author": "Pliny, the Elder",
+              "work": "Naturalis Historia",
+              "display": "Pliny, the Elder - Naturalis Historia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0845.phi002:8:16": {
+              "text": "Col. 8, 16",
+              "author": "Columella, Lucius Junius Moderatus",
+              "work": "Res Rustica",
+              "display": "Columella, Lucius Junius Moderatus - Res Rustica",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1294.phi002:13:89": {
+              "text": "Mart. 13, 89",
+              "author": "Martial",
+              "work": "Epigrammata",
+              "display": "Martial - Epigrammata",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:stoa0186.stoa001:2:12": {
+              "text": "Macr. S. 2, 12"
+            }
+          }
+        },
+        {
+          "entry": "B.  A kind of spider, Plin. 29, 4, 27, \u00a7 85; 11, 24, 28, \u00a7 80.\u2014",
+          "entryid": "00:01:00:00",
+          "citations": {
+            "urn:cts:latinLit:phi0978.phi001:29:85": "Plin. 29, 4, 27, \u00a7 85",
+            "urn:cts:latinLit:phi0978.phi001:11:80": "11, 24, 28, \u00a7 80"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0978.phi001:29:85": "Plin. 29, 4, 27, \u00a7 85",
+            "urn:cts:latinLit:phi0978.phi001:11:80": "11, 24, 28, \u00a7 80"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0978.phi001:29:85": {
+              "text": "Plin. 29, 4, 27, \u00a7 85",
+              "author": "Pliny, the Elder",
+              "work": "Naturalis Historia",
+              "display": "Pliny, the Elder - Naturalis Historia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0978.phi001:11:80": {
+              "text": "11, 24, 28, \u00a7 80",
+              "author": "Pliny, the Elder",
+              "work": "Naturalis Historia",
+              "display": "Pliny, the Elder - Naturalis Historia",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "C.  A bit armed with points like wolves\u2019 teeth (frena lupata): et placido duros (equus) accipit ore lupos, Ov. Tr. 4, 6, 3; Stat. Ach. 1, 281.\u2014",
+          "entryid": "00:01:00:01",
+          "citations": {
+            "urn:cts:latinLit:phi0959.phi008:4:6:3": "Ov. Tr. 4, 6, 3",
+            "urn:cts:latinLit:phi1020.phi003:1:281": "Stat. Ach. 1, 281"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0959.phi008:4:6:3": "Ov. Tr. 4, 6, 3",
+            "urn:cts:latinLit:phi1020.phi003:1:281": "Stat. Ach. 1, 281"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0959.phi008:4:6:3": {
+              "text": "Ov. Tr. 4, 6, 3",
+              "author": "Ovid",
+              "work": "Tristia",
+              "display": "Ovid - Tristia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1020.phi003:1:281": {
+              "text": "Stat. Ach. 1, 281",
+              "author": "\u03c3\u03c4\u03b1\u03c4\u03b9\u03c5\u03c2, \u03c0. \u03c0\u03b1\u03c0\u03b9\u03bd\u03b9\u03c5\u03c2 (\u03c0\u03c5\u03b2\u03bb\u03b9\u03c5\u03c2 \u03c0\u03b1\u03c0\u03b9\u03bd\u03b9\u03c5\u03c2)",
+              "work": "Achilleis",
+              "display": "\u03c3\u03c4\u03b1\u03c4\u03b9\u03c5\u03c2, \u03c0. \u03c0\u03b1\u03c0\u03b9\u03bd\u03b9\u03c5\u03c2 (\u03c0\u03c5\u03b2\u03bb\u03b9\u03c5\u03c2 \u03c0\u03b1\u03c0\u03b9\u03bd\u03b9\u03c5\u03c2) - Achilleis",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "D.  A hook with which things were hoisted: in alios lupi superne ferrei injecti, Liv. 28, 3, 7; Isid. Orig. 23, 15.\u2014",
+          "entryid": "00:01:00:02",
+          "citations": {
+            "urn:cts:latinLit:phi0914.phi001:28:3:7": "Liv. 28, 3, 7"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0914.phi001:28:3:7": "Liv. 28, 3, 7"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0914.phi001:28:3:7": {
+              "text": "Liv. 28, 3, 7",
+              "author": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8)",
+              "work": "Ab urbe condita",
+              "display": "\u03c4\u03b9\u03c4\u03c5\u03c2 \u03bb\u03b9v\u03b9\u03c5\u03c2 (\u03bb\u03b9v\u03c8) - Ab urbe condita",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "E.  A small handsaw, Pall. 1, 42, 2 (T.).\u2014",
+          "entryid": "00:01:00:03"
+        },
+        {
+          "entry": "F.  The hop, a plant (Humulus lupulus), Plin. 21, 15, 50, \u00a7 86.",
+          "entryid": "00:02",
+          "citations": {
+            "urn:cts:latinLit:phi0978.phi001:21:86": "Plin. 21, 15, 50, \u00a7 86"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0978.phi001:21:86": "Plin. 21, 15, 50, \u00a7 86"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0978.phi001:21:86": {
+              "text": "Plin. 21, 15, 50, \u00a7 86",
+              "author": "Pliny, the Elder",
+              "work": "Naturalis Historia",
+              "display": "Pliny, the Elder - Naturalis Historia",
+              "kind": "cts"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "word": "lupus",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "lupus\n\n\n \u012b, \nm\n\n a wolf: Torva leaena lupum sequitur,\n                lupus ipse capellam, V.: fulvus, O.: Martialis, sacred to Mars, H.: Ambigui, i. e. men in the form of wolves, O.\u2014It was said that a man\n            seen by a wolf before he saw the wolf lost his speech: vox quoque Moerim Iam fugit ipsa;\n            lupi Moerim videre priores, V.\u2014Prov.: lupus in fabul\u0101, talk of the\n            devil, and he appears, T., C.: auribus teneo lupum, i. e.\n            am in great difficulty, T.: Hac urget lupus, hac canis,\n            between two fires, H.: ovem lupo commisti, intrust a sheep\n            to a wolf, T.: tantum curamus frigora, quantum numerum (ovium)\n            lupus, i. e. care not at all, V.\u2014A voracious fish, wolffish, pike,\n            H., V.\u2014A bit armed with points like wolves' teeth (see lupatus): (equus)\n            accipit ore lupos, O.\u2014A hook, grappling iron: lupi\n            ferrei, L.",
+          "pos": "noun",
+          "metadata": {
+            "source": "lewis_1890"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "lupus",
+        "pos": "unknown",
+        "features": {
+          "ipa": "'l\u028a.p\u028as"
+        }
+      },
+      "source": "cltk",
+      "metadata": {
+        "headword": "lupus",
+        "ipa": "'l\u028a.p\u028as",
+        "lewis_1890_lines": [
+          "lupus\n\n\n \u012b, \nm\n\n a wolf: Torva leaena lupum sequitur,\n                lupus ipse capellam, V.: fulvus, O.: Martialis, sacred to Mars, H.: Ambigui, i. e. men in the form of wolves, O.\u2014It was said that a man\n            seen by a wolf before he saw the wolf lost his speech: vox quoque Moerim Iam fugit ipsa;\n            lupi Moerim videre priores, V.\u2014Prov.: lupus in fabul\u0101, talk of the\n            devil, and he appears, T., C.: auribus teneo lupum, i. e.\n            am in great difficulty, T.: Hac urget lupus, hac canis,\n            between two fires, H.: ovem lupo commisti, intrust a sheep\n            to a wolf, T.: tantum curamus frigora, quantum numerum (ovium)\n            lupus, i. e. care not at all, V.\u2014A voracious fish, wolffish, pike,\n            H., V.\u2014A bit armed with points like wolves' teeth (see lupatus): (equus)\n            accipit ore lupos, O.\u2014A hook, grappling iron: lupi\n            ferrei, L."
+        ]
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 3
+  },
+  "unified_sources": [
+    "cltk",
+    "diogenes",
+    "whitakers"
+  ],
+  "source_present": true
+}

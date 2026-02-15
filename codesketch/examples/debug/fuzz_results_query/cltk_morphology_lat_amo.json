@@ -1,0 +1,2501 @@
+{
+  "target": {
+    "tool": "cltk",
+    "action": "morphology",
+    "lang": "lat",
+    "word": "amo",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "amo",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "love, like",
+          "pos": "verb",
+          "metadata": {
+            "type": "sense"
+          }
+        },
+        {
+          "definition": "fall in love with",
+          "pos": "noun",
+          "metadata": {
+            "type": "sense"
+          }
+        },
+        {
+          "definition": "be fond of",
+          "pos": "noun",
+          "metadata": {
+            "type": "sense"
+          }
+        },
+        {
+          "definition": "have a tendency to",
+          "pos": "noun",
+          "metadata": {
+            "type": "sense"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "amo, amare, amavi, amatus",
+        "pos": "verb",
+        "features": {
+          "declension": "1st",
+          "part_of_speech": "Verb",
+          "number": "Singular",
+          "variant": "1",
+          "term_analysis": {
+            "stem": "am",
+            "ending": "o"
+          },
+          "conjugation": "1",
+          "tense": "Praesens (Present)",
+          "voice": "Active",
+          "mood": "Indicative",
+          "person": "1"
+        },
+        "declension": "1st",
+        "conjugation": "1",
+        "tense": "Praesens (Present)",
+        "mood": "Indicative",
+        "voice": "Active",
+        "person": "1",
+        "number": "Singular"
+      },
+      "source": "whitakers",
+      "metadata": {
+        "raw_lines": [
+          "am.o                 V      1 1 PRES ACTIVE  IND 1 S    ",
+          "amo, amare, amavi, amatus  V (1st)   [XXXAO]  ",
+          "love, like; fall in love with; be fond of; have a tendency to;"
+        ],
+        "senses": [
+          "love, like",
+          "fall in love with",
+          "be fond of",
+          "have a tendency to"
+        ],
+        "terms": [
+          {
+            "term": "am.o",
+            "part_of_speech": "Verb",
+            "number": "Singular",
+            "variant": "1",
+            "term_analysis": {
+              "stem": "am",
+              "ending": "o"
+            },
+            "conjugation": "1",
+            "tense": "Praesens (Present)",
+            "voice": "Active",
+            "mood": "Indicative",
+            "person": "1"
+          }
+        ],
+        "codeline": {
+          "term": "amo, amare, amavi, amatus",
+          "source": "Oxford Latin Dictionary, 1982 (OLD)",
+          "freq": "Very Frequent",
+          "declension": "1st",
+          "pos_code": "Verb"
+        }
+      }
+    },
+    {
+      "word": "amo",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "amo, \u0101vi, \u0101tum, 1, v. a. (am\u0101sso = amavero, Plaut. Cas. 5, 4, 23 (985); id. Curc. 4, 4, 22 (578); id. Mil. 4, 2, 16 (1006); cf. Paul. ex Fest. p. 28 M\u00fcll.: am\u0101sse = amavisse, Ter. Eun. 827: amantum = amantium, Plaut. Men. 2, 3, 4 (354); Lucr. 4, 1077; Ov. A. A. 1, 439) cf. Sanscr. kam = to love; \u1f05\u03bc\u03b1 = Sanscr. sam = Germ. sammt; Engl. same, Lat. similis; with the radical notion of likeness, union, to like, to love, \u1f10\u03c1\u03ac\u03c9, \u03c6\u03b9\u03bb\u03ad\u03c9 (both in the higher and the lower sense, opp. odisse; while diligere (\u1f00\u03b3\u03b1\u03c0\u1ff6) designates esteem, regard; opp. neglegere or spernere; cf. Doed. Syn. IV. p. 97; in the high sense in the philos. writings and Epp. of Cicero; often in the low sense, esp. in the comic poets. In the Vulg. amo and amor are comparatively little used, prob. from their bad associations, amo being used 51 times and amor 20. Instead of these words, diligo, dilectio and caritas were used. Diligo (incl. dilectus) occurs 422 times, and dilectio and caritas 144 times in all; dilectio 43 and caritas 101 times).",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi006:985": "Plaut. Cas. 5, 4, 23 (985)",
+              "urn:cts:latinLit:phi0119.phi008:578": "id. Curc. 4, 4, 22 (578)",
+              "urn:cts:latinLit:phi0119.phi012:1006": "id. Mil. 4, 2, 16 (1006)",
+              "urn:cts:latinLit:phi1236.phi001:page=28": "Fest. p. 28",
+              "urn:cts:latinLit:phi0134.phi003:827": "Ter. Eun. 827",
+              "urn:cts:latinLit:phi0119.phi010:354": "Plaut. Men. 2, 3, 4 (354)",
+              "urn:cts:latinLit:phi0550.phi001:4:1077": "Lucr. 4, 1077",
+              "urn:cts:latinLit:phi0959.phi004:1:439": "Ov. A. A. 1, 439"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi006:985": {
+                "text": "Plaut. Cas. 5, 4, 23 (985)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Casina",
+                "display": "Plautus, Titus Maccius - Casina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi008:578": {
+                "text": "id. Curc. 4, 4, 22 (578)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Curculio",
+                "display": "Plautus, Titus Maccius - Curculio",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi012:1006": {
+                "text": "id. Mil. 4, 2, 16 (1006)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Miles Gloriosus",
+                "display": "Plautus, Titus Maccius - Miles Gloriosus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1236.phi001:page=28": {
+                "text": "Fest. p. 28",
+                "author": "Sex. Pompeius Festus",
+                "work": "P",
+                "display": "Sex. Pompeius Festus - P",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:827": {
+                "text": "Ter. Eun. 827",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi010:354": {
+                "text": "Plaut. Men. 2, 3, 4 (354)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Menaechmi",
+                "display": "Plautus, Titus Maccius - Menaechmi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0550.phi001:4:1077": {
+                "text": "Lucr. 4, 1077",
+                "author": "Lucretius",
+                "work": "De Rerum Natura",
+                "display": "Lucretius - De Rerum Natura",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi004:1:439": {
+                "text": "Ov. A. A. 1, 439",
+                "author": "Ovid",
+                "work": "Ars Amatoria",
+                "display": "Ovid - Ars Amatoria",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "I.  In gen.: quid autem est amare, nisi velle bonis aliquem adfici, quam maximis, etiamsi ad se ex iis nihil redeat, Cic. Fin. 2, 24: amare autem nihil aliud est, nisi eum ipsum diligere, quem ames, null\u0101 indigenti\u0101, null\u0101 utilitate quaesit\u0101, id. Am. 27, 100: videas corde amare (eos) inter se, Plaut. Capt. 2, 3, 60 (420); Ter. Ad. 828: liberi amare patrem atque matrem videntur, Gell. 12, 1, 23: qui amat patrem aut matrem, Vulg. Matt. 6, 5: ipse Pater amat vos, h. l. used of God, ib. Joan. 16, 27: Cicerones pueri amant inter se, love each other, Cic. Att. 6, 1: magis te quam oculos nunc amo meos, Ter. Ad. 701: quem omnes amare meritissimo debemus, Cic. de Or. 1, 55, 234.\u2014So, amare aliquem ex animo, to love with all one's heart, Cic. Q. Fr. 1, 1, 5: unice patriam et cives, id. Cat. 3, 5: aliquem amore singulari, id. Fam. 15, 20: sicut mater unicum amat filium suum, Vulg. 2 Reg. 1, 26: dignus amari, Verg. E. 5, 89.\u2014Amare in contr. with diligere, as stronger, more affectionate: Clodius valde me diligit, vel, ut \u1f10\u03bc\u03c6\u03b1\u03c4\u03b9\u03ba\u03ce\u03c4\u03b5\u03c1\u03bf\u03bd dicam, valde me amat, Cic. ad Brut. 1, 1; id. Fam. 9, 14: eum a me non diligi solum, verum etiam amari, id. ib. 13, 47; id. Fragm. ap. Non. 421, 30 (Orell. IV. 2, p. 466); Plin. Ep. 3, 9.\u2014But diligere, as indicative of esteem, is more emph. than amare, which denotes an instinctive or affectionate love: non quo quemquam plus amem, aut plus diligam, Eo feci, sed, etc., Ter. Eun. 96: homo nobilis, qui a suis et amari et diligi vellet, Cic. Verr. 2, 4, 23: te semper amavi dilexique, have loved and esteemed, id. Fam. 15, 7: diligis (\u1f00\u03b3\u03b1\u03c0\u1fb7\u03c2) me plus his? Etiam, Domine, tu scis quia amo (\u03c6\u03b9\u03bb\u1ff6) te, Vulg. Joan. 21, 15 sqq., ubi v. Alford, Gr. Test. al.\u2014Hence in asseverations: ita (sic) me dii (bene) ament or amabunt, so may the gods love me, by the love of the gods, most assuredly: ita me di amabunt, etc., Plaut. Poen. 1, 3, 30 (439) (v. the pass. in its connection): ita me di ament, credo, Ter. And. 947: non, ita me di bene ament, id. Hec. 206: sic me di amabunt, ut, etc., id. Heaut. 463.\u2014Hence also ellipt.: ita me Juppiter! (sc. amet or amabit), Plaut. Poen. 1, 3, 31 (440) (so in Engl. with different ellipsis, bless me! sc. God).\u2014And as a salutation: Me. Salvus atque fortunatus, Euclio, semper sies. Eu. Di te ament, Me gadore, the gods bless you! Plaut. Aul. 2, 2, 6 (183) al.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:00",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi048:2:24": "Cic. Fin. 2, 24",
+              "urn:cts:latinLit:phi0474.phi052:27:100": "id. Am. 27, 100",
+              "urn:cts:latinLit:phi0119.phi005:420": "Plaut. Capt. 2, 3, 60 (420)",
+              "urn:cts:latinLit:phi0134.phi006:828": "Ter. Ad. 828",
+              "urn:cts:latinLit:phi1254.phi001:12:1:23": "Gell. 12, 1, 23",
+              "urn:cts:greekLit:tlg0031.tlg001:6:5": "Vulg. Matt. 6, 5",
+              "urn:cts:greekLit:tlg0031.tlg004:16:27": "ib. Joan. 16, 27",
+              "urn:cts:latinLit:phi0474.phi057:6:1": "Cic. Att. 6, 1",
+              "urn:cts:latinLit:phi0134.phi006:701": "Ter. Ad. 701",
+              "urn:cts:latinLit:phi0474.phi037:1:55:234": "Cic. de Or. 1, 55, 234",
+              "urn:cts:latinLit:phi0474.phi058:1:1:5": "Cic. Q. Fr. 1, 1, 5",
+              "urn:cts:latinLit:phi0474.phi013:3:5": "id. Cat. 3, 5",
+              "urn:cts:latinLit:phi0474.phi056:15:20": "id. Fam. 15, 20",
+              "urn:cts:greekLit:tlg0527.tlg012:1:26": "Vulg. 2 Reg. 1, 26",
+              "urn:cts:latinLit:phi0690.phi001:5:89": "Verg. E. 5, 89",
+              "urn:cts:latinLit:phi0474.phi059:1:1": "Cic. ad Brut. 1, 1",
+              "urn:cts:latinLit:phi0474.phi056:9:14": "id. Fam. 9, 14",
+              "urn:cts:latinLit:phi0474.phi056:13:47": "id. ib. 13, 47",
+              "urn:cts:latinLit:phi1318.phi001:3:9": "Plin. Ep. 3, 9",
+              "urn:cts:latinLit:phi0134.phi003:96": "Ter. Eun. 96",
+              "urn:cts:latinLit:phi0474.phi005:2:4:23": "Cic. Verr. 2, 4, 23",
+              "urn:cts:latinLit:phi0474.phi056:15:7": "id. Fam. 15, 7",
+              "urn:cts:greekLit:tlg0031.tlg004:21:15": "Vulg. Joan. 21, 15",
+              "urn:cts:latinLit:phi0119.phi015:439": "Plaut. Poen. 1, 3, 30 (439)",
+              "urn:cts:latinLit:phi0134.phi001:947": "Ter. And. 947",
+              "urn:cts:latinLit:phi0134.phi005:206": "id. Hec. 206",
+              "urn:cts:latinLit:phi0134.phi002:463": "id. Heaut. 463",
+              "urn:cts:latinLit:phi0119.phi015:440": "Plaut. Poen. 1, 3, 31 (440)",
+              "urn:cts:latinLit:phi0119.phi003:183": "Plaut. Aul. 2, 2, 6 (183)"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi048:2:24": {
+                "text": "Cic. Fin. 2, 24",
+                "author": "Cicero, Marcus Tullius",
+                "work": "de Finibus Bonorum et Malorum",
+                "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:27:100": {
+                "text": "id. Am. 27, 100",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Amicitia",
+                "display": "Cicero, Marcus Tullius - De Amicitia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi005:420": {
+                "text": "Plaut. Capt. 2, 3, 60 (420)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Captivi",
+                "display": "Plautus, Titus Maccius - Captivi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi006:828": {
+                "text": "Ter. Ad. 828",
+                "author": "Terence",
+                "work": "Adelphi",
+                "display": "Terence - Adelphi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1254.phi001:12:1:23": {
+                "text": "Gell. 12, 1, 23",
+                "author": "Gellius, Aulus",
+                "work": "Noctes Atticae",
+                "display": "Gellius, Aulus - Noctes Atticae",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0031.tlg001:6:5": {
+                "text": "Vulg. Matt. 6, 5",
+                "author": "New Testament",
+                "work": "Matthew",
+                "display": "New Testament - Matthew",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0031.tlg004:16:27": {
+                "text": "ib. Joan. 16, 27",
+                "author": "New Testament",
+                "work": "Joan",
+                "display": "New Testament - Joan",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:6:1": {
+                "text": "Cic. Att. 6, 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi006:701": {
+                "text": "Ter. Ad. 701",
+                "author": "Terence",
+                "work": "Adelphi",
+                "display": "Terence - Adelphi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi037:1:55:234": {
+                "text": "Cic. de Or. 1, 55, 234",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De",
+                "display": "Cicero, Marcus Tullius - De",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi058:1:1:5": {
+                "text": "Cic. Q. Fr. 1, 1, 5",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to his brother Quintus",
+                "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi013:3:5": {
+                "text": "id. Cat. 3, 5",
+                "author": "Cicero, Marcus Tullius",
+                "work": "In Catilinam",
+                "display": "Cicero, Marcus Tullius - In Catilinam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:15:20": {
+                "text": "id. Fam. 15, 20",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0527.tlg012:1:26": {
+                "text": "Vulg. 2 Reg. 1, 26",
+                "author": "Old Testament",
+                "work": "II Samuel",
+                "display": "Old Testament - II Samuel",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi001:5:89": {
+                "text": "Verg. E. 5, 89",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Eclogues",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi059:1:1": {
+                "text": "Cic. ad Brut. 1, 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Ad",
+                "display": "Cicero, Marcus Tullius - Ad",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:9:14": {
+                "text": "id. Fam. 9, 14",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:13:47": {
+                "text": "id. ib. 13, 47",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to his Friends",
+                "display": "Cicero, Marcus Tullius - Letters to his Friends",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1318.phi001:3:9": {
+                "text": "Plin. Ep. 3, 9",
+                "author": "Pliny, the Younger",
+                "work": "Epistulae",
+                "display": "Pliny, the Younger - Epistulae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:96": {
+                "text": "Ter. Eun. 96",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi005:2:4:23": {
+                "text": "Cic. Verr. 2, 4, 23",
+                "author": "Cicero, Marcus Tullius",
+                "work": "In C. Verrem",
+                "display": "Cicero, Marcus Tullius - In C. Verrem",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:15:7": {
+                "text": "id. Fam. 15, 7",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0031.tlg004:21:15": {
+                "text": "Vulg. Joan. 21, 15",
+                "author": "New Testament",
+                "work": "Joan",
+                "display": "New Testament - Joan",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi015:439": {
+                "text": "Plaut. Poen. 1, 3, 30 (439)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Poenulus",
+                "display": "Plautus, Titus Maccius - Poenulus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi001:947": {
+                "text": "Ter. And. 947",
+                "author": "Terence",
+                "work": "Andria",
+                "display": "Terence - Andria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi005:206": {
+                "text": "id. Hec. 206",
+                "author": "Terence",
+                "work": "Hecyra",
+                "display": "Terence - Hecyra",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi002:463": {
+                "text": "id. Heaut. 463",
+                "author": "Terence",
+                "work": "Heautontimorumenos",
+                "display": "Terence - Heautontimorumenos",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi015:440": {
+                "text": "Plaut. Poen. 1, 3, 31 (440)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Poenulus",
+                "display": "Plautus, Titus Maccius - Poenulus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi003:183": {
+                "text": "Plaut. Aul. 2, 2, 6 (183)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Aulularia",
+                "display": "Plautus, Titus Maccius - Aulularia",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "II.  Esp.",
+          "pos": "unknown",
+          "metadata": {
+            "entryid": "00:01",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "A.  Amare se, of vain men, to be in love with, to be pleased with one's self, also, to be selfish (used mostly by Cic.): quam se ipse amans sine rivali! Cic. Q. Fr. 3, 8: nisi nosmet ipsos valde amabimus, id. Off. 1, 9, 29; so id. Att. 4, 18, 2; id. Har. Resp. 9: homines se ipsos amantes, Vulg. 2 Tim. 3, 2.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:00",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi058:3:8": "Cic. Q. Fr. 3, 8",
+              "urn:cts:latinLit:phi0474.phi055:1:9:29": "id. Off. 1, 9, 29",
+              "urn:cts:latinLit:phi0474.phi057:4:18:2": "id. Att. 4, 18, 2",
+              "urn:cts:latinLit:phi0474.phi021:chapter=9": "id. Har. Resp. 9",
+              "urn:cts:greekLit:tlg0031.tlg015:3:2": "Vulg. 2 Tim. 3, 2"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi058:3:8": {
+                "text": "Cic. Q. Fr. 3, 8",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to his brother Quintus",
+                "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi055:1:9:29": {
+                "text": "id. Off. 1, 9, 29",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Officiis",
+                "display": "Cicero, Marcus Tullius - De Officiis",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:4:18:2": {
+                "text": "id. Att. 4, 18, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi021:chapter=9": {
+                "text": "id. Har. Resp. 9",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De haruspicum responso in P. Clodium",
+                "display": "Cicero, Marcus Tullius - De haruspicum responso in P. Clodium",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0031.tlg015:3:2": {
+                "text": "Vulg. 2 Tim. 3, 2",
+                "author": "New Testament",
+                "work": "1 Timothy",
+                "display": "New Testament - 1 Timothy",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "B.  Of unlawful love, Plaut. Bacch. 2, 2, 30 (208): ut videas eam medullitus me amare! id. Most. 1, 3, 86 (242) et saep.: meum gnatum rumor est amare, Ter. And. 185; 191 al.: ibi primum insuevit exercitus populi Romani amare, potare, etc., Sall. C. 11, 6: quae (via) eo me solvat amantem, Verg. A. 4, 479: non aequo foedere amare, id. ib. 4, 520; Hor. S. 2, 3, 250 Heind.; Vulg. Jud. 16, 4; ib. 2 Reg. 13, 4 al. \u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:01",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi004:208": "Plaut. Bacch. 2, 2, 30 (208)",
+              "urn:cts:latinLit:phi0119.phi013:242": "id. Most. 1, 3, 86 (242)",
+              "urn:cts:latinLit:phi0134.phi001:185": "Ter. And. 185",
+              "urn:cts:latinLit:phi0134.phi001:191": "191",
+              "urn:cts:latinLit:phi0631.phi001:11:6": "Sall. C. 11, 6",
+              "urn:cts:latinLit:phi0690.phi003:4:479": "Verg. A. 4, 479",
+              "urn:cts:latinLit:phi0690.phi003:4:520": "id. ib. 4, 520",
+              "urn:cts:latinLit:phi0893.phi004:2:3:250": "Hor. S. 2, 3, 250",
+              "urn:cts:greekLit:tlg0031.tlg026:16:4": "Vulg. Jud. 16, 4",
+              "urn:cts:greekLit:tlg0527.tlg012:13:4": "ib. 2 Reg. 13, 4"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi004:208": {
+                "text": "Plaut. Bacch. 2, 2, 30 (208)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Bacchides",
+                "display": "Plautus, Titus Maccius - Bacchides",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi013:242": {
+                "text": "id. Most. 1, 3, 86 (242)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Mostellaria",
+                "display": "Plautus, Titus Maccius - Mostellaria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi001:185": {
+                "text": "Ter. And. 185",
+                "author": "Terence",
+                "work": "Andria",
+                "display": "Terence - Andria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi001:191": {
+                "text": "191",
+                "author": "Terence",
+                "work": "Andria",
+                "display": "Terence - Andria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0631.phi001:11:6": {
+                "text": "Sall. C. 11, 6",
+                "author": "Sallust",
+                "work": "Catilinae Coniuratio",
+                "display": "Sallust - Catilinae Coniuratio",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:4:479": {
+                "text": "Verg. A. 4, 479",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:4:520": {
+                "text": "id. ib. 4, 520",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi004:2:3:250": {
+                "text": "Hor. S. 2, 3, 250",
+                "author": "Horace",
+                "work": "Satires",
+                "display": "Horace - Satires",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0031.tlg026:16:4": {
+                "text": "Vulg. Jud. 16, 4",
+                "author": "New Testament",
+                "work": "Jude",
+                "display": "New Testament - Jude",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0527.tlg012:13:4": {
+                "text": "ib. 2 Reg. 13, 4",
+                "author": "Old Testament",
+                "work": "II Samuel",
+                "display": "Old Testament - II Samuel",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "C.  Trop., to love a thing, to like, to be fond of, to find pleasure in, delight in: nomen, orationem, vultum, incessum alicujus amare, Cic. Sest. 49, 105: amavi amorem tuum, id. Fam. 9, 16: Alexidis manum amabam, id. Att. 7, 2: amabat litteras, Nep. Att. 1, 2: ea, quae res secundae amant, lascivi\u0101 atque superbi\u0101 incessere, Sall. J. 41, 3: amare nemus et fugere urbem, Hor. Ep. 2, 2, 77: amat bonus otia Daphnis, Verg. E. 5, 61: non omnes eadem mirantur amantque, Hor. Ep. 2, 2, 58: mir\u0101 diversitate natur\u0101, cum \u012bdem homines sic ament inertiam et oderint quietem, Tac. G. 15: pax et quies tunc tantum amata, id. ib. 40: qui amant vinum et pinguia, Vulg. Prov. 21, 17: amant salutationes in foro, ib. Luc. 20, 46: amat Janua limen, loves to remain shut, i. e. is constantly closed, Hor. C. 1, 25, 3; so, Nilus amet alveum suum, keep to its bed, Plin. Pan. 31, 4 al.\u2014With inf. as object: hic ames dici pater atque princeps, Hor. C. 1, 2, 50: amant in synagogis orare, Vulg. Matt. 6, 5.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:02",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi022:49:105": "Cic. Sest. 49, 105",
+              "urn:cts:latinLit:phi0474.phi056:9:16": "id. Fam. 9, 16",
+              "urn:cts:latinLit:phi0474.phi057:7:2": "id. Att. 7, 2",
+              "urn:cts:latinLit:phi0588.phi001:att:1:2": "Nep. Att. 1, 2",
+              "urn:cts:latinLit:phi0631.phi002:41:3": "Sall. J. 41, 3",
+              "urn:cts:latinLit:phi0893.phi005:2:2:77": "Hor. Ep. 2, 2, 77",
+              "urn:cts:latinLit:phi0690.phi001:5:61": "Verg. E. 5, 61",
+              "urn:cts:latinLit:phi0893.phi005:2:2:58": "Hor. Ep. 2, 2, 58",
+              "urn:cts:latinLit:phi1351.phi002:15": "Tac. G. 15",
+              "urn:cts:latinLit:phi1351.phi002:40": "id. ib. 40",
+              "urn:cts:greekLit:tlg0527.tlg029:21:17": "Vulg. Prov. 21, 17",
+              "urn:cts:greekLit:tlg0031.tlg003:20:46": "ib. Luc. 20, 46",
+              "urn:cts:latinLit:phi0893.phi001:1:25:3": "Hor. C. 1, 25, 3",
+              "urn:cts:latinLit:phi1318.phi002:31:4": "Plin. Pan. 31, 4",
+              "urn:cts:latinLit:phi0893.phi001:1:2:50": "Hor. C. 1, 2, 50",
+              "urn:cts:greekLit:tlg0031.tlg001:6:5": "Vulg. Matt. 6, 5"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi022:49:105": {
+                "text": "Cic. Sest. 49, 105",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro P. Sestio",
+                "display": "Cicero, Marcus Tullius - Pro P. Sestio",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:9:16": {
+                "text": "id. Fam. 9, 16",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:7:2": {
+                "text": "id. Att. 7, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0588.phi001:att:1:2": {
+                "text": "Nep. Att. 1, 2",
+                "author": "Nepos, Cornelius",
+                "work": "Att",
+                "display": "Nepos, Cornelius - Att",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0631.phi002:41:3": {
+                "text": "Sall. J. 41, 3",
+                "author": "Sallust",
+                "work": "J",
+                "display": "Sallust - J",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi005:2:2:77": {
+                "text": "Hor. Ep. 2, 2, 77",
+                "author": "Horace",
+                "work": "Epistulae",
+                "display": "Horace - Epistulae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi001:5:61": {
+                "text": "Verg. E. 5, 61",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Eclogues",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi005:2:2:58": {
+                "text": "Hor. Ep. 2, 2, 58",
+                "author": "Horace",
+                "work": "Epistulae",
+                "display": "Horace - Epistulae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1351.phi002:15": {
+                "text": "Tac. G. 15",
+                "author": "Tacitus, Cornelius",
+                "work": "Germania",
+                "display": "Tacitus, Cornelius - Germania",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1351.phi002:40": {
+                "text": "id. ib. 40",
+                "author": "Tacitus, Cornelius",
+                "work": "Germania",
+                "display": "Tacitus, Cornelius - Germania",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0527.tlg029:21:17": {
+                "text": "Vulg. Prov. 21, 17",
+                "author": "Old Testament",
+                "work": "Proverbs",
+                "display": "Old Testament - Proverbs",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0031.tlg003:20:46": {
+                "text": "ib. Luc. 20, 46",
+                "author": "New Testament",
+                "work": "Luc",
+                "display": "New Testament - Luc",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi001:1:25:3": {
+                "text": "Hor. C. 1, 25, 3",
+                "author": "Horace",
+                "work": "Carmina",
+                "display": "Horace - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1318.phi002:31:4": {
+                "text": "Plin. Pan. 31, 4",
+                "author": "Pliny, the Younger",
+                "work": "Panegyricus",
+                "display": "Pliny, the Younger - Panegyricus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi001:1:2:50": {
+                "text": "Hor. C. 1, 2, 50",
+                "author": "Horace",
+                "work": "Carmina",
+                "display": "Horace - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0031.tlg001:6:5": {
+                "text": "Vulg. Matt. 6, 5",
+                "author": "New Testament",
+                "work": "Matthew",
+                "display": "New Testament - Matthew",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "D.  Amare aliquem de or in aliqu\u0101 re, quod, etc., to like one for something, to be obliged to one for something, to be under obligation, be thankful.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:03",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "a.  With de: ecquid nos amas De fidicin\u0101 istac? Ter. Eun. 456: de raudusculo multum te amo, Cic. Att. 7, 2, 7.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:03:00",
+            "citations": {
+              "urn:cts:latinLit:phi0134.phi003:456": "Ter. Eun. 456",
+              "urn:cts:latinLit:phi0474.phi057:7:2:7": "Cic. Att. 7, 2, 7"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0134.phi003:456": {
+                "text": "Ter. Eun. 456",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:7:2:7": {
+                "text": "Cic. Att. 7, 2, 7",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "b.  With in: et in Attilii negotio te amavi, Cic. Fam. 13, 62.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:03:01",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi056:13:62": "Cic. Fam. 13, 62"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi056:13:62": {
+                "text": "Cic. Fam. 13, 62",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "c.  With quod: te multum amamus, quod, etc., Cic. Att. 1, 3: amas me, quod te non vidi? Domit. Afer. ap. Quint. 6, 3, 93.\u2014Also without prep. or quod: soror, parce, amabo. Anter. Quiesco. Adelph. Ergo amo te, I like you, am much obliged to you, Plaut. Poen. 1, 2, 40 (249): bene facis: Merito te amo, Ter. Ad. 946.\u2014Hence in the eilipt. lang. of conversation, amabo or amabo te (never amabo vos, etc.), lit. I shall like you (if you say, do, etc., that for me).\u2014Hence in entreaties = oro, quaeso, precor (with ut or ne foll.), be so good, I pray, entreat you (in Plaut. and Ter. very freq.; in the latter always amabo without te; in Cic. only in Epistt.): quis hic, amabo, est, qui, etc., Plaut. Mil. 3, 3, 26 (900): qui, amabo? id. Bacch. 1, 1, 19 (53): quid, amabo, obticuisti? id. ib. 1, 1, 28 (62) et saep.: id, amabo, adjuta me, Ter. Eun. 150: id agite, amabo, id. ib. 130 al.; Cat. 32, 1: id, amabo te, huic caveas, Plaut. Bacch. 1, 1, 10 (44); id. Men. 4, 3, 4 (678): amabo te, advola, Cic. Q. Fr. 2, 10: cura, amabo te, Ciceronem nostrum, id. Att. 2, 2.\u2014With ut or ne foll.: scin quid te amabo ut facias? Plaut. Men. 2, 3, 71 (421);  3, 3, 1 (524): amabo, ut illuc transeas, Ter. Eun. 537: amabo te, ne improbitati meae assignes, etc., Cic. Q. Fr. 1, 4.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:03:02",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi057:1:3": "Cic. Att. 1, 3",
+              "urn:cts:latinLit:phi1002.phi001:6:3:93": "Quint. 6, 3, 93",
+              "urn:cts:latinLit:phi0119.phi015:249": "Plaut. Poen. 1, 2, 40 (249)",
+              "urn:cts:latinLit:phi0134.phi006:946": "Ter. Ad. 946",
+              "urn:cts:latinLit:phi0119.phi012:900": "Plaut. Mil. 3, 3, 26 (900)",
+              "urn:cts:latinLit:phi0119.phi004:53": "id. Bacch. 1, 1, 19 (53)",
+              "urn:cts:latinLit:phi0119.phi004:62": "id. ib. 1, 1, 28 (62)",
+              "urn:cts:latinLit:phi0134.phi003:150": "Ter. Eun. 150",
+              "urn:cts:latinLit:phi0134.phi003:130": "id. ib. 130",
+              "urn:cts:latinLit:phi0472.phi001:32:1": "Cat. 32, 1",
+              "urn:cts:latinLit:phi0119.phi004:44": "Plaut. Bacch. 1, 1, 10 (44)",
+              "urn:cts:latinLit:phi0119.phi010:678": "id. Men. 4, 3, 4 (678)",
+              "urn:cts:latinLit:phi0474.phi058:2:10": "Cic. Q. Fr. 2, 10",
+              "urn:cts:latinLit:phi0474.phi057:2:2": "id. Att. 2, 2",
+              "urn:cts:latinLit:phi0119.phi010:421": "Plaut. Men. 2, 3, 71 (421)",
+              "urn:cts:latinLit:phi0119.phi010:524": " 3, 3, 1 (524)",
+              "urn:cts:latinLit:phi0134.phi003:537": "Ter. Eun. 537",
+              "urn:cts:latinLit:phi0474.phi058:1:4": "Cic. Q. Fr. 1, 4"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi057:1:3": {
+                "text": "Cic. Att. 1, 3",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:6:3:93": {
+                "text": "Quint. 6, 3, 93",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi015:249": {
+                "text": "Plaut. Poen. 1, 2, 40 (249)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Poenulus",
+                "display": "Plautus, Titus Maccius - Poenulus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi006:946": {
+                "text": "Ter. Ad. 946",
+                "author": "Terence",
+                "work": "Adelphi",
+                "display": "Terence - Adelphi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi012:900": {
+                "text": "Plaut. Mil. 3, 3, 26 (900)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Miles Gloriosus",
+                "display": "Plautus, Titus Maccius - Miles Gloriosus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi004:53": {
+                "text": "id. Bacch. 1, 1, 19 (53)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Bacchides",
+                "display": "Plautus, Titus Maccius - Bacchides",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi004:62": {
+                "text": "id. ib. 1, 1, 28 (62)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Bacchides",
+                "display": "Plautus, Titus Maccius - Bacchides",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:150": {
+                "text": "Ter. Eun. 150",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:130": {
+                "text": "id. ib. 130",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0472.phi001:32:1": {
+                "text": "Cat. 32, 1",
+                "author": "Catullus",
+                "work": "Carmina",
+                "display": "Catullus - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi004:44": {
+                "text": "Plaut. Bacch. 1, 1, 10 (44)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Bacchides",
+                "display": "Plautus, Titus Maccius - Bacchides",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi010:678": {
+                "text": "id. Men. 4, 3, 4 (678)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Menaechmi",
+                "display": "Plautus, Titus Maccius - Menaechmi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi058:2:10": {
+                "text": "Cic. Q. Fr. 2, 10",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to his brother Quintus",
+                "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:2:2": {
+                "text": "id. Att. 2, 2",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi010:421": {
+                "text": "Plaut. Men. 2, 3, 71 (421)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Menaechmi",
+                "display": "Plautus, Titus Maccius - Menaechmi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0119.phi010:524": {
+                "text": " 3, 3, 1 (524)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Menaechmi",
+                "display": "Plautus, Titus Maccius - Menaechmi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi003:537": {
+                "text": "Ter. Eun. 537",
+                "author": "Terence",
+                "work": "Eunuchus",
+                "display": "Terence - Eunuchus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi058:1:4": {
+                "text": "Cic. Q. Fr. 1, 4",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to his brother Quintus",
+                "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "E.  With inf., to do a thing willingly, to be wont or accustomed to (cf. \u03c6\u03b9\u03bb\u03ad\u03c9; mostly poet. or in post-Aug. prose): clamore, vultu, saepe impetu, atque aliis omnibus, quae ira fieri amat, delights to have done, is wont to do, Sall. J. 34, 1; cf. Quint. 9, 3, 17: aurum per medios ire satellites Et perrumpere amat saxa potentius Ictu fulmineo, Hor. C. 3, 16, 9; so id. ib. 2, 3, 9; id. Epod. 8, 15; Plin. 13, 4, 7, \u00a7 28; Tac. A. 4, 9.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "00:01:04",
+            "citations": {
+              "urn:cts:latinLit:phi0631.phi002:34:1": "Sall. J. 34, 1",
+              "urn:cts:latinLit:phi1002.phi001:9:3:17": "Quint. 9, 3, 17",
+              "urn:cts:latinLit:phi0893.phi001:3:16:9": "Hor. C. 3, 16, 9",
+              "urn:cts:latinLit:phi0893.phi001:2:3:9": "id. ib. 2, 3, 9",
+              "urn:cts:latinLit:phi0893.phi003:8:15": "id. Epod. 8, 15",
+              "urn:cts:latinLit:phi0978.phi001:13:28": "Plin. 13, 4, 7, \u00a7 28",
+              "urn:cts:latinLit:phi1351.phi005:4:9": "Tac. A. 4, 9"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0631.phi002:34:1": {
+                "text": "Sall. J. 34, 1",
+                "author": "Sallust",
+                "work": "J",
+                "display": "Sallust - J",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1002.phi001:9:3:17": {
+                "text": "Quint. 9, 3, 17",
+                "author": "Quintilian",
+                "work": "Institutio Oratoria",
+                "display": "Quintilian - Institutio Oratoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi001:3:16:9": {
+                "text": "Hor. C. 3, 16, 9",
+                "author": "Horace",
+                "work": "Carmina",
+                "display": "Horace - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi001:2:3:9": {
+                "text": "id. ib. 2, 3, 9",
+                "author": "Horace",
+                "work": "Carmina",
+                "display": "Horace - Carmina",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi003:8:15": {
+                "text": "id. Epod. 8, 15",
+                "author": "Horace",
+                "work": "Epodi",
+                "display": "Horace - Epodi",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0978.phi001:13:28": {
+                "text": "Plin. 13, 4, 7, \u00a7 28",
+                "author": "Pliny, the Elder",
+                "work": "Naturalis Historia",
+                "display": "Pliny, the Elder - Naturalis Historia",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1351.phi005:4:9": {
+                "text": "Tac. A. 4, 9",
+                "author": "Tacitus, Cornelius",
+                "work": "Annales",
+                "display": "Tacitus, Cornelius - Annales",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "\u2014Hence, \u0103mans, antis, P. a., with gen. or absol.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "01",
+            "citations": {},
+            "citation_details": {},
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "A.  Fond, loving, kind, feeling kindly to, benevolent, pleasing; and subst., a friend, patron: continentem, amantem uxoris maxime, Plaut. As. 5, 2, 7 (857): veterem amicum suum studiosum, amantem, observantem sui, Cic. Rab. Post. 16: homines amantes tui, id. Fam. 9, 6: cives amantes patriae, id. Att. 9, 19; id. Q. Fr. 1, 1, 5: amans cruoris, Ov. P. 2, 9, 46: ad nos amantissimos tui veni, Cic. Fam. 16, 7: Amantissimus Domini habitabit in eo, Vulg. Deut. 33, 12; ib. Amos, 5, 11: amantissima eorum non proderunt iis, their most pleasant things, ib. Isa. 44, 9; so ib. Os. 9, 16.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "01:00",
+            "citations": {
+              "urn:cts:latinLit:phi0119.phi002:857": "Plaut. As. 5, 2, 7 (857)",
+              "urn:cts:latinLit:phi0474.phi030:chapter=16": "Cic. Rab. Post. 16",
+              "urn:cts:latinLit:phi0474.phi056:9:6": "id. Fam. 9, 6",
+              "urn:cts:latinLit:phi0474.phi057:9:19": "id. Att. 9, 19",
+              "urn:cts:latinLit:phi0474.phi058:1:1:5": "id. Q. Fr. 1, 1, 5",
+              "urn:cts:latinLit:phi0959.phi009:2:9:46": "Ov. P. 2, 9, 46",
+              "urn:cts:latinLit:phi0474.phi056:16:7": "Cic. Fam. 16, 7",
+              "urn:cts:greekLit:tlg0527.tlg005:33:12": "Vulg. Deut. 33, 12",
+              "urn:cts:greekLit:tlg0527.tlg048:44:9": "ib. Isa. 44, 9",
+              "urn:cts:greekLit:tlg0527.tlg036:9:16": "ib. Os. 9, 16"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0119.phi002:857": {
+                "text": "Plaut. As. 5, 2, 7 (857)",
+                "author": "Plautus, Titus Maccius",
+                "work": "Asinaria",
+                "display": "Plautus, Titus Maccius - Asinaria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi030:chapter=16": {
+                "text": "Cic. Rab. Post. 16",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro C. Rabirio Postumo",
+                "display": "Cicero, Marcus Tullius - Pro C. Rabirio Postumo",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:9:6": {
+                "text": "id. Fam. 9, 6",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:9:19": {
+                "text": "id. Att. 9, 19",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi058:1:1:5": {
+                "text": "id. Q. Fr. 1, 1, 5",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to his brother Quintus",
+                "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi009:2:9:46": {
+                "text": "Ov. P. 2, 9, 46",
+                "author": "Ovid",
+                "work": "Ex Ponto",
+                "display": "Ovid - Ex Ponto",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:16:7": {
+                "text": "Cic. Fam. 16, 7",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0527.tlg005:33:12": {
+                "text": "Vulg. Deut. 33, 12",
+                "author": "Old Testament",
+                "work": "Deuteronomy",
+                "display": "Old Testament - Deuteronomy",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0527.tlg048:44:9": {
+                "text": "ib. Isa. 44, 9",
+                "author": "Old Testament",
+                "work": "Isaiah",
+                "display": "Old Testament - Isaiah",
+                "kind": "cts"
+              },
+              "urn:cts:greekLit:tlg0527.tlg036:9:16": {
+                "text": "ib. Os. 9, 16",
+                "author": "Old Testament",
+                "work": "Hosea",
+                "display": "Old Testament - Hosea",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "B.  Trop., of things, friendly, affectionate: nomen amantius indulgentiusque, Cic. Clu. 5: lenissimis et amantissimis verbis utens, id. Fam. 5, 15 al.\u2014",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "01:00:00",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi010:chapter=5": "Cic. Clu. 5",
+              "urn:cts:latinLit:phi0474.phi056:5:15": "id. Fam. 5, 15"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi010:chapter=5": {
+                "text": "Cic. Clu. 5",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Pro A. Cluentio",
+                "display": "Cicero, Marcus Tullius - Pro A. Cluentio",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:5:15": {
+                "text": "id. Fam. 5, 15",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        },
+        {
+          "definition": "C.  Sometimes in a bad sense = amator or amica, a paramour; cf. Wolf ad Cic. Tusc. 4, 12, 27; cf. Hor. Ep. 1, 1, 38: quis fallere possit amantem, Verg. A. 4, 296; 4, 429: amantium irae amoris integratio est, Ter. And. 555: oblitos famae melioris amant\u012bs, Verg. A. 4, 221: perjuria amant\u016bm, Ov. A. A. 1, 633.\u2014 Hence, \u0103manter, adv., lovingly, affectionately, Cic. Fam. 5, 19; id. Att. 2, 4.\u2014Comp., Tac. A. 1, 43.\u2014Sup., Cic. Am. 1.",
+          "pos": "noun",
+          "metadata": {
+            "entryid": "01:00:01",
+            "citations": {
+              "urn:cts:latinLit:phi0474.phi049:4:12:27": "Cic. Tusc. 4, 12, 27",
+              "urn:cts:latinLit:phi0893.phi005:1:1:38": "Hor. Ep. 1, 1, 38",
+              "urn:cts:latinLit:phi0690.phi003:4:296": "Verg. A. 4, 296",
+              "urn:cts:latinLit:phi0690.phi003:4:429": "4, 429",
+              "urn:cts:latinLit:phi0134.phi001:555": "Ter. And. 555",
+              "urn:cts:latinLit:phi0690.phi003:4:221": "Verg. A. 4, 221",
+              "urn:cts:latinLit:phi0959.phi004:1:633": "Ov. A. A. 1, 633",
+              "urn:cts:latinLit:phi0474.phi056:5:19": "Cic. Fam. 5, 19",
+              "urn:cts:latinLit:phi0474.phi057:2:4": "id. Att. 2, 4",
+              "urn:cts:latinLit:phi1351.phi005:1:43": "Tac. A. 1, 43",
+              "urn:cts:latinLit:phi0474.phi052:chapter=1": "Cic. Am. 1"
+            },
+            "citation_details": {
+              "urn:cts:latinLit:phi0474.phi049:4:12:27": {
+                "text": "Cic. Tusc. 4, 12, 27",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Tusculanae Disputationes",
+                "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0893.phi005:1:1:38": {
+                "text": "Hor. Ep. 1, 1, 38",
+                "author": "Horace",
+                "work": "Epistulae",
+                "display": "Horace - Epistulae",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:4:296": {
+                "text": "Verg. A. 4, 296",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:4:429": {
+                "text": "4, 429",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0134.phi001:555": {
+                "text": "Ter. And. 555",
+                "author": "Terence",
+                "work": "Andria",
+                "display": "Terence - Andria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0690.phi003:4:221": {
+                "text": "Verg. A. 4, 221",
+                "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+                "work": "Aeneid",
+                "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0959.phi004:1:633": {
+                "text": "Ov. A. A. 1, 633",
+                "author": "Ovid",
+                "work": "Ars Amatoria",
+                "display": "Ovid - Ars Amatoria",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi056:5:19": {
+                "text": "Cic. Fam. 5, 19",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Fam",
+                "display": "Cicero, Marcus Tullius - Fam",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi057:2:4": {
+                "text": "id. Att. 2, 4",
+                "author": "Cicero, Marcus Tullius",
+                "work": "Letters to Atticus",
+                "display": "Cicero, Marcus Tullius - Letters to Atticus",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi1351.phi005:1:43": {
+                "text": "Tac. A. 1, 43",
+                "author": "Tacitus, Cornelius",
+                "work": "Annales",
+                "display": "Tacitus, Cornelius - Annales",
+                "kind": "cts"
+              },
+              "urn:cts:latinLit:phi0474.phi052:chapter=1": {
+                "text": "Cic. Am. 1",
+                "author": "Cicero, Marcus Tullius",
+                "work": "De Amicitia",
+                "display": "Cicero, Marcus Tullius - De Amicitia",
+                "kind": "cts"
+              }
+            },
+            "block_metadata": {}
+          }
+        }
+      ],
+      "source": "diogenes",
+      "metadata": {
+        "chunk_types": [
+          "DiogenesMatchingReference"
+        ],
+        "terms": [
+          "\u0103mo"
+        ]
+      },
+      "dictionary_blocks": [
+        {
+          "entry": "amo, \u0101vi, \u0101tum, 1, v. a. (am\u0101sso = amavero, Plaut. Cas. 5, 4, 23 (985); id. Curc. 4, 4, 22 (578); id. Mil. 4, 2, 16 (1006); cf. Paul. ex Fest. p. 28 M\u00fcll.: am\u0101sse = amavisse, Ter. Eun. 827: amantum = amantium, Plaut. Men. 2, 3, 4 (354); Lucr. 4, 1077; Ov. A. A. 1, 439) cf. Sanscr. kam = to love; \u1f05\u03bc\u03b1 = Sanscr. sam = Germ. sammt; Engl. same, Lat. similis; with the radical notion of likeness, union, to like, to love, \u1f10\u03c1\u03ac\u03c9, \u03c6\u03b9\u03bb\u03ad\u03c9 (both in the higher and the lower sense, opp. odisse; while diligere (\u1f00\u03b3\u03b1\u03c0\u1ff6) designates esteem, regard; opp. neglegere or spernere; cf. Doed. Syn. IV. p. 97; in the high sense in the philos. writings and Epp. of Cicero; often in the low sense, esp. in the comic poets. In the Vulg. amo and amor are comparatively little used, prob. from their bad associations, amo being used 51 times and amor 20. Instead of these words, diligo, dilectio and caritas were used. Diligo (incl. dilectus) occurs 422 times, and dilectio and caritas 144 times in all; dilectio 43 and caritas 101 times).",
+          "entryid": "00",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi006:985": "Plaut. Cas. 5, 4, 23 (985)",
+            "urn:cts:latinLit:phi0119.phi008:578": "id. Curc. 4, 4, 22 (578)",
+            "urn:cts:latinLit:phi0119.phi012:1006": "id. Mil. 4, 2, 16 (1006)",
+            "urn:cts:latinLit:phi1236.phi001:page=28": "Fest. p. 28",
+            "urn:cts:latinLit:phi0134.phi003:827": "Ter. Eun. 827",
+            "urn:cts:latinLit:phi0119.phi010:354": "Plaut. Men. 2, 3, 4 (354)",
+            "urn:cts:latinLit:phi0550.phi001:4:1077": "Lucr. 4, 1077",
+            "urn:cts:latinLit:phi0959.phi004:1:439": "Ov. A. A. 1, 439"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi006:985": "Plaut. Cas. 5, 4, 23 (985)",
+            "urn:cts:latinLit:phi0119.phi008:578": "id. Curc. 4, 4, 22 (578)",
+            "urn:cts:latinLit:phi0119.phi012:1006": "id. Mil. 4, 2, 16 (1006)",
+            "urn:cts:latinLit:phi1236.phi001:page=28": "Fest. p. 28",
+            "urn:cts:latinLit:phi0134.phi003:827": "Ter. Eun. 827",
+            "urn:cts:latinLit:phi0119.phi010:354": "Plaut. Men. 2, 3, 4 (354)",
+            "urn:cts:latinLit:phi0550.phi001:4:1077": "Lucr. 4, 1077",
+            "urn:cts:latinLit:phi0959.phi004:1:439": "Ov. A. A. 1, 439"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi006:985": {
+              "text": "Plaut. Cas. 5, 4, 23 (985)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Casina",
+              "display": "Plautus, Titus Maccius - Casina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi008:578": {
+              "text": "id. Curc. 4, 4, 22 (578)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Curculio",
+              "display": "Plautus, Titus Maccius - Curculio",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi012:1006": {
+              "text": "id. Mil. 4, 2, 16 (1006)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Miles Gloriosus",
+              "display": "Plautus, Titus Maccius - Miles Gloriosus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1236.phi001:page=28": {
+              "text": "Fest. p. 28",
+              "author": "Sex. Pompeius Festus",
+              "work": "P",
+              "display": "Sex. Pompeius Festus - P",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:827": {
+              "text": "Ter. Eun. 827",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi010:354": {
+              "text": "Plaut. Men. 2, 3, 4 (354)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Menaechmi",
+              "display": "Plautus, Titus Maccius - Menaechmi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0550.phi001:4:1077": {
+              "text": "Lucr. 4, 1077",
+              "author": "Lucretius",
+              "work": "De Rerum Natura",
+              "display": "Lucretius - De Rerum Natura",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi004:1:439": {
+              "text": "Ov. A. A. 1, 439",
+              "author": "Ovid",
+              "work": "Ars Amatoria",
+              "display": "Ovid - Ars Amatoria",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "I.  In gen.: quid autem est amare, nisi velle bonis aliquem adfici, quam maximis, etiamsi ad se ex iis nihil redeat, Cic. Fin. 2, 24: amare autem nihil aliud est, nisi eum ipsum diligere, quem ames, null\u0101 indigenti\u0101, null\u0101 utilitate quaesit\u0101, id. Am. 27, 100: videas corde amare (eos) inter se, Plaut. Capt. 2, 3, 60 (420); Ter. Ad. 828: liberi amare patrem atque matrem videntur, Gell. 12, 1, 23: qui amat patrem aut matrem, Vulg. Matt. 6, 5: ipse Pater amat vos, h. l. used of God, ib. Joan. 16, 27: Cicerones pueri amant inter se, love each other, Cic. Att. 6, 1: magis te quam oculos nunc amo meos, Ter. Ad. 701: quem omnes amare meritissimo debemus, Cic. de Or. 1, 55, 234.\u2014So, amare aliquem ex animo, to love with all one's heart, Cic. Q. Fr. 1, 1, 5: unice patriam et cives, id. Cat. 3, 5: aliquem amore singulari, id. Fam. 15, 20: sicut mater unicum amat filium suum, Vulg. 2 Reg. 1, 26: dignus amari, Verg. E. 5, 89.\u2014Amare in contr. with diligere, as stronger, more affectionate: Clodius valde me diligit, vel, ut \u1f10\u03bc\u03c6\u03b1\u03c4\u03b9\u03ba\u03ce\u03c4\u03b5\u03c1\u03bf\u03bd dicam, valde me amat, Cic. ad Brut. 1, 1; id. Fam. 9, 14: eum a me non diligi solum, verum etiam amari, id. ib. 13, 47; id. Fragm. ap. Non. 421, 30 (Orell. IV. 2, p. 466); Plin. Ep. 3, 9.\u2014But diligere, as indicative of esteem, is more emph. than amare, which denotes an instinctive or affectionate love: non quo quemquam plus amem, aut plus diligam, Eo feci, sed, etc., Ter. Eun. 96: homo nobilis, qui a suis et amari et diligi vellet, Cic. Verr. 2, 4, 23: te semper amavi dilexique, have loved and esteemed, id. Fam. 15, 7: diligis (\u1f00\u03b3\u03b1\u03c0\u1fb7\u03c2) me plus his? Etiam, Domine, tu scis quia amo (\u03c6\u03b9\u03bb\u1ff6) te, Vulg. Joan. 21, 15 sqq., ubi v. Alford, Gr. Test. al.\u2014Hence in asseverations: ita (sic) me dii (bene) ament or amabunt, so may the gods love me, by the love of the gods, most assuredly: ita me di amabunt, etc., Plaut. Poen. 1, 3, 30 (439) (v. the pass. in its connection): ita me di ament, credo, Ter. And. 947: non, ita me di bene ament, id. Hec. 206: sic me di amabunt, ut, etc., id. Heaut. 463.\u2014Hence also ellipt.: ita me Juppiter! (sc. amet or amabit), Plaut. Poen. 1, 3, 31 (440) (so in Engl. with different ellipsis, bless me! sc. God).\u2014And as a salutation: Me. Salvus atque fortunatus, Euclio, semper sies. Eu. Di te ament, Me gadore, the gods bless you! Plaut. Aul. 2, 2, 6 (183) al.\u2014",
+          "entryid": "00:00",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi048:2:24": "Cic. Fin. 2, 24",
+            "urn:cts:latinLit:phi0474.phi052:27:100": "id. Am. 27, 100",
+            "urn:cts:latinLit:phi0119.phi005:420": "Plaut. Capt. 2, 3, 60 (420)",
+            "urn:cts:latinLit:phi0134.phi006:828": "Ter. Ad. 828",
+            "urn:cts:latinLit:phi1254.phi001:12:1:23": "Gell. 12, 1, 23",
+            "urn:cts:greekLit:tlg0031.tlg001:6:5": "Vulg. Matt. 6, 5",
+            "urn:cts:greekLit:tlg0031.tlg004:16:27": "ib. Joan. 16, 27",
+            "urn:cts:latinLit:phi0474.phi057:6:1": "Cic. Att. 6, 1",
+            "urn:cts:latinLit:phi0134.phi006:701": "Ter. Ad. 701",
+            "urn:cts:latinLit:phi0474.phi037:1:55:234": "Cic. de Or. 1, 55, 234",
+            "urn:cts:latinLit:phi0474.phi058:1:1:5": "Cic. Q. Fr. 1, 1, 5",
+            "urn:cts:latinLit:phi0474.phi013:3:5": "id. Cat. 3, 5",
+            "urn:cts:latinLit:phi0474.phi056:15:20": "id. Fam. 15, 20",
+            "urn:cts:greekLit:tlg0527.tlg012:1:26": "Vulg. 2 Reg. 1, 26",
+            "urn:cts:latinLit:phi0690.phi001:5:89": "Verg. E. 5, 89",
+            "urn:cts:latinLit:phi0474.phi059:1:1": "Cic. ad Brut. 1, 1",
+            "urn:cts:latinLit:phi0474.phi056:9:14": "id. Fam. 9, 14",
+            "urn:cts:latinLit:phi0474.phi056:13:47": "id. ib. 13, 47",
+            "urn:cts:latinLit:phi1318.phi001:3:9": "Plin. Ep. 3, 9",
+            "urn:cts:latinLit:phi0134.phi003:96": "Ter. Eun. 96",
+            "urn:cts:latinLit:phi0474.phi005:2:4:23": "Cic. Verr. 2, 4, 23",
+            "urn:cts:latinLit:phi0474.phi056:15:7": "id. Fam. 15, 7",
+            "urn:cts:greekLit:tlg0031.tlg004:21:15": "Vulg. Joan. 21, 15",
+            "urn:cts:latinLit:phi0119.phi015:439": "Plaut. Poen. 1, 3, 30 (439)",
+            "urn:cts:latinLit:phi0134.phi001:947": "Ter. And. 947",
+            "urn:cts:latinLit:phi0134.phi005:206": "id. Hec. 206",
+            "urn:cts:latinLit:phi0134.phi002:463": "id. Heaut. 463",
+            "urn:cts:latinLit:phi0119.phi015:440": "Plaut. Poen. 1, 3, 31 (440)",
+            "urn:cts:latinLit:phi0119.phi003:183": "Plaut. Aul. 2, 2, 6 (183)"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi048:2:24": "Cic. Fin. 2, 24",
+            "urn:cts:latinLit:phi0474.phi052:27:100": "id. Am. 27, 100",
+            "urn:cts:latinLit:phi0119.phi005:420": "Plaut. Capt. 2, 3, 60 (420)",
+            "urn:cts:latinLit:phi0134.phi006:828": "Ter. Ad. 828",
+            "urn:cts:latinLit:phi1254.phi001:12:1:23": "Gell. 12, 1, 23",
+            "urn:cts:greekLit:tlg0031.tlg001:6:5": "Vulg. Matt. 6, 5",
+            "urn:cts:greekLit:tlg0031.tlg004:16:27": "ib. Joan. 16, 27",
+            "urn:cts:latinLit:phi0474.phi057:6:1": "Cic. Att. 6, 1",
+            "urn:cts:latinLit:phi0134.phi006:701": "Ter. Ad. 701",
+            "urn:cts:latinLit:phi0474.phi037:1:55:234": "Cic. de Or. 1, 55, 234",
+            "urn:cts:latinLit:phi0474.phi058:1:1:5": "Cic. Q. Fr. 1, 1, 5",
+            "urn:cts:latinLit:phi0474.phi013:3:5": "id. Cat. 3, 5",
+            "urn:cts:latinLit:phi0474.phi056:15:20": "id. Fam. 15, 20",
+            "urn:cts:greekLit:tlg0527.tlg012:1:26": "Vulg. 2 Reg. 1, 26",
+            "urn:cts:latinLit:phi0690.phi001:5:89": "Verg. E. 5, 89",
+            "urn:cts:latinLit:phi0474.phi059:1:1": "Cic. ad Brut. 1, 1",
+            "urn:cts:latinLit:phi0474.phi056:9:14": "id. Fam. 9, 14",
+            "urn:cts:latinLit:phi0474.phi056:13:47": "id. ib. 13, 47",
+            "urn:cts:latinLit:phi1318.phi001:3:9": "Plin. Ep. 3, 9",
+            "urn:cts:latinLit:phi0134.phi003:96": "Ter. Eun. 96",
+            "urn:cts:latinLit:phi0474.phi005:2:4:23": "Cic. Verr. 2, 4, 23",
+            "urn:cts:latinLit:phi0474.phi056:15:7": "id. Fam. 15, 7",
+            "urn:cts:greekLit:tlg0031.tlg004:21:15": "Vulg. Joan. 21, 15",
+            "urn:cts:latinLit:phi0119.phi015:439": "Plaut. Poen. 1, 3, 30 (439)",
+            "urn:cts:latinLit:phi0134.phi001:947": "Ter. And. 947",
+            "urn:cts:latinLit:phi0134.phi005:206": "id. Hec. 206",
+            "urn:cts:latinLit:phi0134.phi002:463": "id. Heaut. 463",
+            "urn:cts:latinLit:phi0119.phi015:440": "Plaut. Poen. 1, 3, 31 (440)",
+            "urn:cts:latinLit:phi0119.phi003:183": "Plaut. Aul. 2, 2, 6 (183)"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi048:2:24": {
+              "text": "Cic. Fin. 2, 24",
+              "author": "Cicero, Marcus Tullius",
+              "work": "de Finibus Bonorum et Malorum",
+              "display": "Cicero, Marcus Tullius - de Finibus Bonorum et Malorum",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:27:100": {
+              "text": "id. Am. 27, 100",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Amicitia",
+              "display": "Cicero, Marcus Tullius - De Amicitia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi005:420": {
+              "text": "Plaut. Capt. 2, 3, 60 (420)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Captivi",
+              "display": "Plautus, Titus Maccius - Captivi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi006:828": {
+              "text": "Ter. Ad. 828",
+              "author": "Terence",
+              "work": "Adelphi",
+              "display": "Terence - Adelphi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1254.phi001:12:1:23": {
+              "text": "Gell. 12, 1, 23",
+              "author": "Gellius, Aulus",
+              "work": "Noctes Atticae",
+              "display": "Gellius, Aulus - Noctes Atticae",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0031.tlg001:6:5": {
+              "text": "Vulg. Matt. 6, 5",
+              "author": "New Testament",
+              "work": "Matthew",
+              "display": "New Testament - Matthew",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0031.tlg004:16:27": {
+              "text": "ib. Joan. 16, 27",
+              "author": "New Testament",
+              "work": "Joan",
+              "display": "New Testament - Joan",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:6:1": {
+              "text": "Cic. Att. 6, 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi006:701": {
+              "text": "Ter. Ad. 701",
+              "author": "Terence",
+              "work": "Adelphi",
+              "display": "Terence - Adelphi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi037:1:55:234": {
+              "text": "Cic. de Or. 1, 55, 234",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De",
+              "display": "Cicero, Marcus Tullius - De",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi058:1:1:5": {
+              "text": "Cic. Q. Fr. 1, 1, 5",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to his brother Quintus",
+              "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi013:3:5": {
+              "text": "id. Cat. 3, 5",
+              "author": "Cicero, Marcus Tullius",
+              "work": "In Catilinam",
+              "display": "Cicero, Marcus Tullius - In Catilinam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:15:20": {
+              "text": "id. Fam. 15, 20",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0527.tlg012:1:26": {
+              "text": "Vulg. 2 Reg. 1, 26",
+              "author": "Old Testament",
+              "work": "II Samuel",
+              "display": "Old Testament - II Samuel",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi001:5:89": {
+              "text": "Verg. E. 5, 89",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Eclogues",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi059:1:1": {
+              "text": "Cic. ad Brut. 1, 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Ad",
+              "display": "Cicero, Marcus Tullius - Ad",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:9:14": {
+              "text": "id. Fam. 9, 14",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:13:47": {
+              "text": "id. ib. 13, 47",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to his Friends",
+              "display": "Cicero, Marcus Tullius - Letters to his Friends",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1318.phi001:3:9": {
+              "text": "Plin. Ep. 3, 9",
+              "author": "Pliny, the Younger",
+              "work": "Epistulae",
+              "display": "Pliny, the Younger - Epistulae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:96": {
+              "text": "Ter. Eun. 96",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi005:2:4:23": {
+              "text": "Cic. Verr. 2, 4, 23",
+              "author": "Cicero, Marcus Tullius",
+              "work": "In C. Verrem",
+              "display": "Cicero, Marcus Tullius - In C. Verrem",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:15:7": {
+              "text": "id. Fam. 15, 7",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0031.tlg004:21:15": {
+              "text": "Vulg. Joan. 21, 15",
+              "author": "New Testament",
+              "work": "Joan",
+              "display": "New Testament - Joan",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi015:439": {
+              "text": "Plaut. Poen. 1, 3, 30 (439)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Poenulus",
+              "display": "Plautus, Titus Maccius - Poenulus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi001:947": {
+              "text": "Ter. And. 947",
+              "author": "Terence",
+              "work": "Andria",
+              "display": "Terence - Andria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi005:206": {
+              "text": "id. Hec. 206",
+              "author": "Terence",
+              "work": "Hecyra",
+              "display": "Terence - Hecyra",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi002:463": {
+              "text": "id. Heaut. 463",
+              "author": "Terence",
+              "work": "Heautontimorumenos",
+              "display": "Terence - Heautontimorumenos",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi015:440": {
+              "text": "Plaut. Poen. 1, 3, 31 (440)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Poenulus",
+              "display": "Plautus, Titus Maccius - Poenulus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi003:183": {
+              "text": "Plaut. Aul. 2, 2, 6 (183)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Aulularia",
+              "display": "Plautus, Titus Maccius - Aulularia",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "II.  Esp.",
+          "entryid": "00:01"
+        },
+        {
+          "entry": "A.  Amare se, of vain men, to be in love with, to be pleased with one's self, also, to be selfish (used mostly by Cic.): quam se ipse amans sine rivali! Cic. Q. Fr. 3, 8: nisi nosmet ipsos valde amabimus, id. Off. 1, 9, 29; so id. Att. 4, 18, 2; id. Har. Resp. 9: homines se ipsos amantes, Vulg. 2 Tim. 3, 2.\u2014",
+          "entryid": "00:01:00",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi058:3:8": "Cic. Q. Fr. 3, 8",
+            "urn:cts:latinLit:phi0474.phi055:1:9:29": "id. Off. 1, 9, 29",
+            "urn:cts:latinLit:phi0474.phi057:4:18:2": "id. Att. 4, 18, 2",
+            "urn:cts:latinLit:phi0474.phi021:chapter=9": "id. Har. Resp. 9",
+            "urn:cts:greekLit:tlg0031.tlg015:3:2": "Vulg. 2 Tim. 3, 2"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi058:3:8": "Cic. Q. Fr. 3, 8",
+            "urn:cts:latinLit:phi0474.phi055:1:9:29": "id. Off. 1, 9, 29",
+            "urn:cts:latinLit:phi0474.phi057:4:18:2": "id. Att. 4, 18, 2",
+            "urn:cts:latinLit:phi0474.phi021:chapter=9": "id. Har. Resp. 9",
+            "urn:cts:greekLit:tlg0031.tlg015:3:2": "Vulg. 2 Tim. 3, 2"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi058:3:8": {
+              "text": "Cic. Q. Fr. 3, 8",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to his brother Quintus",
+              "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi055:1:9:29": {
+              "text": "id. Off. 1, 9, 29",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Officiis",
+              "display": "Cicero, Marcus Tullius - De Officiis",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:4:18:2": {
+              "text": "id. Att. 4, 18, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi021:chapter=9": {
+              "text": "id. Har. Resp. 9",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De haruspicum responso in P. Clodium",
+              "display": "Cicero, Marcus Tullius - De haruspicum responso in P. Clodium",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0031.tlg015:3:2": {
+              "text": "Vulg. 2 Tim. 3, 2",
+              "author": "New Testament",
+              "work": "1 Timothy",
+              "display": "New Testament - 1 Timothy",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "B.  Of unlawful love, Plaut. Bacch. 2, 2, 30 (208): ut videas eam medullitus me amare! id. Most. 1, 3, 86 (242) et saep.: meum gnatum rumor est amare, Ter. And. 185; 191 al.: ibi primum insuevit exercitus populi Romani amare, potare, etc., Sall. C. 11, 6: quae (via) eo me solvat amantem, Verg. A. 4, 479: non aequo foedere amare, id. ib. 4, 520; Hor. S. 2, 3, 250 Heind.; Vulg. Jud. 16, 4; ib. 2 Reg. 13, 4 al. \u2014",
+          "entryid": "00:01:01",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi004:208": "Plaut. Bacch. 2, 2, 30 (208)",
+            "urn:cts:latinLit:phi0119.phi013:242": "id. Most. 1, 3, 86 (242)",
+            "urn:cts:latinLit:phi0134.phi001:185": "Ter. And. 185",
+            "urn:cts:latinLit:phi0134.phi001:191": "191",
+            "urn:cts:latinLit:phi0631.phi001:11:6": "Sall. C. 11, 6",
+            "urn:cts:latinLit:phi0690.phi003:4:479": "Verg. A. 4, 479",
+            "urn:cts:latinLit:phi0690.phi003:4:520": "id. ib. 4, 520",
+            "urn:cts:latinLit:phi0893.phi004:2:3:250": "Hor. S. 2, 3, 250",
+            "urn:cts:greekLit:tlg0031.tlg026:16:4": "Vulg. Jud. 16, 4",
+            "urn:cts:greekLit:tlg0527.tlg012:13:4": "ib. 2 Reg. 13, 4"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi004:208": "Plaut. Bacch. 2, 2, 30 (208)",
+            "urn:cts:latinLit:phi0119.phi013:242": "id. Most. 1, 3, 86 (242)",
+            "urn:cts:latinLit:phi0134.phi001:185": "Ter. And. 185",
+            "urn:cts:latinLit:phi0134.phi001:191": "191",
+            "urn:cts:latinLit:phi0631.phi001:11:6": "Sall. C. 11, 6",
+            "urn:cts:latinLit:phi0690.phi003:4:479": "Verg. A. 4, 479",
+            "urn:cts:latinLit:phi0690.phi003:4:520": "id. ib. 4, 520",
+            "urn:cts:latinLit:phi0893.phi004:2:3:250": "Hor. S. 2, 3, 250",
+            "urn:cts:greekLit:tlg0031.tlg026:16:4": "Vulg. Jud. 16, 4",
+            "urn:cts:greekLit:tlg0527.tlg012:13:4": "ib. 2 Reg. 13, 4"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi004:208": {
+              "text": "Plaut. Bacch. 2, 2, 30 (208)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Bacchides",
+              "display": "Plautus, Titus Maccius - Bacchides",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi013:242": {
+              "text": "id. Most. 1, 3, 86 (242)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Mostellaria",
+              "display": "Plautus, Titus Maccius - Mostellaria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi001:185": {
+              "text": "Ter. And. 185",
+              "author": "Terence",
+              "work": "Andria",
+              "display": "Terence - Andria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi001:191": {
+              "text": "191",
+              "author": "Terence",
+              "work": "Andria",
+              "display": "Terence - Andria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0631.phi001:11:6": {
+              "text": "Sall. C. 11, 6",
+              "author": "Sallust",
+              "work": "Catilinae Coniuratio",
+              "display": "Sallust - Catilinae Coniuratio",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:4:479": {
+              "text": "Verg. A. 4, 479",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:4:520": {
+              "text": "id. ib. 4, 520",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi004:2:3:250": {
+              "text": "Hor. S. 2, 3, 250",
+              "author": "Horace",
+              "work": "Satires",
+              "display": "Horace - Satires",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0031.tlg026:16:4": {
+              "text": "Vulg. Jud. 16, 4",
+              "author": "New Testament",
+              "work": "Jude",
+              "display": "New Testament - Jude",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0527.tlg012:13:4": {
+              "text": "ib. 2 Reg. 13, 4",
+              "author": "Old Testament",
+              "work": "II Samuel",
+              "display": "Old Testament - II Samuel",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "C.  Trop., to love a thing, to like, to be fond of, to find pleasure in, delight in: nomen, orationem, vultum, incessum alicujus amare, Cic. Sest. 49, 105: amavi amorem tuum, id. Fam. 9, 16: Alexidis manum amabam, id. Att. 7, 2: amabat litteras, Nep. Att. 1, 2: ea, quae res secundae amant, lascivi\u0101 atque superbi\u0101 incessere, Sall. J. 41, 3: amare nemus et fugere urbem, Hor. Ep. 2, 2, 77: amat bonus otia Daphnis, Verg. E. 5, 61: non omnes eadem mirantur amantque, Hor. Ep. 2, 2, 58: mir\u0101 diversitate natur\u0101, cum \u012bdem homines sic ament inertiam et oderint quietem, Tac. G. 15: pax et quies tunc tantum amata, id. ib. 40: qui amant vinum et pinguia, Vulg. Prov. 21, 17: amant salutationes in foro, ib. Luc. 20, 46: amat Janua limen, loves to remain shut, i. e. is constantly closed, Hor. C. 1, 25, 3; so, Nilus amet alveum suum, keep to its bed, Plin. Pan. 31, 4 al.\u2014With inf. as object: hic ames dici pater atque princeps, Hor. C. 1, 2, 50: amant in synagogis orare, Vulg. Matt. 6, 5.\u2014",
+          "entryid": "00:01:02",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi022:49:105": "Cic. Sest. 49, 105",
+            "urn:cts:latinLit:phi0474.phi056:9:16": "id. Fam. 9, 16",
+            "urn:cts:latinLit:phi0474.phi057:7:2": "id. Att. 7, 2",
+            "urn:cts:latinLit:phi0588.phi001:att:1:2": "Nep. Att. 1, 2",
+            "urn:cts:latinLit:phi0631.phi002:41:3": "Sall. J. 41, 3",
+            "urn:cts:latinLit:phi0893.phi005:2:2:77": "Hor. Ep. 2, 2, 77",
+            "urn:cts:latinLit:phi0690.phi001:5:61": "Verg. E. 5, 61",
+            "urn:cts:latinLit:phi0893.phi005:2:2:58": "Hor. Ep. 2, 2, 58",
+            "urn:cts:latinLit:phi1351.phi002:15": "Tac. G. 15",
+            "urn:cts:latinLit:phi1351.phi002:40": "id. ib. 40",
+            "urn:cts:greekLit:tlg0527.tlg029:21:17": "Vulg. Prov. 21, 17",
+            "urn:cts:greekLit:tlg0031.tlg003:20:46": "ib. Luc. 20, 46",
+            "urn:cts:latinLit:phi0893.phi001:1:25:3": "Hor. C. 1, 25, 3",
+            "urn:cts:latinLit:phi1318.phi002:31:4": "Plin. Pan. 31, 4",
+            "urn:cts:latinLit:phi0893.phi001:1:2:50": "Hor. C. 1, 2, 50",
+            "urn:cts:greekLit:tlg0031.tlg001:6:5": "Vulg. Matt. 6, 5"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi022:49:105": "Cic. Sest. 49, 105",
+            "urn:cts:latinLit:phi0474.phi056:9:16": "id. Fam. 9, 16",
+            "urn:cts:latinLit:phi0474.phi057:7:2": "id. Att. 7, 2",
+            "urn:cts:latinLit:phi0588.phi001:att:1:2": "Nep. Att. 1, 2",
+            "urn:cts:latinLit:phi0631.phi002:41:3": "Sall. J. 41, 3",
+            "urn:cts:latinLit:phi0893.phi005:2:2:77": "Hor. Ep. 2, 2, 77",
+            "urn:cts:latinLit:phi0690.phi001:5:61": "Verg. E. 5, 61",
+            "urn:cts:latinLit:phi0893.phi005:2:2:58": "Hor. Ep. 2, 2, 58",
+            "urn:cts:latinLit:phi1351.phi002:15": "Tac. G. 15",
+            "urn:cts:latinLit:phi1351.phi002:40": "id. ib. 40",
+            "urn:cts:greekLit:tlg0527.tlg029:21:17": "Vulg. Prov. 21, 17",
+            "urn:cts:greekLit:tlg0031.tlg003:20:46": "ib. Luc. 20, 46",
+            "urn:cts:latinLit:phi0893.phi001:1:25:3": "Hor. C. 1, 25, 3",
+            "urn:cts:latinLit:phi1318.phi002:31:4": "Plin. Pan. 31, 4",
+            "urn:cts:latinLit:phi0893.phi001:1:2:50": "Hor. C. 1, 2, 50",
+            "urn:cts:greekLit:tlg0031.tlg001:6:5": "Vulg. Matt. 6, 5"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi022:49:105": {
+              "text": "Cic. Sest. 49, 105",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro P. Sestio",
+              "display": "Cicero, Marcus Tullius - Pro P. Sestio",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:9:16": {
+              "text": "id. Fam. 9, 16",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:7:2": {
+              "text": "id. Att. 7, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0588.phi001:att:1:2": {
+              "text": "Nep. Att. 1, 2",
+              "author": "Nepos, Cornelius",
+              "work": "Att",
+              "display": "Nepos, Cornelius - Att",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0631.phi002:41:3": {
+              "text": "Sall. J. 41, 3",
+              "author": "Sallust",
+              "work": "J",
+              "display": "Sallust - J",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi005:2:2:77": {
+              "text": "Hor. Ep. 2, 2, 77",
+              "author": "Horace",
+              "work": "Epistulae",
+              "display": "Horace - Epistulae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi001:5:61": {
+              "text": "Verg. E. 5, 61",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Eclogues",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Eclogues",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi005:2:2:58": {
+              "text": "Hor. Ep. 2, 2, 58",
+              "author": "Horace",
+              "work": "Epistulae",
+              "display": "Horace - Epistulae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1351.phi002:15": {
+              "text": "Tac. G. 15",
+              "author": "Tacitus, Cornelius",
+              "work": "Germania",
+              "display": "Tacitus, Cornelius - Germania",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1351.phi002:40": {
+              "text": "id. ib. 40",
+              "author": "Tacitus, Cornelius",
+              "work": "Germania",
+              "display": "Tacitus, Cornelius - Germania",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0527.tlg029:21:17": {
+              "text": "Vulg. Prov. 21, 17",
+              "author": "Old Testament",
+              "work": "Proverbs",
+              "display": "Old Testament - Proverbs",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0031.tlg003:20:46": {
+              "text": "ib. Luc. 20, 46",
+              "author": "New Testament",
+              "work": "Luc",
+              "display": "New Testament - Luc",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi001:1:25:3": {
+              "text": "Hor. C. 1, 25, 3",
+              "author": "Horace",
+              "work": "Carmina",
+              "display": "Horace - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1318.phi002:31:4": {
+              "text": "Plin. Pan. 31, 4",
+              "author": "Pliny, the Younger",
+              "work": "Panegyricus",
+              "display": "Pliny, the Younger - Panegyricus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi001:1:2:50": {
+              "text": "Hor. C. 1, 2, 50",
+              "author": "Horace",
+              "work": "Carmina",
+              "display": "Horace - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0031.tlg001:6:5": {
+              "text": "Vulg. Matt. 6, 5",
+              "author": "New Testament",
+              "work": "Matthew",
+              "display": "New Testament - Matthew",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "D.  Amare aliquem de or in aliqu\u0101 re, quod, etc., to like one for something, to be obliged to one for something, to be under obligation, be thankful.",
+          "entryid": "00:01:03"
+        },
+        {
+          "entry": "a.  With de: ecquid nos amas De fidicin\u0101 istac? Ter. Eun. 456: de raudusculo multum te amo, Cic. Att. 7, 2, 7.\u2014",
+          "entryid": "00:01:03:00",
+          "citations": {
+            "urn:cts:latinLit:phi0134.phi003:456": "Ter. Eun. 456",
+            "urn:cts:latinLit:phi0474.phi057:7:2:7": "Cic. Att. 7, 2, 7"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0134.phi003:456": "Ter. Eun. 456",
+            "urn:cts:latinLit:phi0474.phi057:7:2:7": "Cic. Att. 7, 2, 7"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0134.phi003:456": {
+              "text": "Ter. Eun. 456",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:7:2:7": {
+              "text": "Cic. Att. 7, 2, 7",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "b.  With in: et in Attilii negotio te amavi, Cic. Fam. 13, 62.\u2014",
+          "entryid": "00:01:03:01",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi056:13:62": "Cic. Fam. 13, 62"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi056:13:62": "Cic. Fam. 13, 62"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi056:13:62": {
+              "text": "Cic. Fam. 13, 62",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "c.  With quod: te multum amamus, quod, etc., Cic. Att. 1, 3: amas me, quod te non vidi? Domit. Afer. ap. Quint. 6, 3, 93.\u2014Also without prep. or quod: soror, parce, amabo. Anter. Quiesco. Adelph. Ergo amo te, I like you, am much obliged to you, Plaut. Poen. 1, 2, 40 (249): bene facis: Merito te amo, Ter. Ad. 946.\u2014Hence in the eilipt. lang. of conversation, amabo or amabo te (never amabo vos, etc.), lit. I shall like you (if you say, do, etc., that for me).\u2014Hence in entreaties = oro, quaeso, precor (with ut or ne foll.), be so good, I pray, entreat you (in Plaut. and Ter. very freq.; in the latter always amabo without te; in Cic. only in Epistt.): quis hic, amabo, est, qui, etc., Plaut. Mil. 3, 3, 26 (900): qui, amabo? id. Bacch. 1, 1, 19 (53): quid, amabo, obticuisti? id. ib. 1, 1, 28 (62) et saep.: id, amabo, adjuta me, Ter. Eun. 150: id agite, amabo, id. ib. 130 al.; Cat. 32, 1: id, amabo te, huic caveas, Plaut. Bacch. 1, 1, 10 (44); id. Men. 4, 3, 4 (678): amabo te, advola, Cic. Q. Fr. 2, 10: cura, amabo te, Ciceronem nostrum, id. Att. 2, 2.\u2014With ut or ne foll.: scin quid te amabo ut facias? Plaut. Men. 2, 3, 71 (421);  3, 3, 1 (524): amabo, ut illuc transeas, Ter. Eun. 537: amabo te, ne improbitati meae assignes, etc., Cic. Q. Fr. 1, 4.\u2014",
+          "entryid": "00:01:03:02",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi057:1:3": "Cic. Att. 1, 3",
+            "urn:cts:latinLit:phi1002.phi001:6:3:93": "Quint. 6, 3, 93",
+            "urn:cts:latinLit:phi0119.phi015:249": "Plaut. Poen. 1, 2, 40 (249)",
+            "urn:cts:latinLit:phi0134.phi006:946": "Ter. Ad. 946",
+            "urn:cts:latinLit:phi0119.phi012:900": "Plaut. Mil. 3, 3, 26 (900)",
+            "urn:cts:latinLit:phi0119.phi004:53": "id. Bacch. 1, 1, 19 (53)",
+            "urn:cts:latinLit:phi0119.phi004:62": "id. ib. 1, 1, 28 (62)",
+            "urn:cts:latinLit:phi0134.phi003:150": "Ter. Eun. 150",
+            "urn:cts:latinLit:phi0134.phi003:130": "id. ib. 130",
+            "urn:cts:latinLit:phi0472.phi001:32:1": "Cat. 32, 1",
+            "urn:cts:latinLit:phi0119.phi004:44": "Plaut. Bacch. 1, 1, 10 (44)",
+            "urn:cts:latinLit:phi0119.phi010:678": "id. Men. 4, 3, 4 (678)",
+            "urn:cts:latinLit:phi0474.phi058:2:10": "Cic. Q. Fr. 2, 10",
+            "urn:cts:latinLit:phi0474.phi057:2:2": "id. Att. 2, 2",
+            "urn:cts:latinLit:phi0119.phi010:421": "Plaut. Men. 2, 3, 71 (421)",
+            "urn:cts:latinLit:phi0119.phi010:524": " 3, 3, 1 (524)",
+            "urn:cts:latinLit:phi0134.phi003:537": "Ter. Eun. 537",
+            "urn:cts:latinLit:phi0474.phi058:1:4": "Cic. Q. Fr. 1, 4"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi057:1:3": "Cic. Att. 1, 3",
+            "urn:cts:latinLit:phi1002.phi001:6:3:93": "Quint. 6, 3, 93",
+            "urn:cts:latinLit:phi0119.phi015:249": "Plaut. Poen. 1, 2, 40 (249)",
+            "urn:cts:latinLit:phi0134.phi006:946": "Ter. Ad. 946",
+            "urn:cts:latinLit:phi0119.phi012:900": "Plaut. Mil. 3, 3, 26 (900)",
+            "urn:cts:latinLit:phi0119.phi004:53": "id. Bacch. 1, 1, 19 (53)",
+            "urn:cts:latinLit:phi0119.phi004:62": "id. ib. 1, 1, 28 (62)",
+            "urn:cts:latinLit:phi0134.phi003:150": "Ter. Eun. 150",
+            "urn:cts:latinLit:phi0134.phi003:130": "id. ib. 130",
+            "urn:cts:latinLit:phi0472.phi001:32:1": "Cat. 32, 1",
+            "urn:cts:latinLit:phi0119.phi004:44": "Plaut. Bacch. 1, 1, 10 (44)",
+            "urn:cts:latinLit:phi0119.phi010:678": "id. Men. 4, 3, 4 (678)",
+            "urn:cts:latinLit:phi0474.phi058:2:10": "Cic. Q. Fr. 2, 10",
+            "urn:cts:latinLit:phi0474.phi057:2:2": "id. Att. 2, 2",
+            "urn:cts:latinLit:phi0119.phi010:421": "Plaut. Men. 2, 3, 71 (421)",
+            "urn:cts:latinLit:phi0119.phi010:524": " 3, 3, 1 (524)",
+            "urn:cts:latinLit:phi0134.phi003:537": "Ter. Eun. 537",
+            "urn:cts:latinLit:phi0474.phi058:1:4": "Cic. Q. Fr. 1, 4"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi057:1:3": {
+              "text": "Cic. Att. 1, 3",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:6:3:93": {
+              "text": "Quint. 6, 3, 93",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi015:249": {
+              "text": "Plaut. Poen. 1, 2, 40 (249)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Poenulus",
+              "display": "Plautus, Titus Maccius - Poenulus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi006:946": {
+              "text": "Ter. Ad. 946",
+              "author": "Terence",
+              "work": "Adelphi",
+              "display": "Terence - Adelphi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi012:900": {
+              "text": "Plaut. Mil. 3, 3, 26 (900)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Miles Gloriosus",
+              "display": "Plautus, Titus Maccius - Miles Gloriosus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi004:53": {
+              "text": "id. Bacch. 1, 1, 19 (53)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Bacchides",
+              "display": "Plautus, Titus Maccius - Bacchides",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi004:62": {
+              "text": "id. ib. 1, 1, 28 (62)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Bacchides",
+              "display": "Plautus, Titus Maccius - Bacchides",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:150": {
+              "text": "Ter. Eun. 150",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:130": {
+              "text": "id. ib. 130",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0472.phi001:32:1": {
+              "text": "Cat. 32, 1",
+              "author": "Catullus",
+              "work": "Carmina",
+              "display": "Catullus - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi004:44": {
+              "text": "Plaut. Bacch. 1, 1, 10 (44)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Bacchides",
+              "display": "Plautus, Titus Maccius - Bacchides",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi010:678": {
+              "text": "id. Men. 4, 3, 4 (678)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Menaechmi",
+              "display": "Plautus, Titus Maccius - Menaechmi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi058:2:10": {
+              "text": "Cic. Q. Fr. 2, 10",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to his brother Quintus",
+              "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:2:2": {
+              "text": "id. Att. 2, 2",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi010:421": {
+              "text": "Plaut. Men. 2, 3, 71 (421)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Menaechmi",
+              "display": "Plautus, Titus Maccius - Menaechmi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0119.phi010:524": {
+              "text": " 3, 3, 1 (524)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Menaechmi",
+              "display": "Plautus, Titus Maccius - Menaechmi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi003:537": {
+              "text": "Ter. Eun. 537",
+              "author": "Terence",
+              "work": "Eunuchus",
+              "display": "Terence - Eunuchus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi058:1:4": {
+              "text": "Cic. Q. Fr. 1, 4",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to his brother Quintus",
+              "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "E.  With inf., to do a thing willingly, to be wont or accustomed to (cf. \u03c6\u03b9\u03bb\u03ad\u03c9; mostly poet. or in post-Aug. prose): clamore, vultu, saepe impetu, atque aliis omnibus, quae ira fieri amat, delights to have done, is wont to do, Sall. J. 34, 1; cf. Quint. 9, 3, 17: aurum per medios ire satellites Et perrumpere amat saxa potentius Ictu fulmineo, Hor. C. 3, 16, 9; so id. ib. 2, 3, 9; id. Epod. 8, 15; Plin. 13, 4, 7, \u00a7 28; Tac. A. 4, 9.",
+          "entryid": "00:01:04",
+          "citations": {
+            "urn:cts:latinLit:phi0631.phi002:34:1": "Sall. J. 34, 1",
+            "urn:cts:latinLit:phi1002.phi001:9:3:17": "Quint. 9, 3, 17",
+            "urn:cts:latinLit:phi0893.phi001:3:16:9": "Hor. C. 3, 16, 9",
+            "urn:cts:latinLit:phi0893.phi001:2:3:9": "id. ib. 2, 3, 9",
+            "urn:cts:latinLit:phi0893.phi003:8:15": "id. Epod. 8, 15",
+            "urn:cts:latinLit:phi0978.phi001:13:28": "Plin. 13, 4, 7, \u00a7 28",
+            "urn:cts:latinLit:phi1351.phi005:4:9": "Tac. A. 4, 9"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0631.phi002:34:1": "Sall. J. 34, 1",
+            "urn:cts:latinLit:phi1002.phi001:9:3:17": "Quint. 9, 3, 17",
+            "urn:cts:latinLit:phi0893.phi001:3:16:9": "Hor. C. 3, 16, 9",
+            "urn:cts:latinLit:phi0893.phi001:2:3:9": "id. ib. 2, 3, 9",
+            "urn:cts:latinLit:phi0893.phi003:8:15": "id. Epod. 8, 15",
+            "urn:cts:latinLit:phi0978.phi001:13:28": "Plin. 13, 4, 7, \u00a7 28",
+            "urn:cts:latinLit:phi1351.phi005:4:9": "Tac. A. 4, 9"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0631.phi002:34:1": {
+              "text": "Sall. J. 34, 1",
+              "author": "Sallust",
+              "work": "J",
+              "display": "Sallust - J",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1002.phi001:9:3:17": {
+              "text": "Quint. 9, 3, 17",
+              "author": "Quintilian",
+              "work": "Institutio Oratoria",
+              "display": "Quintilian - Institutio Oratoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi001:3:16:9": {
+              "text": "Hor. C. 3, 16, 9",
+              "author": "Horace",
+              "work": "Carmina",
+              "display": "Horace - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi001:2:3:9": {
+              "text": "id. ib. 2, 3, 9",
+              "author": "Horace",
+              "work": "Carmina",
+              "display": "Horace - Carmina",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi003:8:15": {
+              "text": "id. Epod. 8, 15",
+              "author": "Horace",
+              "work": "Epodi",
+              "display": "Horace - Epodi",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0978.phi001:13:28": {
+              "text": "Plin. 13, 4, 7, \u00a7 28",
+              "author": "Pliny, the Elder",
+              "work": "Naturalis Historia",
+              "display": "Pliny, the Elder - Naturalis Historia",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1351.phi005:4:9": {
+              "text": "Tac. A. 4, 9",
+              "author": "Tacitus, Cornelius",
+              "work": "Annales",
+              "display": "Tacitus, Cornelius - Annales",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "\u2014Hence, \u0103mans, antis, P. a., with gen. or absol.",
+          "entryid": "01"
+        },
+        {
+          "entry": "A.  Fond, loving, kind, feeling kindly to, benevolent, pleasing; and subst., a friend, patron: continentem, amantem uxoris maxime, Plaut. As. 5, 2, 7 (857): veterem amicum suum studiosum, amantem, observantem sui, Cic. Rab. Post. 16: homines amantes tui, id. Fam. 9, 6: cives amantes patriae, id. Att. 9, 19; id. Q. Fr. 1, 1, 5: amans cruoris, Ov. P. 2, 9, 46: ad nos amantissimos tui veni, Cic. Fam. 16, 7: Amantissimus Domini habitabit in eo, Vulg. Deut. 33, 12; ib. Amos, 5, 11: amantissima eorum non proderunt iis, their most pleasant things, ib. Isa. 44, 9; so ib. Os. 9, 16.\u2014",
+          "entryid": "01:00",
+          "citations": {
+            "urn:cts:latinLit:phi0119.phi002:857": "Plaut. As. 5, 2, 7 (857)",
+            "urn:cts:latinLit:phi0474.phi030:chapter=16": "Cic. Rab. Post. 16",
+            "urn:cts:latinLit:phi0474.phi056:9:6": "id. Fam. 9, 6",
+            "urn:cts:latinLit:phi0474.phi057:9:19": "id. Att. 9, 19",
+            "urn:cts:latinLit:phi0474.phi058:1:1:5": "id. Q. Fr. 1, 1, 5",
+            "urn:cts:latinLit:phi0959.phi009:2:9:46": "Ov. P. 2, 9, 46",
+            "urn:cts:latinLit:phi0474.phi056:16:7": "Cic. Fam. 16, 7",
+            "urn:cts:greekLit:tlg0527.tlg005:33:12": "Vulg. Deut. 33, 12",
+            "urn:cts:greekLit:tlg0527.tlg048:44:9": "ib. Isa. 44, 9",
+            "urn:cts:greekLit:tlg0527.tlg036:9:16": "ib. Os. 9, 16"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0119.phi002:857": "Plaut. As. 5, 2, 7 (857)",
+            "urn:cts:latinLit:phi0474.phi030:chapter=16": "Cic. Rab. Post. 16",
+            "urn:cts:latinLit:phi0474.phi056:9:6": "id. Fam. 9, 6",
+            "urn:cts:latinLit:phi0474.phi057:9:19": "id. Att. 9, 19",
+            "urn:cts:latinLit:phi0474.phi058:1:1:5": "id. Q. Fr. 1, 1, 5",
+            "urn:cts:latinLit:phi0959.phi009:2:9:46": "Ov. P. 2, 9, 46",
+            "urn:cts:latinLit:phi0474.phi056:16:7": "Cic. Fam. 16, 7",
+            "urn:cts:greekLit:tlg0527.tlg005:33:12": "Vulg. Deut. 33, 12",
+            "urn:cts:greekLit:tlg0527.tlg048:44:9": "ib. Isa. 44, 9",
+            "urn:cts:greekLit:tlg0527.tlg036:9:16": "ib. Os. 9, 16"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0119.phi002:857": {
+              "text": "Plaut. As. 5, 2, 7 (857)",
+              "author": "Plautus, Titus Maccius",
+              "work": "Asinaria",
+              "display": "Plautus, Titus Maccius - Asinaria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi030:chapter=16": {
+              "text": "Cic. Rab. Post. 16",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro C. Rabirio Postumo",
+              "display": "Cicero, Marcus Tullius - Pro C. Rabirio Postumo",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:9:6": {
+              "text": "id. Fam. 9, 6",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:9:19": {
+              "text": "id. Att. 9, 19",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi058:1:1:5": {
+              "text": "id. Q. Fr. 1, 1, 5",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to his brother Quintus",
+              "display": "Cicero, Marcus Tullius - Letters to his brother Quintus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi009:2:9:46": {
+              "text": "Ov. P. 2, 9, 46",
+              "author": "Ovid",
+              "work": "Ex Ponto",
+              "display": "Ovid - Ex Ponto",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:16:7": {
+              "text": "Cic. Fam. 16, 7",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0527.tlg005:33:12": {
+              "text": "Vulg. Deut. 33, 12",
+              "author": "Old Testament",
+              "work": "Deuteronomy",
+              "display": "Old Testament - Deuteronomy",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0527.tlg048:44:9": {
+              "text": "ib. Isa. 44, 9",
+              "author": "Old Testament",
+              "work": "Isaiah",
+              "display": "Old Testament - Isaiah",
+              "kind": "cts"
+            },
+            "urn:cts:greekLit:tlg0527.tlg036:9:16": {
+              "text": "ib. Os. 9, 16",
+              "author": "Old Testament",
+              "work": "Hosea",
+              "display": "Old Testament - Hosea",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "B.  Trop., of things, friendly, affectionate: nomen amantius indulgentiusque, Cic. Clu. 5: lenissimis et amantissimis verbis utens, id. Fam. 5, 15 al.\u2014",
+          "entryid": "01:00:00",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi010:chapter=5": "Cic. Clu. 5",
+            "urn:cts:latinLit:phi0474.phi056:5:15": "id. Fam. 5, 15"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi010:chapter=5": "Cic. Clu. 5",
+            "urn:cts:latinLit:phi0474.phi056:5:15": "id. Fam. 5, 15"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi010:chapter=5": {
+              "text": "Cic. Clu. 5",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Pro A. Cluentio",
+              "display": "Cicero, Marcus Tullius - Pro A. Cluentio",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:5:15": {
+              "text": "id. Fam. 5, 15",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            }
+          }
+        },
+        {
+          "entry": "C.  Sometimes in a bad sense = amator or amica, a paramour; cf. Wolf ad Cic. Tusc. 4, 12, 27; cf. Hor. Ep. 1, 1, 38: quis fallere possit amantem, Verg. A. 4, 296; 4, 429: amantium irae amoris integratio est, Ter. And. 555: oblitos famae melioris amant\u012bs, Verg. A. 4, 221: perjuria amant\u016bm, Ov. A. A. 1, 633.\u2014 Hence, \u0103manter, adv., lovingly, affectionately, Cic. Fam. 5, 19; id. Att. 2, 4.\u2014Comp., Tac. A. 1, 43.\u2014Sup., Cic. Am. 1.",
+          "entryid": "01:00:01",
+          "citations": {
+            "urn:cts:latinLit:phi0474.phi049:4:12:27": "Cic. Tusc. 4, 12, 27",
+            "urn:cts:latinLit:phi0893.phi005:1:1:38": "Hor. Ep. 1, 1, 38",
+            "urn:cts:latinLit:phi0690.phi003:4:296": "Verg. A. 4, 296",
+            "urn:cts:latinLit:phi0690.phi003:4:429": "4, 429",
+            "urn:cts:latinLit:phi0134.phi001:555": "Ter. And. 555",
+            "urn:cts:latinLit:phi0690.phi003:4:221": "Verg. A. 4, 221",
+            "urn:cts:latinLit:phi0959.phi004:1:633": "Ov. A. A. 1, 633",
+            "urn:cts:latinLit:phi0474.phi056:5:19": "Cic. Fam. 5, 19",
+            "urn:cts:latinLit:phi0474.phi057:2:4": "id. Att. 2, 4",
+            "urn:cts:latinLit:phi1351.phi005:1:43": "Tac. A. 1, 43",
+            "urn:cts:latinLit:phi0474.phi052:chapter=1": "Cic. Am. 1"
+          },
+          "original_citations": {
+            "urn:cts:latinLit:phi0474.phi049:4:12:27": "Cic. Tusc. 4, 12, 27",
+            "urn:cts:latinLit:phi0893.phi005:1:1:38": "Hor. Ep. 1, 1, 38",
+            "urn:cts:latinLit:phi0690.phi003:4:296": "Verg. A. 4, 296",
+            "urn:cts:latinLit:phi0690.phi003:4:429": "4, 429",
+            "urn:cts:latinLit:phi0134.phi001:555": "Ter. And. 555",
+            "urn:cts:latinLit:phi0690.phi003:4:221": "Verg. A. 4, 221",
+            "urn:cts:latinLit:phi0959.phi004:1:633": "Ov. A. A. 1, 633",
+            "urn:cts:latinLit:phi0474.phi056:5:19": "Cic. Fam. 5, 19",
+            "urn:cts:latinLit:phi0474.phi057:2:4": "id. Att. 2, 4",
+            "urn:cts:latinLit:phi1351.phi005:1:43": "Tac. A. 1, 43",
+            "urn:cts:latinLit:phi0474.phi052:chapter=1": "Cic. Am. 1"
+          },
+          "citation_details": {
+            "urn:cts:latinLit:phi0474.phi049:4:12:27": {
+              "text": "Cic. Tusc. 4, 12, 27",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Tusculanae Disputationes",
+              "display": "Cicero, Marcus Tullius - Tusculanae Disputationes",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0893.phi005:1:1:38": {
+              "text": "Hor. Ep. 1, 1, 38",
+              "author": "Horace",
+              "work": "Epistulae",
+              "display": "Horace - Epistulae",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:4:296": {
+              "text": "Verg. A. 4, 296",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:4:429": {
+              "text": "4, 429",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0134.phi001:555": {
+              "text": "Ter. And. 555",
+              "author": "Terence",
+              "work": "Andria",
+              "display": "Terence - Andria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0690.phi003:4:221": {
+              "text": "Verg. A. 4, 221",
+              "author": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb)",
+              "work": "Aeneid",
+              "display": "\u03c0. V\u03b5\u03c1\u03b3\u03b9\u03bb\u03b9\u03c5\u03c2 \u03bc\u03b1\u03c1\u03bf (V\u03b9\u03c1\u03b3\u03b9\u03bb) - Aeneid",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0959.phi004:1:633": {
+              "text": "Ov. A. A. 1, 633",
+              "author": "Ovid",
+              "work": "Ars Amatoria",
+              "display": "Ovid - Ars Amatoria",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi056:5:19": {
+              "text": "Cic. Fam. 5, 19",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Fam",
+              "display": "Cicero, Marcus Tullius - Fam",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi057:2:4": {
+              "text": "id. Att. 2, 4",
+              "author": "Cicero, Marcus Tullius",
+              "work": "Letters to Atticus",
+              "display": "Cicero, Marcus Tullius - Letters to Atticus",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi1351.phi005:1:43": {
+              "text": "Tac. A. 1, 43",
+              "author": "Tacitus, Cornelius",
+              "work": "Annales",
+              "display": "Tacitus, Cornelius - Annales",
+              "kind": "cts"
+            },
+            "urn:cts:latinLit:phi0474.phi052:chapter=1": {
+              "text": "Cic. Am. 1",
+              "author": "Cicero, Marcus Tullius",
+              "work": "De Amicitia",
+              "display": "Cicero, Marcus Tullius - De Amicitia",
+              "kind": "cts"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "word": "amo",
+      "language": "lat",
+      "definitions": [
+        {
+          "definition": "am\u014d \u0101v\u012b, \u0101tus, \u0101re AM-, to love: magis te, quam oculos, T.: unice patriam: dignus amari, V.: non diligi solum, verum etiam amari: a suis et amari et diligi: nescio, ita me di ament, so help me the gods, T.: sic me di amabunt, ut, etc., T.: quam se ipse amans sine rivali! in love with himself: nisi nosmet ipsos valde amabimus. \u2014 To be in love, have an amour: meum gnatum rumor est Amare, T.: insuevit exercitus amare, S. \u2014 Fig., to love, be fond of, find pleasure in: voltum, incessum alicuius: litteras, N.: ea, quae res secundae amant, S.: nemus, H.: amat ianua limen, i. e. is constantly closed, H.: focos, i. e. to make homes, V.: Litus ama, keep close to, V. \u2014 With infin: Hic ames dici pater atque princeps, H. \u2014 Amare aliquem, to be obliged to, be under obligation, have to thank: ecquid nos amas de fidicin\u0101 istac? T.: et in Attilii negotio te amavi: bene facis, merito te amo, T.\u2014Colloq., amabo or amabo te (never vos, etc.), I shall be under obligation to you, and in entreaties, be so good, I pray, I entreat you: id, amabo, adiuta me, T.: cura, amabo te, Ciceronem nostrum: amabo ut illuc transeas, T.: amabo te, ne improbitati meae adsignes, etc.: ego me amavi, was well satisfied with myself. \u2014 Meton., amare with inf, to be fond, be wont, be accustomed: clamore, voltu, aliis omnibus, quae ira fieri amat, S.: Aurum perrumpere amat saxa, H.",
+          "pos": "noun",
+          "metadata": {
+            "source": "lewis_1890"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "amo",
+        "pos": "unknown",
+        "features": {
+          "ipa": "'a.mo\u02d0"
+        }
+      },
+      "source": "cltk",
+      "metadata": {
+        "headword": "amo",
+        "ipa": "'a.mo\u02d0",
+        "lewis_1890_lines": [
+          "am\u014d \u0101v\u012b, \u0101tus, \u0101re AM-, to love: magis te, quam oculos, T.: unice patriam: dignus amari, V.: non diligi solum, verum etiam amari: a suis et amari et diligi: nescio, ita me di ament, so help me the gods, T.: sic me di amabunt, ut, etc., T.: quam se ipse amans sine rivali! in love with himself: nisi nosmet ipsos valde amabimus. \u2014 To be in love, have an amour: meum gnatum rumor est Amare, T.: insuevit exercitus amare, S. \u2014 Fig., to love, be fond of, find pleasure in: voltum, incessum alicuius: litteras, N.: ea, quae res secundae amant, S.: nemus, H.: amat ianua limen, i. e. is constantly closed, H.: focos, i. e. to make homes, V.: Litus ama, keep close to, V. \u2014 With infin: Hic ames dici pater atque princeps, H. \u2014 Amare aliquem, to be obliged to, be under obligation, have to thank: ecquid nos amas de fidicin\u0101 istac? T.: et in Attilii negotio te amavi: bene facis, merito te amo, T.\u2014Colloq., amabo or amabo te (never vos, etc.), I shall be under obligation to you, and in entreaties, be so good, I pray, I entreat you: id, amabo, adiuta me, T.: cura, amabo te, Ciceronem nostrum: amabo ut illuc transeas, T.: amabo te, ne improbitati meae adsignes, etc.: ego me amavi, was well satisfied with myself. \u2014 Meton., amare with inf, to be fond, be wont, be accustomed: clamore, voltu, aliis omnibus, quae ira fieri amat, S.: Aurum perrumpere amat saxa, H."
+        ]
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 3
+  },
+  "unified_sources": [
+    "cltk",
+    "diogenes",
+    "whitakers"
+  ],
+  "source_present": true
+}

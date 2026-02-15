@@ -1,0 +1,71 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "grc",
+    "word": "anthropos",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "chunks": [
+      {
+        "logeion": "https://logeion.uchicago.edu/\u03b1\u03bd\u03c4\u03b7\u03c1\u03bf\u03c0\u03bf\u03c2"
+      },
+      {
+        "reference_id": "8779811",
+        "definitions": {
+          "blocks": [
+            {
+              "entry": "\u1f00\u03bd\u03c4\u03b7\u03c1\u03af\u03c2, \u03af\u03b4\u03bf\u03c2, \u1f21",
+              "entryid": "00"
+            },
+            {
+              "entry": "prop, stay, support, E. Fr. 1111: pl., Plb. 8.4.6; stanchion or strut in torsion-engines, Ph. Bel. 76.16, Hero Bel. 101.9; \u1f00\u03c1\u03ba\u03cd\u03c9\u03bd X. Cyn. 10.7; in Th. 7.36 \u1f00\u03bd\u03c4\u03b7\u03c1\u03af\u03b4\u03b5\u03c2 are stay-beams fixed inside a ship\u02bcs bow, and projecting beyond it, so as to support and strengthen the \u1f10\u03c0\u03c9\u03c4\u03af\u03b4\u03b5\u03c2.",
+              "entryid": "00:00",
+              "citations": {
+                "urn:cts:greekLit:tlg0006.tlg020:1111": "E. Fr. 1111",
+                "urn:cts:greekLit:tlg0543.tlg001:8:4:6": "Plb. 8.4.6",
+                "urn:cts:greekLit:tlg1599.tlg001:76:16": "Ph. Bel. 76.16",
+                "urn:cts:greekLit:tlg0559.tlg012:101:9": "Hero Bel. 101.9",
+                "urn:cts:greekLit:tlg0032.tlg014:10:7": "X. Cyn. 10.7",
+                "urn:cts:greekLit:tlg0003.tlg001:7:36": "Th. 7.36"
+              }
+            },
+            {
+              "entry": "II.  = \u03b8\u03c5\u03c1\u03af\u03c2, window, Suid.:\u2014and in E. Rh. 785 it must mean nostrils, if it be the right reading. [\u1fd0\u03b4\u03bf\u03c2 E. ll.cc.: hence \u1f00\u03bd\u03c4\u03ae\u03c1\u03b5\u03b9\u03b4\u03b5\u03c2 in Apollod. Poliorc. 178.4, Hero Bel. 101.9, is wrong; so -\u03b5\u03af\u03b4\u03b9\u03bf\u03bd ib. 89.4 is f.l. for -\u03af\u03b4\u03b9\u03bf\u03bd as Inscrr. show.] (-\u03b7\u03c1\u1fd0\u03b4 = -\u03b5\u03c1\u1fd0\u03b4-, weak form of stem of \u1f10\u03c1\u03b5\u03af\u03b4\u03c9 (cf. \u1f14\u03c1\u03b9\u03c2).)",
+              "entryid": "00:00:00",
+              "citations": {
+                "urn:cts:greekLit:tlg0006.tlg052:785": "E. Rh. 785",
+                "urn:cts:greekLit:tlg1165.tlg001:178:4": "Apollod. Poliorc. 178.4",
+                "urn:cts:greekLit:tlg0559.tlg012:101:9": "Hero Bel. 101.9",
+                "urn:cts:greekLit:tlg0559.tlg012:89:4": "89.4"
+              }
+            }
+          ],
+          "term": "\u1f00\u03bd\u03c4\u03b7\u03c1\u03af\u03c2"
+        }
+      }
+    ],
+    "dg_parsed": true,
+    "chunk_types": [
+      "NoMatchFoundHeader",
+      "DiogenesFuzzyReference"
+    ]
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "chunks": 2,
+    "dg_parsed": 1,
+    "chunk_types": 2
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

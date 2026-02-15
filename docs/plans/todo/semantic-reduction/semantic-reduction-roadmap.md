@@ -8,9 +8,9 @@
 ## Overview
 
 This plan outlines the implementation of the semantic reduction pipeline as defined in:
-1. `docs/technical/design/01-semantic-structs.md` - Schema definition
-2. `docs/technical/design/02-witness-contracts.md` - Source contracts  
-3. `docs/technical/design/03-classifier-and-reducer.md` - 4-stage pipeline design
+1. `docs/technical/design/semantic-structs.md` - Schema definition
+2. `docs/technical/design/witness-contracts.md` - Source contracts  
+3. `docs/technical/design/classifier-and-reducer.md` - 4-stage pipeline design
 
 **Current Status**: We have completed the **schema infrastructure** but need to build the actual **semantic reduction engine**.
 
@@ -378,7 +378,7 @@ def benchmark_pipeline():
 
 ## 📞 Contact & Context
 
-**Based on**: `docs/technical/design/01-semantic-structs.md`, `02-witness-contracts.md`, `03-classifier-and-reducer.md`  
+**Based on**: `docs/technical/design/semantic-structs.md`, `witness-contracts.md`, `classifier-and-reducer.md`  
 **Educational Focus**: Classical language education tool for Latin, Greek, Sanskrit  
 **Session Goal**: Build semantic reduction pipeline to move from raw evidence to structured semantic output
 

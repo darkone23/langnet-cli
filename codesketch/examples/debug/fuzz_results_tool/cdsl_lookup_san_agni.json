@@ -1,0 +1,134 @@
+{
+  "target": {
+    "tool": "cdsl",
+    "action": "lookup",
+    "lang": "san",
+    "word": "agni",
+    "dict_name": "mw",
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "transliteration": {
+      "input": "agni",
+      "iast": "agni",
+      "hk": "agni",
+      "devanagari": "\u0905\u0917\u094d\u0928\u093f"
+    },
+    "dictionaries": {
+      "mw": [
+        {
+          "id": "890",
+          "meaning": "agni/   m. (\u221a ag, U\u1e47.) fire, sacrificial fire (of three kinds, G\u0101rhapatya, \u0100havan\u012bya, and Dak\u1e63i\u1e47a)",
+          "pos": "m.",
+          "gender": [
+            "masculine"
+          ],
+          "sanskrit_form": "agni/",
+          "etymology": {
+            "type": "verb_root",
+            "root": "ag"
+          },
+          "references": [
+            "U\u1e47.",
+            "G\u0101rhapatya",
+            "\u0100havan\u012bya",
+            "Dak\u1e63i\u1e47a"
+          ]
+        },
+        {
+          "id": "891",
+          "meaning": "the number three, S\u016bryas.",
+          "sanskrit_form": "agni/",
+          "references": [
+            "S\u016bryas."
+          ]
+        },
+        {
+          "id": "892",
+          "meaning": "the god of fire, the fire of the stomach, digestive faculty, gastric fluid",
+          "sanskrit_form": "agni/"
+        },
+        {
+          "id": "893",
+          "meaning": "bile, L.",
+          "sanskrit_form": "agni/",
+          "references": [
+            "L."
+          ]
+        },
+        {
+          "id": "894",
+          "meaning": "gold, L.",
+          "sanskrit_form": "agni/",
+          "references": [
+            "L."
+          ]
+        },
+        {
+          "id": "895",
+          "meaning": "N. of various plants Semecarpus Anacardium, Su\u015br., Plumbago Zeylanica and Rosea, Citrus Acida",
+          "sanskrit_form": "agni/",
+          "references": [
+            "Su\u015br."
+          ]
+        },
+        {
+          "id": "896",
+          "meaning": "mystical substitute for the letter r",
+          "sanskrit_form": "agni/"
+        },
+        {
+          "id": "897",
+          "meaning": "in the K\u0101tantra grammar N. of noun-stems ending in i and u",
+          "sanskrit_form": "agni/",
+          "references": [
+            "K\u0101tantra"
+          ]
+        },
+        {
+          "id": "897",
+          "meaning": "(also) = next, \u0100p\u015ar.",
+          "sanskrit_form": "agni",
+          "references": [
+            "\u0100p\u015ar."
+          ]
+        },
+        {
+          "id": "897",
+          "meaning": "agni   [cf. Lat. ign\u00ec-s; Lith. ugni-s; Slav. ognj].",
+          "sanskrit_form": "agni"
+        }
+      ],
+      "ap90": []
+    },
+    "root": {
+      "type": "verb_root",
+      "root": "ag"
+    },
+    "canonical_form": "agni",
+    "canonical_form_candidates": [
+      "agni",
+      "agnI",
+      "agni"
+    ],
+    "input_form": "agni"
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "transliteration": 4,
+    "dictionaries": 2,
+    "root": 2,
+    "canonical_form": 4,
+    "canonical_form_candidates": 3,
+    "input_form": 4
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

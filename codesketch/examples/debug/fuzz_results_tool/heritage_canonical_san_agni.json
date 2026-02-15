@@ -1,0 +1,32 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "canonical",
+    "lang": "san",
+    "word": "agni",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "canonical": {
+      "original_query": "agni",
+      "bare_query": "agni",
+      "canonical_text": "agnii",
+      "match_method": "sktsearch",
+      "entry_url": "/skt/MW/2.html#H_agnii"
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "canonical": 5
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

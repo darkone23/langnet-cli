@@ -1,0 +1,210 @@
+{
+  "target": {
+    "tool": "diogenes",
+    "action": "parse",
+    "lang": "lat",
+    "word": "vir",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "chunks": [
+      {
+        "logeion": "https://logeion.uchicago.edu/vir",
+        "morphology": {
+          "morphs": [
+            {
+              "stem": [
+                "vir"
+              ],
+              "tags": [
+                "masc",
+                "nom",
+                "voc",
+                "sg"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "reference_id": "78455950",
+        "definitions": {
+          "blocks": [
+            {
+              "entry": "vir, v\u012dri (gen. plur. vir\u016bm, Enn. ap. Charis. p. 251 P., or Ann. v. 280 Vahl.; id. ap. Fest. p. 257 M\u00fcll., or Ann. v. 394 Vahl.; Verg. A. 6, 553 al.), m. Sanscr. vira, hero; the root is in O. H. Germ. weralt; Angl.Sax. veruld; Engl. world, i. e. age or generation of men, a male person, a man (opp. femina; cf. mas).",
+              "entryid": "00",
+              "citations": {
+                "urn:cts:latinLit:phi1236.phi001:page=257": "Fest. p. 257",
+                "urn:cts:latinLit:phi0690.phi003:6:553": "Verg. A. 6, 553"
+              }
+            },
+            {
+              "entry": "I.  In gen.: virum me natam vellem, Ter. Phorm. 792: deque viro factus (mirabile') femina, Ov. M. 3, 326: ambiguus fuerit modo vir, modo femina Sithon, id. ib. 4, 280: mulier conjuncta viro, Lucr. 5, 1012: vir mulierque, Tib. 2, 2, 2: sapientissimorum nostrae civitatis virorum disputatio, Cic. Rep. 1, 8, 13: vir prudens, id. ib. 1, 12, 18: clari viri, id. Fam. 6, 6, 12: vir clarus et honoratus, id. Sen. 7, 22: praestantior, id. ib. 23, 84: bonus et sapiens et legibus parens, id. Fin. 3, 19, 64; cf. id. Off. 3, 15, 64; v. bonus: optimi (opp. homines improbi), id. Cael. 5, 12: fortis, id. Fin. 3, 8, 29; id. Rep. 1, 3, 5: turpissimus, Sall. J. 85, 42: nefandus, Verg. A. 4, 498.\u2014",
+              "entryid": "00:00",
+              "citations": {
+                "urn:cts:latinLit:phi0134.phi004:792": "Ter. Phorm. 792",
+                "urn:cts:latinLit:phi0959.phi006:3:326": "Ov. M. 3, 326",
+                "urn:cts:latinLit:phi0959.phi006:4:280": "id. ib. 4, 280",
+                "urn:cts:latinLit:phi0550.phi001:5:1012": "Lucr. 5, 1012",
+                "urn:cts:latinLit:phi0660.phi001:2:2:2": "Tib. 2, 2, 2",
+                "urn:cts:latinLit:phi0474.phi043:1:8:13": "Cic. Rep. 1, 8, 13",
+                "urn:cts:latinLit:phi0474.phi043:1:12:18": "id. ib. 1, 12, 18",
+                "urn:cts:latinLit:phi0474.phi056:6:6:12": "id. Fam. 6, 6, 12",
+                "urn:cts:latinLit:phi0474.phi051:7:22": "id. Sen. 7, 22",
+                "urn:cts:latinLit:phi0474.phi051:23:84": "id. ib. 23, 84",
+                "urn:cts:latinLit:phi0474.phi048:3:19:64": "id. Fin. 3, 19, 64",
+                "urn:cts:latinLit:phi0474.phi055:3:15:64": "id. Off. 3, 15, 64",
+                "urn:cts:latinLit:phi0474.phi024:5:12": "id. Cael. 5, 12",
+                "urn:cts:latinLit:phi0474.phi048:3:8:29": "id. Fin. 3, 8, 29",
+                "urn:cts:latinLit:phi0474.phi043:1:3:5": "id. Rep. 1, 3, 5",
+                "urn:cts:latinLit:phi0631.phi002:85:42": "Sall. J. 85, 42",
+                "urn:cts:latinLit:phi0690.phi003:4:498": "Verg. A. 4, 498"
+              }
+            },
+            {
+              "entry": "II.  In partic.",
+              "entryid": "00:01"
+            },
+            {
+              "entry": "A.  A man as related to a woman, a husband, maritus (very freq.): is (Juppiter) amare occepit Alcumenam clam virum, Plaut. Am. prol. 107; 111; 134; 1, 3, 4 (502); Ter. Hec. 516: quem (vultum) dicitur Xanthippe praedicare solita in viro suo fuisse, Cic. Tusc. 3, 15, 31; id. Verr. 5, 31, 82; id. Cael. 13, 32; id. Fam. 7, 23, 4; Liv. 1, 46, 6; Hor. C. 2, 18, 28; 3, 3, 68; id. S. 1, 2, 127 al.; Ov. M. 1, 146; Petr. 111; Quint. 5, 10, 62; 5, 11, 28; 7, 1, 28; Suet. Aug. 69; id. Calig. 25; id. Claud. 29; id. Ner. 35; id. Dom. 22 al.\u2014Transf., of animals, the male, mate, etc., Verg. E. 7, 7; Ov. M. 1, 660; Mart. 3, 93, 11; Sol. 23.\u2014",
+              "entryid": "00:01:00",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi001:107": "Plaut. Am. prol. 107",
+                "urn:cts:latinLit:phi0119.phi001:111": "111",
+                "urn:cts:latinLit:phi0119.phi001:134": "134",
+                "urn:cts:latinLit:phi0119.phi001:502": "1, 3, 4 (502)",
+                "urn:cts:latinLit:phi0134.phi005:516": "Ter. Hec. 516",
+                "urn:cts:latinLit:phi0474.phi049:3:15:31": "Cic. Tusc. 3, 15, 31",
+                "urn:cts:latinLit:phi0474.phi005:2:5:82": "id. Verr. 5, 31, 82",
+                "urn:cts:latinLit:phi0474.phi024:13:32": "id. Cael. 13, 32",
+                "urn:cts:latinLit:phi0474.phi056:7:23:4": "id. Fam. 7, 23, 4",
+                "urn:cts:latinLit:phi0914.phi001:1:46:6": "Liv. 1, 46, 6",
+                "urn:cts:latinLit:phi0893.phi001:2:18:28": "Hor. C. 2, 18, 28",
+                "urn:cts:latinLit:phi0893.phi001:3:3:68": "3, 3, 68",
+                "urn:cts:latinLit:phi0893.phi004:1:2:127": "id. S. 1, 2, 127",
+                "urn:cts:latinLit:phi0959.phi006:1:146": "Ov. M. 1, 146",
+                "urn:cts:latinLit:phi1002.phi001:5:10:62": "Quint. 5, 10, 62",
+                "urn:cts:latinLit:phi1002.phi001:5:11:28": "5, 11, 28",
+                "urn:cts:latinLit:phi1002.phi001:7:1:28": "7, 1, 28",
+                "urn:cts:latinLit:phi1348.phi001:life=aug.:69": "Suet. Aug. 69",
+                "urn:cts:latinLit:phi1348.phi001:life=cal.:25": "id. Calig. 25",
+                "urn:cts:latinLit:phi1348.phi001:life=cl.:29": "id. Claud. 29",
+                "urn:cts:latinLit:phi1348.phi001:life=nero:35": "id. Ner. 35",
+                "urn:cts:latinLit:phi1348.phi001:life=dom.:22": "id. Dom. 22",
+                "urn:cts:latinLit:phi0690.phi001:7:7": "Verg. E. 7, 7",
+                "urn:cts:latinLit:phi0959.phi006:1:660": "Ov. M. 1, 660",
+                "urn:cts:latinLit:phi1294.phi002:3:93:11": "Mart. 3, 93, 11"
+              }
+            },
+            {
+              "entry": "B.  A man (opp. a boy): pueri hoc possunt, viri non potuerunt? Cic. Tusc. 2, 14, 34: ex toto non sic pueri ut viri curari debent, Cels. 3, 7 fin.: pueroque viroque, Ov. M. 13, 397: neque eos (pueros) prius in urbem redire, quam viri facti essent, statuit, Just. 3, 3, 7: cum essem parvulus ... quando factus sum vir, etc., Vulg. 1 Cor. 13, 11.\u2014",
+              "entryid": "00:01:01",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi049:2:14:34": "Cic. Tusc. 2, 14, 34",
+                "urn:cts:latinLit:phi0836.phi002:3:7": "Cels. 3, 7 fin.",
+                "urn:cts:latinLit:phi0959.phi006:13:397": "Ov. M. 13, 397",
+                "urn:cts:latinLit:phi2806.phi001:3:3:7": "Just. 3, 3, 7",
+                "urn:cts:greekLit:tlg0031.tlg007:13:11": "Vulg. 1 Cor. 13, 11"
+              }
+            },
+            {
+              "entry": "C.  Pregn., a man, a man of courage, principle, or honor, one who deserves the name of a man: Marius rusticanus vir, sed plane vir, cum secaretur, vetuit se alligari ... Ita et tulit dolorem, ut vir; et, ut homo, majorem ferre sine caus\u0101 necessari\u0101 noluit, Cic. Tusc. 2, 22, 53; cf. id. Fam. 5, 17, 3: cum is jam se corroboravisset ac vir inter viros esset, id. Cael. 5, 11: te oro, te colligas virumque praebeas, id. Fam. 5, 18, 1: si vir esse volet, praeclara \u03c3\u03c5\u03bd\u03bf\u03b4\u03af\u03b1, id. Att. 10, 7, 2: tum viro et gubernatore opus est, Liv. 24, 8, 1; 1, 41, 3; 1, 46, 6; 2, 38, 6 et saep.: si quid in Flacco viri est, Non feret, Hor. Epod. 15, 12.\u2014",
+              "entryid": "00:01:02",
+              "citations": {
+                "urn:cts:latinLit:phi0474.phi049:2:22:53": "Cic. Tusc. 2, 22, 53",
+                "urn:cts:latinLit:phi0474.phi056:5:17:3": "id. Fam. 5, 17, 3",
+                "urn:cts:latinLit:phi0474.phi024:5:11": "id. Cael. 5, 11",
+                "urn:cts:latinLit:phi0474.phi056:5:18:1": "id. Fam. 5, 18, 1",
+                "urn:cts:latinLit:phi0474.phi057:10:7:2": "id. Att. 10, 7, 2",
+                "urn:cts:latinLit:phi0914.phi001:24:8:1": "Liv. 24, 8, 1",
+                "urn:cts:latinLit:phi0914.phi001:1:41:3": "1, 41, 3",
+                "urn:cts:latinLit:phi0914.phi001:1:46:6": "1, 46, 6",
+                "urn:cts:latinLit:phi0914.phi001:2:38:6": "2, 38, 6",
+                "urn:cts:latinLit:phi0893.phi003:15:12": "Hor. Epod. 15, 12"
+              }
+            },
+            {
+              "entry": "D.  In milit. lang.",
+              "entryid": "00:01:03"
+            },
+            {
+              "entry": "1.  In gen., like our man, for soldier (syn. miles): dispertiti viri, dispertiti ordines, Plaut. Am. 1, 1, 65 (217); cf.: boat Caelum fremitu virum, id. ib. 1, 1, 78 (230): vir unus cum viro congrediendo, T. Manlius, M. Valerius, quantum Gallicam rabiem vinceret Romana virtus, docuerunt, Liv. 38, 17, 8.\u2014",
+              "entryid": "00:01:03:00",
+              "citations": {
+                "urn:cts:latinLit:phi0119.phi001:217": "Plaut. Am. 1, 1, 65 (217)",
+                "urn:cts:latinLit:phi0119.phi001:230": "id. ib. 1, 1, 78 (230)",
+                "urn:cts:latinLit:phi0914.phi001:38:17:8": "Liv. 38, 17, 8"
+              }
+            },
+            {
+              "entry": "2.  In partic., as opposed to the cavalry, a foot-soldier (syn. pedes): equites virique, Liv. 21, 27, 1: magn\u0101 voce trahens equitemque virosque, Sil. 9, 559: passim turmaeque virique, etc., Petr. 123.\u2014Hence, prov.: equis viris, or viris equisque, with horse and foot, i. e. with might and main; v. equus.\u2014",
+              "entryid": "00:01:03:01",
+              "citations": {
+                "urn:cts:latinLit:phi0914.phi001:21:27:1": "Liv. 21, 27, 1",
+                "urn:cts:latinLit:phi1345.phi001:9:559": "Sil. 9, 559"
+              }
+            },
+            {
+              "entry": "E.  With emphasis in place of a pronoun of reference, is, ille, etc.: fletusque et conploratio fregere tandem virum, Liv. 2, 40, 9: hae tantae viri virtutes, id. 21, 4, 9; Sall. J. 9, 3.\u2014",
+              "entryid": "00:01:04",
+              "citations": {
+                "urn:cts:latinLit:phi0914.phi001:2:40:9": "Liv. 2, 40, 9",
+                "urn:cts:latinLit:phi0914.phi001:21:4:9": "id. 21, 4, 9",
+                "urn:cts:latinLit:phi0631.phi002:9:3": "Sall. J. 9, 3"
+              }
+            },
+            {
+              "entry": "F.  Distributively, each man, every man: vir virum legit, of choosing a senator, Suet. Aug. 35: vir cum viro congrediaris, Liv. 22, 14, 14: legitque virum vir, singled out (in battle), Verg. A. 11, 632 (an imitation of Hom. Il. 4, 472: \u1f00\u03bd\u1f74\u03c1 \u03b4 \u1f04\u03bd\u03b4\u1fe4 \u1f10\u03b4\u03bd\u03bf\u03c0\u03ac\u03bb\u03b9\u03b6\u03b5\u03bd): cum vir virum legisset, i. e. a companion in battle, Liv. 9, 39, 5; cf., in a sarcastic transfer-: ille (Clodius), qui semper secum scorta, semper exoletos, semper lupas ducebat, tum neminem, nisi ut virum a viro lectum esse diceres, Cic. Mil. 21, 55.\u2014",
+              "entryid": "00:02",
+              "citations": {
+                "urn:cts:latinLit:phi1348.phi001:life=aug.:35": "Suet. Aug. 35",
+                "urn:cts:latinLit:phi0914.phi001:22:14:14": "Liv. 22, 14, 14",
+                "urn:cts:latinLit:phi0690.phi003:11:632": "Verg. A. 11, 632",
+                "urn:cts:latinLit:phi0914.phi001:9:39:5": "Liv. 9, 39, 5",
+                "urn:cts:latinLit:phi0474.phi031:21:55": "Cic. Mil. 21, 55"
+              }
+            },
+            {
+              "entry": "G.  Human beings (poet. homines, opp. pecudes), Ov. M. 1, 286; cf. Verg. A. 6, 553.\u2014",
+              "entryid": "00:03",
+              "citations": {
+                "urn:cts:latinLit:phi0959.phi006:1:286": "Ov. M. 1, 286",
+                "urn:cts:latinLit:phi0690.phi003:6:553": "Verg. A. 6, 553"
+              }
+            },
+            {
+              "entry": "H.  Manhood, virility (poet. and very rare): ut relicta sensit sibi membra sine viro, Cat. 63, 6: ferro mollita juventus Atque exsecta virum, Luc. 10, 134.",
+              "entryid": "00:04",
+              "citations": {
+                "urn:cts:latinLit:phi0472.phi001:63:6": "Cat. 63, 6",
+                "urn:cts:latinLit:phi0917.phi001:10:134": "Luc. 10, 134"
+              }
+            }
+          ],
+          "term": "v\u012dr"
+        }
+      }
+    ],
+    "dg_parsed": true,
+    "chunk_types": [
+      "PerseusAnalysisHeader",
+      "DiogenesMatchingReference"
+    ]
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "chunks": 2,
+    "dg_parsed": 1,
+    "chunk_types": 2
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

@@ -1,0 +1,33 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "canonical",
+    "lang": "san",
+    "word": "krishna",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "canonical": {
+      "original_query": "krishna",
+      "bare_query": "krishna",
+      "canonical_text": "k.r.s.naa",
+      "canonical_sanskrit": "k.r.s.naa",
+      "match_method": "sktsearch",
+      "entry_url": "/skt/MW/68.html#H_k.r.s.naa"
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "canonical": 6
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

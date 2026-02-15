@@ -1,0 +1,490 @@
+{
+  "target": {
+    "tool": "heritage",
+    "action": "morphology",
+    "lang": "san",
+    "word": "yoga",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "query",
+  "tool_raw": null,
+  "tool_ok": null,
+  "tool_error": null,
+  "tool_summary": null,
+  "unified_raw": [
+    {
+      "word": "yoga",
+      "language": "san",
+      "morphology": {
+        "lemma": "yoga",
+        "pos": "noun",
+        "features": {
+          "analyses": [
+            {
+              "word": "yoga",
+              "lemma": "yoga",
+              "root": "",
+              "pos": "noun",
+              "case": "vocative",
+              "gender": "masculine",
+              "number": "singular"
+            }
+          ]
+        }
+      },
+      "source": "heritage",
+      "metadata": {
+        "morphology_raw": {
+          "input_text": "yoga",
+          "solutions": [
+            {
+              "type": "morphological_analysis",
+              "analyses": [
+                {
+                  "word": "yoga",
+                  "lemma": "yoga",
+                  "root": "",
+                  "pos": "noun",
+                  "case": "vocative",
+                  "gender": "masculine",
+                  "number": "singular"
+                }
+              ],
+              "total_words": 1,
+              "metadata": {
+                "color": "lawngreen_back",
+                "raw_text": "[yoga]{m. sg. voc.}",
+                "segments": [
+                  {
+                    "class": "blue",
+                    "text": "yoga"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  },
+                  {
+                    "class": "blue",
+                    "text": "solution kept among"
+                  },
+                  {
+                    "class": "magenta",
+                    "text": "1"
+                  }
+                ]
+              }
+            }
+          ],
+          "word_analyses": [],
+          "total_solutions": 1,
+          "metadata": {
+            "solutions_kept": 1,
+            "total_available": 1
+          }
+        },
+        "combined": {
+          "lemma": "yoga",
+          "pos": "noun",
+          "morphology_analyses": [
+            {
+              "word": "yoga",
+              "lemma": "yoga",
+              "pos": "noun",
+              "features": {
+                "case": "vocative",
+                "gender": "masculine",
+                "number": "singular",
+                "person": null,
+                "tense": null,
+                "voice": null,
+                "mood": null,
+                "stem": ""
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "word": "yoga",
+      "language": "san",
+      "definitions": [
+        {
+          "definition": "yoga   &c. See pp. 856, 858.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "172001"
+          }
+        },
+        {
+          "definition": "yo/ga   m. (\u221a 1. yuj; ifc. f(A). ) the act of yoking, joining, attaching, harnessing, putting to (of horses), RV.; MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172324"
+          }
+        },
+        {
+          "definition": "a yoke, team, vehicle, conveyance, \u015aBr.; Kau\u015b.; MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172325"
+          }
+        },
+        {
+          "definition": "employment, use, application, performance, RV. &c. &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172326"
+          }
+        },
+        {
+          "definition": "equipping or arraying (of an army), MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172327"
+          }
+        },
+        {
+          "definition": "fixing (of an arrow on the bow-string), ib.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172328"
+          }
+        },
+        {
+          "definition": "putting on (of armour), L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172329"
+          }
+        },
+        {
+          "definition": "a remedy, cure, Su\u015br.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "172330"
+          }
+        },
+        {
+          "definition": "a means, expedient, device, way, manner, method, MBh.; K\u0101v. &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172331"
+          }
+        },
+        {
+          "definition": "a supernatural means, charm, incantation, magical art, ib.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172332"
+          }
+        },
+        {
+          "definition": "a trick, stratagem, fraud, deceit, Mn.; Kath\u0101s. (cf. yoga-nanda)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172333"
+          }
+        },
+        {
+          "definition": "undertaking, business, work, RV.; AV.; TS.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172334"
+          }
+        },
+        {
+          "definition": "acquisition, gain, profit, wealth, property, ib.; Kau\u015b.; MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172335"
+          }
+        },
+        {
+          "definition": "occasion, opportunity, K\u0101m.; M\u0101rkP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172336"
+          }
+        },
+        {
+          "definition": "any junction, union, combination, contact with (instr. with or without saha, or comp.), MBh.; K\u0101v. &c. (yogam \u221a i, to agree, consent, acquiesce in anything, R.)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172337"
+          }
+        },
+        {
+          "definition": "mixing of various materials, mixture, MBh.; R.; VarB\u1e5bS.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172338"
+          }
+        },
+        {
+          "definition": "partaking of, possessing (instr. or comp.), Mn.; R.; Hariv.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172339"
+          }
+        },
+        {
+          "definition": "connection, relation (yogAt, yogena and yoga-tas ifc. in consequence of, on account of, by reason of, according to, through), K\u0101ty\u015ar.; \u015avetUp.; Mn. &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172340"
+          }
+        },
+        {
+          "definition": "putting together, arrangement, disposition, regular succession, K\u0101\u1e6dh.  \u015arS.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172341"
+          }
+        },
+        {
+          "definition": "fitting together, fitness, propriety, suitability (\u00b0gena ind. and -tas ind. suitably, fitly, duly, in the right manner), MBh.; K\u0101v. &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172342"
+          }
+        },
+        {
+          "definition": "exertion, endeavour, zeal, diligence, industry, care, attention (\u00b0yoga-tas ind. strenuously, assiduously; pUrRena yogena, with all one's powers, with overflowing zeal), Mn.; MBh. &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172343"
+          }
+        },
+        {
+          "definition": "application or concentration of the thoughts, abstract contemplation, meditation, (esp.) self-concentration, abstract meditation and mental abstraction practised as a system (as taught by Pata\u00f1jali and called the Yoga philosophy; it is the second of the two S\u0101\u1e43khya systems, its chief aim being to teach the means by which the human spirit may attain complete union with \u012a\u015bvara or the Supreme Spirit; in the practice of self-concentration it is closely connected with Buddhism), Up.; MBh.; K\u0101v. &c. (IW. 92)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172344"
+          }
+        },
+        {
+          "definition": "any simple act or rite conducive to Yoga or abstract meditation, Sarvad.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172345"
+          }
+        },
+        {
+          "definition": "Yoga personified (as the son of Dharma and Kriy\u0101), BhP.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172346"
+          }
+        },
+        {
+          "definition": "a follower of the Yoga system, MBh.; \u015aa\u1e43k.",
+          "pos": "unknown",
+          "metadata": {
+            "dict": "mw",
+            "id": "172347"
+          }
+        },
+        {
+          "definition": "(in S\u0101\u1e43khya) the union of soul with matter (one of the 10 M\u016blik\u0101rth\u0101s or radical facts), Tattvas.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172348"
+          }
+        },
+        {
+          "definition": "(with P\u0101\u015bupatas) the union of the individual soul with the universal soul, Kul\u0101r\u1e47.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172349"
+          }
+        },
+        {
+          "definition": "(with P\u0101\u00f1car\u0101tras) devotion, pious seeking after God, Sarvad.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172350"
+          }
+        },
+        {
+          "definition": "(with Jainas) contact or mixing with the outer world, ib.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172351"
+          }
+        },
+        {
+          "definition": "(in astron.) conjunction, lucky conjuncture, L\u0101\u1e6dy.; VarB\u1e5bS.; MBh. &c.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172352"
+          }
+        },
+        {
+          "definition": "a constellation, asterism (these, with the moon, are called cAndra-yogAH and are 13 in number; without the moon they are called Ka-yogAH, or nABasa-yogAH), VarB\u1e5bS.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172353"
+          }
+        },
+        {
+          "definition": "the leading or principal star of a lunar asterism, W.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172354"
+          }
+        },
+        {
+          "definition": "N. of a variable division of time (during which the joint motion in longitude of the sun and moon amounts to 13 degrees 20 minutes; there are 27 such Yogas beginning with Vi\u1e63kambha and ending with Vaidh\u1e5bti), ib.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172355"
+          }
+        },
+        {
+          "definition": "(in arithm.) addition, sum, total, S\u016bryas.; MBh.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172356"
+          }
+        },
+        {
+          "definition": "(in gram.) the connection of words together, syntactical dependence of a word, construction, Nir.; Su\u015br. (ifc. = dependent on, ruled by, P\u0101\u1e47. ii, 2, 8, V\u0101rtt. 1)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172357"
+          }
+        },
+        {
+          "definition": "a combined or concentrated grammatical rule or aphorism, P\u0101\u1e47., Sch.; Siddh. (cf. yoga-viBAga)",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172358"
+          }
+        },
+        {
+          "definition": "the connection of a word with its root, original or etymological meaning (as opp. to rUQi, q.v.), Nir.; Prat\u0101p.; K\u0101ty\u015ar., Sch.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172359"
+          }
+        },
+        {
+          "definition": "a violator of confidence, spy, L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172360"
+          }
+        },
+        {
+          "definition": "N. of a Sch. on the Param\u0101rthas\u0101ra",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172361"
+          }
+        },
+        {
+          "definition": "yo/gA   (A), f. N. of a \u015aakti, Pa\u00f1car.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172362"
+          }
+        },
+        {
+          "definition": "of P\u012bvar\u012b (daughter of the Pit\u1e5bs called Barhi\u1e63ads), Hariv.",
+          "pos": "verb",
+          "metadata": {
+            "dict": "mw",
+            "id": "172363"
+          }
+        },
+        {
+          "definition": "1. yOga   m. (fr. yoga) a follower of the Yoga system of philosophy, L.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172914"
+          }
+        },
+        {
+          "definition": "2. yOga   V\u1e5bddhi form of yuga in comp.",
+          "pos": "noun",
+          "metadata": {
+            "dict": "mw",
+            "id": "172915"
+          }
+        }
+      ],
+      "morphology": {
+        "lemma": "yOga",
+        "pos": "noun",
+        "features": {
+          "declension": "A",
+          "gender": [
+            "masculine"
+          ]
+        },
+        "gender": [
+          "masculine"
+        ]
+      },
+      "source": "cdsl",
+      "metadata": {
+        "dict": "mw",
+        "dictionary": "mw",
+        "count": 43
+      }
+    }
+  ],
+  "unified_ok": true,
+  "unified_error": null,
+  "unified_summary": {
+    "entries": 2
+  },
+  "unified_sources": [
+    "cdsl",
+    "heritage"
+  ],
+  "source_present": true
+}

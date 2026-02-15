@@ -1,0 +1,32 @@
+{
+  "target": {
+    "tool": "cltk",
+    "action": "dictionary",
+    "lang": "lat",
+    "word": "arma",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": true
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "latin_dictionary": {
+      "headword": "arma",
+      "ipa": "'ar.ma",
+      "lewis_1890_lines": [
+        "arma \u014drum, n 1 AR-, implements, outfit, instruments, tools: cerealia, for making bread, V.: (coloni) operis, O.: omne genus: armorum, Cs.: Conligere arma iubet, the ship's tackle, V.\u2014Armor fitted to the body, defensive armor (the shield, coat of mail, helmet, etc.): arma his imperata, galea, clipeum, ocreae, lorica, omnia ex aere, L.: auro caelata, L.: Lausum super arma ferre, on his shield, V.: caelestia, quae ancilia appellantur, L.: se collegit in arma, covered with his shield, V. \u2014 In gen., implements of war, arms, weapons: alia ad tegendum, alia ad nocendum: belli, T.: pugnis, dein ... Pugnabant armis, H.: arma capere: ferre posse, Cs.: aptare, L.: induere, O.: armis accingi, V.: vocare ad arma: ad arma concurri, Cs.: armis uti: in armis esse, under arms, Cs.: cum alquo armis dimicare, N.: deponere, Cs.: amittere, V.: deripere militibus, H.: ad bellum polliceri, L.: armorum atque telorum portationes, S. \u2014 Fig., means of protection, defence, weapons: prudentiae: mihi Stertinius arma (i. e. praecepta) dedit, H.: contra Borean, i. e. covering, O.: quaerere conscius arma, i. e. ways of attacking me, V.: silent leges inter arma, in war: cedant arma togae: externa erat, foreign, L.: civilia, Ta.: inferre Italiae, N.: ad horrida promptior arma, O.: compositis armis, H.: Arma virumque cano, V.: in arma feror, battle, V.\u2014A side, party in war: isdem in armis fui.\u2014Soldiers, troops: nostro supplicio liberemus Romana arma, L.: machina Feta armis, V.: auxiliaria, auxiliary troops, O."
+      ]
+    }
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "latin_dictionary": 3
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}

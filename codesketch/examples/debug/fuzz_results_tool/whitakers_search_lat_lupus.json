@@ -1,0 +1,60 @@
+{
+  "target": {
+    "tool": "whitakers",
+    "action": "search",
+    "lang": "lat",
+    "word": "lupus",
+    "dict_name": null,
+    "allow_empty": false,
+    "compare_optional": false
+  },
+  "mode": "tool",
+  "tool_raw": {
+    "wordlist": [
+      {
+        "raw_lines": [
+          "lup.us               N      2 1 NOM S M                 ",
+          "lupus, lupi  N (2nd) M   [XXXAX]  ",
+          "wolf; grappling iron;"
+        ],
+        "senses": [
+          "wolf",
+          "grappling iron"
+        ],
+        "terms": [
+          {
+            "term": "lup.us",
+            "part_of_speech": "Noun",
+            "declension": "2",
+            "case": "Nominative",
+            "number": "Singular",
+            "gender": "Masculine",
+            "variant": "1",
+            "term_analysis": {
+              "stem": "lup",
+              "ending": "us"
+            }
+          }
+        ],
+        "codeline": {
+          "term": "lupus, lupi",
+          "freq": "Very Frequent",
+          "declension": "2nd",
+          "pos_form": "Masculine",
+          "pos_code": "Noun"
+        }
+      }
+    ]
+  },
+  "tool_ok": true,
+  "tool_error": null,
+  "tool_summary": {
+    "wordlist": 1
+  },
+  "unified_raw": null,
+  "unified_ok": null,
+  "unified_error": null,
+  "unified_summary": null,
+  "unified_sources": null,
+  "source_present": null
+}
