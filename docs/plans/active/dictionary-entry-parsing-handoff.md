@@ -208,7 +208,7 @@ sense_marker: (ROMAN | GREEK_LETTER) "." "  "  # Literal two spaces
 ### 2. CDSL Citation Abbreviation Ambiguity
 
 **Problem**: `L.` could be:
-- Lassen (Sanskrit scholar citation)
+- lexicographers (Sanskrit scholar citation)
 - A line number reference
 - Part of the actual definition
 
@@ -218,7 +218,7 @@ sense_marker: (ROMAN | GREEK_LETTER) "." "  "  # Literal two spaces
 ```python
 # src/langnet/parsing/cdsl/citation_abbrevs.py
 CDSL_CITATION_ABBREVS = {
-    "L.": "Lassen",
+    "L.": "lexicographers",
     "RV.": "Rig Veda",
     "AV.": "Atharva Veda",
     "TS.": "Taittiriya Samhita",

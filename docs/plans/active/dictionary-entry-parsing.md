@@ -14,7 +14,7 @@ Current dictionary adapters conflate distinct information types into single "def
 | Source | Raw Entry (repr) | What's Conflated |
 |--------|------------------|------------------|
 | CDSL | `'agni/   m. (√ ag, Uṇ.) fire, sacrificial fire...'` | headword + gender + **root** + sense |
-| CDSL | `'bile, L.'` | sense + **citation abbreviation** (Lassen) |
+| CDSL | `'bile, L.'` | sense + **citation abbreviation** (lexicographers) |
 | Diogenes Latin | `'I.  Lit.: torva leaena lupum sequitur, Verg. E. 2, 63; Plin.'` | marker + **citation text** + source refs |
 | Diogenes Latin | `'β.  Lupum auribus tenere, to have a wolf by the ears...'` | Greek letter marker + sense |
 | Diogenes Greek | `'1.  account of money handled, σανίδες εἰς ἃς τὸν λ. ἀναγράφομεν IG 1(2).374.191;...'` | marker + sense + **embedded citations** |
@@ -408,7 +408,7 @@ Add `wsu_type` field to distinguish `sense` vs `citation` WSUs
 
 ## Edge Cases
 
-1. **Ambiguous abbreviations**: `L.` could be Lassen or a line number
+1. **Ambiguous abbreviations**: `L.` could be lexicographers or a line number
    - Heuristic: position in entry, surrounding context
     
 2. **Nested citations**: Entry text quotes other works

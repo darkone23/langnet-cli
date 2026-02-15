@@ -100,7 +100,7 @@ model = downloader.load('glove-wiki-gigaword-100')
 **Problem**: Citation abbreviations pollute glosses
 
 **Examples**:
-- "bile, L." → "L." is Lassen citation
+- "bile, L." → "L." is lexicographers citation
 - "gold, RV." → "RV." is Rig Veda citation
 
 **Solution**: Strip common citation abbreviations

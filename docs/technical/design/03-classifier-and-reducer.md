@@ -4,7 +4,7 @@
 
 **Draft – Target for Stabilization**  
 **Last Updated**: 2026-02-15  
-**Prerequisites**: `02-witness-contracts.md`, **`04-entry-parsing.md` (NEW)**
+**Prerequisites**: `02-witness-contracts.md`, `04-entry-parsing.md`, `05-tool-fact-architecture.md`
 **Implementation Reality Check**: See "Current Architecture Gap" section below
 
 ## Purpose
@@ -17,14 +17,11 @@ This document specifies the semantic distillation pipeline that converts raw lex
 * Epistemic mode variation (`open` vs `skeptic`)
 * Gradual construction of a curated semantic constant registry
 
-This document defines:
+**Architecture Note**: The semantic reducer consumes Claims from the universal layer (see `05-tool-fact-architecture.md`). Tool-specific facts are transformed to Claims before reaching this pipeline:
 
-* Witness extraction
-* Clustering (sense bucketing)
-* Semantic constant assignment
-* Deterministic behavior guarantees
-* Mode-dependent strictness rules
-* Testing and stability requirements
+```
+Tool-Specific Facts → Transform → Claims → WSU Extraction → Clustering → Buckets
+```
 
 ---
 

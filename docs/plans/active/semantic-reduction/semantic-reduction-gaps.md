@@ -98,7 +98,7 @@ assert hybrid_similarity(["fire", "flame"], ["blaze"]) > 0.3
 
 **Examples**:
 ```
-"bile, L."         → "L." = Lassen (citation)
+"bile, L."         → "L." = lexicographers (citation)
 "gold, RV."        → "RV." = Rig Veda (citation)
 "heavenly, MBh."   → "MBh." = Mahabharata (citation)
 ```

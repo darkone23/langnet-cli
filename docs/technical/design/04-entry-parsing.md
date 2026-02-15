@@ -19,7 +19,7 @@ This document defines the parsing layer that sits between raw adapter output and
 | Source | Raw Entry | What's Conflated |
 |--------|-----------|------------------|
 | CDSL | `agni/   m. (√ ag, Uṇ.) fire, sacrificial fire` | headword + gender + root + sense |
-| CDSL | `bile, L.` | sense + citation abbrev (Lassen) |
+| CDSL | `bile, L.` | sense + citation abbrev (lexicographers) |
 | Diogenes | `I.  Lit.: torva leaena lupum sequitur, Verg. E. 2, 63` | sense marker + citation text + source ref |
 | CLTK Lewis | `sēdō\n\n\n āvī, ātus, āre \n\nSED-, \nto bring...` | headword + principal parts + root + sense |
 

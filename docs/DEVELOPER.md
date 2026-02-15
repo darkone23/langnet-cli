@@ -256,23 +256,11 @@ devenv shell just -- autobot fuzz run --validate --compare --save examples/debug
 
 ### 4. Schema Validation
 
-Ensure fixtures and outputs match expected schemas:
+We do not ship JSON Schema files in this repo. Validation today relies on:
+- Dataclass typing + cattrs in adapters (`src/langnet/schema.py`).
+- Test suites (e.g., `tests/test_semantic_reduction_clustering.py`) and fuzz validation (`just autobot fuzz run --validate`).
 
-```bash
-# Validate individual fixtures
-python -c "
-import json, jsonschema
-with open('tests/fixtures/raw_tool_outputs/diogenes/schema_diogenes.json') as f:
-    schema = json.load(f)
-with open('tests/fixtures/raw_tool_outputs/diogenes/search_lat_lupus.json') as f:
-    data = json.load(f)
-jsonschema.validate(data, schema)
-print('✓ Schema validation passed')
-"
-
-# Batch validation
-just autobot fuzz run --validate
-```
+If you need JSON Schema, generate it ad hoc from the dataclasses before use; there is no committed `jsonschema` reference in `tests/fixtures/`.
 
 ## Development Workflow
 
