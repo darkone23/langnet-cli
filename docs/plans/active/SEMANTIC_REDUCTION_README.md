@@ -1,7 +1,7 @@
 # Semantic Reduction Project - Complete Documentation
 
 ## 📋 Project Status
-**Planning Complete ✅** | **Ready for Implementation** | **Last Updated**: 2026-02-15
+**Phase 0 Complete ✅** | **Phase 1 Ready** | **Last Updated**: 2026-02-15
 
 ## 🎯 Goal
 Implement semantic reduction pipeline to convert raw lexical evidence into structured semantic output with:
@@ -55,10 +55,10 @@ devenv shell langnet-cli -- langnet-cli semantic san agni --output json
 ## 📊 Success Metrics
 
 ### **Phase 0 Complete When**
-- [ ] Schema updated with new fields
-- [ ] CDSL adapter populates source_ref
-- [ ] Sanskrit tests pass with MW IDs
-- [ ] No breaking changes to existing API
+- [x] Schema updated with new fields
+- [x] CDSL adapter populates source_ref
+- [x] Sanskrit tests pass with MW IDs
+- [x] No breaking changes to existing API
 
 ### **Project Complete When**
 - [ ] Semantic format uses actual reduction

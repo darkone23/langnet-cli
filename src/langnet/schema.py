@@ -34,6 +34,14 @@ class DictionaryDefinition:
     examples: list[str] = field(default_factory=list)  # Example usages
     citations: list[Citation] = field(default_factory=list)  # Source references
     metadata: JSONMapping = field(default_factory=dict)  # Backend-specific raw data
+    source_ref: str | None = None  # Stable source reference (e.g., "mw:890", "ap90:123")
+    domains: list[str] = field(
+        default_factory=list
+    )  # Semantic domains (e.g., ["religion", "mythology"])
+    register: list[str] = field(
+        default_factory=list
+    )  # Register classification (e.g., ["vedic", "epic"])
+    confidence: float | None = None  # Confidence score for stochastic sources (0.0-1.0)
 
 
 @dataclass

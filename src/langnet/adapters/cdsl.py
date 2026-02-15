@@ -92,6 +92,7 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                 DictionaryDefinition(
                     definition=str(definition_text),
                     pos=entry_pos,
+                    source_ref=self._build_source_ref(dict_name, entry.get("id")),
                     metadata={
                         "dict": dict_name,
                         "id": entry.get("id"),
@@ -332,3 +333,19 @@ class CDSLBackendAdapter(BaseBackendAdapter):
                 seen.add(item)
                 unique.append(item)
         return unique
+
+    @staticmethod
+    def _build_source_ref(dict_name: str, entry_id: str | None) -> str | None:
+        """Build a stable source reference from dictionary name and entry ID.
+
+        Args:
+            dict_name: Dictionary identifier (e.g., "mw", "ap90", "MW", "AP90")
+            entry_id: Entry ID from the dictionary (e.g., "890")
+
+        Returns:
+            Source reference string (e.g., "mw:890", "ap90:123") or None if entry_id is missing
+        """
+        if not entry_id:
+            return None
+        normalized_dict = dict_name.lower()
+        return f"{normalized_dict}:{entry_id}"
