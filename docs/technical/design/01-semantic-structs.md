@@ -93,13 +93,34 @@ Represents user input and normalization pipeline.
     "lemma_id": "san:śiva",
     "display": "śiva",
     "language": "san",
-    "confidence": 0.95,
-    "sources": ["MW", "Heritage"]
+    "sources": ["SOURCE_MW", "SOURCE_HERITAGE"]
   }
 ]
 ```
 
 Multiple candidates allowed.
+
+**Source Enum Values**:
+- `SOURCE_MW`: Monier-Williams Sanskrit-English Dictionary
+- `SOURCE_AP90`: Apte Practical Sanskrit-English Dictionary  
+- `SOURCE_HERITAGE`: Sanskrit Heritage Platform
+- `SOURCE_CDSL`: Cologne Digital Sanskrit Lexicon
+- `SOURCE_WHITAKERS`: Whitaker's Words (Latin)
+- `SOURCE_DIOGENES`: Diogenes (Latin/Greek)
+- `SOURCE_LEWIS_SHORT`: Lewis & Short Latin Dictionary
+- `SOURCE_LSJ`: Liddell-Scott-Jones Greek-English Lexicon
+- `SOURCE_CLTK`: Classical Language Toolkit
+
+**Source Enum Values**:
+- `SOURCE_MW`: Monier-Williams Sanskrit-English Dictionary
+- `SOURCE_AP90`: Apte Practical Sanskrit-English Dictionary  
+- `SOURCE_HERITAGE`: Sanskrit Heritage Platform
+- `SOURCE_CDSL`: Cologne Digital Sanskrit Lexicon
+- `SOURCE_WHITAKERS`: Whitaker's Words (Latin)
+- `SOURCE_DIOGENES`: Diogenes (Latin/Greek)
+- `SOURCE_LEWIS_SHORT`: Lewis & Short Latin Dictionary
+- `SOURCE_LSJ`: Liddell-Scott-Jones Greek-English Lexicon
+- `SOURCE_CLTK`: Classical Language Toolkit
 
 ---
 
@@ -108,17 +129,16 @@ Multiple candidates allowed.
 ```json
 "analyses": [
   {
-    "type": "morphology",
+    "type": "ANALYSIS_TYPE_MORPHOLOGY",
     "features": {
-      "pos": "noun",
-      "case": "vocative",
-      "number": "singular",
-      "gender": "masculine"
+      "pos": "POS_NOUN",
+      "case": "CASE_VOCATIVE",
+      "number": "NUMBER_SINGULAR",
+      "gender": "GENDER_MASCULINE"
     },
-    "confidence": 0.87,
     "witnesses": [
       {
-        "source": "Heritage",
+        "source": "SOURCE_HERITAGE",
         "ref": "heritage:morph:ziva"
       }
     ]
@@ -164,8 +184,8 @@ Each element in `senses[]` represents a **bucketed cluster of witness senses** a
 | display_gloss     | yes      | Human-readable gloss selected from witnesses |
 | domains           | optional | Semantic domains                             |
 | register          | optional | Register classification                      |
-| confidence        | yes      | Bucket coherence/support metric              |
-| witnesses         | yes      | Supporting WSUs                              |
+| confidence        | yes      | Bucket coherence/support metric (0.0-1.0)    |
+| witnesses         | yes      | Supporting WSUs (use Source enum values)     |
 
 ---
 

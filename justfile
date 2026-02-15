@@ -8,6 +8,8 @@ cli *args:
 
 # cache-clear:
 #     just cli cache-clear
+codegen:
+    cd vendor/langnet-spec && devenv shell just -- generate-python
     
 # Kill zombie diogenes processes (loop mode)
 langnet-dg-reaper:

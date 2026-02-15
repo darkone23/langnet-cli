@@ -11,6 +11,8 @@ Usage:
 
 Commands:
     query       Query a word in a given language
+    semantic    Query using semantic structs format (new schema)
+    semantic    Query using semantic structs format (new schema)
     verify      Check backend connectivity and health
     langs       List supported languages
     health      Alias for verify
@@ -33,7 +35,13 @@ from rich.console import Console
 from rich.pretty import pprint
 from rich.table import Table
 
-from langnet.cologne.core import CdslIndex, CdslIndexBuilder, batch_build
+from langnet.cologne.core import (
+    CdslIndex,
+    CdslIndexBuilder,
+    batch_build,
+    get_cdsl_db_dir,
+    get_cdsl_dict_dir,
+)
 from langnet.config import get_settings
 from langnet.foster.render import render_foster_codes
 from langnet.indexer.core import IndexType
@@ -435,63 +443,78 @@ def query(lang: str, word: str, api_url: str, output: str):
         sys.exit(1)
 
 
-@main.command(name="langs")
-@click.option(
-    "--api-url",
-    default=DEFAULT_API_URL,
-    help="Base URL of the langnet API server",
-)
-def list_languages(api_url: str):
-    """List supported languages and their codes.
-
-    Displays a table of available language codes and full names.
-    """
-    table = Table(title="Supported Languages")
-    table.add_column("Code", style="cyan")
-    table.add_column("Name", style="green")
-    table.add_row("lat", "Latin")
-    table.add_row("grc", "Greek")
-    table.add_row("san", "Sanskrit")
-    console.print(table)
-
-
-@main.command(name="health")
+@main.command(name="semantic")
+@click.argument("lang")
+@click.argument("word")
 @click.option(
     "--api-url",
     default=DEFAULT_API_URL,
     help="Base URL of the langnet API server",
 )
 @click.option(
-    "--timeout",
-    default=30.0,
-    help="Timeout for HTTP health check (seconds)",
+    "--output",
+    type=click.Choice(["json", "pretty"]),
+    default="json",
+    help="Output format: json (raw semantic JSON) or pretty (formatted display)",
 )
-def health(api_url: str, timeout: float):
-    """Check API health (alias for verify).
+def semantic_query(lang: str, word: str, api_url: str, output: str):
+    """Query a word using the semantic structs format.
 
-    Deprecated: Use 'langnet verify' instead.
+    Returns structured semantic output with lemmas, analyses, senses, and witnesses.
+    This is the new schema format for LangNet, providing better structure and traceability.
+
+    Arguments:
+        lang: Language code (lat, grc, san, or grk as alias for grc)
+        word: Word to look up (ASCII or UTF-8)
+
+    Options:
+        --output json   Output raw semantic JSON (pipable)
+        --output pretty Pretty formatted semantic output
+
+    Examples:
+        langnet-cli semantic san agni --output json
+        langnet-cli semantic lat lupus --output pretty
     """
-    _verify_impl(api_url, http_timeout=timeout)
+    err, normalized_lang = validate_query(lang, word)
+    if err:
+        console.print(f"[red]Error: {err}[/]")
+        sys.exit(1)
 
+    lang = normalized_lang or lang
+    if lang in LANG_ALIASES:
+        lang = LANG_ALIASES[lang]
 
-def get_cdsl_db_dir() -> Path:
-    return settings.cdsl_db_dir
+    url = f"{api_url}/api/q"
 
+    # Add format=semantic parameter
+    params = {"format": "semantic"}
 
-def get_cdsl_dict_dir() -> Path:
-    return settings.cdsl_dict_dir
+    try:
+        response = requests.post(url, data={"l": lang, "s": word}, params=params, timeout=30)
+        response.raise_for_status()
+
+        if output == "json":
+            sys.stdout.write(response.text)
+            sys.stdout.flush()
+        else:  # pretty
+            result = orjson.loads(response.text)
+            pprint(result)
+    except requests.RequestException as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
 
 
 @main.group()
 def cdsl():
-    """CDSL Sanskrit dictionary tools (Cologne Digital Sanskrit Lexicon)."""
+    """CDSL (Sanskrit dictionary) tools."""
+    pass
 
 
 @cdsl.command(name="build")
 @click.argument("dict_dir", type=click.Path(exists=True, file_okay=False))
-@click.argument("output_db", type=click.Path(file_okay=True, dir_okay=False))
-@click.option("--dict-id", default=None, help="Explicit dict ID (from dir name if not provided)")
-@click.option("--limit", default=None, type=int, help="Limit to N entries (for testing)")
+@click.argument("output_db", type=click.Path(dir_okay=False))
+@click.argument("dict_id", required=False)
+@click.option("--limit", default=None, type=int, help="Limit to N entries")
 @click.option("--force", is_flag=True, default=False, help="Overwrite existing database")
 @click.option(
     "--batch-size",

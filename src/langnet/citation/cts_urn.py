@@ -116,7 +116,9 @@ class CTSUrnMapper:
         db_path = self._get_db_path()
         if db_path and os.path.exists(db_path):
             try:
-                self._db_conn = duckdb.connect(db_path)
+                # Use read_only=True to avoid concurrent access issues
+                # config={'access_mode': 'read_only'} ensures multiple processes can read
+                self._db_conn = duckdb.connect(db_path, read_only=True)
                 return self._db_conn
             except Exception as e:
                 logger.debug(f"Could not connect to DuckDB: {e}")
@@ -278,7 +280,7 @@ class CTSUrnMapper:
             return None
 
         best = None
-        best_len = None
+        best_len = 0
         for author_name, work_title, cts_urn in rows:
             norm_title = self._normalize_abbrev_key(work_title)
             if not norm_title:

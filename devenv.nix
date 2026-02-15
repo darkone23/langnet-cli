@@ -101,7 +101,8 @@ in
   enterShell = ''
     export TMP="${config.devenv.root}/tmp";
     export TMPDIR="${config.devenv.root}/tmp";
-    export PYTHONPATH=$DEVENV_ROOT/src:$DEVENV_ROOT/.justscripts:$PYTHONPATH
+    export CODEGEN_PATH=$DEVENV_ROOT/vendor/langnet-spec/generated/python
+    export PYTHONPATH=$DEVENV_ROOT/src:$DEVENV_ROOT/.justscripts:$CODEGEN_PATH:$PYTHONPATH
   '';
 
   # scripts.gunicorn-serve.exec = ''

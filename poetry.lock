@@ -127,6 +127,29 @@ files = [
 ]
 
 [[package]]
+name = "betterproto2"
+version = "0.9.1"
+description = "A better Protobuf / gRPC generator & library"
+optional = false
+python-versions = "<4.0,>=3.10"
+groups = ["main"]
+files = [
+    {file = "betterproto2-0.9.1-py3-none-any.whl", hash = "sha256:de0544b4b2b6b5a05ce0c1bfac36d232f745087b02907e748f31466becfc3dbd"},
+    {file = "betterproto2-0.9.1.tar.gz", hash = "sha256:59d518cfbdd316e216c3d7f53448a6956432c7bd86ab9918fd8793c88c623cce"},
+]
+
+[package.dependencies]
+python-dateutil = ">=2.9.0.post0"
+typing-extensions = ">=4.14.0"
+
+[package.extras]
+all = ["grpcio (>=1.72.1)", "grpclib (>=0.4.8)", "protobuf (>=5.29.3)", "pydantic (>=2.11.5)"]
+grpcio = ["grpcio (>=1.72.1)"]
+grpclib = ["grpclib (>=0.4.8)"]
+protobuf = ["protobuf (>=5.29.3)"]
+pydantic = ["pydantic (>=2.11.5)"]
+
+[[package]]
 name = "blis"
 version = "0.7.11"
 description = "The Blis BLAS-like linear algebra library, as a self-contained C-extension."
@@ -2458,6 +2481,21 @@ files = [
 ]
 
 [[package]]
+name = "python-dateutil"
+version = "2.9.0.post0"
+description = "Extensions to the standard Python datetime module"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+groups = ["main"]
+files = [
+    {file = "python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3"},
+    {file = "python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"},
+]
+
+[package.dependencies]
+six = ">=1.5"
+
+[[package]]
 name = "python-dotenv"
 version = "1.2.1"
 description = "Read key-value pairs from a .env file and set them as environment variables"
@@ -4018,4 +4056,4 @@ dev = ["pytest", "setuptools"]
 [metadata]
 lock-version = "2.1"
 python-versions = "<3.12,>=3.10"
-content-hash = "629a9b382a52e8b703d9d30938d2fc9b22bf0eeaa783871c2f2c7d28453bdd55"
+content-hash = "b7f2e19a1c43a904d7b88ef04c852cefb6314d239b99bf38bfecb57417bd06a5"

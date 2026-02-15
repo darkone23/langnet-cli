@@ -16,6 +16,7 @@ from langnet.config import get_settings
 from langnet.core import LangnetWiring, build_langnet_wiring
 from langnet.health import run_health_checks
 from langnet.logging import scoped_context, setup_logging
+from langnet.semantic_converter import convert_multiple_entries
 from langnet.types import JSONMapping
 from langnet.validation import validate_query, validate_tool_request
 
@@ -99,6 +100,10 @@ async def cache_stats_api(request: Request):
 async def query_api(request: Request):
     with _request_context(request):
         request_start = time.perf_counter()
+
+        # Check if semantic format is requested
+        semantic_format = request.query_params.get("format") == "semantic"
+
         if request.method == "POST":
             form_data = await request.form()
             raw_lang = form_data.get("l")
@@ -128,8 +133,15 @@ async def query_api(request: Request):
             result = wiring.engine.handle_query(lang, word)
             handle_ms = (time.perf_counter() - handle_start) * 1000
 
-            # Unstructure DictionaryEntry objects to dicts (omits None fields)
-            result_dict = [json_converter.unstructure(entry) for entry in result]
+            if semantic_format:
+                # Convert to semantic structs format
+                semantic_response = convert_multiple_entries(result)
+                # Convert to dict for JSON serialization
+                result_dict = semantic_response.to_dict()
+            else:
+                # Unstructure DictionaryEntry objects to dicts (omits None fields)
+                result_dict = [json_converter.unstructure(entry) for entry in result]
+
             total_ms = (time.perf_counter() - request_start) * 1000
 
             timings_payload = {
@@ -137,17 +149,20 @@ async def query_api(request: Request):
                 "handle_query_ms": round(handle_ms, 3),
                 "total_ms": round(total_ms, 3),
             }
-            for entry in result_dict:
-                if not isinstance(entry, dict):
-                    continue
-                if "metadata" in entry and isinstance(entry["metadata"], dict):
-                    entry["metadata"].pop("timings_ms", None)
-                    entry["metadata"].pop("request_timings_ms", None)
+
+            if not semantic_format:
+                for entry in result_dict:
+                    if not isinstance(entry, dict):
+                        continue
+                    if "metadata" in entry and isinstance(entry["metadata"], dict):
+                        entry["metadata"].pop("timings_ms", None)
+                        entry["metadata"].pop("request_timings_ms", None)
 
             logger.info(
                 "query_timings",
                 lang=lang,
                 word=word,
+                format="semantic" if semantic_format else "legacy",
                 request_timings=timings_payload,
             )
 
@@ -159,6 +174,7 @@ async def query_api(request: Request):
                 exc_info=True,
                 lang=lang,
                 word=word,
+                format="semantic" if semantic_format else "legacy",
             )
             return ORJsonResponse({"error": str(e)}, status_code=500)
 
