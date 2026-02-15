@@ -2,7 +2,9 @@
 
 ## Status
 
-Draft – Target for Stabilization
+**Draft – Target for Stabilization**  
+**Last Updated**: 2026-02-15  
+**Implementation Reality Check**: See "Current Architecture Gap" section below
 
 ## Purpose
 
@@ -37,6 +39,33 @@ The system distinguishes four semantic layers:
 | Display Gloss            | Human-readable description            | Presentation-stable |
 
 These layers must not be conflated.
+
+## Current Architecture Gap
+
+**Important**: This design assumes data structures that do not fully match current implementation.
+
+### **Design Assumption vs Current Reality**
+
+| Design Assumption | Current Reality | Impact |
+|------------------|----------------|--------|
+| WSUs have `source_ref` (e.g., "mw:217497") | `DictionaryDefinition` lacks source tracking | Cannot trace definitions to source |
+| Structured `metadata` with `domains`/`register` | Flat `JSONMapping` without schema | Cannot extract domains/register |
+| Consistent adapter WSU output | Adapters output inconsistent data structures | Need adapter-specific extraction |
+| Sense lines as first-class objects | CDSL stores `sense_lines` in metadata | Need parsing to create WSUs |
+
+### **Required Schema Evolution**
+Before implementing this pipeline, the following schema changes are needed:
+
+```python
+# In src/langnet/schema.py DictionaryDefinition
+source_ref: str | None = None  # "mw:217497", "diogenes:lsj:1234"
+domains: list[str] = field(default_factory=list)
+register: list[str] = field(default_factory=list)
+confidence: float | None = None  # For stochastic sources
+```
+
+### **Implementation Path**
+See `docs/plans/todo/semantic-reduction-migration-plan.md` for detailed migration strategy.
 
 ---
 

@@ -2,7 +2,9 @@
 
 ## Status
 
-Draft – Target for Stabilization
+**Draft – Target for Stabilization**  
+**Last Updated**: 2026-02-15  
+**Implementation Note**: Source contracts require schema evolution (see below)
 
 ## Purpose
 
@@ -390,8 +392,34 @@ Example:
 
 ---
 
-## 6. Completion Criteria
+## 6. Implementation Reality
 
+### **Current Architecture Gap**
+These witness contracts assume granular source tracking at the sense level, but current `DictionaryDefinition` schema lacks `source_ref` field.
+
+**Required Schema Evolution**:
+```python
+# In src/langnet/schema.py DictionaryDefinition
+source_ref: str | None = None  # Required for witness contracts
+```
+
+### **Migration Strategy**
+1. **Phase 0**: Add `source_ref` to schema (non-breaking)
+2. **Phase 1**: Update CDSL adapter to populate from `sense_lines`
+3. **Phase 2**: Gradually update other adapters
+4. **Phase 3**: Implement witness contract validation
+
+### **Temporary Workaround**
+Until schema is enhanced, witness extraction will use:
+- CDSL: Parse `sense_lines` from metadata
+- Diogenes: Extract from `dictionary_blocks`
+- Whitakers: Generate synthetic references
+- Fallback: Entry-level source tracking only
+
+## 7. Completion Criteria
+
+* [ ] Schema enhanced with `source_ref` field
+* [ ] CDSL adapter populates `source_ref` from sense lines
 * [ ] All sources have an entry in this registry
 * [ ] Every adapter emits witnesses using the agreed `source/type/ref` pattern
 * [ ] Resolver strategy documented for each citation type
