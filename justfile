@@ -13,7 +13,7 @@ codegen:
     
 # Kill zombie diogenes processes (loop mode)
 langnet-dg-reaper:
-    python3 -m langnet.diogenes.cli_util
+    just autobot diogenes reap
 
 # restart uvicorn server
 restart-server:
@@ -29,7 +29,7 @@ lint-all:
 
 # One-shot zombie reap
 reap:
-    python3 -m langnet.diogenes.cli_util reap --once
+    just autobot diogenes reap --once
 
 # Run the test suite
 test-all:

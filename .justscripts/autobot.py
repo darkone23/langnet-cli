@@ -35,6 +35,11 @@ try:
 except ImportError:
     fuzz = None  # type: ignore[assignment]
 
+try:
+    from diogenes_commands import diogenes  # type: ignore[assignment,attr-defined]
+except ImportError:
+    diogenes = None  # type: ignore[assignment]
+
 
 @click.group()
 def autobot():
@@ -57,6 +62,10 @@ if model is not None:
 # Add fuzz group to autobot if available
 if fuzz is not None:
     autobot.add_command(fuzz, name="fuzz")
+
+# Add diogenes group to autobot if available
+if diogenes is not None:
+    autobot.add_command(diogenes, name="diogenes")
 
 
 if __name__ == "__main__":
