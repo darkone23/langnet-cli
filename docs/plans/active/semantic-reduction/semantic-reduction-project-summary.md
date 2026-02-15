@@ -1,7 +1,7 @@
 # Semantic Reduction Project - Complete Planning Summary
 
 **Date**: 2026-02-15  
-**Status**: 📋 PLANNING COMPLETE (Ready for Implementation)  
+**Status**: 📋 PLANNING COMPLETE (Implementation exists; tests not executed in this shell)  
 **Priority**: HIGH  
 **Area**: infra/semantic-reduction
 
@@ -13,17 +13,17 @@
 
 ## Key Documents Created
 
-### **Planning Documents** (in `docs/plans/todo/`)
-1. **[semantic-reduction-roadmap.md](todo/semantic-reduction-roadmap.md)** - Complete 5-phase implementation plan
-2. **[semantic-reduction-adapter-requirements.md](todo/semantic-reduction-adapter-requirements.md)** - WSU extraction requirements per adapter
-3. **[semantic-reduction-similarity-spec.md](todo/semantic-reduction-similarity-spec.md)** - Similarity scoring algorithm specification
-4. **[semantic-reduction-gap-analysis.md](todo/semantic-reduction-gap-analysis.md)** - Architecture gap analysis and solutions
-5. **[semantic-reduction-migration-plan.md](todo/semantic-reduction-migration-plan.md)** - Step-by-step migration strategy
+### **Planning Documents** (in `docs/plans/todo/semantic-reduction/`)
+1. **[semantic-reduction-roadmap.md](../../todo/semantic-reduction/semantic-reduction-roadmap.md)** - Complete 5-phase implementation plan
+2. **[semantic-reduction-adapter-requirements.md](../../todo/semantic-reduction/semantic-reduction-adapter-requirements.md)** - WSU extraction requirements per adapter
+3. **[semantic-reduction-similarity-spec.md](../../todo/semantic-reduction/semantic-reduction-similarity-spec.md)** - Similarity scoring algorithm specification
+4. **[semantic-reduction-gap-analysis.md](../../todo/semantic-reduction/semantic-reduction-gap-analysis.md)** - Architecture gap analysis and solutions
+5. **[semantic-reduction-migration-plan.md](../../todo/semantic-reduction/semantic-reduction-migration-plan.md)** - Step-by-step migration strategy
 
 ### **Design Documents** (in `docs/technical/design/`)
-1. **[01-semantic-structs.md](../technical/design/01-semantic-structs.md)** - Schema definition ✅
-2. **[02-witness-contracts.md](../technical/design/02-witness-contracts.md)** - Source contracts ✅  
-3. **[03-classifier-and-reducer.md](../technical/design/03-classifier-and-reducer.md)** - 4-stage pipeline design ✅
+1. **[01-semantic-structs.md](../../technical/design/01-semantic-structs.md)** - Schema definition ✅
+2. **[02-witness-contracts.md](../../technical/design/02-witness-contracts.md)** - Source contracts ✅  
+3. **[03-classifier-and-reducer.md](../../technical/design/03-classifier-and-reducer.md)** - 4-stage pipeline design ✅
 
 ## Current Architecture Assessment
 

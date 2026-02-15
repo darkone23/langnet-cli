@@ -1,7 +1,7 @@
 # Semantic Reduction Project - Complete Documentation
 
 ## 📋 Project Status
-**Phase 0 Complete ✅** | **Phase 1 Ready** | **Last Updated**: 2026-02-15
+**Phase 0 Complete ✅** | **Phase 1 Ready** | **Phase 2 modules + tests exist (not executed here)** | **Last Updated**: 2026-02-15
 
 ## 🎯 Goal
 Implement semantic reduction pipeline to convert raw lexical evidence into structured semantic output with:
@@ -30,11 +30,11 @@ confidence: float | None = None
 3. **[Current Status](semantic-reduction-current-status.md)** - Implementation readiness
 
 ### **Planning Documents**
-4. **[Migration Plan](../todo/semantic-reduction-migration-plan.md)** - 5-phase step-by-step
-5. **[Roadmap](../todo/semantic-reduction-roadmap.md)** - Detailed implementation phases
-6. **[Gap Analysis](../todo/semantic-reduction-gap-analysis.md)** - Architecture issues
-7. **[Adapter Requirements](../todo/semantic-reduction-adapter-requirements.md)** - WSU extraction specs
-8. **[Similarity Spec](../todo/semantic-reduction-similarity-spec.md)** - Algorithm details
+4. **[Migration Plan](../../todo/semantic-reduction/semantic-reduction-migration-plan.md)** - 5-phase step-by-step
+5. **[Roadmap](../../todo/semantic-reduction/semantic-reduction-roadmap.md)** - Detailed implementation phases
+6. **[Gap Analysis](../../todo/semantic-reduction/semantic-reduction-gap-analysis.md)** - Architecture issues
+7. **[Adapter Requirements](../../todo/semantic-reduction/semantic-reduction-adapter-requirements.md)** - WSU extraction specs
+8. **[Similarity Spec](../../todo/semantic-reduction/semantic-reduction-similarity-spec.md)** - Algorithm details
 
 ### **Handoff Support**
 9. **[Handoff Checklist](semantic-reduction-handoff-checklist.md)** - Completeness verification
@@ -49,7 +49,7 @@ confidence: float | None = None
 
 ### **Command to Test**
 ```bash
-devenv shell langnet-cli -- langnet-cli semantic san agni --output json
+devenv shell just -- cli semantic san agni --output json
 ```
 
 ## 📊 Success Metrics
@@ -102,4 +102,4 @@ devenv shell langnet-cli -- langnet-cli semantic san agni --output json
 
 ---
 
-*All planning complete. Ready for implementation starting with Phase 0.*
+*Planning complete. Implementation artifacts exist through Phase 2; run semantic-reduction tests in a prepared environment before relying on the status.*

@@ -424,7 +424,7 @@ Add `wsu_type` field to distinguish `sense` vs `citation` WSUs
 
 - **`docs/technical/design/04-entry-parsing.md`** - Design specification for parsing layer
 - **`docs/plans/active/dictionary-entry-parsing-handoff.md`** - Handoff checklist for next developer
-- `docs/plans/active/semantic-reduction-current-status.md` - Will benefit from this
+- `docs/plans/active/semantic-reduction/semantic-reduction-current-status.md` - Will benefit from this
 - `docs/technical/design/03-classifier-and-reducer.md` - WSU extraction (downstream)
 - `src/langnet/schema.py` - Current schema (will extend)
 - `src/langnet/whitakers_words/lineparsers/` - Reference implementation

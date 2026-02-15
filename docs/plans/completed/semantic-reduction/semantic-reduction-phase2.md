@@ -1,7 +1,7 @@
 # Semantic Reduction: Clustering Pipeline Complete
 
 **Date**: 2026-02-15  
-**Status**: ✅ Complete
+**Status**: ✅ Implemented; regression tests exist (`tests/test_semantic_reduction_clustering.py`), but were not run in this shell. Execute via `just test tests.test_semantic_reduction_clustering` inside `devenv shell langnet-cli`.
 
 ## Summary
 
@@ -79,7 +79,7 @@ Total tests: 80 passing (48 WSU + 32 clustering)
 
 ## Known Gaps
 
-See `docs/plans/active/semantic-reduction-gaps.md` for details:
+See `docs/plans/active/semantic-reduction/semantic-reduction-gaps.md` for details:
 
 1. **Token-based similarity is limited** - Need embedding-based similarity (gensim)
 2. **Low similarity scores for related senses** - Even semantically related glosses score 0.1-0.15

@@ -1,23 +1,32 @@
 # Project Plans Overview
 
-This repository organises its design and implementation plans under `docs/plans/` using clear lifecycle categories:
+Plans are organized by lifecycle and feature area. Use the structure below when adding or moving plans:
 
-| Category | Directory | What it contains |
-|----------|-----------|------------------|
-| **Active** | `docs/plans/active/` | Plans that are currently being worked on. They may have partially‑implemented code, ongoing tests, or upcoming milestones. |
-| **Todo** | `docs/plans/todo/` | High‑level ideas, future work, or plans that have not yet started. |
-| **Completed** | `/dev/null` | Once plans are completed they should be deleted |
+```
+docs/plans/
+├── active/
+│   └── <feature-area>/   # skt, whitakers, dico, pedagogy, infra, semantic-reduction, etc.
+├── todo/
+│   └── <feature-area>/
+└── completed/
+    └── <feature-area>/
+```
 
----
+## Lifecycle Categories
+- **active/** — In progress or being implemented.
+- **todo/** — Ideas and scoped work that has not started.
+- **completed/** — Finished plans retained for reference.
 
-### Maintenance Guidelines
+## Maintenance Guidelines
+1. Place new plans under the correct feature area directory (e.g., `active/skt/` for Heritage/CLTK/Sanskrit work).
+2. When work finishes, move the plan into `completed/<feature-area>/` and date the handoff.
+3. Avoid duplicates; each plan should appear in only one lifecycle directory.
+4. Add status markers inside the file (`✅ COMPLETE`, `🔄 IN PROGRESS`, `⏳ PENDING`) and keep them accurate.
+5. If a plan is paused, move it back to `todo/` and note the blockers.
 
-1. **When a plan moves from active to completed** – move its markdown file to `docs/plans/completed/` and update this README.
-2. **When a new high‑level idea appears** – add a markdown file under `docs/plans/todo/`.
-3. **Avoid duplicate files** – each plan should live in only one of the three directories.
-4. **Review implementation status** - Check if "active" plans are actually complete before updating.
-5. **Keep structure clean** - Remove redundant files and directories.
-6. **Track progress** - Update status markers (✅ COMPLETE, 🔄 IN PROGRESS, ⏳ PENDING) as work progresses.
+## Clean-Up Notes
+- Semantic reduction plans are grouped under `active/semantic-reduction/`, `todo/semantic-reduction/`, and `completed/semantic-reduction/`; keep new work in those folders.
+- `active/skt/` is currently empty; use it for Heritage/CDSL improvements instead of creating new top-level files.
 
-### 📚 Related Documentation
-- **[docs/DEVELOPER.md](../DEVELOPER.md)** - Development workflow and AI integration
+## Related Documentation
+- **[docs/DEVELOPER.md](../DEVELOPER.md)** — Development workflow and AI integration

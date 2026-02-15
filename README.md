@@ -9,13 +9,13 @@ A command-line tool for querying classical language lexicons and morphology. Ext
 devenv shell langnet-cli
 
 # Or run a one-off command with the environment activated
-devenv shell langnet-cli -- langnet-cli query lat lupus --output json
+devenv shell just -- cli query lat lupus --output json
 
-# Start the API server (requires external services running)
-devenv shell langnet-cli -- uvicorn-run --reload
+# Start/restart the API server (requires external services running)
+devenv shell just -- restart-server
 
 # Check backend services
-devenv shell langnet-cli -- langnet-cli verify
+devenv shell just -- cli verify
 ```
 
 ## Language Support
@@ -28,16 +28,20 @@ devenv shell langnet-cli -- langnet-cli verify
 
 ## External Dependencies
 
-These must be installed separately before any queries will work:
-1. **Sanskrit Heritage Platform** (`localhost:48080`) - Sanskrit morphology
-2. **Diogenes** (`localhost:8888`) - Greek/Latin lexicons
-3. **Whitaker's Words** (`~/.local/bin/whitakers-words`) - Latin morphology
+Services that must be installed and running locally:
+1. **Sanskrit Heritage Platform** (`localhost:48080`) – Sanskrit morphology
+2. **Diogenes** (`localhost:8888`) – Greek/Latin lexicons
+3. **Whitaker's Words** (`~/.local/bin/whitakers-words`) – Latin morphology
 
-Automatic dependencies (download on first use):
-- **CLTK models** (~500MB to `~/cltk_data/`)
+Manually sourced or downloaded data (plan ahead before running indexers or semantic reduction):
+- **Perseus canonical corpora** (`~/perseus`): `canonical-greekLit` and `canonical-latinLit` trees needed for CTS URN indexing and citation lookups.
+- **Classics-Data (PHI CD-ROM) legacy corpus** (`~/Classics-Data`): optional gap-fill for works missing from Perseus.
+- **Stanza resources** (`~/stanza_resources/`): downloaded automatically on first Stanza use; allow network or preinstall to avoid runtime stalls.
+- **Gensim embeddings** (`~/gensim-data/`) used by the semantic reducer for similarity scoring
+- **CLTK models** (to `~/cltk_data/`)
 - **CDSL data** (to `~/cdsl_data/`)
 
-After code changes, restart your long-running server process so Python modules reload (`uvicorn-run` caches imports).
+After code changes, restart your long-running server process so Python modules reload (`just restart-server` to pick up changes).
 
 ## Documentation
 

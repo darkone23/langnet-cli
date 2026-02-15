@@ -141,14 +141,14 @@ langnet-cli query san agni --output json  # Should still work
 ## 📚 Reference Documents
 
 ### **Read First (In Order)**
-1. `docs/plans/active/semantic-reduction-project-summary.md` - Overview
-2. `docs/plans/todo/semantic-reduction-gap-analysis.md` - Problem statement
-3. `docs/plans/todo/semantic-reduction-migration-plan.md` - Solution path
+1. `docs/plans/active/semantic-reduction/semantic-reduction-project-summary.md` - Overview
+2. `docs/plans/todo/semantic-reduction/semantic-reduction-gap-analysis.md` - Problem statement
+3. `docs/plans/todo/semantic-reduction/semantic-reduction-migration-plan.md` - Solution path
 
 ### **Read as Needed**
-4. `docs/plans/todo/semantic-reduction-roadmap.md` - Detailed phases
-5. `docs/plans/todo/semantic-reduction-adapter-requirements.md` - Adapter specs
-6. `docs/plans/todo/semantic-reduction-similarity-spec.md` - Algorithm details
+4. `docs/plans/todo/semantic-reduction/semantic-reduction-roadmap.md` - Detailed phases
+5. `docs/plans/todo/semantic-reduction/semantic-reduction-adapter-requirements.md` - Adapter specs
+6. `docs/plans/todo/semantic-reduction/semantic-reduction-similarity-spec.md` - Algorithm details
 
 ## 🆘 Troubleshooting
 

@@ -6,32 +6,33 @@
 ## 📋 Handoff Completeness Checklist
 
 ### ✅ **1. Problem Understanding**
-- [x] Gap analysis completed (`semantic-reduction-gap-analysis.md`)
+- [x] Gap analysis completed (`docs/plans/todo/semantic-reduction/semantic-reduction-gap-analysis.md`)
 - [x] Current vs target state documented
 - [x] Schema evolution requirements defined
 
 ### ✅ **2. Solution Design**
-- [x] 5-phase implementation roadmap (`semantic-reduction-roadmap.md`)
-- [x] Migration strategy with non-breaking changes (`semantic-reduction-migration-plan.md`)
-- [x] Algorithm specifications (`semantic-reduction-similarity-spec.md`)
+- [x] 5-phase implementation roadmap (`docs/plans/todo/semantic-reduction/semantic-reduction-roadmap.md`)
+- [x] Migration strategy with non-breaking changes (`docs/plans/todo/semantic-reduction/semantic-reduction-migration-plan.md`)
+- [x] Algorithm specifications (`docs/plans/todo/semantic-reduction/semantic-reduction-similarity-spec.md`)
 
 ### ✅ **3. Technical Specifications**
-- [x] Adapter requirements documented (`semantic-reduction-adapter-requirements.md`)
+- [x] Adapter requirements documented (`docs/plans/todo/semantic-reduction/semantic-reduction-adapter-requirements.md`)
 - [x] Schema changes specified
 - [x] Performance targets defined
 - [x] Testing strategy outlined
 
 ### ✅ **4. Documentation Updates**
 - [x] Design docs updated with reality checks
-- [x] Planning docs organized in `docs/plans/`
-- [x] Current status documented (`semantic-reduction-current-status.md`)
-- [x] Project summary created (`semantic-reduction-project-summary.md`)
+- [x] Planning docs organized in `docs/plans/semantic-reduction/`
+- [x] Current status documented (`docs/plans/active/semantic-reduction/semantic-reduction-current-status.md`)
+- [x] Project summary created (`docs/plans/active/semantic-reduction/semantic-reduction-project-summary.md`)
 
 ### ✅ **5. Risk Management**
 - [x] Primary risks identified
 - [x] Mitigation strategies defined
 - [x] Rollback plans documented
 - [x] Timeline estimates with buffers
+- ⚠️ Verification pending: implementation/coverage claims not cross-checked with repo code/tests
 
 ## 🔍 Missing Pieces for Complete Handoff
 
@@ -80,8 +81,8 @@
 
 ### **Step 1: Review Key Documents**
 1. Read `docs/plans/active/semantic-reduction-project-summary.md` (overview)
-2. Read `docs/plans/todo/semantic-reduction-gap-analysis.md` (problem)
-3. Read `docs/plans/todo/semantic-reduction-migration-plan.md` (solution)
+2. Read `docs/plans/todo/semantic-reduction/semantic-reduction-gap-analysis.md` (problem)
+3. Read `docs/plans/todo/semantic-reduction/semantic-reduction-migration-plan.md` (solution)
 
 ### **Step 2: Examine Current Code**
 ```bash
@@ -94,7 +95,7 @@ cat src/langnet/semantic_converter.py  # Current basic converter
 ### **Step 3: Run Examples**
 ```bash
 # Test current semantic format
-devenv shell langnet-cli -- langnet-cli semantic san agni --output json
+devenv shell just -- cli semantic san agni --output json
 
 # Test CDSL adapter directly
 python -c "from langnet.adapters.cdsl import CdslAdapter; a = CdslAdapter(); print(a.query('san', 'agni'))"

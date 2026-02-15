@@ -9,18 +9,15 @@ A command-line tool for querying classical language lexicons and morphological a
 devenv shell langnet-cli
 
 # Or run a single command with the environment activated
-devenv shell langnet-cli -- langnet-cli query lat lupus --output json
+devenv shell just -- cli query lat lupus --output json
 
 # Check available backends (requires external services running)
-devenv shell langnet-cli -- langnet-cli verify
-
-# Start API server
-devenv shell langnet-cli -- uvicorn-run --reload
+devenv shell just -- cli verify
 
 # Query words
-devenv shell langnet-cli -- langnet-cli query lat lupus      # Latin
-devenv shell langnet-cli -- langnet-cli query grc λόγος     # Greek  
-devenv shell langnet-cli -- langnet-cli query san agni      # Sanskrit
+devenv shell just -- cli query lat lupus      # Latin
+devenv shell just -- cli query grc λόγος     # Greek  
+devenv shell just -- cli query san agni      # Sanskrit
 ```
 
 ## External Services Required
@@ -33,59 +30,45 @@ devenv shell langnet-cli -- langnet-cli query san agni      # Sanskrit
 
 These services are not bundled with the project; run them locally before using `langnet-cli verify` or making queries.
 
-## Automated Downloads
-
-These are downloaded on first use:
-- **CLTK models** (~500MB) → `~/cltk_data/`
-- **CDSL data** → `~/cdsl_data/`
-
 ## Commands
 
 ### Basic Queries
 ```bash
-devenv shell langnet-cli -- langnet-cli query lat lupus
-devenv shell langnet-cli -- langnet-cli query grc ἄνθρωπος  
-devenv shell langnet-cli -- langnet-cli query san dharma
+devenv shell just -- cli query lat lupus
+devenv shell just -- cli query grc ἄνθρωπος  
+devenv shell just -- cli query san dharma
 ```
 
 To learn how to consume the JSON output (what fields to show learners first, where references and Foster functions live), see **[docs/OUTPUT_GUIDE.md](OUTPUT_GUIDE.md)**.
 
 ### Health Checks
 ```bash
-devenv shell langnet-cli -- langnet-cli verify          # Check all backends
-devenv shell langnet-cli -- langnet-cli health         # Alias for verify
+devenv shell just -- cli verify          # Check all backends
+devenv shell just -- cli health         # Alias for verify
 ```
 
 ### API Usage
 ```bash
-# Start server
-devenv shell langnet-cli -- uvicorn-run --reload
 
 # Query via HTTP
 curl "http://localhost:8000/api/q?l=lat&s=lupus"
 curl -X POST "http://localhost:8000/api/q" -d "l=lat&s=lupus"
 ```
 
-### Cache Management
-```bash
-devenv shell langnet-cli -- langnet-cli cache-clear    # Clear query cache
-devenv shell langnet-cli -- langnet-cli cache-stats    # Show cache statistics
-```
-
 ### Indexer Tools (CTS URN)
 ```bash
 # Build citation index
-devenv shell langnet-cli -- langnet-cli indexer build cts-urn --source /path/to/Classics-Data
+devenv shell just -- cli indexer build cts-urn --source /path/to/Classics-Data
 
 # Query citation index
-devenv shell langnet-cli -- langnet-cli indexer query "Hom. Il." --language grc
+devenv shell just -- cli indexer query "Hom. Il." --language grc
 ```
 
 ## Troubleshooting
 
 ### Backend Services Not Found
 ```bash
-devenv shell langnet-cli -- langnet-cli verify  # Shows which services are unavailable
+devenv shell just -- cli verify  # Shows which services are unavailable
 
 # Sanskrit Heritage Platform
 curl http://localhost:48080/sktreader
@@ -99,9 +82,8 @@ curl http://localhost:8888
 
 ### Common Issues
 - **CLTK downloading data**: First query may take ~5 minutes
-- **Cache issues**: Run `devenv shell langnet-cli -- langnet-cli cache-clear` if responses seem stale
-- **Process restart needed**: After code changes, restart API server with `uvicorn-run`
-- **External services missing**: Most queries depend on Heritage, Diogenes, and Whitaker's Words being available locally; `langnet-cli verify` reports which ones are missing.
+- **Process restart needed**: After code changes, restart API server with `just restart-server`
+- **External services missing**: Most queries depend on Heritage, Diogenes, and Whitaker's Words being available locally; `devenv shell just -- cli verify` reports which ones are missing.
 
 ## Development
 

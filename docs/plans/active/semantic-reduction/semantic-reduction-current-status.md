@@ -1,7 +1,7 @@
 # Semantic Reduction: Current Status & Iteration Plan
 
 **Date**: 2026-02-15  
-**Status**: Phase 2 COMPLETE, Iteration Phase  
+**Status**: Phase 2 implemented; tests present (not executed in this environment)  
 **Priority**: HIGH
 
 ## Executive Summary
@@ -155,9 +155,9 @@ for s in get_bucket_summary(buckets)[:3]:
 
 ## Related Documents
 
-- `docs/plans/active/semantic-reduction-gaps.md` - Detailed gap analysis
-- `docs/plans/completed/semantic-reduction-phase2.md` - Phase 2 completion notes
+- `docs/plans/active/semantic-reduction/semantic-reduction-gaps.md` - Detailed gap analysis
+- `docs/plans/completed/semantic-reduction/semantic-reduction-phase2.md` - Phase 2 completion notes
 - `docs/technical/design/03-classifier-and-reducer.md` - Original design spec
 
 ---
-Phases 0-2 complete. Ready for iteration on embedding-based similarity and sense ranking.
+Evidence: `src/langnet/semantic_reducer/` contains extractor/similarity/clusterer/pipeline modules, and `tests/test_semantic_reduction_clustering.py` exercises the pipeline; command execution was not run here because the `just` runner was not invoked in this shell. Run `just test tests.test_semantic_reduction_clustering` (inside `devenv shell langnet-cli`) to validate in a prepared environment.
