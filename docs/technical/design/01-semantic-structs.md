@@ -3,6 +3,7 @@
 ## Status
 
 Draft – Target for Stabilization
+**Prerequisites**: `04-entry-parsing.md` (Parsing produces clean ParsedEntry objects)
 
 ## Purpose
 
@@ -29,6 +30,8 @@ Surface Query
     ↓
 Lemma Hypotheses
     ↓
+Entry Parsing (NEW - see 04-entry-parsing.md)
+    ↓
 Witness Sense Units (per source)
     ↓
 Sense Buckets (clustered WSUs)
@@ -42,10 +45,17 @@ Important distinction:
 
 | Layer             | Stability            | Purpose                 |
 | ----------------- | -------------------- | ----------------------- |
+| ParsedEntry       | Grammar-defined      | Clean structured data   |
 | Witness           | Source-defined       | Raw evidence            |
 | Bucket            | Algorithm-defined    | Cluster artifact        |
 | Semantic Constant | Registry-defined     | Stable concept identity |
 | Display Gloss     | Presentation-defined | Description of concept  |
+
+**WSU Types**: Witnesses produce two types:
+- `sense` WSUs: Lexicographer definitions
+- `citation` WSUs: Usage examples from texts
+
+These should cluster separately - senses cluster with related definitions, citations cluster with similar usage patterns.
 
 Buckets may change as evidence changes.
 Semantic constants must remain stable once curated.
@@ -278,8 +288,10 @@ These do not alter evidence — only display defaults.
 
 # 12. Completion Criteria
 
+* [ ] **Entry parsing layer implemented** (see `04-entry-parsing.md`)
 * [ ] JSON schema validation file created
 * [ ] Unit tests enforce required fields
+* [ ] **WSU type field** (`sense` vs `citation`) supported
 * [ ] Semantic constant nullable support implemented
 * [ ] Snapshot tests confirm stability
 * [ ] Version string exposed in CLI output

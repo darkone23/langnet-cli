@@ -4,6 +4,7 @@
 
 **Draft – Target for Stabilization**  
 **Last Updated**: 2026-02-15  
+**Prerequisites**: `02-witness-contracts.md`, **`04-entry-parsing.md` (NEW)**
 **Implementation Reality Check**: See "Current Architecture Gap" section below
 
 ## Purpose
@@ -52,6 +53,8 @@ These layers must not be conflated.
 | Structured `metadata` with `domains`/`register` | Flat `JSONMapping` without schema | Cannot extract domains/register |
 | Consistent adapter WSU output | Adapters output inconsistent data structures | Need adapter-specific extraction |
 | Sense lines as first-class objects | CDSL stores `sense_lines` in metadata | Need parsing to create WSUs |
+| **Clean gloss text** | **Raw entries contain root symbols, abbreviations, citations** | **WSU extraction produces dirty data** |
+| **Citation vs sense distinction** | **Both conflated in `definition` field** | **Cannot cluster by WSU type** |
 
 ### **Required Schema Evolution**
 Before implementing this pipeline, the following schema changes are needed:
@@ -65,7 +68,14 @@ confidence: float | None = None  # For stochastic sources
 ```
 
 ### **Implementation Path**
-See `docs/plans/todo/semantic-reduction-migration-plan.md` for detailed migration strategy.
+
+1. **Entry Parsing** (see `04-entry-parsing.md`): Parse raw dictionary entries into `ParsedEntry` objects
+2. **Schema Evolution**: Add `source_ref`, `domains`, `register`, `confidence` to `DictionaryDefinition`
+3. **Adapter Updates**: Wire parsers into adapters
+4. **WSU Extraction**: Generate typed WSUs (`sense` vs `citation`) from `ParsedEntry`
+5. **Clustering Pipeline**: Implement similarity and clustering
+
+See `docs/plans/active/dictionary-entry-parsing.md` for detailed parsing plan.
 
 ---
 
@@ -73,13 +83,28 @@ See `docs/plans/todo/semantic-reduction-migration-plan.md` for detailed migratio
 
 A WSU is the smallest semantic evidence unit extracted from a source.
 
+## WSU Types
+
+**Critical distinction**: WSUs have a `wsu_type` field:
+
+| Type | Source | Semantic Signal |
+|------|--------|-----------------|
+| `sense` | Lexicographer's definition | "What dictionaries say it means" |
+| `citation` | Usage example from text | "How authors actually used it" |
+
+Senses and citations should be clustered **separately**. A definition "wolf" clusters with "canine". A Latin sentence about wolves clusters with similar usage patterns.
+
+**What is NOT a WSU type**: Grammatical metadata (POS, gender, conjugation) stays at the entry level. WSU types are for semantic content that requires similarity analysis. See `04-entry-parsing.md` for the full design principle.
+
 ## Required Fields
 
 ```json
 {
+  "wsu_type": "sense",
   "source": "MW",
   "sense_ref": "217497",
-  "gloss_raw": "auspicious; benign; favorable",
+  "gloss_raw": "fire, sacrificial fire",
+  "gloss_normalized": "fire sacrificial fire",
   "metadata": {
     "domain": [],
     "register": []
@@ -403,7 +428,9 @@ If algorithm version changes:
 
 # 16. Completion Criteria
 
+* [ ] **Entry parsing implemented** (prerequisite - see `04-entry-parsing.md`)
 * [ ] WSU extraction implemented per source
+* [ ] **WSU types distinguished** (`sense` vs `citation`)
 * [ ] Deterministic clustering stable
 * [ ] Constant registry implemented
 * [ ] Match + introduce policy operational

@@ -4,6 +4,7 @@
 
 **Draft – Target for Stabilization**  
 **Last Updated**: 2026-02-15  
+**Prerequisites**: `04-entry-parsing.md` (Parsing layer must extract clean WSUs)
 **Implementation Note**: Source contracts require schema evolution (see below)
 
 ## Purpose

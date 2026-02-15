@@ -27,21 +27,27 @@ This document provides a comprehensive technical overview of the langnet-cli arc
      ┌──────────▼───┐ ┌──────▼──┐ ┌────▼────┐ ┌─────▼──────┐
      │ DiogenesScraper│ │Whitakers│ │Classics │ │Cologne    │
      │ (Greek/Latin) │ │ Words   │ │Toolkit  │ │(Sanskrit) │
-     └───────────────┘ └─────────┘ └─────────┘ └───────────┘
-            │              │          │            │
-     ┌──────▼─────┐  ┌──────▼──┐ ┌────▼────┐ ┌────▼────┐
-     │ DuckDB     │  │ whitakers│ │ CLTK    │ │ CDSL    │
-     │ cache      │  │ -words   │ │ models  │ │ data    │
-     └────────────┘  └─────────┘ └─────────┘ └─────────┘
+     └───────┬───────┘ └────┬────┘ └────┬────┘ └─────┬──────┘
+             │              │          │            │
+     ┌───────▼──────────────▼──────────▼────────────▼──────┐
+     │              Entry Parsing Layer                     │
+     │  (Lark grammars: CDSL, Diogenes, CLTK Lewis)        │
+     │  → ParsedEntry (clean senses, roots, citations)     │
+     └───────────────────────┬─────────────────────────────┘
+                             │
+     ┌───────────────────────▼─────────────────────┐
+     │ DuckDB cache + cattrs serialization         │
+     └─────────────────────────────────────────────┘
 ```
 
 ### Request lifecycle (CLI and API)
 1. **Normalization:** Sanskrit inputs pass through the `SanskritQueryNormalizer` (encoding detection, canonical SLP1, tokenization). Greek/Latin inputs are passed through unchanged.
 2. **Validation:** `LanguageEngine` validates language codes and shapes the tool request.
 3. **Backend fan-out:** Each backend runs independently (`Diogenes`, `Whitaker's Words`, `CLTK`, `CDSL`, `Heritage`). Timings are captured per backend.
-4. **Pedagogy enrichment:** Foster functional grammar is attached in `morphology.features.foster` and `metadata.foster_codes` where available.
-5. **Deduplication:** References are de-duplicated and kept next to the senses they describe; morphology `raw` blocks are pruned of non-morphological keys (`tags`, `foster_codes`) to keep schema stable.
-6. **Serialization:** Results are structured via `cattrs` and returned to CLI or Starlette (`/api/q`) using `ORJSONResponse`.
+4. **Entry parsing:** Raw dictionary entries are parsed via Lark grammars into `ParsedEntry` objects (separating roots, senses, citations). See `docs/technical/design/04-entry-parsing.md`.
+5. **Pedagogy enrichment:** Foster functional grammar is attached in `morphology.features.foster` and `metadata.foster_codes` where available.
+6. **Deduplication:** References are de-duplicated and kept next to the senses they describe; morphology `raw` blocks are pruned of non-morphological keys (`tags`, `foster_codes`) to keep schema stable.
+7. **Serialization:** Results are structured via `cattrs` and returned to CLI or Starlette (`/api/q`) using `ORJSONResponse`.
 
 ### Core Components
 
@@ -109,6 +115,18 @@ This document provides a comprehensive technical overview of the langnet-cli arc
   - Text processing utilities
   - Additional linguistic features
 
+#### 5. Entry Parsing (`src/langnet/parsing/`)
+- **Purpose**: Parse raw dictionary entries into structured data
+- **Framework**: Lark (EBNF grammars)
+- **Features**:
+  - Per-dictionary grammars (CDSL, Diogenes, CLTK Lewis)
+  - Root extraction (√ symbols)
+  - Citation abbreviation stripping
+  - Sense marker parsing (hierarchical I., II., β., etc.)
+  - Citation text vs source reference separation
+- **Output**: `ParsedEntry` objects with clean `ParsedSense` and `ParsedCitation`
+- **See**: `docs/technical/design/04-entry-parsing.md`
+
 ## 🔧 Data Models
 
 ### Core Query Model
@@ -161,10 +179,10 @@ class CitationType(str, Enum):
 
 ### Query Processing Pipeline
 ```
-User Input → Normalization → Backend Routing → Result Aggregation → Response
-    ↓            ↓              ↓              ↓              ↓
-Raw Text   CanonicalQuery   Multi-backend   Combined      JSON/CLI
-           Validation      Queries        Results       Output
+User Input → Normalization → Backend Routing → Entry Parsing → Result Aggregation → Response
+    ↓            ↓              ↓               ↓              ↓              ↓
+Raw Text   CanonicalQuery   Multi-backend   ParsedEntry    Combined      JSON/CLI
+            Validation      Queries        (clean data)    Results       Output
 ```
 
 ### Citation Extraction Pipeline
