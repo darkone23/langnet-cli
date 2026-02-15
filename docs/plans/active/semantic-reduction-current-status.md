@@ -1,147 +1,163 @@
-# Semantic Reduction: Current Status & Next Steps
+# Semantic Reduction: Current Status & Iteration Plan
 
 **Date**: 2026-02-15  
-**Status**: 📋 PLANNING COMPLETE, READY FOR IMPLEMENTATION  
+**Status**: Phase 2 COMPLETE, Iteration Phase  
 **Priority**: HIGH
 
 ## Executive Summary
 
-We have completed comprehensive planning for semantic reduction pipeline implementation. **Critical discovery**: Current architecture doesn't match design assumptions, requiring schema evolution before pipeline implementation.
+Phases 0-2 are complete. The semantic reduction pipeline can:
+1. Extract WSUs from all adapters (CDSL, Diogenes, Heritage, Whitakers)
+2. Build similarity matrices using Stanza English lemmatization
+3. Cluster WSUs into SenseBuckets using greedy agglomerative algorithm
+4. Produce multi-witness buckets for related glosses
 
-## What We Accomplished Today
+**Test Coverage**: 80 tests passing
 
-### ✅ **Planning Phase Complete**
-1. **Gap Analysis**: Identified mismatch between design and current architecture
-2. **Roadmap Creation**: 5-phase implementation plan (9-12 weeks)
-3. **Migration Strategy**: Step-by-step non-breaking approach
-4. **Documentation**: All plans saved to workspace
-5. **Design Updates**: Updated main design docs to reflect reality
+## Completed Phases
 
-### ✅ **Key Documents Created**
-```
-docs/plans/active/semantic-reduction-project-summary.md     # Complete overview
-docs/plans/todo/semantic-reduction-roadmap.md               # 5-phase implementation
-docs/plans/todo/semantic-reduction-adapter-requirements.md  # WSU extraction specs
-docs/plans/todo/semantic-reduction-similarity-spec.md       # Algorithm details
-docs/plans/todo/semantic-reduction-gap-analysis.md          # Architecture gaps
-docs/plans/todo/semantic-reduction-migration-plan.md        # Step-by-step migration
-```
+### ✅ Phase 0: Schema Enhancement
+- `DictionaryDefinition` enhanced with `source_ref`, `domains`, `register`, `confidence`
+- CDSL adapter populates `source_ref` from MW/AP90 entry IDs
+- 13 tests passing
 
-### ✅ **Design Documents Updated**
-- `docs/technical/design/03-classifier-and-reducer.md` - Added "Current Architecture Gap" section
-- `docs/technical/design/02-witness-contracts.md` - Added implementation reality notes
+### ✅ Phase 1: WSU Extraction
+- `src/langnet/semantic_reducer/types.py` - WSU, SenseBucket, Mode, Source
+- `src/langnet/semantic_reducer/normalizer.py` - Gloss normalization + Stanza lemmatization
+- `src/langnet/semantic_reducer/wsu_extractor.py` - Extraction + CDSL preprocessing
+- 48 tests passing
 
-## Critical Discovery: Architecture Gap
+### ✅ Phase 2: Clustering Pipeline
+- `src/langnet/semantic_reducer/similarity.py` - Numpy similarity matrix
+- `src/langnet/semantic_reducer/clusterer.py` - Greedy agglomerative clustering
+- `src/langnet/semantic_reducer/pipeline.py` - Full pipeline orchestrator
+- 32 tests passing
 
-### **Design vs Reality Mismatch**
-| Design Assumption | Current Reality | Impact |
-|------------------|----------------|--------|
-| WSUs have `source_ref` | `DictionaryDefinition` lacks source tracking | Cannot trace to source |
-| Structured metadata | Flat `JSONMapping` without schema | Cannot extract domains/register |
-| Consistent adapter outputs | Inconsistent data structures | Need adapter-specific extraction |
+## Current Performance
 
-### **Required Schema Evolution**
+| Language | Word | WSUs | Buckets | Multi-witness |
+|----------|------|------|---------|---------------|
+| Sanskrit | agni | 10 | 9 | 1 |
+| Sanskrit | deva | 38 | 24 | 6 |
+| Sanskrit | jala | 35 | 24 | 6 |
+| Latin | lupus | 19 | 17 | 2 |
+| Latin | homo | 29 | 26 | 3 |
+| Latin | terra | 7 | 6 | 1 |
+| Greek | logos | 65 | 65 | 0 |
+
+## Mode Thresholds (Adjusted for Jaccard)
+
+| Mode | Threshold | Behavior |
+|------|-----------|----------|
+| OPEN | 0.15 | Broader clustering, learner-friendly |
+| SKEPTIC | 0.25 | Narrower clustering, evidence-first |
+
+## Adapter Coverage
+
+| Adapter | Data Structure | `source_ref` | WSU Support | Preprocessing |
+|---------|----------------|--------------|-------------|---------------|
+| **CDSL** | `definitions[]` | ✅ Stable | ✅ Full | ✅ Grammatical strip |
+| **Diogenes** | `dictionary_blocks[]` | ✅ Generated | ✅ Full | None |
+| **Heritage** | `definitions[]` | ⚠️ Synthetic | ✅ Works | None |
+| **Whitakers** | `definitions[]` | ⚠️ Synthetic | ✅ Works | None |
+
+## Iteration Roadmap
+
+### Priority 1: Embedding-based Similarity (HIGH IMPACT)
+
+**Problem**: Token-based Jaccard can't detect "fire" ~ "blaze" ~ "conflagration"
+
+**Solution**: Use gensim word embeddings
+
 ```python
-# In src/langnet/schema.py DictionaryDefinition
-source_ref: str | None = None  # "mw:217497", "diogenes:lsj:1234"
-domains: list[str] = field(default_factory=list)
-register: list[str] = field(default_factory=list)
-confidence: float | None = None
+# Available in environment
+from gensim import downloader
+model = downloader.load('glove-wiki-gigaword-100')
+
+# Hybrid score: 0.5 * token + 0.5 * embedding
 ```
 
-## Implementation Readiness Assessment
+**Files to modify**:
+- `src/langnet/semantic_reducer/normalizer.py` - Add `embedding_similarity()`
+- `src/langnet/semantic_reducer/similarity.py` - Use hybrid scoring
 
-### **Ready to Start** ✅
-- Comprehensive planning complete
-- Risk mitigation strategies defined
-- Backward compatibility ensured
-- Test strategy outlined
-- Performance targets set
+**Expected impact**: "fire, flame" and "blaze, conflagration" would cluster together
 
-### **Blockers Resolved** ✅
-- Schema evolution path defined
-- Migration strategy created
-- Adapter update approach decided
-- Fallback mechanisms planned
+### Priority 2: Sense Disambiguation (USER EXPERIENCE)
 
-### **Open Questions** (Resolved in planning)
-1. **Schema evolution approach**: Add optional fields (non-breaking)
-2. **WSU extraction strategy**: Hybrid (enhanced schema + fallback parsing)
-3. **Performance targets**: < 500ms for typical queries
-4. **Timeline**: 9-12 weeks total
+**Problem**: Greek "λόγος" (logos) has 65 senses, all returned equally
 
-## Recommended Next Steps
+**Solutions**:
+1. Rank by source priority (MW > AP90 > Heritage > ...)
+2. Rank by frequency (if available from corpus)
+3. Consider user context (philosophy, grammar, rhetoric)
 
-### **Immediate (Phase 0: Schema Enhancement)**
-1. **Update `src/langnet/schema.py`**
-   ```python
-   # Add to DictionaryDefinition
-   source_ref: str | None = None
-   domains: list[str] = field(default_factory=list)
-   register: list[str] = field(default_factory=list)
-   confidence: float | None = None
-   ```
+**Files to create**:
+- `src/langnet/semantic_reducer/ranker.py` - Sense ranking logic
 
-2. **Enhance CDSL adapter**
-   - Parse `sense_lines` into proper `DictionaryDefinition` objects
-   - Populate `source_ref` from MW/AP90 IDs
-   - Test with Sanskrit data (agni, śiva)
+### Priority 3: Gloss Cleaning (QUALITY)
 
-3. **Create Phase 0 tests**
-   - Schema field validation
-   - CDSL adapter regression tests
-   - Backward compatibility verification
+**Problem**: Citation abbreviations pollute glosses
 
-### **Timeline**
-- **Phase 0**: 1-2 weeks (schema + CDSL adapter)
-- **Phase 1**: 1-2 weeks (WSU extraction foundation)
-- **Phase 2**: 2 weeks (similarity engine)
-- **Phase 3**: 2 weeks (clustering core)
-- **Phase 4**: 2 weeks (semantic constants)
-- **Phase 5**: 1-2 weeks (integration & polish)
+**Examples**:
+- "bile, L." → "L." is Lassen citation
+- "gold, RV." → "RV." is Rig Veda citation
 
-## Success Metrics
+**Solution**: Strip common citation abbreviations
 
-### **Phase 0 Success**
-- [ ] Schema updated with new fields
-- [ ] CDSL adapter populates source_ref
-- [ ] Sanskrit tests pass with MW IDs
-- [ ] No breaking changes to existing API
+**Files to modify**:
+- `src/langnet/semantic_reducer/wsu_extractor.py` - Expand `_preprocess_cdsl_gloss()`
 
-### **Project Complete Success**
-- [ ] Semantic format uses actual reduction
-- [ ] Performance < 500ms for typical queries
-- [ ] Deterministic outputs
-- [ ] All languages supported
-- [ ] Evidence inspection available
-- [ ] Mode switching operational
+### Priority 4: Cross-language Sense Linking (FUTURE)
 
-## Risk Management
+**Problem**: Cannot link agni (Sanskrit) ~ ignis (Latin) ~ πῦρ (Greek)
 
-### **Primary Risks & Mitigations**
-1. **Performance degradation**: Profile early, add caching, legacy format fallback
-2. **Non-deterministic outputs**: Strict sorting rules, extensive testing
-3. **Adapter compatibility**: Optional fields, gradual updates, fallback extraction
-4. **Constant registry bloat**: Automatic merging, size limits, manual curation
+**Solution**: Use multilingual embeddings (MUSE, fastText multilingual)
 
-### **Rollback Strategy**
-- Phase 0 changes are non-breaking
-- Can revert schema additions if needed
-- Legacy format always available
+**Status**: Requires research, lower priority
 
-## Conclusion
+## Test Gaps
 
-**The semantic reduction project is fully planned and ready for implementation.** 
+Current tests are mostly synthetic. Need:
 
-We have:
-1. ✅ **Identified** the architecture gap
-2. ✅ **Created** comprehensive migration plan  
-3. ✅ **Updated** design documents to reflect reality
-4. ✅ **Defined** non-breaking implementation path
-5. ✅ **Addressed** all major risks
+1. **Integration tests with real data**
+   - Fixed test fixtures for agni, lupus, logos
+   - Golden snapshot tests for bucket stability
 
-**Recommendation**: Begin Phase 0 (Schema Enhancement) when ready to start implementation. This enables all future work without breaking existing functionality.
+2. **Edge case tests**
+   - Empty glosses
+   - Single-character glosses
+   - Non-English text in glosses
+
+3. **Performance tests**
+   - Large entries (logos with 65 senses)
+   - Many small entries
+
+## Quick Verification
+
+```bash
+# Run all semantic reduction tests
+python -m nose2 -s tests tests.test_semantic_reduction_wsus tests.test_semantic_reduction_clustering -v
+
+# Test end-to-end
+python -c "
+from langnet.core import LangnetWiring
+from langnet.semantic_reducer import reduce_to_semantic_structs, get_bucket_summary, Mode
+
+wiring = LangnetWiring()
+entries = wiring.engine.handle_query('san', 'agni')
+buckets = reduce_to_semantic_structs(entries, Mode.OPEN)
+print(f'agni: {len(buckets)} buckets')
+for s in get_bucket_summary(buckets)[:3]:
+    print(f\"  {s['sense_id']}: {s['display_gloss'][:40]}... ({s['witness_count']} witnesses)\")
+"
+```
+
+## Related Documents
+
+- `docs/plans/active/semantic-reduction-gaps.md` - Detailed gap analysis
+- `docs/plans/completed/semantic-reduction-phase2.md` - Phase 2 completion notes
+- `docs/technical/design/03-classifier-and-reducer.md` - Original design spec
 
 ---
-
-*This status document should be updated as implementation progresses. Refer to individual planning documents for detailed specifications.*
+Phases 0-2 complete. Ready for iteration on embedding-based similarity and sense ranking.
