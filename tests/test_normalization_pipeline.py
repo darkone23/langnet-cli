@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import duckdb
-
 from heritage_spec import MonierWilliamsResult, SktSearchResult
+from query_spec import LanguageHint, NormalizationStep
+
 from langnet.diogenes.client import ParseResult, WordListResult
 from langnet.normalizer.core import (
     QueryNormalizer,
@@ -14,7 +15,6 @@ from langnet.normalizer.core import (
 from langnet.normalizer.sanskrit import HeritageClientProtocol, SanskritNormalizer
 from langnet.normalizer.service import NormalizationService
 from langnet.storage.normalization_index import NormalizationIndex, apply_schema
-from query_spec import LanguageHint, NormalizationStep
 
 
 @dataclass(frozen=True)
@@ -31,7 +31,7 @@ def test_normalization_round_trip_index() -> None:
     normalizer = QueryNormalizer()
     raw_query = "  Shiva "
     idx = NormalizationIndex(conn)
-    result = normalize_with_index(normalizer, raw_query, LanguageHint.SAN, idx)
+    result = normalize_with_index(normalizer, raw_query, LanguageHint.LANGUAGE_HINT_SAN, idx)
 
     loaded = idx.get(result.query_hash)
     assert loaded is not None
@@ -40,7 +40,7 @@ def test_normalization_round_trip_index() -> None:
     assert any("ziva" in lemma for lemma in lemmas)
     assert loaded.normalizations, "Normalization steps should be recorded"
 
-    result_cached = normalize_with_index(normalizer, raw_query, LanguageHint.SAN, idx)
+    result_cached = normalize_with_index(normalizer, raw_query, LanguageHint.LANGUAGE_HINT_SAN, idx)
     assert [c.lemma for c in result_cached.normalized.candidates] == [
         c.lemma for c in loaded.candidates
     ]
@@ -122,7 +122,7 @@ def test_normalization_service_uses_index(tmp_path: Path) -> None:
     conn = duckdb.connect(database=str(db_path))
     service = NormalizationService(conn, heritage_client=_FakeHeritage())
 
-    first = service.normalize("shiva", LanguageHint.SAN)
+    first = service.normalize("shiva", LanguageHint.LANGUAGE_HINT_SAN)
     lemmas = [c.lemma for c in first.normalized.candidates]
     assert "ziva" in lemmas
 
@@ -130,13 +130,13 @@ def test_normalization_service_uses_index(tmp_path: Path) -> None:
     assert cached is not None
     assert [c.lemma for c in cached.candidates] == [c.lemma for c in first.normalized.candidates]
 
-    second = service.normalize("shiva", LanguageHint.SAN)
+    second = service.normalize("shiva", LanguageHint.LANGUAGE_HINT_SAN)
     assert [c.lemma for c in second.normalized.candidates] == [c.lemma for c in cached.candidates]
 
 
 def test_greek_normalizer_uses_diogenes_wordlist() -> None:
     normalizer = QueryNormalizer(diogenes_greek_client=_FakeDiogenes())
-    result = normalizer.normalize("λόγος", LanguageHint.GRC)
+    result = normalizer.normalize("λόγος", LanguageHint.LANGUAGE_HINT_GRC)
     lemmas = [c.lemma for c in result.normalized.candidates]
     assert "λόγος" in lemmas
     assert any("diogenes_word_list" in c.sources for c in result.normalized.candidates)
@@ -147,7 +147,7 @@ def test_latin_normalizer_uses_diogenes_parse() -> None:
     normalizer = QueryNormalizer(
         diogenes_latin_client=_FakeDiogenes(), whitaker_client=_FakeWhitaker()
     )
-    result = normalizer.normalize("lupus", LanguageHint.LAT)
+    result = normalizer.normalize("lupus", LanguageHint.LANGUAGE_HINT_LAT)
     lemmas = [c.lemma for c in result.normalized.candidates]
     assert "lupus" in lemmas
     assert any("diogenes_parse" in c.sources for c in result.normalized.candidates)

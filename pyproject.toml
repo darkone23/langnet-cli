@@ -45,6 +45,7 @@ vulture = "^2.14"
 jsonschema = "^4.26.0"
 stanza = "^1.11.0"
 protobuf = "^6.33.5"
+returns = {extras = ["compatible-mypy"], version = "^0.26.0"}
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"
@@ -100,3 +101,30 @@ max-args = 5
 [tool.ruff.lint.per-file-ignores]
 "src/langnet/heritage/encoding_service.py" = ["PLR0911"]
 "src/langnet/heritage/parameters.py" = ["PLR0911"]
+
+[tool.mypy]
+# The mypy configurations: http://bit.ly/2zEl9WI
+ignore_missing_imports = true
+strict = true
+local_partial_types = true
+warn_unreachable = true
+
+enable_error_code = [
+  "truthy-bool",
+  "truthy-iterable",
+  "redundant-expr",
+  "unused-awaitable",
+  # "ignore-without-code",
+  "possibly-undefined",
+  "redundant-self",
+  # "explicit-override",
+  # "mutable-override",
+  "unimported-reveal",
+  "deprecated",
+  "exhaustive-match",
+]
+
+disable_error_code = [
+  "no-untyped-def", # TODO: fix
+]
+

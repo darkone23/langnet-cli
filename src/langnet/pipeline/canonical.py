@@ -4,6 +4,8 @@ import importlib
 from dataclasses import dataclass, field
 from typing import cast
 
+from query_spec import CanonicalCandidate, LanguageHint
+
 from langnet.clients import HttpToolClient
 from langnet.cltk.ipa_adapter import CLTKIPAAdapter
 from langnet.diogenes.adapter import DiogenesWordListAdapter
@@ -23,7 +25,8 @@ from langnet.normalizer.utils import strip_accents, unique
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.extraction_index import ExtractionIndex
 from langnet.whitakers.adapter import WhitakerAdapter
-from query_spec import CanonicalCandidate, LanguageHint
+
+LanguageValue = LanguageHint.ValueType
 
 DEVANAGARI_UNICODE_START = 0x0900
 DEVANAGARI_UNICODE_END = 0x097F
@@ -83,26 +86,26 @@ class CanonicalPipeline:
             service=None, raw_index=raw_index, extraction_index=extraction_index
         )
 
-    def lookup(self, raw_query: str, language: LanguageHint) -> CanonicalLookupResult:
+    def lookup(self, raw_query: str, language: LanguageValue) -> CanonicalLookupResult:
         norm = self.norm_service.normalize(raw_query, language)
         canonical_targets = [c.lemma for c in norm.normalized.candidates]
 
         state = LookupState(candidates=list(canonical_targets))
 
-        if language == LanguageHint.GRC:
+        if language == LanguageHint.LANGUAGE_HINT_GRC:
             self._handle_greek_lookup(raw_query, canonical_targets, state)
-        elif language == LanguageHint.LAT:
+        elif language == LanguageHint.LANGUAGE_HINT_LAT:
             self._handle_latin_lookup(raw_query, canonical_targets, state)
-        elif language == LanguageHint.SAN:
+        elif language == LanguageHint.LANGUAGE_HINT_SAN:
             self._handle_sanskrit_raw(raw_query, state)
 
-        if language in (LanguageHint.LAT, LanguageHint.GRC):
-            state.ipa_value = self.cltk_ipa.lookup(language.name.lower(), raw_query)
+        if language in (LanguageHint.LANGUAGE_HINT_LAT, LanguageHint.LANGUAGE_HINT_GRC):
+            state.ipa_value = self.cltk_ipa.lookup(str(language).lower(), raw_query)
 
         candidate_values = unique(state.candidates)
         structured = (
             self._sanskrit_candidates(candidate_values)
-            if language == LanguageHint.SAN
+            if language == LanguageHint.LANGUAGE_HINT_SAN
             else self._structure_candidates(candidate_values, language, state.ipa_value)
         )
         selected = structured[0] if structured else None
@@ -169,9 +172,9 @@ class CanonicalPipeline:
         structured: list[CanonicalCandidate] = []
         for candidate in values:
             encodings: dict[str, str] = {"lemma": candidate}
-            if language == LanguageHint.GRC:
+            if language == LanguageHint.LANGUAGE_HINT_GRC:
                 encodings["accentless"] = strip_accents(candidate)
-            if language == LanguageHint.LAT and ipa_value:
+            if language == LanguageHint.LANGUAGE_HINT_LAT and ipa_value:
                 encodings["ipa"] = ipa_value
             structured.append(
                 CanonicalCandidate(lemma=candidate, encodings=encodings, sources=["diogenes"])

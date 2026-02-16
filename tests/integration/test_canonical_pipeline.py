@@ -5,9 +5,9 @@ import unittest
 from pathlib import Path
 
 import requests
+from query_spec import LanguageHint  # noqa: E402
 
 from langnet.pipeline.canonical import CanonicalPipeline  # noqa: E402
-from query_spec import LanguageHint  # noqa: E402
 from tests.integration.utils import Wiring  # noqa: E402
 
 DIOGENES_URL = "http://localhost:8888/Diogenes.cgi"
@@ -46,7 +46,7 @@ class CanonicalPipelineTests(unittest.TestCase):
                 extraction_index=wiring.extraction_index,
                 diogenes_base=DIOGENES_URL,
             )
-            result = pipeline.lookup("logos", LanguageHint.GRC)
+            result = pipeline.lookup("logos", LanguageHint.LANGUAGE_HINT_GRC)
             self.assertTrue(result.candidates, "Should produce structured candidates")
             self.assertTrue(any("λογ" in c.lemma for c in result.candidates))
             self.assertTrue(result.responses, "Should store raw response")
@@ -65,7 +65,7 @@ class CanonicalPipelineTests(unittest.TestCase):
                 extraction_index=wiring.extraction_index,
                 heritage_base=HERITAGE_URL,
             )
-            result = pipeline.lookup("krishna", LanguageHint.SAN)
+            result = pipeline.lookup("krishna", LanguageHint.LANGUAGE_HINT_SAN)
             self.assertTrue(result.responses, "Should store heritage raw response")
             self.assertTrue(result.selected, "Should select a canonical")
             self.assertTrue(any("devanagari" in c.encodings for c in result.candidates))
@@ -81,7 +81,7 @@ class CanonicalPipelineTests(unittest.TestCase):
                 extraction_index=wiring.extraction_index,
                 diogenes_base=DIOGENES_URL,
             )
-            result = pipeline.lookup("portas", LanguageHint.LAT)
+            result = pipeline.lookup("portas", LanguageHint.LANGUAGE_HINT_LAT)
             # Expect a lemma around 'porta' or 'porto' from diogenes parse (accentless)
             self.assertTrue(
                 any(

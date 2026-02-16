@@ -5,20 +5,19 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 import duckdb
+from query_spec import LanguageHint
 
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.normalization_index import NormalizationIndex
 from langnet.storage.normalization_index import ensure_schema as ensure_norm_schema
-from query_spec import LanguageHint
 
 from .core import NormalizationResult, QueryNormalizer, _hash_query
+from .sanskrit import HeritageClientProtocol
+
+LanguageValue = LanguageHint.ValueType
 
 if TYPE_CHECKING:
     from langnet.diogenes.client import DiogenesClient
-
-    from .sanskrit import HeritageClientProtocol
-else:
-    HeritageClientProtocol = object  # type: ignore[misc,assignment]
 
 
 class _HeritageFactory(Protocol):
@@ -122,7 +121,7 @@ class NormalizationService:
         for client in self._capturing_clients:
             client.clear_captured_response_ids()
 
-    def normalize(self, raw_query: str, language: LanguageHint):
+    def normalize(self, raw_query: str, language: LanguageValue):
         """
         Resolve a query to canonical forms by checking the index first, then computing and storing.
         """
@@ -148,7 +147,7 @@ class NormalizationService:
         self.index.upsert(
             query_hash=result.query_hash,
             raw_query=raw_query,
-            language=language.name.lower(),
+            language=str(language).lower(),
             normalized=result.normalized,
             source_response_ids=source_response_ids if source_response_ids else None,
         )

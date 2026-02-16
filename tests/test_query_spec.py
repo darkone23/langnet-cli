@@ -16,7 +16,7 @@ from query_spec import (
 def test_tool_plan_structures_are_constructible() -> None:
     query = NormalizedQuery(
         original="shiva",
-        language=LanguageHint.SAN,
+        language=LanguageHint.LANGUAGE_HINT_SAN,
         candidates=[
             CanonicalCandidate(lemma="śiva", encodings={}, sources=["local"]),
         ],

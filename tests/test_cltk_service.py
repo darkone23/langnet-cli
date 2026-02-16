@@ -1,13 +1,6 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = BASE_DIR / "vendor" / "langnet-spec" / "generated" / "python"
-sys.path.insert(0, str(SCHEMA_PATH))
-
-from langnet.clients import CLTKService  # noqa: E402
+from langnet.clients import CLTKService
 
 
 def test_cltk_service_warmup_uses_single_instance() -> None:

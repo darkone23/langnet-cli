@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import duckdb
-
+import orjson
+from google.protobuf.json_format import MessageToDict, ParseDict
 from query_spec import NormalizedQuery
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "langnet.sql"
@@ -60,7 +60,8 @@ class NormalizationIndex:
         if not row:
             return None
         normalized_json = row[0]
-        return NormalizedQuery.from_json(normalized_json)
+        data = orjson.loads(normalized_json)
+        return ParseDict(data, NormalizedQuery())
 
     def upsert(
         self,
@@ -70,13 +71,17 @@ class NormalizationIndex:
         normalized: NormalizedQuery,
         source_response_ids: list[str] | None = None,
     ) -> None:
-        candidates_json = json.dumps(
+        candidates_json = orjson.dumps(
             [
-                {"lemma": c.lemma, "encodings": c.encodings, "sources": c.sources}
+                {"lemma": c.lemma, "encodings": dict(c.encodings), "sources": list(c.sources)}
                 for c in normalized.candidates
             ]
+        ).decode("utf-8")
+        response_ids_json = (
+            orjson.dumps(source_response_ids).decode("utf-8") if source_response_ids else None
         )
-        response_ids_json = json.dumps(source_response_ids) if source_response_ids else None
+        # Serialize normalized query using protobuf binary format
+        normalized_json = orjson.dumps(MessageToDict(normalized)).decode("utf-8")
         self.conn.execute(
             """
             INSERT OR REPLACE INTO query_normalization_index
@@ -96,7 +101,7 @@ class NormalizationIndex:
                 query_hash,
                 raw_query,
                 language,
-                normalized.to_json(),
+                normalized_json,
                 candidates_json,
                 response_ids_json,
             ],
@@ -114,4 +119,4 @@ class NormalizationIndex:
         ).fetchone()
         if not row or row[0] is None:
             return []
-        return json.loads(row[0])
+        return orjson.loads(row[0])

@@ -26,6 +26,7 @@ We completed the first milestone: **user input → canonical search terms** with
 2) **Execution wiring**: ensure the resulting plan flows into the executor and stores effects for downstream parsing.  
 3) **CLI smoke**: extend `langnet-cli` (or a just target) to print the generated plan for a sample query per language.  
 4) **Regression guardrails**: add/extend tests covering plan construction for SAN/GRC/LAT to lock in the milestone.
+5) **Plan staging**: ToolPlan now emits staged nodes (fetch → extract → derive → claim) with dependencies per language (Heritage/CDSL for SAN, Diogenes/Whitaker/CLTK for LAT, Diogenes/CTS/CLTK for GRC).
 
 ## Quick Architecture Reminder
 
@@ -60,6 +61,10 @@ just codegen        # Generate Python from proto
 just test           # Run tests
 just typecheck      # Type check
 just ruff-check     # Lint
+# Planning smoke: inspect staged tool plan for a query (fetch/extract/derive/claim)
+#   just cli plan san krishna
+#   just cli plan lat ea
+#   just cli plan grc logos
 # Offline builds (run inside repo root):
 #   just cli databuild cts   --perseus-dir ~/perseus --legacy-dir ~/Classics-Data
 #   just cli databuild cdsl <DICT_ID> --source-dir ~/cdsl_data/dict

@@ -6,8 +6,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import duckdb
+from returns.result import Failure, Success
 
-from .base import BuildResult, BuildStatus
+from .base import BuildErrorStats, BuildResult, BuildStatus, CTSStats
 from .paths import default_cts_path
 
 logger = logging.getLogger(__name__)
@@ -120,7 +121,7 @@ class CtsUrnBuilder:
         self._editions: list[EditionEntry] = []
         self._connection: duckdb.DuckDBPyConnection | None = None
 
-    def build(self) -> BuildResult:
+    def build(self) -> BuildResult[CTSStats | BuildErrorStats]:
         try:
             if self.output_path.exists():
                 if self.wipe_existing:
@@ -131,7 +132,7 @@ class CtsUrnBuilder:
                     return BuildResult(
                         status=BuildStatus.SKIPPED,
                         output_path=self.output_path,
-                        stats=self.get_stats(),
+                        stats=Success(self.get_stats()),
                         message="Index already exists; use --wipe or --force to rebuild",
                     )
 
@@ -140,13 +141,15 @@ class CtsUrnBuilder:
             self._build_duckdb()
             valid = self.validate()
             status = BuildStatus.SUCCESS if valid else BuildStatus.FAILED
-            return BuildResult(status=status, output_path=self.output_path, stats=self.get_stats())
+            return BuildResult(
+                status=status, output_path=self.output_path, stats=Success(self.get_stats())
+            )
         except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to build CTS URN index: %s", exc)
             return BuildResult(
                 status=BuildStatus.FAILED,
                 output_path=self.output_path,
-                stats={"error": str(exc)},
+                stats=Failure(BuildErrorStats(error=str(exc))),
                 message=str(exc),
             )
         finally:
@@ -433,32 +436,40 @@ class CtsUrnBuilder:
             return False
         return True
 
-    def get_stats(self) -> dict[str, object]:
-        stats: dict[str, object] = {
-            "type": "cts_urn",
-            "format": "duckdb",
-            "path": str(self.output_path),
-        }
+    def get_stats(self) -> CTSStats:
+        size_mb = None
         if self.output_path.exists():
-            stats["size_mb"] = round(self.output_path.stat().st_size / (1024 * 1024), 3)
+            size_mb = round(self.output_path.stat().st_size / (1024 * 1024), 3)
+
+        author_count = work_count = edition_count = perseus_count = legacy_count = None
         if self.output_path.exists():
             if not self._connection:
                 self._connection = duckdb.connect(str(self.output_path))
             result = self._connection.execute("SELECT COUNT(*) FROM author_index").fetchone()
-            stats["author_count"] = result[0] if result else 0
+            author_count = result[0] if result else 0
             result = self._connection.execute("SELECT COUNT(*) FROM works").fetchone()
-            stats["work_count"] = result[0] if result else 0
+            work_count = result[0] if result else 0
             result = self._connection.execute("SELECT COUNT(*) FROM editions").fetchone()
-            stats["edition_count"] = result[0] if result else 0
+            edition_count = result[0] if result else 0
             perseus_result = self._connection.execute(
                 "SELECT COUNT(*) FROM works WHERE source_path LIKE '%perseus%'"
             ).fetchone()
-            stats["perseus_count"] = perseus_result[0] if perseus_result else 0
+            perseus_count = perseus_result[0] if perseus_result else 0
             legacy_result = self._connection.execute(
                 "SELECT COUNT(*) FROM works WHERE source_path LIKE '%Classics-Data%'"
             ).fetchone()
-            stats["legacy_count"] = legacy_result[0] if legacy_result else 0
-        return stats
+            legacy_count = legacy_result[0] if legacy_result else 0
+
+        return CTSStats(
+            path=str(self.output_path),
+            format="duckdb",
+            author_count=author_count,
+            work_count=work_count,
+            edition_count=edition_count,
+            perseus_count=perseus_count,
+            legacy_count=legacy_count,
+            size_mb=size_mb,
+        )
 
     def cleanup(self) -> None:
         if self._connection:

@@ -3,11 +3,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 import duckdb
-
-from langnet.clients.base import RawResponseEffect
-from langnet.planner.executor import execute_plan
-from langnet.storage.effects_index import RawResponseIndex
-from langnet.storage.plan_index import PlanIndex, PlanResponseIndex, apply_schema
 from query_spec import (
     CanonicalCandidate,
     LanguageHint,
@@ -17,6 +12,11 @@ from query_spec import (
     ToolPlan,
     ToolResponseRef,
 )
+
+from langnet.clients.base import RawResponseEffect
+from langnet.planner.executor import execute_plan
+from langnet.storage.effects_index import RawResponseIndex
+from langnet.storage.plan_index import PlanIndex, PlanResponseIndex, apply_schema
 
 EXPECTED_RESPONSE_COUNT = 2
 
@@ -48,7 +48,7 @@ def test_plan_index_and_execution_round_trip() -> None:
 
     normal = NormalizedQuery(
         original="logos",
-        language=LanguageHint.GRC,
+        language=LanguageHint.LANGUAGE_HINT_GRC,
         candidates=[CanonicalCandidate(lemma="logos", encodings={}, sources=["local"])],
         normalizations=[],
     )
@@ -80,7 +80,7 @@ def test_plan_index_and_execution_round_trip() -> None:
     pindex.upsert(
         query_hash="hash-logos",
         query=normal.original,
-        language=normal.language.name.lower(),
+        language=str(normal.language).lower(),
         plan=result.plan,
     )
     loaded_plan = pindex.get("hash-logos")

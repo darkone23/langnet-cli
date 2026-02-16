@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import cast
 
 import duckdb
+from query_spec import LanguageHint
 
 from langnet.diogenes.client import DiogenesClient, WordListResult
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
-from query_spec import LanguageHint
 
 
 class CountingDiogenes:
@@ -33,7 +33,7 @@ def test_normalizer_uses_cache_and_skips_diogenes_on_second_run() -> None:
             diogenes_config=DiogenesConfig(greek_client=cast(DiogenesClient, dio1)),
             use_cache=True,
         )
-        result1 = svc1.normalize("thea", LanguageHint.GRC)
+        result1 = svc1.normalize("thea", LanguageHint.LANGUAGE_HINT_GRC)
         assert dio1.calls == 1
         assert any(c.lemma == "θεά" for c in result1.normalized.candidates)
         conn1.close()
@@ -46,7 +46,7 @@ def test_normalizer_uses_cache_and_skips_diogenes_on_second_run() -> None:
             diogenes_config=DiogenesConfig(greek_client=cast(DiogenesClient, dio2)),
             use_cache=True,
         )
-        result2 = svc2.normalize("thea", LanguageHint.GRC)
+        result2 = svc2.normalize("thea", LanguageHint.LANGUAGE_HINT_GRC)
         assert dio2.calls == 0, "Cache miss caused Diogenes call on second run"
         assert any(c.lemma == "θεά" for c in result2.normalized.candidates)
         conn2.close()
@@ -59,6 +59,6 @@ def test_normalizer_uses_cache_and_skips_diogenes_on_second_run() -> None:
             diogenes_config=DiogenesConfig(greek_client=cast(DiogenesClient, dio3)),
             use_cache=False,
         )
-        svc3.normalize("thea", LanguageHint.GRC)
+        svc3.normalize("thea", LanguageHint.LANGUAGE_HINT_GRC)
         assert dio3.calls == 1, "Cache disabled should force Diogenes call"
         conn3.close()

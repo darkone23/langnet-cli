@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import duckdb
+import orjson
+from query_spec import ToolResponseRef
 
 from langnet.clients.base import RawResponseEffect
-from query_spec import ToolResponseRef
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "langnet.sql"
 
@@ -58,7 +58,7 @@ class RawResponseIndex:
                 effect.endpoint,
                 effect.status_code,
                 effect.content_type,
-                json.dumps(effect.headers),
+                orjson.dumps(effect.headers).decode("utf-8"),
                 effect.body,
                 effect.fetch_duration_ms,
             ],
@@ -82,7 +82,7 @@ class RawResponseIndex:
         ).fetchone()
         if not row:
             return None
-        headers = json.loads(row[5]) if row[5] else {}
+        headers = orjson.loads(row[5]) if row[5] else {}
         return RawResponseEffect(
             response_id=response_id,
             tool=row[0],

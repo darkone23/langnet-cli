@@ -1,15 +1,9 @@
 from __future__ import annotations
 
-import sys
 import unittest
-from pathlib import Path
 
 import duckdb
 import requests
-
-BASE_DIR = Path(__file__).resolve().parents[2]
-SCHEMA_PATH = BASE_DIR / "vendor" / "langnet-spec" / "generated" / "python"
-sys.path.insert(0, str(SCHEMA_PATH))
 
 from langnet.clients import HttpToolClient  # noqa: E402
 from langnet.storage.effects_index import RawResponseIndex, apply_schema  # noqa: E402

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Sequence
 from pathlib import Path
 
 import duckdb
-
+import orjson
+from google.protobuf.json_format import MessageToDict, ParseDict
 from query_spec import ExecutedPlan, ToolPlan, ToolResponseRef
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "langnet.sql"
@@ -36,9 +36,11 @@ class PlanIndex:
         ).fetchone()
         if not row:
             return None
-        return ToolPlan.from_json(row[0])
+        plan_data = orjson.loads(row[0])
+        return ParseDict(plan_data, ToolPlan())
 
     def upsert(self, query_hash: str, query: str, language: str, plan: ToolPlan) -> None:
+        plan_json = orjson.dumps(MessageToDict(plan)).decode("utf-8")
         self.conn.execute(
             """
             INSERT OR REPLACE INTO query_plan_index
@@ -51,7 +53,7 @@ class PlanIndex:
                 language,
                 plan.plan_id,
                 plan.plan_hash,
-                plan.to_json(),
+                plan_json,
             ],
         )
 
@@ -75,21 +77,21 @@ class PlanResponseIndex:
         ).fetchone()
         if not row:
             return None
-        response_ids = json.loads(row[1]) if row[1] else []
+        response_ids = orjson.loads(row[1]) if row[1] else []
         executed = ExecutedPlan(plan_id=row[0], plan_hash=plan_hash, from_cache=True)
         for ref in response_ids:
-            executed.responses.append(ToolResponseRef.from_json(json.dumps(ref)))
+            executed.responses.append(ParseDict(ref, ToolResponseRef()))
         return executed
 
     def upsert(
         self, plan_hash: str, plan_id: str, response_refs: Sequence[ToolResponseRef]
     ) -> None:
-        encoded_refs = [json.loads(ref.to_json()) for ref in response_refs]
+        encoded_refs = [MessageToDict(ref) for ref in response_refs]
         self.conn.execute(
             """
             INSERT OR REPLACE INTO plan_response_index
             (plan_hash, plan_id, tool_response_ids, created_at, last_accessed)
             VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """,
-            [plan_hash, plan_id, json.dumps(encoded_refs)],
+            [plan_hash, plan_id, orjson.dumps(encoded_refs).decode("utf-8")],
         )

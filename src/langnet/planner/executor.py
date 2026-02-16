@@ -1,35 +1,36 @@
 from __future__ import annotations
 
-import hashlib
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Protocol
 
-from langnet.clients.base import RawResponseEffect, ToolClient
 from query_spec import ExecutedPlan, ToolCallSpec, ToolPlan, ToolResponseRef
 
+from langnet.clients.base import RawResponseEffect, ToolClient
+from langnet.planner.core import stable_plan_hash
 
-def compute_plan_hash(plan: ToolPlan) -> str:
-    material = plan.to_json()
-    return hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
+
+class ResponseStore(Protocol):
+    def store(self, effect: RawResponseEffect) -> ToolResponseRef: ...
 
 
 @dataclass
 class PlanExecutionResult:
-    plan: ToolPlan
-    executed: ExecutedPlan
-    effects: list[RawResponseEffect]
+    plan: ToolPlan  # type: ignore
+    executed: ExecutedPlan  # type: ignore
+    effects: list[RawResponseEffect]  # type: ignore
 
 
 def execute_plan(
-    plan: ToolPlan,
-    clients: Mapping[str, ToolClient],
-    response_handler: object | None = None,
-) -> PlanExecutionResult:
+    plan: ToolPlan,  # type: ignore
+    clients: Mapping[str, ToolClient],  # type: ignore
+    response_handler: ResponseStore | None = None,
+) -> PlanExecutionResult:  # type: ignore
     """
     Execute a ToolPlan using dumb tool clients, respecting dependencies when provided.
     """
-    plan_hash = plan.plan_hash or compute_plan_hash(plan)
+    plan_hash = plan.plan_hash or stable_plan_hash(plan)
     plan.plan_hash = plan_hash
 
     start = time.time()

@@ -3,15 +3,16 @@ from __future__ import annotations
 import logging
 import sqlite3
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from itertools import islice
 from pathlib import Path
 
 import duckdb
 from bs4 import BeautifulSoup
+from returns.result import Failure, Success
 
-from .base import BuildResult, BuildStatus
+from .base import BuildErrorStats, BuildResult, BuildStatus, CdslStats
 from .paths import default_cdsl_path
 
 logger = logging.getLogger(__name__)
@@ -200,7 +201,7 @@ class CdslBuilder:
         self.force_rebuild = config.force_rebuild
         self._conn: duckdb.DuckDBPyConnection | None = None
 
-    def build(self) -> BuildResult:
+    def build(self) -> BuildResult[CdslStats | BuildErrorStats]:
         try:
             if not self.sqlite_path.exists():
                 raise FileNotFoundError(f"CDSL SQLite not found at {self.sqlite_path}")
@@ -214,7 +215,7 @@ class CdslBuilder:
                     return BuildResult(
                         status=BuildStatus.SKIPPED,
                         output_path=self.output_path,
-                        stats=self.get_stats(),
+                        stats=Success(self.get_stats()),
                         message="Index already exists; use --wipe or --force to rebuild",
                     )
 
@@ -230,17 +231,18 @@ class CdslBuilder:
                 "('dict_id', ?), ('build_date', CURRENT_TIMESTAMP), ('entry_count', ?)",
                 [self.dict_id, processed],
             )
-            stats = self.get_stats()
-            stats["processed"] = processed
+            stats = replace(self.get_stats(), processed=processed)
             return BuildResult(
-                status=BuildStatus.SUCCESS, output_path=self.output_path, stats=stats
+                status=BuildStatus.SUCCESS,
+                output_path=self.output_path,
+                stats=Success(stats),
             )
         except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to build CDSL index for %s: %s", self.dict_id, exc)
             return BuildResult(
                 status=BuildStatus.FAILED,
                 output_path=self.output_path,
-                stats={"error": str(exc)},
+                stats=Failure(BuildErrorStats(error=str(exc))),
                 message=str(exc),
             )
         finally:
@@ -326,23 +328,26 @@ class CdslBuilder:
             )
         return total_entries
 
-    def get_stats(self) -> dict[str, object]:
-        stats: dict[str, object] = {
-            "type": "cdsl",
-            "dict_id": self.dict_id,
-            "path": str(self.output_path),
-        }
+    def get_stats(self) -> CdslStats:
+        size_mb = None
+        entry_count = headword_count = None
         if self.output_path.exists():
-            stats["size_mb"] = round(self.output_path.stat().st_size / (1024 * 1024), 3)
+            size_mb = round(self.output_path.stat().st_size / (1024 * 1024), 3)
         conn = duckdb.connect(str(self.output_path))
         try:
             result = conn.execute("SELECT COUNT(*) FROM entries").fetchone()
-            stats["entry_count"] = result[0] if result else 0
+            entry_count = result[0] if result else 0
             result = conn.execute("SELECT COUNT(*) FROM headwords").fetchone()
-            stats["headword_count"] = result[0] if result else 0
+            headword_count = result[0] if result else 0
         finally:
             conn.close()
-        return stats
+        return CdslStats(
+            dict_id=self.dict_id,
+            path=str(self.output_path),
+            entry_count=entry_count,
+            headword_count=headword_count,
+            size_mb=size_mb,
+        )
 
     def cleanup(self) -> None:
         if self._conn:

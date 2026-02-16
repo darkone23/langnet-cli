@@ -4,23 +4,27 @@ import hashlib
 import importlib
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Protocol
+
+from query_spec import CanonicalCandidate, LanguageHint, NormalizationStep, NormalizedQuery
 
 from langnet.normalizer.sanskrit import HeritageClientProtocol
-from query_spec import CanonicalCandidate, LanguageHint, NormalizationStep, NormalizedQuery
 
 if TYPE_CHECKING:
     from langnet.diogenes.client import ParseResult, WordListResult
 else:
-    ParseResult = Any
-    WordListResult = Any
+    ParseResult = object
+    WordListResult = object
 
 from .base import LanguageNormalizer
 from .utils import contains_greek, strip_accents
 
+LanguageValue = LanguageHint.ValueType
 
-def _hash_query(raw_query: str, language: LanguageHint) -> str:
-    material = f"{language.name}:{raw_query}"
+
+def _hash_query(raw_query: str, language: LanguageValue) -> str:
+    # LanguageHint protobuf enums are integers, so use them directly
+    material = f"{language}:{raw_query}"
     return hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
 
 
@@ -330,7 +334,7 @@ class QueryNormalizer:
         sanskrit_normalizer_cls = getattr(sanskrit_module, "SanskritNormalizer")
         self._sanskrit = sanskrit_normalizer_cls(heritage_client)
 
-    def normalize(self, raw_query: str, language: LanguageHint) -> NormalizationResult:
+    def normalize(self, raw_query: str, language: LanguageValue) -> NormalizationResult:
         steps: list[NormalizationStep] = []
         current = raw_query
 
@@ -380,9 +384,9 @@ class QueryNormalizer:
     def _canonical_candidates(
         self, current: str, language: LanguageHint, steps: list[NormalizationStep]
     ) -> Iterable[CanonicalCandidate]:
-        if language == LanguageHint.SAN:
+        if language == LanguageHint.LANGUAGE_HINT_SAN:
             return self._sanskrit.canonical_candidates(current, steps)
-        if language == LanguageHint.GRC:
+        if language == LanguageHint.LANGUAGE_HINT_GRC:
             return self._greek.canonical_candidates(current, steps)
         return self._latin.canonical_candidates(current, steps)
 
@@ -390,7 +394,7 @@ class QueryNormalizer:
 def normalize_with_index(
     normalizer: QueryNormalizer,
     raw_query: str,
-    language: LanguageHint,
+    language: LanguageValue,
     index,
     use_cache: bool = True,
 ) -> NormalizationResult:
@@ -410,7 +414,7 @@ def normalize_with_index(
         index.upsert(
             query_hash=result.query_hash,
             raw_query=raw_query,
-            language=language.name.lower(),
+            language=str(language).lower(),
             normalized=result.normalized,
         )
     return result

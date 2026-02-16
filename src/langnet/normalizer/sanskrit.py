@@ -5,15 +5,18 @@ import logging
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from types import ModuleType
 from typing import Protocol, cast
 
 from heritage_spec import MonierWilliamsResult, SktSearchResult
-from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from query_spec import CanonicalCandidate, NormalizationStep
+
+from langnet.heritage.velthuis_converter import to_heritage_velthuis
 
 from .base import LanguageNormalizer
 
 logger = logging.getLogger(__name__)
+SanscriptCode = str
 
 ENC_ASCII = "ascii"
 ENC_DEVANAGARI = "devanagari"
@@ -40,12 +43,12 @@ class HeritageClientProtocol(Protocol):
 
 
 class SanscriptModule(Protocol):
-    DEVANAGARI: object
-    HK: object
-    IAST: object
-    SLP1: object
-    VELTHUIS: object
-    transliterate: Callable[[str, object, object], str]
+    DEVANAGARI: SanscriptCode
+    HK: SanscriptCode
+    IAST: SanscriptCode
+    SLP1: SanscriptCode
+    VELTHUIS: SanscriptCode
+    transliterate: Callable[[str, SanscriptCode, SanscriptCode], str]
 
 
 @dataclass(frozen=True)
@@ -382,7 +385,7 @@ class SanskritNormalizer(LanguageNormalizer):
         sanscript = self._load_sanscript_module()
         if sanscript is not None:
             try:
-                source_map: dict[str, object] = {
+                source_map: dict[str, SanscriptCode] = {
                     ENC_DEVANAGARI: sanscript.DEVANAGARI,
                     ENC_IAST: sanscript.IAST,
                     ENC_VELTHUIS: sanscript.VELTHUIS,
@@ -424,7 +427,7 @@ class SanskritNormalizer(LanguageNormalizer):
         except Exception:  # noqa: BLE001
             return None
 
-    def _load_detect_module(self) -> object | None:
+    def _load_detect_module(self) -> ModuleType | None:
         try:
             return importlib.import_module("indic_transliteration.detect")
         except Exception:  # noqa: BLE001
