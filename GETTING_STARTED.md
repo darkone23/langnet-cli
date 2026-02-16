@@ -60,6 +60,10 @@ just codegen        # Generate Python from proto
 just test           # Run tests
 just typecheck      # Type check
 just ruff-check     # Lint
+# Offline builds (run inside repo root):
+#   just cli databuild cts   --perseus-dir ~/perseus --legacy-dir ~/Classics-Data
+#   just cli databuild cdsl <DICT_ID> --source-dir ~/cdsl_data/dict
+# Normalizer cache: CLI writes/reads DuckDB at data/langnet.duckdb by default; override with --db-path or LANGNET_DATA_DIR.
 ```
 
 For quick manual checks while wiring the normalizer, use the Python snippet in the handoff to confirm `sources` reflects the real tool client (`heritage_sktsearch`, diogenes, etc.).

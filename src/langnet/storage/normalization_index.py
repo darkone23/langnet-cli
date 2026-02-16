@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import duckdb
+
 from query_spec import NormalizedQuery
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "langnet.sql"
@@ -13,6 +14,30 @@ def apply_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Apply core schema to the provided DuckDB connection."""
     sql = SCHEMA_PATH.read_text(encoding="utf-8")
     conn.execute(sql)
+
+
+def _fetch_single_count(result) -> int:
+    """Safely extract a single count value from a fetchone result."""
+    row = result.fetchone()
+    if row is None:
+        return 0
+    return row[0]
+
+
+def ensure_schema(conn: duckdb.DuckDBPyConnection) -> None:
+    """
+    Idempotently apply schema only if the normalization table is missing.
+
+    Avoids re-executing the full project schema on every cache lookup.
+    """
+    TABLE_NAME = "query_normalization_index"
+    result = conn.execute(
+        f"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{TABLE_NAME}'"
+    )
+    exists = _fetch_single_count(result)
+    if exists:
+        return
+    apply_schema(conn)
 
 
 class NormalizationIndex:
@@ -35,7 +60,7 @@ class NormalizationIndex:
         if not row:
             return None
         normalized_json = row[0]
-        return NormalizedQuery().from_json(normalized_json)
+        return NormalizedQuery.from_json(normalized_json)
 
     def upsert(
         self, query_hash: str, raw_query: str, language: str, normalized: NormalizedQuery

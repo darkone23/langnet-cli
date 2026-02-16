@@ -1,23 +1,16 @@
 from __future__ import annotations
 
-import importlib
-import sys
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = BASE_DIR / "vendor" / "langnet-spec" / "generated" / "python"
-sys.path.insert(0, str(SCHEMA_PATH))
-
-query_spec = importlib.import_module("query_spec")
-CanonicalCandidate = getattr(query_spec, "CanonicalCandidate")
-ExecutedPlan = getattr(query_spec, "ExecutedPlan")
-LanguageHint = getattr(query_spec, "LanguageHint")
-NormalizationStep = getattr(query_spec, "NormalizationStep")
-NormalizedQuery = getattr(query_spec, "NormalizedQuery")
-PlanDependency = getattr(query_spec, "PlanDependency")
-ToolCallSpec = getattr(query_spec, "ToolCallSpec")
-ToolPlan = getattr(query_spec, "ToolPlan")
-ToolResponseRef = getattr(query_spec, "ToolResponseRef")
+from query_spec import (
+    CanonicalCandidate,
+    ExecutedPlan,
+    LanguageHint,
+    NormalizationStep,
+    NormalizedQuery,
+    PlanDependency,
+    ToolCallSpec,
+    ToolPlan,
+    ToolResponseRef,
+)
 
 
 def test_tool_plan_structures_are_constructible() -> None:
@@ -76,8 +69,11 @@ def test_tool_plan_structures_are_constructible() -> None:
         ],
     )
 
+    assert plan.query is not None, "Query should not be None"
     assert plan.query.original == "shiva"
-    assert plan.tool_calls[0].params["q"] == "Siva"
+    assert plan.tool_calls, "Tool calls should not be empty"
+    assert plan.tool_calls[0].params is not None, "Tool call params should not be None"
+    assert plan.tool_calls[0].params.get("q") == "Siva"
     assert plan.dependencies[0].from_call_id == "call-cdsl"
 
     executed_plan = ExecutedPlan(

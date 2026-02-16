@@ -4,12 +4,16 @@ import hashlib
 import importlib
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
+from langnet.normalizer.sanskrit import HeritageClientProtocol
 from query_spec import CanonicalCandidate, LanguageHint, NormalizationStep, NormalizedQuery
 
-from langnet.diogenes.client import ParseResult, WordListResult
-from langnet.normalizer.sanskrit import HeritageClientProtocol
+if TYPE_CHECKING:
+    from langnet.diogenes.client import ParseResult, WordListResult
+else:
+    ParseResult = Any
+    WordListResult = Any
 
 from .base import LanguageNormalizer
 from .utils import contains_greek, strip_accents
@@ -384,7 +388,11 @@ class QueryNormalizer:
 
 
 def normalize_with_index(
-    normalizer: QueryNormalizer, raw_query: str, language: LanguageHint, index
+    normalizer: QueryNormalizer,
+    raw_query: str,
+    language: LanguageHint,
+    index,
+    use_cache: bool = True,
 ) -> NormalizationResult:
     """
     Helper that consults the normalization index before computing a fresh result.
@@ -392,15 +400,17 @@ def normalize_with_index(
     The index is duckdb-backed; callers supply a NormalizationIndex to avoid import cycles.
     """
     query_hash = _hash_query(raw_query, language)
-    cached = index.get(query_hash)
-    if cached is not None:
-        return NormalizationResult(query_hash=query_hash, normalized=cached)
+    if use_cache:
+        cached = index.get(query_hash)
+        if cached is not None:
+            return NormalizationResult(query_hash=query_hash, normalized=cached)
 
     result = normalizer.normalize(raw_query, language)
-    index.upsert(
-        query_hash=result.query_hash,
-        raw_query=raw_query,
-        language=language.name.lower(),
-        normalized=result.normalized,
-    )
+    if use_cache:
+        index.upsert(
+            query_hash=result.query_hash,
+            raw_query=raw_query,
+            language=language.name.lower(),
+            normalized=result.normalized,
+        )
     return result

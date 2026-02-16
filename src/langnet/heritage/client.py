@@ -8,6 +8,7 @@ from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
+
 from heritage_spec import MonierWilliamsResult, SktSearchResult
 
 from .config import HeritageConfig, heritage_config

@@ -6,6 +6,7 @@ and emit RawResponseEffect records without parsing or derivation.
 """
 
 from .base import RawResponseEffect, ToolClient
+from .capturing import CapturingToolClient, wrap_client_if_index
 from .cltk import CLTKService
 from .files import FileToolClient
 from .http import HttpToolClient
@@ -18,4 +19,6 @@ __all__ = [
     "HttpToolClient",
     "SubprocessToolClient",
     "FileToolClient",
+    "CapturingToolClient",
+    "wrap_client_if_index",
 ]

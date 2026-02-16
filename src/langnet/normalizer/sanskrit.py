@@ -8,9 +8,8 @@ from dataclasses import dataclass
 from typing import Protocol, cast
 
 from heritage_spec import MonierWilliamsResult, SktSearchResult
-from query_spec import CanonicalCandidate, NormalizationStep
-
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
+from query_spec import CanonicalCandidate, NormalizationStep
 
 from .base import LanguageNormalizer
 

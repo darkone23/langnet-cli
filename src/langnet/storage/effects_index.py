@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 
 import duckdb
-from query_spec import ToolResponseRef
 
 from langnet.clients.base import RawResponseEffect
+from query_spec import ToolResponseRef
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "langnet.sql"
 
@@ -37,9 +37,10 @@ class RawResponseIndex:
                 content_type,
                 headers,
                 body,
+                fetch_duration_ms,
                 created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """,
             [
                 effect.response_id,
@@ -50,6 +51,7 @@ class RawResponseIndex:
                 effect.content_type,
                 json.dumps(effect.headers),
                 effect.body,
+                effect.fetch_duration_ms,
             ],
         )
         return ToolResponseRef(
@@ -62,7 +64,8 @@ class RawResponseIndex:
     def get(self, response_id: str) -> RawResponseEffect | None:
         row = self.conn.execute(
             """
-            SELECT tool, call_id, endpoint, status_code, content_type, headers, body
+            SELECT tool, call_id, endpoint, status_code, content_type,
+                   headers, body, fetch_duration_ms
             FROM raw_response_index
             WHERE response_id = ?
             """,
@@ -80,4 +83,5 @@ class RawResponseIndex:
             content_type=row[4] or "",
             headers=headers,
             body=row[6],
+            fetch_duration_ms=row[7] if row[7] is not None else 0,
         )

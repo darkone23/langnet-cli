@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import importlib
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 import duckdb
 
+from heritage_spec import MonierWilliamsResult, SktSearchResult
 from langnet.diogenes.client import ParseResult, WordListResult
 from langnet.normalizer.core import (
     QueryNormalizer,
@@ -15,17 +14,7 @@ from langnet.normalizer.core import (
 from langnet.normalizer.sanskrit import HeritageClientProtocol, SanskritNormalizer
 from langnet.normalizer.service import NormalizationService
 from langnet.storage.normalization_index import NormalizationIndex, apply_schema
-
-BASE_DIR = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = BASE_DIR / "vendor" / "langnet-spec" / "generated" / "python"
-sys.path.insert(0, str(SCHEMA_PATH))
-
-heritage_spec = importlib.import_module("heritage_spec")
-query_spec = importlib.import_module("query_spec")
-SktSearchResult = getattr(heritage_spec, "SktSearchResult")
-MonierWilliamsResult = getattr(heritage_spec, "MonierWilliamsResult")
-LanguageHint = getattr(query_spec, "LanguageHint")
-NormalizationStep = getattr(query_spec, "NormalizationStep")
+from query_spec import LanguageHint, NormalizationStep
 
 
 @dataclass(frozen=True)

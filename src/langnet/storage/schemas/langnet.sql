@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS raw_response_index (
     content_type VARCHAR,
     headers JSON,
     body BLOB,
+    fetch_duration_ms INTEGER,  -- Network round-trip time
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_raw_response_tool ON raw_response_index(tool, created_at);
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS extraction_index (
     kind VARCHAR NOT NULL,
     canonical TEXT,
     payload JSON,
+    load_duration_ms INTEGER,  -- Parsing/extraction time
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_extraction_tool ON extraction_index(tool, created_at);
@@ -71,6 +73,7 @@ CREATE TABLE IF NOT EXISTS claims (
     predicate VARCHAR NOT NULL,
     value JSON,
     provenance_chain JSON,
+    load_duration_ms INTEGER,  -- Derivation/transform time
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_claims_subject ON claims(subject);

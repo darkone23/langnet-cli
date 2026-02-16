@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-import importlib
-import sys
 from pathlib import Path
+from typing import cast
 
-BASE_DIR = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = BASE_DIR / "vendor" / "langnet-spec" / "generated" / "python"
-sys.path.insert(0, str(SCHEMA_PATH))
+import requests
+
+from langnet.clients import (
+    FileToolClient,
+    HttpToolClient,
+    RawResponseEffect,
+    SubprocessToolClient,
+)
 
 HTTP_OK = 200
-
-clients_module = importlib.import_module("langnet.clients")
-FileToolClient = getattr(clients_module, "FileToolClient")
-HttpToolClient = getattr(clients_module, "HttpToolClient")
-RawResponseEffect = getattr(clients_module, "RawResponseEffect")
-SubprocessToolClient = getattr(clients_module, "SubprocessToolClient")
 
 
 class _FakeResponse:
@@ -39,7 +37,9 @@ class _FakeSession:
 
 def test_http_tool_client_emits_raw_response(tmp_path: Path) -> None:
     fake_response = _FakeResponse(b"ok", headers={"Content-Type": "application/json"})
-    client = HttpToolClient(tool="dummy", session=_FakeSession(fake_response))
+    client = HttpToolClient(
+        tool="dummy", session=cast(requests.Session, _FakeSession(fake_response))
+    )
     effect = client.execute(call_id="call-1", endpoint="http://example.com", params={"q": "x"})
 
     assert isinstance(effect, RawResponseEffect)

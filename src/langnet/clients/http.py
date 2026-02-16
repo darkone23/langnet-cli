@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from collections.abc import Mapping
 
 import requests
@@ -23,11 +24,13 @@ class HttpToolClient:
         self, call_id: str, endpoint: str, params: Mapping[str, str] | None = None
     ) -> RawResponseEffect:
         params = params or {}
+        start = time.perf_counter()
         response = (
             self.session.post(endpoint, data=params)
             if self.method == "POST"
             else self.session.get(endpoint, params=params)
         )
+        duration_ms = int((time.perf_counter() - start) * 1000)
 
         content_type = response.headers.get("Content-Type", "")
         return RawResponseEffect(
@@ -39,4 +42,5 @@ class HttpToolClient:
             content_type=content_type,
             headers=dict(response.headers),
             body=response.content,
+            fetch_duration_ms=duration_ms,
         )

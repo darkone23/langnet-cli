@@ -23,6 +23,7 @@ class RawResponseEffect:
     content_type: str
     headers: Mapping[str, str]
     body: bytes
+    fetch_duration_ms: int = 0  # Network round-trip time in milliseconds
     received_at: float = field(default_factory=time.time)
 
 

@@ -1,19 +1,13 @@
 from __future__ import annotations
 
 import contextlib
-import sys
 import unittest
 from pathlib import Path
 
 import requests
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-SCHEMA_PATH = BASE_DIR / "vendor" / "langnet-spec" / "generated" / "python"
-sys.path.insert(0, str(SCHEMA_PATH))
-
-from query_spec import LanguageHint  # noqa: E402
-
 from langnet.pipeline.canonical import CanonicalPipeline  # noqa: E402
+from query_spec import LanguageHint  # noqa: E402
 from tests.integration.utils import Wiring  # noqa: E402
 
 DIOGENES_URL = "http://localhost:8888/Diogenes.cgi"
@@ -31,7 +25,7 @@ def _service_available(url: str) -> bool:
 
 class CanonicalPipelineTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.db_path = Path("data/canonical.duckdb")
+        self.db_path = Path("tmp/canonical.duckdb")
         self.db_path.parent.mkdir(exist_ok=True)
         if self.db_path.exists():
             self.db_path.unlink()

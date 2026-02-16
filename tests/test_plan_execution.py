@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import importlib
-import sys
 from collections.abc import Mapping
-from pathlib import Path
 
 import duckdb
 
@@ -11,19 +8,16 @@ from langnet.clients.base import RawResponseEffect
 from langnet.planner.executor import execute_plan
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.plan_index import PlanIndex, PlanResponseIndex, apply_schema
+from query_spec import (
+    CanonicalCandidate,
+    LanguageHint,
+    NormalizedQuery,
+    PlanDependency,
+    ToolCallSpec,
+    ToolPlan,
+    ToolResponseRef,
+)
 
-BASE_DIR = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = BASE_DIR / "vendor" / "langnet-spec" / "generated" / "python"
-sys.path.insert(0, str(SCHEMA_PATH))
-
-query_spec = importlib.import_module("query_spec")
-CanonicalCandidate = getattr(query_spec, "CanonicalCandidate")
-LanguageHint = getattr(query_spec, "LanguageHint")
-NormalizedQuery = getattr(query_spec, "NormalizedQuery")
-PlanDependency = getattr(query_spec, "PlanDependency")
-ToolCallSpec = getattr(query_spec, "ToolCallSpec")
-ToolPlan = getattr(query_spec, "ToolPlan")
-ToolResponseRef = getattr(query_spec, "ToolResponseRef")
 EXPECTED_RESPONSE_COUNT = 2
 
 

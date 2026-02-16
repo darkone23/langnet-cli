@@ -4,8 +4,6 @@ import importlib
 from dataclasses import dataclass, field
 from typing import cast
 
-from query_spec import CanonicalCandidate, LanguageHint
-
 from langnet.clients import HttpToolClient
 from langnet.cltk.ipa_adapter import CLTKIPAAdapter
 from langnet.diogenes.adapter import DiogenesWordListAdapter
@@ -25,6 +23,7 @@ from langnet.normalizer.utils import strip_accents, unique
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.extraction_index import ExtractionIndex
 from langnet.whitakers.adapter import WhitakerAdapter
+from query_spec import CanonicalCandidate, LanguageHint
 
 DEVANAGARI_UNICODE_START = 0x0900
 DEVANAGARI_UNICODE_END = 0x097F

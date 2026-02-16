@@ -5,9 +5,8 @@ import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from query_spec import ExecutedPlan, ToolCallSpec, ToolPlan, ToolResponseRef
-
 from langnet.clients.base import RawResponseEffect, ToolClient
+from query_spec import ExecutedPlan, ToolCallSpec, ToolPlan, ToolResponseRef
 
 
 def compute_plan_hash(plan: ToolPlan) -> str:

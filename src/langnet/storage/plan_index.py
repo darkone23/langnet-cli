@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import duckdb
+
 from query_spec import ExecutedPlan, ToolPlan, ToolResponseRef
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "langnet.sql"
@@ -35,7 +36,7 @@ class PlanIndex:
         ).fetchone()
         if not row:
             return None
-        return ToolPlan().from_json(row[0])
+        return ToolPlan.from_json(row[0])
 
     def upsert(self, query_hash: str, query: str, language: str, plan: ToolPlan) -> None:
         self.conn.execute(
@@ -77,7 +78,7 @@ class PlanResponseIndex:
         response_ids = json.loads(row[1]) if row[1] else []
         executed = ExecutedPlan(plan_id=row[0], plan_hash=plan_hash, from_cache=True)
         for ref in response_ids:
-            executed.responses.append(ToolResponseRef().from_json(json.dumps(ref)))
+            executed.responses.append(ToolResponseRef.from_json(json.dumps(ref)))
         return executed
 
     def upsert(
