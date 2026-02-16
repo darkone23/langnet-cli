@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import duckdb
-
 from langnet.types import JSONMapping
 
 from .core import IndexerBase, IndexStatus

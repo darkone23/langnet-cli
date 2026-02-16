@@ -12,9 +12,9 @@ from indic_transliteration.sanscript import (
     WX,
     transliterate,
 )
+from langnet.types import JSONMapping
 
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
-from langnet.types import JSONMapping
 
 
 class HeritageLookup(TypedDict):

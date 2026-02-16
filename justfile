@@ -49,11 +49,11 @@ ruff-format:
 
 # Lint code with ruff
 ruff-check *args:
-    ruff check {{ args }}
+    ruff check src/ tests/ ./.justscripts {{ args }}
 
 # Type check with ty
 typecheck *args:
-    ty check {{ args }}
+    ty check src/ tests/ ./.justscripts {{ args }}
 
 # # Run arbitrary command in devenv shell
 # devenv-bash +ARGS:

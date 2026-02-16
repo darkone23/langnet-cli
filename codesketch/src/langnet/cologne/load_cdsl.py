@@ -18,7 +18,6 @@ from pathlib import Path
 
 import click
 import structlog
-
 from langnet.cologne.core import CdslIndexBuilder
 from langnet.config import config
 

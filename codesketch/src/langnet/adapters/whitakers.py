@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import structlog
-
 from langnet.citation.cts_urn import CTSUrnMapper
 from langnet.foster.latin import (
     FOSTER_LATIN_CASES,

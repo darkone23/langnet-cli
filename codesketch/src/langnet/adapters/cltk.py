@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import structlog
-
 from langnet.schema import DictionaryDefinition, DictionaryEntry, MorphFeatures, MorphologyInfo
 
 from .base import BaseBackendAdapter

@@ -5,8 +5,6 @@ from pathlib import Path
 
 import cattrs
 import structlog
-from sh import Command
-
 from langnet.whitakers_words.enums import (
     Age as WWAge,
 )
@@ -46,6 +44,7 @@ from langnet.whitakers_words.enums import (
 from langnet.whitakers_words.enums import (
     Voice as WWVoice,
 )
+from sh import Command
 
 from .lineparsers import CodesReducer, FactsReducer, SensesReducer
 

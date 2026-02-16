@@ -214,7 +214,7 @@ Proto Schema → Code Generation → Implementation
 
 **Example**:
 ```
-1. Define: query.proto with NormalizedQuery, ToolPlan
+1. Define: query_spec.proto with NormalizedQuery, ToolPlan
 2. Generate: Python classes from proto
 3. Test: Write tests that construct ToolPlan objects
 4. Implement: QueryPlanner that produces ToolPlan
@@ -225,7 +225,7 @@ Proto Schema → Code Generation → Implementation
 vendor/langnet-spec/schema/
 ├── langnet_spec.proto      # Universal layer (exists)
 ├── provenance.proto        # ProvenanceRecord, ProvenanceChain
-├── query.proto             # NormalizedQuery, ToolPlan, ToolCallSpec
+├── query_spec.proto        # NormalizedQuery, ToolPlan, ToolCallSpec
 ├── response.proto          # RawResponse, ToolResponseRef
 ├── extraction.proto        # Extraction, ExtractionMetadata
 └── tools/
@@ -367,7 +367,7 @@ Create proto files in `vendor/langnet-spec/schema/`:
 schema/
 ├── langnet_spec.proto      # Universal layer (exists)
 ├── provenance.proto        # ProvenanceRecord, ProvenanceChain
-├── query.proto             # NormalizedQuery, ToolPlan, ToolCallSpec
+├── query_spec.proto        # NormalizedQuery, ToolPlan, ToolCallSpec
 ├── response.proto          # RawResponse, ToolResponseRef
 ├── extraction.proto        # Extraction, ExtractionMetadata
 └── tools/
@@ -380,7 +380,7 @@ schema/
 ```
 
 **Deliverables**:
-- [ ] `query.proto` with NormalizedQuery, ToolPlan, ToolCallSpec
+- [ ] `query_spec.proto` with NormalizedQuery, ToolPlan, ToolCallSpec
 - [ ] `response.proto` with RawResponse, ToolResponseRef
 - [ ] `extraction.proto` with Extraction types
 - [ ] `provenance.proto` with ProvenanceChain
@@ -1294,11 +1294,11 @@ For implementation, start with Phase 1 (proto schemas and storage layer).
 
 ### First Task: Define a Proto Schema
 
-**Goal**: Define `query.proto` with NormalizedQuery and ToolPlan types.
+**Goal**: Define `query_spec.proto` with NormalizedQuery and ToolPlan types.
 
 **Steps**:
 1. Read `vendor/langnet-spec/schema/langnet_spec.proto` to understand existing style
-2. Create `vendor/langnet-spec/schema/query.proto`
+2. Create `vendor/langnet-spec/schema/query_spec.proto`
 3. Define NormalizedQuery with fields: original, language, canonical_forms, normalizations
 4. Define ToolPlan with fields: plan_id, query, tool_calls, dependencies
 5. Run `just codegen` to generate Python

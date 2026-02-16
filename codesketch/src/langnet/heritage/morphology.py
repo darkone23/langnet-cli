@@ -5,7 +5,6 @@ from typing import cast
 
 import structlog
 from bs4 import BeautifulSoup
-
 from langnet.types import JSONMapping
 
 from ..cologne.core import SanskritCologneLexicon

@@ -1,9 +1,8 @@
 import logging as stdlib_logging
 import os
 
-from nose2.events import Plugin
-
 from langnet.logging import setup_logging
+from nose2.events import Plugin
 
 
 class NullWriter:

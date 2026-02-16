@@ -9,7 +9,6 @@ import duckdb
 import structlog
 from indic_transliteration.detect import detect
 from indic_transliteration.sanscript import DEVANAGARI, HK, IAST, SLP1, transliterate
-
 from langnet.config import config
 from langnet.types import JSONMapping
 

@@ -3,7 +3,6 @@ import time
 import unittest
 
 import cattrs
-
 from langnet.whitakers_words.core import (
     WhitakersWords,
     WhitakersWordsChunker,

@@ -14,9 +14,10 @@ import requests
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from langnet.heritage.morphology import HeritageMorphologyService
+
 from langnet.heritage.client import HeritageAPIError, HeritageHTTPClient
 from langnet.heritage.config import heritage_config
-from langnet.heritage.morphology import HeritageMorphologyService
 
 
 class TestHeritageConnectivity(unittest.TestCase):

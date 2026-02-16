@@ -9,7 +9,6 @@ These tests verify:
 import unittest
 
 from cattrs import unstructure
-
 from langnet.adapters.cdsl import CDSLBackendAdapter
 from langnet.schema import DictionaryDefinition
 

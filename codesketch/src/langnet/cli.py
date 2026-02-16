@@ -31,10 +31,6 @@ from urllib.parse import urlparse
 import click
 import orjson
 import requests
-from rich.console import Console
-from rich.pretty import pprint
-from rich.table import Table
-
 from langnet.cologne.core import (
     CdslIndex,
     CdslIndexBuilder,
@@ -53,6 +49,9 @@ from langnet.validation import (
     validate_query,
     validate_tool_request,
 )
+from rich.console import Console
+from rich.pretty import pprint
+from rich.table import Table
 
 BODY_PREVIEW_LENGTH = 100
 

@@ -8,12 +8,12 @@ from typing import Protocol
 import structlog
 from indic_transliteration.detect import detect
 from indic_transliteration.sanscript import DEVANAGARI, SLP1, VELTHUIS, transliterate
-
 from langnet.cologne.core import to_slp1 as cdsl_to_slp1
-from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.encoding_service import EncodingService
 from langnet.normalization import NormalizationPipeline
 from langnet.normalization.models import CanonicalQuery
+
+from langnet.heritage.client import HeritageHTTPClient
 
 logger = structlog.get_logger(__name__)
 

@@ -4,6 +4,7 @@
 devenv.local.nix
 .dev-envfile
 
+data/
 *.db
 *.sqlite
 *.sqlite3

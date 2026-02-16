@@ -12,7 +12,6 @@ import unittest
 
 from langnet.schema import DictionaryDefinition, DictionaryEntry
 from langnet.semantic_reducer import (
-    MODE_THRESHOLDS,
     Mode,
     SenseBucket,
     WitnessSenseUnit,

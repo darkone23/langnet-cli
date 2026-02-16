@@ -22,7 +22,6 @@ import unicodedata
 
 import betacode.conv
 import duckdb
-
 from langnet.heritage.abbr import HERITAGE_ABBR_MAP
 
 logger = logging.getLogger(__name__)

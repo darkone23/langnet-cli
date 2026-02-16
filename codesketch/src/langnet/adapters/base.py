@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import betacode.conv
-
 from langnet.schema import Citation
 
 # Common POS indicators

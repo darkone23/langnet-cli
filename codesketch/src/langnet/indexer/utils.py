@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import duckdb
-
 from langnet.types import JSONMapping
 
 from .core import IndexStatus, IndexType

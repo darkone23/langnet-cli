@@ -16,7 +16,6 @@ import time
 import unittest
 
 import orjson
-
 from langnet.backend_adapter import (
     CDSLBackendAdapter,
     CLTKBackendAdapter,

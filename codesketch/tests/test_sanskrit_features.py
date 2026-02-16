@@ -1,7 +1,6 @@
 import unittest
 
 import cattrs
-
 from langnet.classics_toolkit.core import (
     ClassicsToolkit,
     SanskritMorphologyResult,

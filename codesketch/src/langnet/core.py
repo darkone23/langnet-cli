@@ -4,18 +4,18 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import structlog
-
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
 from langnet.config import LangnetSettings, get_settings
 from langnet.diogenes.core import DiogenesScraper
 from langnet.engine.core import LanguageEngine, LanguageEngineConfig
 from langnet.engine.sanskrit_normalizer import SanskritQueryNormalizer
-from langnet.heritage.client import HeritageHTTPClient
-from langnet.heritage.config import HeritageConfig
 from langnet.heritage.morphology import HeritageMorphologyService
 from langnet.normalization import NormalizationPipeline
 from langnet.whitakers_words.core import WhitakersWords
+
+from langnet.heritage.client import HeritageHTTPClient
+from langnet.heritage.config import HeritageConfig
 
 logger = structlog.get_logger(__name__)
 

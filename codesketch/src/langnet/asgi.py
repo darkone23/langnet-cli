@@ -7,11 +7,6 @@ from typing import cast
 import cattrs
 import orjson
 import structlog
-from starlette.applications import Starlette
-from starlette.requests import Request
-from starlette.responses import Response
-from starlette.routing import Route
-
 from langnet.config import get_settings
 from langnet.core import LangnetWiring, build_langnet_wiring
 from langnet.health import run_health_checks
@@ -19,6 +14,10 @@ from langnet.logging import scoped_context, setup_logging
 from langnet.semantic_converter import convert_multiple_entries
 from langnet.types import JSONMapping
 from langnet.validation import validate_query, validate_tool_request
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import Response
+from starlette.routing import Route
 
 logger = structlog.get_logger(__name__)
 

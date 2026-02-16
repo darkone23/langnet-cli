@@ -103,6 +103,7 @@ in
     export TMPDIR="${config.devenv.root}/tmp";
     export CODEGEN_PATH=$DEVENV_ROOT/vendor/langnet-spec/generated/python
     export PYTHONPATH=$DEVENV_ROOT/src:$DEVENV_ROOT/.justscripts:$CODEGEN_PATH:$PYTHONPATH
+    export PATH=$PATH:$HOME/.local/bin
   '';
 
   # scripts.gunicorn-serve.exec = ''

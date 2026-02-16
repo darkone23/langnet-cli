@@ -9,7 +9,6 @@ import cattrs
 import requests
 import structlog
 from bs4 import BeautifulSoup, FeatureNotFound, Tag
-
 from langnet.citation.cts_urn import CTSUrnMapper
 
 # from langnet.citation.models import Citation, CitationCollection, CitationType

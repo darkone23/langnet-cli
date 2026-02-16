@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import TypedDict, cast
 
 import structlog
-
 from langnet.citation.cts_urn import CTSUrnMapper
 from langnet.schema import DictionaryBlock, DictionaryDefinition, DictionaryEntry, MorphologyInfo
 from langnet.types import JSONMapping, JSONValue

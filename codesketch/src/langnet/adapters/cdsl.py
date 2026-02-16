@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import cast
 
 import structlog
-
 from langnet.citation.cts_urn import CTSUrnMapper
 from langnet.schema import DictionaryDefinition, DictionaryEntry, MorphologyInfo
 from langnet.types import JSONValue

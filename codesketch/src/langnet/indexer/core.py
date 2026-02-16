@@ -8,7 +8,6 @@ from enum import Enum
 from pathlib import Path
 
 import duckdb
-
 from langnet.types import JSONMapping
 
 logger = logging.getLogger(__name__)

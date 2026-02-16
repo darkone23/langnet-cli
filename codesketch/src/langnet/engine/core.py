@@ -4,7 +4,6 @@ from typing import cast
 
 import cattrs
 import structlog
-
 from langnet.adapters.registry import LanguageAdapterRegistry
 from langnet.classics_toolkit.core import ClassicsToolkit
 from langnet.cologne.core import SanskritCologneLexicon
@@ -14,7 +13,6 @@ from langnet.engine.sanskrit_normalizer import (
     SanskritQueryNormalizer,
 )
 from langnet.foster.apply import apply_foster_view
-from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.morphology import (
     HeritageMorphologyService,  # TODO: not sure why this is not just in heritage client?
 )
@@ -23,6 +21,8 @@ from langnet.normalization import NormalizationPipeline
 from langnet.types import JSONMapping
 from langnet.validation import validate_tool_request
 from langnet.whitakers_words.core import WhitakersWords
+
+from langnet.heritage.client import HeritageHTTPClient
 
 try:  # structlog contextvars may be missing in some environments
     from structlog.contextvars import get_contextvars  # type: ignore

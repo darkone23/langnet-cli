@@ -6,7 +6,6 @@ using lemmatized token-based similarity functions.
 """
 
 import numpy as np
-
 from langnet.semantic_reducer.normalizer import get_similarity_function, lemmatize_gloss
 from langnet.semantic_reducer.types import WitnessSenseUnit
 

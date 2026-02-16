@@ -1,34 +1,45 @@
 # Getting Started with V2 Implementation
 
-This document is a quick-start guide for implementing the V2 architecture.
+This is the quick-start for continuing the V2 build, now focused on canonical candidate generation. Read the handoff first: `docs/handoff/handoff-20260216-candidates.md` (it supersedes earlier setup tasks).
 
 ## Read These First (in order)
 
-1. `docs/plans/active/v2-implementation-master-plan.md` - The master plan (read top to bottom)
-2. `codesketch/README.md` - What reference code exists
-3. `docs/technical/design/v2-architecture-overview.md` - Architecture overview
+1. `docs/plans/active/v2-implementation-master-plan.md` - Master plan
+2. `docs/handoff/handoff-20260216-candidates.md` - Current workstream + next steps
+3. `codesketch/README.md` - What reference code exists
+4. `docs/technical/design/v2-architecture-overview.md` - Architecture overview
 
-## Core Concepts
+## Where We Are
 
-- **Effects**: A query produces effects (tool calls, responses, extractions, derivations, claims)
-- **Lexicon Artifacts**: Each tool produces its own artifact type (CDSLArtifact, DiogenesArtifact, etc.)
-- **Pipeline**: Parse → Reduce → Distill
-- **Schema-driven**: Define proto schemas before writing implementation code
-- **Caches**: 4 transparent, disposable layers (query, plan, derivation, claim)
+- Proto schemas in `vendor/langnet-spec/schema/` are defined and codegen is in place.
+- Normalization pipeline lives in `src/langnet/normalizer/` (`core.py`, `sanskrit.py`) with tests passing.
+- Tool clients exist (`heritage/client.py`, `diogenes/client.py`, `clients/http.py`, `clients/subprocess.py`).
+- DuckDB cache for normalization is in `src/langnet/storage/normalization_index.py`.
 
-## Architecture
+## Current Focus: Canonical Candidates
+
+We completed the first milestone: **user input → canonical search terms** with proper sources and caching. Next up is the second milestone: **canonical search term → tool plan**.
+
+### Immediate Tasks (from the handoff)
+
+1) **Plan generation**: build `ToolPlan` creation from `NormalizedQuery` (canonical → plan) with language-specific tool calls.  
+2) **Execution wiring**: ensure the resulting plan flows into the executor and stores effects for downstream parsing.  
+3) **CLI smoke**: extend `langnet-cli` (or a just target) to print the generated plan for a sample query per language.  
+4) **Regression guardrails**: add/extend tests covering plan construction for SAN/GRC/LAT to lock in the milestone.
+
+## Quick Architecture Reminder
 
 ```
 Query → ToolPlan → Execute → Effects → Parse → Reduce → Distill → Output
                         │
                         ├── ToolCallEffect
-                        ├── RawResponseEffect  
-                        ├── ExtractionEffect (produces LexiconArtifact)
+                        ├── RawResponseEffect
+                        ├── ExtractionEffect (LexiconArtifact)
                         ├── DerivationEffect
                         └── ClaimEffect
 ```
 
-## DuckDB Files
+## DuckDB Layout
 
 ```
 ~/.local/share/langnet/
@@ -42,21 +53,7 @@ Query → ToolPlan → Execute → Effects → Parse → Reduce → Distill → 
     └── cts_index.duckdb  # CTS URN lookups (also a tool)
 ```
 
-## First Task: Define query.proto
-
-1. Create `vendor/langnet-spec/schema/query.proto`
-2. Define `NormalizedQuery` with: original, language, canonical_forms, normalizations
-3. Define `ToolPlan` with: plan_id, plan_hash, query, tool_calls, dependencies
-4. Run `just codegen`
-5. Write test that constructs a ToolPlan object
-
-## Second Task: Define Storage Schema
-
-1. Create `src/langnet/storage/schemas/langnet.sql`
-2. Define tables: query_cache, plan_cache, claims, provenance
-3. Write test with in-memory DuckDB
-
-## Key Commands
+## Commands
 
 ```bash
 just codegen        # Generate Python from proto
@@ -65,14 +62,4 @@ just typecheck      # Type check
 just ruff-check     # Lint
 ```
 
-## Reference Code
-
-Look in `codesketch/src/langnet/` for working implementations:
-- `normalization/` - Transliteration (port this)
-- `semantic_reducer/` - Clustering (port this)
-- `diogenes/core.py` - HTML parsing patterns (study, don't port)
-- `heritage/morphology.py` - JSON handling (study, don't port)
-
-## Questions?
-
-See `docs/plans/active/v2-implementation-master-plan.md` for full details.
+For quick manual checks while wiring the normalizer, use the Python snippet in the handoff to confirm `sources` reflects the real tool client (`heritage_sktsearch`, diogenes, etc.).

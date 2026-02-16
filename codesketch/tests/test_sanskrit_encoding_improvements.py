@@ -10,10 +10,11 @@ import unittest
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from langnet.heritage.client import HeritageHTTPClient
-from langnet.heritage.config import heritage_config
 from langnet.heritage.encoding_service import EncodingService
 from langnet.heritage.parameters import HeritageParameterBuilder
+
+from langnet.heritage.client import HeritageHTTPClient
+from langnet.heritage.config import heritage_config
 
 
 class TestEncodingDetection(unittest.TestCase):

@@ -7,9 +7,10 @@ import re
 from dataclasses import dataclass
 from typing import cast
 
-from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.encoding_service import EncodingService
 from langnet.types import JSONMapping
+
+from langnet.heritage.client import HeritageHTTPClient
 
 from .core import LanguageNormalizer
 from .models import CanonicalQuery, Encoding, Language

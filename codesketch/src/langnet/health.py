@@ -8,11 +8,11 @@ from pathlib import Path
 import duckdb
 import requests
 import structlog
-
 from langnet.config import LangnetSettings
+from langnet.types import JSONMapping
+
 from langnet.heritage.client import HeritageHTTPClient
 from langnet.heritage.config import HeritageConfig
-from langnet.types import JSONMapping
 
 logger = structlog.get_logger(__name__)
 HEALTHY_STATUS = 200

@@ -5,9 +5,10 @@ Unit tests for Heritage Platform integration functionality without pytest.
 import unittest
 from unittest.mock import Mock, patch
 
-from langnet.heritage.client import HeritageAPIError, HeritageHTTPClient
 from langnet.heritage.encoding_service import EncodingService, SmartVelthuisNormalizer
 from langnet.heritage.parsers import MorphologyReducer
+
+from langnet.heritage.client import HeritageAPIError, HeritageHTTPClient
 
 
 class TestMorphologyReducer(unittest.TestCase):

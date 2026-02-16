@@ -2,7 +2,6 @@ import re
 from typing import cast
 
 from bs4 import BeautifulSoup
-
 from langnet.types import JSONMapping
 
 from .html_extractor import HeritageHTMLExtractor, _PatternEntry
