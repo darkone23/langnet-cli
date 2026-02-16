@@ -39,6 +39,7 @@ class CapturingToolClient:
         self._client = inner_client
         self._index = effects_index
         self.tool = getattr(inner_client, "tool", "unknown")
+        self._captured_response_ids: list[str] = []
 
     def execute(
         self,
@@ -51,8 +52,17 @@ class CapturingToolClient:
 
         if self._index is not None:
             self._index.store(effect)
+            self._captured_response_ids.append(effect.response_id)
 
         return effect
+
+    def get_captured_response_ids(self) -> list[str]:
+        """Get the list of response IDs captured since last clear."""
+        return list(self._captured_response_ids)
+
+    def clear_captured_response_ids(self) -> None:
+        """Clear the list of captured response IDs."""
+        self._captured_response_ids.clear()
 
 
 def wrap_client_if_index(inner_client, effects_index):

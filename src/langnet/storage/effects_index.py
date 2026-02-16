@@ -23,8 +23,17 @@ class RawResponseIndex:
 
     def __init__(self, conn: duckdb.DuckDBPyConnection) -> None:
         self.conn = conn
+        # Schema will be applied lazily on first write
+        self._schema_applied = False
+
+    def _ensure_schema(self) -> None:
+        """Apply schema lazily - only when needed for writes."""
+        if not self._schema_applied:
+            apply_schema(self.conn)
+            self._schema_applied = True
 
     def store(self, effect: RawResponseEffect) -> ToolResponseRef:
+        self._ensure_schema()
         self.conn.execute(
             """
             INSERT OR REPLACE INTO raw_response_index

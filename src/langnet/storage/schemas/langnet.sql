@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS query_normalization_index (
     language VARCHAR NOT NULL,
     normalized_json JSON NOT NULL,
     canonical_forms JSON,
+    source_response_ids JSON,  -- References to raw_response_index entries
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

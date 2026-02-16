@@ -63,7 +63,12 @@ class NormalizationIndex:
         return NormalizedQuery.from_json(normalized_json)
 
     def upsert(
-        self, query_hash: str, raw_query: str, language: str, normalized: NormalizedQuery
+        self,
+        query_hash: str,
+        raw_query: str,
+        language: str,
+        normalized: NormalizedQuery,
+        source_response_ids: list[str] | None = None,
     ) -> None:
         candidates_json = json.dumps(
             [
@@ -71,6 +76,7 @@ class NormalizationIndex:
                 for c in normalized.candidates
             ]
         )
+        response_ids_json = json.dumps(source_response_ids) if source_response_ids else None
         self.conn.execute(
             """
             INSERT OR REPLACE INTO query_normalization_index
@@ -80,10 +86,11 @@ class NormalizationIndex:
                 language,
                 normalized_json,
                 canonical_forms,
+                source_response_ids,
                 created_at,
                 last_accessed
             )
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """,
             [
                 query_hash,
@@ -91,5 +98,20 @@ class NormalizationIndex:
                 language,
                 normalized.to_json(),
                 candidates_json,
+                response_ids_json,
             ],
         )
+
+    def get_source_response_ids(self, query_hash: str) -> list[str]:
+        """Get the raw response IDs that contributed to this normalization."""
+        row = self.conn.execute(
+            """
+            SELECT source_response_ids
+            FROM query_normalization_index
+            WHERE query_hash = ?
+            """,
+            [query_hash],
+        ).fetchone()
+        if not row or row[0] is None:
+            return []
+        return json.loads(row[0])

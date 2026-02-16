@@ -10,8 +10,11 @@ import requests
 from bs4 import BeautifulSoup
 
 from heritage_spec import MonierWilliamsResult, SktSearchResult
+from langnet.clients.base import ToolClient
 
 from .config import HeritageConfig, heritage_config
+
+HTTP_OK = 200
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +35,14 @@ class HeritageHTTPClient:
     """
 
     def __init__(
-        self, config: HeritageConfig | None = None, session: requests.Session | None = None
+        self,
+        config: HeritageConfig | None = None,
+        session: requests.Session | None = None,
+        tool_client: ToolClient | None = None,
     ) -> None:
         self.config = config or heritage_config
         self.session = session or requests.Session()
+        self._tool_client = tool_client
 
     def _build_url(self, script_name: str, params: Mapping[str, str] | None = None) -> str:
         base_url = self.config.base_url.rstrip("/")
@@ -67,18 +74,39 @@ class HeritageHTTPClient:
             entry_url=first.entry_url,
         )
 
+    def _get_response_text(self, url: str, call_id: str) -> str | None:
+        """Fetch URL and return response text, using tool_client if available."""
+        if self._tool_client is not None:
+            try:
+                effect = self._tool_client.execute(
+                    call_id=call_id,
+                    endpoint=url,
+                    params={},
+                )
+                if effect.status_code == HTTP_OK:
+                    return effect.body.decode("utf-8")
+                return None
+            except Exception as exc:
+                logger.debug("heritage_http_failed", extra={"error": str(exc), "url": url})
+                return None
+        else:
+            try:
+                response = self.session.get(url, timeout=self.config.timeout)
+                response.raise_for_status()
+                return response.text
+            except Exception as exc:
+                logger.debug("heritage_sktsearch_failed", extra={"error": str(exc)})
+                return None
+
     def fetch_all_matches(self, query: str) -> list[SktSearchMatch]:
         bare_query = re.sub(r"[^a-zA-Z]", "", query.lower())
         params = {"q": bare_query, "lex": "SH"}
         url = self._build_url("sktsearch", params)
-        try:
-            response = self.session.get(url, timeout=self.config.timeout)
-            response.raise_for_status()
-        except Exception as exc:
-            logger.debug("heritage_sktsearch_failed", extra={"error": str(exc)})
+        text = self._get_response_text(url, f"heritage-sktsearch-{bare_query}")
+        if text is None:
             return []
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(text, "html.parser")
         matches: list[SktSearchMatch] = []
 
         for link in soup.find_all("a", href=True):

@@ -8,6 +8,7 @@ import click
 import duckdb
 
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
+from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.paths import normalization_db_path
 from query_spec import LanguageHint
 
@@ -27,15 +28,15 @@ def _parse_language(lang: str) -> LanguageHint:
     return alias_map[normalized]
 
 
-def _heritage_factory(base_url: str | None):
+def _heritage_factory(base_url: str | None, tool_client=None):
     def factory():
         from langnet.heritage.client import HeritageHTTPClient  # noqa: PLC0415
         from langnet.heritage.config import HeritageConfig  # noqa: PLC0415
 
         if base_url:
             cfg = HeritageConfig(base_url=base_url, cgi_path="/cgi-bin/skt/")
-            return HeritageHTTPClient(config=cfg)
-        return HeritageHTTPClient()
+            return HeritageHTTPClient(config=cfg, tool_client=tool_client)
+        return HeritageHTTPClient(tool_client=tool_client)
 
     return factory
 
@@ -102,17 +103,23 @@ def _normalize_impl(config: NormalizeConfig, language: str, text: str) -> None:
     conn = duckdb.connect(database=str(path))
     dio_config = DiogenesConfig(endpoint=config.diogenes_endpoint)
 
+    # Create effects index to capture raw responses
+    effects_index = RawResponseIndex(conn)
+
     def _whitaker_factory():
         from langnet.whitakers.client import WhitakerClient  # noqa: PLC0415
 
         return WhitakerClient()
 
+    # Don't pass heritage_client factory when we want capturing
+    # Let NormalizationService create it with the capturing client
     service = NormalizationService(
         conn,
-        heritage_client=_heritage_factory(config.heritage_base),
+        heritage_client=None,  # Will be created with capturing in _ensure_normalizer
         diogenes_config=dio_config,
-        whitaker_client=_whitaker_factory,
+        whitaker_client=_whitaker_factory,  # type: ignore[arg-type]
         use_cache=not config.no_cache,
+        effects_index=effects_index,
     )
 
     result = service.normalize(text, lang_hint)
