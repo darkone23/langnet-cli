@@ -11,6 +11,7 @@ from langnet.cltk.ipa_adapter import CLTKIPAAdapter
 from langnet.diogenes.adapter import DiogenesWordListAdapter
 from langnet.diogenes.parse_adapter import DiogenesParseAdapter
 from langnet.heritage.client import HeritageHTTPClient
+from langnet.normalizer.greek_transliterator import contains_greek, transliterate
 from langnet.normalizer.sanskrit import (
     ENC_ASCII,
     ENC_DEVANAGARI,
@@ -121,10 +122,17 @@ class CanonicalPipeline:
     def _handle_greek_lookup(
         self, raw_query: str, canonical_targets: list[str], state: LookupState
     ) -> None:
+        query_value = raw_query
+        targets = list(canonical_targets)
+        if not contains_greek(raw_query):
+            trans = transliterate(raw_query)
+            if trans.search_key:
+                query_value = trans.search_key
+                targets = [trans.search_key] + targets
         result = self.dio_wordlist.fetch(
             call_id=f"dio-wordlist-{raw_query}",
-            query=raw_query,
-            canonical_targets=canonical_targets,
+            query=query_value,
+            canonical_targets=targets,
         )
         state.responses.append(result.response_id)
         if result.extraction_id:

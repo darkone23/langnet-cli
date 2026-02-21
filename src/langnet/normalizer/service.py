@@ -126,6 +126,7 @@ class NormalizationService:
         Resolve a query to canonical forms by checking the index first, then computing and storing.
         """
         query_hash = _hash_query(raw_query, language)
+        cached = None
         if self.use_cache:
             cached = self.index.get(query_hash)
             if cached is not None:
@@ -143,13 +144,14 @@ class NormalizationService:
         # Collect captured response IDs
         source_response_ids = self._get_captured_response_ids()
 
-        # Store in index with provenance (always store, but only check cache if use_cache=True)
-        self.index.upsert(
-            query_hash=result.query_hash,
-            raw_query=raw_query,
-            language=str(language).lower(),
-            normalized=result.normalized,
-            source_response_ids=source_response_ids if source_response_ids else None,
-        )
+        # Store in index with provenance if caching is enabled
+        if self.use_cache:
+            self.index.upsert(
+                query_hash=result.query_hash,
+                raw_query=raw_query,
+                language=str(language).lower(),
+                normalized=result.normalized,
+                source_response_ids=source_response_ids if source_response_ids else None,
+            )
 
         return result

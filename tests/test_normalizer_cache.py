@@ -34,7 +34,8 @@ def test_normalizer_uses_cache_and_skips_diogenes_on_second_run() -> None:
             use_cache=True,
         )
         result1 = svc1.normalize("thea", LanguageHint.LANGUAGE_HINT_GRC)
-        assert dio1.calls == 1
+        # Greek normalization may issue variant word_list calls; ensure at least one
+        assert dio1.calls >= 1
         assert any(c.lemma == "θεά" for c in result1.normalized.candidates)
         conn1.close()
 
@@ -60,5 +61,5 @@ def test_normalizer_uses_cache_and_skips_diogenes_on_second_run() -> None:
             use_cache=False,
         )
         svc3.normalize("thea", LanguageHint.LANGUAGE_HINT_GRC)
-        assert dio3.calls == 1, "Cache disabled should force Diogenes call"
+        assert dio3.calls >= 1, "Cache disabled should force Diogenes call"
         conn3.close()

@@ -20,6 +20,7 @@ class WordListResult:
     query: str
     lemmas: list[str]  # Accented lemmas from word_list
     matched: bool
+    frequencies: dict[str, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -142,11 +143,12 @@ class DiogenesClient:
             endpoint=self._url(params),
             params=None,
         )
-        lemmas = self._parse_word_list(effect.body, query, limit)
+        lemmas, freqs = self._parse_word_list(effect.body, query, limit)
         return WordListResult(
             query=query,
             lemmas=lemmas,
             matched=len(lemmas) > 0,
+            frequencies=freqs if freqs else None,
         )
 
     def fetch_parse(self, query: str, lang: str = "lat") -> ParseResult:
@@ -179,18 +181,23 @@ class DiogenesClient:
             matched=len(lemmas) > 0,
         )
 
-    def _parse_word_list(self, body: bytes, query: str, limit: int | None) -> list[str]:
+    def _parse_word_list(
+        self, body: bytes, query: str, limit: int | None
+    ) -> tuple[list[str], dict[str, int]]:
         """Parse lemmas from word_list HTML response."""
         soup = self._build_soup(body)
         if soup is None:
-            return []
+            return ([], {})
         checkboxes = self._checkbox_inputs(soup)
         entries = self._collect_word_list_entries(checkboxes)
         merged = self._merge_word_list(entries)
-        ranked = self._rank_word_list(query, merged)
+        ranked, freqs = self._rank_word_list(query, merged)
         if limit is not None and len(ranked) > limit:
-            return ranked[:limit]
-        return ranked
+            ranked = ranked[:limit]
+        # Prune freqs to ranked set
+        ranked_set = set(ranked)
+        freqs = {k: v for k, v in freqs.items() if k in ranked_set}
+        return ranked, freqs
 
     def _build_soup(self, body: bytes) -> BeautifulSoup | None:
         try:
@@ -210,6 +217,8 @@ class DiogenesClient:
             if entry:
                 entries.append(entry)
             order_weight -= 1
+        # Preserve original order for stable ranking when counts tie
+        entries.reverse()
         return entries
 
     def _extract_word_list_entry(self, checkbox: Tag, order_weight: int) -> WordListEntry | None:
@@ -237,7 +246,7 @@ class DiogenesClient:
     def _link_text(self, cell: Tag) -> str:
         for anchor in cell.find_all("a"):
             link_text = (anchor.get_text() or "").strip()
-            if link_text and re.search(r"[a-zA-Zα-ωά-ώ]", link_text):
+            if link_text and re.search(r"[a-zA-Zα-ωά-ώἀ-῾]", link_text):
                 return link_text
         return ""
 
@@ -270,9 +279,12 @@ class DiogenesClient:
         return text.strip()
 
     def _clean_lemma_text(self, lemma: str) -> str:
-        cleaned = re.sub(r"^[^a-zA-Zα-ωά-ώ]+|[^a-zA-Zα-ωά-ώ]+$", "", lemma)
-        if cleaned and re.search(r"[a-zA-Zα-ωά-ώ]", cleaned):
-            return cleaned
+        # Preserve leading/trailing punctuation (e.g., ".ἄνθρωπος" or "ἄνθρωπος.")
+        prefix = "." if lemma.startswith(".") else ""
+        suffix = "." if lemma.endswith(".") else ""
+        cleaned = re.sub(r"^[^a-zA-Zα-ωά-ώἀ-῾]+|[^a-zA-Zα-ωά-ώἀ-῾]+$", "", lemma)
+        if cleaned and re.search(r"[a-zA-Zα-ωά-ώἀ-῾]", cleaned):
+            return f"{prefix}{cleaned}{suffix}"
         return ""
 
     def _merge_word_list(self, entries: list[WordListEntry]) -> dict[str, tuple[int, int]]:
@@ -290,7 +302,7 @@ class DiogenesClient:
 
     def _rank_word_list(
         self, query: str, lemmas_with_counts: dict[str, tuple[int, int]]
-    ) -> list[str]:
+    ) -> tuple[list[str], dict[str, int]]:
         """
         Rank lemmas by: distance (primary), frequency ratio (tie-break),
         length/lexicographic (secondary).
@@ -299,6 +311,7 @@ class DiogenesClient:
         target_norm = _normalize_for_distance(query)
         total = sum(v[0] for v in lemmas_with_counts.values())
         ranked: list[RankedLemma] = []
+        freqs: dict[str, int] = {}
         for lemma, (count, _order_weight) in lemmas_with_counts.items():
             norm = _normalize_for_distance(lemma)
             dist = _levenshtein(norm, target_norm)
@@ -312,9 +325,10 @@ class DiogenesClient:
                     lemma=lemma,
                 )
             )
+            freqs[lemma] = count
 
         ranked.sort()
-        return [r.lemma for r in ranked]
+        return [r.lemma for r in ranked], freqs
 
     def _parse_parse_output(self, body: bytes, query: str) -> list[str]:
         """Parse lemmas from parse HTML response."""

@@ -11,12 +11,28 @@ from query_spec import CanonicalCandidate, LanguageHint, NormalizationStep, Norm
 from langnet.normalizer.sanskrit import HeritageClientProtocol
 
 if TYPE_CHECKING:
-    from langnet.diogenes.client import ParseResult, WordListResult
+    from langnet.diogenes.client import (
+        ParseResult,
+        WordListResult,
+        _levenshtein,
+        _normalize_for_distance,
+    )
+    from langnet.diogenes.client import (
+        WordListResult as DioWordListResult,
+    )
 else:
     ParseResult = object
     WordListResult = object
+    DioWordListResult = object
+    _levenshtein = None
+    _normalize_for_distance = None
 
 from .base import LanguageNormalizer
+from .greek_transliterator import (
+    _greek_to_betacode,
+    transliterate,
+    transliterate_variants,
+)
 from .utils import contains_greek, strip_accents
 
 LanguageValue = LanguageHint.ValueType
@@ -136,26 +152,8 @@ class GreekNormalizer(LanguageNormalizer):
     Greek canonicalization using betacode conversions and accent stripping.
     """
 
-    LATIN_TO_BETACODE = [
-        ("ph", "f"),
-        ("th", "q"),
-        ("ch", "x"),
-        ("rh", "r"),
-        ("PH", "F"),
-        ("TH", "Q"),
-        ("CH", "X"),
-        ("RH", "R"),
-    ]
-
     def __init__(self, diogenes_client: DiogenesGreekClientProtocol | None = None) -> None:
         self.diogenes = diogenes_client
-
-    def _latin_to_betacode(self, text: str) -> str:
-        result = text
-        for latin, betacode in self.LATIN_TO_BETACODE:
-            result = result.replace(latin, betacode)
-        result = result.replace("y", "u").replace("Y", "U")
-        return result
 
     def canonical_candidates(
         self, text: str, steps: list[NormalizationStep]
@@ -180,12 +178,16 @@ class GreekNormalizer(LanguageNormalizer):
         candidates: list[CanonicalCandidate] = []
         for lemma in result.lemmas:
             encodings: dict[str, str] = {}
+            if result.frequencies:
+                freq = result.frequencies.get(lemma)
+                if freq is not None:
+                    encodings["freq"] = str(freq)
             stripped = strip_accents(lemma)
-            if stripped != lemma:
-                encodings["accentless"] = stripped
             betacode_variants = _betacode_variants(lemma, stripped)
             if betacode_variants:
                 encodings["betacode"] = betacode_variants[0]
+            elif contains_greek(lemma):
+                encodings["betacode"] = _greek_to_betacode(lemma)
             candidates.append(
                 CanonicalCandidate(lemma=lemma, encodings=encodings, sources=["diogenes_word_list"])
             )
@@ -196,13 +198,76 @@ class GreekNormalizer(LanguageNormalizer):
     ) -> WordListResult | None:
         if self.diogenes is None:
             return None
-        primary = self._attempt_word_list(base, steps, "diogenes_word_list")
+        # If base is not Greek, transliterate before fetch.
+        query_val = base
+        variants: list[str] = []
+        if not contains_greek(base):
+            translits = transliterate_variants(base)
+            if translits:
+                # Record the primary transliteration step once
+                steps.append(
+                    NormalizationStep(
+                        operation="greek_transliterate",
+                        input=base,
+                        output=translits[0].search_key,
+                        tool="greek_transliterator",
+                    )
+                )
+                query_val = translits[0].search_key
+                # Only query Greek Unicode variants; skip betacode to avoid extra calls
+                variants = [t.search_key for t in translits[1:] if t.search_key]
+
+        results: list[WordListResult] = []
+        primary = self._attempt_word_list(query_val, steps, "diogenes_word_list")
         if primary:
-            return primary
-        betacode_form = self._latin_to_betacode(base)
-        if betacode_form == base:
+            results.append(primary)
+        for alt in variants:
+            if not alt:
+                continue
+            variant_result = self._attempt_word_list(alt, steps, "diogenes_word_list_fallback")
+            if variant_result:
+                results.append(variant_result)
+        if not results:
             return None
-        return self._attempt_word_list(betacode_form, steps, "diogenes_word_list_fallback")
+        return self._merge_word_list_results(query_val, results)
+
+    def _merge_word_list_results(self, query: str, results: list[WordListResult]) -> WordListResult:
+        # Lazy import to avoid pulling BeautifulSoup-heavy diogenes client on fast paths
+        from langnet.diogenes.client import (  # noqa: I001, PLC0415
+            WordListResult as DioWordListResult,
+            _levenshtein,
+            _normalize_for_distance,
+        )
+
+        merged_lemmas: list[str] = []
+        merged_freqs: dict[str, int] = {}
+        seen: set[str] = set()
+        for res in results:
+            freqs = res.frequencies or {}
+            for lemma in res.lemmas:
+                if lemma not in seen:
+                    seen.add(lemma)
+                    merged_lemmas.append(lemma)
+                if lemma in freqs:
+                    current = merged_freqs.get(lemma, 0)
+                    merged_freqs[lemma] = max(current, freqs[lemma])
+        # Re-rank merged lemmas using the normalized distance heuristic and frequencies
+        total = sum(merged_freqs.values()) or 1
+        target_norm = _normalize_for_distance(query)
+        ranked = sorted(
+            merged_lemmas,
+            key=lambda lemma: (
+                _levenshtein(_normalize_for_distance(lemma), target_norm),
+                -((merged_freqs.get(lemma, 0) / total) if total else 0.0),
+                len(_normalize_for_distance(lemma)),
+            ),
+        )
+        return DioWordListResult(
+            query=query,
+            lemmas=ranked,
+            matched=True,
+            frequencies=merged_freqs or None,
+        )
 
     def _attempt_word_list(
         self, query: str, steps: list[NormalizationStep], operation: str
@@ -237,65 +302,48 @@ class GreekNormalizer(LanguageNormalizer):
             sources = ["local"]
 
             stripped = strip_accents(base)
-            if stripped != base:
-                steps.append(
-                    NormalizationStep(
-                        operation="strip_accents",
-                        input=base,
-                        output=stripped,
-                        tool="unicodedata",
-                    )
-                )
-                encodings["accentless"] = stripped
-
             betacode_variants = _betacode_variants(base, stripped)
             if betacode_variants:
                 encodings["betacode"] = betacode_variants[0]
 
             candidates.append(CanonicalCandidate(lemma=base, encodings=encodings, sources=sources))
-            if stripped != base:
-                candidates.append(
-                    CanonicalCandidate(lemma=stripped, encodings=encodings, sources=sources)
-                )
         else:
             ascii_lower = base.lower()
             encodings: dict[str, str] = {}
             sources = ["local"]
 
-            unicode_guess = ""
-            conv = _load_betacode_conv()
-            if conv is not None:
-                try:
-                    unicode_guess = conv.beta_to_uni(ascii_lower)
-                except Exception:  # noqa: BLE001
-                    unicode_guess = ""
-
-            if unicode_guess and unicode_guess != ascii_lower:
-                steps.append(
-                    NormalizationStep(
-                        operation="betacode_to_unicode",
-                        input=ascii_lower,
-                        output=unicode_guess,
-                        tool="betacode",
+            trans = transliterate(ascii_lower)
+            if trans.search_key:
+                if not _has_transliterate_step(steps, ascii_lower):
+                    steps.append(
+                        NormalizationStep(
+                            operation="greek_transliterate",
+                            input=ascii_lower,
+                            output=trans.search_key,
+                            tool="greek_transliterator",
+                        )
                     )
-                )
-                encodings["betacode"] = ascii_lower
+                if trans.betacode:
+                    encodings["betacode"] = trans.betacode
                 candidates.append(
-                    CanonicalCandidate(lemma=unicode_guess, encodings=encodings, sources=sources)
+                    CanonicalCandidate(lemma=trans.search_key, encodings=encodings, sources=sources)
                 )
-                stripped = strip_accents(unicode_guess)
-                if stripped != unicode_guess:
+                stripped = strip_accents(trans.search_key)
+                if stripped != trans.search_key:
                     encodings["accentless"] = stripped
                     candidates.append(
                         CanonicalCandidate(lemma=stripped, encodings=encodings, sources=sources)
                     )
-
-            if not candidates:
+            else:
                 candidates.append(
                     CanonicalCandidate(lemma=ascii_lower, encodings=encodings, sources=sources)
                 )
 
         return candidates
+
+
+def _has_transliterate_step(steps: list[NormalizationStep], source: str) -> bool:
+    return any(s.operation == "greek_transliterate" and s.input == source for s in steps)
 
 
 def _betacode_variants(base: str, stripped: str) -> list[str]:

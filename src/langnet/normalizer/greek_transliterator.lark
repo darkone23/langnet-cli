@@ -1,0 +1,18 @@
+# Greek transliteration grammar (latinish → Greek letters/betacode)
+#
+# We prioritize digraphs before single letters. Input is expected to be
+# lowercase ASCII; callers should lowercase before parsing.
+#
+# Tokens produce simple letter units; Transformer will map to Greek.
+
+?start: token+
+
+token: DIGRAPH
+     | VOWEL_MACRON
+     | LETTER
+
+DIGRAPH: "ph" | "ch" | "th" | "ps" | "rh" | "ei" | "ai" | "oi" | "eu" | "au" | "ou" | "ui"
+VOWEL_MACRON: "ē" | "ê" | "ō" | "ô"
+LETTER: /[a-z]/
+
+%ignore /[^a-zēêōô]+/i
