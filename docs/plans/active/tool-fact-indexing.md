@@ -32,6 +32,8 @@ Implement an index-first query architecture where each tool emits canonical fact
 | Provenance granularity | Request-level | One URL produces many facts |
 | Index strategy | Lazy + manual refresh | No upfront cost, `--refresh` for stale data |
 | Tool-specific fields | Stay in tool-spec | Not promoted to universal layer |
+| Fact shape | Flat facts (anchor, predicate, value, qualifiers, source_json, confidence) | Fits DuckDB and aligns with RDF discipline without embedding provenance in IDs |
+| Scoping | Interpretations between forms and lexemes | Avoids attaching verb senses to pronoun readings (e.g., `ea`) |
 
 ## Prerequisites
 
@@ -215,6 +217,18 @@ CREATE TABLE fact_index (
 
 ## Phase 3: Adapter Fact Extraction (4-5 days)
 
+### 3.0 Updated extraction rules (from semantic triples doc)
+- Emit flat facts, not blobs: `(anchor, predicate, value, qual_json, source_json, confidence, extracted_at)`.
+- Anchor types to use consistently:
+  - `form:<surface>` — search term
+  - `interp:form:<surface>→lex:<lemma>#<pos>` — scoped reading
+  - `lex:<lemma>#<pos>` — headword/lemma bucket
+  - `sense:<lex>#<sense-key>` — sense node
+- Predicate set (universal): `has_interpretation`, `realizes_lexeme`, `pos`, `variant_form`, `has_sense`, `gloss`, plus morphological features via `qual_json` (case/number/gender/person/tense/voice/mood/degree/declension/conjugation) and tool-specific extras via `has_feature`. For pronunciation: `has_pronunciation`. For citations: `has_citation`.
+- Provenance: keep in `source_json` (tool, response_id/call_id, raw_ref) and DO NOT bake provenance into IDs.
+- Sense scope: senses attach to lexeme/sense nodes, not forms.
+- Variants: additional codeline lemmas use `variant_of`/`variant_form` on the lexeme anchor.
+
 ### 3.1 Update Diogenes Adapter
 
 ```python
@@ -323,6 +337,12 @@ TRANSFORM_RULES = {
 - [ ] `transform_to_claims()` function
 - [ ] Semantic reducer accepts Claims
 - [ ] Tests: fact-to-claim transformation
+
+### 5.3 Outstanding design items to settle
+- Stable ID policy (deterministic, no provenance in IDs) for `form/ interp/ lex/ sense` anchors.
+- Predicate registry constants to avoid typos; mapping tables per tool to universal predicates.
+- Evidence schema: required keys for `source_json`/`evidence` in triples (tool, response_id, call_id, optional raw_ref/raw_blob_ref).
+- Guidance on `has_form` literal for form nodes when opaque IDs are used internally.
 
 ---
 

@@ -520,16 +520,38 @@ class ToolPlanner:
                     ),
                 )
             )
+            cltk_extract_id = "cltk-extract-1"
+            calls.append(
+                _make_call(
+                    tool="extract.cltk.lexicon",
+                    call_id=cltk_extract_id,
+                    endpoint="internal://cltk/lexicon_extract",
+                    params={"source_call_id": cltk_fetch_id},
+                    opts=_opts(
+                        expected="extraction",
+                        priority=4,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_EXTRACT,
+                    ),
+                )
+            )
+            deps.append(
+                PlanDependency(
+                    from_call_id=cltk_fetch_id,
+                    to_call_id=cltk_extract_id,
+                    rationale="Extract Lewis lines/IPA from CLTK fetch",
+                )
+            )
             cltk_derive_id = "cltk-derive-1"
             calls.append(
                 _make_call(
                     tool="derive.cltk.ipa",
                     call_id=cltk_derive_id,
                     endpoint="internal://cltk/ipa_derive",
-                    params={"source_call_id": cltk_fetch_id},
+                    params={"source_call_id": cltk_extract_id},
                     opts=_opts(
                         expected="derivation",
-                        priority=4,
+                        priority=5,
                         optional=True,
                         stage=ToolStage.TOOL_STAGE_DERIVE,
                     ),
@@ -537,9 +559,9 @@ class ToolPlanner:
             )
             deps.append(
                 PlanDependency(
-                    from_call_id=cltk_fetch_id,
+                    from_call_id=cltk_extract_id,
                     to_call_id=cltk_derive_id,
-                    rationale="Derive IPA from CLTK fetch",
+                    rationale="Derive IPA from CLTK extraction",
                 )
             )
             claim_cltk_id = "claim-cltk-1"
@@ -550,10 +572,7 @@ class ToolPlanner:
                     endpoint="internal://claim/cltk_ipa",
                     params={"source_call_id": cltk_derive_id},
                     opts=_opts(
-                        expected="claim",
-                        priority=5,
-                        optional=True,
-                        stage=ToolStage.TOOL_STAGE_CLAIM,
+                        expected="claim", priority=6, optional=True, stage=ToolStage.TOOL_STAGE_CLAIM
                     ),
                 )
             )
@@ -796,16 +815,38 @@ class ToolPlanner:
                     ),
                 )
             )
+            cltk_extract_id = "cltk-extract-1"
+            calls.append(
+                _make_call(
+                    tool="extract.cltk.lexicon",
+                    call_id=cltk_extract_id,
+                    endpoint="internal://cltk/lexicon_extract",
+                    params={"source_call_id": cltk_fetch_id},
+                    opts=_opts(
+                        expected="extraction",
+                        priority=4,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_EXTRACT,
+                    ),
+                )
+            )
+            deps.append(
+                PlanDependency(
+                    from_call_id=cltk_fetch_id,
+                    to_call_id=cltk_extract_id,
+                    rationale="Extract Lewis lines/IPA from CLTK fetch",
+                )
+            )
             cltk_derive_id = "cltk-derive-1"
             calls.append(
                 _make_call(
                     tool="derive.cltk.ipa",
                     call_id=cltk_derive_id,
                     endpoint="internal://cltk/ipa_derive",
-                    params={"source_call_id": cltk_fetch_id},
+                    params={"source_call_id": cltk_extract_id},
                     opts=_opts(
                         expected="derivation",
-                        priority=4,
+                        priority=5,
                         optional=True,
                         stage=ToolStage.TOOL_STAGE_DERIVE,
                     ),
@@ -813,9 +854,9 @@ class ToolPlanner:
             )
             deps.append(
                 PlanDependency(
-                    from_call_id=cltk_fetch_id,
+                    from_call_id=cltk_extract_id,
                     to_call_id=cltk_derive_id,
-                    rationale="Derive IPA from CLTK fetch",
+                    rationale="Derive IPA from CLTK extraction",
                 )
             )
             claim_cltk_id = "claim-cltk-1"

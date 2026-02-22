@@ -9,6 +9,7 @@ from itertools import islice
 from pathlib import Path
 
 import duckdb
+import time
 from bs4 import BeautifulSoup
 from returns.result import Failure, Success
 
@@ -219,6 +220,16 @@ class CdslBuilder:
                         message="Index already exists; use --wipe or --force to rebuild",
                     )
 
+            logger.info(
+                "Building CDSL index",
+                extra={
+                    "dict": self.dict_id,
+                    "sqlite": str(self.sqlite_path),
+                    "output": str(self.output_path),
+                    "batch_size": self.batch_size,
+                    "limit": self.limit,
+                },
+            )
             self.output_path.parent.mkdir(parents=True, exist_ok=True)
             self._conn = duckdb.connect(str(self.output_path))
             for stmt in SCHEMA_SQL.strip().split(";"):
@@ -232,6 +243,15 @@ class CdslBuilder:
                 [self.dict_id, processed],
             )
             stats = replace(self.get_stats(), processed=processed)
+            logger.info(
+                "Finished CDSL index",
+                extra={
+                    "dict": self.dict_id,
+                    "output": str(self.output_path),
+                    "processed": processed,
+                    "size_mb": stats.size_mb,
+                },
+            )
             return BuildResult(
                 status=BuildStatus.SUCCESS,
                 output_path=self.output_path,
@@ -251,20 +271,23 @@ class CdslBuilder:
     def _load_entries(self) -> int:
         assert self._conn is not None
         sqlite_conn = sqlite3.connect(str(self.sqlite_path))
-        try:
-            cursor = sqlite_conn.execute(f"SELECT key, lnum, data FROM {self.dict_id}")
-            rows = cursor.fetchall()
-        finally:
-            sqlite_conn.close()
-
-        if self.limit is not None:
-            rows = rows[: self.limit]
-
+        cursor = sqlite_conn.execute(f"SELECT key, lnum, data FROM {self.dict_id}")
         total_entries = 0
-        for batch in _chunked(rows, self.batch_size):
+        fetched = 0
+        start_time = time.perf_counter()
+        while True:
+            rows = cursor.fetchmany(self.batch_size)
+            if not rows:
+                break
+            if self.limit is not None and fetched >= self.limit:
+                break
+
             entries_data = []
             headword_data = []
-            for key, lnum, raw_xml in batch:
+            for key, lnum, raw_xml in rows:
+                fetched += 1
+                if self.limit is not None and fetched > self.limit:
+                    break
                 try:
                     fallback_lnum = float(Decimal(lnum))
                 except Exception:
@@ -321,11 +344,13 @@ class CdslBuilder:
                 )
             total_entries += len(entries_data)
             logger.info(
-                "Inserted batch for %s: %s entries (total %s)",
+                "Inserted batch for %s: %s entries (total %s, elapsed_ms=%s)",
                 self.dict_id,
                 len(entries_data),
                 total_entries,
+                round((time.perf_counter() - start_time) * 1000, 2),
             )
+        sqlite_conn.close()
         return total_entries
 
     def get_stats(self) -> CdslStats:
