@@ -66,6 +66,20 @@ CREATE TABLE IF NOT EXISTS extraction_index (
 CREATE INDEX IF NOT EXISTS idx_extraction_tool ON extraction_index(tool, created_at);
 CREATE INDEX IF NOT EXISTS idx_extraction_canonical ON extraction_index(canonical);
 
+-- Derived facts after extractions
+CREATE TABLE IF NOT EXISTS derivation_index (
+    derivation_id VARCHAR PRIMARY KEY,
+    extraction_id VARCHAR NOT NULL,
+    tool VARCHAR NOT NULL,
+    kind VARCHAR NOT NULL,
+    canonical TEXT,
+    payload JSON,
+    derive_duration_ms INTEGER,  -- Content parsing/derivation time
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_derivation_tool ON derivation_index(tool, created_at);
+CREATE INDEX IF NOT EXISTS idx_derivation_canonical ON derivation_index(canonical);
+
 -- Universal claims emitted after derivation/transform
 CREATE TABLE IF NOT EXISTS claims (
     claim_id VARCHAR PRIMARY KEY,

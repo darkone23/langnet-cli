@@ -43,6 +43,11 @@ test *args:
 test-fast:
     nose2 -s tests --config tests/nose2.cfg -A '!integration'
 
+# Remove runtime caches (safe to delete)
+clean-cache:
+    rm -rf data/cache
+    mkdir -p data/cache
+
 # Format code with ruff
 ruff-format:
     ruff format src/ tests/ ./.justscripts/
@@ -82,3 +87,12 @@ fuzz-compare:
 # Legacy alias for tool fuzzing
 fuzz-all:
     just fuzz-tools
+
+read-codesketch-diogenes:
+    cat ./codesketch/src/langnet/diogenes/core.py
+    
+read-codesketch-whitakers:
+    cat ./codesketch/src/langnet/whitakers_words/core.py
+
+read-codesketch-cltk:
+    cat ./codesketch/src/langnet/classics_toolkit/core.py

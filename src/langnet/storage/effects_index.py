@@ -71,6 +71,7 @@ class RawResponseIndex:
         )
 
     def get(self, response_id: str) -> RawResponseEffect | None:
+        self._ensure_schema()
         row = self.conn.execute(
             """
             SELECT tool, call_id, endpoint, status_code, content_type,

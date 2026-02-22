@@ -13,7 +13,7 @@ def project_root() -> Path:
 
 def data_dir() -> Path:
     """
-    Default data directory for generated DuckDB files.
+    Default data directory for generated DuckDB files and caches.
     Respects LANGNET_DATA_DIR override, otherwise uses repo-local data/.
     """
     override = os.getenv("LANGNET_DATA_DIR")
@@ -31,15 +31,33 @@ def ensure_data_dir() -> Path:
     return path
 
 
+def build_dir() -> Path:
+    """
+    Directory for expensive, reproducible build artifacts (CTS/CDSL indexes).
+    """
+    path = ensure_data_dir() / "build"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def cache_dir() -> Path:
+    """
+    Directory for ephemeral caches safe to delete (normalization, plan cache).
+    """
+    path = ensure_data_dir() / "cache"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def default_cts_path() -> Path:
     """
     Default output path for CTS index.
     """
-    return ensure_data_dir() / "cts_urn.duckdb"
+    return build_dir() / "cts_urn.duckdb"
 
 
 def default_cdsl_path(dict_id: str) -> Path:
     """
     Default output path for a CDSL dictionary index.
     """
-    return ensure_data_dir() / f"cdsl_{dict_id.lower()}.duckdb"
+    return build_dir() / f"cdsl_{dict_id.lower()}.duckdb"
