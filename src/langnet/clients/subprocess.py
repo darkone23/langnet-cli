@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import importlib
 import logging
 from collections.abc import Iterable, Mapping
+
+import sh
 
 from .base import RawResponseEffect, _new_response_id
 
@@ -13,8 +14,7 @@ class SubprocessToolClient:
     """
     Wraps a local executable and emits stdout/stderr as a raw response effect.
 
-    Prefers the `sh` library for predictable shelling; falls back to stdlib
-    subprocess if unavailable.
+    Uses the `sh` library for predictable shelling.
     """
 
     def __init__(self, tool: str, command: Iterable[str]) -> None:
@@ -29,18 +29,13 @@ class SubprocessToolClient:
         for key, value in params.items():
             cmd.append(f"{key}={value}")
 
-        try:
-            sh_module = importlib.import_module("sh")
-            sh_command = sh_module.Command(cmd[0])
-            result = sh_command(*cmd[1:], _ok_code=list(range(0, 256)), _encoding=None)
-            body = result.stdout if hasattr(result, "stdout") else bytes(result)  # type: ignore[arg-type]
-            status_code = result.exit_code if hasattr(result, "exit_code") else 0  # type: ignore[attr-defined]
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("sh_subprocess_unavailable_fallback", extra={"error": str(exc)})
-            subprocess = importlib.import_module("subprocess")
-            proc = subprocess.run(cmd, capture_output=True, check=False)
-            body = proc.stdout if proc.stdout else proc.stderr
-            status_code = proc.returncode
+        sh_cmd = sh.Command(cmd[0])
+        result = sh_cmd(
+            *cmd[1:], _ok_code=list(range(0, 256)), _encoding="utf-8", _decode_errors="ignore"
+        )
+        raw_out = result.stdout if hasattr(result, "stdout") else result
+        body = raw_out if isinstance(raw_out, (bytes, bytearray)) else str(raw_out).encode("utf-8")
+        status_code = result.exit_code if hasattr(result, "exit_code") else 0  # type: ignore[attr-defined]
 
         return RawResponseEffect(
             response_id=_new_response_id(),

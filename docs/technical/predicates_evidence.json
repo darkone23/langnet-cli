@@ -1,0 +1,25 @@
+{
+  "anchors": [
+    "form:<surface>",
+    "interp:form:<surface>→lex:<lemma>#<pos>",
+    "lex:<lemma>#<pos>",
+    "sense:<lex>#<sense-key>"
+  ],
+  "predicates": {
+    "linking": ["has_interpretation", "realizes_lexeme"],
+    "lexical": ["has_sense", "gloss", "variant_form", "variant_of", "has_pronunciation", "has_citation", "has_frequency", "has_form"],
+    "morphology": ["has_pos", "has_gender", "has_case", "has_number", "has_person", "has_tense", "has_voice", "has_mood", "has_degree", "has_declension", "has_conjugation"],
+    "extras": ["has_feature"]
+  },
+  "evidence_fields": [
+    "source_tool",
+    "call_id",
+    "response_id",
+    "extraction_id",
+    "derivation_id",
+    "claim_id",
+    "raw_ref",
+    "raw_blob_ref",
+    "source_ref"
+  ]
+}

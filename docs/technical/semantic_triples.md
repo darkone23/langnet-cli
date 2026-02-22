@@ -1,6 +1,6 @@
 # Semantic Triples: Cross-Language Design (LAT/GRC/SAN)
 
-Goal: represent tool outputs as evidence-backed triples so downstream reducers can answer “tell me about X” with clear provenance. Keep raw payloads intact; triples are a projection, not a lossy replacement. Subjects/objects must stay clean graph nodes; provenance is attached alongside, not embedded.
+Goal: represent tool outputs as evidence-backed triples so downstream reducers can answer “tell me about X” with clear provenance. Keep raw payloads intact; triples are a projection, not a lossy replacement. Subjects/objects must stay clean graph nodes; provenance is attached alongside, not embedded. See also `docs/technical/triples_txt.md` for the flat-fact anchor/predicate rules this document aligns with, and `docs/technical/predicates_evidence.md` for the canonical predicate/evidence list.
 
 ## Core model
 - **Node identity**
@@ -8,17 +8,24 @@ Goal: represent tool outputs as evidence-backed triples so downstream reducers c
   - `form`: surface/inflected form (e.g., `ea`, `lupus`, `ἀνήρ`). Internally mint stable ids (hash of form + headword + tool + features) but do **not** encode provenance in the id.
   - `sense`: literal gloss text from the tool.
   - Tool/source info belongs in provenance metadata, not in the node id.
-- **Predicates (language-agnostic)**
-  - Lexical: `inflection_of`, `variant_of`, `has_pos`, `has_gender`, `has_case`, `has_number`, `has_person`, `has_tense`, `has_voice`, `has_mood`, `has_degree`, `has_declension`, `has_conjugation`, `has_pronunciation`, `has_sense`, `has_frequency`.
-  - Morph bundle (optional): `has_feature` with a map for tool-specific extras to avoid losing information.
+- **Predicates (language-agnostic)** — canonical set to use across tools
+  - Lexical: `has_interpretation` (form→interp), `realizes_lexeme` (interp→lex), `variant_of`, `variant_form`, `has_sense`, `gloss`, `has_pronunciation`, `has_citation`, `has_frequency`.
+  - Morph bundle: `has_pos`, `has_gender`, `has_case`, `has_number`, `has_person`, `has_tense`, `has_voice`, `has_mood`, `has_degree`, `has_declension`, `has_conjugation`; use `has_feature` with a map for tool-specific extras to avoid losing information.
   - Evidence linkage is separate metadata (see Provenance); do not overload subject/object.
+
+### Quick predicate/evidence reference
+
+See `docs/technical/predicates_evidence.md` for the canonical list and evidence schema. Handlers/tests should import those constants to keep memoization stable.
 - **Objects**
   - Prefer normalized codes that work across LAT/GRC/SAN (`noun`, `verb`, `pronoun`, `ADJ`, cases like `NOM/ACC`, numbers `S/P`, genders `M/F/N/C`, persons `1/2/3`, tenses `PRES/IMP/PERF/FUT/FUTP/PLUP`, voices `ACTIVE/PASSIVE/MIDDLE`, moods `IND/SUB/IMP/INF/PPL`, degrees `POS/COMP/SUPER`).
   - If a tool emits a value outside the universal set, place it in `has_feature` as a literal and keep the raw string.
 
-## Provenance
-- Each claim carries a `provenance_chain` (existing effect chain). For triples, attach an `evidence` block alongside (not in subject/object):
-  - `source_tool` (e.g., `whitaker`, `diogenes`, `cltk`), `response_id`, `call_id`, optional `raw_ref` (line snippet/offset), and `raw_blob_ref` (`raw_text`/`raw_html` key).
+## Provenance and Evidence (standard schema)
+- Each claim carries a `provenance_chain` (effect chain). For triples, attach an `evidence` block alongside (not in subject/object):
+  - `source_tool` (e.g., `whitaker`, `diogenes`, `cltk`)
+  - `call_id`, `response_id`, `extraction_id`, `derivation_id`, `claim_id`
+  - `raw_ref` (line snippet/offset) and/or `raw_blob_ref` (`raw_text`/`raw_html` key)
+  - `source_ref` when tools expose stable entry IDs (e.g., `mw:217497`)
 - The claim payload keeps `raw_text`/`raw_html` and parsed structures; triples are stored alongside with their `evidence`.
 
 ## Whitaker projection (example: “ea”)

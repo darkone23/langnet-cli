@@ -98,5 +98,5 @@ read-codesketch-cltk:
     cat ./codesketch/src/langnet/classics_toolkit/core.py
 
 # Dump tool claims/triples for a word (Latin) with no stubs/no cache. Optional tool filter (exact prefix), use "all" to run everything.
-triples-dump tool word:
-	python3 ./.justscripts/triples_dump.py "{{tool}}" "{{word}}"
+triples-dump lang word tool="all":
+    python3 ./.justscripts/triples_dump.py "{{lang}}" "{{word}}" "{{tool}}"

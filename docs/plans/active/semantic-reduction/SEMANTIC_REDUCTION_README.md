@@ -1,105 +1,50 @@
-# Semantic Reduction Project - Complete Documentation
+# Semantic Reduction — Canonical README
 
-## 📋 Project Status
-**Phase 0 Complete ✅** | **Phase 1 Ready** | **Phase 2 modules + tests exist (not executed here)** | **Last Updated**: 2026-02-15
+**Last Updated**: 2026-02-15  
+**Scope**: Status, priorities, and how to start. Use this instead of the older status/checklist docs.
 
-## 🎯 Goal
-Implement semantic reduction pipeline to convert raw lexical evidence into structured semantic output with:
-- Stable concept identifiers (semantic constants)
-- Witness traceability (source references)
-- Epistemic mode support (open vs skeptic)
-- Deterministic clustering
+## Current State
+- Reference implementation exists in `codesketch/src/langnet/semantic_reducer/` (WSU extraction, similarity, clustering); ~80 tests passing there.
+- V1 schema evolution landed (source_ref/domains/register/confidence fields added; CDSL populates source_ref). Phase 0 QA passed in prior work.
+- Semantic format in `langnet-cli semantic` still uses the legacy converter; the reducer pipeline is not wired into runtime yet.
+- Similarity is token/Jaccard-based; thresholds are OPEN=0.15 / SKEPTIC=0.25. Embedding-based similarity and ranking are TODO.
 
-## 🔍 Critical Discovery
-**Design vs Reality Gap**: Current schema doesn't match design assumptions. Need schema evolution first.
+## Key Gaps / Next Moves
+1) **Similarity quality**: Add embedding-backed similarity (e.g., glove-wiki-gigaword-100) and hybrid scoring; replace Jaccard-only scoring.
+2) **Gloss cleaning**: Strip citation abbreviations (CDSL/Heritage) before similarity.
+3) **Sense ranking**: Rank by witness count + source priority; consider domain/frequency when available.
+4) **Runtime wiring**: Replace legacy semantic converter with reducer pipeline; ensure deterministic bucket IDs and evidence preservation.
+5) **Fixtures/tests**: Golden snapshots for agni/lupus/logos; integration tests to assert deterministic buckets and performance bounds.
 
-### **Required Schema Changes**
-```python
-# Add to DictionaryDefinition in src/langnet/schema.py
-source_ref: str | None = None  # "mw:217497"
-domains: list[str] = field(default_factory=list)
-register: list[str] = field(default_factory=list)
-confidence: float | None = None
-```
+## Quickstart (dev)
+- Environment: `devenv shell langnet-cli`
+- Sanity check (legacy semantic path): `langnet-cli semantic san agni --output json`
+- Inspect codesketch reference: `codesketch/src/langnet/semantic_reducer/` (types, normalizer, similarity, clusterer, pipeline)
+- Useful tests (once wired): `just test tests.test_semantic_reduction_clustering` (may require assets)
 
-## 📁 Documentation Structure
+## Performance Snapshot (codesketch runs)
+| Language | Word | WSUs | Buckets | Multi-witness |
+|----------|------|------|---------|---------------|
+| Sanskrit | agni | 10 | 9 | 1 |
+| Sanskrit | deva | 38 | 24 | 6 |
+| Latin | lupus | 19 | 17 | 2 |
+| Greek | logos | 65 | 65 | 0 |
 
-### **Start Here** (Read in Order)
-1. **[Getting Started](semantic-reduction-getting-started.md)** - First 30 minutes guide
-2. **[Project Summary](semantic-reduction-project-summary.md)** - Complete overview
-3. **[Current Status](semantic-reduction-current-status.md)** - Implementation readiness
+## Adapter Coverage (reference)
+- **CDSL**: definitions with stable `source_ref`; WSU extraction works after schema enhancement.
+- **Diogenes**: dictionary blocks yield WSUs; `source_ref` synthetic.
+- **Heritage**: definitions yield WSUs; `source_ref` synthetic.
+- **Whitakers**: definitions yield WSUs; `source_ref` synthetic.
 
-### **Planning Documents**
-4. **[Migration Plan](../../todo/semantic-reduction/semantic-reduction-migration-plan.md)** - 5-phase step-by-step
-5. **[Roadmap](../../todo/semantic-reduction/semantic-reduction-roadmap.md)** - Detailed implementation phases
-6. **[Gap Analysis](../../todo/semantic-reduction/semantic-reduction-gap-analysis.md)** - Architecture issues
-7. **[Adapter Requirements](../../todo/semantic-reduction/semantic-reduction-adapter-requirements.md)** - WSU extraction specs
-8. **[Similarity Spec](../../todo/semantic-reduction/semantic-reduction-similarity-spec.md)** - Algorithm details
+## Work Plan Pointers
+- Implementation roadmap & migration steps: `docs/plans/todo/semantic-reduction/semantic-reduction-migration-plan.md`, `semantic-reduction-roadmap.md`
+- Gap details and algorithm specs: `semantic-reduction-gap-analysis.md`, `semantic-reduction-similarity-spec.md`, `semantic-reduction-adapter-requirements.md`
+- Clustering/classifier design: `docs/technical/design/classifier-and-reducer.md`
 
-### **Handoff Support**
-9. **[Handoff Checklist](semantic-reduction-handoff-checklist.md)** - Completeness verification
+## Success Criteria (when rewired)
+- Semantic format uses reducer pipeline with deterministic bucket IDs.
+- Similarity/clustering produce stable buckets (OPEN/SKEPTIC) with evidence retained.
+- Benchmarks: <500ms typical query; deterministic outputs; fixture tests green.
 
-## 🚀 Quick Start Implementation
-
-### **Phase 0: Schema Enhancement** (Week 1-2)
-1. **Update schema** (`src/langnet/schema.py`)
-2. **Enhance CDSL adapter** to populate `source_ref`
-3. **Create tests** for new functionality
-4. **Verify** no breaking changes
-
-### **Command to Test**
-```bash
-devenv shell just -- cli semantic san agni --output json
-```
-
-## 📊 Success Metrics
-
-### **Phase 0 Complete When**
-- [x] Schema updated with new fields
-- [x] CDSL adapter populates source_ref
-- [x] Sanskrit tests pass with MW IDs
-- [x] No breaking changes to existing API
-
-### **Project Complete When**
-- [ ] Semantic format uses actual reduction
-- [ ] Performance < 500ms for typical queries
-- [ ] Deterministic outputs
-- [ ] All languages supported
-- [ ] Evidence inspection available
-- [ ] Mode switching operational
-
-## ⏱️ Timeline
-**Total**: 9-12 weeks
-- Phase 0: 1-2 weeks (schema + CDSL)
-- Phase 1: 1-2 weeks (WSU extraction)
-- Phase 2: 2 weeks (similarity engine)
-- Phase 3: 2 weeks (clustering)
-- Phase 4: 2 weeks (constants)
-- Phase 5: 1-2 weeks (integration)
-
-## ⚠️ Key Risks & Mitigations
-
-| Risk | Mitigation |
-|------|------------|
-| Performance degradation | Profile early, add caching, legacy fallback |
-| Non-deterministic outputs | Strict sorting rules, extensive testing |
-| Adapter compatibility | Optional fields, gradual updates |
-| Constant registry bloat | Automatic merging, size limits |
-
-## 🤝 Handoff Ready
-✅ **Yes** - Another developer can pick this up with:
-- Complete planning documentation
-- Clear implementation path
-- Risk mitigation strategies
-- Getting started guide
-- Testable success criteria
-
-## 📞 Next Steps
-1. **Review** `getting-started.md` for immediate tasks
-2. **Execute** Phase 0 schema changes
-3. **Follow** migration plan for subsequent phases
-4. **Update** documentation as implementation progresses
-
----
-
-*Planning complete. Implementation artifacts exist through Phase 2; run semantic-reduction tests in a prepared environment before relying on the status.*
+## Notes
+- This README supersedes older status/checklist/QA files in this folder. If you need historical detail, check git history.

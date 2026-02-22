@@ -16,7 +16,7 @@
 | `query-planning.md` | -1, 0 | User input → NormalizedQuery → ToolPlan |
 | `tool-response-pipeline.md` | 1-5 | Tool Call → Raw → Extract → Derive → Claim |
 | `hydration-reduction.md` | 4.5, 6 | Hydrate references → Reduce to buckets |
-| `tool-fact-architecture.md` | Types | Tool-specific fact types, transformation rules |
+| `tool-fact-architecture.md` | Types | Tool-specific fact types, transformation rules (see `../predicates_evidence.md` for predicates/evidence) |
 | `entry-parsing.md` | 3, 4 | Lark grammars for extraction/derivation |
 | `classifier-and-reducer.md` | 6 | Semantic reduction, clustering |
 | `witness-contracts.md` | Provenance | Source contracts, witness expectations |

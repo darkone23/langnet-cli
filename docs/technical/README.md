@@ -7,6 +7,7 @@ This directory contains technical references for the core system and its backend
 - **[backend/](backend/README.md)** — Engine, Diogenes, Cologne/CDSL, and Whitaker’s Words specifics.
 - **[design/](design/)** — Semantic reduction design notes and drafts.
 - **[opencode/](opencode/)** — Multi-model AI workflow guidance.
+- **[predicates_evidence.md](predicates_evidence.md)** — Canonical predicates/anchors/evidence schema for triples/claims (JSON export: `predicates_evidence.json`).
 
 ## When to Read What
 - Start with **ARCHITECTURE.md** to understand the request flow and schema boundaries.
@@ -17,3 +18,4 @@ This directory contains technical references for the core system and its backend
 - Update the relevant backend README when interface or normalization rules change.
 - Keep examples in sync with `src/langnet/schema.py` to avoid drift in output expectations.
 - If you add a new component, create a short README here and link it from `backend/README.md`.
+- Keep handlers/tests aligned to `predicates_evidence.md` to avoid schema/memoization drift.

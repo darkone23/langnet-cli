@@ -1,19 +1,13 @@
 # Tool Fact Architecture: Two-Layer Proto Design
 
-**Status**: Draft - See `tool-response-pipeline.md` for refined pipeline
+**Status**: Draft — superseded by stage boundaries in `tool-response-pipeline.md` and predicate/evidence rules in `docs/technical/predicates_evidence.md`
 **Date**: 2026-02-15
 **Priority**: HIGH (Foundational architecture)
-**Related**: `tool-response-pipeline.md` (5-stage pipeline), `classifier-and-reducer.md`, `tool-capabilities.md`
+**Related**: `tool-response-pipeline.md` (5-stage pipeline), `classifier-and-reducer.md`, `tool-capabilities.md`, `docs/technical/semantic_triples.md`, `docs/technical/triples_txt.md`
 
 ## Note
 
-This document defines fact types and the transformation layer. The **pipeline architecture** has been refined in `tool-response-pipeline.md` to include explicit stages:
-
-```
-Tool Call → Raw Response → Extractions → Derivations → Claims
-```
-
-The fact types defined here (CDSLSenseFact, DiogenesMorphFact, etc.) are **Derivations** in the refined pipeline. The transformation rules remain valid.
+Use this document for tool-specific fact type sketches. For the stage model, see `tool-response-pipeline.md`. For predicates/evidence/anchors used in claims/triples, see `docs/technical/semantic_triples.md`, `docs/technical/triples_txt.md`, and `docs/technical/predicates_evidence.md`. Fact types below map to **Derivations** in the staged pipeline.
 
 ## Executive Summary
 

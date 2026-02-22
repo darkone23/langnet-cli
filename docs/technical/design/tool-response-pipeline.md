@@ -5,6 +5,8 @@
 **Priority**: FOUNDATIONAL
 **Related**: `query-planning.md` (Stage -1 and 0), `tool-fact-architecture.md` (Fact types)
 
+**Status note**: This document describes the stage boundaries. For the current executor/handler state and next actions, see `docs/handoff/tool-execution-and-triples.md`.
+
 ## Executive Summary
 
 This document defines the pipeline stages after query planning:
@@ -421,82 +423,6 @@ Derivation (unchanged) → New Claim (updated transform)
 ```
 
 Cost: Only re-transform, don't re-parse anything.
-
-## V1 vs V2 Decision
-
-### V1 (Shim Current Architecture)
-
-Pros:
-- Incremental migration
-- Existing tests still work
-- Faster to initial value
-
-Cons:
-- Provenance chain incomplete
-- Mixed concerns persist
-- Technical debt compounds
-
-### V2 (Clean Slate)
-
-Pros:
-- Clear contracts per stage
-- Full provenance chain
-- Each stage independently testable
-- Re-parsing enables iteration
-
-Cons:
-- Larger upfront effort
-- Existing adapters need rewrite
-- Migration path for users
-
-**Recommendation**: Start V2 as parallel implementation. Run both pipelines side-by-side until V2 is proven, then deprecate V1.
-
-## Implementation Phases
-
-### Phase 1: Define Proto Schemas (1-2 days)
-
-Create proto files for each stage:
-
-- `tool_call.proto` - ToolCall, RequestParams
-- `raw_response.proto` - RawResponse, ResponseMetadata
-- `extraction.proto` - Extraction, ExtractionMetadata
-- `tools/*_spec.proto` - Tool-specific derivations
-- `claim.proto` - Claim, ProvenanceChain
-
-### Phase 2: Implement Storage Layer (2-3 days)
-
-- DuckDB schema for all 5 stages
-- Compression for raw responses
-- Indexes for common queries
-- Migration utilities
-
-### Phase 3: Build Pipeline Runner (3-4 days)
-
-- `PipelineRunner` class that orchestrates all stages
-- Stage interfaces (extractors, derivators, transformers)
-- Error handling and retries
-- Progress tracking
-
-### Phase 4: Implement Per-Tool Extractors (2-3 days per tool)
-
-- CDSL XML extractor
-- Diogenes HTML extractor
-- Heritage JSON extractor
-- Whitakers text extractor
-- CLTK adapter
-
-### Phase 5: Implement Per-Tool Derivators (3-4 days per tool)
-
-- CDSL sense/entry derivator
-- Diogenes dict/citation derivator
-- Heritage morphology derivator
-- Whitakers analysis derivator
-
-### Phase 6: Build V2 API/CLI (2-3 days)
-
-- New endpoints that use V2 pipeline
-- Side-by-side with V1
-- Feature flag for gradual rollout
 
 ## Related Documents
 

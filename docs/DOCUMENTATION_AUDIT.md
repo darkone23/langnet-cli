@@ -3,17 +3,17 @@
 Purpose: capture the current documentation state, highlight drift, and define next actions before the next planning cycle. This is a living tracker—update it as cleanup lands.
 
 ## Current Observations
-- **Plan layout normalized**: Semantic-reduction plans live under `docs/plans/active/semantic-reduction/`, `docs/plans/todo/semantic-reduction/`, and `docs/plans/completed/semantic-reduction/`.
-- **Status caveats added**: Semantic-reduction docs note Phase 0–2 modules/tests exist; tests were not executed here (use `just test tests.test_semantic_reduction_clustering` inside the devenv shell).
-- **Legacy note removed**: `docs/TODO.md` was deleted; any remaining nuggets should already exist in semantic-reduction plan files.
-- **Entry-point duplication trimmed**: `docs/README.md` is now an index that defers to the root `README.md`.
-- **Output expectations**: `OUTPUT_GUIDE.md` now includes per-language sample responses and display rules; real environment snapshots would still help.
+- **Handoff consolidation**: Tool executor + triples status is now canonical at `docs/handoff/tool-execution-and-triples.md` with an index in `docs/handoff/README.md`. Older handoff fragments were removed.
+- **Scoped triples alignment**: `docs/technical/semantic_triples.md` now points to `docs/technical/triples_txt.md` for anchor/predicate rules; the active plan `docs/plans/active/tool-fact-indexing.md` references both and the handoff.
+- **Plan layout**: Semantic-reduction plans remain split across multiple status/checklist files under `docs/plans/active/semantic-reduction/`; several are overlapping (current-status, gaps, phase0-qa, getting-started). Needs consolidation into one status + one getting-started.
+- **Output expectations**: `OUTPUT_GUIDE.md` includes per-language sample responses and display rules; live snapshots would still help.
+- **Entry-point duplication trimmed**: `docs/README.md` defers to the root `README.md`; plan structure guidance lives in `docs/plans/README.md`.
 
 ## High-Priority Next Steps
-1. **Verify semantic-reduction claims** (@architect @auditor): run the semantic-reduction tests via `devenv shell just -- test tests.test_semantic_reduction_clustering`; adjust statuses based on results.
-2. **Add feature-area discipline** (@scribe): create subfolders for other workstreams (`skt/`, `whitakers`, `dico`, `pedagogy`, `infra`) as new plans appear, with a one-page index per area.
-3. **Capture real outputs** (@coder @scribe): replace/sample-augment `OUTPUT_GUIDE.md` with live CLI/API responses (Latin, Greek, Sanskrit) once backends are available; ensure foster codes and citations are shown in examples.
-4. **Prune redundant semantic-reduction text** (@auditor): after verification, merge or remove overlapping status docs to keep one concise status and one plan index.
+1. **Semantic-reduction doc merge** (@auditor @scribe): DONE — consolidated into `SEMANTIC_REDUCTION_README.md` (status/priorities) + concise `semantic-reduction-getting-started.md`; redundant status/checklist/QA files removed.
+2. **Predicate/evidence constants surfaced** (@architect @scribe): add a small constants table to `docs/technical/semantic_triples.md` (mirroring `tool-fact-indexing.md`) and ensure handlers refer to it.
+3. **Capture real outputs** (@coder @scribe): augment `OUTPUT_GUIDE.md` with live CLI/API snapshots (LAT/GRC/SAN) once backends are available; include foster codes and citations.
+4. **Feature-area discipline** (@scribe): keep new plans inside feature subfolders (`skt/`, `whitakers`, `dico`, `pedagogy`, `infra`); add a one-page index per area as they grow.
 
 ## Reliable Launch Points (use these first)
 - `docs/GETTING_STARTED.md` — setup and first queries.

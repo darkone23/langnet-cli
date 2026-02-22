@@ -4,12 +4,13 @@ import time
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-import logging
 
+import structlog
 from query_spec import ExecutedPlan, ToolCallSpec, ToolPlan, ToolResponseRef, ToolStage
 
 from langnet.clients.base import RawResponseEffect, ToolClient
 from langnet.execution.effects import ClaimEffect, DerivationEffect, ExtractionEffect
+from langnet.logging import setup_logging
 from langnet.planner.core import stable_plan_hash
 from langnet.storage.claim_index import ClaimIndex
 from langnet.storage.derivation_index import DerivationIndex
@@ -98,7 +99,8 @@ def execute_plan_staged(  # noqa: PLR0913
     handlers registered in ToolRegistry, and all effects are persisted
     to DuckDB indices with memoizable plan_hash reuse.
     """
-    logger = logging.getLogger(__name__)
+    setup_logging()
+    logger = structlog.get_logger(__name__)
     plan_hash = plan.plan_hash or stable_plan_hash(plan)
     plan.plan_hash = plan_hash
 

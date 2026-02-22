@@ -4,13 +4,13 @@
 **Owner**: Core team (@architect for design, @coder for build, @sleuth for debugging, @scribe for docs, @auditor for review)  
 **Scope**: Execute ToolPlans end-to-end, capture effects (fetch/parse/derive), and emit normalized semantic claims without confidence scores.
 
+**Status snapshot**: See `docs/handoff/tool-execution-and-triples.md` for the canonical “what works vs what’s next” view.
+
 ## Context (What Exists Today)
-- Normalization + canonicalization works: `langnet-cli normalize` hits diogenes/heritage/whitaker via the canonical pipeline, capturing raw responses and extractions into DuckDB (`RawResponseIndex`, `ExtractionIndex`, `NormalizationService` + `CanonicalPipeline`).
-- Tool planning works: `ToolPlanner` builds per-language DAGs (fetch → extract → derive → claim) with stable hashes; `langnet-cli plan` renders them.
-- Execution sketch exists: `execute_plan` runs ToolPlans over `ToolClient`s, stores raw responses, and records executed plan refs; there is no stage-aware parsing/deriving/claiming.
-- Storage: DuckDB schema for raw responses, extractions, claims, plan/cache indices; plan/response index round-trips are tested.
-- Clients: HTTP/subprocess/file wrappers plus capturing shim; adapters for diogenes word_list/parse and whitaker are normalization-focused only.
-- Missing: stage-aware executor, per-tool fetch runners mapped to planned tool names, parse/derive functions for `internal://...`, claim emitters, and effect journaling beyond raw responses.
+- Staged executor exists: fetch → extract → derive → claim with plan-hash caching, deterministic effect IDs, and registry dispatch (stubs available).
+- Current handlers: Diogenes path is real; Whitaker + CLTK run for Latin but triple projection is rough; Heritage/CDSL still stubbed. Registry supports stub fallback or failure on missing handlers.
+- Storage: DuckDB tables/indices for raw/extraction/derivation/claim plus plan/cache indices; data layout splits `data/build` vs `data/cache`; `just clean-cache` wipes caches.
+- CLI/tests: `plan-exec` runs normalize → plan → execute; executor + diogenes flow is covered in `tests/test_execution_executor.py`. Fixture-backed tests for other tools are pending.
 
 ## Goal
 Deliver a deterministic executor that runs ToolPlans, captures all effects (fetch, parse, derive, claim), reuses/memoizes via DuckDB, and produces normalized semantic claims (triples with provenance) ready for downstream semantic reduction. No confidence fields added to raw dictionary extractions.

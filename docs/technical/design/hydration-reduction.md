@@ -3,7 +3,7 @@
 **Status**: Draft
 **Date**: 2026-02-15
 **Priority**: FOUNDATIONAL
-**Related**: `tool-response-pipeline.md`, `query-planning.md`
+**Related**: `tool-response-pipeline.md`, `query-planning.md`, `docs/technical/predicates_evidence.md`
 
 ## The Distinction
 
@@ -12,7 +12,7 @@
 | **Hydration** | Expand | CTS URN → full citation text |
 | **Reduction** | Condense | 10 glosses → 3 buckets |
 
-These are **opposite** operations and must not be conflated.
+These are **opposite** operations and must not be conflated. Hydration sits between Derivations and Claims; Reduction consumes Claims (triples).
 
 ## Current Problem
 
