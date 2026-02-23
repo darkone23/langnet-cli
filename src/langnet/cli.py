@@ -492,6 +492,26 @@ class BuildCdslConfig:
     force: bool
 
 
+@dataclass
+class BuildGaffiotConfig:
+    source_path: str | None
+    output: str | None
+    limit: int | None
+    batch_size: int
+    wipe: bool
+    force: bool
+
+
+@dataclass
+class BuildDicoConfig:
+    source_dir: str | None
+    output: str | None
+    limit: int | None
+    batch_size: int
+    wipe: bool
+    force: bool
+
+
 def _build_cdsl_impl(config: BuildCdslConfig) -> None:
     _ensure_logging()
     from langnet.databuild.cdsl import CdslBuildConfig, CdslBuilder  # noqa: PLC0415
@@ -510,6 +530,44 @@ def _build_cdsl_impl(config: BuildCdslConfig) -> None:
         force_rebuild=config.force,
     )
     builder = CdslBuilder(builder_config)
+    result = builder.build()
+    _print_build_result(result)
+
+
+def _build_gaffiot_impl(config: BuildGaffiotConfig) -> None:
+    _ensure_logging()
+    from langnet.databuild.gaffiot import GaffiotBuildConfig, GaffiotBuilder  # noqa: PLC0415
+    from langnet.databuild.paths import default_gaffiot_path  # noqa: PLC0415
+
+    output_path = Path(config.output).expanduser() if config.output else default_gaffiot_path()
+    builder_config = GaffiotBuildConfig(
+        source_path=Path(config.source_path).expanduser() if config.source_path else None,
+        output_path=output_path,
+        limit=config.limit,
+        batch_size=config.batch_size,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+    )
+    builder = GaffiotBuilder(builder_config)
+    result = builder.build()
+    _print_build_result(result)
+
+
+def _build_dico_impl(config: BuildDicoConfig) -> None:
+    _ensure_logging()
+    from langnet.databuild.dico import DicoBuildConfig, DicoBuilder  # noqa: PLC0415
+    from langnet.databuild.paths import default_dico_path  # noqa: PLC0415
+
+    output_path = Path(config.output).expanduser() if config.output else default_dico_path()
+    builder_config = DicoBuildConfig(
+        source_dir=Path(config.source_dir).expanduser() if config.source_dir else None,
+        output_path=output_path,
+        limit=config.limit,
+        batch_size=config.batch_size,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+    )
+    builder = DicoBuilder(builder_config)
     result = builder.build()
     _print_build_result(result)
 
@@ -958,6 +1016,97 @@ def build_cdsl(  # noqa: PLR0913
         force=force,
     )
     _build_cdsl_impl(config)
+
+
+@databuild.command("gaffiot")
+@click.option(
+    "--source",
+    "source_path",
+    type=click.Path(),
+    default=None,
+    help="Path to gaffiot-unicode.xml (defaults to ~/digital-gaffiot-json/gaffiot-unicode.xml).",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output DuckDB path (defaults to data/build/lex_gaffiot.duckdb)",
+)
+@click.option("--limit", type=int, help="Limit rows for testing.")
+@click.option(
+    "--batch-size",
+    type=int,
+    default=500,
+    show_default=True,
+    help="Rows per batch while inserting.",
+)
+@click.option(
+    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_gaffiot(  # noqa: PLR0913
+    source_path: str | None,
+    output: str | None,
+    limit: int | None,
+    batch_size: int,
+    wipe: bool,
+    force: bool,
+):
+    """Build Gaffiot French→Latin index."""
+    config = BuildGaffiotConfig(
+        source_path=source_path,
+        output=output,
+        limit=limit,
+        batch_size=batch_size,
+        wipe=wipe,
+        force=force,
+    )
+    _build_gaffiot_impl(config)
+
+
+@databuild.command("dico")
+@click.option(
+    "--source-dir",
+    type=click.Path(),
+    default=None,
+    help="Path to DICO HTML directory (defaults to ~/langnet-tools/sanskrit-heritage/webroot/htdocs/DICO/).",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output DuckDB path (defaults to data/build/lex_dico.duckdb)",
+)
+@click.option("--limit", type=int, help="Limit rows for testing.")
+@click.option(
+    "--batch-size",
+    type=int,
+    default=500,
+    show_default=True,
+    help="Rows per batch while inserting.",
+)
+@click.option(
+    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_dico(  # noqa: PLR0913
+    source_dir: str | None,
+    output: str | None,
+    limit: int | None,
+    batch_size: int,
+    wipe: bool,
+    force: bool,
+):
+    """Build DICO French→Sanskrit index."""
+    config = BuildDicoConfig(
+        source_dir=source_dir,
+        output=output,
+        limit=limit,
+        batch_size=batch_size,
+        wipe=wipe,
+        force=force,
+    )
+    _build_dico_impl(config)
 
 
 def _build_exec_clients(plan, diogenes_endpoint: str, use_stubs: bool) -> dict[str, object]:

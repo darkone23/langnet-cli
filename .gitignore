@@ -32,3 +32,4 @@ tmp/
 playing_with_aisuite/
 
 ruff-todo/
+vendor/

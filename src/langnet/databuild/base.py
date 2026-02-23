@@ -36,7 +36,17 @@ class CdslStats:
     processed: int | None = None
 
 
-BuildStats = CTSStats | CdslStats | BuildErrorStats
+@dataclass(frozen=True)
+class LexiconStats:
+    lex_id: str
+    path: str
+    entry_count: int | None = None
+    headword_count: int | None = None
+    sense_count: int | None = None
+    size_mb: float | None = None
+
+
+BuildStats = CTSStats | CdslStats | LexiconStats | BuildErrorStats
 StatsType = TypeVar("StatsType", bound=BuildStats)
 
 logger = logging.getLogger(__name__)

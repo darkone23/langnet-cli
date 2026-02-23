@@ -56,6 +56,7 @@ in
 
   # https://devenv.sh/languages/
   # languages.rust.enable = true;
+  languages.c.enable = true;
   languages.python.enable = true;
   languages.python.package = pkgs.python311; # the version that currently works with CLTK
   languages.python.venv.enable = true;

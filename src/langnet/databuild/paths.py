@@ -61,3 +61,19 @@ def default_cdsl_path(dict_id: str) -> Path:
     Default output path for a CDSL dictionary index.
     """
     return build_dir() / f"cdsl_{dict_id.lower()}.duckdb"
+
+
+def default_gaffiot_path() -> Path:
+    """
+    Default output path for the Gaffiot French→Latin index.
+    """
+    # built from EPWING -> tei-xml
+    return build_dir() / "lex_gaffiot.duckdb"
+
+
+def default_dico_path() -> Path:
+    """
+    Default output path for the DICO Sanskrit→French index.
+    """
+    # built from heritage htdocs
+    return build_dir() / "lex_dico.duckdb"
