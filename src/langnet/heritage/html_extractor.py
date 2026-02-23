@@ -147,14 +147,12 @@ class HeritageHTMLExtractor:
         while current and current != next_solution:
             if getattr(current, "find_all", None):
                 for span in current.find_all("span", class_="latin12"):
-                    entry = self._extract_pattern_from_span(span)
-                    if not entry:
-                        continue
-                    key = f"{entry.word}||{entry.analysis}"
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    patterns.append(entry)
+                    for entry in self._extract_patterns_from_span(span):
+                        key = f"{entry.word}||{entry.analysis}"
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        patterns.append(entry)
             current = current.next_sibling
         return patterns
 
@@ -166,8 +164,7 @@ class HeritageHTMLExtractor:
         current = start_span.next_sibling
         while current and current != next_solution:
             if getattr(current, "name", None) == "span" and "latin12" in (current.get("class") or []):
-                entry = self._extract_pattern_from_span(current)
-                if entry:
+                for entry in self._extract_patterns_from_span(current):
                     key = f"{entry.word}||{entry.analysis}"
                     if key not in seen:
                         seen.add(key)
@@ -181,14 +178,12 @@ class HeritageHTMLExtractor:
         patterns: list[_PatternEntry] = []
         seen: set[str] = set()
         for span in container.find_all("span", class_="latin12"):
-            entry = self._extract_pattern_from_span(span)
-            if not entry:
-                continue
-            key = f"{entry.word}||{entry.analysis}"
-            if key in seen:
-                continue
-            seen.add(key)
-            patterns.append(entry)
+            for entry in self._extract_patterns_from_span(span):
+                key = f"{entry.word}||{entry.analysis}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                patterns.append(entry)
         return patterns
 
     def _collect_segments(
@@ -199,10 +194,17 @@ class HeritageHTMLExtractor:
         def collect_from(node):
             if getattr(node, "name", None) == "span":
                 text = node.get_text(strip=True)
+                # Skip metadata text
                 if self._is_metadata(text):
                     return
-                segments.append({"css_class": (node.get("class") or [None])[0], "text": text})
+                segments.append(
+                    {
+                        "css_class": (node.get("class") or [None])[0],
+                        "text": text,
+                    }
+                )
             for child in getattr(node, "children", []) or []:
+                # Stop if we hit the next solution marker
                 if child == next_solution:
                     return
                 collect_from(child)
@@ -213,20 +215,21 @@ class HeritageHTMLExtractor:
             current = current.next_sibling
         return segments
 
-    def _extract_pattern_from_span(self, span) -> _PatternEntry | None:
-        span_text = span.get_text(strip=True)
-        match = self._pattern_re.search(span_text)
-        if not match:
-            return None
-        word = match.group(1).strip()
-        analysis = match.group(2).strip()
-        url: str | None = None
-        for link in span.find_all("a", class_="navy"):
-            href = link.get("href")
-            if href and isinstance(href, str):
-                url = href
-                break
-        return _PatternEntry(word, analysis, match.group(0), url)
+    def _extract_patterns_from_span(self, span) -> list[_PatternEntry]:
+        """Extract all [word]{analysis} pairs from a latin12 span."""
+        patterns: list[_PatternEntry] = []
+        span_text = span.get_text("", strip=True)
+        for match in self._pattern_re.finditer(span_text):
+            word = match.group(1).strip()
+            analysis = match.group(2).strip()
+            url: str | None = None
+            for link in span.find_all("a", class_="navy"):
+                href = link.get("href")
+                if href and isinstance(href, str):
+                    url = href
+                    break
+            patterns.append(_PatternEntry(word, analysis, match.group(0), url))
+        return patterns
 
     def _extract_loose_patterns(self, soup) -> list[_PatternEntry]:
         patterns: list[_PatternEntry] = []
@@ -240,15 +243,28 @@ class HeritageHTMLExtractor:
                 patterns.append(entry)
         if not patterns:
             for span in soup.find_all("span", class_="latin12"):
-                entry = self._extract_pattern_from_span(span)
-                if not entry:
-                    continue
-                key = f"{entry.word}||{entry.analysis}"
-                if key in seen:
-                    continue
-                seen.add(key)
-                patterns.append(entry)
+                for entry in self._extract_patterns_from_span(span):
+                    key = f"{entry.word}||{entry.analysis}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    patterns.append(entry)
         return patterns
+
+    def _get_innermost_pattern_tables(self, soup):
+        """Find innermost pattern tables (those without nested pattern tables)."""
+        pattern_tables = soup.find_all("table")
+        pattern_tables = [t for t in pattern_tables if self._is_pattern_table(t)]
+        innermost = []
+        for table in pattern_tables:
+            has_nested = False
+            for nested in table.find_all("table", recursive=False):
+                if self._is_pattern_table(nested):
+                    has_nested = True
+                    break
+            if not has_nested:
+                innermost.append(table)
+        return innermost
 
     @staticmethod
     def _find_solution_table(solution_span: Tag):

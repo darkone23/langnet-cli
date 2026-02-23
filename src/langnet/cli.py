@@ -707,7 +707,30 @@ def parse(  # noqa: PLR0913
         }
     elif tool_l == "heritage":
         endpoint = opt or f"{heritage_base.rstrip('/')}/cgi-bin/skt/sktreader"
-        params = {"t": "VH", "text": to_heritage_velthuis(query_word), "max": "5"}
+        vh_text = to_heritage_velthuis(query_word)
+        query_parts = [
+            ("t", "VH"),
+            ("lex", "SH"),
+            ("font", "roma"),
+            ("cache", "f"),
+            ("st", "t"),
+            ("us", "f"),
+            ("best_mode", "b"),
+            ("fmode", "w"),
+            ("text", vh_text),
+            ("topic", ""),
+            ("abs", "f"),
+            ("corpmode", ""),
+            ("corpdir", ""),
+            ("sentno", ""),
+            ("mode", "p"),
+            ("cpts", ""),
+            ("rcpts", ""),
+            ("max", "5"),
+            ("orig", query_word),
+        ]
+        query_string = ";".join(f"{k}={v}" for k, v in query_parts)
+        params = {"__http_query": query_string}
         fetch = HttpToolClient(tool="fetch.heritage").execute(
             call_id="heritage-1", endpoint=endpoint, params=params
         )

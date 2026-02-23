@@ -23,7 +23,7 @@ Use this as the starting point to emit scoped triples from each tool. It points 
 - **Diogenes**: morph entries → form nodes + morph qualifiers; dictionary blocks → lex/sense `has_sense/gloss`; citations → `has_citation` with evidence; keep `raw_html` + chunk map. (Implemented in `execution/handlers/diogenes.py`, wired in registry; jump refs now mapped to CTS URNs where possible, with original citation text stored in metadata.)
 - **CLTK**: form→lemma via `realizes_lexeme`; `has_pronunciation`; Lewis lines as `has_sense/gloss`; keep raw payload. (Triples implemented in `execution/handlers/cltk.py`, but disabled in the triples-dump helper to avoid CLTK cold-start latency.)
 - CLTK IPA extraction: single-string IPA payloads are no longer truncated (str was treated as a Sequence); Latin now emits the full IPA string (e.g., `['lʊ.pʊs]` for `lupus`).
-- **Heritage/CDSL**: reuse parsers (see `@codesketch/langnet` heritage/cdsl modules); normalize VH/SLP1 encodings; emit morph + sense facts with domains/register/root/compound/sandhi + `source_ref` (`analysis_id` or `mw:<lnum>`), keep `raw_html`/`raw_text`; fall back to stubs when DBs absent; abbreviations in `docs/upstream-docs/skt-heritage` and `docs/upstream-docs/cdsl`. **Current**: heritage handlers live (basic morph anchor + analyses, raw_ref-only), CDSL DuckDB handler live with accent/IAST→SLP1 matching and MW hits for Śiva/Agni/Deva/Kṛṣṇa; dictionary parsing still needs structured sense/domains/root extraction.
+- **Heritage/CDSL**: reuse parsers (see `@codesketch/langnet` heritage/cdsl modules); normalize VH/SLP1 encodings; emit morph + sense facts with domains/register/root/compound/sandhi + `source_ref` (`analysis_id` or `mw:<lnum>`), keep `raw_html`/`raw_text`; fall back to stubs when DBs absent; abbreviations in `docs/upstream-docs/skt-heritage` and `docs/upstream-docs/cdsl`. **Current (Mar 2026)**: heritage handler now fires semicolon sktreader requests (best_mode/fmode) and records the full request URL; parses morphology with abbreviation map (iic/ifc), color normalization/meaning, and groups compound solutions with per-variant features. CDSL DuckDB handler live with accent/IAST→SLP1 matching and MW hits for Śiva/Agni/Deva/Kṛṣṇa; dictionary parsing still needs structured sense/domains/root extraction.
 
 ## Greek Path: Status + Next Steps
 - Scope: Greek currently relies on Diogenes (LSJ + Perseus morph) and CLTK morphology; Whitaker has no Greek path, so expect fewer sources than Latin.
@@ -38,7 +38,7 @@ Use this as the starting point to emit scoped triples from each tool. It points 
 
 ## Sanskrit Path (Heritage + CDSL)
 - Assets: `data/build/cdsl_mw.duckdb` and `data/build/cdsl_ap90.duckdb` are present; planner already schedules `heritage` + `cdsl` (MW by default). Upstream references live in `docs/upstream-docs/skt-heritage/*` and `docs/upstream-docs/cdsl/*`; use `@codesketch/langnet`’s `heritage/*` and `cologne/*` modules for parser patterns.
-- Heritage projection: **current** handler anchors SLP1 lemmas, parses basic analyses, and keeps only `raw_ref`; needs full HTML extraction (compound_role/sandhi/color) via `heritage/html_extractor.py` + `lineparsers/parse_morphology.py`, plus `has_morphology` qualifiers and dictionary/combined senses with `source_ref` (`heritage:<analysis_id>`). Add tests/fixtures (agni/yoga/śiva) covering VH→SLP1 conversion.
+- Heritage projection: handler now hits `sktreader` with full semicolon params (best_mode/fmode/rcpts) and records the full request URL; parses morphology with abbreviations, color normalization/meaning, and groups solutions into compound members with variant features. Still TODO: sandhi/segment reconstruction and dictionary sense extraction. Add tests/fixtures (agni/yoga/śiva/zmazruvardhana) covering VH→SLP1 conversion and compound grouping.
 - CDSL projection: **current** handler queries DuckDB read-only with accent/IAST→SLP1 matching and emits `has_sense` glosses with `source_ref` (`mw:<lnum>`). TODO: parse `sense_lines`/domains/register/root/grammar_refs` via `codesketch/cologne/parser.py` and emit structured triples; expand dict selection (mw/ap90) and add fixtures.
 - Encoding/normalization: lean on `langnet.normalizer.sanskrit`; bridge VH↔SLP1 with the Heritage converter and CDSL `to_slp1` helpers (codesketch). Hash anchors on unaccented SLP1 tokens so Heritage VH and CDSL SLP1 converge.
 - Fixtures/verification: start with `agni`/`agnim` plus AP90 contrasts (`bhakti`, `śiva`/`śiva`); target goldens in `tests/fixtures` + snapshots; run `just triples-dump san agni heritage` / `just triples-dump san agni cdsl` and `just cli plan-exec san agni --no-cache --no-stub-handlers` (use `--use-stub-handlers` if Heritage is offline). Add `just cli parse heritage|cdsl san <term>` smoke tests.
@@ -53,7 +53,7 @@ Use this as the starting point to emit scoped triples from each tool. It points 
 - Golden snapshots for agni/lupus/logos once projections are in place.
 - Needs: add deterministic fixtures for Diogenes/Whitaker/CLTK triples; add regression to check timing (e.g., client build skips CLTK unless enabled).
 
-## Current Readiness (Latin/Greek) — Mar 2026
+## Current Readiness (Latin/Greek/Sanskrit) — Mar 2026
 - CLI sanity: `just triples-dump grc anthropos spacy` now works (planner receives NormalizedQuery); Diogenes/Whitaker/CLTK parses succeed via `langnet-cli parse` and in triples-dump.
 - Fuzz harness: updated to call `langnet-cli parse …` for diogenes/whitakers/cltk. Sample runs saved under `examples/debug/fuzz_diogenes_lat|grc`, `fuzz_whitakers_lat`, `fuzz_cltk_lat|grc` with tool=ok for lupus/amo/logos/anthropos.
 - Provenance: claims carry `raw_blob_ref` + call/extraction/derivation/claim IDs; raw payloads remain in the effects index (no need to inline).
@@ -75,11 +75,8 @@ Use this as the starting point to emit scoped triples from each tool. It points 
 - Latin (19 terms: lupus, amo, puella, rex, res, bellum, homo, lux, miles, corpus, manus, dies, sum, mare, bonus, domus, terra, gloria, deus): `just triples-dump lat <term>` passed (Diogenes + Whitaker).
 - Greek (20 terms in Greek script: λόγος, ἄνθρωπος, θεός, φῶς, ἀγαθός, γυνή, ἀνήρ, ψυχή, βίος, χείρ, παιδεία, πόλις, χρόνος, φίλος, σοφία, δίκη, ἔργον, οἶκος, λόγχη): `just triples-dump grc <term>` passed (Diogenes anchors + LSJ senses; spaCy morph claims). CLTK Greek still lemma-only here (no IPA/gloss).
 - Sanskrit (20 terms: agni, deva, śiva, kṛṣṇa, arjuna, yoga, dharma, karma, bhakti, guru, putra, nara, satya, rāma, sita, lakṣmaṇa, brahma, ātman, māyā, bhūmi): `just triples-dump san <term>` passed. Fix added to CDSL fetch key variants (SLP1/digraphs/underscore+numbers) so MW glosses resolve for dharma/bhakti/śiva/sita/bhūmi, etc.
-- Gaps for next dev: Heritage still only basic morph anchor + raw_ref; needs full HTML parsing (compound/sandhi/qualifiers + senses with source_ref). CDSL senses still flat gloss strings—structure domains/register/root via `codesketch/cologne/parser.py` and add fixtures. CLTK Greek still missing IPA/gloss unless environment provides richer payloads; spaCy path optional. No semantic reduction yet (witness-only).
+- Gaps for next dev: Heritage still lacks sandhi/segment reconstruction and dictionary sense extraction; add tests/goldens for compound grouping. CDSL senses still flat gloss strings—structure domains/register/root via `codesketch/cologne/parser.py` and add fixtures. CLTK Greek still missing IPA/gloss unless environment provides richer payloads; spaCy path optional. No semantic reduction yet (witness-only).
 
-### Heritage Sanskrit: Near-term TODOs
-- **Capture Heritage sktreader URLs**: Store the full sktreader fetch URL (or path) in claim metadata/evidence so downstream DICO linkage can resolve back to the page. Wire this into the Heritage handler when processing `raw_ref`.
-- **Recover rich parser features**: Mine the earlier Sanskrit Heritage sktreader parser (legacy code had compound_role/sandhi/color/abbrev decoding). Reintroduce structured extraction (morph qualifiers + senses) using the existing `heritage/html_extractor.py` and `lineparsers/parse_morphology.py`.
 - **Ambiguous form strategy (e.g., mahāśmaśāna)**: sktreader fails on ASCII transliteration like `mahashmashana` but succeeds on VH/SLP1 (`mahaazmazaana`). Proposed plan:
   1) When Heritage returns “not recognized”, attempt ASCII→IAST-ish heuristics: map `sh`→`ś`, long vowels (`aa`→`ā`, `ii`→`ī`, `uu`→`ū`), retroflex (`z`→`ṣ`), and try SLP1 digraph guesses.
   2) Retry sktreader with the candidate VH/SLP1 forms (up to a small bounded set, log attempts).
@@ -111,6 +108,12 @@ Use this as the starting point to emit scoped triples from each tool. It points 
   4) Ambiguous forms: exercise the retry heuristics with `just cli plan-exec san mahaazmazaana --no-cache --no-stub-handlers` (Velthuis hit) and `just cli plan-exec san mahāśmaśāna --no-cache` (IAST hit). Record attempted forms in claim metadata; success = Heritage returns analyses instead of “not recognized”.
   5) Snapshots/tests: once triples stabilize, add fixtures under `tests/fixtures/triples/san/` (agni/yoga/śiva + a failing compound) and guard with `just test-fast` (or `just test` when integration tags needed). Ensure deterministic anchors/claim IDs and that memoized runs are cache hits.
   6) Full pipeline: `just cli plan-exec san agni --no-cache --no-stub-handlers` should produce merged Heritage + CDSL claims with aligned anchors; rerun with cache warmed to confirm memoization. If Heritage is flaky, use `--use-stub-handlers` to validate CDSL path while keeping Sanskrit planner wiring intact.
+
+### Heritage parity gaps (after URL alignment)
+- Sandhi/segment reconstruction from HTML segments and emission alongside compounds.
+- Dictionary sense extraction (heritage dictionaries) with `source_ref` and abbreviation expansion.
+- Segment merging: keep spans grouped per pattern to avoid over-splitting multi-word solutions; reuse the codesketch segment collector logic.
+- Verification target: `just triples-dump san zmazruvardhana heritage` and `yogānuśāsanam` should emit correctly grouped segments and parsed features with color hints; rerun `mahashmashana` to confirm compound parsing survives.
 
 ## Verification Guide
 1) Parse layer (pre-triples)

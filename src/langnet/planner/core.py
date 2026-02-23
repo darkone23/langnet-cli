@@ -150,19 +150,35 @@ class ToolPlanner:
         velthuis = velthuis.lower()
         variant_texts = self._heritage_variants(normalized.original or "", velthuis)
         for idx, vh_text in enumerate(variant_texts, start=1):
-            params = {
-                "text": vh_text,
-                "t": "VH",
-                "max": str(self.config.heritage_max_results),
-                "orig": normalized.original or "",
-            }
+            query_parts = [
+                ("t", "VH"),
+                ("lex", "SH"),
+                ("font", "roma"),
+                ("cache", "f"),
+                ("st", "t"),
+                ("us", "f"),
+                ("best_mode", "b"),
+                ("fmode", "w"),
+                ("text", vh_text),
+                ("topic", ""),
+                ("abs", "f"),
+                ("corpmode", ""),
+                ("corpdir", ""),
+                ("sentno", ""),
+                ("mode", "p"),
+                ("cpts", ""),
+                ("rcpts", ""),
+                ("max", str(self.config.heritage_max_results)),
+                ("orig", normalized.original or ""),
+            ]
+            query_string = ";".join(f"{k}={v}" for k, v in query_parts)
             heritage_fetch_id = f"heritage-{idx}"
             calls.append(
                 _make_call(
                     tool="fetch.heritage",
                     call_id=heritage_fetch_id,
                     endpoint=endpoint,
-                    params=params,
+                    params={"__http_query": query_string},
                     opts=_opts(
                         expected="html",
                         priority=1,
@@ -327,6 +343,7 @@ class ToolPlanner:
     def _heritage_endpoint(self) -> str:
         base = self.config.heritage_base_url.rstrip("/")
         cgi = self.config.heritage_cgi_path.strip("/")
+        # Heritage sktreader endpoint does not use a .cgi suffix; align with CLI parse path.
         return f"{base}/{cgi}/sktreader"
 
     def _parse_endpoint(self) -> str:

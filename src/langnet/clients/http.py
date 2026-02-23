@@ -24,11 +24,22 @@ class HttpToolClient:
         self, call_id: str, endpoint: str, params: Mapping[str, str] | None = None
     ) -> RawResponseEffect:
         params = params or {}
+        # Allow callers to supply a prebuilt query string (e.g., semicolon-delimited Heritage CGI).
+        raw_query = params.get("__http_query")
+        http_params = {k: v for k, v in params.items() if not k.startswith("__")}
+        if raw_query is not None:
+            # Do not send http_params when a raw query string is provided.
+            http_params = {}
+            if "?" in endpoint:
+                endpoint = f"{endpoint}&{raw_query}"
+            else:
+                endpoint = f"{endpoint}?{raw_query}"
+
         start = time.perf_counter()
         response = (
-            self.session.post(endpoint, data=params)
+            self.session.post(endpoint, data=http_params)
             if self.method == "POST"
-            else self.session.get(endpoint, params=params)
+            else self.session.get(endpoint, params=http_params)
         )
         duration_ms = int((time.perf_counter() - start) * 1000)
 
