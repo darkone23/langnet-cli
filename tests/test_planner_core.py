@@ -55,9 +55,10 @@ def test_sanskrit_plan_contains_heritage_call() -> None:
     assert "fetch.heritage" in tools
     heritage_call = next(c for c in plan.tool_calls if c.tool == "fetch.heritage")
     assert heritage_call.params is not None
-    assert heritage_call.params.get("text") == "k.r.s.na"
-    assert heritage_call.params.get("t") == "VH"
-    assert heritage_call.params.get("max") == "3"
+    query = heritage_call.params.get("__http_query", "")
+    assert "text=k.r.s.na" in query
+    assert "t=VH" in query
+    assert "max=3" in query
     # Parse and derive nodes present
     assert any(c.tool == "extract.heritage.html" for c in plan.tool_calls)
     assert any(c.tool == "derive.heritage.morph" for c in plan.tool_calls)

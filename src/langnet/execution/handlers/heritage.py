@@ -18,6 +18,7 @@ from langnet.execution.effects import (
     stable_effect_id,
 )
 from langnet.heritage.html_extractor import extract_solutions
+from langnet.heritage.client import HeritageHTTPClient
 
 def _velthuis_to_slp1(text: str) -> str:
     """
@@ -56,6 +57,67 @@ def _get_param(params: Any, key: str) -> str:
         return ""
     return ""
 
+def _needs_guess_fallback(solutions: list[dict[str, Any]]) -> bool:
+    if not solutions:
+        return True
+    for sol in solutions:
+        for pat in sol.get("patterns", []) or []:
+            analysis = pat.get("analysis")
+            if analysis and analysis != "?":
+                return False
+    return True
+
+
+def _fallback_user_feedback(endpoint: str) -> tuple[list[dict[str, Any]], str, str]:
+    vel_text = _extract_velthuis_from_endpoint(endpoint)
+    if not vel_text:
+        return [], "", ""
+    client = HeritageHTTPClient()
+    matches, raw_html, request_url = client.fetch_user_feedback_page(vel_text)
+    if not matches:
+        return [], "", ""
+    patterns: list[dict[str, Any]] = []
+    for m in matches:
+        patterns.append(
+            {
+                "word": m.display or m.canonical,
+                "analysis": m.analysis or "?",
+                "dictionary_url": m.entry_url or None,
+            }
+        )
+    raw_lines = []
+    for p in patterns:
+        line = f"[{p['word']}]"
+        if p.get("analysis"):
+            line += "{" + str(p["analysis"]) + "}"
+        raw_lines.append(line)
+    return (
+        [
+            {
+                "solution_number": None,
+                "patterns": patterns,
+                "color": "deep_sky_back",
+                "raw_text": "\n".join(raw_lines),
+                "segments": [],
+            }
+        ],
+        raw_html,
+        request_url,
+    )
+
+
+def _extract_velthuis_from_endpoint(endpoint: str) -> str:
+    if not endpoint:
+        return ""
+    query = endpoint.split("?", 1)[1] if "?" in endpoint else endpoint
+    params: dict[str, str] = {}
+    for part in query.split(";"):
+        if "=" not in part:
+            continue
+        k, v = part.split("=", 1)
+        params[k] = v
+    return params.get("text", "")
+
 
 def extract_html(call: ToolCallSpec, raw_response) -> ExtractionEffect:
     """
@@ -83,6 +145,20 @@ def extract_html(call: ToolCallSpec, raw_response) -> ExtractionEffect:
     slp1 = _velthuis_to_slp1(lemma)
 
     solutions = extract_solutions(html)
+    guess_used = False
+    if _needs_guess_fallback(solutions):
+        guess_solutions, guess_html, guess_url = _fallback_user_feedback(raw_response.endpoint)
+        if guess_solutions:
+            solutions = guess_solutions
+            guess_used = True
+            if guess_solutions[0].get("patterns"):
+                guess_word = guess_solutions[0]["patterns"][0].get("word")
+                if guess_word:
+                    lemma = guess_word
+            if guess_html:
+                html = guess_html
+            if guess_url:
+                raw_response.endpoint = guess_url
     analyses: list[dict[str, Any]] = []
     for solution in solutions:
         for pattern in solution.get("patterns", []):
@@ -105,6 +181,7 @@ def extract_html(call: ToolCallSpec, raw_response) -> ExtractionEffect:
         "lemma_slp1": slp1,
         "solutions": solutions,
         "analyses": analyses,
+        "heritage_guess": guess_used,
     }
     duration_ms = int((time.perf_counter() - start) * 1000)
     return ExtractionEffect(
@@ -128,16 +205,15 @@ def derive_morph(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
     payload = extraction.payload or {}
     canonical = None
     analyses: list[dict[str, Any]] = []
+    is_guess = bool(payload.get("heritage_guess")) if isinstance(payload, Mapping) else False
     if isinstance(payload, Mapping):
-        canonical = payload.get("lemma_slp1") or payload.get("lemma")
+        canonical = payload.get("lemma") if is_guess else payload.get("lemma_slp1") or payload.get("lemma")
         for analysis in payload.get("analyses", []) or []:
             analysis_variants = _parse_analysis_variants(analysis.get("analysis", ""))
             word = analysis.get("word", "")
-            word_slp1 = _velthuis_to_slp1(word)
             analyses.append(
                 {
                     "word": word,
-                    "word_slp1": word_slp1,
                     "analysis": analysis.get("analysis", ""),
                     "analysis_variants": analysis_variants,
                     "dictionary_url": analysis.get("dictionary_url"),

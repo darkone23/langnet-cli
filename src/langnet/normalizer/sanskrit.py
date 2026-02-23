@@ -40,6 +40,7 @@ class HeritageClientProtocol(Protocol):
     def fetch_canonical_via_sktsearch(self, query: str) -> SktSearchResult: ...
     def fetch_canonical_sanskrit(self, query: str) -> MonierWilliamsResult: ...
     def fetch_all_matches(self, query: str) -> list: ...
+    def fetch_user_feedback_matches(self, velthuis_text: str) -> list: ...
 
 
 class SanscriptModule(Protocol):
@@ -78,6 +79,19 @@ class HeritageCanonicalizer:
             ]
         except Exception as exc:  # noqa: BLE001
             logger.debug("sktsearch_lookup_failed", extra={"error": str(exc)})
+        return []
+
+    def user_feedback_matches(self, velthuis_text: str) -> list[SktSearchMatch]:
+        if self.client is None:
+            return []
+        try:
+            matches = self.client.fetch_user_feedback_matches(velthuis_text)
+            return [
+                SktSearchMatch(canonical=m.canonical, display=m.display, entry_url=m.entry_url)
+                for m in matches
+            ]
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("sktuser_lookup_failed", extra={"error": str(exc)})
         return []
 
     def canonical_via_sktsearch(self, text: str) -> SktSearchResult | None:
@@ -236,6 +250,11 @@ class SanskritNormalizer(LanguageNormalizer):
                 candidates.extend(fallback_candidates)
 
         if not candidates:
+            feedback_candidates = self._heritage_user_feedback(velthuis_form, stripped, steps)
+            if feedback_candidates:
+                candidates.extend(feedback_candidates)
+
+        if not candidates:
             encodings = self._build_encodings(velthuis_form, encoding, steps)
             candidates.append(
                 CanonicalCandidate(lemma=velthuis_form, encodings=encodings, sources=["local"])
@@ -368,6 +387,46 @@ class SanskritNormalizer(LanguageNormalizer):
             # Stop after first successful variant to limit search.
             if candidates:
                 break
+        return candidates
+
+    def _heritage_user_feedback(
+        self, velthuis_form: str, original_text: str, steps: list[NormalizationStep]
+    ) -> list[CanonicalCandidate]:
+        """Last-resort: hit Heritage sktuser feedback page for guesses."""
+        matches = self.heritage.user_feedback_matches(velthuis_form)
+        if not matches:
+            steps.append(
+                NormalizationStep(
+                    operation="heritage_sktuser_guess",
+                    input=original_text,
+                    output="miss",
+                    tool="heritage_sktuser_guess",
+                )
+            )
+            return []
+        ranked = _rank_heritage_matches(original_text, matches)
+        steps.append(
+            NormalizationStep(
+                operation="heritage_sktuser_guess",
+                input=original_text,
+                output=";".join(m.display for m in ranked),
+                tool="heritage_sktuser_guess",
+            )
+        )
+        candidates: list[CanonicalCandidate] = []
+        for match in ranked:
+            encodings = {
+                ENC_VELTHUIS: match.canonical,
+                ENC_IAST: match.display,
+            }
+            encodings.update(self._build_encodings(match.canonical, ENC_VELTHUIS, steps))
+            candidates.append(
+                CanonicalCandidate(
+                    lemma=match.display,
+                    encodings=encodings,
+                    sources=["heritage_sktuser_guess"],
+                )
+            )
         return candidates
 
     def _heuristic_ascii_variants(self, text: str) -> list[str]:

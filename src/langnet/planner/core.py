@@ -76,7 +76,7 @@ class PlannerConfig:
     include_cltk: bool = True
     include_spacy: bool = True
     include_cdsl: bool = True
-    cdsl_dicts: tuple[str, ...] = ("mw",)
+    cdsl_dicts: tuple[str, ...] = ("mw", "ap90")
     max_candidates: int = 3
 
 

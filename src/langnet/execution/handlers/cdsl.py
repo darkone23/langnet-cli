@@ -23,15 +23,15 @@ _IAST_TO_SLP1 = {
     "ā": "A",
     "ī": "I",
     "ū": "U",
-    "ṛ": "R",
-    "ṝ": "RR",
-    "ḷ": "L",
-    "ḹ": "LL",
+    "ṛ": "f",
+    "ṝ": "F",
+    "ḷ": "x",
+    "ḹ": "X",
     "ṅ": "G",
     "ñ": "Y",
     "ṇ": "R",
-    "ś": "z",
-    "ṣ": "S",
+    "ś": "S",
+    "ṣ": "z",
     "ṃ": "M",
     "ṁ": "M",
     "ḥ": "H",
@@ -76,6 +76,52 @@ def _to_slp1(text: str) -> str:
         ch = text[i]
         out.append(_IAST_TO_SLP1.get(ch, ch))
         i += 1
+    return "".join(out)
+
+
+_SLP1_TO_IAST = {
+    "A": "ā",
+    "I": "ī",
+    "U": "ū",
+    "f": "ṛ",
+    "F": "ṝ",
+    "x": "ḷ",
+    "X": "ḹ",
+    "e": "e",
+    "E": "ai",
+    "o": "o",
+    "O": "au",
+    "G": "gh",
+    "Y": "ñ",
+    "R": "ṇ",
+    "w": "ṭ",
+    "W": "ṭh",
+    "q": "ḍ",
+    "Q": "ḍh",
+    "K": "kh",
+    "G'": "gh",
+    "C": "ch",
+    "J": "jh",
+    "T": "th",
+    "D": "dh",
+    "P": "ph",
+    "B": "bh",
+    "S": "ś",
+    "z": "ṣ",
+}
+
+
+def _slp1_to_iast(text: str) -> str:
+    """
+    Minimal SLP1 → IAST converter (coverage sufficient for lemma display).
+    """
+    out: list[str] = []
+    for ch in text:
+        mapped = _SLP1_TO_IAST.get(ch)
+        if mapped:
+            out.append(mapped)
+        else:
+            out.append(ch)
     return "".join(out)
 
 
@@ -236,13 +282,15 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
     if isinstance(payload, Mapping):
         entries = payload.get("entries", [])
     senses: list[dict[str, Any]] = []
+    grouped: dict[str, dict[str, Any]] = {}
     for entry in entries or []:
-        lemma = (entry.get("key") or entry.get("key2") or "").strip()
+        lemma_slp1 = (entry.get("key") or entry.get("key2") or "").strip()
+        lemma_iast = _slp1_to_iast(lemma_slp1)
         gloss = entry.get("plain_text") or entry.get("body") or entry.get("data") or ""
         source_ref = f"{entry.get('dict_id', '').lower()}:{entry.get('lnum')}" if entry.get("lnum") else ""
         grammar = _parse_body_metadata(entry.get("body") or "")
         sense_obj: dict[str, Any] = {
-            "lemma": lemma,
+            "anchor": lemma_slp1,
             "gloss": gloss,
             "dict": entry.get("dict_id"),
             "lnum": entry.get("lnum"),
@@ -251,6 +299,14 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
         if grammar:
             sense_obj["grammar"] = grammar
         senses.append(sense_obj)
+        group_key = lemma_iast or lemma_slp1
+        if group_key not in grouped:
+            grouped[group_key] = {
+                "lemma": lemma_iast,
+                "lemma_slp1": lemma_slp1,
+                "senses": [],
+            }
+        grouped[group_key]["senses"].append(sense_obj)
     duration_ms = int((time.perf_counter() - start) * 1000)
     prov = [
         ProvenanceLink(
@@ -265,7 +321,7 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
         extraction_id=extraction.extraction_id,
         kind="cdsl_sense",
         canonical=None,
-        payload={"senses": senses},
+        payload={"lemmas": list(grouped.values())},
         derive_duration_ms=duration_ms,
         provenance_chain=prov,
     )
@@ -280,28 +336,27 @@ def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
         ProvenanceLink(stage="derive", tool=derivation.tool, reference_id=derivation.derivation_id)
     )
     payload = derivation.payload or {}
-    senses = payload.get("senses") if isinstance(payload, Mapping) else None
+    sense_groups = payload.get("lemmas") if isinstance(payload, Mapping) else None
     triples: list[dict[str, Any]] = []
-    if isinstance(senses, list):
-        for sense in senses:
-            lemma = (sense.get("lemma") or "").strip().lower()
-            subject = f"lex:{lemma}" if lemma else derivation.derivation_id
-            obj = {
-                "gloss": sense.get("gloss", ""),
-            }
-            if sense.get("source_ref"):
-                obj["source_ref"] = sense["source_ref"]
-            grammar = sense.get("grammar")
-            if grammar:
-                obj["grammar"] = grammar
-            triples.append(
-                {
-                    "subject": subject,
-                    "predicate": "has_sense",
-                    "object": obj,
-                }
-            )
-    value = {"triples": triples}
+    if isinstance(sense_groups, list):
+        for group in sense_groups:
+            lemma_anchor = (group.get("lemma_slp1") or "").strip().lower()
+            subject = f"lex:{lemma_anchor}" if lemma_anchor else derivation.derivation_id
+            for sense in group.get("senses", []):
+                obj = {"gloss": sense.get("gloss", "")}
+                if sense.get("source_ref"):
+                    obj["source_ref"] = sense["source_ref"]
+                grammar = sense.get("grammar")
+                if grammar:
+                    obj["grammar"] = grammar
+                triples.append(
+                    {
+                        "subject": subject,
+                        "predicate": "has_sense",
+                        "object": obj,
+                    }
+                )
+    value = {"lemmas": sense_groups, "triples": triples}
     return ClaimEffect(
         claim_id=stable_effect_id("clm", call.call_id, derivation.derivation_id),
         tool=call.tool,

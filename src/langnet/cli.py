@@ -661,29 +661,13 @@ def parse(  # noqa: PLR0913
         resp = requests.get(url)
         html = resp.text if resp.ok else ""
         parsed = _parse_diogenes_html(html)
-        payload = {
-            "tool": "diogenes",
-            "endpoint": endpoint,
-            "url": url,
-            "status": resp.status_code,
-            "lang": language,
-            "word": text,
-            "content_length": len(html),
-            "parsed": parsed,
-        }
+        payload = parsed
     elif tool_l == "whitakers":
         binary = opt or find_whitaker_binary() or "whitakers-words"
         proc = subprocess.run([binary, query_word], check=False, capture_output=True, text=True)
         text_out = proc.stdout or ""
         parsed = _parse_whitaker_output(text_out)
-        payload = {
-            "tool": "whitakers",
-            "binary": binary,
-            "status": proc.returncode,
-            "word": text,
-            "content_length": len(text_out),
-            "parsed": parsed,
-        }
+        payload = parsed
     elif tool_l == "cltk":
         client = get_cltk_fetch_client()
         effect = client.execute(
@@ -697,14 +681,7 @@ def parse(  # noqa: PLR0913
             parsed = orjson.loads(effect.body)
         except Exception:
             parsed = {}
-        payload = {
-            "tool": "cltk",
-            "endpoint": effect.endpoint,
-            "status": effect.status_code,
-            "word": text,
-            "content_length": len(raw_json),
-            "parsed": parsed,
-        }
+        payload = parsed
     elif tool_l == "heritage":
         endpoint = opt or f"{heritage_base.rstrip('/')}/cgi-bin/skt/sktreader"
         vh_text = to_heritage_velthuis(query_word)
@@ -748,20 +725,15 @@ def parse(  # noqa: PLR0913
             params={"source_call_id": ext_call.call_id},
         )
         derivation = heritage_handlers.derive_morph(drv_call, extraction)
-        payload = {
-            "tool": "heritage",
-            "endpoint": endpoint,
-            "status": fetch.status_code,
-            "extraction": extraction.payload,
-            "derivation": derivation.payload,
-        }
+        payload = derivation.payload
     elif tool_l == "cdsl":
         fetch_client = cdsl_handlers.CdslFetchClient()
         use_dict = opt or dict_id
+        lemma = cdsl_handlers._to_slp1(query_word)  # type: ignore[attr-defined]
         fetch = fetch_client.execute(
             call_id="cdsl-1",
             endpoint="duckdb",
-            params={"lemma": query_word, "dict": use_dict},
+            params={"lemma": lemma, "dict": use_dict},
         )
         ext_call = ToolCallSpec(
             tool="extract.cdsl.xml",
@@ -777,13 +749,7 @@ def parse(  # noqa: PLR0913
             params={"source_call_id": ext_call.call_id},
         )
         derivation = cdsl_handlers.derive_sense(drv_call, extraction)
-        payload = {
-            "tool": "cdsl",
-            "dict": use_dict,
-            "status": fetch.status_code,
-            "extraction": extraction.payload,
-            "derivation": derivation.payload,
-        }
+        payload = derivation.payload
     else:  # pragma: no cover - click enforces choices
         raise click.UsageError(f"Unsupported tool '{tool}'.")
 
