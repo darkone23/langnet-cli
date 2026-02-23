@@ -341,8 +341,9 @@ class ToolPlanner:
         deps: list[PlanDependency] = []
         base = self._parse_endpoint()
 
-        # Use canonical lemma from the single candidate
-        query_value = candidate.lemma.lower()
+        # Prefer the user's original surface form to keep Diogenes aligned with the query (e.g., "ea"),
+        # but fall back to the canonical lemma when it is missing.
+        query_value = (getattr(normalized, "original", "") or "").lower() or candidate.lemma.lower()
         lang_param = self._diogenes_lang(normalized)
 
         # Parse → extract → derive → claim pipeline for dictionary and morphological analysis

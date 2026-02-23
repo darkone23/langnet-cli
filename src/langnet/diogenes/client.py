@@ -75,6 +75,7 @@ def _normalize_for_distance(text: str) -> str:
     except Exception:
         beta = text
     beta = re.sub(r"[^A-Za-z]", "", beta).lower()
+    beta = beta.replace("w", "o")  # treat omega/w ~ omicron for distance
     return beta or strip_accents(text).lower()
 
 
@@ -121,6 +122,16 @@ class DiogenesClient:
         segments = [f"{k}={urllib.parse.quote_plus(v)}" for k, v in params.items()]
         return f"{self.parse_endpoint}?{'&'.join(segments)}"
 
+    @staticmethod
+    def _normalize_lang(lang: str) -> str:
+        """
+        Diogenes expects Greek as `grk` (not `grc`), so normalize inputs.
+        Leave other languages unchanged.
+        """
+        if lang.lower() == "grc":
+            return "grk"
+        return lang
+
     def fetch_word_list(self, query: str, limit: int = 50) -> WordListResult:
         """Fetch word_list for Greek queries."""
         params = {
@@ -153,6 +164,7 @@ class DiogenesClient:
 
     def fetch_parse(self, query: str, lang: str = "lat") -> ParseResult:
         """Fetch parse for Latin/Greek queries."""
+        normalized_lang = self._normalize_lang(lang)
         params = {
             "JumpToFromPerseus": "",
             "JumpFromQuery": "",
@@ -164,7 +176,7 @@ class DiogenesClient:
             "action": "parse",
             "splash": "true",
             "xml-export-dir": "",
-            "lang": lang,
+            "lang": normalized_lang,
             "q": query,
             "do": "parse",
             "current_pageXXstate": "splash",

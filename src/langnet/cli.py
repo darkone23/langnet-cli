@@ -1,20 +1,27 @@
 from __future__ import annotations
 
+import logging
+import os
+import re
+import subprocess
+import time
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import TypedDict, cast
-import logging
 
 import click
 import duckdb
 import orjson
 import query_spec
+import requests
 from returns.result import Failure, Success
 
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
+from langnet.normalizer.utils import strip_accents
 from langnet.planner.core import PlannerConfig, ToolPlanner
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.paths import normalization_db_path
+from langnet.storage.db import connect_duckdb
 from langnet.execution.registry import default_registry
 from langnet.execution.executor import execute_plan_staged
 from langnet.storage.extraction_index import ExtractionIndex
@@ -22,11 +29,13 @@ from langnet.storage.derivation_index import DerivationIndex
 from langnet.storage.claim_index import ClaimIndex
 from langnet.storage.plan_index import PlanResponseIndex, apply_schema
 from langnet.execution.clients import (
-    CLTKFetchClient,
     StubToolClient,
     find_whitaker_binary,
     WhitakerFetchClient,
+    get_cltk_fetch_client,
 )
+from langnet.execution.handlers.diogenes import _parse_diogenes_html
+from langnet.execution.handlers.whitakers import _parse_whitaker_output
 from langnet.clients.http import HttpToolClient
 
 LanguageHint = query_spec.LanguageHint
@@ -255,14 +264,13 @@ class PlanExecConfig:
     use_stub_handlers: bool
 
 
-def _create_normalization_service(config: NormalizeConfig) -> NormalizationService:
-    path = Path(config.db_path).expanduser() if config.db_path else normalization_db_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    conn = duckdb.connect(database=str(path))
+def _create_normalization_service(
+    config: NormalizeConfig, conn: duckdb.DuckDBPyConnection, *, read_only: bool = False
+) -> NormalizationService:
     dio_config = DiogenesConfig(endpoint=config.diogenes_endpoint)
 
-    # Create effects index to capture raw responses
-    effects_index = RawResponseIndex(conn)
+    # Create effects index to capture raw responses when we are allowed to write
+    effects_index = None if read_only else RawResponseIndex(conn)
 
     def _whitaker_factory():
         from langnet.whitakers.client import WhitakerClient  # noqa: PLC0415
@@ -276,14 +284,112 @@ def _create_normalization_service(config: NormalizeConfig) -> NormalizationServi
         whitaker_client=_whitaker_factory,  # type: ignore[arg-type]
         use_cache=not config.no_cache,
         effects_index=effects_index,
+        read_only=read_only,
     )
+
+
+def _normalize_word_for_tool(
+    language: str, text: str, config: NormalizeConfig, *, use_cache: bool = True
+) -> str:
+    """
+    Run the normalizer and return the best candidate lemma/text for downstream tool calls.
+    """
+    lang_hint = _parse_language(language)
+    path = Path(config.db_path).expanduser() if config.db_path else normalization_db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    use_memory = config.no_cache or not use_cache or not path.exists()
+
+    def _norm_for_compare(s: str) -> str:
+        normalized = strip_accents(s).lower()
+        normalized = normalized.replace("ω", "ο").replace("w", "o")
+        normalized = re.sub(r"[^a-z]+", "", normalized)
+        return normalized or s
+
+    def _lev(a: str, b: str) -> int:
+        if a == b:
+            return 0
+        if not a:
+            return len(b)
+        if not b:
+            return len(a)
+        prev = list(range(len(b) + 1))
+        for i, ca in enumerate(a, start=1):
+            curr = [i]
+            for j, cb in enumerate(b, start=1):
+                cost = 0 if ca == cb else 1
+                curr.append(min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost))
+            prev = curr
+        return prev[-1]
+
+    def _pick_candidate(normalized):
+        # Rank by Levenshtein to raw text (omega folded to omicron), tie-break by freq.
+        try:
+            candidates = getattr(normalized.normalized, "candidates", []) or []
+            if candidates:
+                raw_norm = _norm_for_compare(text)
+
+                def _score(cand) -> tuple[int, int]:
+                    enc = getattr(cand, "encodings", {}) or {}
+                    freq = enc.get("freq")
+                    try:
+                        freq_int = int(freq)
+                    except Exception:
+                        freq_int = -1
+                    lemma = getattr(cand, "lemma", "") or ""
+                    cand_norm = _norm_for_compare(enc.get("betacode", "") or lemma)
+                    dist = _lev(raw_norm, cand_norm)
+                    return (dist, -freq_int)
+
+                best = min(candidates, key=_score)
+                lemma = getattr(best, "lemma", None)
+                if isinstance(lemma, str) and lemma:
+                    return lemma
+                lemma0 = getattr(candidates[0], "lemma", None)
+                if isinstance(lemma0, str) and lemma0:
+                    return lemma0
+            original = getattr(normalized.normalized, "original", None)
+            if isinstance(original, str) and original:
+                return original
+        except Exception:
+            pass
+        return text
+
+    if use_memory:
+        with duckdb.connect(database=":memory:") as conn:
+            service = _create_normalization_service(config, conn, read_only=False)
+            normalized = service.normalize(text, lang_hint)
+            return _pick_candidate(normalized)
+    read_only = config.no_cache
+    with connect_duckdb(path, read_only=read_only, lock=not read_only) as conn:
+        service = _create_normalization_service(config, conn, read_only=read_only)
+        normalized = service.normalize(text, lang_hint)
+        return _pick_candidate(normalized)
+
+
+def _diogenes_query_url(base: str, lang: str, word: str) -> str:
+    """
+    Build a diogenes parse URL with raw Unicode query (avoid percent-encoding Greek).
+    """
+    sep = "&" if "?" in base else "?"
+    return f"{base}{sep}do=parse&lang={lang}&q={word}"
 
 
 def _normalize_impl(config: NormalizeConfig, language: str, text: str) -> None:
     lang_hint = _parse_language(language)
-    service = _create_normalization_service(config)
-    result = service.normalize(text, lang_hint)
-    _print_result(result, config.output)
+    path = Path(config.db_path).expanduser() if config.db_path else normalization_db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    use_memory = config.no_cache and not path.exists()
+    if use_memory:
+        with duckdb.connect(database=":memory:") as conn:
+            service = _create_normalization_service(config, conn, read_only=False)
+            result = service.normalize(text, lang_hint)
+            _print_result(result, config.output)
+    else:
+        read_only = config.no_cache
+        with connect_duckdb(path, read_only=read_only, lock=not read_only) as conn:
+            service = _create_normalization_service(config, conn, read_only=read_only)
+            result = service.normalize(text, lang_hint)
+            _print_result(result, config.output)
 
 
 def _plan_impl(config: PlanCliConfig, language: str, text: str) -> None:
@@ -295,22 +401,46 @@ def _plan_impl(config: PlanCliConfig, language: str, text: str) -> None:
         no_cache=config.no_cache,
         output=config.output,
     )
-    service = _create_normalization_service(norm_config)
-    normalized = service.normalize(text, lang_hint)
+    path = Path(norm_config.db_path).expanduser() if norm_config.db_path else normalization_db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    use_memory = norm_config.no_cache and not path.exists()
+    if use_memory:
+        with duckdb.connect(database=":memory:") as conn:
+            service = _create_normalization_service(norm_config, conn, read_only=False)
+            normalized = service.normalize(text, lang_hint)
 
-    planner = ToolPlanner(
-        PlannerConfig(
-            diogenes_endpoint=config.diogenes_endpoint,
-            diogenes_parse_endpoint=config.diogenes_parse_endpoint,
-            heritage_base_url=config.heritage_base,
-            heritage_max_results=config.heritage_max_results,
-            include_whitakers=config.include_whitakers,
-            max_candidates=config.max_candidates,
-        )
-    )
-    candidate = planner.select_candidate(normalized.normalized)
-    plan = planner.build(normalized.normalized, candidate)
-    _print_plan(plan, config.output)
+            planner = ToolPlanner(
+                PlannerConfig(
+                    diogenes_endpoint=config.diogenes_endpoint,
+                    diogenes_parse_endpoint=config.diogenes_parse_endpoint,
+                    heritage_base_url=config.heritage_base,
+                    heritage_max_results=config.heritage_max_results,
+                    include_whitakers=config.include_whitakers,
+                    max_candidates=config.max_candidates,
+                )
+            )
+            candidate = planner.select_candidate(normalized.normalized)
+            plan = planner.build(normalized.normalized, candidate)
+            _print_plan(plan, config.output)
+    else:
+        read_only = norm_config.no_cache
+        with connect_duckdb(path, read_only=read_only, lock=not read_only) as conn:
+            service = _create_normalization_service(norm_config, conn, read_only=read_only)
+            normalized = service.normalize(text, lang_hint)
+
+            planner = ToolPlanner(
+                PlannerConfig(
+                    diogenes_endpoint=config.diogenes_endpoint,
+                    diogenes_parse_endpoint=config.diogenes_parse_endpoint,
+                    heritage_base_url=config.heritage_base,
+                    heritage_max_results=config.heritage_max_results,
+                    include_whitakers=config.include_whitakers,
+                    max_candidates=config.max_candidates,
+                )
+            )
+            candidate = planner.select_candidate(normalized.normalized)
+            plan = planner.build(normalized.normalized, candidate)
+            _print_plan(plan, config.output)
 
 
 @dataclass
@@ -439,6 +569,128 @@ def normalize(  # noqa: PLR0913
         output=output,
     )
     _normalize_impl(config, language, text)
+
+
+@main.command()
+@click.argument("tool", type=click.Choice(["diogenes", "whitakers", "cltk"], case_sensitive=False))
+@click.argument("language")
+@click.argument("text")
+@click.option(
+    "--opt",
+    default="",
+    show_default=True,
+    help="Optional arg: diogenes parse endpoint or Whitaker binary override.",
+)
+@click.option(
+    "--normalize/--no-normalize",
+    default=True,
+    show_default=True,
+    help="Normalize input before querying the tool.",
+)
+@click.option(
+    "--diogenes-endpoint",
+    default="http://localhost:8888/Perseus.cgi",
+    show_default=True,
+    help="Diogenes parse endpoint (Perseus.cgi).",
+)
+@click.option(
+    "--heritage-base",
+    default="http://localhost:48080",
+    show_default=True,
+    help="Base URL for Heritage Platform (unused here; kept for symmetry).",
+)
+@click.option(
+    "--db-path",
+    type=click.Path(),
+    help="Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb).",
+)
+@click.option(
+    "--no-cache",
+    is_flag=True,
+    help="Skip normalization cache lookups and writes for this invocation.",
+)
+def parse(  # noqa: PLR0913
+    tool: str,
+    language: str,
+    text: str,
+    opt: str,
+    normalize: bool,
+    diogenes_endpoint: str,
+    heritage_base: str,
+    db_path: str | None,
+    no_cache: bool,
+):
+    """
+    Parse tool output (diogenes|whitakers|cltk) with optional normalization.
+    """
+    lang_hint = _parse_language(language)
+    norm_cfg = NormalizeConfig(
+        diogenes_endpoint=diogenes_endpoint,
+        heritage_base=heritage_base,
+        db_path=db_path,
+        no_cache=no_cache,
+        output="pretty",
+    )
+    query_word = text
+    if normalize:
+        query_word = _normalize_word_for_tool(language, text, norm_cfg, use_cache=not no_cache)
+
+    tool_l = tool.lower()
+    if tool_l == "diogenes":
+        endpoint = opt or diogenes_endpoint
+        mapped_lang = "grk" if lang_hint == LanguageHint.LANGUAGE_HINT_GRC else language
+        url = _diogenes_query_url(endpoint, mapped_lang, query_word)
+        resp = requests.get(url)
+        html = resp.text if resp.ok else ""
+        parsed = _parse_diogenes_html(html)
+        payload = {
+            "tool": "diogenes",
+            "endpoint": endpoint,
+            "url": url,
+            "status": resp.status_code,
+            "lang": language,
+            "word": text,
+            "content_length": len(html),
+            "parsed": parsed,
+        }
+    elif tool_l == "whitakers":
+        binary = opt or find_whitaker_binary() or "whitakers-words"
+        proc = subprocess.run([binary, query_word], check=False, capture_output=True, text=True)
+        text_out = proc.stdout or ""
+        parsed = _parse_whitaker_output(text_out)
+        payload = {
+            "tool": "whitakers",
+            "binary": binary,
+            "status": proc.returncode,
+            "word": text,
+            "content_length": len(text_out),
+            "parsed": parsed,
+        }
+    elif tool_l == "cltk":
+        client = get_cltk_fetch_client()
+        effect = client.execute(
+            call_id=f"cltk-{query_word}",
+            endpoint=f"cltk://ipa/{language}",
+            params={"word": query_word, "language": language},
+        )
+        raw_json = effect.body.decode("utf-8", errors="ignore")
+        parsed = {}
+        try:
+            parsed = orjson.loads(effect.body)
+        except Exception:
+            parsed = {}
+        payload = {
+            "tool": "cltk",
+            "endpoint": effect.endpoint,
+            "status": effect.status_code,
+            "word": text,
+            "content_length": len(raw_json),
+            "parsed": parsed,
+        }
+    else:  # pragma: no cover - click enforces choices
+        raise click.UsageError(f"Unsupported tool '{tool}'.")
+
+    click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
 
 
 @main.command()
@@ -662,7 +914,7 @@ def _build_exec_clients(plan, diogenes_endpoint: str, use_stubs: bool) -> dict[s
         elif tool == "fetch.cltk":
             if tool not in clients:
                 try:
-                    clients[tool] = CLTKFetchClient()
+                    clients[tool] = get_cltk_fetch_client()
                 except Exception:
                     if use_stubs:
                         clients[tool] = StubToolClient(tool)
@@ -681,48 +933,47 @@ def _plan_exec_impl(config: PlanExecConfig, language: str, text: str) -> None:
         no_cache=config.no_cache,
         output="pretty",
     )
-    service = _create_normalization_service(norm_cfg)
-    normalized = service.normalize(text, lang_hint)
+    path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with connect_duckdb(path, read_only=False, lock=True) as conn:
+        service = _create_normalization_service(norm_cfg, conn, read_only=False)
+        normalized = service.normalize(text, lang_hint)
 
-    planner = ToolPlanner(
-        PlannerConfig(
-            diogenes_endpoint=config.diogenes_endpoint,
-            diogenes_parse_endpoint=config.diogenes_parse_endpoint,
-            heritage_base_url=config.heritage_base,
-            heritage_max_results=config.heritage_max_results,
-            include_whitakers=config.include_whitakers,
-            max_candidates=config.max_candidates,
+        planner = ToolPlanner(
+            PlannerConfig(
+                diogenes_endpoint=config.diogenes_endpoint,
+                diogenes_parse_endpoint=config.diogenes_parse_endpoint,
+                heritage_base_url=config.heritage_base,
+                heritage_max_results=config.heritage_max_results,
+                include_whitakers=config.include_whitakers,
+                max_candidates=config.max_candidates,
+            )
         )
-    )
-    candidate = planner.select_candidate(normalized.normalized)
-    plan = planner.build(normalized.normalized, candidate)
+        candidate = planner.select_candidate(normalized.normalized)
+        plan = planner.build(normalized.normalized, candidate)
 
-    # Shared DuckDB cache
-    db_path = Path(config.db_path).expanduser() if config.db_path else normalization_db_path()
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = duckdb.connect(database=str(db_path))
-    apply_schema(conn)
+        apply_schema(conn)
 
-    raw_index = RawResponseIndex(conn)
-    extraction_index = ExtractionIndex(conn)
-    derivation_index = DerivationIndex(conn)
-    claim_index = ClaimIndex(conn)
-    plan_response_index = PlanResponseIndex(conn)
+        raw_index = RawResponseIndex(conn)
+        extraction_index = ExtractionIndex(conn)
+        derivation_index = DerivationIndex(conn)
+        claim_index = ClaimIndex(conn)
+        plan_response_index = PlanResponseIndex(conn)
 
-    registry = default_registry(use_stubs=config.use_stub_handlers)
-    clients = _build_exec_clients(plan, config.diogenes_endpoint, config.use_stub_handlers)
+        registry = default_registry(use_stubs=config.use_stub_handlers)
+        clients = _build_exec_clients(plan, config.diogenes_endpoint, config.use_stub_handlers)
 
-    result = execute_plan_staged(
-        plan=plan,
-        clients=clients,
-        registry=registry,
-        raw_index=raw_index,
-        extraction_index=extraction_index,
-        derivation_index=derivation_index,
-        claim_index=claim_index,
-        plan_response_index=plan_response_index,
-        allow_cache=not config.no_cache,
-    )
+        result = execute_plan_staged(
+            plan=plan,
+            clients=clients,
+            registry=registry,
+            raw_index=raw_index,
+            extraction_index=extraction_index,
+            derivation_index=derivation_index,
+            claim_index=claim_index,
+            plan_response_index=plan_response_index,
+            allow_cache=not config.no_cache,
+        )
 
     _print_plan(plan, "pretty")
     click.echo(
@@ -818,6 +1069,149 @@ def plan_exec(  # noqa: PLR0913
         use_stub_handlers=use_stub_handlers,
     )
     _plan_exec_impl(config, language, text)
+
+
+@main.command("triples-dump")
+@click.argument("language")
+@click.argument("text")
+@click.argument("tool_filter", default="all")
+@click.option(
+    "--normalize/--no-normalize",
+    default=True,
+    show_default=True,
+    help="Normalize input before planning/executing.",
+)
+@click.option(
+    "--diogenes-endpoint",
+    default="http://localhost:8888/Diogenes.cgi",
+    show_default=True,
+    help="Diogenes CGI endpoint for planning/fetch.",
+)
+@click.option(
+    "--diogenes-parse-endpoint",
+    help="Alternate Diogenes parse endpoint (defaults to diogenes-endpoint).",
+)
+@click.option(
+    "--heritage-base",
+    default="http://localhost:48080",
+    show_default=True,
+    help="Base URL for Heritage Platform (unused here; kept for symmetry).",
+)
+@click.option(
+    "--db-path",
+    type=click.Path(),
+    help="Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb).",
+)
+@click.option(
+    "--no-cache",
+    is_flag=True,
+    help="Skip normalization cache lookups and writes for this invocation.",
+)
+@click.option(
+    "--include-cltk/--no-include-cltk",
+    default=False,
+    show_default=True,
+    help="Include CLTK in the plan (may be slow due to warmup).",
+)
+def triples_dump(
+    language: str,
+    text: str,
+    tool_filter: str,
+    normalize: bool,
+    diogenes_endpoint: str,
+    diogenes_parse_endpoint: str | None,
+    heritage_base: str,
+    db_path: str | None,
+    no_cache: bool,
+    include_cltk: bool,
+):
+    """
+    Build a ToolPlan for the word and dump claims/triples for selected tools.
+    """
+    lang_hint = _parse_language(language)
+    norm_cfg = NormalizeConfig(
+        diogenes_endpoint=diogenes_endpoint,
+        heritage_base=heritage_base,
+        db_path=db_path,
+        no_cache=no_cache,
+        output="pretty",
+    )
+    query_value = text
+    if normalize:
+        query_value = _normalize_word_for_tool(language, text, norm_cfg, use_cache=not no_cache)
+
+    planner = ToolPlanner(
+        PlannerConfig(
+            diogenes_endpoint=diogenes_endpoint,
+            diogenes_parse_endpoint=diogenes_parse_endpoint,
+            heritage_base_url=heritage_base,
+            heritage_max_results=5,
+            include_whitakers=lang_hint == LanguageHint.LANGUAGE_HINT_LAT,
+            include_cltk=include_cltk and lang_hint in {LanguageHint.LANGUAGE_HINT_LAT, LanguageHint.LANGUAGE_HINT_GRC},
+            max_candidates=3,
+        )
+    )
+    candidate = planner.select_candidate(query_value)
+    plan = planner.build(query_value, candidate)
+
+    if tool_filter and tool_filter.lower() != "all":
+        lf = tool_filter.lower()
+
+        def _matches_tool(tool_name: str) -> bool:
+            t = tool_name.lower()
+            if t.startswith(lf):
+                return True
+            _, _, rest = t.partition(".")
+            return bool(rest) and rest.startswith(lf)
+
+        filtered_calls = [c for c in plan.tool_calls if _matches_tool(c.tool)]
+        kept_ids = {c.call_id for c in filtered_calls}
+        filtered_deps = [d for d in plan.dependencies if d.from_call_id in kept_ids and d.to_call_id in kept_ids]
+        plan.ClearField("tool_calls")
+        plan.ClearField("dependencies")
+        plan.tool_calls.extend(filtered_calls)
+        plan.dependencies.extend(filtered_deps)
+
+    with duckdb.connect(database=":memory:") as conn:
+        apply_schema(conn)
+        raw_index = RawResponseIndex(conn)
+        extraction_index = ExtractionIndex(conn)
+        derivation_index = DerivationIndex(conn)
+        claim_index = ClaimIndex(conn)
+        plan_response_index = PlanResponseIndex(conn)
+        registry = default_registry(use_stubs=False)
+        clients = _build_exec_clients(plan, diogenes_endpoint, use_stubs=False)
+        result = execute_plan_staged(
+            plan=plan,
+            clients=clients,
+            registry=registry,
+            raw_index=raw_index,
+            extraction_index=extraction_index,
+            derivation_index=derivation_index,
+            claim_index=claim_index,
+            plan_response_index=plan_response_index,
+            allow_cache=False,
+        )
+
+    for claim in result.claims:
+        click.echo(f"TOOL={claim.tool} PRED={claim.predicate} SUBJECT={claim.subject}")
+        val = claim.value if isinstance(claim.value, dict) else {}
+        triples = val.get("triples") if isinstance(val, dict) else None
+        if triples:
+            sense_counts: dict[str, int] = {}
+            for t in triples:
+                if isinstance(t, dict) and t.get("predicate") == "has_sense":
+                    subj = t.get("subject")
+                    if isinstance(subj, str):
+                        sense_counts[subj] = sense_counts.get(subj, 0) + 1
+            if sense_counts:
+                click.echo(f"  sense_counts {sense_counts}")
+            for t in triples[:10]:
+                click.echo(f"  triple {t}")
+        if isinstance(val, dict) and "raw_text" in val:
+            click.echo(f"  raw_text_len {len(val['raw_text'])}")
+        if isinstance(val, dict) and "raw_html" in val:
+            click.echo(f"  raw_html_len {len(val['raw_html'])}")
 
 
 if __name__ == "__main__":

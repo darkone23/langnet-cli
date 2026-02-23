@@ -78,9 +78,9 @@ def test_cts_builder_minimal_perseus_and_legacy() -> None:
 
         config = CtsBuildConfig(
             perseus_dir=perseus_root,
-            legacy_dir=legacy_root,
+            phi_cdrom_dir=legacy_root,
             output_path=out_path,
-            include_legacy=True,
+            include_packard=True,
             wipe_existing=True,
         )
         builder = CtsUrnBuilder(config)
@@ -105,7 +105,7 @@ def test_cts_builder_minimal_perseus_and_legacy() -> None:
             conn.close()
 
         EXPECTED_AUTHOR_COUNT = 2  # Latin + Greek
-        EXPECTED_WORK_COUNT = 3  # Perseus + Greek + legacy
+        EXPECTED_WORK_COUNT = 2  # Perseus Latin + Perseus Greek (no packard fixtures)
         EXPECTED_EDITION_COUNT = 2
         assert authors == EXPECTED_AUTHOR_COUNT
         assert works == EXPECTED_WORK_COUNT

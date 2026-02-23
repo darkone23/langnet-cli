@@ -86,11 +86,11 @@ def test_whitaker_triples_projection() -> None:
     realizes = _find_triple(triples, interp_anchor, "realizes_lexeme", lex_anchor)
     assert realizes is not None
     assert _find_triple(triples, interp_anchor, "has_pos", "verb") is not None
-    assert _find_triple(triples, interp_anchor, "has_tense", "IMPF") is not None
-    assert _find_triple(triples, interp_anchor, "has_mood", "SUB") is not None
-    assert _find_triple(triples, interp_anchor, "has_voice", "ACTIVE") is not None
+    assert _find_triple(triples, interp_anchor, "has_tense", "imperfect") is not None
+    assert _find_triple(triples, interp_anchor, "has_mood", "subjunctive") is not None
+    assert _find_triple(triples, interp_anchor, "has_voice", "active") is not None
     assert _find_triple(triples, interp_anchor, "has_person", "1") is not None
-    assert _find_triple(triples, interp_anchor, "has_number", "S") is not None
+    assert _find_triple(triples, interp_anchor, "has_number", "singular") is not None
 
     has_sense = _find_triple(triples, lex_anchor, "has_sense", sense_anchor)
     assert has_sense is not None

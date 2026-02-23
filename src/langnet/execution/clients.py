@@ -99,6 +99,19 @@ class CLTKFetchClient:
         )
 
 
+_CLTK_CLIENT_SINGLETON: CLTKFetchClient | None = None
+
+
+def get_cltk_fetch_client() -> CLTKFetchClient:
+    """
+    Lazy singleton to avoid repeatedly initializing CLTK resources.
+    """
+    global _CLTK_CLIENT_SINGLETON
+    if _CLTK_CLIENT_SINGLETON is None:
+        _CLTK_CLIENT_SINGLETON = CLTKFetchClient()
+    return _CLTK_CLIENT_SINGLETON
+
+
 class WhitakerFetchClient:
     """
     Client wrapper for fetch.whitakers using the local whitakers-words binary.

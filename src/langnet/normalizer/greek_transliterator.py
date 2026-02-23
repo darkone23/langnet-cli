@@ -217,6 +217,7 @@ def transliterate_variants(text: str) -> list[GreekTransliteration]:
         variants[base.search_key] = base
 
     prioritized = _prioritized_eta_variants(text, base.search_key)
+    prioritized += _prioritized_omega_variants(text, base.search_key)
 
     for variant in _eta_omega_variants(base.search_key):
         if variant not in variants:
@@ -253,6 +254,18 @@ def _eta_omega_variants(base_key: str) -> list[str]:
     if base_key.endswith("ε"):
         variants.append(base_key[:-1] + "η")
     return variants
+
+
+def _prioritized_omega_variants(raw_text: str, base_key: str) -> list[str]:
+    """
+    Prefer an omega replacement for terminal -os when input uses 'o' or 'w' as omega.
+    """
+    out: list[str] = []
+    lower = raw_text.lower()
+    if base_key.endswith("ος") and ("w" in lower or lower.endswith("os") or lower.endswith("ws")):
+        omega_terminal = base_key[:-2] + "ως"
+        out.append(omega_terminal)
+    return out
 
 
 def _replace_first(src: str, target: str, replacement: str) -> str | None:

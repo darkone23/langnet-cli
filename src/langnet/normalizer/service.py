@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 import duckdb
-from query_spec import LanguageHint
+from query_spec import LanguageHint, NormalizedQuery
 
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.normalization_index import NormalizationIndex
@@ -48,10 +48,14 @@ class NormalizationService:
         whitaker_client: _WhitakerFactory | None = None,
         use_cache: bool | None = None,
         effects_index: RawResponseIndex | None = None,
+        *,
+        read_only: bool = False,
     ) -> None:
-        ensure_norm_schema(conn)
+        self.read_only = read_only
+        if not read_only:
+            ensure_norm_schema(conn)
         self.index = NormalizationIndex(conn)
-        self._effects_index = effects_index
+        self._effects_index = None if read_only else effects_index
         self._heritage_client = heritage_client
         self._diogenes_config = diogenes_config or DiogenesConfig()
         self._whitaker_client = whitaker_client
@@ -61,6 +65,8 @@ class NormalizationService:
         self.use_cache = (
             use_cache if use_cache is not None else env_nocache not in ("1", "true", "yes")
         )
+        if self.read_only:
+            self.use_cache = False
 
     def _ensure_normalizer(self) -> None:
         if self.normalizer is not None:
@@ -130,7 +136,8 @@ class NormalizationService:
         if self.use_cache:
             cached = self.index.get(query_hash)
             if cached is not None:
-                return NormalizationResult(query_hash=query_hash, normalized=cached)
+                reranked = self._rerank_candidates(raw_query, language, cached)
+                return NormalizationResult(query_hash=query_hash, normalized=reranked)
 
         self._ensure_normalizer()
         assert self.normalizer is not None
@@ -140,18 +147,78 @@ class NormalizationService:
 
         # Perform normalization
         result = self.normalizer.normalize(raw_query, language)
+        reranked = self._rerank_candidates(raw_query, language, result.normalized)
 
         # Collect captured response IDs
         source_response_ids = self._get_captured_response_ids()
 
         # Store in index with provenance if caching is enabled
-        if self.use_cache:
+        if self.use_cache and not self.read_only:
             self.index.upsert(
                 query_hash=result.query_hash,
                 raw_query=raw_query,
                 language=str(language).lower(),
-                normalized=result.normalized,
+                normalized=reranked,
                 source_response_ids=source_response_ids if source_response_ids else None,
             )
 
-        return result
+        return NormalizationResult(query_hash=result.query_hash, normalized=reranked)
+
+    def _rerank_candidates(
+        self, raw_query: str, language: LanguageValue, normalized: NormalizedQuery
+    ) -> NormalizedQuery:
+        """
+        Re-rank cached candidates with the current distance/frequency heuristic.
+
+        Cached rows may have been stored with an older ordering; re-scoring here
+        keeps omega/omicron and betacode/Unicode variants aligned to the best
+        frequency match without forcing a cache clear.
+        """
+        if language != LanguageHint.LANGUAGE_HINT_GRC:
+            return normalized
+
+        try:
+            from langnet.diogenes.client import (  # noqa: PLC0415
+                _levenshtein,
+                _normalize_for_distance,
+            )
+        except Exception:
+            return normalized
+
+        candidates = list(normalized.candidates)
+        if len(candidates) <= 1:
+            return normalized
+
+        target_source = raw_query
+        for step in normalized.normalizations:
+            if step.operation == "greek_transliterate" and step.output:
+                target_source = step.output
+                break
+        target = _normalize_for_distance(target_source)
+
+        def _freq(cand) -> int:
+            try:
+                return int(cand.encodings.get("freq", 0))
+            except Exception:
+                return 0
+
+        freqs = [_freq(c) for c in candidates]
+        total = sum(freqs) or 1
+
+        def _norm_token(cand) -> str:
+            token = cand.encodings.get("betacode") or cand.lemma or ""
+            normed = _normalize_for_distance(token)
+            return normed or token
+
+        def _score(item) -> tuple[int, float, int]:
+            cand, freq = item
+            normed = _norm_token(cand)
+            dist = _levenshtein(normed, target)
+            ratio = -(freq / total) if total else 0.0
+            return (dist, ratio, len(normed))
+
+        ranked = sorted(zip(candidates, freqs), key=_score)
+        ordered = [cand for cand, _freq in ranked]
+        normalized.candidates.clear()
+        normalized.candidates.extend(ordered)
+        return normalized

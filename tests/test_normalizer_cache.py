@@ -5,10 +5,12 @@ from pathlib import Path
 from typing import cast
 
 import duckdb
-from query_spec import LanguageHint
+from query_spec import LanguageHint, NormalizedQuery
 
 from langnet.diogenes.client import DiogenesClient, WordListResult
+from langnet.normalizer.core import _hash_query
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
+from langnet.storage.normalization_index import NormalizationIndex, ensure_schema as ensure_norm_schema
 
 
 class CountingDiogenes:
@@ -63,3 +65,36 @@ def test_normalizer_uses_cache_and_skips_diogenes_on_second_run() -> None:
         svc3.normalize("thea", LanguageHint.LANGUAGE_HINT_GRC)
         assert dio3.calls >= 1, "Cache disabled should force Diogenes call"
         conn3.close()
+
+
+def test_cached_greek_results_are_reranked_with_freq() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "canon.duckdb"
+        conn = duckdb.connect(str(db_path))
+        ensure_norm_schema(conn)
+        index = NormalizationIndex(conn)
+
+        normalized = NormalizedQuery(original="phos", language=LanguageHint.LANGUAGE_HINT_GRC)
+        low = normalized.candidates.add()
+        low.lemma = "φος"
+        low.encodings["freq"] = "24"
+        high = normalized.candidates.add()
+        high.lemma = "φῶς"
+        high.encodings["freq"] = "13636"
+
+        index.upsert(
+            query_hash=_hash_query("phos", LanguageHint.LANGUAGE_HINT_GRC),
+            raw_query="phos",
+            language=str(LanguageHint.LANGUAGE_HINT_GRC).lower(),
+            normalized=normalized,
+            source_response_ids=None,
+        )
+        conn.close()
+
+        conn_read = duckdb.connect(str(db_path))
+        svc = NormalizationService(conn_read, use_cache=True)
+        result = svc.normalize("phos", LanguageHint.LANGUAGE_HINT_GRC)
+
+        candidates = list(result.normalized.candidates)
+        assert candidates[0].lemma == "φῶς"
+        conn_read.close()

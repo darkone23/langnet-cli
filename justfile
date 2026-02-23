@@ -4,7 +4,21 @@ default:
 
 # run langnet-cli tool
 cli *args:
-    langnet-cli {{ args }}
+    # Use devenv shell to ensure langnet-cli env is active.
+    devenv shell langnet-cli -- {{ args }}
+
+# Convenience wrappers for click subcommands
+cli-normalize *args:
+    devenv shell langnet-cli -- normalize {{ args }}
+
+cli-plan *args:
+    devenv shell langnet-cli -- plan {{ args }}
+
+cli-plan-exec *args:
+    devenv shell langnet-cli -- plan-exec {{ args }}
+
+cli-databuild *args:
+    devenv shell langnet-cli -- databuild {{ args }}
 
 # cache-clear:
 #     just cli cache-clear
@@ -96,6 +110,14 @@ read-codesketch-whitakers:
 
 read-codesketch-cltk:
     cat ./codesketch/src/langnet/classics_toolkit/core.py
+
+# Parse Diogenes HTML and dump the raw parsed JSON (pre-triples). Optional endpoint override.
+diogenes-parse lang word endpoint="":
+    python3 ./.justscripts/diogenes_parse.py "{{lang}}" "{{word}}" "{{endpoint}}"
+
+# Generic parser helper: tool = diogenes|whitakers. Fourth arg = endpoint (dio) or binary (whitakers).
+parse tool lang word opt="":
+    python3 ./.justscripts/tool_parse.py "{{tool}}" "{{lang}}" "{{word}}" --opt "{{opt}}" --no-normalize
 
 # Dump tool claims/triples for a word (Latin) with no stubs/no cache. Optional tool filter (exact prefix), use "all" to run everything.
 triples-dump lang word tool="all":

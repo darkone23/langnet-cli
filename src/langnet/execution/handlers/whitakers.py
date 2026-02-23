@@ -53,6 +53,126 @@ _FACT_PRED_MAP = {
 }
 _CODELINE_FEATURE_KEYS = ("source", "age", "area", "geo", "notes")
 
+# Rich code-to-label maps (adapted from the codesketch whitakers_words core)
+_TENSE_MAP = {
+    "PRES": "present",
+    "IMP": "imperfect",
+    "IMPF": "imperfect",
+    "IMPFF": "imperfect",
+    "PERF": "perfect",
+    "FUT": "future",
+    "FUTP": "future perfect",
+    "PLUP": "pluperfect",
+    "X": "unknown",
+}
+_VOICE_MAP = {"ACTIVE": "active", "PASSIVE": "passive", "X": "unknown"}
+_MOOD_MAP = {
+    "IND": "indicative",
+    "SUB": "subjunctive",
+    "IMP": "imperative",
+    "INF": "infinitive",
+    "PPL": "participle",
+    "X": "unknown",
+}
+_PERSON_MAP = {"0": "0", "1": "1", "2": "2", "3": "3", "X": "unknown"}
+_NUMBER_MAP = {"S": "singular", "P": "plural", "X": "unknown"}
+_CASE_MAP = {
+    "NOM": "nominative",
+    "VOC": "vocative",
+    "GEN": "genitive",
+    "DAT": "dative",
+    "ACC": "accusative",
+    "ABL": "ablative",
+    "LOC": "locative",
+    "X": "unknown",
+}
+_GENDER_MAP = {"M": "masculine", "F": "feminine", "N": "neuter", "C": "common", "X": "unknown"}
+_DEGREE_MAP = {"POS": "positive", "COMP": "comparative", "SUPER": "superlative", "X": "unknown"}
+_PRONOUN_TYPE_MAP = {
+    "PERS": "personal",
+    "REFLEX": "reflexive",
+    "DEMONS": "demonstrative",
+    "INDEF": "indefinite",
+    "INTERR": "interrogative",
+    "REL": "relative",
+    "ADJECT": "adjectival",
+    "X": "unknown",
+}
+_NUMERAL_TYPE_MAP = {
+    "CARD": "cardinal",
+    "ORD": "ordinal",
+    "DIST": "distributive",
+    "ADVERB": "adverbial",
+    "X": "unknown",
+}
+_AGE_MAP = {
+    "A": "archaic",
+    "B": "early",
+    "C": "classical",
+    "D": "late",
+    "E": "later",
+    "F": "medieval",
+    "G": "scholastic",
+    "H": "hispano-latin",
+    "I": "modern",
+    "X": "unknown",
+}
+_AREA_MAP = {
+    "A": "Africa",
+    "B": "Britain",
+    "C": "China",
+    "E": "Egypt",
+    "F": "France/Spain",
+    "G": "Germany",
+    "H": "North Africa",
+    "I": "Italy",
+    "J": "Judea",
+    "K": "Balkans",
+    "L": "Low Countries",
+    "M": "Mediterranean",
+    "N": "Northern Europe",
+    "P": "Persia",
+    "Q": "Syria",
+    "R": "Romania",
+    "S": "Scandinavia",
+    "T": "Sicily",
+    "U": "Russia",
+    "X": "unknown",
+}
+_GEO_MAP = {
+    "A": "Africa",
+    "B": "Britain",
+    "C": "China",
+    "E": "Egypt",
+    "F": "France",
+    "G": "Germany",
+    "H": "Greece",
+    "I": "Italy",
+    "J": "India",
+    "K": "Balkan",
+    "L": "Malta",
+    "M": "Macedonia",
+    "N": "Northern",
+    "O": "Oriental",
+    "P": "Persia",
+    "Q": "Syria",
+    "R": "Rome",
+    "S": "Spain",
+    "T": "Tropic",
+    "U": "Russia",
+    "X": "unknown",
+}
+_FREQ_MAP = {
+    "A": "very frequent",
+    "B": "frequent",
+    "C": "common",
+    "D": "uncommon",
+    "E": "rare",
+    "F": "very rare",
+    "X": "unknown",
+}
+_SOURCE_MAP = {"A": "Allen and Greenough", "L": "Lewis and Short", "S": "Supplement", "X": "unknown"}
+
 
 def _load_whitaker_parser(module_name: str) -> ModuleType:
     if module_name in _WHITAKER_MODULES:
@@ -97,6 +217,12 @@ def _normalize_pos(term: Mapping[str, object] | None, codeline: Mapping[str, obj
     if not pos and codeline and isinstance(codeline.get("pos_code"), str):
         pos = _POS_CODE_MAP.get(codeline["pos_code"], codeline["pos_code"].lower())
     return pos or _ANCHOR_UNKNOWN_POS
+
+
+def _map_feature_value(code: str | None, mapping: Mapping[str, str]) -> str | None:
+    if not code:
+        return None
+    return mapping.get(code, code)
 
 
 def _lex_anchor(lemma: str, pos: str) -> str:
@@ -256,6 +382,28 @@ def _collect_lemmas(wordlist: list[Mapping[str, object]]) -> list[str]:
     return deduped
 
 
+def _collect_word_lemmas(word: Mapping[str, object]) -> list[str]:
+    """Collect lemmas from a single Whitaker word chunk (codeline + terms)."""
+    lemmas: list[str] = []
+    codeline = word.get("codeline")
+    if isinstance(codeline, Mapping):
+        term = codeline.get("term")
+        if isinstance(term, str):
+            lemmas.append(term.split(",")[0].strip().lower())
+    for term in word.get("terms", []) or []:
+        if isinstance(term, Mapping):
+            t = term.get("term")
+            if isinstance(t, str):
+                lemmas.append(t.replace(".", ""))
+    seen = set()
+    deduped: list[str] = []
+    for lemma in lemmas:
+        if lemma not in seen:
+            seen.add(lemma)
+            deduped.append(lemma)
+    return deduped
+
+
 def _make_base_evidence(call: ToolCallSpec, derivation: DerivationEffect, claim_id: str) -> dict[str, object]:
     return _trim_evidence(
         {
@@ -300,12 +448,16 @@ def _build_triples(
     for word in wordlist:
         if not isinstance(word, Mapping):
             continue
+        word_lemmas = _collect_word_lemmas(word)
+        normalized_word_lemmas = [_normalize_lemma(l) or l.lower() for l in word_lemmas if isinstance(l, str)]
         raw_lines = [l for l in word.get("raw_lines", []) if isinstance(l, str)]
         codeline = word.get("codeline") if isinstance(word.get("codeline"), Mapping) else {}
         senses = word.get("senses") if isinstance(word.get("senses"), list) else []
         terms = [t for t in word.get("terms", []) if isinstance(t, Mapping)] if isinstance(word.get("terms"), list) else []
 
         primary_lemma = _normalize_lemma(codeline.get("term")) if isinstance(codeline, Mapping) else None
+        if not primary_lemma and normalized_word_lemmas:
+            primary_lemma = normalized_word_lemmas[0]
         if not primary_lemma and normalized_lemmas:
             primary_lemma = normalized_lemmas[0]
         if not primary_lemma:
@@ -320,15 +472,35 @@ def _build_triples(
             triples.append(_make_triple(lex_anchor, "has_pos", pos, base_evidence))
             if isinstance(codeline, Mapping):
                 if codeline.get("freq"):
-                    triples.append(_make_triple(lex_anchor, "has_frequency", codeline.get("freq"), base_evidence))
+                    triples.append(
+                        _make_triple(
+                            lex_anchor,
+                            "has_frequency",
+                            _map_feature_value(codeline.get("freq"), _FREQ_MAP) or codeline.get("freq"),
+                            base_evidence,
+                        )
+                    )
                 if codeline.get("declension"):
                     triples.append(_make_triple(lex_anchor, "has_declension", codeline.get("declension"), base_evidence))
                 if codeline.get("pos_form"):
-                    triples.append(_make_triple(lex_anchor, "has_gender", codeline.get("pos_form"), base_evidence))
-                extra_features = {k: codeline[k] for k in _CODELINE_FEATURE_KEYS if codeline.get(k)}
+                    pf = str(codeline.get("pos_form"))
+                    pron_type = _map_feature_value(pf, _PRONOUN_TYPE_MAP)
+                    num_type = _map_feature_value(pf, _NUMERAL_TYPE_MAP)
+                    if pron_type and pron_type != pf:
+                        triples.append(_make_triple(lex_anchor, "has_pronoun_type", pron_type, base_evidence))
+                    elif num_type and num_type != pf:
+                        triples.append(_make_triple(lex_anchor, "has_numeral_type", num_type, base_evidence))
+                    else:
+                        triples.append(_make_triple(lex_anchor, "has_feature", {"pos_form": pf}, base_evidence))
+                extra_features = {}
+                for key, mapping in [("age", _AGE_MAP), ("area", _AREA_MAP), ("geo", _GEO_MAP), ("source", _SOURCE_MAP)]:
+                    if codeline.get(key):
+                        extra_features[key] = _map_feature_value(codeline.get(key), mapping) or codeline.get(key)
+                if codeline.get("notes"):
+                    extra_features["notes"] = codeline.get("notes")
                 if extra_features:
                     triples.append(_make_triple(lex_anchor, "has_feature", extra_features, base_evidence))
-            for variant in _variant_candidates(normalized_lemmas, primary_lemma):
+            for variant in _variant_candidates(normalized_word_lemmas, primary_lemma):
                 triples.append(_make_triple(lex_anchor, "variant_form", variant, base_evidence))
             for sense in senses:
                 if not isinstance(sense, str):
@@ -348,13 +520,31 @@ def _build_triples(
             interp_anchor = _interp_anchor(surface, lex_anchor)
             triples.append(_make_triple(form_anchor, "has_interpretation", interp_anchor, base_evidence))
             triples.append(_make_triple(interp_anchor, "realizes_lexeme", lex_anchor, base_evidence))
+            triples.append(_make_triple(form_anchor, "inflection_of", lex_anchor, base_evidence))
             term_pos = _normalize_pos(term, codeline if isinstance(codeline, Mapping) else None)
             if term_pos:
                 triples.append(_make_triple(interp_anchor, "has_pos", term_pos, base_evidence))
             for key, pred in _FACT_PRED_MAP.items():
                 val = term.get(key) if isinstance(term, Mapping) else None
                 if val:
-                    triples.append(_make_triple(interp_anchor, pred, val, base_evidence))
+                    mapped_val = val
+                    if pred == "has_tense":
+                        mapped_val = _map_feature_value(str(val), _TENSE_MAP) or val
+                    elif pred == "has_voice":
+                        mapped_val = _map_feature_value(str(val), _VOICE_MAP) or val
+                    elif pred == "has_mood":
+                        mapped_val = _map_feature_value(str(val), _MOOD_MAP) or val
+                    elif pred == "has_person":
+                        mapped_val = _map_feature_value(str(val), _PERSON_MAP) or val
+                    elif pred == "has_number":
+                        mapped_val = _map_feature_value(str(val), _NUMBER_MAP) or val
+                    elif pred == "has_case":
+                        mapped_val = _map_feature_value(str(val), _CASE_MAP) or val
+                    elif pred == "has_gender":
+                        mapped_val = _map_feature_value(str(val), _GENDER_MAP) or val
+                    elif pred == "has_degree":
+                        mapped_val = _map_feature_value(str(val), _DEGREE_MAP) or val
+                    triples.append(_make_triple(interp_anchor, pred, mapped_val, base_evidence))
             if term.get("notes"):
                 triples.append(_make_triple(interp_anchor, "has_feature", {"notes": term.get("notes")}, base_evidence))
     return triples

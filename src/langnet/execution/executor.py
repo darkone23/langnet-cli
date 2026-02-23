@@ -212,7 +212,9 @@ def execute_plan_staged(  # noqa: PLR0913
                         progressed = True
                         continue
                     raise RuntimeError(f"Missing source raw response for call '{call_id}'")
+                handler_start = time.time()
                 extraction = handler(call, source_raw)
+                handler_ms = int((time.time() - handler_start) * 1000)
                 extraction_index.store_effect(extraction)
                 extractions.append(extraction)
                 extraction_by_call[call_id] = extraction
@@ -221,6 +223,7 @@ def execute_plan_staged(  # noqa: PLR0913
                     call_id=call_id,
                     tool=call.tool,
                     source_call=source_call_id,
+                    duration_ms=handler_ms,
                 )
             elif stage == ToolStage.TOOL_STAGE_DERIVE:
                 handler = registry.get_derive(call.tool)
@@ -253,7 +256,9 @@ def execute_plan_staged(  # noqa: PLR0913
                         progressed = True
                         continue
                     raise RuntimeError(f"Missing source extraction for call '{call_id}'")
+                handler_start = time.time()
                 derivation = handler(call, source_extraction)
+                handler_ms = int((time.time() - handler_start) * 1000)
                 derivation_index.store_effect(derivation)
                 derivations.append(derivation)
                 derivation_by_call[call_id] = derivation
@@ -262,6 +267,7 @@ def execute_plan_staged(  # noqa: PLR0913
                     call_id=call_id,
                     tool=call.tool,
                     source_call=source_call_id,
+                    duration_ms=handler_ms,
                 )
             elif stage == ToolStage.TOOL_STAGE_CLAIM:
                 handler = registry.get_claim(call.tool)
@@ -294,7 +300,9 @@ def execute_plan_staged(  # noqa: PLR0913
                         progressed = True
                         continue
                     raise RuntimeError(f"Missing source derivation for call '{call_id}'")
+                handler_start = time.time()
                 claim = handler(call, source_derivation)
+                handler_ms = int((time.time() - handler_start) * 1000)
                 claim_index.store_effect(claim)
                 claims.append(claim)
                 logger.info(
@@ -302,6 +310,7 @@ def execute_plan_staged(  # noqa: PLR0913
                     call_id=call_id,
                     tool=call.tool,
                     source_call=source_call_id,
+                    duration_ms=handler_ms,
                 )
             else:
                 raise ValueError(f"Unsupported tool stage for call '{call_id}': {stage}")
