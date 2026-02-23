@@ -157,12 +157,12 @@ def _build_triples(payload: Mapping[str, object] | None, base_evidence: Mapping[
     normalized_word = _normalize_token(word)
     ipa_list = payload.get("ipa")
     ipa_value: str | None = None
-    if isinstance(ipa_list, Sequence) and ipa_list:
+    if isinstance(ipa_list, str):
+        ipa_value = ipa_list
+    elif isinstance(ipa_list, Sequence) and ipa_list:
         first = ipa_list[0]
         if isinstance(first, str):
             ipa_value = first
-    elif isinstance(ipa_list, str):
-        ipa_value = ipa_list
     lewis_lines = [line for line in payload.get("lewis_lines", []) or [] if isinstance(line, str)]
 
     if lex_anchor and normalized_word and normalized_word != normalized_lemma:

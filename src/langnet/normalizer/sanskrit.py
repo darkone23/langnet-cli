@@ -229,6 +229,12 @@ class SanskritNormalizer(LanguageNormalizer):
                         )
                     )
 
+        # Ambiguity fallback: heuristically diacritize ASCII and retry Heritage when no matches.
+        if not candidates and encoding == ENC_ASCII:
+            fallback_candidates = self._heritage_retry_with_variants(stripped, steps)
+            if fallback_candidates:
+                candidates.extend(fallback_candidates)
+
         if not candidates:
             encodings = self._build_encodings(velthuis_form, encoding, steps)
             candidates.append(
@@ -304,6 +310,81 @@ class SanskritNormalizer(LanguageNormalizer):
         alternates: list[tuple[str, dict[str, str]]] = []
 
         return alternates
+
+    def _heritage_retry_with_variants(
+        self, text: str, steps: list[NormalizationStep]
+    ) -> list[CanonicalCandidate]:
+        """
+        When Heritage returns no matches for bare ASCII, try diacritic/long-vowel variants and retry.
+        """
+        variants = self._heuristic_ascii_variants(text)
+        candidates: list[CanonicalCandidate] = []
+        for variant in variants:
+            vel = to_heritage_velthuis(variant).lower()
+            heritage_query = self._strip_to_alpha(vel)
+            steps.append(
+                NormalizationStep(
+                    operation="heritage_retry_variant",
+                    input=variant,
+                    output=vel,
+                    tool="ascii_variant",
+                )
+            )
+            if not heritage_query:
+                continue
+            matches = self.heritage.all_matches(heritage_query)
+            if not matches:
+                steps.append(
+                    NormalizationStep(
+                        operation="heritage_retry_variant_result",
+                        input=variant,
+                        output="miss",
+                        tool="heritage_sktsearch",
+                    )
+                )
+                continue
+            ranked_matches = _rank_heritage_matches(variant, matches)
+            steps.append(
+                NormalizationStep(
+                    operation="heritage_retry_variant_result",
+                    input=variant,
+                    output=";".join(m.display for m in ranked_matches),
+                    tool="heritage_sktsearch",
+                )
+            )
+            for match in ranked_matches:
+                encodings = {
+                    ENC_VELTHUIS: match.canonical,
+                    ENC_IAST: match.display,
+                }
+                encodings.update(self._build_encodings(match.canonical, ENC_VELTHUIS, steps))
+                candidates.append(
+                    CanonicalCandidate(
+                        lemma=match.display,
+                        encodings=encodings,
+                        sources=["heritage_sktsearch_retry"],
+                    )
+                )
+            # Stop after first successful variant to limit search.
+            if candidates:
+                break
+        return candidates
+
+    def _heuristic_ascii_variants(self, text: str) -> list[str]:
+        """
+        Generate a small set of ASCII-with-diacritics variants to catch common Heritage misses.
+        """
+        base = text.lower()
+        variants: set[str] = {base}
+        # Long vowels
+        variants.add(base.replace("aa", "ā").replace("ii", "ī").replace("uu", "ū"))
+        # ś vs ṣ vs s/h
+        sh_variant = base.replace("sh", "ś")
+        variants.add(sh_variant)
+        variants.add(sh_variant.replace("z", "ṣ"))
+        # Retroflex-only swap for bare z → ṣ
+        variants.add(base.replace("z", "ṣ"))
+        return [v for v in variants if v]
 
     def _detect_encoding(self, text: str) -> str:
         if any(DEVANAGARI_UNICODE_START <= ord(c) <= DEVANAGARI_UNICODE_END for c in text):

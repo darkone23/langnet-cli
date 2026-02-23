@@ -74,6 +74,7 @@ class PlannerConfig:
     heritage_max_results: int = 5
     include_whitakers: bool = True
     include_cltk: bool = True
+    include_spacy: bool = True
     include_cdsl: bool = True
     cdsl_dicts: tuple[str, ...] = ("mw",)
     max_candidates: int = 3
@@ -147,87 +148,96 @@ class ToolPlanner:
 
         velthuis = candidate.encodings.get("velthuis") or to_heritage_velthuis(candidate.lemma)
         velthuis = velthuis.lower()
-        params = {
-            "text": velthuis,
-            "t": "VH",
-            "max": str(self.config.heritage_max_results),
-        }
-        heritage_fetch_id = "heritage-1"
-        calls.append(
-            _make_call(
-                tool="fetch.heritage",
-                call_id=heritage_fetch_id,
-                endpoint=endpoint,
-                params=params,
-                opts=_opts(
-                    expected="html", priority=1, optional=False, stage=ToolStage.TOOL_STAGE_FETCH
-                ),
+        variant_texts = self._heritage_variants(normalized.original or "", velthuis)
+        for idx, vh_text in enumerate(variant_texts, start=1):
+            params = {
+                "text": vh_text,
+                "t": "VH",
+                "max": str(self.config.heritage_max_results),
+                "orig": normalized.original or "",
+            }
+            heritage_fetch_id = f"heritage-{idx}"
+            calls.append(
+                _make_call(
+                    tool="fetch.heritage",
+                    call_id=heritage_fetch_id,
+                    endpoint=endpoint,
+                    params=params,
+                    opts=_opts(
+                        expected="html",
+                        priority=1,
+                        optional=(idx > 1),
+                        stage=ToolStage.TOOL_STAGE_FETCH,
+                    ),
+                )
             )
-        )
-        # Parse Heritage HTML → extraction
-        parse_id = "heritage-parse-1"
-        calls.append(
-            _make_call(
-                tool="extract.heritage.html",
-                call_id=parse_id,
-                endpoint="internal://heritage/html_extract",
-                params={"source_call_id": heritage_fetch_id},
-                opts=_opts(
-                    expected="extraction",
-                    priority=2,
-                    optional=True,
-                    stage=ToolStage.TOOL_STAGE_EXTRACT,
-                ),
+            # Parse Heritage HTML → extraction
+            parse_id = f"heritage-parse-{idx}"
+            calls.append(
+                _make_call(
+                    tool="extract.heritage.html",
+                    call_id=parse_id,
+                    endpoint="internal://heritage/html_extract",
+                    params={"source_call_id": heritage_fetch_id},
+                    opts=_opts(
+                        expected="extraction",
+                        priority=2,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_EXTRACT,
+                    ),
+                )
             )
-        )
-        deps.append(
-            PlanDependency(
-                from_call_id=heritage_fetch_id,
-                to_call_id=parse_id,
-                rationale="Parse heritage HTML after fetch",
+            deps.append(
+                PlanDependency(
+                    from_call_id=heritage_fetch_id,
+                    to_call_id=parse_id,
+                    rationale="Parse heritage HTML after fetch",
+                )
             )
-        )
-        derive_id = "heritage-derive-1"
-        calls.append(
-            _make_call(
-                tool="derive.heritage.morph",
-                call_id=derive_id,
-                endpoint="internal://heritage/morph_derive",
-                params={"source_call_id": parse_id},
-                opts=_opts(
-                    expected="derivation",
-                    priority=3,
-                    optional=True,
-                    stage=ToolStage.TOOL_STAGE_DERIVE,
-                ),
+            derive_id = f"heritage-derive-{idx}"
+            calls.append(
+                _make_call(
+                    tool="derive.heritage.morph",
+                    call_id=derive_id,
+                    endpoint="internal://heritage/morph_derive",
+                    params={"source_call_id": parse_id},
+                    opts=_opts(
+                        expected="derivation",
+                        priority=3,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_DERIVE,
+                    ),
+                )
             )
-        )
-        deps.append(
-            PlanDependency(
-                from_call_id=parse_id,
-                to_call_id=derive_id,
-                rationale="Derive morphology from parsed heritage",
+            deps.append(
+                PlanDependency(
+                    from_call_id=parse_id,
+                    to_call_id=derive_id,
+                    rationale="Derive morphology from parsed heritage",
+                )
             )
-        )
-        claim_id = "claim-heritage-1"
-        calls.append(
-            _make_call(
-                tool="claim.heritage.morph",
-                call_id=claim_id,
-                endpoint="internal://claim/heritage_morph",
-                params={"source_call_id": derive_id},
-                opts=_opts(
-                    expected="claim", priority=4, optional=True, stage=ToolStage.TOOL_STAGE_CLAIM
-                ),
+            claim_id = f"claim-heritage-{idx}"
+            calls.append(
+                _make_call(
+                    tool="claim.heritage.morph",
+                    call_id=claim_id,
+                    endpoint="internal://claim/heritage_morph",
+                    params={"source_call_id": derive_id},
+                    opts=_opts(
+                        expected="claim",
+                        priority=4,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_CLAIM,
+                    ),
+                )
             )
-        )
-        deps.append(
-            PlanDependency(
-                from_call_id=derive_id,
-                to_call_id=claim_id,
-                rationale="Produce morph claims from heritage derivation",
+            deps.append(
+                PlanDependency(
+                    from_call_id=derive_id,
+                    to_call_id=claim_id,
+                    rationale="Produce morph claims from heritage derivation",
+                )
             )
-        )
         if self.config.include_cdsl:
             slp1 = candidate.encodings.get("slp1") or _velthuis_to_slp1_basic(velthuis)
             for dict_id in self.config.cdsl_dicts:
@@ -311,7 +321,7 @@ class ToolPlanner:
                         to_call_id=claim_id_cdsl,
                         rationale="Produce claim from CDSL sense derivation",
                     )
-                )
+        )
         return calls, deps
 
     def _heritage_endpoint(self) -> str:
@@ -333,6 +343,31 @@ class ToolPlanner:
         if normalized.language == LanguageHint.LANGUAGE_HINT_LAT:
             return "lat"
         return "lat"
+
+    def _heritage_variants(self, raw_query: str, base_vh: str) -> list[str]:
+        """
+        Return a small set of VH texts to try for Heritage fetch (base + heuristic variants).
+        """
+        variants: list[str] = []
+        seen: set[str] = set()
+        def _add(text: str) -> None:
+            if text and text not in seen:
+                seen.add(text)
+                variants.append(text)
+
+        _add(base_vh.lower())
+
+        if raw_query:
+            rq = raw_query.lower()
+            ascii_variants = {rq}
+            ascii_variants.add(rq.replace("aa", "ā").replace("ii", "ī").replace("uu", "ū"))
+            ascii_variants.add(rq.replace("sh", "ś"))
+            ascii_variants.add(rq.replace("sh", "ṣ"))
+            ascii_variants.add(rq.replace("z", "ṣ"))
+            for candidate in ascii_variants:
+                vh = to_heritage_velthuis(candidate).lower()
+                _add(vh)
+        return variants
 
     def _build_latin_calls(
         self, normalized: NormalizedQuery, candidate
@@ -803,6 +838,83 @@ class ToolPlanner:
         )
 
         # Include CLTK as before
+        if self.config.include_spacy:
+            spacy_fetch_id = "spacy-fetch-1"
+            calls.append(
+                _make_call(
+                    tool="fetch.spacy",
+                    call_id=spacy_fetch_id,
+                    endpoint="spacy://morph/grc",
+                    params={"word": query_value, "language": "grc"},
+                    opts=_opts(
+                        expected="json", priority=3, optional=True, stage=ToolStage.TOOL_STAGE_FETCH
+                    ),
+                )
+            )
+            spacy_extract_id = "spacy-extract-1"
+            calls.append(
+                _make_call(
+                    tool="extract.spacy.json",
+                    call_id=spacy_extract_id,
+                    endpoint="internal://spacy/json_extract",
+                    params={"source_call_id": spacy_fetch_id},
+                    opts=_opts(
+                        expected="extraction",
+                        priority=4,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_EXTRACT,
+                    ),
+                )
+            )
+            deps.append(
+                PlanDependency(
+                    from_call_id=spacy_fetch_id,
+                    to_call_id=spacy_extract_id,
+                    rationale="Extract spaCy morphology payload",
+                )
+            )
+            spacy_derive_id = "spacy-derive-1"
+            calls.append(
+                _make_call(
+                    tool="derive.spacy.morph",
+                    call_id=spacy_derive_id,
+                    endpoint="internal://spacy/morph_derive",
+                    params={"source_call_id": spacy_extract_id},
+                    opts=_opts(
+                        expected="derivation",
+                        priority=5,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_DERIVE,
+                    ),
+                )
+            )
+            deps.append(
+                PlanDependency(
+                    from_call_id=spacy_extract_id,
+                    to_call_id=spacy_derive_id,
+                    rationale="Derive morphology from spaCy extraction",
+                )
+            )
+            spacy_claim_id = "spacy-claim-1"
+            calls.append(
+                _make_call(
+                    tool="claim.spacy.morph",
+                    call_id=spacy_claim_id,
+                    endpoint="internal://claim/spacy_morph",
+                    params={"source_call_id": spacy_derive_id},
+                    opts=_opts(
+                        expected="claim", priority=6, optional=True, stage=ToolStage.TOOL_STAGE_CLAIM
+                    ),
+                )
+            )
+            deps.append(
+                PlanDependency(
+                    from_call_id=spacy_derive_id,
+                    to_call_id=spacy_claim_id,
+                    rationale="Produce claims from spaCy derivation",
+                )
+            )
+
         if self.config.include_cltk:
             cltk_fetch_id = "cltk-ipa-1"
             calls.append(

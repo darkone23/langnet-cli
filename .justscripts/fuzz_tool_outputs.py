@@ -16,9 +16,11 @@ import sys
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Final
 
 DEFAULT_SAVE_PATH = Path("examples/debug/fuzz_results")
 FuzzMode = str
+SUPPORTED_PARSE_TOOLS: Final = {"diogenes", "whitakers", "cltk"}
 
 
 # Catalog of supported tools/actions with default word lists
@@ -229,32 +231,33 @@ def _run_cmd(cmd: Sequence[str]) -> str:
 
 
 def _cli_tool_request(target: FuzzTarget) -> dict:
-    """Invoke langnet-cli tool query and return parsed JSON."""
+    """
+    Invoke langnet-cli parse for supported tools and return parsed JSON payload.
+
+    The legacy `langnet-cli tool query` command was removed; this now maps to the
+    current `parse` subcommand for diogenes|whitakers|cltk.
+    """
     cmd = [
         "langnet-cli",
-        "tool",
-        "query",
-        "--tool",
+        "parse",
         target.tool,
-        "--action",
-        target.action,
-        "--query",
+        target.lang or "",
         target.word,
+        "--no-cache",
+        "--normalize",
     ]
-    if target.lang:
-        cmd.extend(["--lang", target.lang])
-    if target.dict_name:
-        cmd.extend(["--dict", target.dict_name])
-
     stdout = _run_cmd(cmd)
     return json.loads(stdout) if stdout else {}
 
 
 def _cli_unified_query(lang: str, word: str) -> list[dict]:
-    """Invoke langnet-cli query and return parsed JSON."""
-    cmd = ["langnet-cli", "query", lang, word, "--output", "json"]
-    stdout = _run_cmd(cmd)
-    return json.loads(stdout) if stdout else []
+    """
+    Placeholder for unified query fuzzing.
+
+    The current CLI does not expose a `query` subcommand; skip gracefully until
+    the unified endpoint is wired into the CLI.
+    """
+    raise RuntimeError("Unified query CLI not supported; skipping")
 
 
 def _run_target(target: FuzzTarget, mode: FuzzMode, validate: bool) -> FuzzResult:
@@ -270,13 +273,17 @@ def _run_target(target: FuzzTarget, mode: FuzzMode, validate: bool) -> FuzzResul
     source_present: bool | None = None
 
     if mode in ("tool", "compare"):
-        try:
-            tool_raw = _cli_tool_request(target)
-            tool_summary = _summarize_raw(tool_raw)
-            tool_ok = bool(tool_raw) or target.allow_empty or not validate
-        except Exception as exc:  # noqa: BLE001
-            tool_error = str(exc)
-            tool_ok = False
+        if target.tool not in SUPPORTED_PARSE_TOOLS:
+            tool_error = f"Tool '{target.tool}' not supported by langnet-cli parse; skipping"
+            tool_ok = None
+        else:
+            try:
+                tool_raw = _cli_tool_request(target)
+                tool_summary = _summarize_raw(tool_raw)
+                tool_ok = bool(tool_raw) or target.allow_empty or not validate
+            except Exception as exc:  # noqa: BLE001
+                tool_error = str(exc)
+                tool_ok = False
 
     if mode in ("query", "compare") and target.lang:
         try:

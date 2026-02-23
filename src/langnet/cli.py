@@ -33,10 +33,15 @@ from langnet.execution.clients import (
     find_whitaker_binary,
     WhitakerFetchClient,
     get_cltk_fetch_client,
+    get_spacy_fetch_client,
 )
 from langnet.execution.handlers.diogenes import _parse_diogenes_html
 from langnet.execution.handlers.whitakers import _parse_whitaker_output
 from langnet.clients.http import HttpToolClient
+from langnet.execution.handlers import heritage as heritage_handlers
+from langnet.execution.handlers import cdsl as cdsl_handlers
+from langnet.heritage.velthuis_converter import to_heritage_velthuis
+from query_spec import ToolCallSpec
 
 LanguageHint = query_spec.LanguageHint
 LanguageValue = query_spec.LanguageHint.ValueType
@@ -366,6 +371,8 @@ def _normalize_word_for_tool(
         return _pick_candidate(normalized)
 
 
+
+
 def _diogenes_query_url(base: str, lang: str, word: str) -> str:
     """
     Build a diogenes parse URL with raw Unicode query (avoid percent-encoding Greek).
@@ -572,14 +579,17 @@ def normalize(  # noqa: PLR0913
 
 
 @main.command()
-@click.argument("tool", type=click.Choice(["diogenes", "whitakers", "cltk"], case_sensitive=False))
+@click.argument(
+    "tool",
+    type=click.Choice(["diogenes", "whitakers", "cltk", "heritage", "cdsl"], case_sensitive=False),
+)
 @click.argument("language")
 @click.argument("text")
 @click.option(
     "--opt",
     default="",
     show_default=True,
-    help="Optional arg: diogenes parse endpoint or Whitaker binary override.",
+    help="Optional arg: diogenes endpoint/whitaker binary/cdsl dict id/heritage base override.",
 )
 @click.option(
     "--normalize/--no-normalize",
@@ -605,6 +615,13 @@ def normalize(  # noqa: PLR0913
     help="Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb).",
 )
 @click.option(
+    "--dict",
+    "dict_id",
+    default="mw",
+    show_default=True,
+    help="CDSL dictionary id (mw, ap90) when tool=cdsl.",
+)
+@click.option(
     "--no-cache",
     is_flag=True,
     help="Skip normalization cache lookups and writes for this invocation.",
@@ -617,11 +634,12 @@ def parse(  # noqa: PLR0913
     normalize: bool,
     diogenes_endpoint: str,
     heritage_base: str,
+    dict_id: str,
     db_path: str | None,
     no_cache: bool,
 ):
     """
-    Parse tool output (diogenes|whitakers|cltk) with optional normalization.
+    Parse tool output (diogenes|whitakers|cltk|heritage|cdsl) with optional normalization.
     """
     lang_hint = _parse_language(language)
     norm_cfg = NormalizeConfig(
@@ -686,6 +704,62 @@ def parse(  # noqa: PLR0913
             "word": text,
             "content_length": len(raw_json),
             "parsed": parsed,
+        }
+    elif tool_l == "heritage":
+        endpoint = opt or f"{heritage_base.rstrip('/')}/cgi-bin/skt/sktreader"
+        params = {"t": "VH", "text": to_heritage_velthuis(query_word), "max": "5"}
+        fetch = HttpToolClient(tool="fetch.heritage").execute(
+            call_id="heritage-1", endpoint=endpoint, params=params
+        )
+        ext_call = ToolCallSpec(
+            tool="extract.heritage.html",
+            call_id="heritage-parse-1",
+            endpoint="internal://heritage/html_extract",
+            params={"source_call_id": "heritage-1"},
+        )
+        extraction = heritage_handlers.extract_html(ext_call, fetch)
+        drv_call = ToolCallSpec(
+            tool="derive.heritage.morph",
+            call_id="heritage-derive-1",
+            endpoint="internal://heritage/morph_derive",
+            params={"source_call_id": ext_call.call_id},
+        )
+        derivation = heritage_handlers.derive_morph(drv_call, extraction)
+        payload = {
+            "tool": "heritage",
+            "endpoint": endpoint,
+            "status": fetch.status_code,
+            "extraction": extraction.payload,
+            "derivation": derivation.payload,
+        }
+    elif tool_l == "cdsl":
+        fetch_client = cdsl_handlers.CdslFetchClient()
+        use_dict = opt or dict_id
+        fetch = fetch_client.execute(
+            call_id="cdsl-1",
+            endpoint="duckdb",
+            params={"lemma": query_word, "dict": use_dict},
+        )
+        ext_call = ToolCallSpec(
+            tool="extract.cdsl.xml",
+            call_id="cdsl-parse-1",
+            endpoint="internal://cdsl/xml_extract",
+            params={"source_call_id": "cdsl-1"},
+        )
+        extraction = cdsl_handlers.extract_xml(ext_call, fetch)
+        drv_call = ToolCallSpec(
+            tool="derive.cdsl.sense",
+            call_id="cdsl-derive-1",
+            endpoint="internal://cdsl/sense_derive",
+            params={"source_call_id": ext_call.call_id},
+        )
+        derivation = cdsl_handlers.derive_sense(drv_call, extraction)
+        payload = {
+            "tool": "cdsl",
+            "dict": use_dict,
+            "status": fetch.status_code,
+            "extraction": extraction.payload,
+            "derivation": derivation.payload,
         }
     else:  # pragma: no cover - click enforces choices
         raise click.UsageError(f"Unsupported tool '{tool}'.")
@@ -904,6 +978,9 @@ def _build_exec_clients(plan, diogenes_endpoint: str, use_stubs: bool) -> dict[s
         if tool == "fetch.diogenes":
             if tool not in clients:
                 clients[tool] = HttpToolClient(tool="fetch.diogenes")
+        elif tool == "fetch.heritage":
+            if tool not in clients:
+                clients[tool] = HttpToolClient(tool="fetch.heritage")
         elif tool == "fetch.whitakers":
             if tool not in clients:
                 binary = find_whitaker_binary()
@@ -915,6 +992,22 @@ def _build_exec_clients(plan, diogenes_endpoint: str, use_stubs: bool) -> dict[s
             if tool not in clients:
                 try:
                     clients[tool] = get_cltk_fetch_client()
+                except Exception:
+                    if use_stubs:
+                        clients[tool] = StubToolClient(tool)
+        elif tool == "fetch.spacy":
+            if tool not in clients:
+                try:
+                    clients[tool] = get_spacy_fetch_client()
+                except Exception:
+                    if use_stubs:
+                        clients[tool] = StubToolClient(tool)
+        elif tool == "fetch.cdsl":
+            if tool not in clients:
+                try:
+                    from langnet.execution.handlers.cdsl import CdslFetchClient  # noqa: PLC0415
+
+                    clients[tool] = CdslFetchClient()
                 except Exception:
                     if use_stubs:
                         clients[tool] = StubToolClient(tool)
@@ -1136,9 +1229,35 @@ def triples_dump(
         no_cache=no_cache,
         output="pretty",
     )
-    query_value = text
+    # Always plan against a NormalizedQuery, even when skipping the normalizer.
+    path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    use_memory = norm_cfg.no_cache or not path.exists()
     if normalize:
-        query_value = _normalize_word_for_tool(language, text, norm_cfg, use_cache=not no_cache)
+        if use_memory:
+            with duckdb.connect(database=":memory:") as norm_conn:
+                service = _create_normalization_service(norm_cfg, norm_conn, read_only=False)
+                normalized_result = service.normalize(text, lang_hint)
+        else:
+            read_only = norm_cfg.no_cache
+            with connect_duckdb(path, read_only=read_only, lock=not read_only) as norm_conn:
+                service = _create_normalization_service(norm_cfg, norm_conn, read_only=read_only)
+                normalized_result = service.normalize(text, lang_hint)
+        query_value = normalized_result.normalized
+    else:
+        # Minimal passthrough NormalizedQuery to satisfy the planner.
+        query_value = query_spec.NormalizedQuery(
+            original=text,
+            language=lang_hint,
+            candidates=[
+                query_spec.CanonicalCandidate(
+                    lemma=text,
+                    encodings={"accentless": text},
+                    sources=["manual"],
+                )
+            ],
+            normalizations=[],
+        )
 
     planner = ToolPlanner(
         PlannerConfig(
