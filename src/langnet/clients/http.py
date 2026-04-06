@@ -30,10 +30,7 @@ class HttpToolClient:
         if raw_query is not None:
             # Do not send http_params when a raw query string is provided.
             http_params = {}
-            if "?" in endpoint:
-                endpoint = f"{endpoint}&{raw_query}"
-            else:
-                endpoint = f"{endpoint}?{raw_query}"
+            endpoint = f"{endpoint}&{raw_query}" if "?" in endpoint else f"{endpoint}?{raw_query}"
 
         start = time.perf_counter()
         response = (

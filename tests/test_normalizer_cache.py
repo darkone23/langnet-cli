@@ -10,7 +10,12 @@ from query_spec import LanguageHint, NormalizedQuery
 from langnet.diogenes.client import DiogenesClient, WordListResult
 from langnet.normalizer.core import _hash_query
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
-from langnet.storage.normalization_index import NormalizationIndex, ensure_schema as ensure_norm_schema
+from langnet.storage.normalization_index import (
+    NormalizationIndex,
+)
+from langnet.storage.normalization_index import (
+    ensure_schema as ensure_norm_schema,
+)
 
 
 class CountingDiogenes:

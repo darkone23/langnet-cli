@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import time
 import unicodedata
-from typing import Any, Mapping
+from collections.abc import Mapping, Sequence
+from typing import cast
 from xml.etree import ElementTree
 
 import orjson
 from query_spec import ToolCallSpec
 
+from langnet.clients.base import RawResponseEffect, _new_response_id
 from langnet.databuild.paths import default_cdsl_path
 from langnet.execution.effects import (
     ClaimEffect,
@@ -16,8 +18,8 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
+from langnet.execution.versioning import versioned
 from langnet.storage.db import connect_duckdb_ro
-
 
 _IAST_TO_SLP1 = {
     "ā": "A",
@@ -126,7 +128,9 @@ def _slp1_to_iast(text: str) -> str:
 
 
 def _strip_accents(text: str) -> str:
-    return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn").lower()
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
+    ).lower()
 
 
 def _slp1_to_ascii(text: str) -> str:
@@ -206,34 +210,37 @@ _CASE_MAP = {
 }
 
 
-def _parse_body_metadata(body_xml: str) -> dict[str, Any]:
-    if not body_xml:
-        return {}
-    try:
-        root = ElementTree.fromstring(body_xml)
-    except ElementTree.ParseError:
-        return {}
-    grammar: dict[str, Any] = {}
-    lex_elem = root.find("lex")
-    if lex_elem is not None:
-        lex_text = "".join([lex_elem.text or ""] + [child.tail or "" for child in lex_elem])
-        lex_text = lex_text.strip().strip(".").lower()
-        if lex_text in _GENDER_MAP:
-            gender_val = _GENDER_MAP[lex_text]
+def _parse_lex_element(lex_elem, grammar: dict[str, object]) -> None:
+    """Parse lex element for gender and POS hints."""
+    lex_text = "".join([lex_elem.text or ""] + [child.tail or "" for child in lex_elem])
+    lex_text = lex_text.strip().strip(".").lower()
+    if lex_text in _GENDER_MAP:
+        gender_val = _GENDER_MAP[lex_text]
+        grammar["gender"] = gender_val if isinstance(gender_val, list) else [gender_val]
+    pos_match = lex_text.split(".")[0]
+    if pos_match:
+        grammar["pos_hint"] = pos_match
+
+
+def _parse_info_element(info_elem, grammar: dict[str, object]) -> None:
+    """Parse info element for gender and number markers."""
+    lex_attr = info_elem.get("lex", "")
+    if lex_attr:
+        gender_val = _GENDER_MAP.get(lex_attr)
+        if gender_val:
             grammar["gender"] = gender_val if isinstance(gender_val, list) else [gender_val]
-        pos_match = lex_text.split(".")[0]
-        if pos_match:
-            grammar["pos_hint"] = pos_match
-    info_elem = root.find("info")
-    if info_elem is not None:
-        lex_attr = info_elem.get("lex", "")
-        if lex_attr:
-            gender_val = _GENDER_MAP.get(lex_attr)
-            if gender_val:
-                grammar["gender"] = gender_val if isinstance(gender_val, list) else [gender_val]
-        if info_elem.get("n"):
-            grammar.setdefault("grammar_tags", {})["number_marker"] = info_elem.get("n")
-    body_text = ElementTree.tostring(root, encoding="unicode", method="text").strip()
+    n_val = info_elem.get("n")
+    if n_val:
+        if "grammar_tags" not in grammar:
+            grammar["grammar_tags"] = {}
+        tags_val = grammar["grammar_tags"]
+        if isinstance(tags_val, dict):
+            tags = cast(dict[str, object], tags_val)
+            tags["number_marker"] = n_val
+
+
+def _parse_body_text_features(body_text: str, grammar: dict[str, object]) -> None:
+    """Parse case and number from body text."""
     lower = body_text.lower()
     for pattern, case_num in _CASE_MAP.items():
         if pattern in lower:
@@ -243,11 +250,38 @@ def _parse_body_metadata(body_xml: str) -> dict[str, Any]:
         if pattern in lower:
             grammar.setdefault("number", num_code)
             break
-    if root.find("s") is not None and root.find("s").text:
-        grammar["sanskrit_form"] = root.find("s").text.strip()
+
+
+def _parse_body_metadata(body_xml: str) -> dict[str, object]:
+    """Parse CDSL body XML to extract grammatical metadata."""
+    if not body_xml:
+        return {}
+    try:
+        root = ElementTree.fromstring(body_xml)
+    except ElementTree.ParseError:
+        return {}
+
+    grammar: dict[str, object] = {}
+
+    lex_elem = root.find("lex")
+    if lex_elem is not None:
+        _parse_lex_element(lex_elem, grammar)
+
+    info_elem = root.find("info")
+    if info_elem is not None:
+        _parse_info_element(info_elem, grammar)
+
+    body_text = ElementTree.tostring(root, encoding="unicode", method="text").strip()
+    _parse_body_text_features(body_text, grammar)
+
+    s_elem = root.find("s")
+    if s_elem is not None and s_elem.text:
+        grammar["sanskrit_form"] = s_elem.text.strip()
+
     return grammar
 
 
+@versioned("v1")
 def extract_xml(call: ToolCallSpec, raw_response) -> ExtractionEffect:
     """
     Load CDSL rows returned by the DuckDB fetch client.
@@ -272,28 +306,55 @@ def extract_xml(call: ToolCallSpec, raw_response) -> ExtractionEffect:
     )
 
 
+@versioned("v1")
 def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> DerivationEffect:
     """
     Convert CDSL rows into simple sense payloads.
     """
     start = time.perf_counter()
-    entries = []
+    entries: Sequence[object] = []
     payload = extraction.payload or {}
     if isinstance(payload, Mapping):
-        entries = payload.get("entries", [])
-    senses: list[dict[str, Any]] = []
-    grouped: dict[str, dict[str, Any]] = {}
-    for entry in entries or []:
-        lemma_slp1 = (entry.get("key") or entry.get("key2") or "").strip()
+        payload_dict = cast(dict[str, object], payload)
+        entries_val = payload_dict.get("entries")
+        if isinstance(entries_val, Sequence):
+            entries = entries_val
+    senses: list[dict[str, object]] = []
+    grouped: dict[str, dict[str, object]] = {}
+    for entry_raw in entries or []:
+        if not isinstance(entry_raw, Mapping):
+            continue
+        entry = cast(dict[str, object], entry_raw)
+
+        key_val = entry.get("key")
+        key2_val = entry.get("key2")
+        lemma_slp1 = key_val or key2_val or ""
+        lemma_slp1 = lemma_slp1.strip() if isinstance(lemma_slp1, str) else ""
+
         lemma_iast = _slp1_to_iast(lemma_slp1)
-        gloss = entry.get("plain_text") or entry.get("body") or entry.get("data") or ""
-        source_ref = f"{entry.get('dict_id', '').lower()}:{entry.get('lnum')}" if entry.get("lnum") else ""
-        grammar = _parse_body_metadata(entry.get("body") or "")
-        sense_obj: dict[str, Any] = {
+
+        plain_text = entry.get("plain_text")
+        body_val = entry.get("body")
+        data_val = entry.get("data")
+        gloss = plain_text or body_val or data_val or ""
+        if not isinstance(gloss, str):
+            gloss = ""
+
+        dict_id = entry.get("dict_id")
+        lnum_val = entry.get("lnum")
+        source_ref = ""
+        if lnum_val:
+            dict_id_str = dict_id.lower() if isinstance(dict_id, str) else ""
+            source_ref = f"{dict_id_str}:{lnum_val}"
+
+        grammar_input = body_val if isinstance(body_val, str) else ""
+        grammar = _parse_body_metadata(grammar_input)
+
+        sense_obj: dict[str, object] = {
             "anchor": lemma_slp1,
             "gloss": gloss,
-            "dict": entry.get("dict_id"),
-            "lnum": entry.get("lnum"),
+            "dict": dict_id,
+            "lnum": lnum_val,
             "source_ref": source_ref,
         }
         if grammar:
@@ -301,17 +362,19 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
         senses.append(sense_obj)
         group_key = lemma_iast or lemma_slp1
         if group_key not in grouped:
+            senses_list: list[dict[str, object]] = []
             grouped[group_key] = {
                 "lemma": lemma_iast,
                 "lemma_slp1": lemma_slp1,
-                "senses": [],
+                "senses": senses_list,
             }
-        grouped[group_key]["senses"].append(sense_obj)
+        senses_val = grouped[group_key].get("senses")
+        if isinstance(senses_val, list):
+            typed_senses = cast(list[dict[str, object]], senses_val)
+            typed_senses.append(sense_obj)
     duration_ms = int((time.perf_counter() - start) * 1000)
     prov = [
-        ProvenanceLink(
-            stage="extract", tool=extraction.tool, reference_id=extraction.extraction_id
-        )
+        ProvenanceLink(stage="extract", tool=extraction.tool, reference_id=extraction.extraction_id)
     ]
     return DerivationEffect(
         derivation_id=stable_effect_id("drv", call.call_id, extraction.extraction_id),
@@ -327,6 +390,7 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
     )
 
 
+@versioned("v1")
 def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect:
     """
     Emit `has_sense` triples for CDSL glosses.
@@ -336,16 +400,33 @@ def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
         ProvenanceLink(stage="derive", tool=derivation.tool, reference_id=derivation.derivation_id)
     )
     payload = derivation.payload or {}
-    sense_groups = payload.get("lemmas") if isinstance(payload, Mapping) else None
-    triples: list[dict[str, Any]] = []
+    payload_dict = cast(dict[str, object], payload) if isinstance(payload, Mapping) else {}
+    sense_groups = payload_dict.get("lemmas") if payload_dict else None
+    triples: list[dict[str, object]] = []
     if isinstance(sense_groups, list):
-        for group in sense_groups:
-            lemma_anchor = (group.get("lemma_slp1") or "").strip().lower()
+        for group_raw in sense_groups:
+            if not isinstance(group_raw, Mapping):
+                continue
+            group = cast(dict[str, object], group_raw)
+
+            lemma_slp1 = group.get("lemma_slp1")
+            lemma_anchor = lemma_slp1.strip().lower() if isinstance(lemma_slp1, str) else ""
             subject = f"lex:{lemma_anchor}" if lemma_anchor else derivation.derivation_id
-            for sense in group.get("senses", []):
-                obj = {"gloss": sense.get("gloss", "")}
-                if sense.get("source_ref"):
-                    obj["source_ref"] = sense["source_ref"]
+
+            senses_val = group.get("senses")
+            senses_list = senses_val if isinstance(senses_val, Sequence) else []
+            for sense_raw in senses_list:
+                if not isinstance(sense_raw, Mapping):
+                    continue
+                sense = cast(dict[str, object], sense_raw)
+
+                gloss_val = sense.get("gloss")
+                obj: dict[str, object] = {"gloss": gloss_val if isinstance(gloss_val, str) else ""}
+
+                source_ref = sense.get("source_ref")
+                if source_ref:
+                    obj["source_ref"] = source_ref
+
                 grammar = sense.get("grammar")
                 if grammar:
                     obj["grammar"] = grammar
@@ -396,9 +477,11 @@ class CdslFetchClient:
                     placeholders = ",".join(["?"] * len(keys))
                     rows = conn.execute(
                         f"""
-                        SELECT dict_id, key, key2, key_normalized, key2_normalized, lnum, body, plain_text, data
+                        SELECT dict_id, key, key2, key_normalized, key2_normalized, lnum,
+                               body, plain_text, data
                         FROM entries
-                        WHERE key_normalized IN ({placeholders}) OR key2_normalized IN ({placeholders})
+                        WHERE key_normalized IN ({placeholders})
+                           OR key2_normalized IN ({placeholders})
                         """,
                         keys + keys,
                     ).fetchall()
@@ -406,7 +489,8 @@ class CdslFetchClient:
                 if not rows:
                     rows = conn.execute(
                         """
-                        SELECT dict_id, key, key2, key_normalized, key2_normalized, lnum, body, plain_text, data
+                        SELECT dict_id, key, key2, key_normalized, key2_normalized, lnum,
+                               body, plain_text, data
                         FROM entries
                         WHERE key_normalized = ? OR key2_normalized = ?
                         """,
@@ -416,19 +500,15 @@ class CdslFetchClient:
             duration_ms = int((time.perf_counter() - start) * 1000)
             entries = [dict(zip(cols, row)) for row in rows]
             body = orjson.dumps(entries)
-            return _empty_response(
-                call_id, self.tool, endpoint, 200, body, duration_ms=duration_ms
-            )
+            return _empty_response(call_id, self.tool, endpoint, 200, body, duration_ms=duration_ms)
         except Exception as exc:  # noqa: BLE001
             body = orjson.dumps({"error": str(exc)})
             return _empty_response(call_id, self.tool, endpoint, 500, body)
 
 
-def _empty_response(
+def _empty_response(  # noqa: PLR0913
     call_id: str, tool: str, endpoint: str, status: int, body: bytes, duration_ms: int = 0
 ):
-    from langnet.clients.base import RawResponseEffect, _new_response_id
-
     return RawResponseEffect(
         response_id=_new_response_id(),
         tool=tool,

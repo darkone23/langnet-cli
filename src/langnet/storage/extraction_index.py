@@ -49,7 +49,8 @@ class ExtractionIndex:
         self.conn.execute(
             """
             INSERT OR REPLACE INTO extraction_index
-            (extraction_id, response_id, tool, kind, canonical, payload, load_duration_ms, created_at)
+            (extraction_id, response_id, tool, kind, canonical, payload,
+             load_duration_ms, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """,
             [
@@ -70,8 +71,9 @@ class ExtractionIndex:
         self.conn.execute(
             """
             INSERT OR REPLACE INTO extraction_index
-            (extraction_id, response_id, tool, kind, canonical, payload, load_duration_ms, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            (extraction_id, response_id, tool, kind, canonical, payload,
+             handler_version, load_duration_ms, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """,
             [
                 effect.extraction_id,
@@ -80,6 +82,7 @@ class ExtractionIndex:
                 effect.kind,
                 effect.canonical,
                 orjson.dumps(effect.payload or {}).decode("utf-8"),
+                effect.handler_version,
                 effect.load_duration_ms,
             ],
         )

@@ -20,7 +20,7 @@ from typing import Final
 
 DEFAULT_SAVE_PATH = Path("examples/debug/fuzz_results")
 FuzzMode = str
-SUPPORTED_PARSE_TOOLS: Final = {"diogenes", "whitakers", "cltk"}
+SUPPORTED_PARSE_TOOLS: Final = {"diogenes", "whitakers", "cltk", "heritage", "cdsl"}
 
 
 # Catalog of supported tools/actions with default word lists

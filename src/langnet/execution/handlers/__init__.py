@@ -1,6 +1,8 @@
-from . import diogenes  # noqa: F401
-from . import whitakers  # noqa: F401
-from . import cltk  # noqa: F401
-from . import spacy  # noqa: F401
-from . import heritage  # noqa: F401
-from . import cdsl  # noqa: F401
+from . import (
+    cdsl,  # noqa: F401
+    cltk,  # noqa: F401
+    diogenes,  # noqa: F401
+    heritage,  # noqa: F401
+    spacy,  # noqa: F401
+    whitakers,  # noqa: F401
+)

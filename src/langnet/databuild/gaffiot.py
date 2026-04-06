@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import re
+import time
 import unicodedata
-import hashlib
-from lxml import etree as ET
 from dataclasses import dataclass, replace
 from itertools import islice
 from pathlib import Path
+from typing import TypedDict
 
 import duckdb
-import time
+from lxml import etree as ET  # type: ignore[import-untyped]
+from pylatexenc.latex2text import LatexNodes2Text
 from returns.result import Failure, Success
 
 from langnet.normalizer.utils import strip_accents
@@ -21,8 +24,17 @@ from .paths import default_gaffiot_path
 logger = logging.getLogger(__name__)
 
 LEX_ID = "GAFFIOT_FR_LAT"
-# EPWING-derived TEI (full dump with gaiji resolved) lives alongside the disc.
-DEFAULT_SOURCE = Path.home() / "digital-gaffiot-json" / "gaffiot-tei.xml"
+
+
+class _SeenHashRecord(TypedDict):
+    canonical_id: str
+    heads: set[str]
+
+
+# Use the JSON export as default (cleaner and more reliable than TEI or EBWING).
+DEFAULT_SOURCE = Path.home() / "digital-gaffiot-json" / "gaffiot.json"
+# Fallback to TEI XML if JSON not available
+DEFAULT_SOURCE_TEI = Path.home() / "digital-gaffiot-json" / "gaffiot-unicode.xml"
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS entries_fr (
@@ -34,23 +46,6 @@ CREATE TABLE IF NOT EXISTS entries_fr (
     plain_text TEXT,
     entry_hash VARCHAR,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS entries_en (
-    entry_id VARCHAR PRIMARY KEY,
-    headword_raw VARCHAR,
-    headword_norm VARCHAR,
-    variant_num INTEGER,
-    tei_xml TEXT,
-    plain_text TEXT,
-    entry_hash VARCHAR,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS entry_aliases (
-    entry_id VARCHAR PRIMARY KEY,
-    canonical_id VARCHAR NOT NULL,
-    FOREIGN KEY (canonical_id) REFERENCES entries_fr(entry_id)
 );
 """
 
@@ -69,6 +64,40 @@ class GaffiotBuildConfig:
     force_rebuild: bool = False
 
 
+def _strip_latex(text: str) -> str:
+    """
+    Strip LaTeX markup from text, preserving content and structure.
+    Handles Gaffiot's custom commands like \\gen{}, \\aut{}, \\lat{}, etc.
+    Converts \\par to ¶ (pilcrow) for paragraph marking.
+    """
+    if not text:
+        return ""
+
+    # Pre-process: convert \par to pilcrow marker (used in translation scripts)
+    text = text.replace("\\par", " ¶ ")
+
+    # Create a converter that strips LaTeX commands
+    converter = LatexNodes2Text()
+    try:
+        # Clean the text
+        clean = converter.latex_to_text(text)
+        # Normalize whitespace but preserve paragraph markers
+        clean = re.sub(r"[ \t]+", " ", clean)
+        # Clean up spacing around pilcrow
+        clean = re.sub(r"\s*¶\s*", " ¶ ", clean)
+        # Remove any duplicate pilcrows
+        clean = re.sub(r"¶\s*¶+", "¶", clean)
+        return clean.strip()
+    except Exception as e:
+        logger.warning(f"Failed to strip LaTeX from text, using fallback: {e}")
+        # Fallback: simple regex-based stripping
+        clean = re.sub(r"\\[a-zA-Z]+\{([^}]*)\}", r"\1", text)
+        clean = re.sub(r"\\[a-zA-Z]+", "", text)
+        clean = re.sub(r"\s+", " ", clean)
+        clean = re.sub(r"\s*¶\s*", " ¶ ", clean)
+        return clean.strip()
+
+
 def _normalize_headword(raw: str) -> str:
     """
     Normalize headword to lowercase ASCII, strip leading numbering, and remove accents.
@@ -80,13 +109,20 @@ def _normalize_headword(raw: str) -> str:
     stripped = stripped.lstrip("0123456789. ").strip()
     # Expand common ligatures before accent stripping.
     ligature_expanded = (
-        stripped.replace("æ", "ae")
-        .replace("Æ", "ae")
-        .replace("œ", "oe")
-        .replace("Œ", "oe")
+        stripped.replace("æ", "ae").replace("Æ", "ae").replace("œ", "oe").replace("Œ", "oe")
     )
     lowered = ligature_expanded.lower()
     return strip_accents(lowered)
+
+
+def _try_strip_with_separators(trimmed: str, trimmed_lower: str, base: str) -> str | None:
+    """Try stripping base with various separators. Returns None if no match."""
+    for sep in ("", " ", ",", ".", ";", ":", "-", " ,", " ."):
+        candidate = base + sep
+        if trimmed_lower.startswith(candidate):
+            cut = len(candidate)
+            return trimmed[cut:].lstrip()
+    return None
 
 
 def _strip_leading_headword(text: str, head_clean: str, head_raw: str) -> str:
@@ -103,13 +139,13 @@ def _strip_leading_headword(text: str, head_clean: str, head_raw: str) -> str:
         bases.append(head_raw.lower())
     if head_clean:
         bases.append(head_clean.lower())
+
     for base in bases:
         # Include variants that start with digits in the raw head.
-        for sep in ("", " ", ",", ".", ";", ":", "-", " ,", " ."):
-            candidate = base + sep
-            if trimmed_lower.startswith(candidate):
-                cut = len(candidate)
-                return trimmed[cut:].lstrip()
+        result = _try_strip_with_separators(trimmed, trimmed_lower, base)
+        if result is not None:
+            return result
+
         # If the base starts with digits, also try stripping just the numeric prefix.
         numeric_prefix = ""
         for ch in base:
@@ -118,13 +154,34 @@ def _strip_leading_headword(text: str, head_clean: str, head_raw: str) -> str:
             else:
                 break
         if numeric_prefix:
-            base_no_num = base[len(numeric_prefix):].lstrip(" .")
-            for sep in ("", " ", ",", ".", ";", ":", "-", " ,", " ."):
-                candidate = base_no_num + sep
-                if trimmed_lower.startswith(candidate):
-                    cut = len(candidate)
-                    return trimmed[cut:].lstrip()
+            base_no_num = base[len(numeric_prefix) :].lstrip(" .")
+            result = _try_strip_with_separators(trimmed, trimmed_lower, base_no_num)
+            if result is not None:
+                return result
     return text
+
+
+def _collect_text_with_breaks(
+    elem: ET.Element, break_tags: set[str] | tuple[str, ...] = ("lb",)
+) -> str:
+    """
+    Collect text content while translating specific break-like tags to newlines.
+    """
+    parts: list[str] = []
+
+    for node in elem.iter():
+        tag = node.tag if isinstance(node.tag, str) else None
+        if node is not elem and tag in break_tags:
+            parts.append("\n")
+        if node.text:
+            parts.append(node.text)
+        if node is not elem and node.tail:
+            parts.append(node.tail)
+
+    text = "".join(parts)
+    text = re.sub(r"[ \t]+", " ", text)  # normalize intra-line spacing
+    text = re.sub(r"[ \t]*\n[ \t]*", "\n", text)  # trim spaces around newlines
+    return text.strip()
 
 
 def _build_plain_text(elem: ET.Element, headword_clean: str) -> str:
@@ -133,11 +190,8 @@ def _build_plain_text(elem: ET.Element, headword_clean: str) -> str:
     Strip one leading headword occurrence and leading punctuation remnants.
     """
     def_el = elem.find("def")
-    if def_el is not None:
-        parts = [t.strip() for t in def_el.itertext() if t.strip()]
-        raw_text = " ".join(parts)
-    else:
-        raw_text = " ".join(t.strip() for t in elem.itertext() if t.strip())
+    source = def_el if def_el is not None else elem
+    raw_text = _collect_text_with_breaks(source)
 
     stripped = _strip_leading_headword(raw_text, headword_clean, elem.findtext("orth") or "")
     stripped = stripped.lstrip(" ,;:.")  # remove leftover punctuation
@@ -161,7 +215,16 @@ class GaffiotBuilder:
     """
 
     def __init__(self, config: GaffiotBuildConfig) -> None:
-        self.source_path = (config.source_path or DEFAULT_SOURCE).expanduser()
+        # Auto-detect JSON vs XML source
+        if config.source_path:
+            self.source_path = config.source_path.expanduser()
+        elif DEFAULT_SOURCE.exists():
+            self.source_path = DEFAULT_SOURCE
+        elif DEFAULT_SOURCE_TEI.exists():
+            self.source_path = DEFAULT_SOURCE_TEI
+        else:
+            self.source_path = DEFAULT_SOURCE
+
         self.output_path = config.output_path or default_gaffiot_path()
         self.limit = config.limit
         self.batch_size = config.batch_size
@@ -236,8 +299,7 @@ class GaffiotBuilder:
         start_time = time.perf_counter()
         total = 0
         entries_batch = []
-        alias_batch = []
-        seen_hash_to_id: dict[str, str] = {}
+        seen_hash_to_id: dict[str, _SeenHashRecord] = {}
         for idx, entry in enumerate(self._iter_entry_elements(), start=1):
             entry_id = f"gaffiot_{idx}"
             headword_raw = entry["headword_raw"]
@@ -247,7 +309,11 @@ class GaffiotBuilder:
 
             record = seen_hash_to_id.get(entry_hash)
             if record is None:
-                seen_hash_to_id[entry_hash] = {"canonical_id": entry_id, "heads": {headword_raw}}
+                new_record: _SeenHashRecord = {
+                    "canonical_id": entry_id,
+                    "heads": {headword_raw},
+                }
+                seen_hash_to_id[entry_hash] = new_record
                 entries_batch.append(
                     (
                         entry_id,
@@ -261,10 +327,8 @@ class GaffiotBuilder:
                     )
                 )
             else:
-                # Only create an alias when the headword differs from existing heads for this body.
-                if headword_raw not in record["heads"]:
-                    alias_batch.append((entry_id, record["canonical_id"]))
-                    record["heads"].add(headword_raw)
+                # Duplicate body: keep the canonical entry, drop the duplicate.
+                continue
 
             if self.limit is not None:
                 remaining = self.limit - total
@@ -273,15 +337,14 @@ class GaffiotBuilder:
                 if len(entries_batch) >= remaining:
                     # Trim to remaining and flush immediately.
                     entries_batch = entries_batch[:remaining]
-                    self._flush_batches(entries_batch, alias_batch)
+                    self._flush_entries(entries_batch)
                     total += len(entries_batch)
                     entries_batch.clear()
-                    alias_batch.clear()
                     break
 
             if len(entries_batch) >= self.batch_size:
                 batch_size = len(entries_batch)
-                self._flush_batches(entries_batch, alias_batch)
+                self._flush_entries(entries_batch)
                 total += batch_size
                 elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
                 logger.info(
@@ -291,11 +354,9 @@ class GaffiotBuilder:
                     elapsed_ms,
                 )
                 entries_batch.clear()
-                alias_batch.clear()
-
         if entries_batch:
             batch_size = len(entries_batch)
-            self._flush_batches(entries_batch, alias_batch)
+            self._flush_entries(entries_batch)
             total += batch_size
             elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
             logger.info(
@@ -307,7 +368,7 @@ class GaffiotBuilder:
 
         return total
 
-    def _flush_batches(self, entries_batch, alias_batch) -> None:
+    def _flush_entries(self, entries_batch) -> None:
         assert self._conn is not None
         if entries_batch:
             self._conn.executemany(
@@ -316,18 +377,33 @@ class GaffiotBuilder:
                 """,
                 entries_batch,
             )
-        if alias_batch:
-            self._conn.executemany(
-                """
-                INSERT INTO entry_aliases VALUES (?, ?)
-                """,
-                alias_batch,
-            )
 
     def _iter_entry_elements(self):
         """
-        Stream entryFree elements to keep memory bounded.
+        Stream entries from JSON or XML source.
         """
+        # Detect format by extension
+        if self.source_path.suffix.lower() == ".json":
+            yield from self._iter_json_entries()
+        else:
+            yield from self._iter_xml_entries()
+
+    def _iter_json_entries(self):
+        """
+        Stream entries from gaffiot.json.
+        """
+        logger.info(f"Loading JSON entries from {self.source_path}")
+        with open(self.source_path, encoding="utf-8") as f:
+            data = json.load(f)
+
+        for entry in data:
+            yield self._parse_json_entry(entry)
+
+    def _iter_xml_entries(self):
+        """
+        Stream entryFree elements from TEI XML to keep memory bounded.
+        """
+        logger.info(f"Loading XML entries from {self.source_path}")
         context = ET.iterparse(self.source_path, events=("end",), huge_tree=True)
         for _, elem in context:
             if elem.tag != "entryFree":
@@ -335,7 +411,51 @@ class GaffiotBuilder:
             yield self._parse_entry(elem)
             elem.clear()
 
+    def _parse_json_entry(self, entry: dict) -> dict:
+        """
+        Parse a JSON entry from gaffiot.json format.
+        Entry structure: {id, latin_raw, latin, french}
+        """
+        headword_raw = entry.get("latin_raw", "").strip()
+        headword_clean = entry.get("latin", "").strip()
+        french_text = entry.get("french", "")
+
+        # Extract variant number from headword
+        variant_num = None
+        if headword_raw:
+            prefix_match = re.match(r"^\s*(\d+)", headword_raw)
+            if prefix_match:
+                try:
+                    variant_num = int(prefix_match.group(1))
+                except Exception:
+                    variant_num = None
+            # Strip leading numeric markers for clean headword
+            headword_clean = re.sub(r"^\s*\d+[\s.]*", "", headword_raw).strip()
+
+        # Strip LaTeX markup from French definition
+        plain_text = _strip_latex(french_text)
+
+        # Remove leading headword repetition if present
+        plain_text = _strip_leading_headword(plain_text, headword_clean, headword_raw)
+        plain_text = plain_text.lstrip(" ,;:.")
+
+        # Use original entry as "TEI XML" for compatibility
+        tei_xml = json.dumps(entry, ensure_ascii=False)
+
+        digest = hashlib.sha1(plain_text.encode("utf-8")).hexdigest()
+        return {
+            "headword_raw": headword_raw,
+            "headword_clean": headword_clean,
+            "variant_num": variant_num,
+            "plain_text": plain_text,
+            "tei_xml": tei_xml,
+            "entry_hash": digest,
+        }
+
     def _parse_entry(self, elem: ET.Element) -> dict:
+        """
+        Parse a TEI XML entry element.
+        """
         headword_raw = ""
         headword_clean = ""
         variant_num = None

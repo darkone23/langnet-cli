@@ -40,6 +40,7 @@ in
     # pkgs.black
     # pkgs.pipx
  
+    # pkgs.libeb
     # some libraries for cltk deps (numpy, scipy)
     pkgs.zlib
     pkgs.gcc

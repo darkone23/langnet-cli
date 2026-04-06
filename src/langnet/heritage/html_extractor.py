@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
+from typing import TypedDict, cast
+
+from bs4 import BeautifulSoup, Tag
+
 """
 Lightweight Heritage HTML extractor (ported from codesketch).
 
 Extracts solution blocks with [word]{analysis} patterns, attached navy links
 (dictionary URLs), CSS color hints, and span segments between solution markers.
 """
-
-import re
-from dataclasses import dataclass
-from typing import TypedDict
-
-from bs4 import BeautifulSoup, Tag
 
 
 class MorphologyPattern(TypedDict):
@@ -65,18 +65,21 @@ class HeritageHTMLExtractor:
         loose = self._extract_loose_patterns(soup)
         if loose:
             raw_text = "\n".join(entry.raw_text for entry in loose)
-            patterns = [
-                {"word": p.word, "analysis": p.analysis, "dictionary_url": p.url} for p in loose
+            patterns: list[MorphologyPattern] = [
+                cast(
+                    MorphologyPattern,
+                    {"word": p.word, "analysis": p.analysis, "dictionary_url": p.url},
+                )
+                for p in loose
             ]
-            return [
-                {
-                    "solution_number": 1,
-                    "patterns": patterns,
-                    "color": None,
-                    "raw_text": raw_text,
-                    "segments": [],
-                }
-            ]
+            solution: MorphologySolution = {
+                "solution_number": 1,
+                "patterns": patterns,
+                "color": None,
+                "raw_text": raw_text,
+                "segments": [],
+            }
+            return [solution]
         return []
 
     def _extract_solution_blocks(self, soup) -> list[MorphologySolution]:
@@ -97,18 +100,21 @@ class HeritageHTMLExtractor:
                 continue
             deduped = self._deduplicate(patterns)
             raw_text = self._build_raw_text(deduped, segments)
-            blocks.append(
-                {
-                    "solution_number": solution_number,
-                    "patterns": [
-                        {"word": p.word, "analysis": p.analysis, "dictionary_url": p.url}
-                        for p in deduped
-                    ],
-                    "color": self._table_color(table),
-                    "raw_text": raw_text,
-                    "segments": segments,
-                }
-            )
+            patterns_typed: list[MorphologyPattern] = [
+                cast(
+                    MorphologyPattern,
+                    {"word": p.word, "analysis": p.analysis, "dictionary_url": p.url},
+                )
+                for p in deduped
+            ]
+            solution: MorphologySolution = {
+                "solution_number": solution_number,
+                "patterns": patterns_typed,
+                "color": self._table_color(table),
+                "raw_text": raw_text,
+                "segments": segments,
+            }
+            blocks.append(solution)
         return blocks
 
     @staticmethod
@@ -145,7 +151,7 @@ class HeritageHTMLExtractor:
         seen: set[str] = set()
         current = start_span.next_sibling
         while current and current != next_solution:
-            if getattr(current, "find_all", None):
+            if isinstance(current, Tag):
                 for span in current.find_all("span", class_="latin12"):
                     for entry in self._extract_patterns_from_span(span):
                         key = f"{entry.word}||{entry.analysis}"
@@ -163,7 +169,9 @@ class HeritageHTMLExtractor:
         seen: set[str] = set()
         current = start_span.next_sibling
         while current and current != next_solution:
-            if getattr(current, "name", None) == "span" and "latin12" in (current.get("class") or []):
+            if isinstance(current, Tag) and current.name == "span" and "latin12" in (
+                current.get("class") or []
+            ):
                 for entry in self._extract_patterns_from_span(current):
                     key = f"{entry.word}||{entry.analysis}"
                     if key not in seen:
@@ -197,12 +205,13 @@ class HeritageHTMLExtractor:
                 # Skip metadata text
                 if self._is_metadata(text):
                     return
-                segments.append(
-                    {
-                        "css_class": (node.get("class") or [None])[0],
-                        "text": text,
-                    }
-                )
+                class_list = node.get("class") or []
+                css_class: str | None = class_list[0] if class_list else None
+                segment: MorphologySegment = {
+                    "css_class": css_class,
+                    "text": text,
+                }
+                segments.append(segment)
             for child in getattr(node, "children", []) or []:
                 # Stop if we hit the next solution marker
                 if child == next_solution:
@@ -302,10 +311,7 @@ class HeritageHTMLExtractor:
     def _is_metadata(self, text: str) -> bool:
         if not text:
             return True
-        for pattern in self._metadata_re:
-            if pattern.search(text):
-                return True
-        return False
+        return any(pattern.search(text) for pattern in self._metadata_re)
 
 
 def extract_solutions(html: str) -> list[MorphologySolution]:

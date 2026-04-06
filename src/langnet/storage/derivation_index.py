@@ -34,8 +34,9 @@ class DerivationIndex:
         self.conn.execute(
             """
             INSERT OR REPLACE INTO derivation_index
-            (derivation_id, extraction_id, tool, kind, canonical, payload, derive_duration_ms, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            (derivation_id, extraction_id, tool, kind, canonical, payload,
+             handler_version, derive_duration_ms, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """,
             [
                 effect.derivation_id,
@@ -44,6 +45,7 @@ class DerivationIndex:
                 effect.kind,
                 effect.canonical,
                 orjson.dumps(effect.payload or {}).decode("utf-8"),
+                effect.handler_version,
                 effect.derive_duration_ms,
             ],
         )

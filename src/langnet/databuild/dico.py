@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import contextlib
+import hashlib
 import logging
 import re
+import time
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
-from itertools import islice
 from pathlib import Path
-from typing import Iterable
-import hashlib
 
 import duckdb
-import time
 from bs4 import BeautifulSoup
-from bs4.element import NavigableString, Tag
+from bs4.element import Tag
 from returns.result import Failure, Success
 
 from langnet.normalizer.utils import strip_accents
@@ -38,18 +38,6 @@ CREATE TABLE IF NOT EXISTS entries_fr (
     PRIMARY KEY (entry_id, occurrence)
 );
 
-CREATE TABLE IF NOT EXISTS entries_en (
-    entry_id VARCHAR NOT NULL,
-    occurrence INTEGER NOT NULL,
-    headword_deva VARCHAR,
-    headword_roma VARCHAR,
-    headword_norm VARCHAR,
-    variant_num INTEGER,
-    body_html TEXT,
-    plain_text TEXT,
-    source_page VARCHAR,
-    PRIMARY KEY (entry_id, occurrence)
-);
 """
 
 
@@ -110,6 +98,31 @@ def _strip_variant_suffix(text: str) -> str:
     Drop a trailing _N or #N suffix used for hom/variant markers.
     """
     return re.sub(r"([#_]\d+)$", "", text or "")
+
+
+def _extract_plain_text(chunk_soup: BeautifulSoup) -> str:
+    """
+    Flatten HTML into readable text while preserving meaningful breaks.
+
+    - Treat <br> and <p> as newlines so examples/notes stay separated.
+    - Collapse other whitespace to single spaces to avoid spurious line breaks
+      introduced by HTML formatting.
+    """
+    BREAK = "__LN__"
+
+    for br in chunk_soup.find_all("br"):
+        br.replace_with(BREAK)
+    for p in chunk_soup.find_all("p"):
+        p.insert_before(BREAK)
+
+    text = chunk_soup.get_text(" ", strip=False)
+    text = text.replace("\r", "")
+    text = re.sub(r"\s+", " ", text)
+    text = text.replace(f"{BREAK} ", f"{BREAK}")
+    text = text.replace(f" {BREAK}", f"{BREAK}")
+    text = text.replace(BREAK, "\n")
+    text = re.sub(r"\n{2,}", "\n", text)
+    return text.strip()
 
 
 class DicoBuilder:
@@ -257,8 +270,7 @@ class DicoBuilder:
             page = html_path.stem
             html = html_path.read_text(encoding="utf-8", errors="ignore")
             soup = BeautifulSoup(html, "lxml")
-            for entry in self._parse_page(soup, page, seen_bodies):
-                yield entry
+            yield from self._parse_page(soup, page, seen_bodies)
 
     def _iter_source_files(self):
         def _sort_key(path: Path):
@@ -272,12 +284,16 @@ class DicoBuilder:
         deva_spans = soup.find_all("span", class_="deva")
         for idx, span in enumerate(deva_spans):
             headword_deva = span.get_text(strip=True)
-            chunk_nodes = self._collect_chunk(span, deva_spans[idx + 1] if idx + 1 < len(deva_spans) else None)
+            chunk_nodes = self._collect_chunk(
+                span, deva_spans[idx + 1] if idx + 1 < len(deva_spans) else None
+            )
             chunk_html = "".join(str(node) for node in chunk_nodes)
             chunk_soup = BeautifulSoup(chunk_html, "lxml")
             anchor = chunk_soup.find("a", class_="navy", attrs={"name": True})
             if anchor is None:
-                logger.warning("Skipping entry without anchor on page %s (deva=%s)", page, headword_deva)
+                logger.warning(
+                    "Skipping entry without anchor on page %s (deva=%s)", page, headword_deva
+                )
                 continue
             entry_id = anchor["name"].strip()
             body_hash = hashlib.sha1(chunk_html.encode("utf-8")).hexdigest()
@@ -292,7 +308,7 @@ class DicoBuilder:
             variant_num = _parse_variant(entry_id)
             base_entry_id = _strip_variant_suffix(entry_id)
             headword_norm = _normalize_id(base_entry_id)
-            plain_text = chunk_soup.get_text(" ", strip=True)
+            plain_text = _extract_plain_text(chunk_soup)
             plain_text = _strip_leading_headword(
                 plain_text, [headword_roma, base_entry_id, headword_deva]
             )
@@ -330,10 +346,8 @@ class DicoBuilder:
         except Exception:
             entry_count = None
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 conn.close()
-            except Exception:
-                pass
         return LexiconStats(
             lex_id=LEX_ID,
             path=str(self.output_path),

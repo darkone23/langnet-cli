@@ -166,7 +166,11 @@ class HeritageHTTPClient:
             params["lex"] = lex
             query_string = urlencode(params, safe=",")
             url = urljoin(base_url, cgi_path + "sktuser") + "?" + query_string
-            text = self._get_response_text(url, f"heritage-sktuser-{velthuis_text}-{lex}") if self._tool_client else None
+            text = (
+                self._get_response_text(url, f"heritage-sktuser-{velthuis_text}-{lex}")
+                if self._tool_client
+                else None
+            )
             if text is None and self._tool_client is None:
                 try:
                     resp = self.session.get(url, headers=headers, timeout=self.config.timeout)

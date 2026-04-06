@@ -46,6 +46,7 @@ jsonschema = "^4.26.0"
 stanza = "^1.11.0"
 protobuf = "^6.33.5"
 returns = {extras = ["compatible-mypy"], version = "^0.26.0"}
+pylatexenc = "^2.10"
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"

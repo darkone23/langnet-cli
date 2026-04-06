@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from langnet.execution.handlers import diogenes as dio_handlers
 from langnet.execution.handlers import cltk as cltk_handlers
+from langnet.execution.handlers import diogenes as dio_handlers
 
 
 def test_diogenes_normalizes_greek_to_ascii_anchor() -> None:

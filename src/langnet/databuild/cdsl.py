@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from decimal import Decimal
@@ -9,7 +10,6 @@ from itertools import islice
 from pathlib import Path
 
 import duckdb
-import time
 from bs4 import BeautifulSoup
 from returns.result import Failure, Success
 

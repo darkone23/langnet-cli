@@ -3,8 +3,9 @@ from __future__ import annotations
 import hashlib
 import time
 import uuid
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import orjson
 
@@ -46,6 +47,7 @@ class ExtractionEffect:
     kind: str
     canonical: str | None
     payload: Mapping[str, Any] | Sequence[Any] | None
+    handler_version: str | None = None
     load_duration_ms: int = 0
     created_at: float = field(default_factory=time.time)
 
@@ -60,6 +62,7 @@ class DerivationEffect:
     kind: str
     canonical: str | None
     payload: Mapping[str, Any] | Sequence[Any] | None
+    handler_version: str | None = None
     derive_duration_ms: int = 0
     provenance_chain: ProvenanceChain | None = None
     created_at: float = field(default_factory=time.time)
@@ -76,5 +79,6 @@ class ClaimEffect:
     predicate: str
     value: Mapping[str, Any] | Sequence[Any] | None
     provenance_chain: ProvenanceChain
+    handler_version: str | None = None
     load_duration_ms: int = 0
     created_at: float = field(default_factory=time.time)

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
 import subprocess
-import time
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import TypedDict, cast
@@ -14,34 +12,35 @@ import duckdb
 import orjson
 import query_spec
 import requests
+from query_spec import ToolCallSpec
 from returns.result import Failure, Success
 
-from langnet.normalizer.service import DiogenesConfig, NormalizationService
-from langnet.normalizer.utils import strip_accents
-from langnet.planner.core import PlannerConfig, ToolPlanner
-from langnet.storage.effects_index import RawResponseIndex
-from langnet.storage.paths import normalization_db_path
-from langnet.storage.db import connect_duckdb
-from langnet.execution.registry import default_registry
-from langnet.execution.executor import execute_plan_staged
-from langnet.storage.extraction_index import ExtractionIndex
-from langnet.storage.derivation_index import DerivationIndex
-from langnet.storage.claim_index import ClaimIndex
-from langnet.storage.plan_index import PlanResponseIndex, apply_schema
+from langnet.clients.base import ToolClient
+from langnet.clients.http import HttpToolClient
 from langnet.execution.clients import (
     StubToolClient,
-    find_whitaker_binary,
     WhitakerFetchClient,
+    find_whitaker_binary,
     get_cltk_fetch_client,
     get_spacy_fetch_client,
 )
+from langnet.execution.executor import execute_plan_staged
+from langnet.execution.handlers import cdsl as cdsl_handlers
+from langnet.execution.handlers import heritage as heritage_handlers
 from langnet.execution.handlers.diogenes import _parse_diogenes_html
 from langnet.execution.handlers.whitakers import _parse_whitaker_output
-from langnet.clients.http import HttpToolClient
-from langnet.execution.handlers import heritage as heritage_handlers
-from langnet.execution.handlers import cdsl as cdsl_handlers
+from langnet.execution.registry import default_registry
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
-from query_spec import ToolCallSpec
+from langnet.normalizer.service import DiogenesConfig, NormalizationService
+from langnet.normalizer.utils import strip_accents
+from langnet.planner.core import PlannerConfig, ToolPlanner
+from langnet.storage.claim_index import ClaimIndex
+from langnet.storage.db import connect_duckdb
+from langnet.storage.derivation_index import DerivationIndex
+from langnet.storage.effects_index import RawResponseIndex
+from langnet.storage.extraction_index import ExtractionIndex
+from langnet.storage.paths import normalization_db_path
+from langnet.storage.plan_index import PlanResponseIndex, apply_schema
 
 LanguageHint = query_spec.LanguageHint
 LanguageValue = query_spec.LanguageHint.ValueType
@@ -293,6 +292,68 @@ def _create_normalization_service(
     )
 
 
+def _norm_text_for_compare(s: str) -> str:
+    """Normalize text for comparison (remove accents, fold omega/w, keep only letters)."""
+    normalized = strip_accents(s).lower()
+    normalized = normalized.replace("ω", "ο").replace("w", "o")
+    normalized = re.sub(r"[^a-z]+", "", normalized)
+    return normalized or s
+
+
+def _levenshtein_distance(a: str, b: str) -> int:
+    """Calculate Levenshtein distance between two strings."""
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, start=1):
+        curr = [i]
+        for j, cb in enumerate(b, start=1):
+            cost = 0 if ca == cb else 1
+            curr.append(min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost))
+        prev = curr
+    return prev[-1]
+
+
+def _pick_best_normalization_candidate(normalized, raw_text: str) -> str:
+    """Select best candidate from normalized results using Levenshtein distance and frequency."""
+    try:
+        candidates = getattr(normalized.normalized, "candidates", []) or []
+        if candidates:
+            raw_norm = _norm_text_for_compare(raw_text)
+
+            def _score(cand) -> tuple[int, int]:
+                enc = getattr(cand, "encodings", {}) or {}
+                freq = enc.get("freq")
+                freq_int = -1
+                if freq is not None:
+                    try:
+                        freq_int = int(freq)
+                    except (ValueError, TypeError):
+                        freq_int = -1
+                lemma = getattr(cand, "lemma", "") or ""
+                cand_norm = _norm_text_for_compare(enc.get("betacode", "") or lemma)
+                dist = _levenshtein_distance(raw_norm, cand_norm)
+                return (dist, -freq_int)
+
+            best = min(candidates, key=_score)
+            lemma = getattr(best, "lemma", None)
+            if isinstance(lemma, str) and lemma:
+                return lemma
+            lemma0 = getattr(candidates[0], "lemma", None)
+            if isinstance(lemma0, str) and lemma0:
+                return lemma0
+        original = getattr(normalized.normalized, "original", None)
+        if isinstance(original, str) and original:
+            return original
+    except Exception:
+        pass
+    return raw_text
+
+
 def _normalize_word_for_tool(
     language: str, text: str, config: NormalizeConfig, *, use_cache: bool = True
 ) -> str:
@@ -304,73 +365,16 @@ def _normalize_word_for_tool(
     path.parent.mkdir(parents=True, exist_ok=True)
     use_memory = config.no_cache or not use_cache or not path.exists()
 
-    def _norm_for_compare(s: str) -> str:
-        normalized = strip_accents(s).lower()
-        normalized = normalized.replace("ω", "ο").replace("w", "o")
-        normalized = re.sub(r"[^a-z]+", "", normalized)
-        return normalized or s
-
-    def _lev(a: str, b: str) -> int:
-        if a == b:
-            return 0
-        if not a:
-            return len(b)
-        if not b:
-            return len(a)
-        prev = list(range(len(b) + 1))
-        for i, ca in enumerate(a, start=1):
-            curr = [i]
-            for j, cb in enumerate(b, start=1):
-                cost = 0 if ca == cb else 1
-                curr.append(min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost))
-            prev = curr
-        return prev[-1]
-
-    def _pick_candidate(normalized):
-        # Rank by Levenshtein to raw text (omega folded to omicron), tie-break by freq.
-        try:
-            candidates = getattr(normalized.normalized, "candidates", []) or []
-            if candidates:
-                raw_norm = _norm_for_compare(text)
-
-                def _score(cand) -> tuple[int, int]:
-                    enc = getattr(cand, "encodings", {}) or {}
-                    freq = enc.get("freq")
-                    try:
-                        freq_int = int(freq)
-                    except Exception:
-                        freq_int = -1
-                    lemma = getattr(cand, "lemma", "") or ""
-                    cand_norm = _norm_for_compare(enc.get("betacode", "") or lemma)
-                    dist = _lev(raw_norm, cand_norm)
-                    return (dist, -freq_int)
-
-                best = min(candidates, key=_score)
-                lemma = getattr(best, "lemma", None)
-                if isinstance(lemma, str) and lemma:
-                    return lemma
-                lemma0 = getattr(candidates[0], "lemma", None)
-                if isinstance(lemma0, str) and lemma0:
-                    return lemma0
-            original = getattr(normalized.normalized, "original", None)
-            if isinstance(original, str) and original:
-                return original
-        except Exception:
-            pass
-        return text
-
     if use_memory:
         with duckdb.connect(database=":memory:") as conn:
             service = _create_normalization_service(config, conn, read_only=False)
             normalized = service.normalize(text, lang_hint)
-            return _pick_candidate(normalized)
+            return _pick_best_normalization_candidate(normalized, text)
     read_only = config.no_cache
     with connect_duckdb(path, read_only=read_only, lock=not read_only) as conn:
         service = _create_normalization_service(config, conn, read_only=read_only)
         normalized = service.normalize(text, lang_hint)
-        return _pick_candidate(normalized)
-
-
+        return _pick_best_normalization_candidate(normalized, text)
 
 
 def _diogenes_query_url(base: str, lang: str, word: str) -> str:
@@ -408,7 +412,9 @@ def _plan_impl(config: PlanCliConfig, language: str, text: str) -> None:
         no_cache=config.no_cache,
         output=config.output,
     )
-    path = Path(norm_config.db_path).expanduser() if norm_config.db_path else normalization_db_path()
+    path = (
+        Path(norm_config.db_path).expanduser() if norm_config.db_path else normalization_db_path()
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     use_memory = norm_config.no_cache and not path.exists()
     if use_memory:
@@ -595,7 +601,9 @@ def main() -> None:
 @click.option(
     "--db-path",
     type=click.Path(),
-    help="Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb).",
+    help=(
+        "Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb)."
+    ),
 )
 @click.option(
     "--no-cache",
@@ -670,7 +678,9 @@ def normalize(  # noqa: PLR0913
 @click.option(
     "--db-path",
     type=click.Path(),
-    help="Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb).",
+    help=(
+        "Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb)."
+    ),
 )
 @click.option(
     "--dict",
@@ -684,7 +694,7 @@ def normalize(  # noqa: PLR0913
     is_flag=True,
     help="Skip normalization cache lookups and writes for this invocation.",
 )
-def parse(  # noqa: PLR0913
+def parse(  # noqa: PLR0913, PLR0915
     tool: str,
     language: str,
     text: str,
@@ -733,7 +743,7 @@ def parse(  # noqa: PLR0913
             endpoint=f"cltk://ipa/{language}",
             params={"word": query_word, "language": language},
         )
-        raw_json = effect.body.decode("utf-8", errors="ignore")
+        effect.body.decode("utf-8", errors="ignore")
         parsed = {}
         try:
             parsed = orjson.loads(effect.body)
@@ -1069,7 +1079,10 @@ def build_gaffiot(  # noqa: PLR0913
     "--source-dir",
     type=click.Path(),
     default=None,
-    help="Path to DICO HTML directory (defaults to ~/langnet-tools/sanskrit-heritage/webroot/htdocs/DICO/).",
+    help=(
+        "Path to DICO HTML directory "
+        "(defaults to ~/langnet-tools/sanskrit-heritage/webroot/htdocs/DICO/)."
+    ),
 )
 @click.option(
     "--output",
@@ -1109,48 +1122,89 @@ def build_dico(  # noqa: PLR0913
     _build_dico_impl(config)
 
 
-def _build_exec_clients(plan, diogenes_endpoint: str, use_stubs: bool) -> dict[str, object]:
-    clients: dict[str, object] = {}
+def _create_http_client(tool: str) -> ToolClient:
+    """Create an HTTP client for the given tool."""
+    return HttpToolClient(tool=tool)
+
+
+def _create_whitakers_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a Whitakers client, with stub fallback."""
+    binary = find_whitaker_binary()
+    if binary:
+        return WhitakerFetchClient(binary)
+    if use_stubs:
+        return StubToolClient(tool)
+    return None
+
+
+def _create_cltk_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a CLTK client, with stub fallback."""
+    try:
+        return get_cltk_fetch_client()
+    except Exception:
+        if use_stubs:
+            return StubToolClient(tool)
+    return None
+
+
+def _create_spacy_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a spaCy client, with stub fallback."""
+    try:
+        return get_spacy_fetch_client()
+    except Exception:
+        if use_stubs:
+            return StubToolClient(tool)
+    return None
+
+
+def _create_cdsl_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a CDSL client, with stub fallback."""
+    try:
+        from langnet.execution.handlers.cdsl import CdslFetchClient  # noqa: PLC0415
+
+        return CdslFetchClient()
+    except Exception:
+        if use_stubs:
+            return StubToolClient(tool)
+    return None
+
+
+def _get_client_factory(tool: str, use_stubs: bool):
+    """Get the factory function for creating a client for the given tool."""
+    http_tools = {"fetch.diogenes", "fetch.heritage"}
+
+    # Special client factories
+    special_factories = {
+        "fetch.whitakers": lambda: _create_whitakers_client(tool, use_stubs),
+        "fetch.cltk": lambda: _create_cltk_client(tool, use_stubs),
+        "fetch.spacy": lambda: _create_spacy_client(tool, use_stubs),
+        "fetch.cdsl": lambda: _create_cdsl_client(tool, use_stubs),
+    }
+
+    if tool in http_tools:
+        return lambda: _create_http_client(tool)
+    if tool in special_factories:
+        return special_factories[tool]
+    if tool.startswith("fetch.") and use_stubs:
+        return lambda: StubToolClient(tool)
+    return None
+
+
+def _build_exec_clients(plan, diogenes_endpoint: str, use_stubs: bool) -> dict[str, ToolClient]:
+    """Build execution clients for all tools in the plan."""
+    clients: dict[str, ToolClient] = {}
+
     for call in plan.tool_calls:
         tool = call.tool
-        if tool == "fetch.diogenes":
-            if tool not in clients:
-                clients[tool] = HttpToolClient(tool="fetch.diogenes")
-        elif tool == "fetch.heritage":
-            if tool not in clients:
-                clients[tool] = HttpToolClient(tool="fetch.heritage")
-        elif tool == "fetch.whitakers":
-            if tool not in clients:
-                binary = find_whitaker_binary()
-                if binary:
-                    clients[tool] = WhitakerFetchClient(binary)
-                elif use_stubs:
-                    clients[tool] = StubToolClient(tool)
-        elif tool == "fetch.cltk":
-            if tool not in clients:
-                try:
-                    clients[tool] = get_cltk_fetch_client()
-                except Exception:
-                    if use_stubs:
-                        clients[tool] = StubToolClient(tool)
-        elif tool == "fetch.spacy":
-            if tool not in clients:
-                try:
-                    clients[tool] = get_spacy_fetch_client()
-                except Exception:
-                    if use_stubs:
-                        clients[tool] = StubToolClient(tool)
-        elif tool == "fetch.cdsl":
-            if tool not in clients:
-                try:
-                    from langnet.execution.handlers.cdsl import CdslFetchClient  # noqa: PLC0415
+        if tool in clients:
+            continue
 
-                    clients[tool] = CdslFetchClient()
-                except Exception:
-                    if use_stubs:
-                        clients[tool] = StubToolClient(tool)
-        elif tool.startswith("fetch.") and use_stubs:
-            clients.setdefault(tool, StubToolClient(tool))
+        factory = _get_client_factory(tool, use_stubs)
+        if factory is not None:
+            client = factory()
+            if client is not None:
+                clients[tool] = client
+
     return clients
 
 
@@ -1209,7 +1263,8 @@ def _plan_exec_impl(config: PlanExecConfig, language: str, text: str) -> None:
     _print_plan(plan, "pretty")
     click.echo(
         f"counts: raw={len(result.raw_effects)} extractions={len(result.extractions)} "
-        f"derivations={len(result.derivations)} claims={len(result.claims)} cache_hit={result.from_cache}"
+        f"derivations={len(result.derivations)} claims={len(result.claims)} "
+        f"cache_hit={result.from_cache}"
     )
     if result.claims:
         click.echo("Claims:")
@@ -1331,7 +1386,9 @@ def plan_exec(  # noqa: PLR0913
 @click.option(
     "--db-path",
     type=click.Path(),
-    help="Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb).",
+    help=(
+        "Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb)."
+    ),
 )
 @click.option(
     "--no-cache",
@@ -1344,7 +1401,83 @@ def plan_exec(  # noqa: PLR0913
     show_default=True,
     help="Include CLTK in the plan (may be slow due to warmup).",
 )
-def triples_dump(
+def _get_query_value_for_plan(
+    text: str, lang_hint, normalize: bool, norm_cfg: NormalizeConfig
+) -> object:
+    """Get the query value for planning, either normalized or passthrough."""
+    path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    use_memory = norm_cfg.no_cache or not path.exists()
+
+    if normalize:
+        if use_memory:
+            with duckdb.connect(database=":memory:") as norm_conn:
+                service = _create_normalization_service(norm_cfg, norm_conn, read_only=False)
+                normalized_result = service.normalize(text, lang_hint)
+        else:
+            read_only = norm_cfg.no_cache
+            with connect_duckdb(path, read_only=read_only, lock=not read_only) as norm_conn:
+                service = _create_normalization_service(norm_cfg, norm_conn, read_only=read_only)
+                normalized_result = service.normalize(text, lang_hint)
+        return normalized_result.normalized
+
+    # Minimal passthrough NormalizedQuery to satisfy the planner.
+    return query_spec.NormalizedQuery(
+        original=text,
+        language=lang_hint,
+        candidates=[
+            query_spec.CanonicalCandidate(
+                lemma=text,
+                encodings={"accentless": text},
+                sources=["manual"],
+            )
+        ],
+        normalizations=[],
+    )
+
+
+def _filter_plan_tools(plan, tool_filter: str) -> None:
+    """Filter plan to only include tools matching the filter."""
+    lf = tool_filter.lower()
+
+    def _matches_tool(tool_name: str) -> bool:
+        t = tool_name.lower()
+        if t.startswith(lf):
+            return True
+        _, _, rest = t.partition(".")
+        return bool(rest) and rest.startswith(lf)
+
+    filtered_calls = [c for c in plan.tool_calls if _matches_tool(c.tool)]
+    kept_ids = {c.call_id for c in filtered_calls}
+    filtered_deps = [
+        d for d in plan.dependencies if d.from_call_id in kept_ids and d.to_call_id in kept_ids
+    ]
+    plan.ClearField("tool_calls")
+    plan.ClearField("dependencies")
+    plan.tool_calls.extend(filtered_calls)
+    plan.dependencies.extend(filtered_deps)
+
+
+def _display_claim_triples(result) -> None:
+    """Display claim triples to stdout."""
+    for claim in result.claims:
+        click.echo(f"TOOL={claim.tool} PRED={claim.predicate} SUBJECT={claim.subject}")
+        val = claim.value if isinstance(claim.value, dict) else {}
+        triples = val.get("triples") if isinstance(val, dict) else None
+        if triples:
+            sense_counts: dict[str, int] = {}
+            for t in triples:
+                if isinstance(t, dict) and t.get("predicate") == "has_sense":
+                    subj = t.get("subject")
+                    if isinstance(subj, str):
+                        sense_counts[subj] = sense_counts.get(subj, 0) + 1
+            if sense_counts:
+                click.echo(f"  sense_counts {sense_counts}")
+            for t in triples[:10]:
+                click.echo(f"  triple {t}")
+
+
+def triples_dump(  # noqa: PLR0913
     language: str,
     text: str,
     tool_filter: str,
@@ -1367,35 +1500,8 @@ def triples_dump(
         no_cache=no_cache,
         output="pretty",
     )
-    # Always plan against a NormalizedQuery, even when skipping the normalizer.
-    path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    use_memory = norm_cfg.no_cache or not path.exists()
-    if normalize:
-        if use_memory:
-            with duckdb.connect(database=":memory:") as norm_conn:
-                service = _create_normalization_service(norm_cfg, norm_conn, read_only=False)
-                normalized_result = service.normalize(text, lang_hint)
-        else:
-            read_only = norm_cfg.no_cache
-            with connect_duckdb(path, read_only=read_only, lock=not read_only) as norm_conn:
-                service = _create_normalization_service(norm_cfg, norm_conn, read_only=read_only)
-                normalized_result = service.normalize(text, lang_hint)
-        query_value = normalized_result.normalized
-    else:
-        # Minimal passthrough NormalizedQuery to satisfy the planner.
-        query_value = query_spec.NormalizedQuery(
-            original=text,
-            language=lang_hint,
-            candidates=[
-                query_spec.CanonicalCandidate(
-                    lemma=text,
-                    encodings={"accentless": text},
-                    sources=["manual"],
-                )
-            ],
-            normalizations=[],
-        )
+
+    query_value = _get_query_value_for_plan(text, lang_hint, normalize, norm_cfg)
 
     planner = ToolPlanner(
         PlannerConfig(
@@ -1404,7 +1510,8 @@ def triples_dump(
             heritage_base_url=heritage_base,
             heritage_max_results=5,
             include_whitakers=lang_hint == LanguageHint.LANGUAGE_HINT_LAT,
-            include_cltk=include_cltk and lang_hint in {LanguageHint.LANGUAGE_HINT_LAT, LanguageHint.LANGUAGE_HINT_GRC},
+            include_cltk=include_cltk
+            and lang_hint in {LanguageHint.LANGUAGE_HINT_LAT, LanguageHint.LANGUAGE_HINT_GRC},
             max_candidates=3,
         )
     )
@@ -1412,22 +1519,7 @@ def triples_dump(
     plan = planner.build(query_value, candidate)
 
     if tool_filter and tool_filter.lower() != "all":
-        lf = tool_filter.lower()
-
-        def _matches_tool(tool_name: str) -> bool:
-            t = tool_name.lower()
-            if t.startswith(lf):
-                return True
-            _, _, rest = t.partition(".")
-            return bool(rest) and rest.startswith(lf)
-
-        filtered_calls = [c for c in plan.tool_calls if _matches_tool(c.tool)]
-        kept_ids = {c.call_id for c in filtered_calls}
-        filtered_deps = [d for d in plan.dependencies if d.from_call_id in kept_ids and d.to_call_id in kept_ids]
-        plan.ClearField("tool_calls")
-        plan.ClearField("dependencies")
-        plan.tool_calls.extend(filtered_calls)
-        plan.dependencies.extend(filtered_deps)
+        _filter_plan_tools(plan, tool_filter)
 
     with duckdb.connect(database=":memory:") as conn:
         apply_schema(conn)
@@ -1450,25 +1542,7 @@ def triples_dump(
             allow_cache=False,
         )
 
-    for claim in result.claims:
-        click.echo(f"TOOL={claim.tool} PRED={claim.predicate} SUBJECT={claim.subject}")
-        val = claim.value if isinstance(claim.value, dict) else {}
-        triples = val.get("triples") if isinstance(val, dict) else None
-        if triples:
-            sense_counts: dict[str, int] = {}
-            for t in triples:
-                if isinstance(t, dict) and t.get("predicate") == "has_sense":
-                    subj = t.get("subject")
-                    if isinstance(subj, str):
-                        sense_counts[subj] = sense_counts.get(subj, 0) + 1
-            if sense_counts:
-                click.echo(f"  sense_counts {sense_counts}")
-            for t in triples[:10]:
-                click.echo(f"  triple {t}")
-        if isinstance(val, dict) and "raw_text" in val:
-            click.echo(f"  raw_text_len {len(val['raw_text'])}")
-        if isinstance(val, dict) and "raw_html" in val:
-            click.echo(f"  raw_html_len {len(val['raw_html'])}")
+    _display_claim_triples(result)
 
 
 if __name__ == "__main__":

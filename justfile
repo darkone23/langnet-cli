@@ -53,9 +53,9 @@ test-all:
 test *args:
     nose2 -s tests --config tests/nose2.cfg {{ args }}
 
-# Fast unit/contract tests (skips integration-tagged tests)
+# Fast unit/contract tests (runs all tests - nose2 doesn't support attribute filtering)
 test-fast:
-    nose2 -s tests --config tests/nose2.cfg -A '!integration'
+    nose2 -s tests --config tests/nose2.cfg
 
 # Remove runtime caches (safe to delete)
 clean-cache:
@@ -122,3 +122,11 @@ parse tool lang word opt="":
 # Dump tool claims/triples for a word (Latin) with no stubs/no cache. Optional tool filter (exact prefix), use "all" to run everything.
 triples-dump lang word tool="all":
     python3 ./.justscripts/triples_dump.py "{{lang}}" "{{word}}" "{{tool}}"
+
+# Translate sample lexicon rows (French -> English) using aisuite/OpenRouter.
+translate-lex *opts:
+    #!/usr/bin/env bash
+    #
+    source $HOME/.bashrc
+    # Example: just translate-lex --db data/build/lex_gaffiot.duckdb --table entries_fr --limit 1 --headword agni
+    python3 ./.justscripts/lex_translation_demo.py {{ opts }}

@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Mapping, Sequence
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
-from typing import Mapping
+from typing import Any, Protocol, TypedDict, cast
 
 from query_spec import ToolCallSpec
 
 from langnet.clients.base import RawResponseEffect
+from langnet.execution import anchors, predicates
 from langnet.execution.effects import (
     ClaimEffect,
     DerivationEffect,
@@ -17,6 +19,56 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
+from langnet.execution.versioning import versioned
+
+
+class Reducer(Protocol):
+    """Protocol for Whitaker line parser reducers."""
+
+    @staticmethod
+    def reduce(line: str) -> dict[str, Any]:
+        """Parse a line and return structured data."""
+        ...
+
+
+class WhitakerCodeline(TypedDict, total=False):
+    """Whitaker codeline structure (dictionary entry metadata)."""
+
+    term: str
+    pos_code: str
+    declension: str
+    freq: str
+    source: str
+
+
+class WhitakerTerm(TypedDict, total=False):
+    """Whitaker term structure (morphological analysis)."""
+
+    part_of_speech: str
+    term: str
+    stem: str
+    ending: str
+    conjugation: str
+    declension: str
+    variant: str
+    tense: str
+    voice: str
+    mood: str
+    person: str
+    number: str
+    case: str
+    gender: str
+    comparison: str
+
+
+class WhitakerWord(TypedDict, total=False):
+    """Whitaker word structure (complete parse result)."""
+
+    terms: list[WhitakerTerm]
+    raw_lines: list[str]
+    codeline: WhitakerCodeline
+    senses: list[str]
+    unknown: list[str]
 
 
 _WHITAKER_MODULES: dict[str, ModuleType] = {}
@@ -40,16 +92,16 @@ _POS_CODE_MAP = {
     "PREFIX": "prefix",
 }
 _FACT_PRED_MAP = {
-    "declension": "has_declension",
-    "case": "has_case",
-    "number": "has_number",
-    "gender": "has_gender",
-    "conjugation": "has_conjugation",
-    "tense": "has_tense",
-    "voice": "has_voice",
-    "mood": "has_mood",
-    "person": "has_person",
-    "comparison": "has_degree",
+    "declension": predicates.HAS_DECLENSION,
+    "case": predicates.HAS_CASE,
+    "number": predicates.HAS_NUMBER,
+    "gender": predicates.HAS_GENDER,
+    "conjugation": predicates.HAS_CONJUGATION,
+    "tense": predicates.HAS_TENSE,
+    "voice": predicates.HAS_VOICE,
+    "mood": predicates.HAS_MOOD,
+    "person": predicates.HAS_PERSON,
+    "comparison": predicates.HAS_DEGREE,
 }
 _CODELINE_FEATURE_KEYS = ("source", "age", "area", "geo", "notes")
 
@@ -171,14 +223,27 @@ _FREQ_MAP = {
     "F": "very rare",
     "X": "unknown",
 }
-_SOURCE_MAP = {"A": "Allen and Greenough", "L": "Lewis and Short", "S": "Supplement", "X": "unknown"}
+_SOURCE_MAP = {
+    "A": "Allen and Greenough",
+    "L": "Lewis and Short",
+    "S": "Supplement",
+    "X": "unknown",
+}
 
 
 def _load_whitaker_parser(module_name: str) -> ModuleType:
     if module_name in _WHITAKER_MODULES:
         return _WHITAKER_MODULES[module_name]
     root = Path(__file__).resolve().parents[4]
-    path = root / "codesketch" / "src" / "langnet" / "whitakers_words" / "lineparsers" / f"{module_name}.py"
+    path = (
+        root
+        / "codesketch"
+        / "src"
+        / "langnet"
+        / "whitakers_words"
+        / "lineparsers"
+        / f"{module_name}.py"
+    )
     spec = spec_from_file_location(f"codesketch.whitakers.{module_name}", path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load Whitaker parser module {module_name}")
@@ -188,7 +253,7 @@ def _load_whitaker_parser(module_name: str) -> ModuleType:
     return module
 
 
-def _load_reducers():
+def _load_reducers() -> tuple[type[Reducer], type[Reducer], type[Reducer]]:
     senses = _load_whitaker_parser("parse_senses")
     codes = _load_whitaker_parser("parse_term_codes")
     facts = _load_whitaker_parser("parse_term_facts")
@@ -210,12 +275,16 @@ def _normalize_lemma(raw: str | None) -> str | None:
     return lemma or None
 
 
-def _normalize_pos(term: Mapping[str, object] | None, codeline: Mapping[str, object] | None) -> str:
-    pos = None
-    if term and isinstance(term.get("part_of_speech"), str):
-        pos = term["part_of_speech"].lower()
-    if not pos and codeline and isinstance(codeline.get("pos_code"), str):
-        pos = _POS_CODE_MAP.get(codeline["pos_code"], codeline["pos_code"].lower())
+def _normalize_pos(term: WhitakerTerm | None, codeline: WhitakerCodeline | None) -> str:
+    pos: str | None = None
+    if term:
+        pos_val = term.get("part_of_speech")
+        if isinstance(pos_val, str):
+            pos = pos_val.lower()
+    if not pos and codeline:
+        pos_code = codeline.get("pos_code")
+        if isinstance(pos_code, str):
+            pos = _POS_CODE_MAP.get(pos_code, pos_code.lower())
     return pos or _ANCHOR_UNKNOWN_POS
 
 
@@ -226,14 +295,17 @@ def _map_feature_value(code: str | None, mapping: Mapping[str, str]) -> str | No
 
 
 def _lex_anchor(lemma: str, pos: str) -> str:
-    return f"lex:{lemma}#{pos}"
+    """Delegate to canonical anchor module with normalization."""
+    return anchors.lex_anchor(lemma, pos) if pos else anchors.lex_anchor(lemma)
 
 
 def _interp_anchor(surface: str, lex_anchor: str) -> str:
-    return f"interp:form:{surface}→{lex_anchor}"
+    """Delegate to canonical anchor module."""
+    return anchors.interp_anchor(surface, lex_anchor)
 
 
 def _sense_anchor(lex_anchor: str, sense_txt: str) -> str:
+    """Generate stable sense anchor with content hash."""
     digest = hashlib.sha256(sense_txt.strip().encode("utf-8")).hexdigest()[:8]
     return f"sense:{lex_anchor}#{digest}"
 
@@ -265,7 +337,9 @@ def _classify_line(line: str) -> Mapping[str, str]:
     return {"line_txt": line, "line_type": line_type}
 
 
-def _get_next_word(current: Mapping | None, last_line: Mapping | None, line_info: Mapping[str, str]):
+def _get_next_word(
+    current: Mapping | None, last_line: Mapping | None, line_info: Mapping[str, str]
+):
     next_word: dict[str, object] = {"lines": [line_info]}
     start_new_word = False
     if not last_line:
@@ -276,7 +350,7 @@ def _get_next_word(current: Mapping | None, last_line: Mapping | None, line_info
         if last_line_type == "term-code":
             start_new_word = this_line_type != "sense"
         elif last_line_type == "sense":
-            start_new_word = this_line_type != "sense" and this_line_type != "unknown"
+            start_new_word = this_line_type not in {"sense", "unknown"}
         elif last_line_type == "unknown":
             start_new_word = this_line_type.startswith("term-")
     if start_new_word:
@@ -316,14 +390,28 @@ def _get_word_chunks(text: str) -> list[dict]:
     return word_chunks
 
 
-def _process_chunk(word_chunk: dict, reducers: tuple[object, object, object]) -> dict | None:
+def _process_chunk(
+    word_chunk: dict[str, object],
+    reducers: tuple[type[Reducer], type[Reducer], type[Reducer]],
+) -> WhitakerWord | None:
     SensesReducer, CodesReducer, FactsReducer = reducers
     unknown: list[str] = []
-    terms: list[Mapping[str, object]] = []
+    terms: list[WhitakerTerm] = []
     lines: list[str] = []
-    word: dict[str, object] = {"terms": terms, "raw_lines": lines, "unknown": unknown}
-    for i in range(word_chunk["size"]):
-        txt, line_type = word_chunk["txts"][i], word_chunk["types"][i]
+    word: WhitakerWord = {"terms": terms, "raw_lines": lines, "unknown": unknown}
+
+    size_val = word_chunk.get("size")
+    size = size_val if isinstance(size_val, int) else 0
+    txts_val = word_chunk.get("txts")
+    txts = txts_val if isinstance(txts_val, Sequence) else []
+    types_val = word_chunk.get("types")
+    types = types_val if isinstance(types_val, Sequence) else []
+
+    for i in range(size):
+        txt_val = txts[i] if i < len(txts) else ""
+        txt: str = txt_val if isinstance(txt_val, str) else ""
+        type_val = types[i] if i < len(types) else ""
+        line_type: str = type_val if isinstance(type_val, str) else ""
         lines.append(txt)
         if line_type == "sense":
             data = SensesReducer.reduce(txt)
@@ -340,19 +428,20 @@ def _process_chunk(word_chunk: dict, reducers: tuple[object, object, object]) ->
     return word if lines else None
 
 
-def _fixup_word(word: dict) -> dict:
+def _fixup_word(word: WhitakerWord) -> WhitakerWord:
     codeline = word.get("codeline")
-    if isinstance(codeline, dict) and not codeline.get("term") and word.get("terms"):
-        first_term = word["terms"][0]
-        if isinstance(first_term, Mapping) and first_term.get("term"):
+    terms = word.get("terms", [])
+    if isinstance(codeline, dict) and not codeline.get("term") and terms:
+        first_term = terms[0]
+        if isinstance(first_term, dict) and first_term.get("term"):
             codeline["term"] = first_term["term"]
     return word
 
 
-def _parse_whitaker_output(text: str) -> list[dict]:
+def _parse_whitaker_output(text: str) -> list[WhitakerWord]:
     reducers = _load_reducers()
     chunks = _get_word_chunks(text)
-    wordlist: list[dict] = []
+    wordlist: list[WhitakerWord] = []
     for chunk in chunks:
         word = _process_chunk(chunk, reducers)
         if word:
@@ -360,38 +449,15 @@ def _parse_whitaker_output(text: str) -> list[dict]:
     return wordlist
 
 
-def _collect_lemmas(wordlist: list[Mapping[str, object]]) -> list[str]:
+def _collect_lemmas(wordlist: list[WhitakerWord]) -> list[str]:
     lemmas: list[str] = []
     for word in wordlist:
         codeline = word.get("codeline")
-        if isinstance(codeline, Mapping):
+        if codeline is not None:
             term = codeline.get("term")
             if isinstance(term, str):
                 lemmas.append(term.split(",")[0].strip().lower())
-        for term in word.get("terms", []) or []:
-            if isinstance(term, Mapping):
-                t = term.get("term")
-                if isinstance(t, str):
-                    lemmas.append(t.replace(".", ""))
-    seen = set()
-    deduped: list[str] = []
-    for lemma in lemmas:
-        if lemma not in seen:
-            seen.add(lemma)
-            deduped.append(lemma)
-    return deduped
-
-
-def _collect_word_lemmas(word: Mapping[str, object]) -> list[str]:
-    """Collect lemmas from a single Whitaker word chunk (codeline + terms)."""
-    lemmas: list[str] = []
-    codeline = word.get("codeline")
-    if isinstance(codeline, Mapping):
-        term = codeline.get("term")
-        if isinstance(term, str):
-            lemmas.append(term.split(",")[0].strip().lower())
-    for term in word.get("terms", []) or []:
-        if isinstance(term, Mapping):
+        for term in word.get("terms", []):
             t = term.get("term")
             if isinstance(t, str):
                 lemmas.append(t.replace(".", ""))
@@ -404,7 +470,30 @@ def _collect_word_lemmas(word: Mapping[str, object]) -> list[str]:
     return deduped
 
 
-def _make_base_evidence(call: ToolCallSpec, derivation: DerivationEffect, claim_id: str) -> dict[str, object]:
+def _collect_word_lemmas(word: WhitakerWord) -> list[str]:
+    """Collect lemmas from a single Whitaker word chunk (codeline + terms)."""
+    lemmas: list[str] = []
+    codeline = word.get("codeline")
+    if codeline is not None:
+        term = codeline.get("term")
+        if isinstance(term, str):
+            lemmas.append(term.split(",")[0].strip().lower())
+    for term in word.get("terms", []):
+        t = term.get("term")
+        if isinstance(t, str):
+            lemmas.append(t.replace(".", ""))
+    seen = set()
+    deduped: list[str] = []
+    for lemma in lemmas:
+        if lemma not in seen:
+            seen.add(lemma)
+            deduped.append(lemma)
+    return deduped
+
+
+def _make_base_evidence(
+    call: ToolCallSpec, derivation: DerivationEffect, claim_id: str
+) -> dict[str, object]:
     return _trim_evidence(
         {
             "source_tool": _SOURCE_TOOL,
@@ -438,115 +527,202 @@ def _variant_candidates(lemmas: list[str], primary_lemma: str) -> list[str]:
     return variants
 
 
-def _build_triples(
-    wordlist: list[Mapping[str, object]] | None, lemmas: list[str], base_evidence: Mapping[str, object]
-) -> list[dict[str, object]]:
-    if not isinstance(wordlist, list):
-        return []
-    normalized_lemmas = [_normalize_lemma(l) or l.lower() for l in lemmas if isinstance(l, str)]
-    triples: list[dict[str, object]] = []
-    for word in wordlist:
-        if not isinstance(word, Mapping):
-            continue
-        word_lemmas = _collect_word_lemmas(word)
-        normalized_word_lemmas = [_normalize_lemma(l) or l.lower() for l in word_lemmas if isinstance(l, str)]
-        raw_lines = [l for l in word.get("raw_lines", []) if isinstance(l, str)]
-        codeline = word.get("codeline") if isinstance(word.get("codeline"), Mapping) else {}
-        senses = word.get("senses") if isinstance(word.get("senses"), list) else []
-        terms = [t for t in word.get("terms", []) if isinstance(t, Mapping)] if isinstance(word.get("terms"), list) else []
-
-        primary_lemma = _normalize_lemma(codeline.get("term")) if isinstance(codeline, Mapping) else None
-        if not primary_lemma and normalized_word_lemmas:
-            primary_lemma = normalized_word_lemmas[0]
-        if not primary_lemma and normalized_lemmas:
-            primary_lemma = normalized_lemmas[0]
-        if not primary_lemma:
-            for term in terms:
-                primary_lemma = _normalize_surface(term.get("term"))  # type: ignore[arg-type]
+def _select_primary_lemma(
+    codeline: WhitakerCodeline | None,
+    normalized_word_lemmas: list[str],
+    normalized_lemmas: list[str],
+    terms: list[WhitakerTerm],
+) -> str | None:
+    """Select the primary lemma from available sources."""
+    primary_lemma: str | None = None
+    if codeline is not None:
+        term_val = codeline.get("term")
+        if isinstance(term_val, str):
+            primary_lemma = _normalize_lemma(term_val)
+    if not primary_lemma and normalized_word_lemmas:
+        primary_lemma = normalized_word_lemmas[0]
+    if not primary_lemma and normalized_lemmas:
+        primary_lemma = normalized_lemmas[0]
+    if not primary_lemma:
+        for term in terms:
+            term_str = term.get("term")
+            if isinstance(term_str, str):
+                primary_lemma = _normalize_surface(term_str)
                 if primary_lemma:
                     break
-        pos = _normalize_pos(terms[0] if terms else None, codeline if isinstance(codeline, Mapping) else None)
+    return primary_lemma
+
+
+def _build_codeline_triples(
+    lex_anchor: str,
+    codeline: WhitakerCodeline,
+    base_evidence: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Build triples for codeline features."""
+    triples: list[dict[str, object]] = []
+    freq_val = codeline.get("freq")
+    if freq_val:
+        mapped_freq = _map_feature_value(freq_val, _FREQ_MAP) or freq_val
+        triples.append(_make_triple(lex_anchor, "has_frequency", mapped_freq, base_evidence))
+    declension_val = codeline.get("declension")
+    if declension_val:
+        triples.append(
+            _make_triple(lex_anchor, predicates.HAS_DECLENSION, declension_val, base_evidence)
+        )
+    pos_form = codeline.get("pos_form")
+    if pos_form:
+        pf = str(pos_form)
+        pron_type = _map_feature_value(pf, _PRONOUN_TYPE_MAP)
+        num_type = _map_feature_value(pf, _NUMERAL_TYPE_MAP)
+        if pron_type and pron_type != pf:
+            triples.append(_make_triple(lex_anchor, "has_pronoun_type", pron_type, base_evidence))
+        elif num_type and num_type != pf:
+            triples.append(_make_triple(lex_anchor, "has_numeral_type", num_type, base_evidence))
+        else:
+            triples.append(_make_triple(lex_anchor, "has_feature", {"pos_form": pf}, base_evidence))
+
+    extra_features: dict[str, object] = {}
+    for key, mapping in [
+        ("age", _AGE_MAP),
+        ("area", _AREA_MAP),
+        ("geo", _GEO_MAP),
+        ("source", _SOURCE_MAP),
+    ]:
+        val = codeline.get(key)  # type: ignore[misc]
+        if val:
+            mapped_val = _map_feature_value(str(val), mapping) or val
+            extra_features[key] = mapped_val
+    notes_val = codeline.get("notes")  # type: ignore[misc]
+    if notes_val:
+        extra_features["notes"] = notes_val
+    if extra_features:
+        triples.append(_make_triple(lex_anchor, "has_feature", extra_features, base_evidence))
+    return triples
+
+
+def _build_sense_triples(
+    lex_anchor: str,
+    senses: Sequence[str],
+    base_evidence: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Build triples for word senses."""
+    triples: list[dict[str, object]] = []
+    for sense in senses:
+        sense_txt = sense.strip()
+        if not sense_txt:
+            continue
+        sense_anchor = _sense_anchor(lex_anchor, sense_txt)
+        triples.append(_make_triple(lex_anchor, predicates.HAS_SENSE, sense_anchor, base_evidence))
+        triples.append(_make_triple(sense_anchor, predicates.GLOSS, sense_txt, base_evidence))
+    return triples
+
+
+def _map_morphological_feature(pred: str, val: object) -> object:
+    """Map morphological feature values using appropriate mapping tables."""
+    predicate_map_table = {
+        "has_tense": _TENSE_MAP,
+        "has_voice": _VOICE_MAP,
+        "has_mood": _MOOD_MAP,
+        "has_person": _PERSON_MAP,
+        "has_number": _NUMBER_MAP,
+        "has_case": _CASE_MAP,
+        "has_gender": _GENDER_MAP,
+        "has_degree": _DEGREE_MAP,
+    }
+    feature_map = predicate_map_table.get(pred)
+    return _map_feature_value(str(val), feature_map) or val if feature_map else val
+
+
+def _build_term_triples(
+    terms: list[WhitakerTerm],
+    lex_anchor: str,
+    codeline: WhitakerCodeline | None,
+    base_evidence: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Build triples for inflected terms."""
+    triples: list[dict[str, object]] = []
+    for term in terms:
+        term_str = term.get("term")
+        surface = _normalize_surface(term_str) if isinstance(term_str, str) else None
+        if not surface or not lex_anchor:
+            continue
+        form_anchor = f"form:{surface}"
+        interp_anchor = _interp_anchor(surface, lex_anchor)
+        triples.append(
+            _make_triple(form_anchor, "has_interpretation", interp_anchor, base_evidence)
+        )
+        triples.append(_make_triple(interp_anchor, "realizes_lexeme", lex_anchor, base_evidence))
+        triples.append(_make_triple(form_anchor, "inflection_of", lex_anchor, base_evidence))
+
+        term_pos = _normalize_pos(term, codeline)
+        if term_pos:
+            triples.append(_make_triple(interp_anchor, predicates.HAS_POS, term_pos, base_evidence))
+
+        for key, pred in _FACT_PRED_MAP.items():
+            val = term.get(key)  # type: ignore[misc]
+            if val:
+                mapped_val = _map_morphological_feature(pred, str(val))
+                triples.append(_make_triple(interp_anchor, pred, mapped_val, base_evidence))
+
+        notes_val = term.get("notes")  # type: ignore[misc]
+        if notes_val:
+            triples.append(
+                _make_triple(interp_anchor, "has_feature", {"notes": notes_val}, base_evidence)
+            )
+    return triples
+
+
+def _build_triples(
+    wordlist: list[WhitakerWord] | None,
+    lemmas: list[str],
+    base_evidence: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Build RDF-style triples from Whitakers wordlist data."""
+    if not isinstance(wordlist, list):
+        return []
+
+    normalized_lemmas = [
+        _normalize_lemma(lemma) or lemma.lower() for lemma in lemmas if isinstance(lemma, str)
+    ]
+    triples: list[dict[str, object]] = []
+
+    for word in wordlist:
+        word_lemmas = _collect_word_lemmas(word)
+        normalized_word_lemmas = [
+            _normalize_lemma(lemma) or lemma.lower()
+            for lemma in word_lemmas
+            if isinstance(lemma, str)
+        ]
+        codeline = word.get("codeline")
+        senses = word.get("senses", [])
+        terms = word.get("terms", [])
+
+        primary_lemma = _select_primary_lemma(
+            codeline,
+            normalized_word_lemmas,
+            normalized_lemmas,
+            terms,
+        )
+        pos = _normalize_pos(terms[0] if terms else None, codeline)
         lex_anchor = _lex_anchor(primary_lemma, pos) if primary_lemma else None
 
-        if lex_anchor:
-            triples.append(_make_triple(lex_anchor, "has_pos", pos, base_evidence))
-            if isinstance(codeline, Mapping):
-                if codeline.get("freq"):
-                    triples.append(
-                        _make_triple(
-                            lex_anchor,
-                            "has_frequency",
-                            _map_feature_value(codeline.get("freq"), _FREQ_MAP) or codeline.get("freq"),
-                            base_evidence,
-                        )
-                    )
-                if codeline.get("declension"):
-                    triples.append(_make_triple(lex_anchor, "has_declension", codeline.get("declension"), base_evidence))
-                if codeline.get("pos_form"):
-                    pf = str(codeline.get("pos_form"))
-                    pron_type = _map_feature_value(pf, _PRONOUN_TYPE_MAP)
-                    num_type = _map_feature_value(pf, _NUMERAL_TYPE_MAP)
-                    if pron_type and pron_type != pf:
-                        triples.append(_make_triple(lex_anchor, "has_pronoun_type", pron_type, base_evidence))
-                    elif num_type and num_type != pf:
-                        triples.append(_make_triple(lex_anchor, "has_numeral_type", num_type, base_evidence))
-                    else:
-                        triples.append(_make_triple(lex_anchor, "has_feature", {"pos_form": pf}, base_evidence))
-                extra_features = {}
-                for key, mapping in [("age", _AGE_MAP), ("area", _AREA_MAP), ("geo", _GEO_MAP), ("source", _SOURCE_MAP)]:
-                    if codeline.get(key):
-                        extra_features[key] = _map_feature_value(codeline.get(key), mapping) or codeline.get(key)
-                if codeline.get("notes"):
-                    extra_features["notes"] = codeline.get("notes")
-                if extra_features:
-                    triples.append(_make_triple(lex_anchor, "has_feature", extra_features, base_evidence))
-            for variant in _variant_candidates(normalized_word_lemmas, primary_lemma):
-                triples.append(_make_triple(lex_anchor, "variant_form", variant, base_evidence))
-            for sense in senses:
-                if not isinstance(sense, str):
-                    continue
-                sense_txt = sense.strip()
-                if not sense_txt:
-                    continue
-                sense_anchor = _sense_anchor(lex_anchor, sense_txt)
-                triples.append(_make_triple(lex_anchor, "has_sense", sense_anchor, base_evidence))
-                triples.append(_make_triple(sense_anchor, "gloss", sense_txt, base_evidence))
+        # primary_lemma is guaranteed non-None when lex_anchor exists
+        if lex_anchor and primary_lemma:
+            triples.append(_make_triple(lex_anchor, predicates.HAS_POS, pos, base_evidence))
 
-        for term in terms:
-            surface = _normalize_surface(term.get("term")) if isinstance(term, Mapping) else None
-            if not surface or not lex_anchor:
-                continue
-            form_anchor = f"form:{surface}"
-            interp_anchor = _interp_anchor(surface, lex_anchor)
-            triples.append(_make_triple(form_anchor, "has_interpretation", interp_anchor, base_evidence))
-            triples.append(_make_triple(interp_anchor, "realizes_lexeme", lex_anchor, base_evidence))
-            triples.append(_make_triple(form_anchor, "inflection_of", lex_anchor, base_evidence))
-            term_pos = _normalize_pos(term, codeline if isinstance(codeline, Mapping) else None)
-            if term_pos:
-                triples.append(_make_triple(interp_anchor, "has_pos", term_pos, base_evidence))
-            for key, pred in _FACT_PRED_MAP.items():
-                val = term.get(key) if isinstance(term, Mapping) else None
-                if val:
-                    mapped_val = val
-                    if pred == "has_tense":
-                        mapped_val = _map_feature_value(str(val), _TENSE_MAP) or val
-                    elif pred == "has_voice":
-                        mapped_val = _map_feature_value(str(val), _VOICE_MAP) or val
-                    elif pred == "has_mood":
-                        mapped_val = _map_feature_value(str(val), _MOOD_MAP) or val
-                    elif pred == "has_person":
-                        mapped_val = _map_feature_value(str(val), _PERSON_MAP) or val
-                    elif pred == "has_number":
-                        mapped_val = _map_feature_value(str(val), _NUMBER_MAP) or val
-                    elif pred == "has_case":
-                        mapped_val = _map_feature_value(str(val), _CASE_MAP) or val
-                    elif pred == "has_gender":
-                        mapped_val = _map_feature_value(str(val), _GENDER_MAP) or val
-                    elif pred == "has_degree":
-                        mapped_val = _map_feature_value(str(val), _DEGREE_MAP) or val
-                    triples.append(_make_triple(interp_anchor, pred, mapped_val, base_evidence))
-            if term.get("notes"):
-                triples.append(_make_triple(interp_anchor, "has_feature", {"notes": term.get("notes")}, base_evidence))
+            if codeline is not None:
+                triples.extend(_build_codeline_triples(lex_anchor, codeline, base_evidence))
+
+            for variant in _variant_candidates(normalized_word_lemmas, primary_lemma):
+                triples.append(
+                    _make_triple(lex_anchor, predicates.VARIANT_FORM, variant, base_evidence)
+                )
+
+            triples.extend(_build_sense_triples(lex_anchor, senses, base_evidence))
+
+        if lex_anchor:
+            triples.extend(_build_term_triples(terms, lex_anchor, codeline, base_evidence))
+
     return triples
 
 
@@ -561,6 +737,7 @@ def _extract_response_id(provenance: list[ProvenanceLink] | None) -> str | None:
     return None
 
 
+@versioned("v1")
 def extract_lines(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect:
     text = raw.body.decode("utf-8", errors="ignore")
     wordlist = _parse_whitaker_output(text)
@@ -578,6 +755,7 @@ def extract_lines(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffec
     )
 
 
+@versioned("v1")
 def derive_facts(call: ToolCallSpec, extraction: ExtractionEffect) -> DerivationEffect:
     prov = [
         ProvenanceLink(
@@ -587,12 +765,16 @@ def derive_facts(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
             metadata={"response_id": extraction.response_id},
         )
     ]
-    payload = {}
+    payload: dict[str, object] = {}
     if isinstance(extraction.payload, Mapping):
+        ext_payload = cast(dict[str, object], extraction.payload)
+        lemmas = ext_payload.get("lemmas")
+        wordlist = ext_payload.get("wordlist")
+        raw_text = ext_payload.get("raw_text")
         payload = {
-            "lemmas": extraction.payload.get("lemmas", []),
-            "wordlist": extraction.payload.get("wordlist", []),
-            "raw_text": extraction.payload.get("raw_text", ""),
+            "lemmas": cast(list[str], lemmas) if isinstance(lemmas, list) else [],
+            "wordlist": cast(list[WhitakerWord], wordlist) if isinstance(wordlist, list) else [],
+            "raw_text": raw_text if isinstance(raw_text, str) else "",
         }
     return DerivationEffect(
         derivation_id=stable_effect_id("ww-der", call.call_id, extraction.extraction_id),
@@ -607,6 +789,7 @@ def derive_facts(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
     )
 
 
+@versioned("v2")
 def claim_whitakers(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect:
     prov = derivation.provenance_chain[:] if derivation.provenance_chain else []
     prov.append(
@@ -619,11 +802,17 @@ def claim_whitakers(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEf
     )
     claim_id = stable_effect_id("ww-clm", call.call_id, derivation.derivation_id)
     subject = derivation.canonical or call.call_id
-    value = derivation.payload if isinstance(derivation.payload, Mapping) else {}
-    lemmas = value.get("lemmas") if isinstance(value, Mapping) else []
+    value_raw = derivation.payload if isinstance(derivation.payload, Mapping) else {}
+    value = cast(dict[str, object], value_raw) if isinstance(value_raw, Mapping) else {}
+
+    lemmas_val = value.get("lemmas") if value else []
+    lemmas = list(cast(Sequence[str], lemmas_val)) if isinstance(lemmas_val, Sequence) else []
+    wordlist_val = value.get("wordlist") if value else None
+    wordlist = cast(list[WhitakerWord], wordlist_val) if isinstance(wordlist_val, list) else None
+
     base_evidence = _make_base_evidence(call, derivation, claim_id)
-    triples = _build_triples(value.get("wordlist") if isinstance(value, Mapping) else None, lemmas or [], base_evidence)
-    if isinstance(value, Mapping):
+    triples = _build_triples(wordlist, lemmas, base_evidence)
+    if value:
         value = {**value, "triples": triples}
     return ClaimEffect(
         claim_id=claim_id,

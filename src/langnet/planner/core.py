@@ -337,7 +337,7 @@ class ToolPlanner:
                         to_call_id=claim_id_cdsl,
                         rationale="Produce claim from CDSL sense derivation",
                     )
-        )
+                )
         return calls, deps
 
     def _heritage_endpoint(self) -> str:
@@ -367,6 +367,7 @@ class ToolPlanner:
         """
         variants: list[str] = []
         seen: set[str] = set()
+
         def _add(text: str) -> None:
             if text and text not in seen:
                 seen.add(text)
@@ -393,7 +394,7 @@ class ToolPlanner:
         deps: list[PlanDependency] = []
         base = self._parse_endpoint()
 
-        # Prefer the user's original surface form to keep Diogenes aligned with the query (e.g., "ea"),
+        # Prefer the user's original surface form to keep Diogenes aligned with the query (e.g., "ea"),  # noqa: E501
         # but fall back to the canonical lemma when it is missing.
         query_value = (getattr(normalized, "original", "") or "").lower() or candidate.lemma.lower()
         lang_param = self._diogenes_lang(normalized)
@@ -625,7 +626,10 @@ class ToolPlanner:
                     endpoint="internal://claim/cltk_ipa",
                     params={"source_call_id": cltk_derive_id},
                     opts=_opts(
-                        expected="claim", priority=6, optional=True, stage=ToolStage.TOOL_STAGE_CLAIM
+                        expected="claim",
+                        priority=6,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_CLAIM,
                     ),
                 )
             )
@@ -638,7 +642,7 @@ class ToolPlanner:
             )
         return calls, deps
 
-    def _build_greek_calls(
+    def _build_greek_calls(  # noqa: PLR0915
         self, normalized: NormalizedQuery, candidate
     ) -> tuple[list[ToolCallSpec], list[PlanDependency]]:
         calls: list[ToolCallSpec] = []
@@ -920,7 +924,10 @@ class ToolPlanner:
                     endpoint="internal://claim/spacy_morph",
                     params={"source_call_id": spacy_derive_id},
                     opts=_opts(
-                        expected="claim", priority=6, optional=True, stage=ToolStage.TOOL_STAGE_CLAIM
+                        expected="claim",
+                        priority=6,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_CLAIM,
                     ),
                 )
             )

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import re
-from typing import List
 
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 
 from langnet.heritage.client import SktSearchMatch
 
 
-def parse_user_feedback(html: str) -> List[SktSearchMatch]:
+def parse_user_feedback(html: str) -> list[SktSearchMatch]:
     """
     Parse Heritage sktuser feedback HTML for possible lemmatizations.
 
@@ -19,7 +19,12 @@ def parse_user_feedback(html: str) -> List[SktSearchMatch]:
     matches: list[SktSearchMatch] = []
     seen: set[tuple[str, str]] = set()
     for input_el in soup.find_all("input", attrs={"name": "guess"}):
-        value = input_el.get("value", "")
+        value_raw = input_el.get("value", "")
+        # BeautifulSoup's .get() can return str | list | None, ensure we have a string
+        value = value_raw if isinstance(value_raw, str) else ""
+        if not value:
+            continue
+
         canonical = _extract_canonical(value)
         if not canonical:
             continue
@@ -28,8 +33,9 @@ def parse_user_feedback(html: str) -> List[SktSearchMatch]:
         analysis = label_text or code
         display = canonical
         entry_url = ""
-        if getattr(anchor, "get", None):
-            entry_url = anchor.get("href") or ""
+        if anchor and isinstance(anchor, Tag):
+            href_raw = anchor.get("href")
+            entry_url = href_raw if isinstance(href_raw, str) else ""
             display = _anchor_display(anchor) or display
         key = (analysis or "", display or canonical)
         if key in seen:
@@ -55,13 +61,15 @@ def _extract_canonical(value: str) -> str:
 
 def _extract_analysis(value: str) -> str:
     parts = re.findall(r"\{([^}]+)\}", value)
-    if len(parts) >= 2:
+    if len(parts) >= 2:  # noqa: PLR2004
         return parts[1]
     return ""
 
 
-def _extract_label_and_anchor(node) -> tuple[str, object | None]:
-    container = getattr(node, "find_parent", lambda *_a, **_k: None)("th") or getattr(node, "parent", None)
+def _extract_label_and_anchor(node) -> tuple[str, Tag | None]:
+    container = getattr(node, "find_parent", lambda *_a, **_k: None)("th") or getattr(
+        node, "parent", None
+    )
     if not container:
         return "", None
     anchor = getattr(container, "find", lambda *_a, **_k: None)("a")

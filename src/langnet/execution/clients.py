@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 import shutil
 import time
+from collections.abc import Mapping
 from typing import Any
 
-from langnet.clients.subprocess import SubprocessToolClient
-
 from langnet.clients.base import RawResponseEffect, _new_response_id
+from langnet.clients.subprocess import SubprocessToolClient
 
 
 class StubToolClient:
@@ -107,7 +106,7 @@ def get_cltk_fetch_client() -> CLTKFetchClient:
     """
     Lazy singleton to avoid repeatedly initializing CLTK resources.
     """
-    global _CLTK_CLIENT_SINGLETON
+    global _CLTK_CLIENT_SINGLETON  # noqa: PLW0603
     if _CLTK_CLIENT_SINGLETON is None:
         _CLTK_CLIENT_SINGLETON = CLTKFetchClient()
     return _CLTK_CLIENT_SINGLETON
@@ -158,7 +157,9 @@ class SpacyFetchClient:
         text = params.get("word") or params.get("q") or ""
         self._ensure_model()
         if self._nlp is None:
-            return self._error_response(call_id, endpoint, self._load_error or "spacy_model_missing")
+            return self._error_response(
+                call_id, endpoint, self._load_error or "spacy_model_missing"
+            )
         start = time.time()
         doc = self._nlp(text)
         tokens: list[dict[str, Any]] = []
@@ -194,7 +195,7 @@ def get_spacy_fetch_client(model_name: str = "grc_odycy_joint_sm") -> SpacyFetch
     """
     Lazy singleton to avoid repeatedly loading spaCy models.
     """
-    global _SPACY_CLIENT_SINGLETON
+    global _SPACY_CLIENT_SINGLETON  # noqa: PLW0603
     if _SPACY_CLIENT_SINGLETON is None:
         _SPACY_CLIENT_SINGLETON = SpacyFetchClient(model_name=model_name)
     return _SPACY_CLIENT_SINGLETON

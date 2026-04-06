@@ -34,9 +34,9 @@ class DiogenesParseAdapter:
         extraction_index: ExtractionIndex,
         endpoint: str,
     ) -> None:
-        self.client = client
-        self.raw_index = raw_index
-        self.extraction_index = extraction_index
+        self.client: ToolClient = client
+        self.raw_index: RawResponseIndex = raw_index
+        self.extraction_index: ExtractionIndex = extraction_index
         self.endpoint = endpoint.rstrip("?")
 
     def fetch(

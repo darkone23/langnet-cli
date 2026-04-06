@@ -49,8 +49,10 @@ def test_dico_builder_minimal_html() -> None:
 
         conn = duckdb.connect(str(out_path))
         try:
-            entry_count = conn.execute("SELECT COUNT(*) FROM entries_fr").fetchone()[0]
-            assert entry_count == 2
+            count_result = conn.execute("SELECT COUNT(*) FROM entries_fr").fetchone()
+            assert count_result is not None
+            entry_count = count_result[0]
+            assert entry_count == 2  # noqa: PLR2004
             entry = conn.execute(
                 "SELECT entry_id, headword_deva, headword_roma, variant_num, plain_text "
                 "FROM entries_fr WHERE entry_id='aam#1'"
@@ -61,8 +63,5 @@ def test_dico_builder_minimal_html() -> None:
             assert entry[2].lower().startswith("ā")
             assert entry[3] == 1
             assert entry[4] and "interj" in entry[4].lower()
-
-            en_count = conn.execute("SELECT COUNT(*) FROM entries_en").fetchone()[0]
-            assert en_count == 0
         finally:
             conn.close()

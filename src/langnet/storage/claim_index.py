@@ -35,8 +35,9 @@ class ClaimIndex:
         self.conn.execute(
             """
             INSERT OR REPLACE INTO claims
-            (claim_id, derivation_id, subject, predicate, value, provenance_chain, load_duration_ms, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            (claim_id, derivation_id, subject, predicate, value, provenance_chain,
+             handler_version, load_duration_ms, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """,
             [
                 effect.claim_id,
@@ -45,6 +46,7 @@ class ClaimIndex:
                 effect.predicate,
                 orjson.dumps(effect.value or {}).decode("utf-8"),
                 orjson.dumps([asdict(pc) for pc in effect.provenance_chain]).decode("utf-8"),
+                effect.handler_version,
                 effect.load_duration_ms,
             ],
         )

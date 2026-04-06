@@ -334,7 +334,8 @@ class SanskritNormalizer(LanguageNormalizer):
         self, text: str, steps: list[NormalizationStep]
     ) -> list[CanonicalCandidate]:
         """
-        When Heritage returns no matches for bare ASCII, try diacritic/long-vowel variants and retry.
+        When Heritage returns no matches for bare ASCII, try diacritic/long-vowel
+        variants and retry.
         """
         variants = self._heuristic_ascii_variants(text)
         candidates: list[CanonicalCandidate] = []

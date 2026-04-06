@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from typing import cast
+
 from query_spec import ToolCallSpec, ToolStage
 
 from langnet.clients.base import RawResponseEffect
 from langnet.execution.handlers import whitakers
-
 
 WHITAKER_SAMPLE = """am.arem              V      1 1 IMPF ACTIVE  SUB 1 S    
 amo, amare, amavi, amatus  V (1st)   [XXXAO]  
@@ -13,10 +14,14 @@ love, like; fall in love with; be fond of; have a tendency to;
 
 
 def _make_call(tool: str, call_id: str, stage: ToolStage, params: dict[str, str]) -> ToolCallSpec:
-    return ToolCallSpec(tool=tool, call_id=call_id, endpoint="internal://test", params=params, stage=stage)
+    return ToolCallSpec(
+        tool=tool, call_id=call_id, endpoint="internal://test", params=params, stage=stage
+    )
 
 
-def _find_triple(triples: list[dict[str, object]], subject: str | None, predicate: str, obj: object | None = None):
+def _find_triple(
+    triples: list[dict[str, object]], subject: str | None, predicate: str, obj: object | None = None
+):
     for triple in triples:
         if subject and triple.get("subject") != subject:
             continue
@@ -30,7 +35,10 @@ def _find_triple(triples: list[dict[str, object]], subject: str | None, predicat
 
 def test_whitaker_triples_projection() -> None:
     fetch_call = _make_call(
-        "fetch.whitakers", "fetch-ww", ToolStage.TOOL_STAGE_FETCH, params={"q": "amarem", "word": "amarem"}
+        "fetch.whitakers",
+        "fetch-ww",
+        cast(ToolStage, ToolStage.TOOL_STAGE_FETCH),
+        params={"q": "amarem", "word": "amarem"},
     )
     raw = RawResponseEffect(
         response_id="resp-ww",
@@ -46,7 +54,7 @@ def test_whitaker_triples_projection() -> None:
     extract_call = _make_call(
         "extract.whitakers.lines",
         "extract-ww",
-        ToolStage.TOOL_STAGE_EXTRACT,
+        cast(ToolStage, ToolStage.TOOL_STAGE_EXTRACT),
         params={"source_call_id": fetch_call.call_id},
     )
     extraction = whitakers.extract_lines(extract_call, raw)
@@ -54,7 +62,7 @@ def test_whitaker_triples_projection() -> None:
     derive_call = _make_call(
         "derive.whitakers.facts",
         "derive-ww",
-        ToolStage.TOOL_STAGE_DERIVE,
+        cast(ToolStage, ToolStage.TOOL_STAGE_DERIVE),
         params={"source_call_id": extract_call.call_id},
     )
     derivation = whitakers.derive_facts(derive_call, extraction)
@@ -62,7 +70,7 @@ def test_whitaker_triples_projection() -> None:
     claim_call = _make_call(
         "claim.whitakers",
         "claim-ww",
-        ToolStage.TOOL_STAGE_CLAIM,
+        cast(ToolStage, ToolStage.TOOL_STAGE_CLAIM),
         params={"source_call_id": derive_call.call_id},
     )
     claim = whitakers.claim_whitakers(claim_call, derivation)

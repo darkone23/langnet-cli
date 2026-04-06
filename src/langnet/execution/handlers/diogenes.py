@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import re
 import hashlib
-from typing import Mapping, Sequence
+import re
+from collections.abc import Mapping, Sequence
+from typing import TypedDict, cast
 
-from bs4 import BeautifulSoup
-
+from bs4 import BeautifulSoup, Tag
 from query_spec import ToolCallSpec
 
 from langnet.clients.base import RawResponseEffect
@@ -16,8 +16,53 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
-from langnet.diogenes.parse_adapter import DiogenesParseAdapter
-from langnet.normalizer.utils import strip_accents, contains_greek, normalize_greekish_token
+from langnet.execution.versioning import versioned
+from langnet.normalizer.utils import contains_greek, normalize_greekish_token, strip_accents
+
+
+class DiogenesMorphology(TypedDict, total=False):
+    """Perseus morphological analysis."""
+
+    morphs: list[dict[str, object]]
+    warning: str
+
+
+class DiogenesDefinitionBlock(TypedDict, total=False):
+    """Diogenes definition block with hierarchical structure."""
+
+    indentid: str
+    soup: BeautifulSoup
+    text: str
+    lemma: str | None
+    senses: list[str]
+    diogenes_warning: str
+    citations: dict[str, str]
+    entry: str
+    entryid: str
+
+
+class DiogenesDefinitions(TypedDict, total=False):
+    """Diogenes definitions container."""
+
+    blocks: list[DiogenesDefinitionBlock]
+
+
+class DiogenesChunk(TypedDict, total=False):
+    """Diogenes parsed chunk (either morphology or dictionary reference)."""
+
+    chunk_type: str
+    morphology: DiogenesMorphology
+    reference_id: str
+    definitions: DiogenesDefinitions
+
+
+class DiogenesParsedResult(TypedDict, total=False):
+    """Complete Diogenes parse result."""
+
+    chunks: list[DiogenesChunk]
+    dg_parsed: bool
+    chunk_types: list[str]
+    is_fuzzy_overall: bool
 
 
 _PARSER_PREFERENCE = ("lxml", "html5lib", "html.parser")
@@ -196,7 +241,9 @@ def _normalize_pos(tags: Sequence[str]) -> str | None:
     return None
 
 
-def _lex_for_chunk(term: str | None, normalized_lemmas: Sequence[str], default: str | None) -> str | None:
+def _lex_for_chunk(
+    term: str | None, normalized_lemmas: Sequence[str], default: str | None
+) -> str | None:
     normalized_term = _normalize_token(term)
     if normalized_term:
         return _lex_anchor(normalized_term)
@@ -222,8 +269,8 @@ def _to_cts_urn(ref: str | None) -> str | None:
     return f"urn:cts:{ns}:{ns_raw}{author}.{ns_raw}{work}:{loc}"
 
 
-def _handle_morphology(soup: BeautifulSoup) -> Mapping[str, object]:
-    morphs: list[Mapping[str, object]] = []
+def _handle_morphology(soup: BeautifulSoup) -> DiogenesMorphology:
+    morphs: list[dict[str, object]] = []
     maybe_morph_els = list(soup.find_all("li"))
     warning: str | None = None
     for tag in soup.find_all("p"):
@@ -235,14 +282,14 @@ def _handle_morphology(soup: BeautifulSoup) -> Mapping[str, object]:
     for tag in maybe_morph_els:
         parsed = _parse_perseus_morph(tag)
         if parsed:
-            morphs.append(parsed)
-    payload: dict[str, object] = {"morphs": morphs}
+            morphs.append(dict(parsed))
+    result: DiogenesMorphology = {"morphs": morphs}
     if warning:
-        payload["warning"] = warning
-    return payload
+        result["warning"] = warning
+    return result
 
 
-def _process_block(block: Mapping[str, object], soup: BeautifulSoup) -> Mapping[str, object]:
+def _process_block(block: Mapping[str, object], soup: BeautifulSoup) -> DiogenesDefinitionBlock:
     block_dict = dict(block)
     for p in soup.select("p"):
         _, warning = _extract_parentheses_text(p.get_text())
@@ -261,31 +308,32 @@ def _process_block(block: Mapping[str, object], soup: BeautifulSoup) -> Mapping[
 
     block_txt = soup.get_text().strip().rstrip(",")
     block_dict["entry"] = block_txt
-    coords = _find_nd_coordinate(block_dict.get("indentid", "0"))
+    indentid_val = block_dict.get("indentid", "0")
+    coords = _find_nd_coordinate(cast(str, indentid_val) if isinstance(indentid_val, str) else "0")
     block_dict["entryid"] = ":".join([str(i).zfill(2) for i in coords]) if coords else "00"
     block_dict.pop("indentid", None)
     block_dict.pop("soup", None)
-    return block_dict
+    return cast(DiogenesDefinitionBlock, block_dict)
 
 
-def _handle_references(soup: BeautifulSoup) -> Mapping[str, object]:
-    references: dict[str, object] = {}
+def _handle_references(soup: BeautifulSoup) -> DiogenesDefinitions:
+    references: DiogenesDefinitions = {}
     for term in soup.select("h2 > span:first-child"):
-        references["term"] = term.get_text()
+        references["term"] = term.get_text()  # type: ignore[typeddict-item]
     for term in soup.select("h2"):
         term.decompose()
 
-    blocks: list[Mapping[str, object]] = []
+    blocks: list[dict[str, object]] = []
     indent_history: list[int] = [0]
 
-    def shift_cursor(block: BeautifulSoup) -> str:
+    def shift_cursor(block: Tag | BeautifulSoup) -> str:
         css_text = str(block.attrs.get("style", ""))
         css_match = re.search(r"padding-left:\s*([\d.]+)", css_text)
         indent = int(css_match.group(1)) if css_match else 0
         indent_history.append(indent)
         return ":".join([str(i).zfill(2) for i in indent_history])
 
-    def insert_block(block: BeautifulSoup) -> None:
+    def insert_block(block: Tag | BeautifulSoup) -> None:
         blocks.append({"indentid": shift_cursor(block), "soup": _make_soup(f"{block}")})
 
     for block in soup.select("#sense"):
@@ -294,11 +342,12 @@ def _handle_references(soup: BeautifulSoup) -> Mapping[str, object]:
 
     # Root node
     blocks = [{"indentid": "00", "soup": soup}] + blocks
-    processed: list[Mapping[str, object]] = []
+    processed: list[DiogenesDefinitionBlock] = []
     for block in blocks:
         block_soup = block.get("soup")
         if isinstance(block_soup, BeautifulSoup):
-            processed.append(_process_block(block, block_soup))
+            processed_block = _process_block(block, block_soup)
+            processed.append(processed_block)
     references["blocks"] = processed
     return references
 
@@ -315,14 +364,17 @@ def _determine_chunk_type(
     return "UnknownChunkType"
 
 
-def _parse_diogenes_html(html: str) -> Mapping[str, object]:
+def _parse_diogenes_html(html: str) -> DiogenesParsedResult:
     """
     Parse diogenes HTML into a structure roughly mirroring codesketch DiogenesScraper output.
     """
     if not html:
         return {"chunks": [], "dg_parsed": False, "chunk_types": []}
-    is_fuzzy_overall = "could not find dictionary headword" in html.lower() or "showing nearest entry" in html.lower()
-    result: dict[str, object] = {
+    is_fuzzy_overall = (
+        "could not find dictionary headword" in html.lower()
+        or "showing nearest entry" in html.lower()
+    )
+    result: DiogenesParsedResult = {
         "chunks": [],
         "dg_parsed": True,
         "chunk_types": [],
@@ -333,7 +385,9 @@ def _parse_diogenes_html(html: str) -> Mapping[str, object]:
     for doc in documents:
         soup = _make_soup(doc)
         looks_like_header = bool(soup.find_all(class_="logeion-link"))
-        is_perseus_analysis = any(tag.get_text().strip().startswith("Perseus an") for tag in soup.find_all("h1"))
+        is_perseus_analysis = any(
+            tag.get_text().strip().startswith("Perseus an") for tag in soup.find_all("h1")
+        )
         looks_like_reference = bool(soup.find_all("h2"))
         reference_id: str | None = None
         for tag in soup.find_all("a"):
@@ -347,57 +401,114 @@ def _parse_diogenes_html(html: str) -> Mapping[str, object]:
         chunk_type = _determine_chunk_type(
             is_perseus_analysis, looks_like_header, looks_like_reference, is_fuzzy_overall
         )
+        if "chunk_types" not in result:
+            result["chunk_types"] = []
         result["chunk_types"].append(chunk_type)
         if chunk_type in {"NoMatchFoundHeader", "DiogenesFuzzyReference"}:
             fuzzy_flag = True
 
         if chunk_type == "PerseusAnalysisHeader":
             morph = _handle_morphology(soup)
-            result["chunks"].append({"chunk_type": chunk_type, "morphology": morph})
+            chunk: DiogenesChunk = {"chunk_type": chunk_type, "morphology": morph}
+            result["chunks"].append(chunk)
         elif chunk_type in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
-            result["chunks"].append(
-                {
-                    "chunk_type": chunk_type,
-                    "reference_id": reference_id or "",
-                    "definitions": _handle_references(soup),
-                }
-            )
+            chunk_with_defs: DiogenesChunk = {
+                "chunk_type": chunk_type,
+                "reference_id": reference_id or "",
+                "definitions": _handle_references(soup),
+            }
+            result["chunks"].append(chunk_with_defs)
         else:
-            result["chunks"].append({"chunk_type": chunk_type})
+            unknown_chunk: DiogenesChunk = {"chunk_type": chunk_type}
+            result["chunks"].append(unknown_chunk)
     result["is_fuzzy_overall"] = fuzzy_flag
     return result
 
 
-def extract_html(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect:
-    """
-    Parse Diogenes HTML directly (no refetch) using the adapter's parser to pull lemmas.
-    """
-    adapter = DiogenesParseAdapter(client=None, raw_index=None, extraction_index=None, endpoint="")
-    html = raw.body.decode("utf-8", errors="ignore")
-    parsed = _parse_diogenes_html(html)
+def _extract_lemmas_from_chunks(chunks: Sequence[DiogenesChunk]) -> list[str]:
+    """Extract lemmas from parsed Diogenes chunks."""
     lemmas: list[str] = []
-    for chunk in parsed.get("chunks", []):  # type: ignore[assignment]
+    for chunk in chunks:
         if not isinstance(chunk, Mapping):
             continue
-        if chunk.get("chunk_type") == "PerseusAnalysisHeader":
+
+        chunk_type = chunk.get("chunk_type")
+        if chunk_type == "PerseusAnalysisHeader":
             morph = chunk.get("morphology", {})
             if isinstance(morph, Mapping):
-                for entry in morph.get("morphs", []) or []:
+                morphs = morph.get("morphs", [])
+                morphs_list = morphs if isinstance(morphs, Sequence) else []
+                for entry in morphs_list:
                     if isinstance(entry, Mapping):
-                        lemmas.extend([strip_accents(s).lower() for s in entry.get("stem", []) or []])
-        elif chunk.get("chunk_type") in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
+                        stem_val = entry.get("stem", [])
+                        stems = stem_val if isinstance(stem_val, Sequence) else []
+                        normalized_stems = [
+                            strip_accents(s).lower() for s in stems if isinstance(s, str)
+                        ]
+                        lemmas.extend(normalized_stems)
+        elif chunk_type in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
             definitions = chunk.get("definitions", {})
             if isinstance(definitions, Mapping):
                 term = definitions.get("term")
                 if isinstance(term, str) and term:
                     lemmas.append(strip_accents(term).lower())
-    if not lemmas:
-        lemmas = adapter._parse_lemmas(raw.body)  # type: ignore[attr-defined]
-    query = call.params.get("q", "") or call.params.get("word", "")
+    return lemmas
+
+
+def _filter_lemmas_by_query(lemmas: list[str], query: str) -> list[str]:
+    """Filter lemmas to match query, or return all if no matches."""
     targets = {strip_accents(query).lower()} if query else set()
     if targets:
-        filtered = [l for l in lemmas if strip_accents(l).lower() in targets]
-        lemmas = filtered or lemmas
+        filtered = [lemma for lemma in lemmas if strip_accents(lemma).lower() in targets]
+        return filtered or lemmas
+    return lemmas
+
+
+def _parse_fallback_lemmas(body: bytes) -> list[str]:
+    """
+    Fallback lemma parsing from HTML body.
+    Extracts lemmas from <i>, <b>, <em>, <strong> tags or Lemma: patterns.
+    """
+    lemmas: list[str] = []
+    try:
+        soup = BeautifulSoup(body, "html.parser")
+        # Common diogenes parse pages have lemmas in <i> or bold tags.
+        for tag in soup.find_all(["i", "b", "em", "strong"]):
+            text = (tag.get_text() or "").strip()
+            if text and re.match(r"^[A-Za-z]+$", text):
+                lemmas.append(text.lower())
+        if not lemmas:
+            text = soup.get_text(" ", strip=True)
+            candidates = re.findall(r"Lemma[:\\s]+([A-Za-z]+)", text, flags=re.IGNORECASE)
+            lemmas.extend([c.lower() for c in candidates])
+    except Exception:
+        pass
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    out: list[str] = []
+    for lemma in lemmas:
+        if lemma not in seen:
+            seen.add(lemma)
+            out.append(lemma)
+    return out
+
+
+@versioned("v1")
+def extract_html(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect:
+    """
+    Parse Diogenes HTML directly (no refetch) to extract lemmas and definitions.
+    """
+    html = raw.body.decode("utf-8", errors="ignore")
+    parsed = _parse_diogenes_html(html)
+
+    chunks_val = parsed.get("chunks")
+    chunks = chunks_val if isinstance(chunks_val, Sequence) else []
+    lemmas = _extract_lemmas_from_chunks(chunks)
+    if not lemmas:
+        lemmas = _parse_fallback_lemmas(raw.body)
+
+    query = call.params.get("q", "") or call.params.get("word", "")
+    lemmas = _filter_lemmas_by_query(lemmas, query)
     canonical = lemmas[0] if lemmas else None
     return ExtractionEffect(
         extraction_id=stable_effect_id("dio-ext", call.call_id, raw.response_id),
@@ -411,6 +522,7 @@ def extract_html(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect
     )
 
 
+@versioned("v1")
 def derive_morph(call: ToolCallSpec, extraction: ExtractionEffect) -> DerivationEffect:
     prov = [
         ProvenanceLink(
@@ -424,9 +536,16 @@ def derive_morph(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
     payload: Mapping[str, object] | None = None
     raw_html: str | None = None
     if isinstance(extraction.payload, Mapping):
-        lemmas = extraction.payload.get("lemmas", []) or []
-        payload = extraction.payload.get("parsed")
-        raw_html = extraction.payload.get("raw_html")
+        ext_payload = cast(dict[str, object], extraction.payload)
+        lemmas_val = ext_payload.get("lemmas")
+        lemmas = cast(Sequence[str], lemmas_val) if isinstance(lemmas_val, Sequence) else []
+        payload_val = ext_payload.get("parsed")
+        if isinstance(payload_val, Mapping):
+            payload = cast(Mapping[str, object], payload_val)
+        else:
+            payload = None
+        raw_html_val = ext_payload.get("raw_html")
+        raw_html = raw_html_val if isinstance(raw_html_val, str) else None
     return DerivationEffect(
         derivation_id=stable_effect_id("dio-der", call.call_id, extraction.extraction_id),
         tool=call.tool,
@@ -440,90 +559,153 @@ def derive_morph(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
     )
 
 
-def _build_triples(
-    parsed: Mapping[str, object] | None, lemmas: Sequence[str], base_evidence: Mapping[str, object]
+def _build_perseus_header_triples(
+    morph: Mapping[str, object],
+    default_lex: str | None,
+    base_evidence: Mapping[str, object],
 ) -> list[dict[str, object]]:
-    if not isinstance(parsed, Mapping):
-        return []
+    """Build triples from Perseus morphology analysis header."""
     triples: list[dict[str, object]] = []
-    normalized_lemmas = [_normalize_token(l) for l in lemmas if isinstance(l, str)]
-    default_lex = _lex_anchor(normalized_lemmas[0]) if normalized_lemmas else None
-    chunks = parsed.get("chunks") if isinstance(parsed, Mapping) else None
-    if not isinstance(chunks, Sequence):
-        return triples
-    for chunk in chunks:
-        if not isinstance(chunk, Mapping):
+    morph_dict = cast(dict[str, object], morph)
+    entries_val = morph_dict.get("morphs")
+    entries = entries_val if isinstance(entries_val, Sequence) else []
+    for entry in entries:
+        if not isinstance(entry, Mapping):
             continue
-        chunk_type = chunk.get("chunk_type")
-        if chunk_type == "PerseusAnalysisHeader":
-            morph = chunk.get("morphology")
-            if not isinstance(morph, Mapping):
+        entry_dict = cast(dict[str, object], entry)
+        stem_val = entry_dict.get("stem")
+        if isinstance(stem_val, Sequence):
+            stems = [s for s in stem_val if isinstance(s, str)]
+        else:
+            stems = []
+        tags_val = entry_dict.get("tags")
+        tags = [t for t in tags_val if isinstance(t, str)] if isinstance(tags_val, Sequence) else []
+        defs_val = entry_dict.get("defs")
+        defs = [d for d in defs_val if isinstance(d, str)] if isinstance(defs_val, Sequence) else []
+        pos = _normalize_pos(tags)
+        for stem in stems:
+            normalized_stem = _normalize_token(stem)
+            if not normalized_stem:
                 continue
-            entries = morph.get("morphs", []) or []
-            for entry in entries:
-                if not isinstance(entry, Mapping):
-                    continue
-                stems = [s for s in entry.get("stem", []) or [] if isinstance(s, str)]
-                tags = [t for t in entry.get("tags", []) or [] if isinstance(t, str)]
-                defs = [d for d in entry.get("defs", []) or [] if isinstance(d, str)]
-                pos = _normalize_pos(tags)
-                for stem in stems:
-                    normalized_stem = _normalize_token(stem)
-                    if not normalized_stem:
-                        continue
-                    form_anchor = _form_anchor(normalized_stem)
-                    if default_lex:
-                        triples.append(_make_triple(form_anchor, "inflection_of", default_lex, base_evidence))
-                    triples.append(_make_triple(form_anchor, "has_form", stem, base_evidence))
-                    if pos:
-                        triples.append(_make_triple(form_anchor, "has_pos", pos, base_evidence))
-                    if tags:
-                        triples.append(_make_triple(form_anchor, "has_feature", {"tags": tags}, base_evidence))
-                    if defs:
-                        triples.append(_make_triple(form_anchor, "has_feature", {"defs": defs}, base_evidence))
-        elif chunk_type in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
-            definitions = chunk.get("definitions")
-            if not isinstance(definitions, Mapping):
-                continue
-            lex_anchor = _lex_for_chunk(definitions.get("term"), normalized_lemmas, default_lex)
-            blocks = definitions.get("blocks", [])
-            if not lex_anchor or not isinstance(blocks, Sequence):
-                continue
-            for block in blocks:
-                if not isinstance(block, Mapping):
-                    continue
-                entry_txt = block.get("entry")
-                if isinstance(entry_txt, str):
-                    gloss = entry_txt.strip()
-                    if gloss:
-                        sense_anchor = _sense_anchor(lex_anchor, gloss)
-                        triples.append(_make_triple(lex_anchor, "has_sense", sense_anchor, base_evidence))
-                        triples.append(_make_triple(sense_anchor, "gloss", gloss, base_evidence))
-                citations = block.get("citations") if isinstance(block, Mapping) else None
-                if isinstance(citations, Mapping):
-                    for ref_class, ref_text in citations.items():
-                        if not isinstance(ref_text, str):
-                            continue
-                        ref_txt = ref_text.strip()
-                        if not ref_txt:
-                            continue
-                        urn = _to_cts_urn(ref_class)
-                        obj = urn or ref_txt
-                        triples.append(
-                            {
-                                "subject": lex_anchor,
-                                "predicate": "has_citation",
-                                "object": obj,
-                                "metadata": {
-                                    "evidence": _trim_evidence(dict(base_evidence)),
-                                    "citation_text": ref_txt,
-                                    "citation_ref": ref_class,
-                                },
-                            }
-                        )
+            form_anchor = _form_anchor(normalized_stem)
+            if default_lex:
+                triples.append(
+                    _make_triple(form_anchor, "inflection_of", default_lex, base_evidence)
+                )
+            triples.append(_make_triple(form_anchor, "has_form", stem, base_evidence))
+            if pos:
+                triples.append(_make_triple(form_anchor, "has_pos", pos, base_evidence))
+            if tags:
+                triples.append(
+                    _make_triple(form_anchor, "has_feature", {"tags": tags}, base_evidence)
+                )
+            if defs:
+                triples.append(
+                    _make_triple(form_anchor, "has_feature", {"defs": defs}, base_evidence)
+                )
     return triples
 
 
+def _build_definition_triples(
+    definitions: Mapping[str, object],
+    normalized_lemmas: list[str],
+    default_lex: str | None,
+    base_evidence: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Build triples from Diogenes lexical definitions."""
+    triples: list[dict[str, object]] = []
+    defs_dict = cast(dict[str, object], definitions)
+    term_val = defs_dict.get("term")
+    term = term_val if isinstance(term_val, str) else None
+    lex_anchor = _lex_for_chunk(term, normalized_lemmas, default_lex)
+    blocks_val = defs_dict.get("blocks")
+    blocks = blocks_val if isinstance(blocks_val, Sequence) else []
+    if not lex_anchor:
+        return triples
+
+    for block in blocks:
+        if not isinstance(block, Mapping):
+            continue
+        block_dict = cast(dict[str, object], block)
+        entry_txt = block_dict.get("entry")
+        if isinstance(entry_txt, str):
+            gloss = entry_txt.strip()
+            if gloss:
+                sense_anchor = _sense_anchor(lex_anchor, gloss)
+                triples.append(_make_triple(lex_anchor, "has_sense", sense_anchor, base_evidence))
+                triples.append(_make_triple(sense_anchor, "gloss", gloss, base_evidence))
+
+        citations = block_dict.get("citations")
+        if isinstance(citations, Mapping):
+            for ref_class, ref_text in citations.items():
+                if not isinstance(ref_class, str) or not isinstance(ref_text, str):
+                    continue
+                ref_txt = ref_text.strip()
+                if not ref_txt:
+                    continue
+                urn = _to_cts_urn(ref_class)
+                obj = urn or ref_txt
+                triples.append(
+                    {
+                        "subject": lex_anchor,
+                        "predicate": "has_citation",
+                        "object": obj,
+                        "metadata": {
+                            "evidence": _trim_evidence(dict(base_evidence)),
+                            "citation_text": ref_txt,
+                            "citation_ref": ref_class,
+                        },
+                    }
+                )
+    return triples
+
+
+def _build_triples(
+    parsed: Mapping[str, object] | None, lemmas: Sequence[str], base_evidence: Mapping[str, object]
+) -> list[dict[str, object]]:
+    """Build RDF-style triples from Diogenes parsed data."""
+    if not isinstance(parsed, Mapping):
+        return []
+
+    triples: list[dict[str, object]] = []
+    normalized_lemmas = [
+        n for lemma in lemmas if isinstance(lemma, str) if (n := _normalize_token(lemma))
+    ]
+    default_lex = _lex_anchor(normalized_lemmas[0]) if normalized_lemmas else None
+    parsed_dict = cast(dict[str, object], parsed)
+    chunks = parsed_dict.get("chunks")
+
+    if not isinstance(chunks, Sequence):
+        return triples
+
+    for chunk in chunks:
+        if not isinstance(chunk, Mapping):
+            continue
+        chunk_dict = cast(dict[str, object], chunk)
+
+        chunk_type = chunk_dict.get("chunk_type")
+        if chunk_type == "PerseusAnalysisHeader":
+            morph = chunk_dict.get("morphology")
+            if isinstance(morph, Mapping):
+                morph_typed = cast(Mapping[str, object], morph)
+                perseus_triples = _build_perseus_header_triples(
+                    morph_typed, default_lex, base_evidence
+                )
+                triples.extend(perseus_triples)
+        elif chunk_type in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
+            definitions = chunk_dict.get("definitions")
+            if isinstance(definitions, Mapping):
+                defs_typed = cast(Mapping[str, object], definitions)
+                triples.extend(
+                    _build_definition_triples(
+                        defs_typed, normalized_lemmas, default_lex, base_evidence
+                    )
+                )
+
+    return triples
+
+
+@versioned("v1")
 def claim_morph(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect:
     prov = derivation.provenance_chain[:] if derivation.provenance_chain else []
     prov.append(
@@ -540,7 +722,12 @@ def claim_morph(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
     base_evidence = _make_base_evidence(call, derivation, claim_id)
     triples: list[dict[str, object]] = []
     if isinstance(value, Mapping):
-        triples = _build_triples(value.get("parsed"), value.get("lemmas", []), base_evidence)
+        value_dict = cast(dict[str, object], value)
+        parsed_val = value_dict.get("parsed")
+        parsed = cast(Mapping[str, object], parsed_val) if isinstance(parsed_val, Mapping) else None
+        lemmas_val = value_dict.get("lemmas")
+        lemmas_list = cast(Sequence[str], lemmas_val) if isinstance(lemmas_val, Sequence) else []
+        triples = _build_triples(parsed, lemmas_list, base_evidence)
         value = {**value, "triples": triples}
     return ClaimEffect(
         claim_id=claim_id,

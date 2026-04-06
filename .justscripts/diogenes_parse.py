@@ -1,5 +1,6 @@
 import os
 import sys
+
 import orjson
 import requests
 
@@ -30,6 +31,6 @@ def run(lang: str, word: str, endpoint: str | None) -> None:
 
 if __name__ == "__main__":
     lang = sys.argv[1] if len(sys.argv) > 1 else "lat"
-    word = sys.argv[2] if len(sys.argv) > 2 else "lupus"
-    endpoint = sys.argv[3] if len(sys.argv) > 3 else None
+    word = sys.argv[2] if len(sys.argv) > 2 else "lupus"  # noqa: PLR2004
+    endpoint = sys.argv[3] if len(sys.argv) > 3 else None  # noqa: PLR2004
     run(lang, word, endpoint)

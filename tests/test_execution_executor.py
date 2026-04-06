@@ -125,13 +125,19 @@ def _registry() -> ToolRegistry:
             canonical=extraction.canonical,
             payload={"lemma": "lupus"},
             provenance_chain=[
-                ProvenanceLink(stage="extract", tool=extraction.tool, reference_id=extraction.extraction_id)
+                ProvenanceLink(
+                    stage="extract", tool=extraction.tool, reference_id=extraction.extraction_id
+                )
             ],
         )
 
     def _claim(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect:
         prov = derivation.provenance_chain or []
-        prov.append(ProvenanceLink(stage="derive", tool=derivation.tool, reference_id=derivation.derivation_id))
+        prov.append(
+            ProvenanceLink(
+                stage="derive", tool=derivation.tool, reference_id=derivation.derivation_id
+            )
+        )
         return ClaimEffect(
             claim_id=stable_effect_id("clm", call.call_id, derivation.derivation_id),
             tool=call.tool,
@@ -178,16 +184,23 @@ def test_dio_handlers_in_registry() -> None:
     # Fake HTML containing lemmas
     html = b"<html><body><i>Lupus</i><b>Canis</b></body></html>"
     client = _FakeClient(tool="fetch.diogenes")
-    client.execute = lambda call_id, endpoint, params=None: RawResponseEffect(
-        response_id=f"{call_id}-resp",
-        tool="fetch.diogenes",
-        call_id=call_id,
-        endpoint=endpoint,
-        status_code=200,
-        content_type="text/html",
-        headers={},
-        body=html,
-    )
+
+    # Explicitly override execute method for this test
+    def execute_override(
+        call_id: str, endpoint: str, params: Mapping[str, str] | None = None
+    ) -> RawResponseEffect:
+        return RawResponseEffect(
+            response_id=f"{call_id}-resp",
+            tool="fetch.diogenes",
+            call_id=call_id,
+            endpoint=endpoint,
+            status_code=200,
+            content_type="text/html",
+            headers={},
+            body=html,
+        )
+
+    client.execute = execute_override  # type: ignore[method-assign]
 
     conn = duckdb.connect(database=":memory:")
     apply_schema(conn)

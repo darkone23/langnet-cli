@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS extraction_index (
     kind VARCHAR NOT NULL,
     canonical TEXT,
     payload JSON,
+    handler_version VARCHAR,  -- Handler version for cache invalidation
     load_duration_ms INTEGER,  -- Parsing/extraction time
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -74,6 +75,7 @@ CREATE TABLE IF NOT EXISTS derivation_index (
     kind VARCHAR NOT NULL,
     canonical TEXT,
     payload JSON,
+    handler_version VARCHAR,  -- Handler version for cache invalidation
     derive_duration_ms INTEGER,  -- Content parsing/derivation time
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -88,6 +90,7 @@ CREATE TABLE IF NOT EXISTS claims (
     predicate VARCHAR NOT NULL,
     value JSON,
     provenance_chain JSON,
+    handler_version VARCHAR,  -- Handler version for cache invalidation
     load_duration_ms INTEGER,  -- Derivation/transform time
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

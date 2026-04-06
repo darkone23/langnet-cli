@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from langnet.execution import handlers_stub
 from langnet.execution.executor import ToolRegistry
-from langnet.execution.handlers import diogenes as diogenes_handlers
+from langnet.execution.handlers import cdsl as cdsl_handlers
 from langnet.execution.handlers import cltk as cltk_handlers
+from langnet.execution.handlers import diogenes as diogenes_handlers
+from langnet.execution.handlers import heritage as heritage_handlers
 from langnet.execution.handlers import spacy as spacy_handlers
 from langnet.execution.handlers import whitakers as whitakers_handlers
-from langnet.execution.handlers import heritage as heritage_handlers
-from langnet.execution.handlers import cdsl as cdsl_handlers
-from langnet.execution import handlers_stub
 
 
 def default_registry(use_stubs: bool = False) -> ToolRegistry:

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import orjson
 import hashlib
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, cast
 
+import orjson
 from query_spec import ToolCallSpec
 
 from langnet.clients.base import RawResponseEffect
@@ -14,9 +15,11 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
-from langnet.normalizer.utils import normalize_greekish_token, strip_accents, contains_greek
+from langnet.execution.versioning import versioned
+from langnet.normalizer.utils import contains_greek, normalize_greekish_token, strip_accents
 
 
+@versioned("v1")
 def extract_cltk(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect:
     payload = {}
     canonical = None
@@ -43,6 +46,7 @@ def extract_cltk(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect
     )
 
 
+@versioned("v1")
 def derive_cltk(call: ToolCallSpec, extraction: ExtractionEffect) -> DerivationEffect:
     prov = [
         ProvenanceLink(
@@ -52,12 +56,29 @@ def derive_cltk(call: ToolCallSpec, extraction: ExtractionEffect) -> DerivationE
             metadata={"response_id": extraction.response_id},
         )
     ]
-    payload = extraction.payload if isinstance(extraction.payload, Mapping) else {}
-    canonical = extraction.canonical or payload.get("lemma")
-    if isinstance(payload, Mapping) and payload.get("lemma") and "lemmas" not in payload:
-        payload = {**payload, "lemmas": [payload["lemma"]]}
-    if isinstance(payload, Mapping) and "raw_json" not in payload and extraction.payload.get("raw_json"):
-        payload = {**payload, "raw_json": extraction.payload.get("raw_json")}
+    payload: dict[str, object] = {}
+    canonical = extraction.canonical
+
+    if isinstance(extraction.payload, Mapping):
+        ext_payload = cast(dict[str, Any], extraction.payload)
+        lemma = ext_payload.get("lemma")
+        lemmas = ext_payload.get("lemmas")
+        raw_json = ext_payload.get("raw_json")
+
+        payload = dict(ext_payload)
+
+        # Add lemmas list if we have a lemma but no lemmas list
+        if lemma and not lemmas:
+            payload["lemmas"] = [lemma]
+
+        # Preserve raw_json if present
+        if raw_json and "raw_json" not in payload:
+            payload["raw_json"] = raw_json
+
+        # Set canonical from lemma if not already set
+        if not canonical and isinstance(lemma, str):
+            canonical = lemma
+
     return DerivationEffect(
         derivation_id=stable_effect_id("cltk-der", call.call_id, extraction.extraction_id),
         tool=call.tool,
@@ -146,28 +167,51 @@ def _make_base_evidence(
     )
 
 
-def _build_triples(payload: Mapping[str, object] | None, base_evidence: Mapping[str, object]) -> list[dict[str, object]]:
+def _extract_ipa_value(ipa_raw: object) -> str | None:
+    """Extract IPA value from raw payload field (can be str or list)."""
+    if isinstance(ipa_raw, str):
+        return ipa_raw
+    if isinstance(ipa_raw, Sequence) and ipa_raw:
+        first = ipa_raw[0]
+        if isinstance(first, str):
+            return first
+    return None
+
+
+def _build_triples(
+    payload: Mapping[str, object] | None, base_evidence: Mapping[str, object]
+) -> list[dict[str, object]]:
     if not isinstance(payload, Mapping):
         return []
     triples: list[dict[str, object]] = []
-    lemma = payload.get("lemma") if isinstance(payload.get("lemma"), str) else None
+
+    # Extract and type lemma
+    payload_dict = cast(dict[str, object], payload)
+    lemma_raw = payload_dict.get("lemma")
+    lemma: str | None = lemma_raw if isinstance(lemma_raw, str) else None
     normalized_lemma = _normalize_token(lemma)
     lex_anchor = _lex_anchor(normalized_lemma) if normalized_lemma else None
-    word = payload.get("word") if isinstance(payload.get("word"), str) else None
+
+    # Extract and type word
+    word_raw = payload_dict.get("word")
+    word: str | None = word_raw if isinstance(word_raw, str) else None
     normalized_word = _normalize_token(word)
-    ipa_list = payload.get("ipa")
-    ipa_value: str | None = None
-    if isinstance(ipa_list, str):
-        ipa_value = ipa_list
-    elif isinstance(ipa_list, Sequence) and ipa_list:
-        first = ipa_list[0]
-        if isinstance(first, str):
-            ipa_value = first
-    lewis_lines = [line for line in payload.get("lewis_lines", []) or [] if isinstance(line, str)]
+    ipa_value = _extract_ipa_value(payload_dict.get("ipa"))
+    lewis_lines_val = payload_dict.get("lewis_lines")
+    if isinstance(lewis_lines_val, Sequence):
+        lewis_lines = [line for line in lewis_lines_val if isinstance(line, str)]
+    else:
+        lewis_lines = []
 
     if lex_anchor and normalized_word and normalized_word != normalized_lemma:
-        triples.append(_make_triple(_form_anchor(normalized_word), "inflection_of", lex_anchor, base_evidence))
-        triples.append(_make_triple(_form_anchor(normalized_word), "has_form", word or normalized_word, base_evidence))
+        triples.append(
+            _make_triple(_form_anchor(normalized_word), "inflection_of", lex_anchor, base_evidence)
+        )
+        triples.append(
+            _make_triple(
+                _form_anchor(normalized_word), "has_form", word or normalized_word, base_evidence
+            )
+        )
     if lex_anchor and ipa_value:
         triples.append(_make_triple(lex_anchor, "has_pronunciation", ipa_value, base_evidence))
     if lex_anchor:
@@ -181,6 +225,7 @@ def _build_triples(payload: Mapping[str, object] | None, base_evidence: Mapping[
     return triples
 
 
+@versioned("v1")
 def claim_cltk(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect:
     prov = derivation.provenance_chain[:] if derivation.provenance_chain else []
     prov.append(
@@ -193,11 +238,11 @@ def claim_cltk(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect:
     )
     claim_id = stable_effect_id("cltk-clm", call.call_id, derivation.derivation_id)
     subject = derivation.canonical or call.call_id
-    value = derivation.payload if isinstance(derivation.payload, Mapping) else {}
+    value_raw = derivation.payload if isinstance(derivation.payload, Mapping) else {}
+    value_typed = cast(Mapping[str, object], value_raw) if isinstance(value_raw, Mapping) else None
     base_evidence = _make_base_evidence(call, derivation, claim_id)
-    if isinstance(value, Mapping):
-        triples = _build_triples(value, base_evidence)
-        value = {**value, "triples": triples}
+    triples = _build_triples(value_typed, base_evidence)
+    value = {**value_typed, "triples": triples} if value_typed else {"triples": triples}
     return ClaimEffect(
         claim_id=claim_id,
         tool=call.tool,

@@ -2,31 +2,29 @@ import os
 import subprocess
 import sys
 
+import click
+import duckdb
 import orjson
 import requests
-
-import duckdb
-
-import click
-
-from langnet.cli import _create_normalization_service, NormalizeConfig
-from langnet.storage.db import connect_duckdb
-from langnet.storage.paths import normalization_db_path
-from langnet.execution.handlers.diogenes import _parse_diogenes_html
-from langnet.execution.handlers.whitakers import _parse_whitaker_output
-from langnet.execution.clients import get_cltk_fetch_client
 from query_spec import LanguageHint
 
+from langnet.cli import NormalizeConfig, _create_normalization_service
+from langnet.execution.clients import get_cltk_fetch_client
+from langnet.execution.handlers.diogenes import _parse_diogenes_html
+from langnet.execution.handlers.whitakers import _parse_whitaker_output
+from langnet.storage.db import connect_duckdb
+from langnet.storage.paths import normalization_db_path
 
-def _parse_language(lang: str) -> str:
+
+def _parse_language(lang: str) -> LanguageHint:
     lang_l = lang.lower()
     if lang_l in {"lat", "la", "latin"}:
-        return LanguageHint.LANGUAGE_HINT_LAT
+        return LanguageHint.LANGUAGE_HINT_LAT  # type: ignore[return-value]
     if lang_l in {"grc", "el", "greek"}:
-        return LanguageHint.LANGUAGE_HINT_GRC
+        return LanguageHint.LANGUAGE_HINT_GRC  # type: ignore[return-value]
     if lang_l in {"san", "sa", "sanskrit"}:
-        return LanguageHint.LANGUAGE_HINT_SAN
-    return LanguageHint.LANGUAGE_HINT_LAT
+        return LanguageHint.LANGUAGE_HINT_SAN  # type: ignore[return-value]
+    return LanguageHint.LANGUAGE_HINT_LAT  # type: ignore[return-value]
 
 
 def _normalize_word(lang: str, word: str) -> str:
@@ -36,7 +34,9 @@ def _normalize_word(lang: str, word: str) -> str:
     """
     try:
         norm_cfg = NormalizeConfig(
-            diogenes_endpoint=os.environ.get("DIOGENES_ENDPOINT", "http://localhost:8888/Diogenes.cgi"),
+            diogenes_endpoint=os.environ.get(
+                "DIOGENES_ENDPOINT", "http://localhost:8888/Diogenes.cgi"
+            ),
             heritage_base=os.environ.get("HERITAGE_BASE", "http://localhost:48080"),
             db_path=None,
             no_cache=True,
@@ -67,7 +67,9 @@ def _normalize_word(lang: str, word: str) -> str:
 
 
 def _parse_diogenes(lang: str, word: str, endpoint: str | None, normalize: bool) -> dict:
-    base = endpoint or os.environ.get("DIOGENES_PARSE_ENDPOINT", "http://localhost:8888/Perseus.cgi")
+    base = endpoint or os.environ.get(
+        "DIOGENES_PARSE_ENDPOINT", "http://localhost:8888/Perseus.cgi"
+    )
     query_word = _normalize_word(lang, word) if normalize else word
     mapped_lang = "grk" if lang.lower() == "grc" else lang
     params = {"do": "parse", "lang": mapped_lang, "q": query_word}
@@ -98,7 +100,9 @@ def _parse_whitakers(_lang: str, word: str, binary: str | None) -> dict:
     )
     cmd = next((c for c in candidates if c), None)
     if not cmd:
-        raise RuntimeError("No Whitaker binary found; set WHITAKERS_BIN or install whitakers-words.")
+        raise RuntimeError(
+            "No Whitaker binary found; set WHITAKERS_BIN or install whitakers-words."
+        )
 
     proc = subprocess.run([cmd, word], check=False, capture_output=True, text=True)
     text = proc.stdout or ""
@@ -163,7 +167,7 @@ def cli(tool: str, lang: str, word: str, opt: str, normalize: bool) -> None:
     elif tool_l == "cltk":
         out = _parse_cltk(lang, word, normalize)
     else:
-        raise SystemExit(f"Unsupported tool '{args.tool}'. Use 'diogenes', 'whitakers', or 'cltk'.")
+        raise SystemExit(f"Unsupported tool '{tool}'. Use 'diogenes', 'whitakers', or 'cltk'.")
     sys.stdout.buffer.write(orjson.dumps(out, option=orjson.OPT_INDENT_2))
 
 
