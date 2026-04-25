@@ -1,0 +1,32 @@
+// Lark grammar for parsing French glosses/translations
+// Used for Gaffiot (Fr→Lat) and Heritage French lexicon definitions
+
+?start: gloss_list
+
+// Top-level: list of glosses separated by delimiters
+gloss_list: gloss (SEPARATOR gloss)*
+
+// Single gloss entry (can have qualifiers and cross-references)
+gloss: qualifier? text cross_ref?
+
+// Qualifier: e.g., "fig.", "poet.", "lit.", "propr."
+qualifier: QUALIFIER_TEXT ","?
+
+QUALIFIER_TEXT: "fig" | "poet" | "lit" | "propr" | "sens propre"
+              | "au fig" | "par ext" | "en part"
+              | "spécialt" | "t. de" | "terme de"
+
+// Main text of the gloss
+text: FRENCH_TEXT
+
+FRENCH_TEXT: /[^,;\n\(¶]+/
+
+// Cross-reference: e.g., "(voir amor)", "(cf. bellum)"
+cross_ref: "(" ("voir" | "cf" | "v") FRENCH_TEXT? ")"
+
+// Separators: comma, semicolon, newline, or line break symbol
+SEPARATOR: "," | ";" | "\n" | "\\n" | "¶"
+
+// Import whitespace handling
+%import common.WS
+%ignore WS

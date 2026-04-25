@@ -17,10 +17,16 @@ from langnet.execution.effects import (
 )
 from langnet.execution.versioning import versioned
 from langnet.normalizer.utils import contains_greek, normalize_greekish_token, strip_accents
+from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
 
 
-@versioned("v1")
+@versioned("v2")
 def extract_cltk(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect:
+    """
+    Extract CLTK lexicon data from JSON response.
+
+    Version 2: Adds grammar-based parsing of lewis_lines (Lewis & Short entries).
+    """
     payload = {}
     canonical = None
     raw_json = raw.body.decode("utf-8", errors="ignore")
@@ -34,6 +40,10 @@ def extract_cltk(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect
         payload = {}
     if isinstance(payload, Mapping):
         payload = {**payload, "raw_json": raw_json}
+
+        # Enrich with parsed Lewis & Short entries (v2 improvement)
+        payload = enrich_cltk_with_parsed_lewis(payload)
+
     return ExtractionEffect(
         extraction_id=stable_effect_id("cltk-ext", call.call_id, raw.response_id),
         tool=call.tool,

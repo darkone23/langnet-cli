@@ -4,6 +4,7 @@ default:
 
 # run langnet-cli tool
 cli *args:
+    # Use devenv shell to ensure langnet-cli env is active.
     devenv shell langnet-cli -- {{ args }}
 
 # Convenience wrappers for click subcommands
@@ -19,10 +20,11 @@ cli-plan-exec *args:
 cli-databuild *args:
     devenv shell langnet-cli -- databuild {{ args }}
 
-# Generate Python protobuf code from langnet-spec
+# cache-clear:
+#     just cli cache-clear
 codegen:
     cd vendor/langnet-spec && devenv shell just -- generate-python
-
+    
 # Kill zombie diogenes processes (loop mode)
 langnet-dg-reaper:
     just autobot diogenes reap
@@ -31,7 +33,8 @@ langnet-dg-reaper:
 restart-server:
     just autobot server restart
     just autobot server verify
-
+    # just cli cache-clear
+    
 # run ruff & ty
 lint-all:
     just ruff-format
@@ -50,22 +53,18 @@ test-all:
 test *args:
     nose2 -s tests --config tests/nose2.cfg {{ args }}
 
-# Run all tests including benchmarks (use 'benchmark' for benchmarks only)
+# Fast unit/contract tests (runs all tests - nose2 doesn't support attribute filtering)
 test-fast:
     nose2 -s tests --config tests/nose2.cfg
-
-# Run performance benchmarks only
-benchmark:
-    python -m unittest tests.benchmarks.test_performance -v
 
 # Remove runtime caches (safe to delete)
 clean-cache:
     rm -rf data/cache
     mkdir -p data/cache
 
-# Format code with ruff (supports --check, --diff, etc.)
-ruff-format *args:
-    ruff format src/ tests/ ./.justscripts/ {{ args }}
+# Format code with ruff
+ruff-format:
+    ruff format src/ tests/ ./.justscripts/
 
 # Lint code with ruff
 ruff-check *args:
@@ -74,6 +73,14 @@ ruff-check *args:
 # Type check with ty
 typecheck *args:
     ty check src/ tests/ ./.justscripts {{ args }}
+
+# # Run arbitrary command in devenv shell
+# devenv-bash +ARGS:
+#     devenv shell bash -- -c '{{ ARGS }}'
+
+# Build CDSL dictionary (dict should be AP90 or MW)
+# build_cdsl dict batch_size="1000":
+#     LANGNET_LOG_LEVEL=INFO python3 -m langnet.cologne.load_cdsl --batch-size {{ batch_size }} --force --workers 4 {{ dict }}
 
 # project level automation tool
 autobot *args:
@@ -95,10 +102,9 @@ fuzz-compare:
 fuzz-all:
     just fuzz-tools
 
-# Read V1 codesketch implementations
 read-codesketch-diogenes:
     cat ./codesketch/src/langnet/diogenes/core.py
-
+    
 read-codesketch-whitakers:
     cat ./codesketch/src/langnet/whitakers_words/core.py
 
@@ -119,4 +125,8 @@ triples-dump lang word tool="all":
 
 # Translate sample lexicon rows (French -> English) using aisuite/OpenRouter.
 translate-lex *opts:
+    #!/usr/bin/env bash
+    #
+    source $HOME/.bashrc
+    # Example: just translate-lex --db data/build/lex_gaffiot.duckdb --table entries_fr --limit 1 --headword agni
     python3 ./.justscripts/lex_translation_demo.py {{ opts }}

@@ -236,7 +236,7 @@ def split_lines(text: str) -> list[str]:
 )
 @click.option(
     "--model",
-    default="openai:google/gemma-3-27b-it",
+    default="openai:google/gemma-4-31b-it",
     show_default=True,
     help="Model id to use via aisuite/OpenRouter.",
 )

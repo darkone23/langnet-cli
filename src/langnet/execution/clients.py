@@ -47,7 +47,7 @@ def find_whitaker_binary() -> str | None:
 
 class CLTKFetchClient:
     """
-    In-process client for fetch.cltk (Latin Lewis/IPA via CLTK).
+    In-process client for fetch.cltk (Latin and Greek lemmatization via CLTK).
     """
 
     def __init__(self) -> None:
@@ -56,9 +56,31 @@ class CLTKFetchClient:
         from cltk.lexicon.lat import LatinLewisLexicon  # noqa: PLC0415
         from cltk.phonology.lat.transcription import Transcriber  # noqa: PLC0415
 
-        self._lemmatizer = LatinBackoffLemmatizer()
+        self._latin_lemmatizer = LatinBackoffLemmatizer()
         self._lexicon = LatinLewisLexicon()
         self._transcriber = Transcriber("Classical", "Allen")
+        self._greek_nlp = None
+
+    def _ensure_greek_nlp(self) -> None:
+        """Lazy-load Greek NLP pipeline."""
+        if self._greek_nlp is None:
+            from cltk import NLP  # noqa: PLC0415
+
+            self._greek_nlp = NLP(language="grc", suppress_banner=True)
+
+    def _lemmatize_greek(self, word: str) -> str:
+        """Lemmatize Greek word using CLTK NLP pipeline."""
+        self._ensure_greek_nlp()
+        if self._greek_nlp is None:
+            return word
+        try:
+            doc = self._greek_nlp.analyze(word)
+            if doc.words and len(doc.words) > 0:
+                lemma = doc.words[0].lemma
+                return lemma if lemma else word
+        except Exception:  # noqa: BLE001
+            pass
+        return word
 
     def execute(
         self, call_id: str, endpoint: str, params: Mapping[str, str] | None = None
@@ -66,19 +88,30 @@ class CLTKFetchClient:
         import orjson  # noqa: PLC0415
 
         word = (params or {}).get("word") or (params or {}).get("q") or ""
+        lang = (params or {}).get("language") or (params or {}).get("lang") or "lat"
         start = time.time()
-        lemma_pairs = self._lemmatizer.lemmatize([word]) or []
-        lemma = lemma_pairs[0][1] if lemma_pairs and len(lemma_pairs[0]) > 1 else word
+
+        # Choose lemmatizer based on language
+        if lang == "grc":
+            lemma = self._lemmatize_greek(word)
+        else:
+            lemma_pairs = self._latin_lemmatizer.lemmatize([word]) or []
+            lemma = lemma_pairs[0][1] if lemma_pairs and len(lemma_pairs[0]) > 1 else word
+
         lookup = self._lexicon.lookup(word) or self._lexicon.lookup(lemma) or ""
         lines = lookup if isinstance(lookup, list) else [lookup] if isinstance(lookup, str) else []
         ipa_list: list[str] = []
-        try:
-            ipa_list = self._transcriber.transcribe(word)
-        except Exception:
+
+        # IPA transcription only for Latin
+        if lang == "lat":
             try:
-                ipa_list = self._transcriber.transcribe(lemma)
+                ipa_list = self._transcriber.transcribe(word)
             except Exception:
-                ipa_list = []
+                try:
+                    ipa_list = self._transcriber.transcribe(lemma)
+                except Exception:
+                    ipa_list = []
+
         payload = {
             "word": word,
             "lemma": lemma,

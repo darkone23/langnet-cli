@@ -29,7 +29,6 @@ else:
 
 from .base import LanguageNormalizer
 from .greek_transliterator import (
-    _greek_to_betacode,
     transliterate,
     transliterate_variants,
 )
@@ -149,7 +148,7 @@ class LatinNormalizer(LanguageNormalizer):
 
 class GreekNormalizer(LanguageNormalizer):
     """
-    Greek canonicalization using betacode conversions and accent stripping.
+    Greek canonicalization using Diogenes parse + betacode conversions.
     """
 
     def __init__(self, diogenes_client: DiogenesGreekClientProtocol | None = None) -> None:
@@ -158,40 +157,73 @@ class GreekNormalizer(LanguageNormalizer):
     def canonical_candidates(
         self, text: str, steps: list[NormalizationStep]
     ) -> Sequence[CanonicalCandidate]:
-        candidates: list[CanonicalCandidate] = []
-        base = text
+        lemma_sources: dict[str, set[str]] = {}
 
-        candidates.extend(self._diogenes_candidates(base, steps))
-        candidates.extend(self._local_candidates(base, steps))
+        # Use Diogenes parse for lemmatization (like Latin)
+        self._add_diogenes_parse_sources(text, steps, lemma_sources)
+        # Fallback to word list if parse fails
+        self._add_diogenes_word_list_sources(text, steps, lemma_sources)
+
+        candidates: list[CanonicalCandidate] = [
+            CanonicalCandidate(lemma=lemma, encodings={}, sources=sorted(sources))
+            for lemma, sources in lemma_sources.items()
+        ]
+
+        # Add input as fallback
+        if text not in lemma_sources:
+            candidates.append(CanonicalCandidate(lemma=text, encodings={}, sources=["local"]))
+
+        # Also add betacode/accent-stripped local candidates
+        candidates.extend(self._local_candidates(text, steps))
         return candidates
 
-    def _diogenes_candidates(
-        self, base: str, steps: list[NormalizationStep]
-    ) -> list[CanonicalCandidate]:
+    def _add_diogenes_parse_sources(
+        self, text: str, steps: list[NormalizationStep], lemma_sources: dict[str, set[str]]
+    ) -> None:
+        """Extract lemmas from Diogenes morphological parse (primary method)."""
         if self.diogenes is None:
-            return []
+            return
+        try:
+            parse = self.diogenes.fetch_parse(text, lang="grc")
+        except Exception:  # noqa: BLE001
+            return
+
+        if not parse.lemmas:
+            return
+
+        steps.append(
+            NormalizationStep(
+                operation="diogenes_parse",
+                input=text,
+                output=";".join(parse.lemmas),
+                tool="diogenes",
+            )
+        )
+        self._record_sources(parse.lemmas, "diogenes_parse", lemma_sources)
+
+    def _record_sources(
+        self, lemmas: list[str], source: str, lemma_sources: dict[str, set[str]]
+    ) -> None:
+        """Record lemmas and their sources."""
+        for lemma in lemmas:
+            sources = lemma_sources.setdefault(lemma, set())
+            sources.add(source)
+
+    def _add_diogenes_word_list_sources(
+        self, base: str, steps: list[NormalizationStep], lemma_sources: dict[str, set[str]]
+    ) -> None:
+        """Fallback: extract lemmas from Diogenes word list (secondary method)."""
+        if self.diogenes is None:
+            return
 
         result = self._fetch_word_list_with_fallback(base, steps)
         if result is None or not result.lemmas:
-            return []
+            return
 
-        candidates: list[CanonicalCandidate] = []
+        # Record lemmas from word list as fallback
         for lemma in result.lemmas:
-            encodings: dict[str, str] = {}
-            if result.frequencies:
-                freq = result.frequencies.get(lemma)
-                if freq is not None:
-                    encodings["freq"] = str(freq)
-            stripped = strip_accents(lemma)
-            betacode_variants = _betacode_variants(lemma, stripped)
-            if betacode_variants:
-                encodings["betacode"] = betacode_variants[0]
-            elif contains_greek(lemma):
-                encodings["betacode"] = _greek_to_betacode(lemma)
-            candidates.append(
-                CanonicalCandidate(lemma=lemma, encodings=encodings, sources=["diogenes_word_list"])
-            )
-        return candidates
+            sources = lemma_sources.setdefault(lemma, set())
+            sources.add("diogenes_word_list")
 
     def _fetch_word_list_with_fallback(
         self, base: str, steps: list[NormalizationStep]

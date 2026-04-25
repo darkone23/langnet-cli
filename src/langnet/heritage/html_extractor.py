@@ -169,8 +169,10 @@ class HeritageHTMLExtractor:
         seen: set[str] = set()
         current = start_span.next_sibling
         while current and current != next_solution:
-            if isinstance(current, Tag) and current.name == "span" and "latin12" in (
-                current.get("class") or []
+            if (
+                isinstance(current, Tag)
+                and current.name == "span"
+                and "latin12" in (current.get("class") or [])
             ):
                 for entry in self._extract_patterns_from_span(current):
                     key = f"{entry.word}||{entry.analysis}"

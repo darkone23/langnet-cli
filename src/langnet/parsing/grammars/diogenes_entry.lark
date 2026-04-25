@@ -1,0 +1,67 @@
+// Lark grammar for parsing Diogenes dictionary entries
+// Handles Lewis & Short Latin dictionary format as served by Diogenes
+
+?start: entry
+
+// Top-level entry structure
+entry: entry_header sense_block*
+
+// Entry header: "lupus, -i, m." or "amo, amare, amavi, amatum, v."
+entry_header: LEMMA ("," (GENDER | POS) | "," INFLECTION)* ("." | ",")? etymology?
+
+etymology: "(" ROOT_SYMBOL? LEMMA+ ")"
+
+ROOT_SYMBOL: "√" | "&#8730;"
+
+// Sense blocks with hierarchical numbering
+sense_block: sense_marker qualifier? gloss_text citation_block?
+
+sense_marker: ROMAN "."
+            | LETTER "."
+            | GREEK_LETTER "."
+            | NUMBER "."
+
+qualifier: QUALIFIER_TEXT ","
+
+gloss_text: GLOSS
+
+citation_block: CITATIONS
+
+// Terminals - ordered by priority (longer/more specific first)
+// Use word boundaries to prevent matching "m" in "monere"
+// Greek gender markers: ὁ (masc), ἡ (fem), τό (neut)
+GENDER.10: /m\.\s*or\s*f\./ | /f\.\s*or\s*m\./ | /m\.\s*f\./ | /f\.\s*m\./
+         | /m(?![a-zA-Zāēīōūăĕĭŏŭæœ])/ | /f(?![a-zA-Zāēīōūăĕĭŏŭæœ])/ | /n(?![a-zA-Zāēīōūăĕĭŏŭæœ])/
+         | "ὁ" | "ἡ" | "τό"
+
+POS.9: "preposition" | "conjunction" | "interjection" | "participle" | "adjective" | "adverb" | "pronoun" | "verb" | "noun"
+     | "prep" | "conj" | "interj" | "part" | "adj" | "adv" | "pron"
+     | /v(?![a-zA-Zāēīōūăĕĭŏŭæœ])/ | /n(?![a-zA-Zāēīōūăĕĭŏŭæœ])/
+
+// INFLECTION with lower priority than POS/GENDER to avoid conflicts
+INFLECTION.5: "-" /[a-zA-ZāēīōūăĕĭŏŭæœÆŒ\u0370-\u03FF\u1F00-\u1FFF]+/
+            | /[a-zA-ZāēīōūăĕĭŏŭæœÆŒ\u0370-\u03FF\u1F00-\u1FFF]{2,}/
+            | /[iī]/  // Allow single 'i' as genitive marker
+
+LEMMA: /[a-zA-ZāēīōūăĕĭŏŭæœÆŒ\u0370-\u03FF\u1F00-\u1FFF]+/
+
+ROMAN.15: "I" | "II" | "III" | "IV" | "V" | "VI" | "VII" | "VIII" | "IX" | "X"
+     | "XI" | "XII" | "XIII" | "XIV" | "XV"
+
+LETTER: "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "J" | "K" | "L" | "M"
+      | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+
+GREEK_LETTER: "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ" | "ι" | "κ" | "λ" | "μ"
+            | "ν" | "ξ" | "ο" | "π" | "ρ" | "σ" | "τ" | "υ" | "φ" | "χ" | "ψ" | "ω"
+
+NUMBER.13: /[0-9]+/
+
+QUALIFIER_TEXT.12: /[a-z]+\./
+
+GLOSS.1: /(?![\s]*[A-Z]\.)(?![\s]*[a-z]+\.,)(?:(?![A-Z][a-z]+\.?(\s*;|\s*$))(?!\s+(I{1,3}|IV|V|VI{0,3}|IX|X|XI{0,3}|XIV|XV)\.)(?!\s+[A-Z]\.)(?!\s+[α-ω]\.)(?!\s+[0-9]+\.)[^;])+/
+
+CITATIONS: /[A-Z][a-z]+\.?(\s*;\s*[A-Z][a-z]+\.?)*/
+
+// Import whitespace handling
+%import common.WS
+%ignore WS

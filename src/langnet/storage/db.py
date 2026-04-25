@@ -10,21 +10,34 @@ from filelock import FileLock
 
 @contextlib.contextmanager
 def connect_duckdb(
-    path: Path, read_only: bool = False, lock: bool = True, allow_create: bool = True
+    path: Path | str, read_only: bool = False, lock: bool = True, allow_create: bool = True
 ) -> Iterator[duckdb.DuckDBPyConnection]:
     """
     Open a DuckDB connection with optional file-based locking for writers.
 
     Readers can set read_only=True to avoid grabbing the lock. When allow_create is
     False, a missing file will raise instead of implicitly creating a new DB.
+
+    Special case: path=":memory:" creates an in-memory database.
     """
-    db_uri = str(path)
-    if not allow_create and not path.exists():
-        raise FileNotFoundError(f"DuckDB path does not exist: {path}")
+    # Handle special :memory: case
+    if path == ":memory:":
+        conn = duckdb.connect(database=":memory:", read_only=read_only)
+        try:
+            yield conn
+        finally:
+            conn.close()
+        return
+
+    # Normal file-based path
+    path_obj = Path(path) if isinstance(path, str) else path
+    db_uri = str(path_obj)
+    if not allow_create and not path_obj.exists():
+        raise FileNotFoundError(f"DuckDB path does not exist: {path_obj}")
 
     lock_ctx = contextlib.nullcontext()
     if lock and not read_only:
-        lock_ctx = FileLock(f"{path}.lock")
+        lock_ctx = FileLock(f"{path_obj}.lock")
 
     with lock_ctx:
         conn = duckdb.connect(database=db_uri, read_only=read_only)

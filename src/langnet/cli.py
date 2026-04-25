@@ -9,6 +9,7 @@ from typing import TypedDict, cast
 
 import click
 import duckdb
+import humanize
 import orjson
 import query_spec
 import requests
@@ -33,13 +34,14 @@ from langnet.execution.registry import default_registry
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
 from langnet.normalizer.utils import strip_accents
+from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
 from langnet.planner.core import PlannerConfig, ToolPlanner
 from langnet.storage.claim_index import ClaimIndex
 from langnet.storage.db import connect_duckdb
 from langnet.storage.derivation_index import DerivationIndex
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.extraction_index import ExtractionIndex
-from langnet.storage.paths import normalization_db_path
+from langnet.storage.paths import all_db_paths, normalization_db_path
 from langnet.storage.plan_index import PlanResponseIndex, apply_schema
 
 LanguageHint = query_spec.LanguageHint
@@ -578,9 +580,98 @@ def _build_dico_impl(config: BuildDicoConfig) -> None:
     _print_build_result(result)
 
 
+# Index management commands (Task 2: Foundation Work)
+
+
+@click.group()
+def index():
+    """Manage storage indexes and caches."""
+
+
+@index.command("status")
+@click.option("--tool", help="Show status for specific tool")
+def index_status(tool: str | None):
+    """Show storage index status and disk usage."""
+    paths = all_db_paths()
+    if tool:
+        paths = {k: v for k, v in paths.items() if tool in k}
+
+    total_size = 0
+    for name, path in paths.items():
+        if path.exists():
+            size = path.stat().st_size
+            total_size += size
+            click.echo(f"{name:20} {humanize.naturalsize(size):>10}  {path}")
+
+            # Show row counts for main tables
+            try:
+                with connect_duckdb(path, read_only=True, lock=False) as conn:
+                    tables = [
+                        "raw_response_index",
+                        "extraction_index",
+                        "derivation_index",
+                        "claims",
+                    ]
+                    for table in tables:
+                        try:
+                            result = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+                            if result is not None:
+                                count = result[0]
+                                click.echo(f"  {table:30} {count:>6} rows")
+                        except duckdb.CatalogException:
+                            # Table doesn't exist in this database
+                            pass
+            except Exception as e:
+                click.echo(f"  (Unable to read tables: {e})")
+        else:
+            click.echo(f"{name:20} {'(not created)':>10}")
+
+    if total_size > 0:
+        click.echo(f"\nTotal storage: {humanize.naturalsize(total_size)}")
+
+
+@index.command("clear")
+@click.option("--tool", help="Clear specific tool cache")
+@click.option("--all", is_flag=True, help="Clear all caches")
+@click.confirmation_option(prompt="This will delete cached data. Continue?")
+def index_clear(tool: str | None, all: bool):
+    """Clear storage indexes (safe - will be rebuilt on next query)."""
+    paths = all_db_paths()
+    if tool:
+        paths = {k: v for k, v in paths.items() if tool in k}
+    elif not all:
+        raise click.UsageError("Must specify --tool or --all")
+
+    for name, path in paths.items():
+        if path.exists():
+            path.unlink()
+            click.echo(f"✓ Removed {name}")
+        else:
+            click.echo(f"  Skipped {name} (doesn't exist)")
+
+
+@index.command("rebuild")
+@click.argument("query")
+@click.option("--language", required=True, help="Language (lat, grc, san)")
+def index_rebuild(query: str, language: str):
+    """Rebuild indexes for a specific query (force re-fetch).
+
+    This clears cached data for the given query and re-runs the pipeline
+    from scratch, forcing re-fetches from external services.
+    """
+    click.echo(f"Rebuilding indexes for '{query}' ({language})...")
+    # TODO: Implement after plan execution is updated
+    # This would run the plan-exec command with allow_cache=False
+    click.echo("(Not yet implemented - use index clear + normal query for now)")
+
+
 @click.group()
 def main() -> None:
     """langnet-cli — classical language tools."""
+
+
+# Register subcommands
+main.add_command(index)
 
 
 @main.command()
@@ -749,6 +840,8 @@ def parse(  # noqa: PLR0913, PLR0915
             parsed = orjson.loads(effect.body)
         except Exception:
             parsed = {}
+        # Enrich with parsed Lewis & Short entries
+        parsed = enrich_cltk_with_parsed_lewis(parsed)
         payload = parsed
     elif tool_l == "heritage":
         endpoint = opt or f"{heritage_base.rstrip('/')}/cgi-bin/skt/sktreader"

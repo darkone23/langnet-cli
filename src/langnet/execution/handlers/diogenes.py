@@ -18,6 +18,7 @@ from langnet.execution.effects import (
 )
 from langnet.execution.versioning import versioned
 from langnet.normalizer.utils import contains_greek, normalize_greekish_token, strip_accents
+from langnet.parsing.integration import enrich_extraction_with_parsed_header
 
 
 class DiogenesMorphology(TypedDict, total=False):
@@ -493,10 +494,12 @@ def _parse_fallback_lemmas(body: bytes) -> list[str]:
     return out
 
 
-@versioned("v1")
+@versioned("v2")
 def extract_html(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect:
     """
     Parse Diogenes HTML directly (no refetch) to extract lemmas and definitions.
+
+    Version 2: Adds grammar-based header parsing for cleaner entry structure.
     """
     html = raw.body.decode("utf-8", errors="ignore")
     parsed = _parse_diogenes_html(html)
@@ -510,6 +513,13 @@ def extract_html(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect
     query = call.params.get("q", "") or call.params.get("word", "")
     lemmas = _filter_lemmas_by_query(lemmas, query)
     canonical = lemmas[0] if lemmas else None
+
+    # Build payload with parsed data
+    payload = {"lemmas": lemmas, "parsed": parsed, "raw_html": html}
+
+    # Enrich with grammar-parsed header (v2 improvement)
+    payload = enrich_extraction_with_parsed_header(payload, html)
+
     return ExtractionEffect(
         extraction_id=stable_effect_id("dio-ext", call.call_id, raw.response_id),
         tool=call.tool,
@@ -518,7 +528,7 @@ def extract_html(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect
         response_id=raw.response_id,
         kind="diogenes.html",
         canonical=canonical,
-        payload={"lemmas": lemmas, "parsed": parsed, "raw_html": html},
+        payload=payload,
     )
 
 
