@@ -10,6 +10,7 @@ This directory is the working documentation set for `langnet-cli`.
 - `docs/GOALS.md` — product philosophy and long-term educational direction.
 - `docs/JUST_RECIPE_HEALTH.md` — current recipe wiring and fuzz-harness findings.
 - `docs/SEMANTIC_READINESS.md` — gaps before semantic reduction is safe to implement.
+- `docs/TRANSLATION_CACHE_PLAN.md` — lazy DICO/Gaffiot French → English translation cache design.
 
 ## Developer References
 
@@ -28,6 +29,8 @@ This directory is the working documentation set for `langnet-cli`.
 ## Planning
 
 - `docs/plans/active/infra/design-to-runtime-roadmap.md` — current active plan.
+- `docs/plans/active/infra/local-lexicon-witness-handoff.md` — current Gaffiot/DICO source-witness handoff and next steps.
+- `docs/plans/active/infra/junior-engineer-start-packet.md` — short assignment handoff for junior contributors.
 - `docs/plans/todo/infra/junior-task-backlog.md` — small tasks suitable for intermittent junior-engineer work.
 - `docs/plans/completed/` — completed work records.
 - `docs/archive/2026-04-cleanup/` — historical reports and superseded plans retained for audit only.

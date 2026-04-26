@@ -6,11 +6,11 @@ This is the canonical project roadmap. Detailed implementation tracking lives in
 
 The project has a working CLI, planner, staged executor, storage layer, and real backend handlers. The current priority is stabilization: make the existing system coherent, tested, documented, and safe to extend.
 
-Current grade: **B- / 78%**.
+Current grade: **B+ / 84%**.
 
 - Build health: strong.
 - Runtime architecture: usable.
-- Claim/evidence layer: improving and now fixture-tested across core handlers.
+- Claim/evidence layer: improving, fixture-tested across core handlers, and content-addressed for local DICO/Gaffiot raw responses.
 - Semantic reduction: designed but not runtime-wired.
 - Docs/plans: consolidated in April 2026; archive retained for historical context.
 
@@ -24,6 +24,8 @@ Done or in progress:
 - `just test-fast` passes.
 - Primary docs have been reconciled with current CLI reality.
 - Historical status reports and superseded plans have been archived.
+- Just recipe wiring has been audited and fixed where wrappers drifted from the CLI.
+- Local DICO/Gaffiot raw response IDs are deterministic.
 
 Remaining:
 
@@ -46,12 +48,15 @@ Implemented coverage:
 - Diogenes Latin sense/citation triples.
 - CLTK pronunciation/Lewis-line triples.
 - Heritage morphology triples.
+- Local Gaffiot Latin source-gloss triples.
+- Local DICO Sanskrit source-gloss triples.
 
 Remaining:
 
 - Normalize predicate constants across handlers.
 - Add or document coverage for any secondary/stub handlers.
-- Improve `triples-dump` filters and examples.
+- Add structured JSON inspection for triples/claims.
+- Continue improving reducer-focused inspection workflows.
 
 ## Milestone 2 — Evidence Inspection
 
@@ -60,7 +65,7 @@ Remaining:
 Tasks:
 
 - Improve `plan-exec` summaries with cache status, skipped-call reasons, stage counts, and handler versions.
-- Add `triples-dump` filters for tool, predicate, and subject prefix.
+- Keep `triples-dump` text filters working and add structured JSON output.
 - Document one end-to-end inspection workflow for Latin and Sanskrit.
 
 ## Milestone 3 — Semantic Reduction MVP

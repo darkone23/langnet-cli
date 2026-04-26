@@ -19,50 +19,9 @@ from query_spec import (
 
 from langnet.heritage.config import heritage_config
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
-
-
-@dataclass(slots=True)
-class CallOptions:
-    expected: str
-    priority: int
-    optional: bool
-    stage: ToolStage.ValueType
-
-
-def _opts(
-    *, expected: str, priority: int, optional: bool, stage: ToolStage.ValueType
-) -> CallOptions:
-    return CallOptions(expected=expected, priority=priority, optional=optional, stage=stage)
-
-
-def _make_call_params(*, params: dict[str, str], stage: ToolStage.ValueType) -> dict[str, str]:
-    payload = dict(params)
-    # Store stage in params as string (used by some tools)
-    payload["stage"] = ToolStage.Name(stage)
-    payload.setdefault("source_call_id", payload.get("source_call_id", ""))
-    return payload
-
-
-def _make_call(
-    tool: str,
-    call_id: str,
-    endpoint: str,
-    params: dict[str, str],
-    *,
-    opts: CallOptions,
-) -> ToolCallSpec:
-    payload = _make_call_params(params=params, stage=opts.stage)
-    return ToolCallSpec(
-        tool=tool,
-        call_id=call_id,
-        endpoint=endpoint,
-        params=payload,
-        expected_response_type=opts.expected,
-        priority=opts.priority,
-        optional=opts.optional,
-        stage=opts.stage,
-        source_call_id=payload.get("source_call_id", ""),
-    )
+from langnet.planner.calls import make_call as _make_call
+from langnet.planner.calls import opts as _opts
+from langnet.planner.local_lexicons import append_dico_calls, append_gaffiot_calls
 
 
 @dataclass(slots=True)
@@ -76,6 +35,8 @@ class PlannerConfig:
     include_cltk: bool = True
     include_spacy: bool = True
     include_cdsl: bool = True
+    include_dico: bool = True
+    include_gaffiot: bool = True
     cdsl_dicts: tuple[str, ...] = ("mw", "ap90")
     max_candidates: int = 3
 
@@ -338,6 +299,14 @@ class ToolPlanner:
                         rationale="Produce claim from CDSL sense derivation",
                     )
                 )
+        if self.config.include_dico:
+            append_dico_calls(
+                calls,
+                deps,
+                velthuis=velthuis,
+                lemma=candidate.lemma,
+                original=normalized.original or "",
+            )
         return calls, deps
 
     def _heritage_endpoint(self) -> str:
@@ -387,7 +356,7 @@ class ToolPlanner:
                 _add(vh)
         return variants
 
-    def _build_latin_calls(
+    def _build_latin_calls(  # noqa: PLR0915
         self, normalized: NormalizedQuery, candidate
     ) -> tuple[list[ToolCallSpec], list[PlanDependency]]:
         calls: list[ToolCallSpec] = []
@@ -639,6 +608,13 @@ class ToolPlanner:
                     to_call_id=claim_cltk_id,
                     rationale="Produce claims from CLTK IPA derivation",
                 )
+            )
+        if self.config.include_gaffiot:
+            append_gaffiot_calls(
+                calls,
+                deps,
+                headword=query_value,
+                lemma=candidate.lemma.lower(),
             )
         return calls, deps
 

@@ -6,10 +6,10 @@
 
 ```bash
 # Enter the project environment
-devenv shell langnet-cli
+devenv shell
 
 # Or run one command through just
-devenv shell just -- cli lookup lat lupus --output pretty
+just cli lookup lat lupus --output pretty
 ```
 
 Most project recipes already enter `devenv shell`, so from the repo root this is usually enough:

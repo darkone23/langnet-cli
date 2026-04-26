@@ -68,6 +68,10 @@ def test_sanskrit_plan_contains_heritage_call() -> None:
     assert any(c.tool == "extract.cdsl.xml" for c in plan.tool_calls)
     assert any(c.tool == "derive.cdsl.sense" for c in plan.tool_calls)
     assert any(c.tool.startswith("claim.cdsl") for c in plan.tool_calls)
+    assert any(c.tool == "fetch.dico" for c in plan.tool_calls)
+    assert any(c.tool == "extract.dico.json" for c in plan.tool_calls)
+    assert any(c.tool == "derive.dico.entries" for c in plan.tool_calls)
+    assert any(c.tool == "claim.dico.entries" for c in plan.tool_calls)
     assert plan.dependencies, "Expected dependencies for parse/derive ordering"
 
 
@@ -90,6 +94,10 @@ def test_latin_plan_includes_parse_and_whitakers() -> None:
     assert any(c.tool == "derive.whitakers.facts" for c in plan.tool_calls)
     assert any(c.tool.startswith("claim.diogenes") for c in plan.tool_calls)
     assert any(c.tool.startswith("claim.whitakers") for c in plan.tool_calls)
+    assert "fetch.gaffiot" in tools
+    assert any(c.tool == "extract.gaffiot.json" for c in plan.tool_calls)
+    assert any(c.tool == "derive.gaffiot.entries" for c in plan.tool_calls)
+    assert any(c.tool == "claim.gaffiot.entries" for c in plan.tool_calls)
 
 
 def test_greek_plan_uses_parse_only() -> None:

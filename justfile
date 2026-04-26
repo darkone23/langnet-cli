@@ -4,24 +4,24 @@ default:
 
 # run langnet-cli tool
 cli *args:
-    devenv shell langnet-cli -- {{ args }}
+    devenv shell -- bash -c 'langnet-cli "$@"' _ {{ args }}
 
 # Convenience wrappers for click subcommands
 cli-normalize *args:
-    devenv shell langnet-cli -- normalize {{ args }}
+    devenv shell -- bash -c 'langnet-cli normalize "$@"' _ {{ args }}
 
 cli-plan *args:
-    devenv shell langnet-cli -- plan {{ args }}
+    devenv shell -- bash -c 'langnet-cli plan "$@"' _ {{ args }}
 
 cli-plan-exec *args:
-    devenv shell langnet-cli -- plan-exec {{ args }}
+    devenv shell -- bash -c 'langnet-cli plan-exec "$@"' _ {{ args }}
 
 cli-databuild *args:
-    devenv shell langnet-cli -- databuild {{ args }}
+    devenv shell -- bash -c 'langnet-cli databuild "$@"' _ {{ args }}
 
 # Generate Python protobuf code from langnet-spec
 codegen:
-    cd vendor/langnet-spec && devenv shell just -- generate-python
+    cd vendor/langnet-spec && devenv shell -- just generate-python
 
 # ⚠ DESTRUCTIVE: Kill zombie diogenes processes (loops indefinitely until stopped)
 langnet-dg-reaper:
@@ -107,15 +107,15 @@ read-codesketch-cltk:
 
 # Parse Diogenes HTML and dump the raw parsed JSON (pre-triples). Optional endpoint override.
 diogenes-parse lang word endpoint="":
-    devenv shell -- python3 ./.justscripts/diogenes_parse.py "{{lang}}" "{{word}}" "{{endpoint}}"
+    devenv shell -- bash -c 'langnet-cli parse diogenes "$@"' _ "{{lang}}" "{{word}}" --opt "{{endpoint}}" --no-normalize --format json
 
 # Generic parser helper: tool = diogenes|whitakers. Fourth arg = endpoint (dio) or binary (whitakers).
 parse tool lang word opt="":
-    devenv shell -- python3 ./.justscripts/tool_parse.py "{{tool}}" "{{lang}}" "{{word}}" --opt "{{opt}}" --no-normalize
+    devenv shell -- bash -c 'langnet-cli parse "$@"' _ "{{tool}}" "{{lang}}" "{{word}}" --opt "{{opt}}" --no-normalize --format json
 
 # Dump tool claims/triples for a word (Latin) with no stubs/no cache. Optional tool filter (exact prefix), use "all" to run everything.
 triples-dump lang word tool="all":
-    devenv shell -- python3 ./.justscripts/triples_dump.py "{{lang}}" "{{word}}" "{{tool}}"
+    devenv shell -- bash -c 'langnet-cli triples-dump "$@"' _ "{{lang}}" "{{word}}" "{{tool}}" --no-cache
 
 # Translate sample lexicon rows (French -> English) using aisuite/OpenRouter.
 translate-lex *opts:

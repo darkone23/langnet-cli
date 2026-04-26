@@ -179,7 +179,7 @@ This order keeps educational UX grounded in auditable evidence and prevents sema
 **Design References**
 - `docs/technical/design/classifier-and-reducer.md`
 - `docs/technical/design/semantic-structs.md`
-- `docs/plans/active/semantic-reduction/SEMANTIC_REDUCTION_README.md`
+- `docs/plans/todo/semantic-reduction/semantic-reduction-mvp.md`
 
 **Acceptance Criteria**
 - Same input claims produce same buckets across runs.
@@ -250,24 +250,24 @@ This order keeps educational UX grounded in auditable evidence and prevents sema
 3. Add compound structure explanation as a pedagogical layer.
 
 **Design / Plan References**
-- `docs/plans/active/skt/sanskrit-tokenization-progress.md`
-- `docs/plans/active/pedagogy/compound-term-lookup.md`
+- `docs/plans/todo/skt/sanskrit-tokenization-compound-plan.md`
+- `docs/plans/todo/pedagogy/compound-term-lookup.md`
 
 ## What to Deprioritize for Now
 
 - Rebuilding a first-class ASGI API before CLI/runtime semantics stabilize.
 - Embedding-backed similarity before deterministic claim-to-WSU reduction exists.
 - Full semantic constants before buckets and evidence are stable.
-- Broad `src/langnet/cli.py` refactors before checkpointing current terminal lookup work.
+- Broad behavior-changing CLI refactors before the current cleanup baseline is checkpointed.
 - Passage analysis before compounds can reuse word-level reduction.
 
 ## Immediate Next Work Items
 
 1. **Checkpoint current baseline** using the groups above.
-2. **Finish claim cleanup** by normalizing predicate constants and documenting any secondary handler gaps.
-3. **Improve evidence inspection** in `plan-exec` and `triples-dump`.
-4. **Write a tiny claim-to-WSU extractor spec** before implementing semantic reduction.
-5. **Implement semantic reduction MVP** from service-free fixtures before adding embeddings or passage context.
+2. **Add structured evidence inspection** with `triples-dump --output json` or an equivalent command.
+3. **Clean up CDSL display encoding** by adding learner-facing IAST fields while preserving raw source forms.
+4. **Implement a tiny claim-to-WSU extractor** from service-free fixtures.
+5. **Add translation cache/key helpers** before translated DICO/Gaffiot glosses influence reduction.
 
 ## Success Metrics
 

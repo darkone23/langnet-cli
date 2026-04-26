@@ -13,7 +13,7 @@ This guide describes the current development workflow for `langnet-cli`.
 ## Environment
 
 ```bash
-devenv shell langnet-cli
+devenv shell
 ```
 
 Most recipes enter the environment themselves:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict, cast
 
@@ -14,8 +14,9 @@ import orjson
 import query_spec
 import requests
 from query_spec import ToolCallSpec
-from returns.result import Failure, Success
 
+from langnet.cli_databuild import databuild
+from langnet.cli_triples import display_claim_triples, display_dico_resolutions
 from langnet.clients.base import ToolClient
 from langnet.clients.http import HttpToolClient
 from langnet.execution.clients import (
@@ -141,26 +142,6 @@ def _print_result(result, output: str) -> None:
         click.echo("Steps:")
         for s in steps:
             click.echo(f"  - {s['op']}: {s['input']} -> {s['output']} ({s['tool']})")
-
-
-def _print_build_result(result) -> None:
-    status = result.status.value if hasattr(result, "status") else "unknown"
-    click.echo(f"status: {status}")
-    click.echo(f"output: {result.output_path}")
-    if result.message:
-        click.echo(f"message: {result.message}")
-    if result.stats:
-        if isinstance(result.stats, Success):
-            stats_val = result.stats.unwrap()
-            stats_dict = asdict(stats_val) if is_dataclass(stats_val) else {"value": stats_val}
-            for key, value in sorted(stats_dict.items()):
-                click.echo(f"{key}: {value}")
-        else:
-            err = result.stats.failure() if isinstance(result.stats, Failure) else result.stats
-            err_dict = asdict(err) if is_dataclass(err) else {"error": str(err)}
-            click.echo("error stats:")
-            for key, value in sorted(err_dict.items()):
-                click.echo(f"{key}: {value}")
 
 
 def _print_plan(plan, output: str) -> None:
@@ -458,128 +439,6 @@ def _plan_impl(config: PlanCliConfig, language: str, text: str) -> None:
             _print_plan(plan, config.output)
 
 
-@dataclass
-class BuildCtsConfig:
-    perseus_dir: str
-    phi_cdrom_dir: str
-    output: str | None
-    include_packard: bool
-    wipe: bool
-    force: bool
-    max_works: int | None
-
-
-def _build_cts_impl(config: BuildCtsConfig) -> None:
-    _ensure_logging()
-    from langnet.databuild.cts import CtsBuildConfig, CtsUrnBuilder  # noqa: PLC0415
-    from langnet.databuild.paths import default_cts_path  # noqa: PLC0415
-
-    output_path = Path(config.output).expanduser() if config.output else default_cts_path()
-    cts_config = CtsBuildConfig(
-        perseus_dir=Path(config.perseus_dir).expanduser(),
-        phi_cdrom_dir=Path(config.phi_cdrom_dir).expanduser(),
-        output_path=output_path,
-        include_packard=config.include_packard,
-        wipe_existing=config.wipe,
-        force_rebuild=config.force,
-        max_works=config.max_works,
-    )
-    builder = CtsUrnBuilder(cts_config)
-    result = builder.build()
-    _print_build_result(result)
-
-
-@dataclass
-class BuildCdslConfig:
-    dict_id: str
-    source_dir: str
-    output: str | None
-    limit: int | None
-    batch_size: int
-    wipe: bool
-    force: bool
-
-
-@dataclass
-class BuildGaffiotConfig:
-    source_path: str | None
-    output: str | None
-    limit: int | None
-    batch_size: int
-    wipe: bool
-    force: bool
-
-
-@dataclass
-class BuildDicoConfig:
-    source_dir: str | None
-    output: str | None
-    limit: int | None
-    batch_size: int
-    wipe: bool
-    force: bool
-
-
-def _build_cdsl_impl(config: BuildCdslConfig) -> None:
-    _ensure_logging()
-    from langnet.databuild.cdsl import CdslBuildConfig, CdslBuilder  # noqa: PLC0415
-    from langnet.databuild.paths import default_cdsl_path  # noqa: PLC0415
-
-    output_path = (
-        Path(config.output).expanduser() if config.output else default_cdsl_path(config.dict_id)
-    )
-    builder_config = CdslBuildConfig(
-        dict_id=config.dict_id,
-        source_dir=Path(config.source_dir).expanduser(),
-        output_path=output_path,
-        limit=config.limit,
-        batch_size=config.batch_size,
-        wipe_existing=config.wipe,
-        force_rebuild=config.force,
-    )
-    builder = CdslBuilder(builder_config)
-    result = builder.build()
-    _print_build_result(result)
-
-
-def _build_gaffiot_impl(config: BuildGaffiotConfig) -> None:
-    _ensure_logging()
-    from langnet.databuild.gaffiot import GaffiotBuildConfig, GaffiotBuilder  # noqa: PLC0415
-    from langnet.databuild.paths import default_gaffiot_path  # noqa: PLC0415
-
-    output_path = Path(config.output).expanduser() if config.output else default_gaffiot_path()
-    builder_config = GaffiotBuildConfig(
-        source_path=Path(config.source_path).expanduser() if config.source_path else None,
-        output_path=output_path,
-        limit=config.limit,
-        batch_size=config.batch_size,
-        wipe_existing=config.wipe,
-        force_rebuild=config.force,
-    )
-    builder = GaffiotBuilder(builder_config)
-    result = builder.build()
-    _print_build_result(result)
-
-
-def _build_dico_impl(config: BuildDicoConfig) -> None:
-    _ensure_logging()
-    from langnet.databuild.dico import DicoBuildConfig, DicoBuilder  # noqa: PLC0415
-    from langnet.databuild.paths import default_dico_path  # noqa: PLC0415
-
-    output_path = Path(config.output).expanduser() if config.output else default_dico_path()
-    builder_config = DicoBuildConfig(
-        source_dir=Path(config.source_dir).expanduser() if config.source_dir else None,
-        output_path=output_path,
-        limit=config.limit,
-        batch_size=config.batch_size,
-        wipe_existing=config.wipe,
-        force_rebuild=config.force,
-    )
-    builder = DicoBuilder(builder_config)
-    result = builder.build()
-    _print_build_result(result)
-
-
 # Index management commands (Task 2: Foundation Work)
 
 
@@ -677,6 +536,7 @@ def main() -> None:
 
 # Register subcommands
 main.add_command(index)
+main.add_command(databuild)
 
 
 @main.command()
@@ -1036,210 +896,6 @@ def plan(  # noqa: PLR0913
     _plan_impl(config, language, text)
 
 
-@main.group()
-def databuild():
-    """Offline data/index builders."""
-
-
-@databuild.command("cts")
-@click.option(
-    "--perseus-dir",
-    type=click.Path(),
-    default=str(Path.home() / "perseus"),
-    show_default=True,
-    help="Perseus corpus root (expects canonical-latinLit and canonical-greekLit).",
-)
-@click.option(
-    "--phi-cdrom-dir",
-    type=click.Path(),
-    default=str(Path.home() / "Classics-Data"),
-    show_default=True,
-    help="Packard PHI/TLG corpus root (authtab/idt).",
-)
-@click.option(
-    "--output",
-    "-o",
-    type=click.Path(),
-    help="Output DuckDB path (defaults to data/build/cts_urn.duckdb)",
-)
-@click.option(
-    "--include-packard/--no-packard",
-    default=True,
-    show_default=True,
-    help="Include Packard PHI/TLG authtab/idt data when available.",
-)
-@click.option(
-    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
-)
-@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
-@click.option("--max-works", type=int, help="Limit number of works ingested (sampling/debug).")
-def build_cts(  # noqa: PLR0913
-    perseus_dir: str,
-    phi_cdrom_dir: str,
-    output: str | None,
-    include_packard: bool,
-    wipe: bool,
-    force: bool,
-    max_works: int | None,
-):
-    """Build CTS URN index (Perseus + Packard/legacy)."""
-    config = BuildCtsConfig(
-        perseus_dir=perseus_dir,
-        phi_cdrom_dir=phi_cdrom_dir,
-        output=output,
-        include_packard=include_packard,
-        wipe=wipe,
-        force=force,
-        max_works=max_works,
-    )
-    _build_cts_impl(config)
-
-
-@databuild.command("cdsl")
-@click.argument("dict_id")
-@click.option(
-    "--source-dir",
-    type=click.Path(),
-    default=str(Path.home() / "cdsl_data" / "dict"),
-    show_default=True,
-    help=(
-        "CDSL dictionary root containing subdirectories per dictionary (with web/sqlite/*.sqlite)."
-    ),
-)
-@click.option(
-    "--output",
-    "-o",
-    type=click.Path(),
-    help="Output DuckDB path (defaults to data/build/cdsl_<dict>.duckdb)",
-)
-@click.option("--limit", type=int, help="Limit rows for testing.")
-@click.option(
-    "--batch-size",
-    type=int,
-    default=1000,
-    show_default=True,
-    help="Rows per batch while inserting.",
-)
-@click.option(
-    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
-)
-@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
-def build_cdsl(  # noqa: PLR0913
-    dict_id: str,
-    source_dir: str,
-    output: str | None,
-    limit: int | None,
-    batch_size: int,
-    wipe: bool,
-    force: bool,
-):
-    """Build CDSL dictionary index for a specific dictionary id (e.g., MW, AP90)."""
-    config = BuildCdslConfig(
-        dict_id=dict_id,
-        source_dir=source_dir,
-        output=output,
-        limit=limit,
-        batch_size=batch_size,
-        wipe=wipe,
-        force=force,
-    )
-    _build_cdsl_impl(config)
-
-
-@databuild.command("gaffiot")
-@click.option(
-    "--source",
-    "source_path",
-    type=click.Path(),
-    default=None,
-    help="Path to gaffiot-unicode.xml (defaults to ~/digital-gaffiot-json/gaffiot-unicode.xml).",
-)
-@click.option(
-    "--output",
-    "-o",
-    type=click.Path(),
-    help="Output DuckDB path (defaults to data/build/lex_gaffiot.duckdb)",
-)
-@click.option("--limit", type=int, help="Limit rows for testing.")
-@click.option(
-    "--batch-size",
-    type=int,
-    default=500,
-    show_default=True,
-    help="Rows per batch while inserting.",
-)
-@click.option(
-    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
-)
-@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
-def build_gaffiot(  # noqa: PLR0913
-    source_path: str | None,
-    output: str | None,
-    limit: int | None,
-    batch_size: int,
-    wipe: bool,
-    force: bool,
-):
-    """Build Gaffiot French→Latin index."""
-    config = BuildGaffiotConfig(
-        source_path=source_path,
-        output=output,
-        limit=limit,
-        batch_size=batch_size,
-        wipe=wipe,
-        force=force,
-    )
-    _build_gaffiot_impl(config)
-
-
-@databuild.command("dico")
-@click.option(
-    "--source-dir",
-    type=click.Path(),
-    default=None,
-    help=(
-        "Path to DICO HTML directory "
-        "(defaults to ~/langnet-tools/sanskrit-heritage/webroot/htdocs/DICO/)."
-    ),
-)
-@click.option(
-    "--output",
-    "-o",
-    type=click.Path(),
-    help="Output DuckDB path (defaults to data/build/lex_dico.duckdb)",
-)
-@click.option("--limit", type=int, help="Limit rows for testing.")
-@click.option(
-    "--batch-size",
-    type=int,
-    default=500,
-    show_default=True,
-    help="Rows per batch while inserting.",
-)
-@click.option(
-    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
-)
-@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
-def build_dico(  # noqa: PLR0913
-    source_dir: str | None,
-    output: str | None,
-    limit: int | None,
-    batch_size: int,
-    wipe: bool,
-    force: bool,
-):
-    """Build DICO French→Sanskrit index."""
-    config = BuildDicoConfig(
-        source_dir=source_dir,
-        output=output,
-        limit=limit,
-        batch_size=batch_size,
-        wipe=wipe,
-        force=force,
-    )
-    _build_dico_impl(config)
-
-
 def _create_http_client(tool: str) -> ToolClient:
     """Create an HTTP client for the given tool."""
     return HttpToolClient(tool=tool)
@@ -1287,6 +943,30 @@ def _create_cdsl_client(tool: str, use_stubs: bool) -> ToolClient | None:
     return None
 
 
+def _create_dico_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a local DICO client, with stub fallback."""
+    try:
+        from langnet.execution.handlers.dico import DicoFetchClient  # noqa: PLC0415
+
+        return DicoFetchClient()
+    except Exception:
+        if use_stubs:
+            return StubToolClient(tool)
+    return None
+
+
+def _create_gaffiot_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a local Gaffiot client, with stub fallback."""
+    try:
+        from langnet.execution.handlers.gaffiot import GaffiotFetchClient  # noqa: PLC0415
+
+        return GaffiotFetchClient()
+    except Exception:
+        if use_stubs:
+            return StubToolClient(tool)
+    return None
+
+
 def _get_client_factory(tool: str, use_stubs: bool):
     """Get the factory function for creating a client for the given tool."""
     http_tools = {"fetch.diogenes", "fetch.heritage"}
@@ -1297,6 +977,8 @@ def _get_client_factory(tool: str, use_stubs: bool):
         "fetch.cltk": lambda: _create_cltk_client(tool, use_stubs),
         "fetch.spacy": lambda: _create_spacy_client(tool, use_stubs),
         "fetch.cdsl": lambda: _create_cdsl_client(tool, use_stubs),
+        "fetch.dico": lambda: _create_dico_client(tool, use_stubs),
+        "fetch.gaffiot": lambda: _create_gaffiot_client(tool, use_stubs),
     }
 
     if tool in http_tools:
@@ -1532,25 +1214,6 @@ def _filter_plan_tools(plan, tool_filter: str) -> None:
     plan.dependencies.extend(filtered_deps)
 
 
-def _display_claim_triples(result) -> None:
-    """Display claim triples to stdout."""
-    for claim in result.claims:
-        click.echo(f"TOOL={claim.tool} PRED={claim.predicate} SUBJECT={claim.subject}")
-        val = claim.value if isinstance(claim.value, dict) else {}
-        triples = val.get("triples") if isinstance(val, dict) else None
-        if triples:
-            sense_counts: dict[str, int] = {}
-            for t in triples:
-                if isinstance(t, dict) and t.get("predicate") == "has_sense":
-                    subj = t.get("subject")
-                    if isinstance(subj, str):
-                        sense_counts[subj] = sense_counts.get(subj, 0) + 1
-            if sense_counts:
-                click.echo(f"  sense_counts {sense_counts}")
-            for t in triples[:10]:
-                click.echo(f"  triple {t}")
-
-
 @main.command("triples-dump")
 @click.argument("language")
 @click.argument("text")
@@ -1595,6 +1258,23 @@ def _display_claim_triples(result) -> None:
     show_default=True,
     help="Include CLTK in the plan (may be slow due to warmup).",
 )
+@click.option(
+    "--predicate",
+    "predicate_filter",
+    help="Only display triples with this exact predicate.",
+)
+@click.option(
+    "--subject-prefix",
+    "subject_filter",
+    help="Only display triples whose subject starts with this prefix.",
+)
+@click.option(
+    "--max-triples",
+    default=10,
+    show_default=True,
+    type=int,
+    help="Maximum matching triples to print per claim.",
+)
 def triples_dump(  # noqa: PLR0913
     language: str,
     text: str,
@@ -1606,6 +1286,9 @@ def triples_dump(  # noqa: PLR0913
     db_path: str | None,
     no_cache: bool,
     include_cltk: bool,
+    predicate_filter: str | None,
+    subject_filter: str | None,
+    max_triples: int,
 ):
     """
     Build a ToolPlan for the word and dump claims/triples for selected tools.
@@ -1660,7 +1343,9 @@ def triples_dump(  # noqa: PLR0913
             allow_cache=False,
         )
 
-    _display_claim_triples(result)
+    display_claim_triples(result, predicate_filter, subject_filter, max_triples)
+    if lang_hint == LanguageHint.LANGUAGE_HINT_SAN:
+        display_dico_resolutions(result, predicate_filter, subject_filter, max_triples)
 
 
 def _display_pretty(language: str, text: str, results: dict) -> None:  # noqa: C901, PLR0912, PLR0915

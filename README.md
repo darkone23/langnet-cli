@@ -5,15 +5,16 @@ A command-line tool for querying classical language lexicons and morphology. Ext
 ## Quick Start
 
 ```sh
-# Enter the devenv shell (preferred)
-devenv shell langnet-cli
+# Enter the devenv shell, then run commands normally
+devenv shell
+langnet-cli --help
 
 # Or run a one-off command with the environment activated
-devenv shell just -- cli lookup lat lupus --output json
+just cli lookup lat lupus --output json
 
 # Inspect the staged plan and evidence
-devenv shell just -- cli plan lat lupus
-devenv shell just -- triples-dump lat lupus whitakers
+just cli plan lat lupus
+just triples-dump lat lupus whitakers
 ```
 
 ## Language Support
@@ -35,7 +36,7 @@ Manually sourced or downloaded data (plan ahead before running indexers or seman
 - **Perseus canonical corpora** (`~/perseus`): `canonical-greekLit` and `canonical-latinLit` trees needed for CTS URN indexing and citation lookups.
 - **Classics-Data (PHI CD-ROM) legacy corpus** (`~/Classics-Data`): optional gap-fill for works missing from Perseus.
 - **Stanza resources** (`~/stanza_resources/`): downloaded automatically on first Stanza use; allow network or preinstall to avoid runtime stalls.
-- **Gensim embeddings** (`~/gensim-data/`) used by the semantic reducer for similarity scoring
+- **Gensim embeddings** (`~/gensim-data/`): not required yet; embeddings are explicitly deferred until deterministic semantic buckets exist.
 - **CLTK models** (to `~/cltk_data/`)
 - **CDSL data** (to `~/cdsl_data/`)
 
@@ -64,6 +65,6 @@ This project uses multi-model AI-assisted development via OpenRouter. See `AGENT
 ## Current Status and Known Gaps
 
 - External services are required for most functionality; without them `langnet-cli lookup` returns per-tool errors for unavailable sources.
-- Several open issues remain: Diogenes sense extraction and CTS URN enrichment are flaky, Sanskrit canonicalization and DICO dictionary integration are not complete, CDSL outputs often contain SLP1 artifacts, and the universal schema/fuzzy search are still in design (see `docs/plans/` for status).
+- Several open issues remain: semantic reduction is not runtime-wired, CTS URN enrichment is deferred, CDSL output can still expose source encodings such as SLP1, and DICO/Gaffiot translation is not cache-backed yet. Local DICO and Gaffiot source witnesses are wired into `triples-dump`.
 - Use `just test-fast` and `just lint-all` for local validation; these recipes enter `devenv` automatically. Restart long-lived servers after code changes.
 - Planning docs live under `docs/plans/`; the canonical roadmap is `docs/ROADMAP.md`, with the active implementation plan at `docs/plans/active/infra/design-to-runtime-roadmap.md`.

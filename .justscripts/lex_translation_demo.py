@@ -152,7 +152,7 @@ def translate_entry(  # noqa: PLR0913
 ) -> list[tuple[str, str]]:
     base_system = (
         "You translate french lexicon entries into english for classical language students. "
-        "All french phrases should be translated to english unless instructed otehrwise. "
+        "All french phrases should be translated to english unless instructed otherwise. "
         "Preserve transliterated tokens and sense numbering. Respond with concise prose."
     )
 
@@ -260,6 +260,11 @@ def split_lines(text: str) -> list[str]:
     "--entry-id",
     help="Optional entry_id filter to narrow the sample.",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Fetch and display rows/chunks without requiring OPENAI_API_KEY or calling the model.",
+)
 def main(  # noqa: PLR0913
     db: str,
     table: str,
@@ -269,8 +274,9 @@ def main(  # noqa: PLR0913
     mode: str,
     headword: str | None,
     entry_id: str | None,
+    dry_run: bool,
 ) -> None:
-    """Translate lexicon rows from DuckDB using google/gemma-3-27b-it."""
+    """Translate lexicon rows from DuckDB using OpenRouter."""
     if db is None:
         db = (
             "data/build/lex_gaffiot.duckdb"
@@ -283,12 +289,13 @@ def main(  # noqa: PLR0913
         hints = LATIN_HINTS
     else:
         hints = SANSKRIT_HINTS
-    client = get_client()
+    client = None if dry_run else get_client()
     rows = fetch_rows(db, table, limit, headword=headword, entry_id=entry_id)
     if not rows:
         raise click.ClickException("No rows found for given filters.")
 
-    click.echo(f"Translating {len(rows)} rows from {db}:{table} using {model}")
+    action = "Dry-running" if dry_run else "Translating"
+    click.echo(f"{action} {len(rows)} rows from {db}:{table} using {model}")
     overall_start = time.perf_counter()
     for entry in rows:
         entry_start = time.perf_counter()
@@ -308,6 +315,12 @@ def main(  # noqa: PLR0913
         else:
             chunks = [entry["plain_text"]]
             separator = ""
+        if dry_run:
+            click.echo("\n- Translation skipped (--dry-run)")
+            click.echo(f"  chunks={len(chunks)}")
+            click.echo(f"  hints={len(hints)}")
+            continue
+        assert client is not None
         translations = translate_entry(client, model, entry, hints, chunks, separator)
         for hint_text, content in translations:
             click.echo("\n- Translation: ")

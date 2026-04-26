@@ -16,8 +16,9 @@ Feature areas should be subdirectories such as `infra`, `skt`, `pedagogy`, `dico
 ## Current Canonical Plan
 
 - `docs/plans/active/infra/design-to-runtime-roadmap.md`
+- `docs/plans/active/infra/junior-engineer-start-packet.md`
 
-This is the active implementation roadmap. Avoid creating parallel master plans unless that document is first updated or split deliberately.
+The roadmap remains the active implementation source of truth. The junior start packet is a short assignment handoff and should not become a parallel roadmap.
 
 ## Junior Work
 

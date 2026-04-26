@@ -6,7 +6,9 @@ from langnet.execution import handlers_stub
 from langnet.execution.executor import ToolRegistry
 from langnet.execution.handlers import cdsl as cdsl_handlers
 from langnet.execution.handlers import cltk as cltk_handlers
+from langnet.execution.handlers import dico as dico_handlers
 from langnet.execution.handlers import diogenes as diogenes_handlers
+from langnet.execution.handlers import gaffiot as gaffiot_handlers
 from langnet.execution.handlers import heritage as heritage_handlers
 from langnet.execution.handlers import spacy as spacy_handlers
 from langnet.execution.handlers import whitakers as whitakers_handlers
@@ -47,6 +49,14 @@ def default_registry(use_stubs: bool = False) -> ToolRegistry:
     extract["extract.cdsl.xml"] = cdsl_handlers.extract_xml
     derive["derive.cdsl.sense"] = cdsl_handlers.derive_sense
     claim["claim.cdsl.sense"] = cdsl_handlers.claim_sense
+    # Local DICO handlers
+    extract["extract.dico.json"] = dico_handlers.extract_dico_json
+    derive["derive.dico.entries"] = dico_handlers.derive_dico_entries
+    claim["claim.dico.entries"] = dico_handlers.claim_dico_entries
+    # Local Gaffiot handlers
+    extract["extract.gaffiot.json"] = gaffiot_handlers.extract_gaffiot_json
+    derive["derive.gaffiot.entries"] = gaffiot_handlers.derive_gaffiot_entries
+    claim["claim.gaffiot.entries"] = gaffiot_handlers.claim_gaffiot_entries
 
     if use_stubs:
         # Fallback to stub handlers for any tool not registered above.

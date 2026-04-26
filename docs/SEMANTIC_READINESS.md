@@ -7,9 +7,10 @@ LangNet has enough claim/triple infrastructure to prepare semantic reduction, bu
 ## What Is Ready
 
 - Core handlers emit claim triples.
-- Fixture-backed claim contract tests exist for Whitaker, CDSL, Diogenes, CLTK, and Heritage.
+- Fixture-backed claim contract tests exist for Whitaker, CDSL, Diogenes, CLTK, Heritage, DICO, and Gaffiot.
 - Predicate drift is guarded by a test.
 - A hand-written `lupus` WSU fixture exists under `tests/fixtures/`.
+- DICO/Gaffiot local raw response IDs are content-addressed and regression-tested.
 - Docs now describe the intended WSU → bucket path.
 
 ## Blocking Gaps
@@ -24,7 +25,7 @@ The constants module exists, but handlers still emit many predicate strings dire
 
 ### 3. Evidence Inspection Is Still Thin
 
-`triples-dump` exposes triples, but filtering and summary output are basic. Before semantic reduction, developers should be able to quickly answer:
+`triples-dump` exposes triples and now supports predicate/subject/max-count filters. Before semantic reduction, developers should still be able to quickly answer:
 
 - which claims produced this gloss?
 - which raw response produced this claim?
@@ -46,12 +47,17 @@ There is a WSU fixture contract, but no runtime extractor. The next safe step is
 has_sense + gloss + evidence → WitnessSenseUnit
 ```
 
+### 7. Translation Is Not Yet Evidence-Bearing
+
+DICO and Gaffiot source entries are French. The ad-hoc translation script can translate sampled rows and is tuned most heavily for Gaffiot, but translated text is not cached, not represented as translation evidence, and not visible to `triples-dump`. Gaffiot and DICO source entries now flow through staged effects, but both remain French source evidence. Semantic reduction should not depend on translated Gaffiot/DICO glosses until the cache path in `docs/TRANSLATION_CACHE_PLAN.md` exists.
+
 ## Recommended Next Steps
 
 1. Add a tiny WSU extractor over claim triples.
 2. Keep it service-free and fixture-driven.
 3. Add exact-match bucket grouping only after extractor tests pass.
-4. Delay embeddings, semantic constants, and learner display changes.
+4. Add cached translation triples only after cache-hit behavior is testable without network calls.
+5. Delay embeddings, semantic constants, and learner display changes.
 
 ## Readiness Bar
 
@@ -61,3 +67,4 @@ Semantic reduction is ready to start only when:
 - Each WSU carries claim/evidence IDs.
 - No live backend is required for reducer tests.
 - `triples-dump` can inspect the same facts the reducer consumes.
+- DICO/Gaffiot translated glosses are cache-backed and evidence-bearing before they influence buckets.
