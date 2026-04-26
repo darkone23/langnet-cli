@@ -178,11 +178,11 @@ def _print_plan(plan, output: str) -> None:
                 "tool": c.tool,
                 "call_id": c.call_id,
                 "endpoint": c.endpoint,
-                "params": c.params or {},
+                "params": dict(c.params or {}),
                 "expected_response_type": c.expected_response_type,
                 "priority": c.priority,
                 "optional": c.optional,
-                "stage": (c.params or {}).get("stage", ""),
+                "stage": dict(c.params or {}).get("stage", ""),
             }
             for c in plan.tool_calls
         ],
@@ -654,15 +654,20 @@ def index_clear(tool: str | None, all: bool):
 @click.argument("query")
 @click.option("--language", required=True, help="Language (lat, grc, san)")
 def index_rebuild(query: str, language: str):
-    """Rebuild indexes for a specific query (force re-fetch).
-
-    This clears cached data for the given query and re-runs the pipeline
-    from scratch, forcing re-fetches from external services.
-    """
-    click.echo(f"Rebuilding indexes for '{query}' ({language})...")
-    # TODO: Implement after plan execution is updated
-    # This would run the plan-exec command with allow_cache=False
-    click.echo("(Not yet implemented - use index clear + normal query for now)")
+    """Re-run plan execution for a query without reading cached effects."""
+    config = PlanExecConfig(
+        diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+        diogenes_parse_endpoint=None,
+        heritage_base="http://localhost:48080",
+        heritage_max_results=10,
+        db_path=None,
+        no_cache=True,
+        include_whitakers=True,
+        max_candidates=3,
+        use_stub_handlers=True,
+    )
+    click.echo(f"Rebuilding indexes for '{query}' ({language}) with cache reads disabled...")
+    _plan_exec_impl(config, language, query)
 
 
 @click.group()
@@ -785,6 +790,14 @@ def normalize(  # noqa: PLR0913
     is_flag=True,
     help="Skip normalization cache lookups and writes for this invocation.",
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["json", "pretty"]),
+    default="pretty",
+    show_default=True,
+    help="Output format: json (raw data) or pretty (human-readable).",
+)
 def parse(  # noqa: PLR0913, PLR0915
     tool: str,
     language: str,
@@ -796,6 +809,7 @@ def parse(  # noqa: PLR0913, PLR0915
     dict_id: str,
     db_path: str | None,
     no_cache: bool,
+    output_format: str,
 ):
     """
     Parse tool output (diogenes|whitakers|cltk|heritage|cdsl) with optional normalization.
@@ -828,7 +842,13 @@ def parse(  # noqa: PLR0913, PLR0915
         parsed = _parse_whitaker_output(text_out)
         payload = parsed
     elif tool_l == "cltk":
-        client = get_cltk_fetch_client()
+        try:
+            client = get_cltk_fetch_client()
+        except Exception as exc:  # noqa: BLE001
+            raise click.ClickException(
+                "CLTK client unavailable. Ensure CLTK model data is installed "
+                "and CLTK_DATA points to a writable directory."
+            ) from exc
         effect = client.execute(
             call_id=f"cltk-{query_word}",
             endpoint=f"cltk://ipa/{language}",
@@ -914,7 +934,12 @@ def parse(  # noqa: PLR0913, PLR0915
     else:  # pragma: no cover - click enforces choices
         raise click.UsageError(f"Unsupported tool '{tool}'.")
 
-    click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+    # Output results in requested format
+    if output_format == "pretty":
+        # Wrap single tool result in dict for _display_pretty
+        _display_pretty(language, text, {tool_l: payload})
+    else:
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
 
 
 @main.command()
@@ -1450,53 +1475,9 @@ def plan_exec(  # noqa: PLR0913
     _plan_exec_impl(config, language, text)
 
 
-@main.command("triples-dump")
-@click.argument("language")
-@click.argument("text")
-@click.argument("tool_filter", default="all")
-@click.option(
-    "--normalize/--no-normalize",
-    default=True,
-    show_default=True,
-    help="Normalize input before planning/executing.",
-)
-@click.option(
-    "--diogenes-endpoint",
-    default="http://localhost:8888/Diogenes.cgi",
-    show_default=True,
-    help="Diogenes CGI endpoint for planning/fetch.",
-)
-@click.option(
-    "--diogenes-parse-endpoint",
-    help="Alternate Diogenes parse endpoint (defaults to diogenes-endpoint).",
-)
-@click.option(
-    "--heritage-base",
-    default="http://localhost:48080",
-    show_default=True,
-    help="Base URL for Heritage Platform (unused here; kept for symmetry).",
-)
-@click.option(
-    "--db-path",
-    type=click.Path(),
-    help=(
-        "Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb)."
-    ),
-)
-@click.option(
-    "--no-cache",
-    is_flag=True,
-    help="Skip normalization cache lookups and writes for this invocation.",
-)
-@click.option(
-    "--include-cltk/--no-include-cltk",
-    default=False,
-    show_default=True,
-    help="Include CLTK in the plan (may be slow due to warmup).",
-)
 def _get_query_value_for_plan(
     text: str, lang_hint, normalize: bool, norm_cfg: NormalizeConfig
-) -> object:
+) -> query_spec.NormalizedQuery:
     """Get the query value for planning, either normalized or passthrough."""
     path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1570,6 +1551,50 @@ def _display_claim_triples(result) -> None:
                 click.echo(f"  triple {t}")
 
 
+@main.command("triples-dump")
+@click.argument("language")
+@click.argument("text")
+@click.argument("tool_filter", default="all")
+@click.option(
+    "--normalize/--no-normalize",
+    default=True,
+    show_default=True,
+    help="Normalize input before planning/executing.",
+)
+@click.option(
+    "--diogenes-endpoint",
+    default="http://localhost:8888/Diogenes.cgi",
+    show_default=True,
+    help="Diogenes CGI endpoint for planning/fetch.",
+)
+@click.option(
+    "--diogenes-parse-endpoint",
+    help="Alternate Diogenes parse endpoint (defaults to diogenes-endpoint).",
+)
+@click.option(
+    "--heritage-base",
+    default="http://localhost:48080",
+    show_default=True,
+    help="Base URL for Heritage Platform (unused here; kept for symmetry).",
+)
+@click.option(
+    "--db-path",
+    type=click.Path(),
+    help=(
+        "Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb)."
+    ),
+)
+@click.option(
+    "--no-cache",
+    is_flag=True,
+    help="Skip normalization cache lookups and writes for this invocation.",
+)
+@click.option(
+    "--include-cltk/--no-include-cltk",
+    default=False,
+    show_default=True,
+    help="Include CLTK in the plan (may be slow due to warmup).",
+)
 def triples_dump(  # noqa: PLR0913
     language: str,
     text: str,
@@ -1636,6 +1661,336 @@ def triples_dump(  # noqa: PLR0913
         )
 
     _display_claim_triples(result)
+
+
+def _display_pretty(language: str, text: str, results: dict) -> None:  # noqa: C901, PLR0912, PLR0915
+    """
+    Display dictionary lookup results in a human-readable format.
+
+    Args:
+        language: Language code (lat, grc, san)
+        text: The word that was looked up
+        results: Dict mapping tool names to their results
+    """
+    # Header
+    lang_display = {"lat": "Latin", "grc": "Greek", "san": "Sanskrit"}.get(language, language)
+    click.echo()
+    click.echo(click.style(f"{text.upper()} [{lang_display}]", bold=True, fg="cyan"))
+    click.echo(click.style("━" * 60, fg="cyan"))
+    click.echo()
+
+    # Track success/failures
+    successful = 0
+    total = len(results)
+
+    # Display each tool's results
+    for tool_name, tool_data in results.items():
+        # Check if this tool had an error
+        if isinstance(tool_data, dict) and "error" in tool_data:
+            click.echo(click.style(f"✗ {tool_name.upper()}", fg="red", bold=True))
+            click.echo(f"  Error: {tool_data.get('error', 'Unknown error')}")
+            click.echo()
+            continue
+
+        successful += 1
+
+        # Tool name header
+        tool_display = {
+            "whitakers": "Whitaker's Words",
+            "diogenes": "Lewis & Short (Diogenes)" if language == "lat" else "LSJ (Diogenes)",
+            "cltk": "CLTK",
+            "heritage": "Sanskrit Heritage Platform",
+            "cdsl": "CDSL (Monier-Williams)",
+        }.get(tool_name, tool_name.upper())
+
+        click.echo(click.style(f"● {tool_display}", fg="green", bold=True))
+
+        # Format based on tool type
+        if tool_name == "whitakers" and isinstance(tool_data, list):
+            for entry in tool_data[:3]:  # Limit to first 3 entries
+                if "terms" in entry and entry["terms"]:
+                    term = entry["terms"][0]
+                    click.echo(f"  Form: {term.get('term', 'N/A')}")
+                    if "codeline" in entry:
+                        click.echo(f"  Lemma: {entry['codeline'].get('term', 'N/A')}")
+                        click.echo(f"  POS: {entry['codeline'].get('pos_code', 'N/A')}")
+                if "senses" in entry and entry["senses"]:
+                    click.echo(f"  Meaning: {', '.join(entry['senses'][:3])}")
+                click.echo()
+
+        elif tool_name == "diogenes":
+            # Diogenes can have different structures
+            if isinstance(tool_data, dict):
+                if "entries" in tool_data:
+                    for i, entry in enumerate(tool_data["entries"][:2], 1):
+                        click.echo(f"  {i}. {entry.get('headword', 'N/A')}")
+                        if "definition" in entry:
+                            defn = entry["definition"][:200]
+                            click.echo(f"     {defn}...")
+                elif "error" not in tool_data:
+                    # Show raw structure if not recognized
+                    click.echo(f"  (Raw data available - {len(str(tool_data))} chars)")
+            click.echo()
+
+        elif tool_name == "cltk" and isinstance(tool_data, dict):
+            if "lemma" in tool_data:
+                click.echo(f"  Lemma: {tool_data['lemma']}")
+            if "lewis_lines" in tool_data and tool_data["lewis_lines"]:
+                click.echo("  Lewis & Short:")
+                for line in tool_data["lewis_lines"][:3]:
+                    click.echo(f"    {line[:80]}...")
+            if "parsed_lewis" in tool_data:
+                click.echo(f"  (Parsed {len(tool_data['parsed_lewis'])} entries)")
+            click.echo()
+
+        elif tool_name == "heritage" and isinstance(tool_data, dict):
+            if "morphology" in tool_data:
+                click.echo("  Morphological Analysis:")
+                for analysis in tool_data["morphology"][:3]:
+                    if isinstance(analysis, dict):
+                        form = analysis.get("form", "N/A")
+                        analysis_text = analysis.get("analysis", "N/A")
+                        click.echo(f"    {form}: {analysis_text}")
+            elif "segmentations" in tool_data:
+                click.echo(f"  Segmentations: {len(tool_data['segmentations'])} found")
+            click.echo()
+
+        elif tool_name == "cdsl" and isinstance(tool_data, dict):
+            if "entries" in tool_data:
+                click.echo(f"  Dictionary Entries: {len(tool_data['entries'])} found")
+                for entry in tool_data["entries"][:2]:
+                    if isinstance(entry, dict) and "hw" in entry:
+                        click.echo(f"    {entry['hw']}: {entry.get('definition', 'N/A')[:60]}...")
+            click.echo()
+
+        else:
+            # Generic fallback for unknown structures
+            click.echo(f"  (Data available - {len(str(tool_data))} chars)")
+            click.echo()
+
+    # Footer
+    click.echo(click.style("━" * 60, fg="cyan"))
+    status_color = "green" if successful == total else "yellow"
+    click.echo(click.style(f"Sources: {successful}/{total} successful", fg=status_color))
+    click.echo()
+
+
+@main.command()
+@click.argument("language", type=click.Choice(["lat", "grc", "san"], case_sensitive=False))
+@click.argument("text")
+@click.option(
+    "--output",
+    type=click.Choice(["json", "pretty"]),
+    default="json",
+    show_default=True,
+    help="Output format.",
+)
+@click.option(
+    "--normalize/--no-normalize",
+    default=True,
+    show_default=True,
+    help="Normalize input before querying tools.",
+)
+@click.option(
+    "--diogenes-endpoint",
+    default="http://localhost:8888/Perseus.cgi",
+    show_default=True,
+    help="Diogenes parse endpoint (Perseus.cgi).",
+)
+@click.option(
+    "--heritage-base",
+    default="http://localhost:48080",
+    show_default=True,
+    help="Base URL for Heritage Platform.",
+)
+@click.option(
+    "--dict",
+    "dict_id",
+    default="mw",
+    show_default=True,
+    help="CDSL dictionary id (mw, ap90) for Sanskrit tools.",
+)
+@click.option(
+    "--db-path",
+    type=click.Path(),
+    help=(
+        "Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb)."
+    ),
+)
+@click.option(
+    "--no-cache",
+    is_flag=True,
+    help="Skip normalization cache lookups and writes for this invocation.",
+)
+def lookup(  # noqa: PLR0913, PLR0915, C901
+    language: str,
+    text: str,
+    output: str,
+    normalize: bool,
+    diogenes_endpoint: str,
+    heritage_base: str,
+    dict_id: str,
+    db_path: str | None,
+    no_cache: bool,
+):
+    """
+    Unified lookup across all available dictionary sources for a language.
+
+    Queries multiple tools in parallel for the given language:
+    - Latin (lat): Whitaker's Words, Diogenes (Lewis & Short), CLTK
+    - Greek (grc): Diogenes (LSJ)
+    - Sanskrit (san): Heritage Platform, CDSL
+
+    Returns aggregated results from all available sources.
+    """
+    # Map language to available tools
+    tool_map = {
+        "lat": ["whitakers", "diogenes", "cltk"],
+        "grc": ["diogenes"],
+        "san": ["heritage", "cdsl"],
+    }
+
+    tools = tool_map.get(language.lower(), [])
+    if not tools:
+        raise click.UsageError(f"No tools available for language '{language}'.")
+
+    # Set up normalization config
+    lang_hint = _parse_language(language)
+    norm_cfg = NormalizeConfig(
+        diogenes_endpoint=diogenes_endpoint,
+        heritage_base=heritage_base,
+        db_path=db_path,
+        no_cache=no_cache,
+        output="pretty",
+    )
+
+    # Normalize query word once for all tools
+    query_word = text
+    if normalize:
+        query_word = _normalize_word_for_tool(language, text, norm_cfg, use_cache=not no_cache)
+
+    # Aggregate results from all tools
+    results = {}
+
+    for tool in tools:
+        try:
+            if tool == "diogenes":
+                # Diogenes dictionary lookup
+                mapped_lang = "grk" if lang_hint == LanguageHint.LANGUAGE_HINT_GRC else language
+                url = _diogenes_query_url(diogenes_endpoint, mapped_lang, query_word)
+                resp = requests.get(url)
+                html = resp.text if resp.ok else ""
+                parsed = _parse_diogenes_html(html)
+                results[tool] = parsed
+
+            elif tool == "whitakers":
+                # Whitaker's Words
+                binary = find_whitaker_binary() or "whitakers-words"
+                proc = subprocess.run(
+                    [binary, query_word], check=False, capture_output=True, text=True
+                )
+                text_out = proc.stdout or ""
+                parsed = _parse_whitaker_output(text_out)
+                results[tool] = parsed
+
+            elif tool == "cltk":
+                # CLTK dictionary and morphology
+                client = get_cltk_fetch_client()
+                effect = client.execute(
+                    call_id=f"cltk-{query_word}",
+                    endpoint=f"cltk://ipa/{language}",
+                    params={"word": query_word, "language": language},
+                )
+                parsed = {}
+                try:
+                    parsed = orjson.loads(effect.body)
+                except Exception:
+                    parsed = {}
+
+                # Enrich with parsed Lewis & Short if available
+                parsed = enrich_cltk_with_parsed_lewis(parsed)
+                results[tool] = parsed
+
+            elif tool == "heritage":
+                # Sanskrit Heritage Platform
+                endpoint = f"{heritage_base.rstrip('/')}/cgi-bin/skt/sktreader"
+                vh_text = to_heritage_velthuis(query_word)
+                query_parts = [
+                    ("t", "VH"),
+                    ("lex", "SH"),
+                    ("font", "roma"),
+                    ("cache", "f"),
+                    ("st", "t"),
+                    ("us", "f"),
+                    ("best_mode", "b"),
+                    ("fmode", "w"),
+                    ("text", vh_text),
+                    ("topic", ""),
+                    ("abs", "f"),
+                    ("corpmode", ""),
+                    ("corpdir", ""),
+                    ("sentno", ""),
+                    ("mode", "p"),
+                    ("cpts", ""),
+                    ("rcpts", ""),
+                    ("max", "5"),
+                    ("orig", query_word),
+                ]
+                query_string = ";".join(f"{k}={v}" for k, v in query_parts)
+                params = {"__http_query": query_string}
+                fetch = HttpToolClient(tool="fetch.heritage").execute(
+                    call_id="heritage-1", endpoint=endpoint, params=params
+                )
+                ext_call = ToolCallSpec(
+                    tool="extract.heritage.html",
+                    call_id="heritage-parse-1",
+                    endpoint="internal://heritage/html_extract",
+                    params={"source_call_id": "heritage-1"},
+                )
+                extraction = heritage_handlers.extract_html(ext_call, fetch)
+                drv_call = ToolCallSpec(
+                    tool="derive.heritage.morph",
+                    call_id="heritage-derive-1",
+                    endpoint="internal://heritage/morph_derive",
+                    params={"source_call_id": ext_call.call_id},
+                )
+                derivation = heritage_handlers.derive_morph(drv_call, extraction)
+                results[tool] = derivation.payload
+
+            elif tool == "cdsl":
+                # CDSL Sanskrit dictionaries
+                fetch_client = cdsl_handlers.CdslFetchClient()
+                lemma = cdsl_handlers._to_slp1(query_word)  # type: ignore[attr-defined]
+                fetch = fetch_client.execute(
+                    call_id="cdsl-1",
+                    endpoint="duckdb",
+                    params={"lemma": lemma, "dict": dict_id},
+                )
+                ext_call = ToolCallSpec(
+                    tool="extract.cdsl.xml",
+                    call_id="cdsl-parse-1",
+                    endpoint="internal://cdsl/xml_extract",
+                    params={"source_call_id": "cdsl-1"},
+                )
+                extraction = cdsl_handlers.extract_xml(ext_call, fetch)
+                drv_call = ToolCallSpec(
+                    tool="derive.cdsl.sense",
+                    call_id="cdsl-derive-1",
+                    endpoint="internal://cdsl/sense_derive",
+                    params={"source_call_id": ext_call.call_id},
+                )
+                derivation = cdsl_handlers.derive_sense(drv_call, extraction)
+                results[tool] = derivation.payload
+
+        except Exception as e:
+            # Capture errors per tool but continue with others
+            results[tool] = {"error": str(e), "error_type": type(e).__name__}
+
+    # Output results
+    if output == "pretty":
+        _display_pretty(language, text, results)
+    else:
+        click.echo(orjson.dumps(results, option=orjson.OPT_INDENT_2).decode("utf-8"))
 
 
 if __name__ == "__main__":

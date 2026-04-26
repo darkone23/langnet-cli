@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import time
 import unicodedata
 from collections.abc import Mapping, Sequence
@@ -374,7 +375,12 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
             typed_senses.append(sense_obj)
     duration_ms = int((time.perf_counter() - start) * 1000)
     prov = [
-        ProvenanceLink(stage="extract", tool=extraction.tool, reference_id=extraction.extraction_id)
+        ProvenanceLink(
+            stage="extract",
+            tool=extraction.tool,
+            reference_id=extraction.extraction_id,
+            metadata={"response_id": extraction.response_id},
+        )
     ]
     return DerivationEffect(
         derivation_id=stable_effect_id("drv", call.call_id, extraction.extraction_id),
@@ -390,6 +396,65 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
     )
 
 
+def _trim_evidence(evidence: Mapping[str, object]) -> dict[str, object]:
+    return {k: v for k, v in evidence.items() if v is not None and v != ""}
+
+
+def _extract_response_id(provenance: list[ProvenanceLink] | None) -> str | None:
+    if not provenance:
+        return None
+    for link in provenance:
+        if link.stage == "extract" and link.metadata:
+            response_id = link.metadata.get("response_id")
+            if isinstance(response_id, str):
+                return response_id
+    return None
+
+
+def _make_base_evidence(
+    call: ToolCallSpec,
+    derivation: DerivationEffect,
+    claim_id: str,
+    source_ref: str | None = None,
+) -> dict[str, object]:
+    return _trim_evidence(
+        {
+            "source_tool": "cdsl",
+            "call_id": call.call_id,
+            "response_id": _extract_response_id(derivation.provenance_chain),
+            "extraction_id": derivation.extraction_id,
+            "derivation_id": derivation.derivation_id,
+            "claim_id": claim_id,
+            "source_ref": source_ref,
+            "raw_blob_ref": "raw_json",
+        }
+    )
+
+
+def _sense_anchor(lex_anchor: str, gloss: str, source_ref: str | None) -> str:
+    material = f"{source_ref or ''}:{gloss.strip()}"
+    digest = hashlib.sha256(material.encode("utf-8")).hexdigest()[:8]
+    return f"sense:{lex_anchor}#{digest}"
+
+
+def _make_triple(
+    subject: str,
+    predicate: str,
+    obj: object,
+    evidence: Mapping[str, object],
+    metadata: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    meta: dict[str, object] = {"evidence": _trim_evidence(dict(evidence))}
+    if metadata:
+        meta.update(dict(metadata))
+    return {
+        "subject": subject,
+        "predicate": predicate,
+        "object": obj,
+        "metadata": meta,
+    }
+
+
 @versioned("v1")
 def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect:
     """
@@ -402,6 +467,7 @@ def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
     payload = derivation.payload or {}
     payload_dict = cast(dict[str, object], payload) if isinstance(payload, Mapping) else {}
     sense_groups = payload_dict.get("lemmas") if payload_dict else None
+    claim_id = stable_effect_id("clm", call.call_id, derivation.derivation_id)
     triples: list[dict[str, object]] = []
     if isinstance(sense_groups, list):
         for group_raw in sense_groups:
@@ -421,25 +487,31 @@ def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
                 sense = cast(dict[str, object], sense_raw)
 
                 gloss_val = sense.get("gloss")
-                obj: dict[str, object] = {"gloss": gloss_val if isinstance(gloss_val, str) else ""}
+                gloss = gloss_val if isinstance(gloss_val, str) else ""
 
                 source_ref = sense.get("source_ref")
-                if source_ref:
-                    obj["source_ref"] = source_ref
+                source_ref_str = source_ref if isinstance(source_ref, str) else None
 
                 grammar = sense.get("grammar")
-                if grammar:
-                    obj["grammar"] = grammar
+                evidence = _make_base_evidence(call, derivation, claim_id, source_ref_str)
+                sense_anchor = _sense_anchor(subject, gloss, source_ref_str)
+                triples.append(_make_triple(subject, "has_sense", sense_anchor, evidence))
                 triples.append(
-                    {
-                        "subject": subject,
-                        "predicate": "has_sense",
-                        "object": obj,
-                    }
+                    _make_triple(
+                        sense_anchor,
+                        "gloss",
+                        gloss,
+                        evidence,
+                        {"source_ref": source_ref_str} if source_ref_str else None,
+                    )
                 )
+                if grammar:
+                    triples.append(
+                        _make_triple(sense_anchor, "has_feature", {"grammar": grammar}, evidence)
+                    )
     value = {"lemmas": sense_groups, "triples": triples}
     return ClaimEffect(
-        claim_id=stable_effect_id("clm", call.call_id, derivation.derivation_id),
+        claim_id=claim_id,
         tool=call.tool,
         call_id=call.call_id,
         source_call_id=call.params.get("source_call_id", ""),

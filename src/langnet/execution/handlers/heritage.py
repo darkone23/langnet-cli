@@ -353,7 +353,12 @@ def derive_morph(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
         analyses_as_dicts, cast(list[dict[str, object]], solutions_list)
     )
     prov = [
-        ProvenanceLink(stage="extract", tool=extraction.tool, reference_id=extraction.extraction_id)
+        ProvenanceLink(
+            stage="extract",
+            tool=extraction.tool,
+            reference_id=extraction.extraction_id,
+            metadata={"response_id": extraction.response_id},
+        )
     ]
     duration_ms = int((time.perf_counter() - start) * 1000)
     return DerivationEffect(
@@ -430,10 +435,53 @@ def _build_morphology_object(  # noqa: PLR0913
     return morph_obj
 
 
+def _trim_evidence(evidence: Mapping[str, object]) -> dict[str, object]:
+    return {k: v for k, v in evidence.items() if v is not None and v != ""}
+
+
+def _extract_response_id(provenance: list[ProvenanceLink] | None) -> str | None:
+    if not provenance:
+        return None
+    for link in provenance:
+        if link.stage == "extract" and link.metadata:
+            response_id = link.metadata.get("response_id")
+            if isinstance(response_id, str):
+                return response_id
+    return None
+
+
+def _make_base_evidence(
+    call: ToolCallSpec, derivation: DerivationEffect, claim_id: str
+) -> Mapping[str, object]:
+    return _trim_evidence(
+        {
+            "source_tool": "heritage",
+            "call_id": call.call_id,
+            "response_id": _extract_response_id(derivation.provenance_chain),
+            "extraction_id": derivation.extraction_id,
+            "derivation_id": derivation.derivation_id,
+            "claim_id": claim_id,
+            "raw_blob_ref": "raw_html",
+        }
+    )
+
+
+def _make_triple(
+    subject: str, predicate: str, obj: object, base_evidence: Mapping[str, object]
+) -> dict[str, object]:
+    return {
+        "subject": subject,
+        "predicate": predicate,
+        "object": obj,
+        "metadata": {"evidence": _trim_evidence(dict(base_evidence))},
+    }
+
+
 def _build_morphology_triples(
     analyses: Sequence[HeritageAnalysis],
     lemma: str,
     subject: str,
+    base_evidence: Mapping[str, object],
 ) -> list[dict[str, object]]:
     """Build morphology triples from Heritage analyses."""
     triples: list[dict[str, object]] = []
@@ -468,11 +516,12 @@ def _build_morphology_triples(
                 color_meaning,  # noqa: E501
             )
             triples.append(
-                {
-                    "subject": f"form:{word_slp1}" if word_slp1 else subject,
-                    "predicate": "has_morphology",
-                    "object": morph_obj,
-                }
+                _make_triple(
+                    f"form:{word_slp1}" if word_slp1 else subject,
+                    "has_morphology",
+                    morph_obj,
+                    base_evidence,
+                )
             )
     return triples
 
@@ -527,14 +576,16 @@ def claim_morph(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
         if isinstance(analyses_val, Sequence):
             analyses = cast(Sequence[HeritageAnalysis], analyses_val)
 
-    triples = _build_morphology_triples(analyses, lemma, subject)
+    claim_id = stable_effect_id("clm", call.call_id, derivation.derivation_id)
+    base_evidence = _make_base_evidence(call, derivation, claim_id)
+    triples = _build_morphology_triples(analyses, lemma, subject, base_evidence)
     payload_for_claim = (
         cast(Mapping[str, object], payload) if isinstance(payload, Mapping) else None
     )
     value = _build_claim_value(triples, payload_for_claim)
 
     return ClaimEffect(
-        claim_id=stable_effect_id("clm", call.call_id, derivation.derivation_id),
+        claim_id=claim_id,
         tool=call.tool,
         call_id=call.call_id,
         source_call_id=call.params.get("source_call_id", ""),

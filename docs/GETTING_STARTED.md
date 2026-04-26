@@ -1,90 +1,87 @@
-# Getting Started with Langnet CLI
+# Getting Started
 
-A command-line tool for querying classical language lexicons and morphological analysis.
+`langnet-cli` is a local CLI for classical-language lookup and morphology. The reliable interface today is the command line.
 
-## Quick Setup
+## Environment
 
 ```bash
-# Enter development environment (preferred)
+# Enter the project environment
 devenv shell langnet-cli
 
-# Or run a single command with the environment activated
-devenv shell just -- cli query lat lupus --output json
-
-# Check available backends (requires external services running)
-devenv shell just -- cli verify
-
-# Query words
-devenv shell just -- cli query lat lupus      # Latin
-devenv shell just -- cli query grc λόγος     # Greek  
-devenv shell just -- cli query san agni      # Sanskrit
+# Or run one command through just
+devenv shell just -- cli lookup lat lupus --output pretty
 ```
 
-## External Services Required
+Most project recipes already enter `devenv shell`, so from the repo root this is usually enough:
 
-| Service | Language | Purpose | Status |
-|---------|----------|---------|--------|
-| **Sanskrit Heritage Platform** | Sanskrit | Morphology + dictionary | Must be running at `localhost:48080` |
-| **Diogenes** | Greek/Latin | Lexicons (Lewis & Short, Liddell & Scott) | Must be running at `localhost:8888` |
-| **Whitaker's Words** | Latin | Morphological analysis | Binary in `~/.local/bin/whitakers-words` |
-
-These services are not bundled with the project; run them locally before using `langnet-cli verify` or making queries.
-
-## Commands
-
-### Basic Queries
 ```bash
-devenv shell just -- cli query lat lupus
-devenv shell just -- cli query grc ἄνθρωπος  
-devenv shell just -- cli query san dharma
+just cli --help
+just lint-all
+just test-fast
 ```
 
-To learn how to consume the JSON output (what fields to show learners first, where references and Foster functions live), see **[docs/OUTPUT_GUIDE.md](OUTPUT_GUIDE.md)**.
+## External Services
 
-### Health Checks
+Live lookup depends on local tools that are not bundled with the repo.
+
+| Tool | Languages | Requirement |
+| --- | --- | --- |
+| Diogenes | Latin, Greek | server at `localhost:8888` |
+| Whitaker's Words | Latin | binary at `~/.local/bin/whitakers-words` |
+| Sanskrit Heritage Platform | Sanskrit | server at `localhost:48080` |
+| CDSL DuckDB data | Sanskrit | built with `just cli-databuild ...` when needed |
+| CLTK data | Latin, Greek utilities | uses `CLTK_DATA` when set; otherwise prefers writable `~/cltk_data`, then `data/cache/cltk_data` |
+
+If a service is unavailable, `lookup` should return a per-tool error rather than hiding the failure.
+
+## Core Commands
+
 ```bash
-devenv shell just -- cli verify          # Check all backends
-devenv shell just -- cli health         # Alias for verify
+just cli lookup lat lupus --output pretty
+just cli lookup grc λόγος --output pretty
+just cli lookup san agni --output pretty
+
+just cli parse whitakers lat amarem --format json
+just cli parse diogenes lat lupus --format pretty
+
+just cli normalize san agni
+just cli plan lat lupus
+just cli plan-exec lat lupus
+just triples-dump lat lupus whitakers
 ```
 
-### API Usage
+## Command Reference
+
+| Command | Purpose |
+| --- | --- |
+| `lookup` | Backend-keyed word lookup for users and debugging. |
+| `parse` | Direct parser/debug entrypoint for one backend. |
+| `normalize` | Show canonical query normalization. |
+| `plan` | Build the tool-plan DAG without executing it. |
+| `plan-exec` | Run normalize → plan → fetch/extract/derive/claim. |
+| `triples-dump` | Print claim triples and evidence for inspection. |
+| `databuild` | Build local data/indexes. |
+| `index` | Inspect or manage storage indexes/caches. |
+
+Run `just cli COMMAND --help` for options.
+
+## Validation
+
 ```bash
-
-# Query via HTTP
-curl "http://localhost:8000/api/q?l=lat&s=lupus"
-curl -X POST "http://localhost:8000/api/q" -d "l=lat&s=lupus"
+just lint-all
+just test-fast
 ```
 
-### Indexer Tools (CTS URN)
+Use targeted tests during development:
+
 ```bash
-# Build citation index
-devenv shell just -- cli indexer build cts-urn --source /path/to/Classics-Data
-
-# Query citation index
-devenv shell just -- cli indexer query "Hom. Il." --language grc
+just test tests.test_whitakers_triples
+just test tests.test_cdsl_triples
 ```
 
-## Troubleshooting
+## Common Problems
 
-### Backend Services Not Found
-```bash
-devenv shell just -- cli verify  # Shows which services are unavailable
-
-# Sanskrit Heritage Platform
-curl http://localhost:48080/sktreader
-
-# Diogenes
-curl http://localhost:8888
-
-# Whitaker's Words
-~/.local/bin/whitakers-words lupus
-```
-
-### Common Issues
-- **CLTK downloading data**: First query may take ~5 minutes
-- **Process restart needed**: After code changes, restart API server with `just restart-server`
-- **External services missing**: Most queries depend on Heritage, Diogenes, and Whitaker's Words being available locally; `devenv shell just -- cli verify` reports which ones are missing.
-
-## Development
-
-See [DEVELOPER.md](DEVELOPER.md) for detailed setup and AI-assisted workflow.
+- **No backend data**: confirm Diogenes, Heritage, and Whitaker are installed/running.
+- **CLTK unavailable**: install required CLTK model data and ensure `CLTK_DATA` points to a writable directory.
+- **Stale server behavior**: restart long-running processes after code changes; Python modules are cached in running servers.
+- **Need provenance**: use `plan-exec` or `triples-dump`, not only `lookup --output pretty`.

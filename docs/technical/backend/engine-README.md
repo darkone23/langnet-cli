@@ -1,104 +1,29 @@
-# Language Engine
+# Runtime Engine Notes
 
-Orchestration layer that routes queries to appropriate backend lexicons and aggregates results.
+The old engine/HTTP path is not the current product contract. The active runtime is CLI-first and staged.
 
-## Purpose
+## Current Runtime
 
-The `LanguageEngine` is the core orchestrator:
-1. Receives validated (language, word) pairs
-2. Routes to available backends for that language
-3. Aggregates results into unified response
-4. Handles missing backends gracefully
+- Planner: `src/langnet/planner/core.py`
+- Executor: `src/langnet/execution/executor.py`
+- Effects: `src/langnet/execution/effects.py`
+- Handlers: `src/langnet/execution/handlers/`
+- CLI: `src/langnet/cli.py`
 
-## Architecture
+## Flow
 
-```
-LanguageEngine
-├── diogenes: DiogenesScraper  → Perseus lexicon (Greek/Latin)
-├── whitakers: WhitakersWords  → Latin morphology
-├── cltk: ClassicsToolkit      → CLTK Latin lexicon
-└── cdsl: SanskritCologneLexicon → Sanskrit dictionary
+```text
+normalize → plan → fetch → extract → derive → claim
 ```
 
-### Backend Selection by Language
+Use:
 
-| Language | diogenes | whitakers | CLTK | CDSL |
-|----------:|:--------:|:---------:|:----:|:----:|
-| Latin     | ✓        | ✓         | ✓    | -    |
-| Greek     | ✓        | -         | -    | -    |
-| Sanskrit  | -        | -         | ✓    | ✓    |
-
-## Query Flow
-
-```
-handle_query(lang: str, word: str)
-    ↓
-validate language via LangnetLanguageCodes.get_for_input()
-    ↓
-route by language:
-    ├─ Latin:   diogenes + whitakers + CLTK (parallel)
-    ├─ Greek:   diogenes only
-    └─ Sanskrit: CDSL (placeholder)
-    ↓
-aggregate results (model_dump → dict)
-    ↓
-return dict (JSON-serializable)
+```bash
+just cli plan lat lupus
+just cli plan-exec lat lupus
+just triples-dump lat lupus whitakers
 ```
 
-## Language Codes
+## API Note
 
-Uses ISO 639-3 codes internally:
-- `lat` - Latin
-- `grc` - Ancient Greek
-- `san` - Sanskrit
-
-These map to `ClassicsToolkit` language enums for CLTK compatibility.
-
-## Data Aggregation
-
-Results from multiple backends are merged:
-- Each backend returns its own dataclass model
-- Models are dumped to dicts with `exclude_none=True`
-- Dicts are combined into single response dict
-- Keys are backend names: `diogenes`, `whitakers`, `cltk`, `cdsl`
-
-## Integration Points
-
-### Input
-- `lang`: ISO 639-3 language code string
-- `word`: UTF-8 word to look up
-
-### Output
-Dict with backend-specific keys, e.g.:
-```python
-{
-    "diogenes": {...},      # DiogenesResultT
-    "whitakers": {...},     # WhitakersWordsResult
-    "cltk": {...},          # LatinQueryResult
-}
-```
-
-### Called By
-- `langnet/asgi.py` - ASGI request handler
-- Tests - Direct engine instantiation
-
-## Configuration
-
-Engine is instantiated via `LangnetWiring` (dependency injection):
-```python
-from langnet.core import build_langnet_wiring
-
-wiring = build_langnet_wiring()  # uses env-driven LangnetSettings
-engine = wiring.engine  # LanguageEngine instance
-```
-
-This ensures all backends are initialized consistently while allowing settings/factory overrides for tests and custom deployments.
-
-## Error Handling
-
-- `ValueError`: Invalid language code
-- `NotImplementedError`: Language without backend support
-
-## Grammar Abbreviations
-
-`GrammarAbbreviations.cassells_terms_` is a dictionary of Latin grammatical abbreviations (from Cassells 1854). Used for debugging output, not currently integrated into results.
+Some local setups may still run HTTP process-manager helpers. Do not document those as the canonical interface unless the repo grows a first-class supported API entrypoint again.

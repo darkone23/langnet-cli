@@ -62,6 +62,8 @@ class DiogenesLatinClientProtocol(Protocol):
 
 
 class DiogenesGreekClientProtocol(Protocol):
+    def fetch_parse(self, query: str, lang: str = "grc") -> ParseResult: ...
+
     def fetch_word_list(self, query: str) -> WordListResult: ...
 
 

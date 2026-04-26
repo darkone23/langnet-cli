@@ -6,6 +6,21 @@ Tests various word types, edge cases, and formats to assess robustness.
 
 from __future__ import annotations
 
+from typing import Any, TypedDict
+
+
+class FuzzResult(TypedDict):
+    entry: str
+    description: str
+    success: bool
+    parsed: Any
+
+
+class FuzzResults(TypedDict):
+    pass_count: int
+    fail_count: int
+    details: list[FuzzResult]
+
 
 def fuzz_diogenes_lewis_entries():
     """Test with diverse Lewis & Short entries."""
@@ -52,19 +67,19 @@ def fuzz_diogenes_lewis_entries():
         ("amo, amare, amavi, amatum, v. I. to love II. to like", "Verb with senses"),
     ]
 
-    results: dict[str, int | list] = {"pass": 0, "fail": 0, "details": []}
+    results = FuzzResults(pass_count=0, fail_count=0, details=[])
 
     for entry, description in test_cases:
         parsed = parser.parse_safe(entry)
         success = parsed is not None
 
         if success and parsed is not None:
-            results["pass"] += 1  # type: ignore[operator]
+            results["pass_count"] += 1
             header = parsed["header"]
             parts = ", ".join(header.get("principal_parts", []))
             status = f"✓ {header['lemma']:15} parts={parts[:30]:30}"
         else:
-            results["fail"] += 1  # type: ignore[operator]
+            results["fail_count"] += 1
             status = "✗ FAILED"
 
         results["details"].append(
@@ -75,8 +90,8 @@ def fuzz_diogenes_lewis_entries():
 
     print(f"\n{'=' * 80}")
     print(
-        f"RESULTS: {results['pass']}/{len(test_cases)} passed "
-        f"({results['pass'] / len(test_cases) * 100:.1f}%)"  # type: ignore[operator]
+        f"RESULTS: {results['pass_count']}/{len(test_cases)} passed "
+        f"({results['pass_count'] / len(test_cases) * 100:.1f}%)"
     )
     print(f"{'=' * 80}\n")
 

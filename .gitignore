@@ -30,6 +30,8 @@ __pycache__
 tmp/
 
 playing_with_aisuite/
+.codex
+*.lock
 
 ruff-todo/
 vendor/

@@ -245,6 +245,8 @@ def _cli_tool_request(target: FuzzTarget) -> dict:
         target.word,
         "--no-cache",
         "--normalize",
+        "--format",
+        "json",
     ]
     stdout = _run_cmd(cmd)
     return json.loads(stdout) if stdout else {}

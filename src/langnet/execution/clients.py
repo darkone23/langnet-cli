@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 import shutil
 import time
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 from langnet.clients.base import RawResponseEffect, _new_response_id
@@ -52,6 +54,7 @@ class CLTKFetchClient:
 
     def __init__(self) -> None:
         self.tool = "fetch.cltk"
+        _ensure_cltk_data_dir()
         from cltk.lemmatize.lat import LatinBackoffLemmatizer  # noqa: PLC0415
         from cltk.lexicon.lat import LatinLewisLexicon  # noqa: PLC0415
         from cltk.phonology.lat.transcription import Transcriber  # noqa: PLC0415
@@ -130,6 +133,26 @@ class CLTKFetchClient:
             body=orjson.dumps(payload),
             fetch_duration_ms=duration_ms,
         )
+
+
+def _ensure_cltk_data_dir() -> None:
+    """
+    Ensure CLTK has a writable data/log directory before importing it.
+
+    CLTK defaults to `~/cltk_data` and opens `cltk.log` at import time. In
+    sandboxed/dev environments `$HOME` may be read-only. Prefer an existing
+    writable `~/cltk_data` because it may already contain model data; otherwise
+    default to a project-local cache directory unless the user explicitly set
+    `CLTK_DATA`.
+    """
+    if "CLTK_DATA" in os.environ:
+        return
+    default_path = Path.home() / "cltk_data"
+    if default_path.is_dir() and os.access(default_path, os.W_OK):
+        return
+    path = Path("data/cache/cltk_data")
+    path.mkdir(parents=True, exist_ok=True)
+    os.environ["CLTK_DATA"] = str(path.resolve())
 
 
 _CLTK_CLIENT_SINGLETON: CLTKFetchClient | None = None

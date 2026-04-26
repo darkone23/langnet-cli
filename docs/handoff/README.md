@@ -1,11 +1,9 @@
-# Handoff Docs Map
+# Handoff Notes
 
-Use these canonical handoffs instead of older per-task notes:
+Active handoff notes should be short-lived. If they remain useful after the task is complete, move them into one of:
 
-- Executor + triples status and next steps: `docs/handoff/tool-execution-and-triples.md`
+- `docs/plans/completed/`
+- `docs/archive/`
+- a permanent reference document under `docs/technical/`
 
-Related active plans/designs:
-- Pipeline stages: `docs/technical/design/tool-response-pipeline.md`
-- Triple/anchor rules: `docs/technical/triples_txt.md`
-- Triple projection + evidence model: `docs/technical/semantic_triples.md`
-- Active plan for fact/triple emission: `docs/plans/active/tool-fact-indexing.md`
+Historical handoffs from earlier sessions were archived under `docs/archive/2026-04-cleanup/handoff/`.

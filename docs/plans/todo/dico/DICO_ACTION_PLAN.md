@@ -1,20 +1,29 @@
-# DICO Action Plan
+# DICO Integration Plan
 
-**Goal:** deliver a usable Sanskrit→French/English DICO lookup that plugs into the existing Heritage and DuckDB tooling without adding new model dependencies until data quality is verified.
+**Status:** ⏳ TODO  
+**Feature Area:** dico  
+**Owner Roles:** @architect for scope, @coder for implementation
 
-## Workstream checkpoints
-- **Index import (P0):** extract DICO entries via Heritage (`lex=DICO`) into DuckDB with normalized encodings (Devanagari, IAST, SLP1) and stable IDs. Verify with a 50–100 entry spot check.
-- **Lookup API (P0):** expose a `dico` tool in the adapter registry that mirrors other backends (`lookup`, `search`) and returns consistent schema (headword, senses, references, source_language).
-- **Quality gates (P1):** add fuzz snapshots for 10 representative entries (verbs, compounds, sandhi cases) under `examples/debug/fuzz_results` and a regression test that asserts the schema shape (no optional fields missing).
-- **Translation path (P2):** add an offline pipeline to translate `french_definition` → English using an allowed model (see `.opencode/opencode.json`), with manual review before shipping.
-- **Pedagogy surfacing (P2):** enrich entries with Foster-style functional labels where the DICO metadata allows it; otherwise keep the raw grammatical hints in `metadata.notes`.
+## Goal
 
-## Done criteria
-- `langnet-cli query san <word> --backend dico` returns structured definitions with source info and passes the schema regression test.
-- DuckDB index load documented (inputs, commands, expected row count).
-- Fuzz snapshots added and reviewed.
+Add bilingual dictionary evidence only after the claim/evidence contract and semantic reduction MVP are stable.
 
-## Owners / mentions
-- @coder for adapter + schema work
-- @sleuth for regression tests + fuzz harness expansion
-- @scribe for the DuckDB load/usage documentation
+## Intended Value
+
+DICO-style bilingual data can improve learner-facing glosses and cross-language sense grouping, especially for Sanskrit and classical-language dictionary entries with French or English glosses.
+
+## Dependencies
+
+- Stable claim predicates.
+- Claim-to-WSU extraction.
+- Sense bucket output that can accept additional witnesses.
+
+## Non-Goals For Now
+
+- Adding another backend before semantic reduction exists.
+- Mixing translated glosses into source claims without provenance.
+- Hiding whether a gloss is original, translated, or generated.
+
+## First Task
+
+Draft a fixture showing one original gloss, one translated gloss, and the provenance/evidence fields needed to keep them separate.

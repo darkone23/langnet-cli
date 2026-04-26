@@ -1,151 +1,126 @@
 # Output Guide
 
-This guide shows how to read the JSON returned by `langnet-cli query` and the `/api/q` endpoint. Outputs follow the dataclasses in `src/langnet/schema.py` and are designed to stay stable as we harden the Schema v1 contract.
+LangNet currently exposes two useful output layers:
 
-## Top-Level Shape
+1. **Backend lookup output** from `lookup`.
+2. **Evidence-backed claim/triple output** from `plan-exec` and `triples-dump`.
 
-- CLI/API responses are **lists of dictionary entries** (one per backend that responded).
-- Each entry is a `DictionaryEntry` object with the fields below.
-- Some backends (e.g., Diogenes) also include raw dictionary blocks for transparency.
+The learner-facing semantic layer is planned but not implemented yet.
 
-```json
-[
-  {
-    "word": "lupus",
-    "language": "lat",
-    "source": "whitakers",
-    "definitions": [
-      {
-        "definition": "wolf",
-        "pos": "noun",
-        "gender": "m",
-        "examples": [],
-        "citations": [],
-        "metadata": {
-          "decl": "2nd",
-          "variant": null
-        },
-        "source_ref": null,
-        "domains": [],
-        "register": [],
-        "confidence": null
-      }
-    ],
-    "morphology": {
-      "lemma": "lupus",
-      "pos": "noun",
-      "features": {
-        "case": "nom",
-        "number": "sing",
-        "gender": "m"
-      },
-      "foster_codes": ["NAM"],
-      "declension": "2nd",
-      "conjugation": null,
-      "stem_type": null,
-      "tense": null,
-      "mood": null,
-      "voice": null,
-      "person": null
-    },
-    "dictionary_blocks": [],
-    "metadata": {}
-  }
-]
+## `lookup`
+
+`lookup` is useful for quick inspection. Its JSON is backend-keyed.
+
+```bash
+just cli lookup lat lupus --output json
 ```
 
-Field notes:
-- `definitions[]` list dictionary senses. `source_ref` holds a stable entry ID when available (e.g., `mw:217497`).
-- `morphology` summarizes POS and features; `foster_codes` contain functional grammar labels when present.
-- `dictionary_blocks[]` appears for Diogenes responses and mirrors the raw entry text and citation metadata.
-- `metadata` is backend-specific and may include timings or extra flags; avoid depending on its keys without checking.
+Typical shape:
 
-## Interpreting Multiple Backends
-
-Queries may return several entries for the same word (e.g., Heritage + CDSL for Sanskrit, Diogenes + Whitaker’s for Latin). Present them separately to learners unless you deliberately merge them in a reduction pipeline.
-
-## Sample Outputs (trimmed)
-
-These are representative examples to illustrate shape and ordering; values will differ by environment and backend availability.
-
-### Latin (`whitakers`, `diogenes`)
 ```json
-[
-  {
-    "word": "lupus",
-    "language": "lat",
-    "source": "whitakers",
-    "definitions": [{"definition": "wolf", "pos": "noun", "gender": "m", "citations": [], "source_ref": null}],
-    "morphology": {"lemma": "lupus", "pos": "noun", "features": {"case": "nom", "number": "sing", "gender": "m"}, "foster_codes": ["NAM"]},
-    "dictionary_blocks": []
-  },
-  {
-    "word": "lupus",
-    "language": "lat",
-    "source": "diogenes",
-    "definitions": [],
-    "dictionary_blocks": [{"entryid": "00", "entry": "lupus, i, m. a wolf ..."}]
-  }
-]
+{
+  "whitakers": [...],
+  "diogenes": {...},
+  "cltk": {...}
+}
 ```
 
-### Greek (`diogenes`, CLTK morphology)
-```json
-[
-  {
-    "word": "λογος",
-    "language": "grc",
-    "source": "diogenes",
-    "definitions": [],
-    "dictionary_blocks": [{"entryid": "00", "entry": "λογος, ου, ὁ, computation, reckoning; ..."}]
-  },
-  {
-    "word": "λογος",
-    "language": "grc",
-    "source": "cltk",
-    "morphology": {"lemma": "λογος", "pos": "noun", "features": {"case": "nom", "number": "sing", "gender": "m"}}
-  }
-]
+`lookup --output pretty` is a terminal summary. It is intentionally compact and should not be treated as the final semantic schema.
+
+## `plan-exec`
+
+`plan-exec` runs the staged runtime:
+
+```text
+normalize → plan → fetch → extract → derive → claim
 ```
 
-### Sanskrit (`heritage`, `cdsl`)
-```json
-[
-  {
-    "word": "agni",
-    "language": "san",
-    "source": "heritage",
-    "definitions": [{"definition": "fire; Agni (deity)", "pos": "noun", "citations": [], "source_ref": null}],
-    "morphology": {"lemma": "agni", "pos": "noun", "features": {"case": "nom", "number": "sing", "gender": "m"}}
-  },
-  {
-    "word": "agni",
-    "language": "san",
-    "source": "cdsl",
-    "definitions": [{"definition": "fire; sacrificial fire", "pos": "noun", "source_ref": "mw:217497"}],
-    "dictionary_blocks": []
-  }
-]
+Use it when you need to know which tools were selected and what claim effects were produced.
+
+```bash
+just cli plan-exec lat lupus --output json
 ```
 
-## Display Rules (recommended)
-- Keep entries separate per `source`; do not silently merge fields from different backends.
-- Show `definitions` first, then `morphology`, then any `dictionary_blocks`/citations.
-- If `foster_codes` exist, render them alongside morphology with human-friendly labels.
-- Preserve `source_ref` when present; treat it as a stable reference for sense-level provenance.
-- Do not assume `metadata` keys; guard access or surface them only for debugging.
+## `triples-dump`
 
-## Inspecting Raw Evidence
+`triples-dump` is the best current evidence-inspection command.
 
-To see backend output before adaptation:
-- `devenv shell just -- cli tool diogenes search --lang lat --query lupus --output pretty`
-- `devenv shell just -- cli tool heritage morphology --query agni --output pretty`
+```bash
+just triples-dump lat lupus whitakers
+just triples-dump san agni cdsl
+```
 
-Use these when debugging schema mismatches or adapter changes.
+Use the third argument to narrow the tool family. Examples:
 
-## Future Additions
+- `whitakers`
+- `diogenes`
+- `cdsl`
+- `all`
 
-Semantic reduction (sense clustering and constants) and explicit epistemic modes (`open`, `skeptic`) are still in planning. When they land, this guide will add:
-- Stable IDs for sense buckets/constants
-- Expected ordering for learner-facing displays
-- Links/citations surface rules
+Triples use this shape:
+
+```json
+{
+  "subject": "lex:lupus#noun",
+  "predicate": "has_sense",
+  "object": "sense:lex:lupus#noun#...",
+  "metadata": {
+    "evidence": {
+      "source_tool": "whitaker",
+      "call_id": "...",
+      "response_id": "...",
+      "extraction_id": "...",
+      "derivation_id": "...",
+      "claim_id": "...",
+      "raw_blob_ref": "raw_text"
+    }
+  }
+}
+```
+
+## Reading Triples
+
+| Anchor | Meaning |
+| --- | --- |
+| `form:<surface>` | observed input or inflected surface form |
+| `interp:...` | one scoped interpretation of a form |
+| `lex:<lemma>` | normalized lexical item |
+| `sense:<lex>#...` | source-backed sense node |
+
+Common predicates:
+
+- `has_interpretation`
+- `realizes_lexeme`
+- `has_sense`
+- `gloss`
+- `has_citation`
+- `has_morphology`
+- `has_pos`, `has_case`, `has_number`, `has_gender`, `has_tense`, `has_voice`, `has_mood`
+- `has_feature` for tool-specific details
+
+The canonical predicate/evidence reference is `docs/technical/predicates_evidence.md`.
+
+## Evidence Fields
+
+| Field | Meaning |
+| --- | --- |
+| `source_tool` | backend or source family that produced the assertion |
+| `call_id` | planned tool call that led to the claim |
+| `response_id` | raw response used by extraction, when available |
+| `extraction_id` | structured extraction effect |
+| `derivation_id` | normalized derivation effect |
+| `claim_id` | claim projection that emitted the triple |
+| `source_ref` | stable dictionary/source entry reference, when available |
+| `raw_blob_ref` | raw payload field such as `raw_text`, `raw_html`, or `raw_json` |
+
+## Display Policy
+
+Future learner-facing output should order information this way:
+
+1. Headword/form.
+2. Grouped meanings.
+3. Morphology.
+4. Citations and source evidence.
+5. Source disagreements or caveats.
+
+Until semantic reduction exists, backend-keyed output remains the honest representation.

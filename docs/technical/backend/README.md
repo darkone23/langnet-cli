@@ -1,15 +1,21 @@
-# Backend Documentation
+# Backend Notes
 
-Backend-specific technical references for langnet-cli. These files cover the language engine and each upstream backend. Status is included to clarify whether they are reference-only or still evolving.
+Backend documents describe external tools and local adapters. They are operational references, not product contracts.
 
-## Files
-- **engine-README.md** — Core language processing engine overview (reference).
-- **diogenes-README.md** — Diogenes/Perseus integration details (reference; revisit if Diogenes APIs change).
-- **cologne-README.md** — Cologne Digital Sanskrit Dictionary interface and tooling (reference).
-- **whitakers-words-README.md** — Whitaker's Words parser and helpers (reference).
-- **tool-capabilities.md** — What each backend is trusted for and expected to emit as claims/witnesses (planned).
-- **abbr-latin.md** — Latin grammar abbreviation map (Cassell-derived) for parsing/normalization.
+## Current Backends
 
-## Notes
-- Adapter split and universal schema are now stable; extend adapters directly in `src/langnet/adapters/` and keep tests/fuzz in sync.
-- When altering backend behavior, update the relevant README here and run `just test` (full) plus `just fuzz-query` with the server running.
+- `diogenes-README.md` — Greek/Latin dictionary HTML from Diogenes.
+- `whitakers-words-README.md` — Latin morphology and senses.
+- `cologne-README.md` — CDSL/Sanskrit dictionary data.
+- `engine-README.md` — current runtime wiring notes.
+- `tool-capabilities.md` — rough capability matrix.
+
+## Runtime Boundary
+
+Backends feed the staged pipeline:
+
+```text
+fetch → extract → derive → claim
+```
+
+Do not build new feature logic directly against backend payloads if it can consume claims/triples instead.

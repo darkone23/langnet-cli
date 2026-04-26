@@ -1,21 +1,20 @@
-# Component Documentation
+# Technical Documentation
 
-This directory contains technical references for the core system and its backends.
+Use this directory for implementation-facing references.
 
-## What Lives Here
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — End-to-end system view and API notes.
-- **[backend/](backend/README.md)** — Engine, Diogenes, Cologne/CDSL, and Whitaker’s Words specifics.
-- **[design/](design/)** — Semantic reduction design notes and drafts.
-- **[opencode/](opencode/)** — Multi-model AI workflow guidance.
-- **[predicates_evidence.md](predicates_evidence.md)** — Canonical predicates/anchors/evidence schema for triples/claims (JSON export: `predicates_evidence.json`).
+## Current References
 
-## When to Read What
-- Start with **ARCHITECTURE.md** to understand the request flow and schema boundaries.
-- Use the **backend** README files when changing adapter behavior or adding features.
-- Check **opencode** when routing tasks to personas (@architect, @coder, etc.).
+- `ARCHITECTURE.md` — current CLI/runtime architecture.
+- `predicates_evidence.md` — canonical claim/triple predicates and evidence fields.
+- `semantic_triples.md` — graph-model notes for claims and downstream reduction.
+- `triples_txt.md` — older but still useful explanation of scoped interpretations.
+- `backend/` — backend-specific operational notes.
+- `design/` — design notes for planning, witnesses, semantic reduction, and hydration.
+- `opencode/` — AI/persona workflow notes.
 
-## Maintenance Notes
-- Update the relevant backend README when interface or normalization rules change.
-- Keep examples in sync with `src/langnet/schema.py` to avoid drift in output expectations.
-- If you add a new component, create a short README here and link it from `backend/README.md`.
-- Keep handlers/tests aligned to `predicates_evidence.md` to avoid schema/memoization drift.
+## Maintenance Rules
+
+- Keep `ARCHITECTURE.md` aligned with code that exists now.
+- Keep speculative designs under `design/`.
+- Keep historical implementation reports in `docs/archive/`, not here.
+- When predicates or evidence fields change, update `predicates_evidence.md` and the related tests.

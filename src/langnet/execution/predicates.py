@@ -206,6 +206,13 @@ Example: lex:amo → has_conjugation → "1"
 Values: "1", "2", "3", "3io", "4", "irregular"
 """
 
+HAS_MORPHOLOGY = "has_morphology"
+"""Structured morphology object from a source analyzer.
+
+Example: form:agni → has_morphology → {"case": "nominative", "number": "singular"}
+Scope: form: anchors when the morphology belongs to a specific surface form.
+"""
+
 # =============================================================================
 # ESCAPE HATCH
 # =============================================================================
@@ -230,6 +237,7 @@ FORM_PREDICATES = {
     HAS_FORM,
     HAS_INTERPRETATION,
     INFLECTION_OF,  # Direct link (discouraged, use has_interpretation instead)
+    HAS_MORPHOLOGY,
 }
 """Predicates valid for form: anchors."""
 

@@ -20,6 +20,16 @@ from langnet.storage.extraction_index import ExtractionIndex
 from langnet.storage.paths import normalization_db_path
 from langnet.storage.plan_index import PlanResponseIndex, apply_schema
 
+USAGE = """Usage: triples_dump.py LANG WORD [TOOL] [--normalize|--no-normalize]
+
+Build a ToolPlan for a word and dump claims/triples.
+
+Arguments:
+  LANG  Language code: lat, grc, or san
+  WORD  Word to query
+  TOOL  Optional tool filter; use "all" for every planned tool
+"""
+
 
 def _parse_language(lang: str) -> LanguageHint.ValueType:
     lang_l = lang.lower()
@@ -236,6 +246,9 @@ def run(lang_code: str, word: str, tool_filter: str, use_normalizer: bool = True
 
 
 if __name__ == "__main__":
+    if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+        print(USAGE)
+        raise SystemExit(0)
     lang = sys.argv[1] if len(sys.argv) > 1 else "lat"
     word = sys.argv[2] if len(sys.argv) > 2 else "lupus"  # noqa: PLR2004
     tool = sys.argv[3] if len(sys.argv) > 3 else "all"  # noqa: PLR2004

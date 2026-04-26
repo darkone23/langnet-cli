@@ -1,0 +1,203 @@
+{
+  "description": "Service-free claim triples for Latin 'lupus' semantic-reduction fixtures.",
+  "word": "lupus",
+  "language": "lat",
+  "purpose": "Validate Witness Sense Unit extraction and deterministic clustering inputs.",
+  "clustering_expectations": {
+    "same_bucket": ["wolf", "wild dog"],
+    "separate_bucket": ["pike"]
+  },
+  "claims": [
+    {
+      "claim_id": "claim-whitaker-lupus-001",
+      "tool": "claim.whitakers",
+      "call_id": "call-whitaker-001",
+      "derivation_id": "deriv-whitaker-001",
+      "subject": "lex:lupus#noun",
+      "predicate": "has_sense",
+      "provenance_chain": [
+        {
+          "stage": "extract",
+          "tool": "extract.whitakers.lines",
+          "reference_id": "extract-whitaker-001",
+          "metadata": {
+            "response_id": "resp-whitaker-001"
+          }
+        },
+        {
+          "stage": "derive",
+          "tool": "derive.whitakers.facts",
+          "reference_id": "deriv-whitaker-001"
+        }
+      ],
+      "value": {
+        "triples": [
+          {
+            "subject": "lex:lupus#noun",
+            "predicate": "has_sense",
+            "object": "sense:lex:lupus#noun#whitaker-wolf",
+            "metadata": {
+              "evidence": {
+                "source_tool": "whitaker",
+                "call_id": "call-whitaker-001",
+                "response_id": "resp-whitaker-001",
+                "extraction_id": "extract-whitaker-001",
+                "derivation_id": "deriv-whitaker-001",
+                "claim_id": "claim-whitaker-lupus-001",
+                "raw_blob_ref": "raw_text"
+              }
+            }
+          },
+          {
+            "subject": "sense:lex:lupus#noun#whitaker-wolf",
+            "predicate": "gloss",
+            "object": "wolf",
+            "metadata": {
+              "source_ref": "whitaker:lupus:1",
+              "evidence": {
+                "source_tool": "whitaker",
+                "call_id": "call-whitaker-001",
+                "response_id": "resp-whitaker-001",
+                "extraction_id": "extract-whitaker-001",
+                "derivation_id": "deriv-whitaker-001",
+                "claim_id": "claim-whitaker-lupus-001",
+                "raw_blob_ref": "raw_text",
+                "source_ref": "whitaker:lupus:1"
+              }
+            }
+          },
+          {
+            "subject": "lex:lupus#noun",
+            "predicate": "has_sense",
+            "object": "sense:lex:lupus#noun#whitaker-pike",
+            "metadata": {
+              "evidence": {
+                "source_tool": "whitaker",
+                "call_id": "call-whitaker-001",
+                "response_id": "resp-whitaker-001",
+                "extraction_id": "extract-whitaker-001",
+                "derivation_id": "deriv-whitaker-001",
+                "claim_id": "claim-whitaker-lupus-001",
+                "raw_blob_ref": "raw_text"
+              }
+            }
+          },
+          {
+            "subject": "sense:lex:lupus#noun#whitaker-pike",
+            "predicate": "gloss",
+            "object": "pike",
+            "metadata": {
+              "source_ref": "whitaker:lupus:2",
+              "note": "Different sense: fish.",
+              "evidence": {
+                "source_tool": "whitaker",
+                "call_id": "call-whitaker-001",
+                "response_id": "resp-whitaker-001",
+                "extraction_id": "extract-whitaker-001",
+                "derivation_id": "deriv-whitaker-001",
+                "claim_id": "claim-whitaker-lupus-001",
+                "raw_blob_ref": "raw_text",
+                "source_ref": "whitaker:lupus:2"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "claim_id": "claim-diogenes-lupus-002",
+      "tool": "claim.diogenes.morph",
+      "call_id": "call-diogenes-002",
+      "derivation_id": "deriv-diogenes-002",
+      "subject": "lex:lupus#noun",
+      "predicate": "has_sense",
+      "provenance_chain": [
+        {
+          "stage": "extract",
+          "tool": "extract.diogenes.html",
+          "reference_id": "extract-diogenes-002",
+          "metadata": {
+            "response_id": "resp-diogenes-002"
+          }
+        },
+        {
+          "stage": "derive",
+          "tool": "derive.diogenes.morph",
+          "reference_id": "deriv-diogenes-002"
+        }
+      ],
+      "value": {
+        "triples": [
+          {
+            "subject": "lex:lupus#noun",
+            "predicate": "has_sense",
+            "object": "sense:lex:lupus#noun#diogenes-wolf",
+            "metadata": {
+              "evidence": {
+                "source_tool": "diogenes",
+                "call_id": "call-diogenes-002",
+                "response_id": "resp-diogenes-002",
+                "extraction_id": "extract-diogenes-002",
+                "derivation_id": "deriv-diogenes-002",
+                "claim_id": "claim-diogenes-lupus-002",
+                "raw_blob_ref": "raw_html"
+              }
+            }
+          },
+          {
+            "subject": "sense:lex:lupus#noun#diogenes-wolf",
+            "predicate": "gloss",
+            "object": "wolf",
+            "metadata": {
+              "source_ref": "diogenes:lupus:1",
+              "evidence": {
+                "source_tool": "diogenes",
+                "call_id": "call-diogenes-002",
+                "response_id": "resp-diogenes-002",
+                "extraction_id": "extract-diogenes-002",
+                "derivation_id": "deriv-diogenes-002",
+                "claim_id": "claim-diogenes-lupus-002",
+                "raw_blob_ref": "raw_html",
+                "source_ref": "diogenes:lupus:1"
+              }
+            }
+          },
+          {
+            "subject": "lex:lupus#noun",
+            "predicate": "has_sense",
+            "object": "sense:lex:lupus#noun#diogenes-wild-dog",
+            "metadata": {
+              "evidence": {
+                "source_tool": "diogenes",
+                "call_id": "call-diogenes-002",
+                "response_id": "resp-diogenes-002",
+                "extraction_id": "extract-diogenes-002",
+                "derivation_id": "deriv-diogenes-002",
+                "claim_id": "claim-diogenes-lupus-002",
+                "raw_blob_ref": "raw_html"
+              }
+            }
+          },
+          {
+            "subject": "sense:lex:lupus#noun#diogenes-wild-dog",
+            "predicate": "gloss",
+            "object": "wild dog",
+            "metadata": {
+              "source_ref": "diogenes:lupus:2",
+              "evidence": {
+                "source_tool": "diogenes",
+                "call_id": "call-diogenes-002",
+                "response_id": "resp-diogenes-002",
+                "extraction_id": "extract-diogenes-002",
+                "derivation_id": "deriv-diogenes-002",
+                "claim_id": "claim-diogenes-lupus-002",
+                "raw_blob_ref": "raw_html",
+                "source_ref": "diogenes:lupus:2"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

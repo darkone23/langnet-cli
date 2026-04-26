@@ -1,28 +1,46 @@
-# Project Plans Overview
+# Plans
 
-Plans are organized by lifecycle and feature area. Use the structure below when adding or moving plans:
+Plans are for work management, not permanent reference. Keep this directory small and current.
 
-```
+## Structure
+
+```text
 docs/plans/
-├── active/
-│   └── <feature-area>/   # skt, whitakers, dico, pedagogy, infra, semantic-reduction, etc.
-└── todo/
-    └── <feature-area>/
+├── active/      # work currently being driven
+├── todo/        # scoped future work
+└── completed/   # completed plans and handoff records
 ```
 
-## Lifecycle Categories
-- **active/** — In progress or being implemented.
-- **todo/** — Ideas and scoped work that has not started.
+Feature areas should be subdirectories such as `infra`, `skt`, `pedagogy`, `dico`, or `semantic-reduction`.
 
-## Maintenance Guidelines
-1. Place new plans under the correct feature area directory (e.g., `active/skt/` for Heritage/CLTK/Sanskrit work).
-2. Avoid duplicates; each plan should appear in only one lifecycle directory.
-3. Add status markers inside the file (`🔄 IN PROGRESS`, `⏳ PENDING`) and keep them accurate.
-4. If a plan is paused, move it back to `todo/` and note the blockers.
+## Current Canonical Plan
 
-## Clean-Up Notes
-- Semantic reduction plans are grouped under `active/semantic-reduction/` and `todo/semantic-reduction/`.
-- `active/skt/` is currently empty; use it for Heritage/CDSL improvements instead of creating new top-level files.
+- `docs/plans/active/infra/design-to-runtime-roadmap.md`
 
-## Related Documentation
-- **[docs/DEVELOPER.md](../DEVELOPER.md)** — Development workflow and AI integration
+This is the active implementation roadmap. Avoid creating parallel master plans unless that document is first updated or split deliberately.
+
+## Junior Work
+
+- `docs/plans/todo/infra/junior-task-backlog.md`
+
+Tasks there should be small, explicit, service-free where possible, and independently testable.
+
+## Archival Rule
+
+Move stale plans to `docs/archive/` rather than leaving them under `active/` or `todo/`.
+
+A stale plan is one that:
+
+- describes foundation work already implemented
+- has old test counts or old command names
+- duplicates the canonical roadmap
+- depends on an architecture that no longer exists
+
+## Status Markers
+
+Use simple markers:
+
+- `🔄 ACTIVE`
+- `⏳ TODO`
+- `✅ DONE`
+- `🧊 ARCHIVED`

@@ -1,25 +1,37 @@
-# Langnet CLI Documentation Index
+# LangNet Documentation
 
-The canonical entry point is `README.md` at the repo root. This file is only an index to the most useful documents—prefer these links over duplicating content.
+This directory is the working documentation set for `langnet-cli`.
 
-## Getting Started
-- **New users**: `docs/GETTING_STARTED.md`
-- **Output shape**: `docs/OUTPUT_GUIDE.md`
+## Start Here
 
-## Development
-- **Developers**: `docs/DEVELOPER.md`, `docs/technical/ARCHITECTURE.md`
-- **Handler Development**: `docs/handler-development-guide.md` - Creating extract/derive/claim handlers
-- **Storage Schema**: `docs/storage-schema.md` - Database schema and cache architecture
-- **Performance**: `docs/performance-benchmarks.md` - Baseline metrics and optimization
-- **Justfile Recipes**: `docs/justfile-audit.md` - Command reference and audit
-- **AI workflow**: `AGENTS.md`, `docs/technical/opencode/`
+- `docs/PROJECT_STATUS.md` — current health card, risks, and next decisions.
+- `docs/GETTING_STARTED.md` — setup, service requirements, and first commands.
+- `docs/ROADMAP.md` — canonical implementation sequence.
+- `docs/GOALS.md` — product philosophy and long-term educational direction.
+- `docs/JUST_RECIPE_HEALTH.md` — current recipe wiring and fuzz-harness findings.
+- `docs/SEMANTIC_READINESS.md` — gaps before semantic reduction is safe to implement.
 
-## Planning & Roadmap
-- **Plans**: `docs/plans/active/`, `docs/plans/todo/`, `docs/plans/completed/`
-- **V2 Foundation**: `docs/plans/active/v2-foundation-establishment.md` - ✅ Complete
+## Developer References
 
-## Philosophy & Context
-- **Education/ethos**: `docs/PEDAGOGICAL_PHILOSOPHY.md`, `docs/CITATIONS.md`
-- **Current cleanup status**: `docs/DOCUMENTATION_AUDIT.md`
+- `docs/DEVELOPER.md` — local workflow, validation commands, and debugging notes.
+- `docs/OUTPUT_GUIDE.md` — current output shapes and evidence inspection.
+- `docs/handler-development-guide.md` — how to add or change staged handlers.
+- `docs/storage-schema.md` — DuckDB cache/index schema and staged effect tables.
 
-If you add new documentation, link it here and update the audit to keep the set lean and accurate.
+## Technical References
+
+- `docs/technical/ARCHITECTURE.md` — current runtime architecture.
+- `docs/technical/predicates_evidence.md` — canonical claim/triple predicates and evidence fields.
+- `docs/technical/design/` — design notes for semantic reduction, hydration, planning, and witness contracts.
+- `docs/technical/backend/` — backend-specific notes for Diogenes, Whitaker, Heritage/CDSL, and related tooling.
+
+## Planning
+
+- `docs/plans/active/infra/design-to-runtime-roadmap.md` — current active plan.
+- `docs/plans/todo/infra/junior-task-backlog.md` — small tasks suitable for intermittent junior-engineer work.
+- `docs/plans/completed/` — completed work records.
+- `docs/archive/2026-04-cleanup/` — historical reports and superseded plans retained for audit only.
+
+## Maintenance Rule
+
+Keep active docs factual and short. If a document describes completed work, session notes, stale architecture, or speculative old planning, move it to `docs/archive/` instead of leaving it in the main reading path.

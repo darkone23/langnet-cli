@@ -1,349 +1,125 @@
-# ROADMAP.md
+# Roadmap
 
-# LangNet CLI – Engineering Roadmap
+This is the canonical project roadmap. Detailed implementation tracking lives in `docs/plans/active/infra/design-to-runtime-roadmap.md`.
 
-## Status
+## Current Status
 
-Active Development
+The project has a working CLI, planner, staged executor, storage layer, and real backend handlers. The current priority is stabilization: make the existing system coherent, tested, documented, and safe to extend.
 
-## Purpose
+Current grade: **B- / 78%**.
 
-This document defines the phased engineering plan for stabilizing and expanding the LangNet CLI into a deterministic, pedagogically-oriented semantic lexicon engine.
+- Build health: strong.
+- Runtime architecture: usable.
+- Claim/evidence layer: improving and now fixture-tested across core handlers.
+- Semantic reduction: designed but not runtime-wired.
+- Docs/plans: consolidated in April 2026; archive retained for historical context.
 
-The roadmap is structured around:
+## Milestone 0 — Stabilization Baseline
 
-1. Architectural stabilization
-2. Semantic distillation
-3. CLI contract hardening
-4. Pedagogical surfacing
-5. Source expansion and enrichment
-6. Performance and resilience
+**Goal:** keep the repo in a clean, reviewable state before new product features.
 
-All milestones assume adherence to:
+Done or in progress:
 
-* Schema v1 Specification
-* Source Contracts Specification
-* Semantic Distillation & Constant Design
+- `just lint-all` passes.
+- `just test-fast` passes.
+- Primary docs have been reconciled with current CLI reality.
+- Historical status reports and superseded plans have been archived.
 
----
+Remaining:
 
-# Phase 1 – Architectural Stabilization (Foundation)
+- Commit current changes in coherent groups.
+- Keep active planning limited to one canonical roadmap plus scoped task files.
+- Remove or fix commands that advertise behavior they do not implement.
+- Validate fixtures that will become inputs to semantic reduction.
+- Keep `just` recipe health documented so recipe failures are classified as wiring, dependency, or expected external-service failures.
 
-**Objective:** Freeze structural contracts before expanding features.
+## Milestone 1 — Claim Contract Hardening
 
----
+**Goal:** every handler emits stable, evidence-backed claims suitable for semantic reduction.
 
-## 1.1 Schema v1 Finalization
+Status: **mostly complete for core handlers**.
 
-* [ ] Implement Schema v1 JSON validator
-* [ ] Ensure all CLI `--json` outputs conform
-* [ ] Add regression snapshot tests
-* [ ] Expose `schema_version` in output
-* [ ] Ensure Avro/typed mapping compatibility
+Implemented coverage:
 
----
+- Whitaker Latin morphology/sense triples.
+- CDSL Sanskrit sense/source-ref triples.
+- Diogenes Latin sense/citation triples.
+- CLTK pronunciation/Lewis-line triples.
+- Heritage morphology triples.
 
-## 1.2 Source Adapter Contracts
+Remaining:
 
-Formalize per-source behavior:
+- Normalize predicate constants across handlers.
+- Add or document coverage for any secondary/stub handlers.
+- Improve `triples-dump` filters and examples.
 
-* [ ] Diogenes adapter stability pass
-* [ ] CDSL (MW) adapter normalization review
-* [ ] Heritage adapter guardrails for mangled SLP1
-* [ ] CLTK backend consistency check
-* [ ] Abbreviation map versioning
-* [ ] Foster mapping versioning
+## Milestone 2 — Evidence Inspection
 
-Required:
+**Goal:** developers can answer “where did this fact come from?” from CLI output alone.
 
-* Stable `source/type/ref` witness format
-* No silent evidence loss
+Tasks:
 
----
+- Improve `plan-exec` summaries with cache status, skipped-call reasons, stage counts, and handler versions.
+- Add `triples-dump` filters for tool, predicate, and subject prefix.
+- Document one end-to-end inspection workflow for Latin and Sanskrit.
 
-## 1.3 CLI Contract Hardening
+## Milestone 3 — Semantic Reduction MVP
 
-Define stable behaviors:
+**Goal:** build a deterministic reducer over claims/triples.
 
-* [ ] `lookup WORD`
-* [ ] `lookup WORD --json`
-* [ ] `lookup WORD --mode open`
-* [ ] `lookup WORD --mode skeptic`
-* [ ] `lookup WORD --evidence`
-* [ ] `lookup WORD --links`
+MVP:
 
-Mode must not alter schema shape.
+- Extract Witness Sense Units from `has_sense` + `gloss` triples.
+- Cluster exact or near-exact glosses deterministically.
+- Emit stable sense-bucket IDs.
+- Preserve witness claim IDs and evidence.
 
----
+Do not include yet:
 
-## 1.4 Output Ordering + Snapshot Tests
+- Embeddings.
+- Full semantic constants.
+- Passage-level context.
+- UI-heavy formatting.
 
-Standardize didactic output order:
+## Milestone 4 — Learner-Facing Output
 
-```
-Head → Senses → References → Foster Features
-```
+**Goal:** display grouped meanings first, backend details second.
 
-* [ ] Add regression snapshots
-* [ ] Prevent accidental reordering
+Target order:
 
----
-
-## 1.5 Tool Availability & Verification
-
-* [ ] Whitaker binary detection
-* [ ] CLI `verify` hook
-* [ ] Clear error messaging if unavailable
-* [ ] Non-fatal failure policy for optional sources
-
----
-
-# Phase 2 – Semantic Distillation Engine
-
-**Objective:** Implement deterministic bucketing and constant registry.
-
----
-
-## 2.1 Witness Extraction (All Sources)
-
-* [ ] LSJ via Diogenes
-* [ ] MW via CDSL
-* [ ] Lewis lines via CLTK (Latin)
-* [ ] Perseus CTS anchors
-* [ ] Heritage morphology as WSUs (where applicable)
-
-Ensure:
-
-* Stable `sense_ref`
-* Deterministic extraction
-
----
-
-## 2.2 Bucketing Engine
-
-* [ ] Implement WSU similarity scoring
-* [ ] Deterministic clustering
-* [ ] Mode-dependent merge thresholds
-* [ ] Confidence scoring
-* [ ] Stable `sense_id` generation
-
----
-
-## 2.3 Semantic Constant Registry
-
-* [ ] Implement constant registry store
-* [ ] Matching policy (choose from known constants)
-* [ ] Provisional constant creation
-* [ ] Status field (`provisional` / `curated`)
-* [ ] Constant ID stability guarantees
-
----
-
-## 2.4 Reduction Pipeline (“Spine of Meaning”)
-
-* [ ] Detect overlapping glosses
-* [ ] Reduce redundant senses
-* [ ] Identify semantic expansion/drift
-* [ ] Ensure minor technical senses collapsible via `ui_hints`
-
----
-
-## 2.5 Conflict Representation
-
-* [ ] POS hypotheses with confidence
-* [ ] Morphology observed vs lemma-level POS separation
-* [ ] No evidence suppression in skeptic mode
-
----
-
-# Phase 3 – Pedagogical Surface Layer
-
-**Objective:** Stabilize learner-facing output without sacrificing evidence.
-
----
-
-## 3.1 Didactic View Layer
-
-Derived from Schema v1:
-
-* [ ] Most likely lemma
-* [ ] Top 3–7 buckets
-* [ ] Semantic constant alignment (if assigned)
-* [ ] Morphology summary
-* [ ] Warning notes
-
----
-
-## 3.2 Foster Functional Grammar Integration
-
-* [ ] Unified mapping across Latin/Greek/Sanskrit
-* [ ] Display format: “Technical Term (Functional Label)”
-* [ ] Extend Foster enrichment to:
-
-  * Heritage
-  * Diogenes where metadata allows
-* [ ] Document fallback behavior
-
----
-
-## 3.3 Citation UI Plan
-
-* [ ] Stable citation object model
-* [ ] CTS URN formatting
-* [ ] DuckDuckGo `!ducky` resolver strategy
-* [ ] Outbound DCS search links (Sanskrit)
-* [ ] `--links` CLI flag implementation
-
----
-
-## 3.4 Example Passage Engine
-
-* [ ] Surface 1–3 short passages per major sense
-* [ ] Keep snippets skimmable
-* [ ] Preserve CTS URN traceability
-* [ ] Avoid long raw dumps
-
----
-
-# Phase 4 – Schema Convergence & Universal Structure
-
-**Objective:** Minimize branching across languages.
-
----
-
-## 4.1 Universal Morphology Schema
-
-* [ ] Align morphology structures for Latin/Greek/Sanskrit
-* [ ] Normalize case/number/gender feature keys
-* [ ] Make POS plural-capable (noun, adjective, masc/fem/etc.)
-* [ ] Ensure consistent JSON typing
-
----
-
-## 4.2 LexemeCore / Claim Model (Internal Layer)
-
-Introduce structured claim representation:
-
-* [ ] Define semantic atom
-* [ ] Implement Claim object (subject/predicate/value/witness)
-* [ ] Map bucket results into claims
-* [ ] Preserve witness traceability
-
-This layer must not break Schema v1.
-
----
-
-# Phase 5 – Source Expansion & Enrichment
-
-**Objective:** Enhance semantic evidence without destabilizing core.
-
----
-
-## 5.1 DICO Integration
-
-* [ ] Basic parser
-* [ ] Extraction pipeline
-* [ ] DuckDB-backed adapter
-* [ ] Fuzz snapshot tests
-* [ ] Treat as secondary evidence initially
-
-DICO enhances distillation; it is not a prerequisite.
-
----
-
-## 5.2 CDSL Normalization Improvements
-
-* [ ] Normalize to IAST
-* [ ] Document normalization contract
-* [ ] Preserve source ID fidelity
-
----
-
-## 5.3 Cross-Lexicon Etymology (Deferred)
-
-* [ ] Investigate cross-language constant alignment
-* [ ] Map constants to etymological clusters
-* [ ] Do not block v1 stabilization
-
----
-
-# Phase 6 – Fuzzy Search & Robustness
-
-**Objective:** Improve resilience for real-world input.
-
----
-
-## 6.1 Fuzzy Search
-
-* [ ] Accent tolerance
-* [ ] Encoding normalization (SLP1/IAST)
-* [ ] Minor spelling variance handling
-* [ ] Cross-language tolerant lookup
-
-Must not introduce nondeterminism in bucket IDs.
-
----
-
-## 6.2 Encoding Guardrails
-
-* [ ] Mangled SLP1 detection
-* [ ] Unicode normalization enforcement
-* [ ] Explicit warnings when ambiguity detected
-
----
-
-# Phase 7 – Performance & Observability
-
-**Objective:** Ensure responsiveness and regression visibility.
-
----
-
-## 7.1 Caching Strategy
-
-* [ ] Cache hot MW headwords
-* [ ] Cache Whitaker inflection tables
-* [ ] Cache LSJ entries
-* [ ] Mode-specific cache keys
-
----
-
-## 7.2 Timing Instrumentation
-
-* [ ] Add `timing_ms` to provenance
-* [ ] Track per-source latency
-* [ ] Detect regressions via benchmarks
-
----
-
-# Phase 8 – CLI Stability Milestone
-
-**Target:** Stable 1.0 CLI contract.
+1. Word/headword.
+2. Sense buckets.
+3. Morphology.
+4. Citations/evidence.
+5. Source disagreements.
 
 Requirements:
 
-* [ ] Schema v1 frozen
-* [ ] Deterministic bucketing
-* [ ] Semantic constants operational
-* [ ] Source contracts enforced
-* [ ] CLI modes stable
-* [ ] 60+ regression snapshot coverage
-* [ ] Performance baseline documented
+- Snapshot tests for terminal output.
+- Raw JSON remains available for debugging.
+- Single-source or provisional buckets are marked clearly.
 
----
+## Milestone 5 — Hydration
 
-# Non-Goals (Pre-1.0)
+**Goal:** enrich stable claims without changing their identity.
 
-* Full semantic ontology curation
-* Cross-language philosophical mapping
-* Aggressive gloss paraphrasing
-* Replacing primary lexica with AI summarization
+Examples:
 
----
+- CTS URN expansion.
+- Author/work labels.
+- Dictionary entry links.
 
-# Guiding Engineering Principles
+Rule: semantic buckets must be identical with or without hydration.
 
-1. Determinism over cleverness
-2. Traceability over summarization
-3. Constants over strings
-4. Stability before expansion
-5. Presentation must not alter evidence
+## Milestone 6 — Compounds and Passages
+
+**Goal:** extend word-level lookup/reduction to multi-token Sanskrit and eventually passage reading.
+
+Dependency: do not advance broad passage work until Milestones 1–4 are stable.
+
+## Deprioritized
+
+- First-class ASGI rebuild before CLI semantics stabilize.
+- Embedding-backed similarity before deterministic buckets exist.
+- Passage interpretation before word-level evidence is reliable.
+- Large CLI refactors before baseline commits.
