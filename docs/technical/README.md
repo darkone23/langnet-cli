@@ -9,7 +9,8 @@ Use this directory for implementation-facing references.
 - `semantic_triples.md` — graph-model notes for claims and downstream reduction.
 - `triples_txt.md` — older but still useful explanation of scoped interpretations.
 - `backend/` — backend-specific operational notes.
-- `design/` — design notes for planning, witnesses, semantic reduction, and hydration.
+- `design/TECHNICAL_VISION.md` — technical design map from staged effects to learner output.
+- `design/` — detailed design notes for planning, witnesses, semantic reduction, and hydration.
 - `opencode/` — AI/persona workflow notes.
 
 ## Maintenance Rules

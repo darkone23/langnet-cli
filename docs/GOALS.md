@@ -1,5 +1,7 @@
 # LangNet Goals
 
+This document is the short goals card. The fuller product vision is `docs/VISION.md`; learner-facing grammar policy is `docs/PEDAGOGICAL_PHILOSOPHY.md`.
+
 LangNet is a classical-language learning tool for Latin, Greek, and Sanskrit. Its purpose is to help readers move from an inflected word in a text to a clear, evidence-backed explanation of form, meaning, and source support.
 
 ## Product Goal
@@ -35,18 +37,7 @@ LangNet is moving toward this layered model:
 4. **Sense buckets** — deterministic clusters of equivalent or near-equivalent meanings.
 5. **Learner display** — ordered summaries that explain meaning, morphology, references, and disagreements.
 
-The current runtime has layers 1–2. Layers 3–5 are the next major product work.
-
-## Grammatical Philosophy
-
-LangNet should preserve traditional terminology while making function clear:
-
-- nominative → naming / subject function
-- accusative → receiving / object function
-- dative → to-for function
-- instrumental → by-with function
-
-This “function over label only” approach matters most in learner-facing output. Internal data can remain precise and technical.
+The current runtime has a first version of this path: staged tool evidence becomes claims/triples, exact Witness Sense Units become deterministic buckets, and `langnet-cli encounter` displays the first learner-facing word encounter. That is an MVP, not the finished semantic layer. The next major product work is to make the `encounter` output stable, source-clean, well-ranked, and accepted-output tested before adding broader semantic inference.
 
 ## Non-Goals For Now
 

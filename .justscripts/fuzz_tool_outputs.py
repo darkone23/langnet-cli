@@ -9,6 +9,7 @@ side-by-side comparison.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -340,7 +341,36 @@ def _print_catalog() -> None:
 
 
 def _safe_word(word: str) -> str:
-    return re.sub(r"[^A-Za-z0-9._-]+", "_", word.strip()) or "word"
+    cleaned = word.strip()
+    if not cleaned:
+        return "word"
+
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "_", cleaned).strip("._-")
+    if re.fullmatch(r"[A-Za-z0-9._-]+", cleaned):
+        return slug or "word"
+
+    digest = hashlib.sha1(cleaned.encode("utf-8")).hexdigest()[:8]
+    return f"{slug or 'word'}-{digest}"
+
+
+def _print_hit_rate_summary(results: list[FuzzResult], mode: str) -> None:
+    if mode in ("tool", "compare"):
+        tool_results = [r for r in results if r.tool_ok is not None]
+        if tool_results:
+            ok_count = sum(1 for r in tool_results if r.tool_ok)
+            print(
+                f"Tool hit rate: {ok_count}/{len(tool_results)} "
+                f"({ok_count / len(tool_results):.1%})"
+            )
+
+    if mode in ("query", "compare"):
+        query_results = [r for r in results if r.unified_ok is not None]
+        if query_results:
+            ok_count = sum(1 for r in query_results if r.unified_ok)
+            print(
+                f"Unified query hit rate: {ok_count}/{len(query_results)} "
+                f"({ok_count / len(query_results):.1%})"
+            )
 
 
 def _save_results(save_path: Path, results: list[FuzzResult]) -> None:
@@ -444,6 +474,8 @@ def run_from_args(argv: list[str]) -> int:
         results.append(result)
         status_parts = _build_status_parts(result, target, args.mode)
         print(" -> ".join(status_parts))
+
+    _print_hit_rate_summary(results, args.mode)
 
     if args.save is not None:
         output_path = Path(args.save) if args.save else DEFAULT_SAVE_PATH

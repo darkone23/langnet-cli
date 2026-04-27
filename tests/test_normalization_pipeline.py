@@ -83,6 +83,15 @@ class _FakeWhitaker:
         return ["is", "idem"]
 
 
+class _AmbiguousHeritage(_FakeHeritage):
+    def fetch_all_matches(self, query: str) -> list[HeritageMatch]:
+        return [
+            HeritageMatch(canonical="zraaddha", display="śrāddha", entry_url=""),
+            HeritageMatch(canonical="zraddhaa#1", display="śraddhā_1", entry_url=""),
+            HeritageMatch(canonical="zraddhaa#2", display="śraddhā_2", entry_url=""),
+        ]
+
+
 def test_sanskrit_normalizer_enrichment_prefers_heritage() -> None:
     steps: list[NormalizationStep] = []
     normalizer = SanskritNormalizer(heritage_client=_FakeHeritage())
@@ -95,6 +104,19 @@ def test_sanskrit_normalizer_enrichment_prefers_heritage() -> None:
     assert dev is not None
     assert dev.encodings.get("velthuis") == "ziva"
     assert any(step.operation.startswith("heritage_sktsearch") for step in steps)
+
+
+def test_sanskrit_normalizer_ranks_exact_display_match_before_related_forms() -> None:
+    steps: list[NormalizationStep] = []
+    normalizer = SanskritNormalizer(heritage_client=_AmbiguousHeritage())
+
+    candidates = normalizer.canonical_candidates("śraddhā", steps)
+
+    assert [candidate.lemma for candidate in candidates[:3]] == [
+        "śraddhā_1",
+        "śraddhā_2",
+        "śrāddha",
+    ]
 
 
 def test_devanagari_to_velthuis_canonical() -> None:

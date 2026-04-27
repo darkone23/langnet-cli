@@ -168,9 +168,20 @@ def _rank_heritage_matches(input_text: str, matches: list[SktSearchMatch]) -> li
 
     ranked: list[RankedMatch] = []
     for m in matches:
-        candidate_norm = _normalize_for_comparison(m.canonical)
-        dist = _levenshtein(input_norm, candidate_norm)
-        len_diff = abs(len(input_norm) - len(candidate_norm))
+        candidate_norms = [
+            norm
+            for norm in (
+                _normalize_for_comparison(m.display),
+                _normalize_for_comparison(m.canonical),
+            )
+            if norm
+        ]
+        best_norm = min(
+            candidate_norms,
+            key=lambda norm: (_levenshtein(input_norm, norm), abs(len(input_norm) - len(norm))),
+        )
+        dist = _levenshtein(input_norm, best_norm)
+        len_diff = abs(len(input_norm) - len(best_norm))
         ranked.append(
             RankedMatch(
                 dist=dist,
@@ -578,22 +589,36 @@ class SanskritNormalizer(LanguageNormalizer):
         return re.sub(r"[^a-zA-Z]", "", text)
 
     def _velthuis_to_slp1_basic(self, text: str) -> str:
+        s_dot_placeholder = "\u0000"
         replacements = [
             ("aa", "A"),
             ("ii", "I"),
             ("uu", "U"),
             ("~n", "Y"),
+            (".th", "W"),
             (".rr", "F"),
             (".r", "f"),
             (".ll", "X"),
             (".l", "x"),
+            (".dh", "Q"),
             (".n", "R"),
             (".t", "w"),
             (".d", "q"),
-            (".s", "z"),
+            (".m", "M"),
+            (".h", "H"),
+            ("kh", "K"),
+            ("gh", "G"),
+            ("ch", "C"),
+            ("jh", "J"),
+            ("th", "T"),
+            ("dh", "D"),
+            ("ph", "P"),
+            ("bh", "B"),
+            ("sh", "S"),
             ("'s", "S"),
         ]
-        out = text
+        out = text.replace(".s", s_dot_placeholder)
         for old, new in replacements:
             out = out.replace(old, new)
-        return out
+        out = out.replace("z", "S")
+        return out.replace(s_dot_placeholder, "z")

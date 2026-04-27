@@ -2,7 +2,7 @@
 
 **Status**: 🔄 ACTIVE  
 **Feature Area**: infra  
-**Date**: 2026-04-26  
+**Date**: 2026-04-27  
 **Owner Model Roles**: @architect for sequencing, @coder for implementation, @auditor for contracts/tests, @scribe for documentation  
 
 ## Purpose
@@ -19,12 +19,16 @@ This plan reconciles `docs/technical/design/` with the current codebase and defi
 
 ### Implemented and Healthy
 
-- **CLI surface**: `normalize`, `parse`, `lookup`, `plan`, `plan-exec`, `triples-dump`, `databuild`, `index`.
+- **CLI surface**: `normalize`, `parse`, `lookup`, `plan`, `plan-exec`, `triples-dump`, `encounter`, `databuild`, `index`.
 - **Planner**: `src/langnet/planner/core.py` builds language-specific `ToolPlan` DAGs.
 - **Execution pipeline**: `src/langnet/execution/executor.py` runs fetch → extract → derive → claim.
 - **Handlers**: real handlers exist for Diogenes, Whitaker, CLTK, spaCy, Heritage, and CDSL.
 - **Storage schema**: raw responses, extractions, derivations, claims, provenance, normalization, and plan indexes exist under `src/langnet/storage/`.
 - **Predicate/evidence vocabulary**: `src/langnet/execution/predicates.py` and `src/langnet/execution/evidence.py`.
+- **Reduction/display**: exact WSU extraction and deterministic buckets are wired into `encounter`.
+- **Sanskrit model**: Heritage is the preferred analysis/morphology source; CDSL and DICO provide meaning/gloss supplements.
+- **Translation cache**: DICO/Gaffiot cache-hit projection exists; network translation remains explicit cache-population work.
+- **Diagnostic audit**: the 50-word per-language fuzz audit now separates evidence/gloss hits from Sanskrit Heritage morphology hits.
 - **Quality gate**: `just lint-all && just test-fast` passes.
 
 ### Design Docs That Match Current Direction
@@ -33,17 +37,18 @@ This plan reconciles `docs/technical/design/` with the current codebase and defi
 - `query-planning.md`: planner/executor/cache structure is partially implemented.
 - `tool-fact-architecture.md` / `tool-fact-flow.md`: still useful conceptually, but some details are superseded by current effects/claims code.
 - `witness-contracts.md`: still the right evidence policy target.
-- `classifier-and-reducer.md` / `semantic-structs.md`: still the right semantic reduction target, but not runtime-wired.
+- `classifier-and-reducer.md` / `semantic-structs.md`: still the right broader semantic reduction target; the exact-bucket MVP is runtime-wired, but near-match/general semantic grouping is not.
 - `hydration-reduction.md`: important but should follow stable claims and reduction, not precede them.
 
 ### Current Mismatches / Risks
 
 - Many historical plans were archived; the remaining risk is keeping this roadmap canonical.
 - Claim shape is fixture-tested across core handlers, but predicate constants still need tightening.
-- `lookup` is useful but still backend-keyed; it is not the final semantic learner schema.
-- Semantic reduction has reference/code sketch material but is not wired into runtime.
+- `lookup` is useful but still backend-keyed; `encounter` is the current learner-facing path.
+- Semantic reduction is exact-only and should not be treated as broad semantic understanding.
 - Hydration (e.g. CTS reference expansion) is still not a separate stage/tool.
 - Passage/compound work should not outrun stable word-level claims and sense buckets.
+- Accepted-output coverage is still too small to call the learner interface stable.
 
 ## Strategic Sequence
 
@@ -53,8 +58,8 @@ The project should move in this order:
 2. **Stabilize word-level evidence**
 3. **Contract-test claims/triples**
 4. **Improve evidence inspection**
-5. **Build semantic reduction from claims**
-6. **Expose learner-facing semantic output**
+5. **Harden the exact reduction/encounter MVP**
+6. **Build accepted learner-output examples**
 7. **Add hydration as optional enrichment**
 8. **Expand to compounds/passages**
 
@@ -151,13 +156,15 @@ This order keeps educational UX grounded in auditable evidence and prevents sema
 
 ## Milestone 3 — Minimal Semantic Reduction MVP
 
-**Goal**: Build a runtime semantic reducer that consumes claims/triples, not legacy backend payloads.
+**Goal**: Harden the runtime exact reducer that consumes claims/triples, not legacy backend payloads.
 
-**MVP Definition**
+**Current MVP**
 - Input: claim effects from `plan-exec` / indexed claims.
 - Extract Witness Sense Units (WSUs) from `has_sense` + `gloss` triples.
 - Cluster exact or near-exact glosses deterministically.
 - Output stable bucket IDs with witness provenance.
+- Display through `langnet-cli encounter`.
+- Preserve Sanskrit Heritage analysis rows separately from meaning buckets.
 
 **Do Not Do Yet**
 - Embedding similarity.
@@ -165,16 +172,11 @@ This order keeps educational UX grounded in auditable evidence and prevents sema
 - Passage-level context selection.
 - UI-heavy formatting.
 
-**Tasks**
-1. Create `src/langnet/semantic/` or `src/langnet/reduction/` module.
-2. Define small dataclasses:
-   - `WitnessSenseUnit`
-   - `SenseBucket`
-   - `ReductionResult`
-3. Implement claim-to-WSU extraction.
-4. Implement deterministic exact/Jaccard clustering.
-5. Add CLI path behind explicit flag/command, e.g. `lookup --semantic` or `semantic` only after design review.
-6. Add golden fixtures for `lupus`, `agni`, and `logos` using saved claim payloads.
+**Remaining Tasks**
+1. Add structured bucket JSON examples alongside terminal snapshots.
+2. Improve display ranking using source quality, structured gloss/source-note fields, length, and witness count.
+3. Strengthen CDSL source/gloss/source-note structure while preserving raw text and `source_ref`.
+4. Keep near-match clustering behind tests until exact buckets are boring.
 
 **Design References**
 - `docs/technical/design/classifier-and-reducer.md`
@@ -185,6 +187,8 @@ This order keeps educational UX grounded in auditable evidence and prevents sema
 - Same input claims produce same buckets across runs.
 - Each bucket lists all witness claims.
 - No witness appears in two buckets.
+- Sanskrit examples show Heritage analysis as analysis, not as dictionary meaning evidence.
+- Accepted-output tests catch ranking/display regressions.
 - `just lint-all && just test-fast` passes.
 
 **Junior-Friendly Slices**
@@ -195,7 +199,7 @@ This order keeps educational UX grounded in auditable evidence and prevents sema
 
 ## Milestone 4 — Learner-Facing Semantic Output
 
-**Goal**: Move from backend-keyed `lookup` output to didactic output ordered for students.
+**Goal**: Move from the current `encounter` prototype to didactic output ordered for students.
 
 **Target Display Order**
 1. Headword / form
@@ -264,17 +268,17 @@ This order keeps educational UX grounded in auditable evidence and prevents sema
 ## Immediate Next Work Items
 
 1. **Checkpoint current baseline** using the groups above.
-2. **Add structured evidence inspection** with `triples-dump --output json` or an equivalent command.
-3. **Clean up CDSL display encoding** by adding learner-facing IAST fields while preserving raw source forms.
-4. **Implement a tiny claim-to-WSU extractor** from service-free fixtures.
-5. **Add translation cache/key helpers** before translated DICO/Gaffiot glosses influence reduction.
+2. **Strengthen CDSL source/gloss/source-note structure** around citation-heavy entries.
+3. **Add an evidence-inspection example** tracing `encounter` output back to `triples-dump --output json`.
+4. **Expand no-network DICO/Gaffiot translation-cache fixtures** beyond the first golden rows.
+5. **Keep ranking policy and predicate-constant cleanup incremental** and fixture-backed.
 
 ## Success Metrics
 
 - All primary learner commands are documented and tested.
 - Every handler has at least one fixture-backed claim contract test.
 - `triples-dump` can explain source evidence for Latin, Greek, and Sanskrit examples.
-- Semantic reducer MVP groups at least one multi-witness bucket for `lupus` or `agni`.
+- Exact reducer output has accepted snapshots for representative Sanskrit, Latin, and Greek examples.
 - Learner-facing output remains stable under snapshot tests.
 
 ## Cleanup Note

@@ -6,6 +6,8 @@ from pathlib import Path
 MODULE_PATH = Path(__file__).resolve().parents[1] / ".justscripts" / "lex_translation_demo.py"
 lex_module = SourceFileLoader("lex_translation_demo", str(MODULE_PATH)).load_module()
 
+EXPECTED_TRANSLATION_CHUNKS = 2
+
 
 class _DummyCompletions:
     def __init__(self, outer) -> None:
@@ -52,5 +54,30 @@ def test_translate_entry_rejoins_with_paragraph_marker_separator() -> None:
     finally:
         lex_module.click.echo = original_echo
 
-    assert len(client.calls) == 2  # fresh completion per chunk  # noqa: PLR2004
+    assert len(client.calls) == EXPECTED_TRANSLATION_CHUNKS
     assert result == [("hint", "out\n¶ out")]
+
+
+def test_build_entry_translation_key_uses_gaffiot_variant_as_occurrence() -> None:
+    entry = {
+        "entry_id": "gaffiot_38776",
+        "occurrence": 1,
+        "headword_norm": "lupus",
+        "plain_text": "loup\nCic.",
+    }
+
+    key = lex_module.build_entry_translation_key(
+        entry=entry,
+        mode="latin",
+        model="test:model",
+        hints=["keep Latin"],
+    )
+
+    assert key.source_lexicon == "gaffiot"
+    assert key.occurrence == 1
+    assert key.headword_norm == "lupus"
+
+
+def test_source_text_for_cache_matches_gaffiot_claim_projection() -> None:
+    assert lex_module.source_text_for_cache("latin", "loup\n  Cic.") == "loup Cic."
+    assert lex_module.source_text_for_cache("sanskrit", "loi\n devoir") == "loi\n devoir"

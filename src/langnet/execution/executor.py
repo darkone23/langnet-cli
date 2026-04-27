@@ -34,7 +34,17 @@ class ExecutionArtifacts:
     extractions: list[ExtractionEffect] = field(default_factory=list)
     derivations: list[DerivationEffect] = field(default_factory=list)
     claims: list[ClaimEffect] = field(default_factory=list)
+    skipped_calls: list[SkippedCall] = field(default_factory=list)
     from_cache: bool = False
+
+
+@dataclass(slots=True)
+class SkippedCall:
+    call_id: str
+    tool: str
+    stage: str
+    reason: str
+    source_call_id: str | None = None
 
 
 class ToolRegistry:
@@ -93,7 +103,7 @@ class _ExecutionState:
     extraction_by_call: dict[str, ExtractionEffect] = field(default_factory=dict)
     derivation_by_call: dict[str, DerivationEffect] = field(default_factory=dict)
     completed: set[str] = field(default_factory=set)
-    skipped: set[str] = field(default_factory=set)
+    skipped: dict[str, SkippedCall] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -107,6 +117,29 @@ class _ExecutionContext:
     extraction_index: ExtractionIndex
     derivation_index: DerivationIndex
     claim_index: ClaimIndex
+
+
+def _stage_name(stage: int) -> str:
+    try:
+        return ToolStage.Name(stage).removeprefix("TOOL_STAGE_").lower()
+    except ValueError:
+        return str(stage)
+
+
+def _record_skip(
+    state: _ExecutionState,
+    call: ToolCallSpec,
+    reason: str,
+    *,
+    source_call_id: str | None = None,
+) -> None:
+    state.skipped[call.call_id] = SkippedCall(
+        call_id=call.call_id,
+        tool=call.tool,
+        stage=_stage_name(call.stage),
+        reason=reason,
+        source_call_id=source_call_id,
+    )
 
 
 def _initialize_cache_and_state(  # noqa: PLR0913
@@ -171,7 +204,7 @@ def _handle_fetch_stage(
     if client is None:
         if call.optional:
             ctx.logger.info("executor.skip.missing_client", call_id=call_id, tool=call.tool)  # type: ignore[attr-defined]
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_client")
             state.completed.add(call_id)
             return True
         raise ValueError(f"No client registered for tool '{call.tool}'")
@@ -210,7 +243,7 @@ def _handle_extract_stage(
             ctx.logger.info(  # type: ignore[attr-defined]
                 "executor.skip.missing_extract_handler", call_id=call_id, tool=call.tool
             )
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_extract_handler")
             state.completed.add(call_id)
             return True
         raise ValueError(f"No extract handler registered for tool '{call.tool}'")
@@ -225,7 +258,7 @@ def _handle_extract_stage(
                 tool=call.tool,
                 source_call=source_call_id,
             )
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_source_extract", source_call_id=source_call_id)
             state.completed.add(call_id)
             return True
         raise RuntimeError(f"Missing source raw response for call '{call_id}'")
@@ -239,7 +272,7 @@ def _handle_extract_stage(
                 tool=call.tool,
                 source_call=source_call_id,
             )
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_source_extract", source_call_id=source_call_id)
             state.completed.add(call_id)
             return True
         raise RuntimeError(f"Missing source raw response for call '{call_id}'")
@@ -282,7 +315,7 @@ def _handle_derive_stage(
     if handler is None:
         if call.optional:
             ctx.logger.info("executor.skip.missing_derive_handler", call_id=call_id, tool=call.tool)  # type: ignore[attr-defined]
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_derive_handler")
             state.completed.add(call_id)
             return True
         raise ValueError(f"No derive handler registered for tool '{call.tool}'")
@@ -297,7 +330,7 @@ def _handle_derive_stage(
                 tool=call.tool,
                 source_call=source_call_id,
             )
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_source_derive", source_call_id=source_call_id)
             state.completed.add(call_id)
             return True
         raise RuntimeError(f"Missing source extraction for call '{call_id}'")
@@ -311,7 +344,7 @@ def _handle_derive_stage(
                 tool=call.tool,
                 source_call=source_call_id,
             )
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_source_derive", source_call_id=source_call_id)
             state.completed.add(call_id)
             return True
         raise RuntimeError(f"Missing source extraction for call '{call_id}'")
@@ -354,7 +387,7 @@ def _handle_claim_stage(
     if handler is None:
         if call.optional:
             ctx.logger.info("executor.skip.missing_claim_handler", call_id=call_id, tool=call.tool)  # type: ignore[attr-defined]
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_claim_handler")
             state.completed.add(call_id)
             return True
         raise ValueError(f"No claim handler registered for tool '{call.tool}'")
@@ -369,7 +402,7 @@ def _handle_claim_stage(
                 tool=call.tool,
                 source_call=source_call_id,
             )
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_source_claim", source_call_id=source_call_id)
             state.completed.add(call_id)
             return True
         raise RuntimeError(f"Missing source derivation for call '{call_id}'")
@@ -383,7 +416,7 @@ def _handle_claim_stage(
                 tool=call.tool,
                 source_call=source_call_id,
             )
-            state.skipped.add(call_id)
+            _record_skip(state, call, "missing_source_claim", source_call_id=source_call_id)
             state.completed.add(call_id)
             return True
         raise RuntimeError(f"Missing source derivation for call '{call_id}'")
@@ -532,5 +565,6 @@ def execute_plan_staged(  # noqa: PLR0913
         extractions=extractions,
         derivations=derivations,
         claims=claims,
+        skipped_calls=list(state.skipped.values()),
         from_cache=executed_plan.from_cache,
     )

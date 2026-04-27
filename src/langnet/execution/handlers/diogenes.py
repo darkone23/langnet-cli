@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup, Tag
 from query_spec import ToolCallSpec
 
 from langnet.clients.base import RawResponseEffect
+from langnet.execution import predicates
 from langnet.execution.effects import (
     ClaimEffect,
     DerivationEffect,
@@ -16,6 +17,7 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
+from langnet.execution.source_text import display_text, source_segments_from_text, trim_empty
 from langnet.execution.versioning import versioned
 from langnet.normalizer.utils import contains_greek, normalize_greekish_token, strip_accents
 from langnet.parsing.integration import enrich_extraction_with_parsed_header
@@ -194,13 +196,20 @@ def _sense_anchor(lex_anchor: str, gloss: str) -> str:
 
 
 def _make_triple(
-    subject: str, predicate: str, obj: object, base_evidence: Mapping[str, object]
+    subject: str,
+    predicate: str,
+    obj: object,
+    base_evidence: Mapping[str, object],
+    metadata: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
+    triple_metadata = {"evidence": _trim_evidence(dict(base_evidence))}
+    if metadata:
+        triple_metadata.update(trim_empty(metadata))
     return {
         "subject": subject,
         "predicate": predicate,
         "object": obj,
-        "metadata": {"evidence": _trim_evidence(dict(base_evidence))},
+        "metadata": triple_metadata,
     }
 
 
@@ -604,14 +613,14 @@ def _build_perseus_header_triples(
                 )
             triples.append(_make_triple(form_anchor, "has_form", stem, base_evidence))
             if pos:
-                triples.append(_make_triple(form_anchor, "has_pos", pos, base_evidence))
+                triples.append(_make_triple(form_anchor, predicates.HAS_POS, pos, base_evidence))
             if tags:
                 triples.append(
-                    _make_triple(form_anchor, "has_feature", {"tags": tags}, base_evidence)
+                    _make_triple(form_anchor, predicates.HAS_FEATURE, {"tags": tags}, base_evidence)
                 )
             if defs:
                 triples.append(
-                    _make_triple(form_anchor, "has_feature", {"defs": defs}, base_evidence)
+                    _make_triple(form_anchor, predicates.HAS_FEATURE, {"defs": defs}, base_evidence)
                 )
     return triples
 
@@ -621,6 +630,7 @@ def _build_definition_triples(
     normalized_lemmas: list[str],
     default_lex: str | None,
     base_evidence: Mapping[str, object],
+    reference_id: str | None = None,
 ) -> list[dict[str, object]]:
     """Build triples from Diogenes lexical definitions."""
     triples: list[dict[str, object]] = []
@@ -642,8 +652,42 @@ def _build_definition_triples(
             gloss = entry_txt.strip()
             if gloss:
                 sense_anchor = _sense_anchor(lex_anchor, gloss)
-                triples.append(_make_triple(lex_anchor, "has_sense", sense_anchor, base_evidence))
-                triples.append(_make_triple(sense_anchor, "gloss", gloss, base_evidence))
+                entry_id_val = block_dict.get("entryid")
+                entry_id = entry_id_val if isinstance(entry_id_val, str) else None
+                source_ref_tail = entry_id or reference_id or term or lex_anchor
+                source_ref = f"diogenes:{source_ref_tail}"
+                source_entry = trim_empty(
+                    {
+                        "dict": "diogenes",
+                        "source_ref": source_ref,
+                        "reference_id": reference_id,
+                        "entry_id": entry_id,
+                        "term": term,
+                        "source_text": entry_txt,
+                    }
+                )
+                source_segments = source_segments_from_text(
+                    entry_txt,
+                    segment_type="dictionary_entry",
+                    labels=["dictionary_entry"],
+                )
+                triples.append(
+                    _make_triple(lex_anchor, predicates.HAS_SENSE, sense_anchor, base_evidence)
+                )
+                triples.append(
+                    _make_triple(
+                        sense_anchor,
+                        predicates.GLOSS,
+                        gloss,
+                        base_evidence,
+                        {
+                            "source_ref": source_ref,
+                            "display_gloss": display_text(gloss),
+                            "source_entry": source_entry,
+                            "source_segments": source_segments,
+                        },
+                    )
+                )
 
         citations = block_dict.get("citations")
         if isinstance(citations, Mapping):
@@ -658,7 +702,7 @@ def _build_definition_triples(
                 triples.append(
                     {
                         "subject": lex_anchor,
-                        "predicate": "has_citation",
+                        "predicate": predicates.HAS_CITATION,
                         "object": obj,
                         "metadata": {
                             "evidence": _trim_evidence(dict(base_evidence)),
@@ -706,9 +750,14 @@ def _build_triples(
             definitions = chunk_dict.get("definitions")
             if isinstance(definitions, Mapping):
                 defs_typed = cast(Mapping[str, object], definitions)
+                reference_id = chunk_dict.get("reference_id")
                 triples.extend(
                     _build_definition_triples(
-                        defs_typed, normalized_lemmas, default_lex, base_evidence
+                        defs_typed,
+                        normalized_lemmas,
+                        default_lex,
+                        base_evidence,
+                        reference_id=reference_id if isinstance(reference_id, str) else None,
                     )
                 )
 

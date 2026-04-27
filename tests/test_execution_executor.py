@@ -284,6 +284,42 @@ def test_executor_runs_all_stages_and_caches_fetch() -> None:
     assert second.from_cache is True
 
 
+def test_executor_reports_optional_skipped_calls() -> None:
+    conn = duckdb.connect(database=":memory:")
+    apply_schema(conn)
+    raw_index = RawResponseIndex(conn)
+    extraction_index = ExtractionIndex(conn)
+    derivation_index = DerivationIndex(conn)
+    claim_index = ClaimIndex(conn)
+    plan_response_index = PlanResponseIndex(conn)
+
+    plan = _build_plan()
+    for call in plan.tool_calls:
+        call.optional = True
+
+    result = execute_plan_staged(
+        plan=plan,
+        clients={},
+        registry=_registry(),
+        raw_index=raw_index,
+        extraction_index=extraction_index,
+        derivation_index=derivation_index,
+        claim_index=claim_index,
+        plan_response_index=plan_response_index,
+        allow_cache=False,
+    )
+
+    assert [skip.call_id for skip in result.skipped_calls] == [
+        "call-fetch",
+        "call-extract",
+        "call-derive",
+        "call-claim",
+    ]
+    assert result.skipped_calls[0].reason == "missing_client"
+    assert result.skipped_calls[1].reason == "missing_source_extract"
+    assert result.skipped_calls[1].source_call_id == "call-fetch"
+
+
 def test_tool_registry_with_stubs() -> None:
     reg = ToolRegistry.with_stubs()
     assert callable(reg.get_extract("anything"))

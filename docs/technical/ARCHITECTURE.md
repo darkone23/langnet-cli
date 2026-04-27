@@ -15,7 +15,7 @@ staged execution
   ↓
 raw responses → extractions → derivations → claims/triples
   ↓
-lookup output / evidence inspection / future semantic reduction
+lookup output / evidence inspection / exact WSU reduction / encounter output
 ```
 
 ## Main Entry Points
@@ -36,6 +36,7 @@ lookup output / evidence inspection / future semantic reduction
 | `plan` | show planned tool calls |
 | `plan-exec` | execute the full staged pipeline |
 | `triples-dump` | inspect claim triples and evidence |
+| `encounter` | show the current learner-facing reduced output |
 | `databuild` | build offline data/indexes |
 | `index` | inspect/manage storage indexes |
 
@@ -60,6 +61,8 @@ Handlers should preserve provenance across stages. Claims and triples are the st
 | spaCy | Greek where configured | supplemental NLP claims |
 | Sanskrit Heritage | Sanskrit | morphology |
 | CDSL | Sanskrit | dictionary senses and source references |
+| Local DICO | Sanskrit | French source glosses from Heritage DICO entries |
+| Local Gaffiot | Latin | French source glosses for Latin entries |
 
 Live backend access requires local external services. Unit tests should use fixtures.
 
@@ -109,20 +112,25 @@ Implemented:
 - Staged execution.
 - Claim/triple projection.
 - Fixture-backed claim contract tests for core handlers.
+- Runtime exact Witness Sense Unit reduction into buckets.
+- First learner-facing `encounter` output with Sanskrit Heritage analysis rows.
+- Translation-cache projection for cached DICO/Gaffiot English gloss evidence.
 
 Not implemented yet:
 
-- Runtime semantic reduction into sense buckets.
 - Final learner-facing semantic output.
 - First-class ASGI/API surface as a product contract.
 - Passage-level interpretation.
+- Broad semantic merging beyond exact buckets.
 
 ## Design Direction
 
 The next architectural step is:
 
 ```text
-claims/triples → Witness Sense Units → deterministic sense buckets → learner output
+claims/triples → Witness Sense Units → deterministic sense buckets → accepted learner-output examples
 ```
 
 Do this before embeddings, broad hydration, or passage analysis.
+
+Target design map: `docs/technical/design/TECHNICAL_VISION.md`.

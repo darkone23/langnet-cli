@@ -10,11 +10,13 @@ Implemented:
 
 - handlers emit claims/triples
 - core handlers have fixture-backed claim contract tests
+- Witness Sense Unit extraction over `has_sense` + `gloss`
+- deterministic exact-match sense buckets
+- `encounter` display over reduced buckets
+- accepted-output snapshots for representative word encounters
 
 Not implemented:
 
-- Witness Sense Unit extraction
-- deterministic sense buckets
 - semantic constants
 - embedding or LLM similarity
 
@@ -45,6 +47,19 @@ Start deterministic:
 3. Group exact normalized matches.
 4. Add simple Jaccard/substring grouping only with explicit tests.
 5. Emit stable bucket IDs from normalized contents and witness IDs.
+
+## Current Encounter Ranking Policy
+
+The current learner-facing display order is intentionally simple and
+fixture-backed:
+
+1. Cache-backed English translation buckets rank before untranslated source-language buckets.
+2. Within the same translation class, buckets with more witnesses rank before weaker buckets.
+3. Remaining ties use deterministic gloss text ordering.
+
+This is not yet a broad source-quality model. Do not add source-quality,
+near-match, or semantic-similarity ranking without accepted-output tests that
+explain the intended behavior.
 
 ## Non-Goals For MVP
 

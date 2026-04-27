@@ -145,6 +145,25 @@ def test_gaffiot_entry_triples_mark_source_language_and_evidence() -> None:
     assert triples[1]["metadata"]["source_lang"] == "fr"
     assert triples[1]["metadata"]["evidence"]["source_tool"] == "gaffiot"
     assert triples[1]["metadata"]["evidence"]["variant_num"] == 1
+    assert triples[1]["metadata"]["display_gloss"] == "ī, m., loup"
+    assert triples[1]["metadata"]["source_entry"] == {
+        "dict": "gaffiot",
+        "source_ref": "gaffiot:gaffiot_1",
+        "entry_id": "gaffiot_1",
+        "headword_norm": "lupus",
+        "variant_num": 1,
+        "entry_hash": "hash-1",
+        "source_text": "ī, m., loup",
+    }
+    assert triples[1]["metadata"]["source_segments"] == [
+        {
+            "index": 0,
+            "raw_text": "ī, m., loup",
+            "display_text": "ī, m., loup",
+            "segment_type": "definition_segment",
+            "labels": ["definition"],
+        }
+    ]
 
 
 def test_gaffiot_staged_handlers_emit_claim_triples() -> None:

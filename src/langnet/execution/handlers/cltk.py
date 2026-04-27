@@ -8,6 +8,7 @@ import orjson
 from query_spec import ToolCallSpec
 
 from langnet.clients.base import RawResponseEffect
+from langnet.execution import predicates
 from langnet.execution.effects import (
     ClaimEffect,
     DerivationEffect,
@@ -15,6 +16,7 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
+from langnet.execution.source_text import display_text, source_segments_from_text, trim_empty
 from langnet.execution.versioning import versioned
 from langnet.normalizer.utils import contains_greek, normalize_greekish_token, strip_accents
 from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
@@ -140,13 +142,20 @@ def _sense_anchor(lex_anchor: str, gloss: str) -> str:
 
 
 def _make_triple(
-    subject: str, predicate: str, obj: object, base_evidence: Mapping[str, object]
+    subject: str,
+    predicate: str,
+    obj: object,
+    base_evidence: Mapping[str, object],
+    metadata: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
+    triple_metadata = {"evidence": _trim_evidence(dict(base_evidence))}
+    if metadata:
+        triple_metadata.update(trim_empty(metadata))
     return {
         "subject": subject,
         "predicate": predicate,
         "object": obj,
-        "metadata": {"evidence": _trim_evidence(dict(base_evidence))},
+        "metadata": triple_metadata,
     }
 
 
@@ -225,13 +234,43 @@ def _build_triples(
     if lex_anchor and ipa_value:
         triples.append(_make_triple(lex_anchor, "has_pronunciation", ipa_value, base_evidence))
     if lex_anchor:
-        for line in lewis_lines:
+        for line_index, line in enumerate(lewis_lines):
             gloss = line.strip()
             if not gloss:
                 continue
             sense_anchor = _sense_anchor(lex_anchor, gloss)
-            triples.append(_make_triple(lex_anchor, "has_sense", sense_anchor, base_evidence))
-            triples.append(_make_triple(sense_anchor, "gloss", gloss, base_evidence))
+            source_ref = f"cltk:lewis_lines:{normalized_lemma}:{line_index}"
+            source_entry = trim_empty(
+                {
+                    "dict": "lewis_short_cltk",
+                    "source_ref": source_ref,
+                    "line_index": line_index,
+                    "lemma": normalized_lemma,
+                    "source_text": line,
+                }
+            )
+            source_segments = source_segments_from_text(
+                line,
+                segment_type="dictionary_line",
+                labels=["dictionary_entry"],
+            )
+            triples.append(
+                _make_triple(lex_anchor, predicates.HAS_SENSE, sense_anchor, base_evidence)
+            )
+            triples.append(
+                _make_triple(
+                    sense_anchor,
+                    predicates.GLOSS,
+                    gloss,
+                    base_evidence,
+                    {
+                        "source_ref": source_ref,
+                        "display_gloss": display_text(gloss),
+                        "source_entry": source_entry,
+                        "source_segments": source_segments,
+                    },
+                )
+            )
     return triples
 
 

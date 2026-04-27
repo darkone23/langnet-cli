@@ -1,0 +1,42 @@
+{
+  "description": "No-network golden rows for cache-backed French to English lexicon translation projection.",
+  "model": "test:model",
+  "rows": [
+    {
+      "source_lexicon": "gaffiot",
+      "entry_id": "gaffiot_38776",
+      "occurrence": 1,
+      "headword_norm": "lupus",
+      "source_ref": "gaffiot:gaffiot_38776",
+      "source_text": "loup",
+      "translated_text": "wolf"
+    },
+    {
+      "source_lexicon": "gaffiot",
+      "entry_id": "gaffiot_1024",
+      "occurrence": 0,
+      "headword_norm": "amor",
+      "source_ref": "gaffiot:gaffiot_1024",
+      "source_text": "amour, affection",
+      "translated_text": "love, affection"
+    },
+    {
+      "source_lexicon": "dico",
+      "entry_id": "dharma",
+      "occurrence": 0,
+      "headword_norm": "dharma",
+      "source_ref": "dico:34.html#dharma:0",
+      "source_text": "loi, devoir, vertu",
+      "translated_text": "law, duty, virtue"
+    },
+    {
+      "source_lexicon": "dico",
+      "entry_id": "yoga",
+      "occurrence": 0,
+      "headword_norm": "yoga",
+      "source_ref": "dico:81.html#yoga:0",
+      "source_text": "union, discipline spirituelle",
+      "translated_text": "union, spiritual discipline"
+    }
+  ]
+}

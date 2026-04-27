@@ -41,6 +41,9 @@ just cli lookup lat lupus --output pretty
 just cli lookup grc λόγος --output pretty
 just cli lookup san agni --output pretty
 
+devenv shell -- bash -c 'langnet-cli encounter san dharma all --no-cache --max-buckets 3'
+devenv shell -- bash -c 'langnet-cli encounter san agni heritage --no-cache'
+
 just cli parse whitakers lat amarem --format json
 just cli parse diogenes lat lupus --format pretty
 
@@ -60,6 +63,7 @@ just triples-dump lat lupus whitakers
 | `plan` | Build the tool-plan DAG without executing it. |
 | `plan-exec` | Run normalize → plan → fetch/extract/derive/claim. |
 | `triples-dump` | Print claim triples and evidence for inspection. |
+| `encounter` | Current learner-facing MVP: reduced meaning buckets plus source-backed analysis. |
 | `databuild` | Build local data/indexes. |
 | `index` | Inspect or manage storage indexes/caches. |
 
@@ -82,6 +86,7 @@ just test tests.test_cdsl_triples
 ## Common Problems
 
 - **No backend data**: confirm Diogenes, Heritage, and Whitaker are installed/running.
+- **Sanskrit meanings vs analysis**: Heritage is the preferred Sanskrit analysis/morphology source; CDSL and DICO supply dictionary/source glosses. Use `encounter san <word> all` for the composed view.
 - **CLTK unavailable**: install required CLTK model data and ensure `CLTK_DATA` points to a writable directory.
 - **Stale server behavior**: restart long-running processes after code changes; Python modules are cached in running servers.
 - **Need provenance**: use `plan-exec` or `triples-dump`, not only `lookup --output pretty`.

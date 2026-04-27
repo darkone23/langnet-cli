@@ -23,15 +23,21 @@ from langnet.execution.effects import (
     stable_effect_id,
 )
 from langnet.execution.handlers.local_raw import local_raw_response_id
+from langnet.execution.source_text import display_text, source_segments_from_text, trim_empty
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.normalizer.utils import strip_accents
 
-_DICO_URL_RE = re.compile(r"/DICO/(?P<page>[^/#?]+)\.html#(?P<entry>[^#?]+)")
+_DICO_URL_RE = re.compile(r"/DICO/(?P<page>[^/#?]+)\.html#(?P<entry>[^?]+)")
 
 
 def normalize_dico_headword(raw: str) -> str:
     """Normalize a DICO lookup key."""
     return strip_accents((raw or "").strip()).lower()
+
+
+def _strip_dico_anchor_variant(raw: str) -> str:
+    """Drop Heritage/DICO numeric anchor suffixes such as ``#1`` for headword lookup."""
+    return re.sub(r"#\d+$", "", raw or "")
 
 
 def expand_dico_headword_candidates(headwords: list[str]) -> list[str]:
@@ -49,8 +55,10 @@ def expand_dico_headword_candidates(headwords: list[str]) -> list[str]:
         if not headword:
             continue
         _add(headword)
+        _add(_strip_dico_anchor_variant(headword))
         with contextlib.suppress(Exception):
             _add(to_heritage_velthuis(headword))
+            _add(_strip_dico_anchor_variant(to_heritage_velthuis(headword)))
     return candidates
 
 
@@ -180,6 +188,9 @@ def dico_entry_triples(entry: dict) -> list[dict]:
     occurrence = entry.get("occurrence")
     source_page = entry.get("source_page")
     gloss = entry.get("plain_text") or ""
+    if not isinstance(gloss, str):
+        gloss = ""
+    display_gloss = display_text(gloss)
     lex_anchor = f"lex:{headword}"
     source_ref = f"dico:{source_page}.html#{entry_id}:{occurrence}"
     digest_material = f"{source_ref}:{gloss}"
@@ -190,6 +201,24 @@ def dico_entry_triples(entry: dict) -> list[dict]:
         "source_ref": source_ref,
         "raw_blob_ref": "body_html",
     }
+    source_entry = trim_empty(
+        {
+            "dict": "dico",
+            "source_ref": source_ref,
+            "entry_id": entry_id,
+            "occurrence": occurrence,
+            "source_page": source_page,
+            "headword_deva": entry.get("headword_deva"),
+            "headword_roma": entry.get("headword_roma"),
+            "headword_norm": headword,
+            "source_text": gloss,
+        }
+    )
+    source_segments = source_segments_from_text(
+        gloss,
+        segment_type="definition_segment",
+        labels=["definition"],
+    )
     return [
         {
             "subject": lex_anchor,
@@ -205,6 +234,9 @@ def dico_entry_triples(entry: dict) -> list[dict]:
                 "evidence": evidence,
                 "source_lang": "fr",
                 "source_ref": source_ref,
+                "display_gloss": display_gloss,
+                "source_entry": source_entry,
+                "source_segments": source_segments,
             },
         },
     ]

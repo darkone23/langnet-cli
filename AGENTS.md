@@ -50,9 +50,10 @@ docs/plans/
 See these key documents:
 
 - [README.md](README.md) - Overview, educational use cases, and quick start
+- [docs/VISION.md](docs/VISION.md) - Product vision, audience, principles, and strategic direction
 - [docs/DEVELOPER.md](docs/DEVELOPER.md) - Code conventions, testing, project structure
 - [docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md) - Educational approach and Foster grammar
-- [docs/reference/opencode/MULTI_MODEL_GUIDE.md](docs/reference/opencode/MULTI_MODEL_GUIDE.md) - AI-assisted development workflow
+- [docs/technical/opencode/MULTI_MODEL_GUIDE.md](docs/technical/opencode/MULTI_MODEL_GUIDE.md) - AI-assisted development workflow
 
 ## Critical Patterns
 

@@ -75,6 +75,27 @@ def test_sanskrit_plan_contains_heritage_call() -> None:
     assert plan.dependencies, "Expected dependencies for parse/derive ordering"
 
 
+def test_sanskrit_plan_converts_heritage_velthuis_to_cdsl_slp1() -> None:
+    normalized = NormalizedQuery(
+        original="śraddhā",
+        language=LanguageHint.LANGUAGE_HINT_SAN,
+        candidates=[
+            CanonicalCandidate(
+                lemma="śrāddha",
+                encodings={"velthuis": "zraaddha", "iast": "śrāddha"},
+                sources=["heritage_sktsearch"],
+            )
+        ],
+        normalizations=[],
+    )
+
+    plan = ToolPlanner().build(normalized)
+
+    cdsl_calls = [c for c in plan.tool_calls if c.tool == "fetch.cdsl"]
+    assert cdsl_calls
+    assert all(c.params.get("lemma") == "SrAdDa" for c in cdsl_calls)
+
+
 def test_latin_plan_includes_parse_and_whitakers() -> None:
     planner = ToolPlanner(PlannerConfig(include_whitakers=True))
     plan = planner.build(_lat_normalized())

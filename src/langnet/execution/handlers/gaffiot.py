@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import re
 import time
 from collections.abc import Mapping
 from pathlib import Path
@@ -21,6 +20,7 @@ from langnet.execution.effects import (
     stable_effect_id,
 )
 from langnet.execution.handlers.local_raw import local_raw_response_id
+from langnet.execution.source_text import display_text, source_segments_from_text, trim_empty
 from langnet.normalizer.utils import strip_accents
 
 
@@ -101,6 +101,9 @@ def gaffiot_entry_triples(entry: dict) -> list[dict]:
     entry_id = entry.get("entry_id")
     variant_num = entry.get("variant_num")
     gloss = entry.get("plain_text") or ""
+    if not isinstance(gloss, str):
+        gloss = ""
+    display_gloss = display_text(gloss)
     lex_anchor = f"lex:{headword}"
     source_ref = f"gaffiot:{entry_id}"
     digest_material = f"{source_ref}:{gloss}"
@@ -115,6 +118,23 @@ def gaffiot_entry_triples(entry: dict) -> list[dict]:
         evidence["variant_num"] = variant_num
     if entry.get("entry_hash"):
         evidence["entry_hash"] = entry["entry_hash"]
+    source_entry = trim_empty(
+        {
+            "dict": "gaffiot",
+            "source_ref": source_ref,
+            "entry_id": entry_id,
+            "headword_raw": entry.get("headword_raw"),
+            "headword_norm": headword,
+            "variant_num": variant_num,
+            "entry_hash": entry.get("entry_hash"),
+            "source_text": gloss,
+        }
+    )
+    source_segments = source_segments_from_text(
+        gloss,
+        segment_type="definition_segment",
+        labels=["definition"],
+    )
 
     return [
         {
@@ -126,11 +146,14 @@ def gaffiot_entry_triples(entry: dict) -> list[dict]:
         {
             "subject": sense_anchor,
             "predicate": predicates.GLOSS,
-            "object": re.sub(r"\s+", " ", gloss).strip(),
+            "object": display_gloss,
             "metadata": {
                 "evidence": evidence,
                 "source_lang": "fr",
                 "source_ref": source_ref,
+                "display_gloss": display_gloss,
+                "source_entry": source_entry,
+                "source_segments": source_segments,
             },
         },
     ]

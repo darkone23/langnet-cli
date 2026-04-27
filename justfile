@@ -46,6 +46,12 @@ reap:
 test-all:
     devenv shell -- nose2 -s tests --config tests/nose2.cfg
 
+# Stabilization loop for current learner/evidence work: focused tests, then full gates.
+validate-stabilization:
+    just test test_cdsl_triples test_wsu_extraction test_translation_projection test_cli_encounter_output
+    just lint-all
+    just test-fast
+
 # nose2 -s tests --config tests/nose2.cfg <...>
 test *args:
     devenv shell -- nose2 -s tests --config tests/nose2.cfg {{ args }}

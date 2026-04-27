@@ -1,6 +1,6 @@
 # French Entry Translation Cache
 
-**Status:** design target; not runtime behavior yet.  
+**Status:** cache schema/key helpers, demo cache writes, encounter cache-hit projection, and Gaffiot/DICO golden cache rows are implemented.  
 **Scope:** lazy French → English translation for Gaffiot Latin entries first, then DICO Sanskrit entries.
 
 ## Current State
@@ -10,14 +10,19 @@
 - CDSL does not need translation for this path. It already provides Sanskrit dictionary material separately from the French DICO index.
 - The current prompt and chunking behavior are tuned most heavily for Gaffiot: Latin citations are preserved while surrounding French explanation is translated, and entries are split on Gaffiot paragraph markers.
 - DICO/Sanskrit mode exists and has Sanskrit-preservation hints, but should be treated as less mature until it has fixture-backed examples.
-- The script prints translations only. It does not persist results, expose cache hits, or feed translated text into `triples-dump`.
+- `langnet.translation.cache` now provides the DuckDB `entry_translations` schema, cache-key helpers, and a small `TranslationCache` read/write wrapper. This is intentionally no-network infrastructure.
+- `langnet.translation.projection` can project successful cache hits into derived English `has_sense`/`gloss` triples before semantic reduction.
+- `langnet-cli encounter` now provides a first learner-facing textual path over claim-to-WSU reduction. It displays reduced source glosses and, with `--use-translation-cache`, treats cached translations as first-class English meaning buckets.
+- `.justscripts/lex_translation_demo.py` can now write successful translations to `entry_translations` with `--write-cache` and can display deterministic cache keys with `--show-cache-key`.
+- `langnet-cli encounter` can read cache hits with `--use-translation-cache --translation-cache-db <path>`. It does not call the network.
 - `triples-dump` resolves exact Latin headwords through staged Gaffiot effects (`fetch.gaffiot` → `extract.gaffiot.json` → `derive.gaffiot.entries` → `claim.gaffiot.entries`) and emits French Gaffiot gloss triples.
 - `langnet-cli databuild dico` can rebuild the DICO DuckDB index from local Sanskrit Heritage `DICO/*.html` files.
 - `triples-dump` resolves Sanskrit headwords through staged DICO effects (`fetch.dico` → `extract.dico.json` → `derive.dico.entries` → `claim.dico.entries`) and emits French DICO gloss triples.
 - Heritage `/skt/DICO/*.html#anchor` URL resolution remains as a fallback for cases where the planned headword misses the exact DICO anchor.
 - Gaffiot and DICO lookup clients try multiple candidate forms from the planner so inflected Latin and encoded Sanskrit variants have a better chance of finding local entries.
-- Gaffiot/DICO translation is still not cached or emitted; current local lexicon triples are source-language French evidence.
-- Translation is intentionally networked and potentially expensive, so it must stay opt-in.
+- Gaffiot/DICO source triples remain source-language French evidence. Cached translations are emitted as derived evidence when requested.
+- Translation population is intentionally networked and potentially expensive, so it must stay opt-in. Normal learner-facing lookup should prefer resolved cache hits and should not call the translation provider implicitly.
+- `docs/OUTPUT_GUIDE.md` now includes an inspection walkthrough for source French triples and derived cache-hit English witnesses.
 
 ## Target Behavior
 
@@ -65,8 +70,8 @@ CREATE TABLE IF NOT EXISTS entry_translations (
   status TEXT NOT NULL,
   error TEXT,
   duration_ms INTEGER,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  created_at DOUBLE NOT NULL,
+  updated_at DOUBLE NOT NULL
 );
 ```
 
@@ -88,6 +93,8 @@ The `gloss` claim should carry translation metadata:
 - `entry_id`
 - `occurrence`
 - `source_text_hash`
+- `source_text_lang`
+- `gloss_lang`
 - `model`
 - `prompt_hash`
 - `hint_hash`
@@ -105,12 +112,21 @@ langnet-cli triples-dump lat lupus all --include-gaffiot --translate-fr-en --all
 
 Network calls should require an explicit opt-in flag such as `--allow-translation-network`. Cache-only translation reads should be safe for routine inspection.
 
+Current bridge command:
+
+```bash
+devenv shell -- bash -c 'python3 .justscripts/lex_translation_demo.py --mode latin --headword lupus --limit 1 --write-cache --show-cache-key'
+devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --use-translation-cache --translation-cache-db data/cache/langnet.duckdb'
+```
+
 ## Stabilization Steps
 
-1. Add cache schema and key helpers without calling the network.
-2. Add fixture-backed Gaffiot tests for cache hit, cache miss, and stale prompt hash.
-3. Add equivalent DICO fixtures after Sanskrit examples are reviewed.
-4. Add a fake translator interface for no-network integration tests.
-5. Add cache-hit translated gloss projection for Gaffiot/DICO.
-6. Wire cache-hit translations into `triples-dump` or the semantic reducer input.
-7. Add the explicit network miss path after cache-hit behavior is stable.
+1. Add cache schema and key helpers without calling the network. **Done.**
+2. Add fixture-backed Gaffiot/DICO tests for cache identity and cache hits. **Done.**
+3. Wire the existing translation demo into cache writes. **Done.**
+4. Add cache-hit display in `encounter`. **Done.**
+5. Add cache-hit translated gloss projection for `encounter` reducer JSON. **Done.**
+6. Add evidence-inspection walkthrough for cached translations in `encounter`. **Done.**
+7. Add accepted-output examples that show cached translations in `encounter`.
+8. Add a fake translator interface for no-network integration tests if the explicit miss path needs more coverage.
+9. Add the explicit network miss path only behind an opt-in flag after cache-hit behavior is stable.

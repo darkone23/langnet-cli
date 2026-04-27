@@ -64,7 +64,13 @@ def test_diogenes_claim_contract_for_dictionary_fixture() -> None:
     assert has_sense is not None
     sense_anchor = has_sense["object"]
     assert isinstance(sense_anchor, str)
-    assert find_triple(triples, sense_anchor, "gloss") is not None
+    gloss = find_triple(triples, sense_anchor, "gloss")
+    assert gloss is not None
+    gloss_metadata = gloss["metadata"]
+    assert isinstance(gloss_metadata, Mapping)
+    assert gloss_metadata["display_gloss"]
+    assert gloss_metadata["source_entry"]["dict"] == "diogenes"
+    assert gloss_metadata["source_segments"]
     citation = find_triple(triples, "lex:lupus", "has_citation")
     assert citation is not None
     metadata = citation["metadata"]
@@ -129,6 +135,14 @@ def test_cltk_claim_contract_for_lexicon_fixture() -> None:
     assert find_triple(triples, "lex:amo", "has_pronunciation", "a.mo") is not None
     has_sense = find_triple(triples, "lex:amo", "has_sense")
     assert has_sense is not None
+    sense_anchor = has_sense["object"]
+    assert isinstance(sense_anchor, str)
+    gloss = find_triple(triples, sense_anchor, "gloss", "amo, amare, v. to love")
+    assert gloss is not None
+    metadata = gloss["metadata"]
+    assert isinstance(metadata, Mapping)
+    assert metadata["source_entry"]["dict"] == "lewis_short_cltk"
+    assert metadata["source_segments"][0]["raw_text"] == "amo, amare, v. to love"
 
 
 def test_heritage_claim_contract_for_morphology_fixture() -> None:

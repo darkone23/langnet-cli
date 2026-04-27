@@ -7,11 +7,19 @@ import re
 import textwrap
 import time
 from collections.abc import Iterable
+from pathlib import Path
 
 import aisuite as ai
 import click
 import dotenv
 import duckdb
+
+from langnet.storage.db import connect_duckdb_rw
+from langnet.translation import TranslationCache, TranslationRecord, build_translation_key
+from langnet.translation.prompts import (
+    BASE_SYSTEM,
+    default_hints_for_mode,
+)
 
 dotenv.load_dotenv()
 
@@ -19,64 +27,6 @@ dotenv.load_dotenv()
 #     "Translate into English. Keep abbreviations and any Sanskrit tokens unchanged. Preserve layout, punctuation, and style. Do not translate cross language examples (fr. gr. lat. an.) and do not expand abbreviations.",  # noqa: E501
 #     "Do not add markdown styling such as bold, italics, or numbering.",
 # ]
-
-SANSKRIT_HINTS = [
-    (
-        "Keep abbreviations and any Sanskrit tokens unchanged. "
-        "Preserve layout, punctuation, and style."
-    ),
-    (
-        "Do not modify formatting, leave [brackets] as brackets and (parens) as parens: "
-        "do not omit formatting. Leave sanskrit IAST diacritics intact."
-    ),
-    "Do not expand abbreviations or enhance beyond material found in the source text.",
-    "Avoid translation of cross-language synonym examples prefixed with ; fr.",
-    "All french phrases must be translated. Do not emit french text except for synonym clusters.",
-    (
-        "If input is single sanskrit term return it unmodified. "
-        "Do not add clarifying explanations not found in source."
-    ),
-    (
-        "example word definition: apacasi tu ne sais pas cuisiner. => "
-        "apacasi you do not know how to cook."
-    ),
-    "example synonym cluster: lat. lupus; fr. loup. => lat. lupus; fr. loup.",
-    (
-        "example formatting preservation: aṃśa [act. aś_1] m. (ce qu'on obtient) "
-        "part, partie, portion, division, part d'héritage => aṃśa [act. aś_1] m. "
-        "(that which is obtained) share, portion, portion, division, share of inheritance"
-    ),
-    # "example formatting: "
-    # "Example in : añj v. [7] pr. (anakti) pp. (akta) abs. (aktvā, -añjya) pf. (abhi, ā, vi, sam) oindre, enduire ; orner — pr. r. (aṅkte) s'enduire, s'oindre de ; se farder — ps. (ajyate) être fardé, être beau — ca. (añjayati) oindre, enduire || lat. ungo; fr. oindre, onguent.",  # noqa: E501
-    # "Example out: añj v. [7] pr. (anakti) pp. (akta) abs. (aktvā, -añjya) pf. (abhi, ā, vi, sam) to anoint, to coat; to adorn — pr. r. (aṅkte) to coat oneself, to anoint oneself with; to make up oneself — ps. (ajyate) to be made up, to be beautiful — ca. (añjayati) to anoint, to coat || lat. ungo; fr. oindre, onguent.",  # noqa: E501
-]
-
-LATIN_HINTS = [
-    (
-        "Keep abbreviations and Latin terms/authors/works unchanged. "
-        "Preserve numbering, punctuation, and style. Do not expand abbreviations."
-    ),
-    (
-        "Do not add markdown styling such as bold, italics, or numbering, "
-        "nor enhance with content not in the source text."
-    ),
-    (
-        "Sometimes an entry is full of classic latin citations with french translations "
-        "of those citations. Please keep the latin citations intact and provide english "
-        "translations from the french."
-    ),
-    (
-        "If input is single latin term or letter return it unmodified. "
-        "Do not add clarifying explanations not found in source."
-    ),
-    "All french phrases must be translated. Do not emit untranslated french text.",
-    (
-        "French text is sometimes surrounded formatting or intermixed with latin citations, "
-        "you may have to hunt for french phrases needing translating."
-    ),
-    "Be sure to do a double pass and select the best option.",
-    "example of pass-through: n. ae 2 => n. ae 2",
-]
 
 
 def get_client() -> ai.Client:
@@ -117,7 +67,13 @@ def fetch_rows(
     try:
         columns = {row[1] for row in con.execute(f"PRAGMA table_info('{safe_table}')").fetchall()}
         has_occurrence = "occurrence" in columns
-        occurrence_sql = "occurrence" if has_occurrence else "0 as occurrence"
+        has_variant_num = "variant_num" in columns
+        if has_occurrence:
+            occurrence_sql = "occurrence"
+        elif has_variant_num:
+            occurrence_sql = "variant_num as occurrence"
+        else:
+            occurrence_sql = "0 as occurrence"
 
         query = f"""
             SELECT entry_id, {occurrence_sql}, headword_norm, plain_text
@@ -150,17 +106,11 @@ def translate_entry(  # noqa: PLR0913
     chunks: list[str],
     separator: str,
 ) -> list[tuple[str, str]]:
-    base_system = (
-        "You translate french lexicon entries into english for classical language students. "
-        "All french phrases should be translated to english unless instructed otherwise. "
-        "Preserve transliterated tokens and sense numbering. Respond with concise prose."
-    )
-
     combined_hint = "\n".join(hints)
     translated_parts: list[str] = []
     for idx, chunk in enumerate(chunks, start=1):
         messages = [
-            {"role": "system", "content": base_system},
+            {"role": "system", "content": BASE_SYSTEM},
             {"role": "system", "content": combined_hint},
             {
                 "role": "user",
@@ -210,6 +160,29 @@ def split_lines(text: str) -> list[str]:
     """
     parts = [part.strip() for part in text.splitlines() if part.strip()]
     return parts or [text]
+
+
+def source_lexicon_for_mode(mode: str) -> str:
+    return "gaffiot" if mode.lower() == "latin" else "dico"
+
+
+def source_text_for_cache(mode: str, source_text: str) -> str:
+    if mode.lower() == "latin":
+        return re.sub(r"\s+", " ", source_text).strip()
+    return source_text
+
+
+def build_entry_translation_key(entry: dict, mode: str, model: str, hints: Iterable[str]):
+    return build_translation_key(
+        source_lexicon=source_lexicon_for_mode(mode),
+        entry_id=str(entry["entry_id"]),
+        occurrence=int(entry.get("occurrence") or 0),
+        headword_norm=str(entry.get("headword_norm") or ""),
+        source_text=source_text_for_cache(mode, str(entry["plain_text"])),
+        model=model,
+        prompt=BASE_SYSTEM,
+        hint="\n".join(hints),
+    )
 
 
 @click.command()
@@ -265,7 +238,23 @@ def split_lines(text: str) -> list[str]:
     is_flag=True,
     help="Fetch and display rows/chunks without requiring OPENAI_API_KEY or calling the model.",
 )
-def main(  # noqa: PLR0913
+@click.option(
+    "--cache-db",
+    default="data/cache/langnet.duckdb",
+    show_default=True,
+    help="DuckDB cache for persisted translations.",
+)
+@click.option(
+    "--write-cache",
+    is_flag=True,
+    help="Persist successful translations to the local translation cache.",
+)
+@click.option(
+    "--show-cache-key",
+    is_flag=True,
+    help="Display the translation cache key for each row.",
+)
+def main(  # noqa: C901, PLR0912, PLR0913, PLR0915
     db: str,
     table: str,
     limit: int,
@@ -275,6 +264,9 @@ def main(  # noqa: PLR0913
     headword: str | None,
     entry_id: str | None,
     dry_run: bool,
+    cache_db: str,
+    write_cache: bool,
+    show_cache_key: bool,
 ) -> None:
     """Translate lexicon rows from DuckDB using OpenRouter."""
     if db is None:
@@ -283,12 +275,7 @@ def main(  # noqa: PLR0913
             if mode.lower() == "latin"
             else "data/build/lex_dico.duckdb"
         )
-    if hint:
-        hints = list(hint)
-    elif mode.lower() == "latin":
-        hints = LATIN_HINTS
-    else:
-        hints = SANSKRIT_HINTS
+    hints = list(hint) if hint else default_hints_for_mode(mode)
     client = None if dry_run else get_client()
     rows = fetch_rows(db, table, limit, headword=headword, entry_id=entry_id)
     if not rows:
@@ -319,13 +306,31 @@ def main(  # noqa: PLR0913
             click.echo("\n- Translation skipped (--dry-run)")
             click.echo(f"  chunks={len(chunks)}")
             click.echo(f"  hints={len(hints)}")
+            if show_cache_key:
+                key = build_entry_translation_key(entry, lower_mode, model, hints)
+                click.echo(f"  translation_id={key.translation_id}")
             continue
         assert client is not None
         translations = translate_entry(client, model, entry, hints, chunks, separator)
         for hint_text, content in translations:
             click.echo("\n- Translation: ")
             # normalize by stripping senseless markdown
-            click.echo(indent_block(content.replace("*", "")))
+            cleaned_content = content.replace("*", "")
+            click.echo(indent_block(cleaned_content))
+            key = build_entry_translation_key(entry, lower_mode, model, hints)
+            if show_cache_key:
+                click.echo(f"  translation_id={key.translation_id}")
+            if write_cache:
+                with connect_duckdb_rw(Path(cache_db)) as conn:
+                    cache = TranslationCache(conn)
+                    cache.upsert(
+                        TranslationRecord(
+                            key=key,
+                            translated_text=cleaned_content.strip(),
+                            status="ok",
+                        )
+                    )
+                click.echo(f"  [cache] wrote {key.translation_id}")
         entry_elapsed = time.perf_counter() - entry_start
         total_in_chars = sum(len(chunk) for chunk in chunks)
         entry_rate = total_in_chars / entry_elapsed if entry_elapsed > 0 else float("inf")

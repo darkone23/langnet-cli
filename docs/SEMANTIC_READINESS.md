@@ -1,8 +1,8 @@
 # Semantic Reduction Readiness
 
-**Status:** not ready for implementation beyond fixtures.
+**Status:** ready for MVP extension, not ready for learner-quality semantic generalization.
 
-LangNet has enough claim/triple infrastructure to prepare semantic reduction, but not enough stabilized behavior to build the full reducer confidently.
+LangNet now has a small runtime semantic path: claim triples become Witness Sense Units, exact gloss buckets, and `encounter` output. That is enough to extend the MVP carefully, but not enough to claim broad semantic reduction or learner-quality encounters.
 
 ## What Is Ready
 
@@ -12,6 +12,16 @@ LangNet has enough claim/triple infrastructure to prepare semantic reduction, bu
 - A hand-written `lupus` WSU fixture exists under `tests/fixtures/`.
 - DICO/Gaffiot local raw response IDs are content-addressed and regression-tested.
 - Docs now describe the intended WSU → bucket path.
+- Runtime WSU extraction exists over `has_sense + gloss + evidence`.
+- Exact-match bucket grouping exists.
+- `langnet-cli encounter` displays reduced buckets and shows Heritage morphology analysis rows for Sanskrit.
+- Cached DICO/Gaffiot translations can be projected as derived evidence before reduction.
+- `triples-dump --output json` exposes structured claims and triples for reducer debugging.
+- A 50-word diagnostic audit now distinguishes gloss hits from Heritage morphology/evidence hits.
+- Accepted `encounter` snapshots now cover translated DICO/Gaffiot cache hits and multi-witness ranking.
+- A dedicated learner encounter roadmap now tracks current failures and validation
+  tasks for Sanskrit, Latin, and Greek:
+  `docs/plans/active/pedagogy/learner-encounter-roadmap.md`.
 
 ## Blocking Gaps
 
@@ -37,34 +47,45 @@ CLTK now uses a writable data directory, but model data may be missing. Semantic
 
 ### 5. Fuzz Harness Is Not A Semantic Gate
 
-The fuzz harness is useful for parser diagnostics, but query/compare modes still reflect older API assumptions. It should not be used as proof that semantic reduction is ready.
+The fuzz harness is useful for parser diagnostics, and the current 50-word audit shows strong evidence coverage. It still should not be used as proof that semantic reduction is ready: hit rates show that evidence exists, not that the top learner-facing answer is the best one.
 
-### 6. No WSU Extractor Contract Yet
+### 6. Exact Buckets Are Not Semantic Buckets
 
-There is a WSU fixture contract, but no runtime extractor. The next safe step is an extractor that consumes only triples:
+The current reducer groups exact normalized gloss strings. It is deterministic and inspectable, but it does not yet merge synonyms, reorder source entries by learner value, or split large dictionary entries into clean individual senses.
 
-```text
-has_sense + gloss + evidence → WitnessSenseUnit
-```
+### 7. Translation Is Cache-Bearing But Selectively Populated
 
-### 7. Translation Is Not Yet Evidence-Bearing
+DICO and Gaffiot source entries are French. The cache schema, cache-hit projection, and Gaffiot/DICO golden rows exist, but representative cache rows are not yet broadly populated, and network translation must remain explicit opt-in.
 
-DICO and Gaffiot source entries are French. The ad-hoc translation script can translate sampled rows and is tuned most heavily for Gaffiot, but translated text is not cached, not represented as translation evidence, and not visible to `triples-dump`. Gaffiot and DICO source entries now flow through staged effects, but both remain French source evidence. Semantic reduction should not depend on translated Gaffiot/DICO glosses until the cache path in `docs/TRANSLATION_CACHE_PLAN.md` exists.
+### 8. CDSL Entries Are Still Flat
+
+CDSL display now exposes IAST forms and source keys, and `encounter` performs conservative source-complete display transforms. The underlying CDSL glosses are still large flat strings that mix entry headwords, grammar, citations, abbreviations, compounds, and actual gloss text.
+
+### 9. Learner Encounter Ranking Is Not Trustworthy Yet
+
+Current examples show that evidence existence is not the same as learner quality.
+`nirudha` can rank obscure CDSL material first, `dharma` still exposes flat
+source strings, `lupus` can show unrelated normalized Latin candidates, and
+`logos` can expose large LSJ sections without a concise sense summary.
 
 ## Recommended Next Steps
 
-1. Add a tiny WSU extractor over claim triples.
-2. Keep it service-free and fixture-driven.
-3. Add exact-match bucket grouping only after extractor tests pass.
-4. Add cached translation triples only after cache-hit behavior is testable without network calls.
-5. Delay embeddings, semantic constants, and learner display changes.
+1. Add accepted-output fixtures for hard encounter terms before changing display logic.
+2. Split source glosses into structured display fields before attempting semantic similarity.
+3. Fix candidate/form hygiene so unrelated analyzer candidates do not pollute learner output.
+4. Expand cache-backed translation examples beyond the current golden rows and snapshots.
+5. Extend accepted-output examples for harder multi-source disagreements, not just happy-path matches.
+6. Delay embeddings and LLM similarity until exact buckets plus source display are boring.
 
 ## Readiness Bar
 
-Semantic reduction is ready to start only when:
+Semantic reduction can advance beyond the exact-bucket MVP when:
 
-- WSU extraction works from fixture claims.
-- Each WSU carries claim/evidence IDs.
+- WSU extraction and exact buckets remain fixture-stable.
+- Each WSU carries claim/evidence IDs and display metadata.
 - No live backend is required for reducer tests.
 - `triples-dump` can inspect the same facts the reducer consumes.
 - DICO/Gaffiot translated glosses are cache-backed and evidence-bearing before they influence buckets.
+- CDSL flat entry strings are structured enough that ranking does not privilege undifferentiated source notation.
+- The representative encounter set (`san nirudha`, `san dharma`, `lat lupus`,
+  `grc logos`) has accepted learner-facing output and JSON evidence fixtures.

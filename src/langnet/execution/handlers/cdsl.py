@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
+import re
 import time
 import unicodedata
 from collections.abc import Mapping, Sequence
+from functools import lru_cache
 from typing import cast
 from xml.etree import ElementTree
 
@@ -12,6 +15,7 @@ from query_spec import ToolCallSpec
 
 from langnet.clients.base import RawResponseEffect, _new_response_id
 from langnet.databuild.paths import default_cdsl_path
+from langnet.execution import predicates
 from langnet.execution.effects import (
     ClaimEffect,
     DerivationEffect,
@@ -30,7 +34,7 @@ _IAST_TO_SLP1 = {
     "ṝ": "F",
     "ḷ": "x",
     "ḹ": "X",
-    "ṅ": "G",
+    "ṅ": "N",
     "ñ": "Y",
     "ṇ": "R",
     "ś": "S",
@@ -39,7 +43,8 @@ _IAST_TO_SLP1 = {
     "ṁ": "M",
     "ḥ": "H",
 }
-_SLP1_CHARS = set("aAiIuUfFxXeEoOkgGcCjJwWqQRtTdDpbBmnyYrlvSzshN")
+_IAST_MARKS = frozenset(_IAST_TO_SLP1)
+_SLP1_CHARS = set("aAiIuUfFxXeEoOEkKgGNcCjJYwWqQRtTdDnpPbBmyrlvSzshMH")
 _ASCII_DIGRAPH_TO_SLP1 = {
     "kh": "K",
     "gh": "G",
@@ -51,22 +56,94 @@ _ASCII_DIGRAPH_TO_SLP1 = {
     "bh": "B",
     "sh": "S",
 }
+_VELTHUIS_MARKERS = frozenset({".", '"', "~"})
+_CDSL_SLP1_DISPLAY_MARKS = str.maketrans("", "", "/\\^")
+_CDSL_TOKEN_RE = re.compile(
+    r"(?P<prefix>[^A-Za-z°]*)(?P<body>[A-Za-z°/\\^]+)(?P<suffix>[^A-Za-z°]*)"
+)
+_CDSL_SLP1_MARKERS = set("AIUFXEOKGNCJYRWQTDPSMH")
+_MIN_MARKED_CDSL_TOKEN_LEN = 2
+_CDSL_SOURCE_ABBREVIATIONS = {
+    "AV",
+    "Bhag",
+    "ChUp",
+    "L",
+    "MBh",
+    "Mn",
+    "PadmaP",
+    "RV",
+    "Suśr",
+    "Vop",
+    "Yājñ",
+    "NārP",
+}
+_HERITAGE_S_DOT_PLACEHOLDER = "\u0000"
+
+
+def _heritage_velthuis_to_slp1_basic(text: str) -> str:
+    """
+    Convert the Heritage Platform's Velthuis flavor to CDSL SLP1.
+
+    Heritage uses bare `z` for palatal `ś`, while CDSL SLP1 uses `S`.
+    Retroflex `ṣ` arrives as `.s`, so protect it before the bare-z pass.
+    """
+    replacements = [
+        (".rr", "F"),
+        (".r", "f"),
+        (".ll", "X"),
+        (".l", "x"),
+        ("~n", "Y"),
+        (".th", "W"),
+        (".t", "w"),
+        (".dh", "Q"),
+        (".d", "q"),
+        (".n", "R"),
+        (".m", "M"),
+        (".h", "H"),
+        ("aa", "A"),
+        ("ii", "I"),
+        ("uu", "U"),
+    ]
+    out = text.replace(".s", _HERITAGE_S_DOT_PLACEHOLDER)
+    for old, new in replacements:
+        out = out.replace(old, new)
+    for old, new in _ASCII_DIGRAPH_TO_SLP1.items():
+        out = out.replace(old, new)
+    out = out.replace("z", "S")
+    return out.replace(_HERITAGE_S_DOT_PLACEHOLDER, "z")
 
 
 def _looks_like_slp1(text: str) -> bool:
+    if any(marker in text for marker in _VELTHUIS_MARKERS):
+        return False
     lowered = text.lower()
     if any(pair in lowered for pair in _ASCII_DIGRAPH_TO_SLP1):
         return False
     return bool(text) and all(c.lower() in _SLP1_CHARS for c in text if c.isalpha())
 
 
-def _to_slp1(text: str) -> str:
-    """
-    Minimal IAST/ASCII → SLP1 converter (coverage sufficient for lookup).
-    """
-    if _looks_like_slp1(text):
-        return text
+@lru_cache(maxsize=1)
+def _load_sanscript_module():
+    try:
+        return importlib.import_module("indic_transliteration.sanscript")
+    except Exception:  # noqa: BLE001
+        return None
 
+
+def _sanscript_transliterate(text: str, source: str, target: str) -> str | None:
+    module = _load_sanscript_module()
+    if module is None:
+        return None
+    try:
+        source_scheme = getattr(module, source)
+        target_scheme = getattr(module, target)
+        result = module.transliterate(text, source_scheme, target_scheme)
+    except Exception:  # noqa: BLE001
+        return None
+    return result if isinstance(result, str) else None
+
+
+def _ascii_iast_to_slp1_basic(text: str) -> str:
     out = []
     i = 0
     while i < len(text):
@@ -82,6 +159,199 @@ def _to_slp1(text: str) -> str:
     return "".join(out)
 
 
+def _clean_cdsl_slp1_for_display(text: str) -> str:
+    """Drop CDSL accent markers before learner-facing transliteration."""
+    return text.translate(_CDSL_SLP1_DISPLAY_MARKS).removeprefix("°")
+
+
+def _token_looks_like_cdsl_slp1(token: str) -> bool:
+    clean = _clean_cdsl_slp1_for_display(token)
+    if not clean or clean in _CDSL_SOURCE_ABBREVIATIONS:
+        return False
+    if any(mark in token for mark in "/\\^"):
+        return len(clean) > _MIN_MARKED_CDSL_TOKEN_LEN
+    has_lower = any(ch.islower() for ch in clean)
+    return has_lower and any(ch in _CDSL_SLP1_MARKERS for ch in clean[1:])
+
+
+def _display_token_to_iast(token: str, source_slp1: str = "", display_iast: str = "") -> str:
+    match = _CDSL_TOKEN_RE.fullmatch(token)
+    if match is None:
+        return token
+
+    body = match.group("body")
+    clean_body = _clean_cdsl_slp1_for_display(body)
+    clean_source = _clean_cdsl_slp1_for_display(source_slp1)
+    if display_iast and clean_source and clean_body == clean_source:
+        converted = display_iast
+    elif _token_looks_like_cdsl_slp1(body):
+        converted = _slp1_to_iast(body)
+    else:
+        return token
+    return f"{match.group('prefix')}{converted}{match.group('suffix')}"
+
+
+def cdsl_text_to_iast_display(
+    text: str,
+    *,
+    source_slp1: str = "",
+    display_iast: str = "",
+) -> str:
+    """
+    Best-effort display-only transliteration transform for CDSL gloss text.
+
+    Raw CDSL text remains preserved in claim evidence. This helper is intentionally
+    source-complete and is used only for terminal display.
+    """
+    return " ".join(
+        _display_token_to_iast(token, source_slp1, display_iast) for token in text.split()
+    )
+
+
+def cdsl_display_gloss(
+    text: str,
+    *,
+    source_slp1: str = "",
+    display_iast: str = "",
+) -> str:
+    """
+    Conservative learner-display gloss transform for CDSL entries.
+
+    This currently preserves all source content. It only applies display-safe
+    Sanskrit transliteration while leaving the raw CDSL text as the
+    evidence-bearing triple object.
+    """
+    # High-fidelity invariant: do not drop citation/source segments here.
+    # Future parsing can add explicit source-note fields, but display text stays source-complete.
+    return cdsl_text_to_iast_display(
+        text,
+        source_slp1=source_slp1,
+        display_iast=display_iast,
+    )
+
+
+def _source_abbreviation_tokens(text: str) -> list[str]:
+    return [token.strip(".") for token in re.findall(r"[A-Za-zĀ-ž]+\.?", text)]
+
+
+def _segment_structure(raw_text: str) -> dict[str, object]:
+    """
+    Conservatively label CDSL source segments without changing or dropping text.
+    """
+    tokens = [token for token in _source_abbreviation_tokens(raw_text) if token]
+    lowered = [token.lower() for token in tokens]
+    if lowered and lowered[0] in {"cf", "see"}:
+        abbreviations = [token for token in tokens[1:] if token in _CDSL_SOURCE_ABBREVIATIONS]
+        if abbreviations and len(abbreviations) == len(tokens) - 1:
+            return {
+                "segment_type": "cross_reference",
+                "labels": ["cross_reference", "source_reference"],
+                "recognized_abbreviations": abbreviations,
+            }
+    if tokens and all(token in _CDSL_SOURCE_ABBREVIATIONS for token in tokens):
+        return {
+            "segment_type": "source_reference",
+            "labels": ["source_reference"],
+            "recognized_abbreviations": tokens,
+        }
+    return {"segment_type": "unclassified", "labels": []}
+
+
+def _source_segments(
+    text: str,
+    *,
+    source_slp1: str = "",
+    display_iast: str = "",
+) -> list[dict[str, object]]:
+    """
+    Split CDSL source text into ordered, source-complete display segments.
+
+    Segment typing is conservative: unrecognized text stays unclassified.
+    """
+    segments: list[dict[str, object]] = []
+    for index, raw_segment in enumerate(text.split(";")):
+        raw_text = raw_segment.strip()
+        if not raw_text:
+            continue
+        segment = {
+            "index": index,
+            "raw_text": raw_text,
+            "display_text": cdsl_text_to_iast_display(
+                raw_text,
+                source_slp1=source_slp1,
+                display_iast=display_iast,
+            ),
+        }
+        segment.update(_segment_structure(raw_text))
+        segments.append(segment)
+    return segments
+
+
+def _source_notes_from_segments(segments: Sequence[Mapping[str, object]]) -> dict[str, object]:
+    """
+    Summarize typed CDSL source-note segments without reclassifying unknown text.
+    """
+    cross_reference_segments: list[str] = []
+    source_reference_segments: list[str] = []
+    recognized_abbreviations: list[str] = []
+    seen_abbreviations: set[str] = set()
+
+    for segment in segments:
+        raw_text = segment.get("raw_text")
+        segment_type = segment.get("segment_type")
+        if isinstance(raw_text, str) and segment_type == "cross_reference":
+            cross_reference_segments.append(raw_text)
+        elif isinstance(raw_text, str) and segment_type == "source_reference":
+            source_reference_segments.append(raw_text)
+
+        abbreviations_val = segment.get("recognized_abbreviations")
+        abbreviations = (
+            abbreviations_val
+            if isinstance(abbreviations_val, Sequence)
+            and not isinstance(abbreviations_val, (str, bytes))
+            else []
+        )
+        for abbreviation in abbreviations:
+            if isinstance(abbreviation, str) and abbreviation not in seen_abbreviations:
+                seen_abbreviations.add(abbreviation)
+                recognized_abbreviations.append(abbreviation)
+
+    notes: dict[str, object] = {}
+    if cross_reference_segments:
+        notes["cross_reference_segments"] = cross_reference_segments
+    if source_reference_segments:
+        notes["source_reference_segments"] = source_reference_segments
+    if recognized_abbreviations:
+        notes["recognized_abbreviations"] = recognized_abbreviations
+    return notes
+
+
+def _to_slp1(text: str) -> str:
+    """
+    Convert learner/planner Sanskrit input to SLP1 for CDSL lookup.
+    """
+    if _looks_like_slp1(text):
+        return text
+    if any(ch in _IAST_MARKS for ch in text):
+        converted = _sanscript_transliterate(text, "IAST", "SLP1")
+        if converted and converted != text:
+            return converted
+    heritage_converted = _heritage_velthuis_to_slp1_basic(text)
+    if heritage_converted != text:
+        text = heritage_converted
+        if _looks_like_slp1(text):
+            return text
+    if any(marker in text for marker in _VELTHUIS_MARKERS):
+        converted = _sanscript_transliterate(text, "VELTHUIS", "SLP1")
+        if converted and converted != text:
+            return converted
+    converted = _sanscript_transliterate(text, "IAST", "SLP1")
+    if converted and converted != text:
+        return converted
+
+    return _ascii_iast_to_slp1_basic(text)
+
+
 _SLP1_TO_IAST = {
     "A": "ā",
     "I": "ī",
@@ -95,6 +365,7 @@ _SLP1_TO_IAST = {
     "o": "o",
     "O": "au",
     "G": "gh",
+    "N": "ṅ",
     "Y": "ñ",
     "R": "ṇ",
     "w": "ṭ",
@@ -102,7 +373,6 @@ _SLP1_TO_IAST = {
     "q": "ḍ",
     "Q": "ḍh",
     "K": "kh",
-    "G'": "gh",
     "C": "ch",
     "J": "jh",
     "T": "th",
@@ -111,15 +381,22 @@ _SLP1_TO_IAST = {
     "B": "bh",
     "S": "ś",
     "z": "ṣ",
+    "M": "ṃ",
+    "H": "ḥ",
 }
 
 
 def _slp1_to_iast(text: str) -> str:
     """
-    Minimal SLP1 → IAST converter (coverage sufficient for lemma display).
+    Convert CDSL SLP1 lemmas to learner-facing IAST display.
     """
+    display_text = _clean_cdsl_slp1_for_display(text)
+    converted = _sanscript_transliterate(display_text, "SLP1", "IAST")
+    if converted:
+        return converted
+
     out: list[str] = []
-    for ch in text:
+    for ch in display_text:
         mapped = _SLP1_TO_IAST.get(ch)
         if mapped:
             out.append(mapped)
@@ -138,22 +415,7 @@ def _slp1_to_ascii(text: str) -> str:
     """
     Convert a likely SLP1 token into an accentless ASCII form for DB lookup.
     """
-    rev: dict[str, str] = {}
-    for iast, slp1 in _IAST_TO_SLP1.items():
-        rev[slp1] = iast
-    out: list[str] = []
-    i = 0
-    while i < len(text):
-        # Handle digraphs like RR/LL first.
-        two = text[i : i + 2]
-        if two in rev:
-            out.append(rev[two])
-            i += 2
-            continue
-        ch = text[i]
-        out.append(rev.get(ch, ch))
-        i += 1
-    return _strip_accents("".join(out))
+    return _strip_accents(_slp1_to_iast(text))
 
 
 def _candidate_keys(lemma: str) -> list[str]:
@@ -176,10 +438,75 @@ def _candidate_keys(lemma: str) -> list[str]:
         if slp1:
             variants.add(slp1)
             variants.add(slp1.lower())
+            if not slp1.endswith("H"):
+                visarga = f"{slp1}H"
+                variants.add(visarga)
+                variants.add(visarga.lower())
         slp1_ascii = _slp1_to_ascii(seed)
         if slp1_ascii:
             variants.add(slp1_ascii)
     return [v for v in variants if v]
+
+
+def _preferred_slp1_keys(lemma: str) -> list[str]:
+    raw = (lemma or "").strip()
+    if not raw:
+        return []
+
+    preferred: list[str] = []
+    for seed in [raw, raw.split("_", 1)[0]]:
+        slp1 = _to_slp1(seed)
+        if slp1 and slp1 not in preferred:
+            preferred.append(slp1)
+        visarga = f"{slp1}H" if slp1 and not slp1.endswith("H") else ""
+        if visarga and visarga not in preferred:
+            preferred.append(visarga)
+    return preferred
+
+
+def _match_rank(entry: Mapping[str, object], lemma: str) -> int:
+    """
+    Rank CDSL candidates so IAST-like input prefers its SLP1 key.
+
+    Example: user-facing `dharma` should prefer CDSL `Darma`, not the unrelated
+    lowercase `darma` entry that shares the same normalized key.
+    """
+    key_values = [
+        str(entry.get(name) or "")
+        for name in ("key", "key2")
+        if isinstance(entry.get(name), str) and entry.get(name)
+    ]
+    normalized_values = [
+        str(entry.get(name) or "")
+        for name in ("key_normalized", "key2_normalized")
+        if isinstance(entry.get(name), str) and entry.get(name)
+    ]
+    preferred = _preferred_slp1_keys(lemma)
+    candidates = _candidate_keys(lemma)
+
+    for idx, candidate in enumerate(preferred):
+        if candidate in key_values:
+            return idx
+    for idx, candidate in enumerate(candidates):
+        if candidate in key_values:
+            return 100 + idx
+    for idx, candidate in enumerate(preferred):
+        if candidate.lower() in normalized_values:
+            return 200 + idx
+    for idx, candidate in enumerate(candidates):
+        if candidate.lower() in normalized_values:
+            return 300 + idx
+    return 1000
+
+
+def _filter_best_cdsl_matches(
+    entries: list[dict[str, object]], lemma: str
+) -> list[dict[str, object]]:
+    if len(entries) <= 1:
+        return entries
+    ranked = [(_match_rank(entry, lemma), entry) for entry in entries]
+    best_rank = min(rank for rank, _entry in ranked)
+    return [entry for rank, entry in ranked if rank == best_rank]
 
 
 # --- Body parsing helpers (trimmed from codesketch cologne/parser) ---
@@ -277,7 +604,10 @@ def _parse_body_metadata(body_xml: str) -> dict[str, object]:
 
     s_elem = root.find("s")
     if s_elem is not None and s_elem.text:
-        grammar["sanskrit_form"] = s_elem.text.strip()
+        sanskrit_form = s_elem.text.strip()
+        grammar["sanskrit_form"] = sanskrit_form
+        grammar["sanskrit_form_slp1"] = sanskrit_form
+        grammar["sanskrit_form_iast"] = _slp1_to_iast(sanskrit_form)
 
     return grammar
 
@@ -331,6 +661,7 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
         key2_val = entry.get("key2")
         lemma_slp1 = key_val or key2_val or ""
         lemma_slp1 = lemma_slp1.strip() if isinstance(lemma_slp1, str) else ""
+        key2_slp1 = key2_val.strip() if isinstance(key2_val, str) else ""
 
         lemma_iast = _slp1_to_iast(lemma_slp1)
 
@@ -350,13 +681,33 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
 
         grammar_input = body_val if isinstance(body_val, str) else ""
         grammar = _parse_body_metadata(grammar_input)
+        source_entry = _trim_evidence(
+            {
+                "dict": dict_id,
+                "line_number": lnum_val,
+                "source_ref": source_ref,
+                "key_slp1": lemma_slp1,
+                "key_iast": lemma_iast,
+                "key2_slp1": key2_slp1,
+                "key2_iast": _slp1_to_iast(key2_slp1) if key2_slp1 else "",
+            }
+        )
+        segments = _source_segments(
+            gloss,
+            source_slp1=lemma_slp1,
+            display_iast=lemma_iast,
+        )
 
         sense_obj: dict[str, object] = {
             "anchor": lemma_slp1,
+            "display_slp1": lemma_slp1,
+            "display_iast": lemma_iast,
             "gloss": gloss,
             "dict": dict_id,
             "lnum": lnum_val,
             "source_ref": source_ref,
+            "source_entry": source_entry,
+            "source_segments": segments,
         }
         if grammar:
             sense_obj["grammar"] = grammar
@@ -491,23 +842,76 @@ def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
 
                 source_ref = sense.get("source_ref")
                 source_ref_str = source_ref if isinstance(source_ref, str) else None
+                source_entry_val = sense.get("source_entry")
+                source_entry = (
+                    cast(Mapping[str, object], source_entry_val)
+                    if isinstance(source_entry_val, Mapping)
+                    else {}
+                )
+                source_segments_val = sense.get("source_segments")
+                source_segments = (
+                    source_segments_val
+                    if isinstance(source_segments_val, Sequence)
+                    and not isinstance(source_segments_val, (str, bytes))
+                    else []
+                )
+                source_notes = _source_notes_from_segments(
+                    [
+                        cast(Mapping[str, object], segment)
+                        for segment in source_segments
+                        if isinstance(segment, Mapping)
+                    ]
+                )
 
                 grammar = sense.get("grammar")
+                display_iast_val = sense.get("display_iast")
+                display_iast = display_iast_val if isinstance(display_iast_val, str) else ""
+                display_slp1_val = sense.get("display_slp1")
+                display_slp1 = display_slp1_val if isinstance(display_slp1_val, str) else ""
+                display_gloss = cdsl_display_gloss(
+                    gloss,
+                    source_slp1=display_slp1,
+                    display_iast=display_iast,
+                )
                 evidence = _make_base_evidence(call, derivation, claim_id, source_ref_str)
                 sense_anchor = _sense_anchor(subject, gloss, source_ref_str)
-                triples.append(_make_triple(subject, "has_sense", sense_anchor, evidence))
+                display_metadata = _trim_evidence(
+                    {
+                        "display_iast": display_iast,
+                        "display_slp1": display_slp1,
+                        "source_encoding": "slp1",
+                    }
+                )
+                triples.append(
+                    _make_triple(
+                        subject, predicates.HAS_SENSE, sense_anchor, evidence, display_metadata
+                    )
+                )
                 triples.append(
                     _make_triple(
                         sense_anchor,
-                        "gloss",
+                        predicates.GLOSS,
                         gloss,
                         evidence,
-                        {"source_ref": source_ref_str} if source_ref_str else None,
+                        _trim_evidence(
+                            {
+                                "source_ref": source_ref_str,
+                                "display_gloss": display_gloss,
+                                "source_entry": dict(source_entry),
+                                "source_segments": list(source_segments),
+                                "source_notes": dict(source_notes) if source_notes else None,
+                                "display_iast": display_iast,
+                                "display_slp1": display_slp1,
+                                "source_encoding": "slp1",
+                            }
+                        ),
                     )
                 )
                 if grammar:
                     triples.append(
-                        _make_triple(sense_anchor, "has_feature", {"grammar": grammar}, evidence)
+                        _make_triple(
+                            sense_anchor, predicates.HAS_FEATURE, {"grammar": grammar}, evidence
+                        )
                     )
     value = {"lemmas": sense_groups, "triples": triples}
     return ClaimEffect(
@@ -517,7 +921,7 @@ def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
         source_call_id=call.params.get("source_call_id", ""),
         derivation_id=derivation.derivation_id,
         subject=derivation.derivation_id,
-        predicate="has_sense",
+        predicate=predicates.HAS_SENSE,
         value=value,
         provenance_chain=prov,
     )
@@ -534,7 +938,7 @@ class CdslFetchClient:
     def execute(self, call_id: str, endpoint: str, params: Mapping[str, str] | None = None):
         params = params or {}
         dict_id = (params.get("dict") or "mw").lower()
-        lemma = (params.get("lemma") or params.get("q") or "").lower()
+        lemma = (params.get("lemma") or params.get("q") or "").strip()
         path = default_cdsl_path(dict_id)
         if not path.exists():
             body = orjson.dumps({"error": f"cdsl db missing: {path}"})
@@ -566,11 +970,12 @@ class CdslFetchClient:
                         FROM entries
                         WHERE key_normalized = ? OR key2_normalized = ?
                         """,
-                        [lemma, lemma],
+                        [lemma.lower(), lemma.lower()],
                     ).fetchall()
                     cols = [c[0] for c in conn.description]
             duration_ms = int((time.perf_counter() - start) * 1000)
             entries = [dict(zip(cols, row)) for row in rows]
+            entries = _filter_best_cdsl_matches(entries, lemma)
             body = orjson.dumps(entries)
             return _empty_response(call_id, self.tool, endpoint, 200, body, duration_ms=duration_ms)
         except Exception as exc:  # noqa: BLE001

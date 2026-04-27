@@ -1001,25 +1001,39 @@ def _velthuis_to_slp1_basic(text: str) -> str:
     """
     Minimal Velthuis → SLP1 map for Sanskrit lookups; mirrors the normalizer fallback.
     """
+    s_dot_placeholder = "\u0000"
     replacements = [
         ("aa", "A"),
         ("ii", "I"),
         ("uu", "U"),
         ("~n", "Y"),
+        (".th", "W"),
         (".rr", "F"),
         (".r", "f"),
         (".ll", "X"),
         (".l", "x"),
+        (".dh", "Q"),
         (".n", "R"),
         (".t", "w"),
         (".d", "q"),
-        (".s", "z"),
+        (".m", "M"),
+        (".h", "H"),
+        ("kh", "K"),
+        ("gh", "G"),
+        ("ch", "C"),
+        ("jh", "J"),
+        ("th", "T"),
+        ("dh", "D"),
+        ("ph", "P"),
+        ("bh", "B"),
+        ("sh", "S"),
         ("'s", "S"),
     ]
-    out = text
+    out = text.replace(".s", s_dot_placeholder)
     for old, new in replacements:
         out = out.replace(old, new)
-    return out
+    out = out.replace("z", "S")
+    return out.replace(s_dot_placeholder, "z")
 
 
 def stable_plan_hash(plan: ToolPlan) -> str:
