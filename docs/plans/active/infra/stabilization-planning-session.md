@@ -1,7 +1,7 @@
 # Stabilization Planning Session
 
 **Status:** active planning artifact  
-**Date:** 2026-04-27  
+**Date:** 2026-04-28  
 **Feature Area:** infra / pedagogy / semantic-reduction  
 
 ## Purpose
@@ -53,6 +53,8 @@ Working now:
   morphology/analysis; CDSL and DICO supply dictionary meaning evidence.
 - DICO and Gaffiot French source entries can project cache-backed English
   translations as derived evidence.
+- Missing DICO/Gaffiot translations can be explicitly populated through
+  `encounter --translation-mode auto`; default lookup remains network-free.
 - `triples-dump --output json` and `plan-exec --output json` provide structured
   inspection.
 - Accepted-output snapshots cover representative `encounter` behavior,
@@ -110,8 +112,10 @@ Risk: the system is inspectable in principle but not obvious in practice.
 
 ### 3. Translation Cache Coverage Is Small
 
-The DICO/Gaffiot cache system is correct in shape, but fixture coverage is still
-limited. Network translation remains explicitly opt-in and should stay that way.
+The DICO/Gaffiot cache system is correct in shape, but fixture coverage and
+prewarmed cache coverage are still limited. Network translation remains
+explicitly opt-in and should stay that way. Long entries can be slow on first
+population.
 
 Risk: translated learner output exists but is thinly sampled.
 
@@ -120,8 +124,9 @@ Risk: translated learner output exists but is thinly sampled.
 The current ranking policy is intentionally simple:
 
 1. cache-backed English translations first
-2. stronger witness count next
-3. deterministic gloss ordering as fallback
+2. DICO/Gaffiot source buckets before generic single-source buckets
+3. stronger witness count next
+4. deterministic gloss ordering as fallback
 
 Risk: the first displayed meaning is not always the pedagogically best meaning,
 especially for large or noisy source entries.
@@ -144,8 +149,9 @@ tasks, not expansion tasks.
 | 1 | CDSL source structure follow-through | CDSL entries expose typed source-note/citation/grammar fields where reliable | raw text preserved; display source-complete; focused CDSL tests pass |
 | 2 | Evidence-inspection walkthroughs | Developers can trace a displayed meaning back to triples and source refs | Latin and Sanskrit examples in docs; examples match CLI behavior |
 | 3 | Translation cache fixture expansion | More DICO/Gaffiot translated examples without network calls | golden rows project; stale-cache behavior remains tested |
-| 4 | Ranking policy hardening | Display order is explicit and regression-tested | encounter snapshots explain translation/witness-count ordering |
-| 5 | Predicate/claim cleanup | Lower drift risk across handlers | low-risk predicates moved to constants; claim contract tests pass |
+| 4 | Reader-form eval fixtures | Known misses such as `virumque`, `μῆνιν`, `θεὰ`, and `karma/karman` are tracked | top-1/top-3 lemma/gloss assertions pass |
+| 5 | Ranking policy hardening | Display order is explicit and regression-tested | encounter snapshots explain translation/source/witness-count ordering |
+| 6 | Predicate/claim cleanup | Lower drift risk across handlers | low-risk predicates moved to constants; claim contract tests pass |
 
 ## Test And Validation Loop
 

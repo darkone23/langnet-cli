@@ -14,6 +14,8 @@ flowchart TD
     J --> K[Learner Output]
 ```
 
-Implemented today: through `Claims and Triples`.
+Implemented today: through exact `Sense Buckets` and first `Learner Output`
+via `langnet-cli encounter`.
 
-Next implementation target: `Witness Sense Units` and `Sense Buckets`.
+Next implementation target: better learner display over the existing buckets:
+reader-form ranking, compact glosses, and evidence-preserving source details.

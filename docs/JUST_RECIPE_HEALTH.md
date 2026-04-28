@@ -1,6 +1,6 @@
 # Just Recipe Health
 
-**Last checked:** 2026-04-26  
+**Last checked:** 2026-04-28  
 **Purpose:** distinguish recipe wiring problems from expected external-service/dependency failures.
 
 ## Summary
@@ -47,6 +47,8 @@ These were probed successfully:
 - `devenv shell -- bash -c 'python3 .justscripts/lex_translation_demo.py --help'`
 - `devenv shell -- bash -c 'python3 .justscripts/lex_translation_demo.py --dry-run --limit 1 --mode sanskrit'`
 - `devenv shell -- bash -c 'python3 .justscripts/lex_translation_demo.py --dry-run --limit 1 --mode latin'`
+- `devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --translation-mode cache --translation-cache-db data/cache/langnet.duckdb'`
+- `devenv shell -- bash -c 'langnet-cli encounter san dharma dico --translation-mode cache --translation-cache-db data/cache/langnet.duckdb'`
 - `just read-codesketch-diogenes`
 - `just read-codesketch-whitakers`
 - `just read-codesketch-cltk`
@@ -110,9 +112,17 @@ The fuzz harness was calling `langnet-cli parse` without `--format json`, then t
 
 The helper is currently strongest for Gaffiot/Latin entries. Sanskrit/DICO support exists, but should be promoted only after fixture-backed examples prove the prompt behavior.
 
-Translated DICO/Gaffiot entries are still not part of `triples-dump`; see `docs/TRANSLATION_CACHE_PLAN.md` for the cache-first path needed before semantic reduction consumes them.
+Translated DICO/Gaffiot entries are projected through `encounter` when
+translation cache rows match. Source French evidence remains visible through
+`triples-dump`; derived English translation witnesses are part of the reduction
+path, not replacements for source triples.
 
-Source-language DICO/Gaffiot entries are now locally resolvable in `triples-dump`; translation remains the missing cache-backed layer.
+Source-language DICO/Gaffiot entries are now locally resolvable in
+`triples-dump`; cache-backed translations are projected through `encounter`.
+
+`encounter --translation-mode auto` can explicitly populate missing
+DICO/Gaffiot translations through OpenRouter and then display them. This is
+networked and should stay opt-in; cache-only mode is the routine inspection path.
 
 `triples-dump` now supports `--predicate`, `--subject-prefix`, and `--max-triples` so evidence inspection can focus on reducer-relevant triples.
 

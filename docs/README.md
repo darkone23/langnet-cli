@@ -5,6 +5,7 @@ This directory is the working documentation set for `langnet-cli`.
 ## Start Here
 
 - `docs/VISION.md` — product promise, audience, principles, and long-term direction.
+- `docs/BASELINE_AND_ROADMAP.md` — current working baseline, vision comparison, and concrete next steps.
 - `docs/PROJECT_STATUS.md` — current health card, risks, and next decisions.
 - `docs/EXECUTION_PLAN.md` — compact roadmap, task, gap, and risk index.
 - `docs/REFINEMENT_AUDIT.md` — section-by-section refinement stocktake and acceptance checks.
@@ -34,7 +35,8 @@ This directory is the working documentation set for `langnet-cli`.
 ## Planning
 
 - `docs/plans/active/infra/design-to-runtime-roadmap.md` — current active plan.
-- `docs/plans/active/infra/local-lexicon-witness-handoff.md` — current Gaffiot/DICO source-witness handoff and next steps.
+- `docs/plans/active/pedagogy/learner-encounter-roadmap.md` — active learner-output refinement plan.
+- `docs/plans/active/infra/local-lexicon-witness-handoff.md` — Gaffiot/DICO source-witness handoff retained for local lexicon context.
 - `docs/plans/completed/` — completed work records.
 - `docs/archive/2026-04-cleanup/` — historical reports and superseded plans retained for audit only.
 

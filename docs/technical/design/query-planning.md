@@ -35,4 +35,7 @@ just cli plan lat lupus
 just cli plan-exec lat lupus
 ```
 
-Future work should improve `plan-exec` with cache hit/miss status, skipped-call reasons, stage counts, and handler versions.
+`plan-exec --output json` reports cache status, stage counts, skipped-call
+reasons, handler versions, and compact claim rows. Future work should add more
+narrative examples that show how to follow one displayed `encounter` meaning
+back through `plan-exec` and `triples-dump`.

@@ -54,12 +54,21 @@ The current learner-facing display order is intentionally simple and
 fixture-backed:
 
 1. Cache-backed English translation buckets rank before untranslated source-language buckets.
-2. Within the same translation class, buckets with more witnesses rank before weaker buckets.
-3. Remaining ties use deterministic gloss text ordering.
+2. DICO/Gaffiot bilingual-source buckets rank before generic single-source
+   buckets when no English translation is present.
+3. Within the same class, buckets with more witnesses rank before weaker buckets.
+4. Remaining ties use deterministic gloss text ordering.
 
 This is not yet a broad source-quality model. Do not add source-quality,
 near-match, or semantic-similarity ranking without accepted-output tests that
 explain the intended behavior.
+
+## Next Reducer/Display Target
+
+The next display target is a compact learner gloss derived from source-backed or
+translation-backed witnesses. Compact glosses are display helpers, not source
+facts. Full source and translated entry text must remain inspectable through
+claim/triple evidence.
 
 ## Non-Goals For MVP
 

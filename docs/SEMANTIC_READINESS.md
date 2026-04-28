@@ -16,6 +16,8 @@ LangNet now has a small runtime semantic path: claim triples become Witness Sens
 - Exact-match bucket grouping exists.
 - `langnet-cli encounter` displays reduced buckets and shows Heritage morphology analysis rows for Sanskrit.
 - Cached DICO/Gaffiot translations can be projected as derived evidence before reduction.
+- `encounter --translation-mode auto` can explicitly populate missing
+  DICO/Gaffiot translation rows, then display the projected English evidence.
 - `triples-dump --output json` exposes structured claims and triples for reducer debugging.
 - A 50-word diagnostic audit now distinguishes gloss hits from Heritage morphology/evidence hits.
 - Accepted `encounter` snapshots now cover translated DICO/Gaffiot cache hits and multi-witness ranking.
@@ -55,7 +57,10 @@ The current reducer groups exact normalized gloss strings. It is deterministic a
 
 ### 7. Translation Is Cache-Bearing But Selectively Populated
 
-DICO and Gaffiot source entries are French. The cache schema, cache-hit projection, and Gaffiot/DICO golden rows exist, but representative cache rows are not yet broadly populated, and network translation must remain explicit opt-in.
+DICO and Gaffiot source entries are French. The cache schema, cache-hit
+projection, explicit `auto` miss population, and Gaffiot/DICO golden rows exist.
+Representative cache rows are not yet broadly populated, live translation can be
+slow for long entries, and network translation must remain explicit opt-in.
 
 ### 8. CDSL Entries Are Still Flat
 
@@ -67,14 +72,21 @@ Current examples show that evidence existence is not the same as learner quality
 `nirudha` can rank obscure CDSL material first, `dharma` still exposes flat
 source strings, `lupus` can show unrelated normalized Latin candidates, and
 `logos` can expose large LSJ sections without a concise sense summary.
+Recent reader probes produced concrete high-priority fixes: `μῆνιν` now routes
+to `μῆνις`, `θεὰ` now routes to `θεά`, `karma` can enrich toward `karman` when
+Heritage morphology supports it, `Troiae` can reach `Troia`, and fresh Greek
+runs can route epic `-ῆος` genitives such as `Ἀχιλῆος` to validated `-εύς`
+headwords. Remaining form-hygiene work includes `virumque` component
+display/ranking and Latin/Greek morphology display in learner output.
 
 ## Recommended Next Steps
 
-1. Add accepted-output fixtures for hard encounter terms before changing display logic.
-2. Split source glosses into structured display fields before attempting semantic similarity.
-3. Fix candidate/form hygiene so unrelated analyzer candidates do not pollute learner output.
-4. Expand cache-backed translation examples beyond the current golden rows and snapshots.
-5. Extend accepted-output examples for harder multi-source disagreements, not just happy-path matches.
+1. Run `reader-eval` over the seed classic-opening fixture before and after
+   each learner-output fix.
+2. Fix candidate/form hygiene so unrelated analyzer candidates do not pollute learner output.
+3. Add compact learner glosses over translated/source dictionary entries.
+4. Split source glosses into structured display fields before attempting semantic similarity.
+5. Expand cache-backed translation examples beyond the current golden rows and snapshots.
 6. Delay embeddings and LLM similarity until exact buckets plus source display are boring.
 
 ## Readiness Bar
@@ -89,3 +101,5 @@ Semantic reduction can advance beyond the exact-bucket MVP when:
 - CDSL flat entry strings are structured enough that ranking does not privilege undifferentiated source notation.
 - The representative encounter set (`san nirudha`, `san dharma`, `lat lupus`,
   `grc logos`) has accepted learner-facing output and JSON evidence fixtures.
+- The reader-form eval set catches known misses such as `virumque`, `μῆνιν`,
+  `θεὰ`, and `karma/karman`.

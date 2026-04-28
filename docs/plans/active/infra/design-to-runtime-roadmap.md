@@ -2,7 +2,7 @@
 
 **Status**: 🔄 ACTIVE  
 **Feature Area**: infra  
-**Date**: 2026-04-27  
+**Date**: 2026-04-28  
 **Owner Model Roles**: @architect for sequencing, @coder for implementation, @auditor for contracts/tests, @scribe for documentation  
 
 ## Purpose
@@ -27,7 +27,9 @@ This plan reconciles `docs/technical/design/` with the current codebase and defi
 - **Predicate/evidence vocabulary**: `src/langnet/execution/predicates.py` and `src/langnet/execution/evidence.py`.
 - **Reduction/display**: exact WSU extraction and deterministic buckets are wired into `encounter`.
 - **Sanskrit model**: Heritage is the preferred analysis/morphology source; CDSL and DICO provide meaning/gloss supplements.
-- **Translation cache**: DICO/Gaffiot cache-hit projection exists; network translation remains explicit cache-population work.
+- **Translation cache**: DICO/Gaffiot cache-hit projection exists; `encounter
+  --translation-mode auto` can explicitly populate misses; default lookup remains
+  network-free.
 - **Diagnostic audit**: the 50-word per-language fuzz audit now separates evidence/gloss hits from Sanskrit Heritage morphology hits.
 - **Quality gate**: `just lint-all && just test-fast` passes.
 
@@ -49,6 +51,8 @@ This plan reconciles `docs/technical/design/` with the current codebase and defi
 - Hydration (e.g. CTS reference expansion) is still not a separate stage/tool.
 - Passage/compound work should not outrun stable word-level claims and sense buckets.
 - Accepted-output coverage is still too small to call the learner interface stable.
+- Reader-form ranking has known misses: `virumque`, `μῆνιν`, `θεὰ`, and
+  `karma/karman`.
 
 ## Strategic Sequence
 
@@ -174,7 +178,8 @@ This order keeps educational UX grounded in auditable evidence and prevents sema
 
 **Remaining Tasks**
 1. Add structured bucket JSON examples alongside terminal snapshots.
-2. Improve display ranking using source quality, structured gloss/source-note fields, length, and witness count.
+2. Improve display ranking using source quality, DICO/Gaffiot translation
+   provenance, structured gloss/source-note fields, length, and witness count.
 3. Strengthen CDSL source/gloss/source-note structure while preserving raw text and `source_ref`.
 4. Keep near-match clustering behind tests until exact buckets are boring.
 

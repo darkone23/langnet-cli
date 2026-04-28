@@ -93,6 +93,12 @@ def lookup_gaffiot_entries_by_headword(
     return entries
 
 
+def _split_candidate_param(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [candidate.strip() for candidate in value.split(";") if candidate.strip()]
+
+
 def gaffiot_entry_triples(entry: dict) -> list[dict]:
     """Project a resolved Gaffiot entry into evidence-bearing triples."""
     headword = entry.get("headword_norm") or normalize_gaffiot_headword(
@@ -174,6 +180,7 @@ class GaffiotFetchClient:
             params.get("headword") or "",
             params.get("lemma") or "",
             params.get("q") or "",
+            *_split_candidate_param(params.get("lemma_candidates")),
         ]
         start = time.perf_counter()
         entries = lookup_gaffiot_entries_by_headword(candidates, self.db_path)

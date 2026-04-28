@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Mapping, Sequence
+import time
+from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, cast
 
 from langnet.execution.source_text import display_text, source_segments_from_text
 from langnet.parsing.english_gloss_parser import parse_english_glosses
-from langnet.translation.cache import TranslationCache, TranslationCacheKey, build_translation_key
+from langnet.translation.cache import (
+    TranslationCache,
+    TranslationCacheKey,
+    TranslationRecord,
+    build_translation_key,
+)
 from langnet.translation.prompts import BASE_SYSTEM, default_hints_for_language
 
 _DICO_SOURCE_RE = re.compile(r"#(?P<entry>[^:]+):(?P<occurrence>\d+)$")
@@ -30,6 +36,8 @@ class TranslationProjection:
     source: TranslationSource
     lexeme_anchor: str
     sense_anchor: str
+    source_text: str
+    hint: str
 
 
 def _int_value(value: object, default: int = 0) -> int:
@@ -174,7 +182,97 @@ def _projection_for_gloss(
         source=source,
         lexeme_anchor=lexeme_anchor,
         sense_anchor=sense_anchor,
+        source_text=source_text,
+        hint=hint,
     )
+
+
+def _translation_projections(
+    *,
+    claims: Sequence[Mapping[str, Any]],
+    language: str,
+    model: str,
+) -> list[TranslationProjection]:
+    hint = "\n".join(default_hints_for_language(language))
+    projections: list[TranslationProjection] = []
+    seen_ids: set[str] = set()
+
+    for claim in claims:
+        triples = _triples_from_claim(claim)
+        existing_ids = _existing_translation_ids(triples)
+        sense_links = _sense_links(triples)
+
+        for triple in triples:
+            projection = _projection_for_gloss(
+                triple=triple,
+                sense_links=sense_links,
+                model=model,
+                hint=hint,
+            )
+            if projection is None:
+                continue
+            translation_id = projection.key.translation_id
+            if translation_id in existing_ids or translation_id in seen_ids:
+                continue
+            projections.append(projection)
+            seen_ids.add(translation_id)
+
+    return projections
+
+
+def populate_missing_translations(
+    *,
+    claims: Sequence[Mapping[str, Any]],
+    language: str,
+    model: str,
+    cache: TranslationCache,
+    translate: Callable[[TranslationProjection], str],
+) -> int:
+    """Translate DICO/Gaffiot French glosses that are missing from the cache."""
+    written = 0
+    for projection in _translation_projections(claims=claims, language=language, model=model):
+        existing = cache.get(projection.key)
+        if existing is not None and existing.status == "ok" and existing.translated_text:
+            continue
+
+        start = time.perf_counter()
+        try:
+            translated_text = translate(projection).strip()
+        except Exception as exc:  # noqa: BLE001
+            duration_ms = int((time.perf_counter() - start) * 1000)
+            cache.upsert(
+                TranslationRecord(
+                    key=projection.key,
+                    translated_text=None,
+                    status="error",
+                    error=str(exc),
+                    duration_ms=duration_ms,
+                )
+            )
+            raise
+
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        if not translated_text:
+            cache.upsert(
+                TranslationRecord(
+                    key=projection.key,
+                    translated_text=None,
+                    status="empty",
+                    duration_ms=duration_ms,
+                )
+            )
+            continue
+
+        cache.upsert(
+            TranslationRecord(
+                key=projection.key,
+                translated_text=translated_text,
+                status="ok",
+                duration_ms=duration_ms,
+            )
+        )
+        written += 1
+    return written
 
 
 def _translated_triples(
@@ -252,23 +350,19 @@ def project_cached_translations(
 ) -> list[Mapping[str, Any]]:
     """Add cached English translation triples for DICO/Gaffiot French gloss triples."""
     projected = cast(list[dict[str, Any]], deepcopy([dict(claim) for claim in claims]))
-    hint = "\n".join(default_hints_for_language(language))
-
     for claim in projected:
         mutable_triples = _mutable_triples_from_claim(claim)
         if mutable_triples is None:
             continue
         triples = _triples_from_claim(claim)
         existing_ids = _existing_translation_ids(triples)
-        sense_links = _sense_links(triples)
 
-        for triple in triples:
-            projection = _projection_for_gloss(
-                triple=triple,
-                sense_links=sense_links,
-                model=model,
-                hint=hint,
-            )
+        claim_projections = _translation_projections(
+            claims=[claim],
+            language=language,
+            model=model,
+        )
+        for projection in claim_projections:
             if projection is None or projection.key.translation_id in existing_ids:
                 continue
             record = cache.get(projection.key)

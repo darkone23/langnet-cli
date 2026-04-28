@@ -1,7 +1,7 @@
 # Local Lexicon Witness Handoff
 
 **Status:** active stabilization handoff  
-**Date:** 2026-04-27  
+**Date:** 2026-04-28  
 **Feature Area:** infra / dico / semantic-reduction
 
 ## What Changed
@@ -17,7 +17,9 @@ LangNet now treats local French dictionary sources as evidence-bearing lookup wi
 - `triples-dump` display helpers now live outside `cli.py` in `cli_triples.py`.
 - Offline `databuild` Click commands now live outside `cli.py` in `cli_databuild.py`.
 - DICO/Gaffiot local fetch clients now use content-addressed raw response IDs.
-- Translation-cache schema/key helpers exist, and cache-hit projection can add derived English evidence for `encounter` when `--use-translation-cache` is provided.
+- Translation-cache schema/key helpers exist, cache-hit projection can add
+  derived English evidence for `encounter`, and `--translation-mode auto` can
+  explicitly populate missing DICO/Gaffiot translation rows.
 
 Gaffiot/DICO still emit original French source evidence by default. Cached English translations are derived evidence and must remain distinguishable from the source French.
 
@@ -47,14 +49,19 @@ Expected state:
 - CDSL output is better at showing IAST display forms, but the underlying source strings are still flat and can mix grammar, citations, abbreviations, compounds, and gloss text.
 - `cli.py` and `planner/core.py` are smaller but still large; continue extracting cohesive command/planner areas as behavior stabilizes.
 - Translation cache population remains explicit and network-backed; normal lookup should use resolved cache hits where possible and should not call the translation provider implicitly.
+- Reader-form routing is still a local-lexicon risk: `virumque` can currently
+  lead Gaffiot toward `virus` even though `vir` has a high-quality translated
+  entry.
 
 ## Recommended Next Steps
 
 1. Strengthen CDSL source/gloss/source-note separation while preserving raw encoded source forms.
 2. Add evidence-inspection examples that trace `encounter` meanings through `triples-dump --output json`.
 3. Expand no-network DICO/Gaffiot translation cache examples beyond the first golden rows.
-4. Decide the lemma-vs-surface policy for local lexicon witnesses.
-5. Keep broader semantic grouping behind exact-bucket tests and accepted-output examples.
+4. Decide the lemma-vs-surface policy for local lexicon witnesses, starting
+   with `virumque`, `virum`, and `vir`.
+5. Add compact learner glosses over translated DICO/Gaffiot entries.
+6. Keep broader semantic grouping behind exact-bucket tests and accepted-output examples.
 
 ## Junior-Friendly Work
 

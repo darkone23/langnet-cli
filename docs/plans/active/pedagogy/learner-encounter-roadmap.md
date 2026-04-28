@@ -1,7 +1,7 @@
 # Learner Encounter Roadmap
 
 **Status:** active  
-**Date:** 2026-04-27  
+**Date:** 2026-04-28  
 **Feature Area:** pedagogy / semantic-reduction  
 
 ## Purpose
@@ -65,6 +65,8 @@ What works:
 - Gaffiot local entries and cache-backed translations can project derived
   English witnesses when matching cache rows exist.
 - The reducer can rank translated buckets and multi-witness buckets in tests.
+- `--translation-mode auto` can explicitly populate missing Gaffiot translation
+  rows and then display the projected English evidence.
 
 Current learner failures:
 
@@ -74,8 +76,11 @@ Current learner failures:
   calendar or demonstrative entries from noisy analyzer candidates.
 - Diogenes dictionary sections are long source excerpts rather than concise
   learner senses.
-- Gaffiot translations are not automatically used unless the caller requests the
-  translation cache.
+- Gaffiot translations are used when the caller requests `--translation-mode
+  cache` or `--translation-mode auto`; default lookup remains network-free and
+  source-first.
+- Reader-form routing is still weak: `virumque` can lead to `virus` instead of
+  `vir + -que`.
 
 ### Greek
 
@@ -192,6 +197,7 @@ Tasks:
 - For Latin, keep alternate analyzer candidates inspectable but do not show
   unrelated forms like `id#noun` or `ago#verb` as the resolved forms for
   `lupus`.
+- Add explicit reader-form cases such as `virumque -> vir + -que`.
 - For Sanskrit, show Heritage numbered variants as display alternatives without
   letting suffixes or dictionary anchors confuse lexeme display.
 - For Greek, show the user surface and selected headword without flooding the
@@ -264,8 +270,8 @@ creating hidden network dependency.
 Tasks:
 
 - Use resolved translation cache rows by default when the cache DB exists.
-- Keep live translation explicit, e.g. a separate cache-population command or
-  `--translate-missing`, not default encounter behavior.
+- Keep live translation explicit. The current explicit spelling is
+  `--translation-mode auto`; default encounter behavior must remain network-free.
 - Prefer translated English witnesses over untranslated French witnesses in
   learner display.
 - Always show that translated text is derived from DICO/Gaffiot source evidence.
@@ -274,9 +280,11 @@ Tasks:
 Acceptance:
 
 - `encounter lat lupus` uses a cached Gaffiot translation if the exact cache key
-  exists.
+  exists once cache-hit default enrichment is enabled.
 - `encounter san dharma` uses a cached DICO translation if the exact cache key
-  exists.
+  exists once cache-hit default enrichment is enabled.
+- `encounter lat lupus --translation-mode auto` and `encounter san dharma
+  --translation-mode auto` can populate missing cache rows explicitly.
 - Source French evidence remains inspectable and is not replaced.
 - No network call happens during default encounter.
 
@@ -394,4 +402,3 @@ just validate-stabilization
 - Live translation during default encounter.
 - Broad source-data deletion or "noise removal" that drops evidence instead of
   transforming, labeling, or explaining it.
-

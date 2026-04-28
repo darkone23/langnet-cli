@@ -1,28 +1,24 @@
-# DICO Integration Plan
+# DICO Refinement Plan
 
-**Status:** ⏳ TODO  
+**Status:** active refinement  
 **Feature Area:** dico  
 **Owner Roles:** @architect for scope, @coder for implementation
 
 ## Goal
 
-Add bilingual dictionary evidence without hiding whether a gloss is original French, translated English, or generated.
+Refine already-integrated DICO evidence so it is useful for learners without
+hiding whether a gloss is original French, cache-backed English translation, or
+generated display metadata.
 
 ## Intended Value
 
 DICO-style bilingual data can improve learner-facing glosses and cross-language sense grouping, especially for Sanskrit dictionary entries whose source glosses are in French.
 
-## Dependencies
-
-- Stable claim predicates.
-- Local DICO DuckDB index from Sanskrit Heritage `DICO/*.html`.
-- Claim-to-WSU extraction before translated DICO glosses influence reduction.
-- Sense bucket output that can accept additional witnesses.
-
 ## Non-Goals For Now
 
 - Mixing translated glosses into source claims without provenance.
 - Hiding whether a gloss is original, translated, or generated.
+- Making live translation part of default lookup.
 
 ## Current State
 
@@ -30,8 +26,19 @@ DICO-style bilingual data can improve learner-facing glosses and cross-language 
 - Heritage morphology claims expose `/skt/DICO/*.html#anchor` dictionary URLs.
 - `triples-dump` resolves planned Sanskrit headwords through staged local DICO effects and emits French `has_sense`/`gloss` triples with DICO evidence.
 - Heritage dictionary URL resolution remains as a fallback for exact anchor cases.
-- DICO French → English translation is not cached or wired into triples yet.
+- DICO French → English translation is cache-backed and can be projected into
+  `encounter` as derived English evidence.
+- `encounter --translation-mode cache` reads exact translation cache hits.
+- `encounter --translation-mode auto` explicitly populates missing DICO
+  translation rows through OpenRouter, then displays the projected evidence.
 
-## Next Task
+## Next Tasks
 
-Draft a fixture showing one original French DICO gloss, one translated English gloss, and the provenance/evidence fields needed to keep them separate.
+1. Add compact learner glosses over full translated DICO entries.
+2. Add reader-form/headword fixtures for common aliases such as `karma` and
+   `karman`.
+3. Add cache-warming support for DICO word lists.
+4. Add more no-network DICO golden rows for common terms such as `agni`, `yoga`,
+   `karman`, and `ātman`.
+5. Keep source French and derived English evidence separate in every display and
+   JSON path.

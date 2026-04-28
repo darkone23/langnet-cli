@@ -615,6 +615,11 @@ class ToolPlanner:
                 deps,
                 headword=query_value,
                 lemma=candidate.lemma.lower(),
+                lemma_candidates=[
+                    cand.lemma.lower()
+                    for cand in normalized.candidates
+                    if cand.lemma and cand.lemma.lower()
+                ],
             )
         return calls, deps
 

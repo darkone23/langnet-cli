@@ -32,12 +32,15 @@ Implemented today:
 - Sanskrit `encounter` output that shows Heritage morphology/analysis rows alongside CDSL/DICO meaning evidence where available.
 - Structured `triples-dump --output json` for claim/triple inspection.
 - Translation-cache projection for cache-backed DICO/Gaffiot English gloss evidence.
+- Explicit DICO/Gaffiot cache-miss population through `encounter
+  --translation-mode auto`.
 - Fixture-backed tests for core claim contracts.
 
 Not implemented yet:
 
 - Broad semantic reduction beyond exact buckets.
-- Mature display ranking, accepted-output coverage, and source-specific structuring across all representative examples.
+- Mature display ranking, accepted-output coverage, compact glosses, and
+  source-specific structuring across all representative examples.
 - Hydration as a separate optional enrichment layer.
 - Passage-level interpretation.
 

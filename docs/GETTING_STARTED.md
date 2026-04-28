@@ -51,6 +51,11 @@ just cli normalize san agni
 just cli plan lat lupus
 just cli plan-exec lat lupus
 just triples-dump lat lupus whitakers
+
+just cli encounter lat arma gaffiot --translation-mode cache
+just cli encounter san dharma dico --translation-mode cache
+
+just cli reader-eval --limit 3 --translation-mode cache
 ```
 
 ## Command Reference
@@ -64,16 +69,36 @@ just triples-dump lat lupus whitakers
 | `plan-exec` | Run normalize → plan → fetch/extract/derive/claim. |
 | `triples-dump` | Print claim triples and evidence for inspection. |
 | `encounter` | Current learner-facing MVP: reduced meaning buckets plus source-backed analysis. |
+| `reader-eval` | Run reader-oriented fixture checks against live encounter reductions. |
 | `databuild` | Build local data/indexes. |
 | `index` | Inspect or manage storage indexes/caches. |
 
 Run `just cli COMMAND --help` for options.
+
+## DICO/Gaffiot Translations
+
+DICO and Gaffiot entries are French source evidence. English translations are
+derived evidence stored in the local translation cache.
+
+```bash
+# Read exact cache hits only; no network call.
+just cli encounter lat cano gaffiot --translation-mode cache
+just cli encounter san karman dico --translation-mode cache
+
+# Explicitly populate missing rows through OpenRouter, then display them.
+just cli encounter lat cano gaffiot --translation-mode auto
+just cli encounter san karman dico --translation-mode auto
+```
+
+`--translation-mode auto` requires `OPENAI_API_KEY` only when a cache miss must
+be translated. Routine learner lookup should stay cache-backed and network-free.
 
 ## Validation
 
 ```bash
 just lint-all
 just test-fast
+just validate-stabilization
 ```
 
 Use targeted tests during development:

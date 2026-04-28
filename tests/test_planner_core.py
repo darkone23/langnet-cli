@@ -121,6 +121,48 @@ def test_latin_plan_includes_parse_and_whitakers() -> None:
     assert any(c.tool == "claim.gaffiot.entries" for c in plan.tool_calls)
 
 
+def test_latin_plan_passes_all_normalized_candidates_to_gaffiot() -> None:
+    normalized = NormalizedQuery(
+        original="virumque",
+        language=LanguageHint.LANGUAGE_HINT_LAT,
+        candidates=[
+            CanonicalCandidate(lemma="virus", encodings={}, sources=["diogenes_parse"]),
+            CanonicalCandidate(lemma="vir", encodings={}, sources=["whitakers"]),
+        ],
+        normalizations=[],
+    )
+
+    plan = ToolPlanner().build(normalized)
+
+    gaffiot_call = next(call for call in plan.tool_calls if call.tool == "fetch.gaffiot")
+    assert gaffiot_call.params.get("headword") == "virumque"
+    assert gaffiot_call.params.get("lemma") == "virus"
+    assert gaffiot_call.params.get("lemma_candidates") == "virus;vir"
+
+
+def test_latin_plan_passes_local_form_rule_candidate_to_gaffiot() -> None:
+    normalized = NormalizedQuery(
+        original="Troiae",
+        language=LanguageHint.LANGUAGE_HINT_LAT,
+        candidates=[
+            CanonicalCandidate(lemma="troiades", encodings={}, sources=["diogenes_parse"]),
+            CanonicalCandidate(
+                lemma="troia",
+                encodings={"latin_form_rule": "ae_to_a"},
+                sources=["local_form_rule"],
+            ),
+        ],
+        normalizations=[],
+    )
+
+    plan = ToolPlanner().build(normalized)
+
+    gaffiot_call = next(call for call in plan.tool_calls if call.tool == "fetch.gaffiot")
+    assert gaffiot_call.params.get("headword") == "troiae"
+    assert gaffiot_call.params.get("lemma") == "troiades"
+    assert gaffiot_call.params.get("lemma_candidates") == "troiades;troia"
+
+
 def test_greek_plan_uses_parse_only() -> None:
     planner = ToolPlanner(PlannerConfig(max_candidates=2))
     plan = planner.build(_grc_normalized())

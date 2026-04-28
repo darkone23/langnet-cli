@@ -8,6 +8,7 @@ from langnet.translation.cache import (
 )
 from langnet.translation.projection import (
     TranslationSource,
+    populate_missing_translations,
     project_cached_translations,
     translation_source_from_evidence,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "build_translation_key",
     "default_hints_for_language",
     "default_hints_for_mode",
+    "populate_missing_translations",
     "project_cached_translations",
     "text_hash",
     "translation_source_from_evidence",

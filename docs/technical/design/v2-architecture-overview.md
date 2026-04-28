@@ -15,9 +15,10 @@ This document records the architectural direction that is now mostly implemented
 
 ## Remaining V2 Work
 
-- Better evidence inspection in CLI output.
-- Semantic reduction over claims.
-- Learner-facing semantic display.
+- Better narrative evidence inspection examples in docs.
+- Release-quality learner-facing display.
+- Reader-form/headword ranking.
+- Compact gloss display over full source evidence.
 - Optional hydration.
 
 ## Current Canonical References

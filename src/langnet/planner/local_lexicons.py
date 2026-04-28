@@ -100,15 +100,19 @@ def append_gaffiot_calls(
     *,
     headword: str,
     lemma: str,
+    lemma_candidates: list[str] | None = None,
 ) -> None:
     """Append the staged local Gaffiot source-gloss pipeline."""
     gaffiot_fetch_id = "gaffiot-1"
+    params = {"headword": headword, "lemma": lemma}
+    if lemma_candidates:
+        params["lemma_candidates"] = ";".join(lemma_candidates)
     calls.append(
         make_call(
             tool="fetch.gaffiot",
             call_id=gaffiot_fetch_id,
             endpoint="duckdb://gaffiot",
-            params={"headword": headword, "lemma": lemma},
+            params=params,
             opts=opts(expected="json", priority=7, optional=True, stage=ToolStage.TOOL_STAGE_FETCH),
         )
     )

@@ -1,6 +1,6 @@
 # Refinement Audit
 
-**Date:** 2026-04-27  
+**Date:** 2026-04-28  
 **Purpose:** section-by-section stock of what is integrated, what is weak, and what should be refined next.
 
 Use this document when the project is not blocked by missing foundation, but the current behavior still needs polish before it is learner-ready. The execution queue remains `docs/EXECUTION_PLAN.md`; this audit explains why those tasks matter and what good refinement should look like.
@@ -116,24 +116,35 @@ Use this document when the project is not blocked by missing foundation, but the
 - Local DICO and Gaffiot entries now emit source-gloss triples.
 - Translation cache identity helpers exist.
 - Cached English translations can be projected into derived evidence before reduction.
+- Explicit `encounter --translation-mode auto` can populate missing DICO/Gaffiot
+  translations and then display them.
 - The demo script can write translation cache rows and show cache keys.
 - Golden Gaffiot and DICO cache rows now prove cache hits project English evidence and stale source-text hashes do not.
 
 **What is weak**
 
 - The cache is still populated explicitly, usually by network-backed translation runs.
+- Live population can be slow for long entries and should not be part of default
+  learner lookup.
 - Translation-backed accepted-output examples are not yet broad enough to serve as release fixtures.
 - DICO and Gaffiot source French must not be confused with translated English evidence.
+- The translated output is source-faithful dictionary prose, not a compact
+  learner gloss.
 
 **Refinement action**
 
 - Add accepted-output examples that exercise the golden cache rows through `encounter`.
+- Add compact learner glosses derived from source-backed/translation-backed
+  entries while preserving full evidence.
 - Keep network-backed translation limited to explicit cache population.
 - Keep translated triples visibly derived and metadata-rich.
 
 **Acceptance check**
 
-- `encounter --use-translation-cache` changes output only when cache rows match by source hash, model, prompt hash, and hints.
+- `encounter --translation-mode cache` changes output only when cache rows match
+  by source hash, model, prompt hash, and hints.
+- `encounter --translation-mode auto` is explicitly requested before any
+  translation provider call occurs.
 - Tests show source French evidence and translated English evidence remain distinct.
 
 ## 6. Reduction And Semantic Layer
@@ -228,6 +239,8 @@ Use this document when the project is not blocked by missing foundation, but the
 
 - Treat the next milestone as learner-output hardening, not semantic expansion.
 - Extend the accepted-output gallery with Sanskrit DICO translated cache, Latin Gaffiot translated cache, and Latin Whitaker/Diogenes multi-source examples.
+- Add reader-form regression fixtures for `virumque`, `μῆνιν`, `θεὰ`, and
+  `karma/karman`.
 - Use those examples to drive ranking and display improvements.
 
 **Acceptance check**
@@ -238,9 +251,10 @@ Use this document when the project is not blocked by missing foundation, but the
 ## Recommended Immediate Order
 
 1. Commit or otherwise isolate the current integrated baseline.
-2. Expand CDSL fixtures into stronger source/gloss/source-note structure without omitting source content by default.
-3. Add a narrative evidence-inspection example that traces `encounter` output back to triples and source refs.
-4. Re-run fuzz diagnostics against the refined `encounter` and JSON inspection surfaces.
+2. Add reader-eval fixtures for the Aeneid, Iliad, and Bhagavad Gita opening passages.
+3. Expand CDSL fixtures into stronger source/gloss/source-note structure without omitting source content by default.
+4. Add a narrative evidence-inspection example that traces `encounter` output back to triples and source refs.
+5. Re-run fuzz diagnostics against the refined `encounter` and JSON inspection surfaces.
 
 ## Working Rule
 

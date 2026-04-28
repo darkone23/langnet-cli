@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import subprocess
 from collections import Counter
@@ -45,6 +46,12 @@ from langnet.normalizer.service import DiogenesConfig, NormalizationService
 from langnet.normalizer.utils import strip_accents
 from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
 from langnet.planner.core import PlannerConfig, ToolPlanner
+from langnet.reader_eval import (
+    evaluate_reader_token,
+    iter_reader_eval_tokens,
+    load_reader_eval_fixture,
+    summarize_reader_eval,
+)
 from langnet.reduction import reduce_claims
 from langnet.storage.claim_index import ClaimIndex
 from langnet.storage.db import connect_duckdb
@@ -54,7 +61,9 @@ from langnet.storage.extraction_index import ExtractionIndex
 from langnet.storage.paths import all_db_paths, normalization_db_path
 from langnet.storage.plan_index import PlanResponseIndex, apply_schema
 from langnet.translation import (
+    BASE_SYSTEM,
     TranslationCache,
+    populate_missing_translations,
     project_cached_translations,
 )
 
@@ -1645,7 +1654,7 @@ def _encounter_morphology_rows(
             form = str(obj_dict.get("form") or triple.get("subject") or "").removeprefix("form:")
             lemma = str(obj_dict.get("lemma") or "").removeprefix("lex:")
             analysis = str(obj_dict.get("analysis") or "").strip()
-            if not analysis:
+            if not analysis or analysis == "?":
                 continue
             key = (source_tool, form, lemma, analysis)
             if key in seen:
@@ -1664,6 +1673,89 @@ def _encounter_morphology_rows(
     return rows
 
 
+def _encounter_morphology_fallback_terms(
+    claims: Sequence[Mapping[str, object]],
+    *,
+    language: str,
+    original: str,
+    max_terms: int = 2,
+) -> list[str]:
+    if language != "san":
+        return []
+
+    original_norm = original.strip().lower()
+    terms: list[str] = []
+    for row in _encounter_morphology_rows(claims, max_rows=8):
+        form = row["form"].strip()
+        lemma = row["lemma"].strip()
+        analysis = row["analysis"].strip()
+        if not lemma or lemma == "?" or analysis == "?":
+            continue
+        if analysis == "iic." or analysis.startswith("iic "):
+            continue
+        if form != lemma:
+            continue
+        if lemma.lower() == original_norm:
+            continue
+        if "_" in lemma:
+            continue
+        if lemma not in terms:
+            terms.append(lemma)
+        if len(terms) >= max_terms:
+            break
+    return terms
+
+
+def _encounter_reduction_lemma_values(reduction) -> list[str]:
+    values = [anchor.removeprefix("lex:") for anchor in reduction.lexeme_anchors]
+    for bucket in reduction.buckets:
+        for witness in bucket.witnesses:
+            values.append(witness.lexeme_anchor.removeprefix("lex:"))
+            display_iast = witness.evidence.get("display_iast")
+            display_slp1 = witness.evidence.get("display_slp1")
+            if isinstance(display_iast, str):
+                values.append(display_iast)
+            if isinstance(display_slp1, str):
+                values.append(cdsl_handlers._slp1_to_iast(display_slp1))  # type: ignore[attr-defined]
+    return _dedupe_preserve_order(values)
+
+
+def _encounter_sanskrit_morphology_lookup_terms(
+    *,
+    claims: Sequence[Mapping[str, object]],
+    language: str,
+    original: str,
+    tool_filter: str,
+    reduction,
+) -> tuple[list[str], str | None]:
+    if language != "san" or tool_filter.lower() in {"heritage", "claim.heritage.morph"}:
+        return [], None
+
+    terms = _encounter_morphology_fallback_terms(
+        claims,
+        language=language,
+        original=original,
+    )
+    if not terms:
+        return [], None
+    if not reduction.buckets:
+        return (
+            terms,
+            "No sense buckets for surface form; followed Sanskrit morphology lemma "
+            "for meaning evidence.",
+        )
+
+    if len(terms) != 1:
+        return [], None
+    reduction_lemmas = {value.lower() for value in _encounter_reduction_lemma_values(reduction)}
+    if terms[0].lower() in reduction_lemmas:
+        return [], None
+    return (
+        terms,
+        "Followed Sanskrit morphology lemma for additional meaning evidence.",
+    )
+
+
 def _encounter_bucket_sort_key(bucket) -> tuple[int, int, str]:
     has_english_translation = any(
         witness.source_tool == "translation"
@@ -1671,11 +1763,59 @@ def _encounter_bucket_sort_key(bucket) -> tuple[int, int, str]:
         or witness.evidence.get("source_lang") == "en"
         for witness in bucket.witnesses
     )
+    has_bilingual_source = any(
+        witness.source_tool in {"dico", "gaffiot"}
+        or witness.evidence.get("source_tool") in {"dico", "gaffiot"}
+        or witness.evidence.get("derived_from_tool") in {"dico", "gaffiot"}
+        for witness in bucket.witnesses
+    )
     return (
-        0 if has_english_translation else 1,
+        0 if has_english_translation else 1 if has_bilingual_source else 2,
         -len(bucket.witnesses),
         bucket.display_gloss.lower(),
     )
+
+
+def _openrouter_translation_callback(model: str):
+    client = None
+
+    def translate(projection) -> str:
+        nonlocal client
+        if client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise click.ClickException("Set OPENAI_API_KEY before populating translations.")
+            api_base = os.getenv(
+                "OPENAI_API_BASE",
+                os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1"),
+            )
+            os.environ["OPENAI_BASE_URL"] = api_base
+            try:
+                import aisuite as ai  # noqa: PLC0415
+            except ImportError as exc:
+                raise click.ClickException("aisuite is required to populate translations.") from exc
+            client = ai.Client({"api_key": api_key})
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": BASE_SYSTEM},
+                {"role": "system", "content": projection.hint},
+                {"role": "user", "content": projection.source_text},
+            ],
+        )
+        content = response.choices[0].message.content or ""
+        return content.replace("*", "").strip()
+
+    return translate
+
+
+def _resolve_translation_mode(use_translation_cache: bool, translation_mode: str) -> str:
+    if translation_mode == "do-it-all":
+        return "auto"
+    if use_translation_cache and translation_mode == "off":
+        return "cache"
+    return translation_mode
 
 
 def _execute_lookup_plan(  # noqa: PLR0913
@@ -1810,6 +1950,16 @@ def _execute_lookup_plan(  # noqa: PLR0913
     help="Display cached DICO/Gaffiot French-to-English translations when available.",
 )
 @click.option(
+    "--translation-mode",
+    type=click.Choice(["off", "cache", "populate", "auto", "do-it-all"]),
+    default="off",
+    show_default=True,
+    help=(
+        "French source translation mode: off, cache-only, or populate missing "
+        "DICO/Gaffiot rows via OpenRouter before display. do-it-all is an alias for auto."
+    ),
+)
+@click.option(
     "--translation-cache-db",
     default="data/cache/langnet.duckdb",
     show_default=True,
@@ -1836,6 +1986,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     max_gloss_chars: int,
     output: str,
     use_translation_cache: bool,
+    translation_mode: str,
     translation_cache_db: str,
     translation_model: str,
 ):
@@ -1858,12 +2009,32 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     )
     try:
         claims = _claims_as_mappings(result)
-        if use_translation_cache:
+        resolved_translation_mode = _resolve_translation_mode(
+            use_translation_cache,
+            translation_mode,
+        )
+        if resolved_translation_mode != "off":
             cache_path = Path(translation_cache_db)
-            if cache_path.exists():
-                translation_conn = duckdb.connect(str(cache_path), read_only=True)
-                translation_cache = TranslationCache(translation_conn, read_only=True)
+            populate_translations = resolved_translation_mode in {"populate", "auto"}
+            if cache_path.exists() or populate_translations:
+                if populate_translations:
+                    cache_path.parent.mkdir(parents=True, exist_ok=True)
+                translation_conn = duckdb.connect(
+                    str(cache_path), read_only=not populate_translations
+                )
+                translation_cache = TranslationCache(
+                    translation_conn,
+                    read_only=not populate_translations,
+                )
                 try:
+                    if populate_translations:
+                        populate_missing_translations(
+                            claims=claims,
+                            language=language,
+                            model=translation_model,
+                            cache=translation_cache,
+                            translate=_openrouter_translation_callback(translation_model),
+                        )
                     claims = project_cached_translations(
                         claims=claims,
                         language=language,
@@ -1872,7 +2043,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     )
                 except Exception as exc:  # noqa: BLE001
                     raise click.ClickException(
-                        f"Unable to read translation cache {translation_cache_db}: {exc}"
+                        f"Unable to use translation cache {translation_cache_db}: {exc}"
                     ) from exc
             elif output != "json":
                 click.echo(f"Translation cache unavailable: {translation_cache_db}")
@@ -1899,6 +2070,14 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             fresh_claims = _claims_as_mappings(fresh_result)
             if translation_cache is not None:
                 try:
+                    if resolved_translation_mode in {"populate", "auto"}:
+                        populate_missing_translations(
+                            claims=fresh_claims,
+                            language=language,
+                            model=translation_model,
+                            cache=translation_cache,
+                            translate=_openrouter_translation_callback(translation_model),
+                        )
                     fresh_claims = project_cached_translations(
                         claims=fresh_claims,
                         language=language,
@@ -1917,6 +2096,63 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     "Cached normalization produced no sense buckets; retried with fresh "
                     "normalization."
                 )
+
+        fallback_terms, fallback_warning = _encounter_sanskrit_morphology_lookup_terms(
+            claims=claims,
+            language=language,
+            original=text,
+            tool_filter=tool_filter,
+            reduction=reduction,
+        )
+        if fallback_terms:
+            original_bucket_count = len(reduction.buckets)
+            fallback_claims = list(claims)
+            for fallback_term in fallback_terms:
+                fallback_result = _execute_lookup_plan(
+                    language=language,
+                    text=fallback_term,
+                    tool_filter=tool_filter,
+                    normalize=normalize,
+                    diogenes_endpoint=diogenes_endpoint,
+                    diogenes_parse_endpoint=diogenes_parse_endpoint,
+                    heritage_base=heritage_base,
+                    db_path=db_path,
+                    no_cache=no_cache,
+                    include_cltk=include_cltk,
+                )
+                term_claims = _claims_as_mappings(fallback_result)
+                if translation_cache is not None:
+                    try:
+                        if resolved_translation_mode in {"populate", "auto"}:
+                            populate_missing_translations(
+                                claims=term_claims,
+                                language=language,
+                                model=translation_model,
+                                cache=translation_cache,
+                                translate=_openrouter_translation_callback(translation_model),
+                            )
+                        term_claims = project_cached_translations(
+                            claims=term_claims,
+                            language=language,
+                            model=translation_model,
+                            cache=translation_cache,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        raise click.ClickException(
+                            f"Unable to read translation cache {translation_cache_db}: {exc}"
+                        ) from exc
+                fallback_claims.extend(term_claims)
+            if len(fallback_claims) > len(claims):
+                fallback_reduction = reduce_claims(
+                    query=text,
+                    language=language,
+                    claims=fallback_claims,
+                )
+                if len(fallback_reduction.buckets) > original_bucket_count:
+                    claims = fallback_claims
+                    reduction = fallback_reduction
+                    if fallback_warning:
+                        reduction.warnings.append(fallback_warning)
 
         if output == "json":
             click.echo(orjson.dumps(asdict(reduction), option=orjson.OPT_INDENT_2).decode("utf-8"))
@@ -1979,6 +2215,316 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     finally:
         if translation_conn is not None:
             translation_conn.close()
+
+
+def _reader_eval_translation_claims(
+    *,
+    claims: list[Mapping[str, object]],
+    language: str,
+    translation_mode: str,
+    translation_cache_db: str,
+    translation_model: str,
+) -> list[Mapping[str, object]]:
+    resolved_translation_mode = _resolve_translation_mode(False, translation_mode)
+    if resolved_translation_mode == "off":
+        return claims
+
+    cache_path = Path(translation_cache_db)
+    populate_translations = resolved_translation_mode in {"populate", "auto"}
+    if not cache_path.exists() and not populate_translations:
+        return claims
+
+    if populate_translations:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+    with duckdb.connect(str(cache_path), read_only=not populate_translations) as conn:
+        cache = TranslationCache(conn, read_only=not populate_translations)
+        if populate_translations:
+            populate_missing_translations(
+                claims=claims,
+                language=language,
+                model=translation_model,
+                cache=cache,
+                translate=_openrouter_translation_callback(translation_model),
+            )
+        return project_cached_translations(
+            claims=claims,
+            language=language,
+            model=translation_model,
+            cache=cache,
+        )
+
+
+def _reader_eval_int(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str) and value:
+        return int(value)
+    return 0
+
+
+def _reader_eval_float(value: object) -> float:
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str) and value:
+        return float(value)
+    return 0.0
+
+
+def _reader_eval_display(report: Mapping[str, object]) -> None:
+    summary = report.get("summary")
+    summary_map = cast(Mapping[str, object], summary) if isinstance(summary, Mapping) else {}
+    total = _reader_eval_int(summary_map.get("total"))
+    passed = _reader_eval_int(summary_map.get("passed"))
+    failed = _reader_eval_int(summary_map.get("failed"))
+    hit_rate = _reader_eval_float(summary_map.get("hit_rate"))
+    meaning_passed = _reader_eval_int(summary_map.get("meaning_passed"))
+    meaning_hit_rate = _reader_eval_float(summary_map.get("meaning_hit_rate"))
+    click.echo(f"Reader eval: {passed}/{total} passed ({hit_rate:.0%} hit rate); {failed} failed")
+    click.echo(f"Meaning: {meaning_passed}/{total} ({meaning_hit_rate:.0%} hit rate)")
+
+    results = report.get("results")
+    if not isinstance(results, list):
+        return
+    for result in results:
+        if not isinstance(result, Mapping):
+            continue
+        result_map = cast(Mapping[str, object], result)
+        status = "PASS" if result_map.get("passed") is True else "MISS"
+        label = (f"{result_map.get('language', '')} {result_map.get('surface', '')}").strip()
+        click.echo(f"- {status} {label}")
+        error = result_map.get("error")
+        if error:
+            click.echo(f"  error: {error}")
+            continue
+        checks = result_map.get("checks")
+        if isinstance(checks, Mapping):
+            missed = [key for key, value in checks.items() if value is not True]
+            if missed:
+                click.echo(f"  checks: {', '.join(str(key) for key in missed)}")
+        actual = result_map.get("actual")
+        if isinstance(actual, Mapping):
+            actual_map = cast(Mapping[str, object], actual)
+            top_glosses = actual_map.get("top_glosses")
+            if isinstance(top_glosses, list) and top_glosses:
+                click.echo(f"  top: {top_glosses[0]}")
+
+
+@main.command("reader-eval")
+@click.option(
+    "--fixture",
+    "fixture_path",
+    default="tests/fixtures/reader_eval_classics.json",
+    show_default=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Reader-eval fixture file.",
+)
+@click.option(
+    "--language",
+    "languages",
+    multiple=True,
+    help="Restrict evaluation to one or more language codes.",
+)
+@click.option(
+    "--limit",
+    type=int,
+    help="Evaluate at most this many fixture tokens.",
+)
+@click.option(
+    "--tool-filter",
+    default="all",
+    show_default=True,
+    help="Tool filter passed to encounter lookup planning.",
+)
+@click.option(
+    "--normalize/--no-normalize",
+    default=True,
+    show_default=True,
+    help="Normalize input before planning/executing.",
+)
+@click.option(
+    "--diogenes-endpoint",
+    default="http://localhost:8888/Diogenes.cgi",
+    show_default=True,
+    help="Diogenes CGI endpoint for planning/fetch.",
+)
+@click.option(
+    "--diogenes-parse-endpoint",
+    help="Alternate Diogenes parse endpoint (defaults to diogenes-endpoint).",
+)
+@click.option(
+    "--heritage-base",
+    default="http://localhost:48080",
+    show_default=True,
+    help="Base URL for Heritage Platform.",
+)
+@click.option(
+    "--db-path",
+    type=click.Path(),
+    help=(
+        "Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb)."
+    ),
+)
+@click.option(
+    "--no-cache",
+    is_flag=True,
+    help="Skip normalization cache lookups and writes for this invocation.",
+)
+@click.option(
+    "--include-cltk/--no-include-cltk",
+    default=False,
+    show_default=True,
+    help="Include CLTK in the plan (may be slow due to warmup).",
+)
+@click.option(
+    "--translation-mode",
+    type=click.Choice(["off", "cache", "populate", "auto", "do-it-all"]),
+    default="cache",
+    show_default=True,
+    help="French source translation mode used before scoring gloss evidence.",
+)
+@click.option(
+    "--translation-cache-db",
+    default="data/cache/langnet.duckdb",
+    show_default=True,
+    help="DuckDB cache containing entry_translations rows.",
+)
+@click.option(
+    "--translation-model",
+    default="openai:google/gemma-4-31b-it",
+    show_default=True,
+    help="Model id used when computing translation cache keys.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.option(
+    "--fail-on-miss",
+    is_flag=True,
+    help="Exit non-zero when any fixture token misses.",
+)
+def reader_eval(  # noqa: PLR0913, PLR0915
+    fixture_path: Path,
+    languages: tuple[str, ...],
+    limit: int | None,
+    tool_filter: str,
+    normalize: bool,
+    diogenes_endpoint: str,
+    diogenes_parse_endpoint: str | None,
+    heritage_base: str,
+    db_path: str | None,
+    no_cache: bool,
+    include_cltk: bool,
+    translation_mode: str,
+    translation_cache_db: str,
+    translation_model: str,
+    output: str,
+    fail_on_miss: bool,
+) -> None:
+    """Run reader-oriented fixture checks against live encounter reductions."""
+    language_filter = set(languages) if languages else None
+    fixture = load_reader_eval_fixture(fixture_path)
+    tokens = iter_reader_eval_tokens(fixture, languages=language_filter, limit=limit)
+    results: list[dict[str, object]] = []
+
+    for token in tokens:
+        language = str(token["language"])
+        surface = str(token["surface"])
+        try:
+            lookup_result = _execute_lookup_plan(
+                language=language,
+                text=surface,
+                tool_filter=tool_filter,
+                normalize=normalize,
+                diogenes_endpoint=diogenes_endpoint,
+                diogenes_parse_endpoint=diogenes_parse_endpoint,
+                heritage_base=heritage_base,
+                db_path=db_path,
+                no_cache=no_cache,
+                include_cltk=include_cltk,
+            )
+            claims = _reader_eval_translation_claims(
+                claims=_claims_as_mappings(lookup_result),
+                language=language,
+                translation_mode=translation_mode,
+                translation_cache_db=translation_cache_db,
+                translation_model=translation_model,
+            )
+            reduction = reduce_claims(query=surface, language=language, claims=claims)
+            fallback_terms, _fallback_warning = _encounter_sanskrit_morphology_lookup_terms(
+                claims=claims,
+                language=language,
+                original=surface,
+                tool_filter=tool_filter,
+                reduction=reduction,
+            )
+            if fallback_terms:
+                original_bucket_count = len(reduction.buckets)
+                fallback_claims = list(claims)
+                for fallback_term in fallback_terms:
+                    fallback_result = _execute_lookup_plan(
+                        language=language,
+                        text=fallback_term,
+                        tool_filter=tool_filter,
+                        normalize=normalize,
+                        diogenes_endpoint=diogenes_endpoint,
+                        diogenes_parse_endpoint=diogenes_parse_endpoint,
+                        heritage_base=heritage_base,
+                        db_path=db_path,
+                        no_cache=no_cache,
+                        include_cltk=include_cltk,
+                    )
+                    fallback_claims.extend(
+                        _reader_eval_translation_claims(
+                            claims=_claims_as_mappings(fallback_result),
+                            language=language,
+                            translation_mode=translation_mode,
+                            translation_cache_db=translation_cache_db,
+                            translation_model=translation_model,
+                        )
+                    )
+                if len(fallback_claims) > len(claims):
+                    fallback_reduction = reduce_claims(
+                        query=surface,
+                        language=language,
+                        claims=fallback_claims,
+                    )
+                    if len(fallback_reduction.buckets) > original_bucket_count:
+                        claims = fallback_claims
+                        reduction = fallback_reduction
+            reduction.buckets = sorted(reduction.buckets, key=_encounter_bucket_sort_key)
+            results.append(
+                evaluate_reader_token(
+                    token,
+                    asdict(reduction),
+                    morphology_rows=_encounter_morphology_rows(claims, max_rows=8),
+                )
+            )
+        except Exception as exc:  # noqa: BLE001
+            results.append(evaluate_reader_token(token, {}, error=str(exc)))
+
+    report = {
+        "fixture": str(fixture_path),
+        "summary": summarize_reader_eval(results),
+        "results": results,
+    }
+    if output == "json":
+        click.echo(orjson.dumps(report, option=orjson.OPT_INDENT_2).decode("utf-8"))
+    else:
+        _reader_eval_display(report)
+
+    summary = cast(Mapping[str, object], report["summary"])
+    if fail_on_miss and _reader_eval_int(summary["failed"]) > 0:
+        raise click.ClickException("Reader eval reported misses.")
 
 
 def _display_pretty(language: str, text: str, results: dict) -> None:  # noqa: C901, PLR0912, PLR0915

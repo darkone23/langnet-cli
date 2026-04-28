@@ -60,7 +60,14 @@ just cli normalize san agni
 just cli plan lat lupus
 just cli plan-exec lat lupus
 just triples-dump lat lupus whitakers
+
+just cli encounter lat cano gaffiot --translation-mode cache
+just cli encounter san karman dico --translation-mode cache
 ```
+
+Use `--translation-mode auto` only when you intentionally want to populate
+missing DICO/Gaffiot translations through OpenRouter. It may be slow on long
+entries and requires `OPENAI_API_KEY` on cache misses.
 
 ## Runtime Pipeline
 

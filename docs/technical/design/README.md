@@ -24,7 +24,7 @@ Design files are not proof of implementation. Check `../ARCHITECTURE.md`, `../..
 - `classifier-and-reducer.md` — claim-to-sense-bucket design.
 - `semantic-structs.md` — planned dataclasses for reduction.
 - `hydration-reduction.md` — optional post-claim enrichment.
-- `tool-fact-architecture.md` and `tool-fact-flow.md` — older conceptual notes retained for reference.
+- `tool-fact-architecture.md` and `mermaid/tool-fact-flow.md` — older conceptual notes retained for reference.
 
 ## Reading Order
 

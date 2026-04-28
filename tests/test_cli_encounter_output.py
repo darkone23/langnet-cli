@@ -226,6 +226,196 @@ def test_encounter_sanskrit_heritage_analysis_snapshot() -> None:
     )
 
 
+def test_encounter_follows_sanskrit_morphology_lemma_when_surface_has_no_meanings() -> None:
+    morphology_result = SimpleNamespace(
+        claims=[
+            ClaimEffect(
+                claim_id="clm-heritage",
+                tool="claim.heritage.morph",
+                call_id="call-heritage",
+                source_call_id="derive-heritage",
+                derivation_id="drv-heritage",
+                subject="lex:yuyutsava",
+                predicate="has_morphology",
+                value={
+                    "triples": [
+                        {
+                            "subject": "form:yuyutsava",
+                            "predicate": "has_morphology",
+                            "object": {
+                                "lemma": "yuyutsava",
+                                "form": "yuyutsava",
+                                "analysis": "?",
+                            },
+                            "metadata": {"evidence": {"source_tool": "heritage"}},
+                        },
+                        {
+                            "subject": "form:yuyutsu",
+                            "predicate": "has_morphology",
+                            "object": {
+                                "lemma": "yuyutsu",
+                                "form": "yuyutsu",
+                                "analysis": "m. pl. voc.",
+                            },
+                            "metadata": {"evidence": {"source_tool": "heritage"}},
+                        },
+                    ]
+                },
+                provenance_chain=[],
+                handler_version="test",
+            )
+        ]
+    )
+    sense_triples = [
+        {
+            "subject": "lex:yuyutsu",
+            "predicate": "has_sense",
+            "object": "sense:lex:yuyutsu#1",
+            "metadata": {
+                "evidence": {"source_tool": "cdsl", "source_ref": "mw:yuyutsu"},
+                "display_iast": "yuyutsu",
+                "display_slp1": "yuyutsu",
+            },
+        },
+        {
+            "subject": "sense:lex:yuyutsu#1",
+            "predicate": "gloss",
+            "object": "desiring to fight",
+            "metadata": {
+                "evidence": {"source_tool": "cdsl", "source_ref": "mw:yuyutsu"},
+                "display_iast": "yuyutsu",
+                "display_slp1": "yuyutsu",
+            },
+        },
+    ]
+    lemma_result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="cdsl", subject="lex:yuyutsu", triples=sense_triples)]
+    )
+
+    with patch(
+        "langnet.cli._execute_lookup_plan",
+        side_effect=[morphology_result, lemma_result],
+    ):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "san",
+                "yuyutsavaḥ",
+                "all",
+                "--no-cache",
+                "--max-buckets",
+                "1",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    assert cli_result.output == (
+        "yuyutsavaḥ [san]\n"
+        "================\n"
+        "Forms: yuyutsu\n"
+        "Warning: No sense buckets for surface form; followed Sanskrit morphology lemma "
+        "for meaning evidence.\n"
+        "\n"
+        "Analysis\n"
+        "- yuyutsu -> yuyutsu: m. pl. voc. (heritage)\n"
+        "\n"
+        "Meanings\n"
+        "1. desiring to fight\n"
+        "   sources: cdsl; witnesses: 1; confidence: single-witness\n"
+        "   refs: mw:yuyutsu\n"
+    ), cli_result.output
+
+
+def test_encounter_enriches_sanskrit_surface_with_clear_morphology_lemma() -> None:
+    surface_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="fixture",
+                subject="lex:karma",
+                triples=[
+                    {
+                        "subject": "form:karman",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "lemma": "karman",
+                            "form": "karman",
+                            "analysis": "n. sg. acc. | n. sg. nom.",
+                        },
+                        "metadata": {"evidence": {"source_tool": "heritage"}},
+                    },
+                    {
+                        "subject": "lex:karma",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:karma#compound",
+                        "metadata": {"evidence": {"source_tool": "cdsl"}},
+                    },
+                    {
+                        "subject": "sense:lex:karma#compound",
+                        "predicate": "gloss",
+                        "object": "karma (in comp. for karman above).",
+                        "metadata": {"evidence": {"source_tool": "cdsl"}},
+                    },
+                ],
+            )
+        ]
+    )
+    lemma_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="fixture",
+                subject="lex:karman",
+                triples=[
+                    {
+                        "subject": "lex:karman",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:karman#action",
+                        "metadata": {"evidence": {"source_tool": "cdsl"}},
+                    },
+                    {
+                        "subject": "sense:lex:karman#action",
+                        "predicate": "gloss",
+                        "object": "act, action, duty, rite",
+                        "metadata": {"evidence": {"source_tool": "cdsl"}},
+                    },
+                ],
+            )
+        ]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", side_effect=[surface_result, lemma_result]):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "san",
+                "karma",
+                "all",
+                "--translation-mode",
+                "off",
+                "--max-buckets",
+                "2",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    assert cli_result.output == (
+        "karma [san]\n"
+        "===========\n"
+        "Forms: karman, karma\n"
+        "Warning: Followed Sanskrit morphology lemma for additional meaning evidence.\n"
+        "\n"
+        "Analysis\n"
+        "- karman -> karman: n. sg. acc. | n. sg. nom. (heritage)\n"
+        "\n"
+        "Meanings\n"
+        "1. act, action, duty, rite\n"
+        "   sources: cdsl; witnesses: 1; confidence: single-witness\n"
+        "2. karma (in comp. for karman above).\n"
+        "   sources: cdsl; witnesses: 1; confidence: single-witness\n"
+    ), cli_result.output
+
+
 def test_encounter_retries_uncached_when_cached_normalization_has_no_senses() -> None:
     stale_result = SimpleNamespace(
         claims=[
@@ -470,6 +660,93 @@ def test_encounter_latin_translation_cache_snapshot() -> None:
     )
 
 
+def test_encounter_translation_mode_auto_populates_missing_cache() -> None:
+    model = "test:model"
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "translation.duckdb"
+        triples = [
+            {
+                "subject": "lex:lupus",
+                "predicate": "has_sense",
+                "object": "sense:lex:lupus#gaffiot-loup",
+                "metadata": {
+                    "evidence": {
+                        "source_tool": "gaffiot",
+                        "source_ref": "gaffiot:gaffiot_38776",
+                        "variant_num": 1,
+                    }
+                },
+            },
+            {
+                "subject": "sense:lex:lupus#gaffiot-loup",
+                "predicate": "gloss",
+                "object": "loup",
+                "metadata": {
+                    "source_lang": "fr",
+                    "source_ref": "gaffiot:gaffiot_38776",
+                    "evidence": {
+                        "source_tool": "gaffiot",
+                        "source_ref": "gaffiot:gaffiot_38776",
+                        "variant_num": 1,
+                    },
+                },
+            },
+        ]
+        result = SimpleNamespace(
+            claims=[_claim_with_triples(tool="gaffiot", subject="lex:lupus", triples=triples)]
+        )
+
+        with (
+            patch("langnet.cli._execute_lookup_plan", return_value=result),
+            patch(
+                "langnet.cli._openrouter_translation_callback",
+                return_value=lambda projection: "wolf",
+            ),
+        ):
+            cli_result = CliRunner().invoke(
+                main,
+                [
+                    "encounter",
+                    "lat",
+                    "lupus",
+                    "gaffiot",
+                    "--translation-mode",
+                    "auto",
+                    "--translation-cache-db",
+                    str(cache_path),
+                    "--translation-model",
+                    model,
+                    "--max-buckets",
+                    "1",
+                    "--max-gloss-chars",
+                    "80",
+                ],
+            )
+
+        assert cli_result.exit_code == 0, cli_result.output
+        assert "1. wolf\n" in cli_result.output
+        assert "translated from: gaffiot\n" in cli_result.output
+
+        key = build_translation_key(
+            source_lexicon="gaffiot",
+            entry_id="gaffiot_38776",
+            occurrence=1,
+            headword_norm="lupus",
+            source_text="loup",
+            model=model,
+            prompt=BASE_SYSTEM,
+            hint="\n".join(default_hints_for_language("lat")),
+        )
+        conn = duckdb.connect(str(cache_path), read_only=True)
+        try:
+            record = TranslationCache(conn, read_only=True).get(key)
+        finally:
+            conn.close()
+        assert record is not None
+        assert record.translated_text == "wolf"
+        assert record.status == "ok"
+
+
 def test_encounter_sanskrit_dico_translation_cache_snapshot() -> None:
     model = "test:model"
     with TemporaryDirectory() as tmpdir:
@@ -681,6 +958,74 @@ def test_encounter_prefers_multi_witness_bucket_snapshot() -> None:
         "2. apple\n"
         "   sources: fixture; witnesses: 1; confidence: single-witness\n"
         "   refs: fixture:apple\n"
+    )
+
+
+def test_encounter_prefers_bilingual_source_bucket_snapshot() -> None:
+    triples = [
+        {
+            "subject": "lex:lupus",
+            "predicate": "has_sense",
+            "object": "sense:lex:lupus#generic",
+            "metadata": {"evidence": {"source_tool": "fixture", "source_ref": "fixture:generic"}},
+        },
+        {
+            "subject": "sense:lex:lupus#generic",
+            "predicate": "gloss",
+            "object": "generic animal",
+            "metadata": {"evidence": {"source_tool": "fixture", "source_ref": "fixture:generic"}},
+        },
+        {
+            "subject": "lex:lupus",
+            "predicate": "has_sense",
+            "object": "sense:lex:lupus#gaffiot",
+            "metadata": {
+                "evidence": {"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_38776"}
+            },
+        },
+        {
+            "subject": "sense:lex:lupus#gaffiot",
+            "predicate": "gloss",
+            "object": "loup",
+            "metadata": {
+                "source_lang": "fr",
+                "source_ref": "gaffiot:gaffiot_38776",
+                "evidence": {"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_38776"},
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="latin", subject="lex:lupus", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "lupus",
+                "all",
+                "--max-buckets",
+                "1",
+                "--max-gloss-chars",
+                "80",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    assert cli_result.output == (
+        "lupus [lat]\n"
+        "===========\n"
+        "Forms: lupus\n"
+        "\n"
+        "Meanings\n"
+        "1. loup\n"
+        "   sources: gaffiot; witnesses: 1; confidence: single-witness\n"
+        "   refs: gaffiot:gaffiot_38776\n"
+        "   source language: fr\n"
+        "\n"
+        "(1 more bucket(s) hidden)\n"
     )
 
 

@@ -26,6 +26,8 @@ EXPECTED_SECOND_VARIANT = 2
 def test_normalize_gaffiot_headword_strips_numbering_and_accents() -> None:
     assert normalize_gaffiot_headword("1 lūpus, ī") == "lupus"
     assert normalize_gaffiot_headword("Lœtus") == "loetus"
+    assert normalize_gaffiot_headword("Trœia") == "troeia"
+    assert normalize_gaffiot_headword("Træia") == "traeia"
 
 
 def test_lookup_gaffiot_entries_by_normalized_headword() -> None:
@@ -86,6 +88,44 @@ def test_lookup_gaffiot_entries_uses_later_lemma_candidate() -> None:
 
     assert len(entries) == 1
     assert entries[0]["entry_id"] == "gaffiot_1"
+
+
+def test_gaffiot_fetch_client_uses_normalized_lemma_candidates() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "lex_gaffiot.duckdb"
+        with duckdb.connect(str(db_path)) as conn:
+            conn.execute(
+                """
+                CREATE TABLE entries_fr (
+                    entry_id VARCHAR,
+                    headword_raw VARCHAR,
+                    headword_norm VARCHAR,
+                    variant_num INTEGER,
+                    plain_text VARCHAR,
+                    entry_hash VARCHAR
+                )
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO entries_fr VALUES
+                ('gaffiot_vir', 'vir', 'vir', 1, 'homme', 'hash-vir')
+                """
+            )
+
+        raw = GaffiotFetchClient(db_path).execute(
+            call_id="gaffiot-fetch-1",
+            endpoint="duckdb://gaffiot",
+            params={
+                "headword": "virumque",
+                "lemma": "virus",
+                "lemma_candidates": "virus;vir",
+            },
+        )
+
+    payload = orjson.loads(raw.body)
+    assert payload["headwords"] == ["virumque", "virus", "", "virus", "vir"]
+    assert payload["entries"][0]["headword_norm"] == "vir"
 
 
 def test_gaffiot_fetch_client_uses_content_addressed_response_ids() -> None:

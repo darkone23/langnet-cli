@@ -78,9 +78,35 @@ class _FakeDiogenes:
         return ParseResult(query=query, lemmas=["lupus", "lupum"], matched=True)
 
 
+class _GreekEpicEusDiogenes:
+    def fetch_word_list(self, query: str) -> WordListResult:
+        lemmas_by_query = {
+            "ἀχιλῆος": ["ἀχιλῆος"],
+            "ἀχιλεύς": [],
+            "ἀχιλλεύς": ["ἀχιλλεύς"],
+        }
+        lemmas = lemmas_by_query.get(query, [])
+        return WordListResult(query=query, lemmas=lemmas, matched=bool(lemmas))
+
+    def fetch_parse(self, query: str, lang: str = "grc") -> ParseResult:
+        if query == "ἀχιλλεύς":
+            return ParseResult(query=query, lemmas=["αχιλλευς"], matched=True)
+        return ParseResult(query=query, lemmas=["αχιλλειος"], matched=True)
+
+
 class _FakeWhitaker:
     def fetch(self, query: str) -> list[str]:
         return ["is", "idem"]
+
+
+class _TroiaeDiogenes:
+    def fetch_parse(self, query: str, lang: str = "lat") -> ParseResult:
+        return ParseResult(query=query, lemmas=["troiades"], matched=True)
+
+
+class _NoWhitaker:
+    def fetch(self, query: str) -> list[str]:
+        return []
 
 
 class _AmbiguousHeritage(_FakeHeritage):
@@ -104,6 +130,29 @@ def test_sanskrit_normalizer_enrichment_prefers_heritage() -> None:
     assert dev is not None
     assert dev.encodings.get("velthuis") == "ziva"
     assert any(step.operation.startswith("heritage_sktsearch") for step in steps)
+
+
+def test_latin_normalizer_adds_ae_to_a_reader_form_candidate() -> None:
+    normalizer = QueryNormalizer(
+        diogenes_latin_client=_TroiaeDiogenes(),
+        whitaker_client=_NoWhitaker(),
+    )
+    result = normalizer.normalize("Troiae", LanguageHint.LANGUAGE_HINT_LAT)
+
+    candidates = {candidate.lemma: candidate for candidate in result.normalized.candidates}
+    assert "troia" in candidates
+    assert candidates["troia"].sources == ["local_form_rule"]
+    assert candidates["troia"].encodings["latin_form_rule"] == "ae_to_a"
+
+
+def test_greek_normalizer_adds_validated_epic_eus_candidate() -> None:
+    normalizer = QueryNormalizer(diogenes_greek_client=_GreekEpicEusDiogenes())
+    result = normalizer.normalize("Ἀχιλῆος", LanguageHint.LANGUAGE_HINT_GRC)
+
+    candidates = {candidate.lemma: candidate for candidate in result.normalized.candidates}
+    assert "ἀχιλλεύς" in candidates
+    assert "diogenes_word_list_epic_eus" in candidates["ἀχιλλεύς"].sources
+    assert "ἀχιλεύς" not in candidates
 
 
 def test_sanskrit_normalizer_ranks_exact_display_match_before_related_forms() -> None:

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import os
+import unicodedata
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 import duckdb
-from query_spec import LanguageHint, NormalizedQuery
+from query_spec import CanonicalCandidate, LanguageHint, NormalizedQuery
 
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.normalization_index import NormalizationIndex
@@ -13,8 +14,10 @@ from langnet.storage.normalization_index import ensure_schema as ensure_norm_sch
 
 from .core import NormalizationResult, QueryNormalizer, _hash_query
 from .sanskrit import HeritageClientProtocol
+from .utils import strip_accents
 
 LanguageValue = LanguageHint.ValueType
+LATIN_AE_SUFFIX_LEN = 2
 
 if TYPE_CHECKING:
     from langnet.diogenes.client import DiogenesClient
@@ -174,6 +177,8 @@ class NormalizationService:
         keeps omega/omicron and betacode/Unicode variants aligned to the best
         frequency match without forcing a cache clear.
         """
+        if language == LanguageHint.LANGUAGE_HINT_LAT:
+            return _enrich_latin_cached_candidates(raw_query, normalized)
         if language != LanguageHint.LANGUAGE_HINT_GRC:
             return normalized
 
@@ -195,14 +200,10 @@ class NormalizationService:
                 target_source = step.output
                 break
         target = _normalize_for_distance(target_source)
-
-        def _freq(cand) -> int:
-            try:
-                return int(cand.encodings.get("freq", 0))
-            except Exception:
-                return 0
-
-        freqs = [_freq(c) for c in candidates]
+        target_reader_form = _final_grave_to_acute(target_source)
+        target_reader_norm = _normalize_greek_reader_form(target_reader_form)
+        surface_norm = _normalize_greek_reader_form(target_source)
+        freqs = [_candidate_freq(c) for c in candidates]
         total = sum(freqs) or 1
 
         def _norm_token(cand) -> str:
@@ -210,15 +211,104 @@ class NormalizationService:
             normed = _normalize_for_distance(token)
             return normed or token
 
-        def _score(item) -> tuple[int, float, int]:
+        def _score(item) -> tuple[int, int, float, int]:
             cand, freq = item
             normed = _norm_token(cand)
             dist = _levenshtein(normed, target)
             ratio = -(freq / total) if total else 0.0
-            return (dist, ratio, len(normed))
+            return (
+                _greek_reader_priority(
+                    cand,
+                    target_source=target_source,
+                    target_reader_form=target_reader_form,
+                    target_reader_norm=target_reader_norm,
+                    surface_norm=surface_norm,
+                ),
+                dist,
+                ratio,
+                len(normed),
+            )
 
         ranked = sorted(zip(candidates, freqs), key=_score)
         ordered = [cand for cand, _freq in ranked]
         normalized.candidates.clear()
         normalized.candidates.extend(ordered)
         return normalized
+
+
+def _enrich_latin_cached_candidates(raw_query: str, normalized: NormalizedQuery) -> NormalizedQuery:
+    text = raw_query.strip().lower()
+    if not text.endswith("ae") or len(text) <= LATIN_AE_SUFFIX_LEN:
+        return normalized
+    lemma = f"{text[:-LATIN_AE_SUFFIX_LEN]}a"
+    existing = {candidate.lemma for candidate in normalized.candidates}
+    if lemma in existing:
+        return normalized
+    normalized.candidates.append(
+        CanonicalCandidate(
+            lemma=lemma,
+            encodings={"latin_form_rule": "ae_to_a"},
+            sources=["local_form_rule"],
+        )
+    )
+    return normalized
+
+
+def _candidate_freq(candidate) -> int:
+    try:
+        return int(candidate.encodings.get("freq", 0))
+    except Exception:
+        return 0
+
+
+def _greek_reader_priority(
+    candidate,
+    *,
+    target_source: str,
+    target_reader_form: str,
+    target_reader_norm: str,
+    surface_norm: str,
+) -> int:
+    lemma = candidate.lemma or ""
+    lemma_norm = _normalize_greek_reader_form(lemma)
+    sources = set(candidate.sources)
+    if "diogenes_word_list_epic_eus" in sources:
+        return 0
+    if lemma == target_reader_form and lemma != target_source:
+        return 0
+    if _is_greek_nu_to_sigma_parse_candidate(lemma_norm, surface_norm, sources):
+        return 0
+    if lemma_norm == target_reader_norm and lemma != strip_accents(lemma):
+        return 1
+    if lemma_norm == surface_norm and lemma == strip_accents(lemma):
+        return 2
+    return 1
+
+
+def _is_greek_nu_to_sigma_parse_candidate(
+    lemma_norm: str,
+    surface_norm: str,
+    sources: set[str],
+) -> bool:
+    return (
+        "diogenes_parse" in sources
+        and surface_norm.endswith("ν")
+        and lemma_norm.endswith("σ")
+        and lemma_norm[:-1] == surface_norm[:-1]
+    )
+
+
+def _final_grave_to_acute(text: str) -> str:
+    decomposed = list(unicodedata.normalize("NFD", text))
+    for idx in range(len(decomposed) - 1, -1, -1):
+        char = decomposed[idx]
+        if unicodedata.combining(char) == 0:
+            break
+        if char == "\u0300":
+            decomposed[idx] = "\u0301"
+            break
+    return unicodedata.normalize("NFC", "".join(decomposed))
+
+
+def _normalize_greek_reader_form(text: str) -> str:
+    return strip_accents(text).casefold().replace("ς", "σ")

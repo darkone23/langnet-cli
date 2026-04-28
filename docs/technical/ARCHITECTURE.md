@@ -37,6 +37,7 @@ lookup output / evidence inspection / exact WSU reduction / encounter output
 | `plan-exec` | execute the full staged pipeline |
 | `triples-dump` | inspect claim triples and evidence |
 | `encounter` | show the current learner-facing reduced output |
+| `reader-eval` | score reader fixtures against encounter reductions |
 | `databuild` | build offline data/indexes |
 | `index` | inspect/manage storage indexes |
 
@@ -115,10 +116,14 @@ Implemented:
 - Runtime exact Witness Sense Unit reduction into buckets.
 - First learner-facing `encounter` output with Sanskrit Heritage analysis rows.
 - Translation-cache projection for cached DICO/Gaffiot English gloss evidence.
+- Explicit `encounter --translation-mode auto` cache-miss population for
+  DICO/Gaffiot translations.
 
 Not implemented yet:
 
-- Final learner-facing semantic output.
+- Release-quality learner-facing semantic output.
+- Compact learner glosses over full translated/source dictionary entries.
+- Reader-form/headword ranking for known hard cases.
 - First-class ASGI/API surface as a product contract.
 - Passage-level interpretation.
 - Broad semantic merging beyond exact buckets.
@@ -128,7 +133,7 @@ Not implemented yet:
 The next architectural step is:
 
 ```text
-claims/triples → Witness Sense Units → deterministic sense buckets → accepted learner-output examples
+claims/triples → Witness Sense Units → deterministic sense buckets → compact learner display
 ```
 
 Do this before embeddings, broad hydration, or passage analysis.

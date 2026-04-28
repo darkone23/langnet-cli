@@ -32,9 +32,12 @@ from .greek_transliterator import (
     transliterate,
     transliterate_variants,
 )
-from .utils import contains_greek, strip_accents
+from .utils import contains_greek, normalize_greekish_token, strip_accents
 
 LanguageValue = LanguageHint.ValueType
+LATIN_AE_SUFFIX_LEN = 2
+GREEK_EPIC_EUS_GENITIVE_SUFFIX = "ῆος"
+GREEK_EUS_NOMINATIVE_SUFFIX = "εύς"
 
 
 def _hash_query(raw_query: str, language: LanguageValue) -> str:
@@ -95,6 +98,23 @@ class LatinNormalizer(LanguageNormalizer):
 
         if text not in lemma_sources:
             candidates.append(CanonicalCandidate(lemma=text, encodings={}, sources=["local"]))
+        candidates.extend(self._local_form_candidates(text, lemma_sources))
+        return candidates
+
+    def _local_form_candidates(
+        self, text: str, lemma_sources: dict[str, set[str]]
+    ) -> list[CanonicalCandidate]:
+        candidates: list[CanonicalCandidate] = []
+        if text.endswith("ae") and len(text) > LATIN_AE_SUFFIX_LEN:
+            lemma = f"{text[:-LATIN_AE_SUFFIX_LEN]}a"
+            if lemma not in lemma_sources and lemma != text:
+                candidates.append(
+                    CanonicalCandidate(
+                        lemma=lemma,
+                        encodings={"latin_form_rule": "ae_to_a"},
+                        sources=["local_form_rule"],
+                    )
+                )
         return candidates
 
     def _add_diogenes_sources(
@@ -165,6 +185,7 @@ class GreekNormalizer(LanguageNormalizer):
         self._add_diogenes_parse_sources(text, steps, lemma_sources)
         # Fallback to word list if parse fails
         self._add_diogenes_word_list_sources(text, steps, lemma_sources)
+        self._add_epic_eus_sources(text, steps, lemma_sources)
 
         candidates: list[CanonicalCandidate] = [
             CanonicalCandidate(lemma=lemma, encodings={}, sources=sorted(sources))
@@ -226,6 +247,57 @@ class GreekNormalizer(LanguageNormalizer):
         for lemma in result.lemmas:
             sources = lemma_sources.setdefault(lemma, set())
             sources.add("diogenes_word_list")
+
+    def _add_epic_eus_sources(
+        self,
+        base: str,
+        steps: list[NormalizationStep],
+        lemma_sources: dict[str, set[str]],
+    ) -> None:
+        """
+        Add validated -εύς headwords for epic genitives in -ῆος.
+
+        This handles a reusable Homeric pattern, e.g. Πηλῆος -> Πηλεύς and
+        Ἀχιλῆος -> Ἀχιλλεύς. Candidates are kept only when Diogenes' word list
+        confirms the generated headword exactly.
+        """
+        if self.diogenes is None or not base.endswith(GREEK_EPIC_EUS_GENITIVE_SUFFIX):
+            return
+
+        for candidate in _greek_epic_eus_candidates(base):
+            result = self._attempt_word_list(
+                candidate,
+                steps,
+                "diogenes_word_list_epic_eus",
+            )
+            if result is None:
+                continue
+            if _contains_exact_greek_lemma(result.lemmas, candidate) and self._parse_confirms(
+                candidate,
+                steps,
+            ):
+                lemma_sources.setdefault(candidate, set()).add("diogenes_word_list_epic_eus")
+
+    def _parse_confirms(self, candidate: str, steps: list[NormalizationStep]) -> bool:
+        if self.diogenes is None:
+            return False
+        try:
+            parse = self.diogenes.fetch_parse(candidate, lang="grc")
+        except Exception:  # noqa: BLE001
+            return False
+        if not parse.lemmas:
+            return False
+        if not _contains_greekish_lemma(parse.lemmas, candidate):
+            return False
+        steps.append(
+            NormalizationStep(
+                operation="diogenes_parse_epic_eus",
+                input=candidate,
+                output=";".join(parse.lemmas),
+                tool="diogenes",
+            )
+        )
+        return True
 
     def _fetch_word_list_with_fallback(
         self, base: str, steps: list[NormalizationStep]
@@ -378,6 +450,28 @@ class GreekNormalizer(LanguageNormalizer):
 
 def _has_transliterate_step(steps: list[NormalizationStep], source: str) -> bool:
     return any(s.operation == "greek_transliterate" and s.input == source for s in steps)
+
+
+def _greek_epic_eus_candidates(base: str) -> list[str]:
+    stem = base[: -len(GREEK_EPIC_EUS_GENITIVE_SUFFIX)]
+    if not stem:
+        return []
+    candidates = [f"{stem}{GREEK_EUS_NOMINATIVE_SUFFIX}"]
+    last = stem[-1]
+    if contains_greek(last):
+        candidates.append(f"{stem}{last}{GREEK_EUS_NOMINATIVE_SUFFIX}")
+    return list(dict.fromkeys(candidates))
+
+
+def _contains_exact_greek_lemma(lemmas: Sequence[str], candidate: str) -> bool:
+    return any(lemma.strip().casefold() == candidate.casefold() for lemma in lemmas)
+
+
+def _contains_greekish_lemma(lemmas: Sequence[str], candidate: str) -> bool:
+    candidate_key = normalize_greekish_token(candidate)
+    if not candidate_key:
+        return False
+    return any(normalize_greekish_token(lemma) == candidate_key for lemma in lemmas)
 
 
 def _betacode_variants(base: str, stripped: str) -> list[str]:

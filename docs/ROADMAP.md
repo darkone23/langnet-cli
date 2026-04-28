@@ -1,148 +1,176 @@
 # Roadmap
 
-This is the canonical milestone roadmap. It turns the vision in `docs/VISION.md` into implementation order. The compact operating queue is `docs/EXECUTION_PLAN.md`; detailed implementation tracking lives in `docs/plans/active/infra/design-to-runtime-roadmap.md`.
+This is the canonical milestone roadmap. For the current baseline and concrete
+next steps, read `docs/BASELINE_AND_ROADMAP.md`. For day-to-day task selection,
+read `docs/EXECUTION_PLAN.md`.
 
 ## Current Status
 
-The project has a working CLI, planner, staged executor, storage layer, and real backend handlers. The current priority is stabilization: make the existing system coherent, tested, documented, and safe to extend.
+LangNet has a working CLI-first word-level evidence engine:
 
-Current grade: **B / 84%**.
+- normalize -> plan -> fetch -> extract -> derive -> claim;
+- claim triples -> Witness Sense Units -> exact buckets -> `encounter`;
+- source inspection through `plan-exec` and `triples-dump`;
+- Latin, Greek, and Sanskrit backend coverage;
+- DICO/Gaffiot source evidence plus cache-backed English translation evidence.
 
-- Build health: strong.
-- Runtime architecture: usable.
-- Claim/evidence layer: improving, fixture-tested across core handlers, and content-addressed for local DICO/Gaffiot raw responses.
-- Semantic reduction: exact WSU/bucket MVP is runtime-wired through `encounter`,
-  but learner display quality is still below the product bar for hard terms.
-- Sanskrit runtime model: Heritage is the preferred analysis/morphology source; CDSL and DICO provide source-gloss supplements.
-- Docs/plans: consolidated in April 2026; archive retained for historical context.
+The project remains in stabilization. The next work is learner-quality
+refinement, not broad product expansion.
 
-## Milestone 0 — Stabilization Baseline
+## Milestone 0: Stabilization Baseline
 
-**Goal:** keep the repo in a clean, reviewable state before new product features.
+**Goal:** keep the repo factual, validated, and reviewable.
 
-Done or in progress:
+Current state:
 
-- `just lint-all` passes.
-- `just test-fast` passes.
-- Primary docs have been reconciled with current CLI reality.
-- Historical status reports and superseded plans have been archived.
-- Just recipe wiring has been audited and fixed where wrappers drifted from the CLI.
-- Local DICO/Gaffiot raw response IDs are deterministic.
-- CDSL exposes IAST display fields while preserving SLP1 source keys.
-- Translation cache helpers and cache-hit projection exist.
-- `triples-dump --output json` exposes structured claim/triple inspection.
-- Snapshot-style tests cover representative `encounter` output, including Sanskrit Heritage analysis rows.
-- The 50-word lexical audit separates gloss coverage from Heritage morphology coverage.
+- `just ruff-check` and `just typecheck` pass.
+- Focused `encounter` and translation projection tests pass.
+- CLI recipes route through the maintained `langnet-cli` surface.
+- Stale root quick-start content has been replaced with current pointers.
 
 Remaining:
 
-- Commit current changes in coherent groups.
-- Keep active planning limited to one canonical roadmap plus scoped task files.
-- Remove or fix commands that advertise behavior they do not implement.
-- Validate fixtures that will become inputs to semantic reduction.
-- Keep `just` recipe health documented so recipe failures are classified as wiring, dependency, or expected external-service failures.
+- keep `just lint-all` and `just test-fast` passing before larger changes land;
+- keep active docs aligned with implemented commands and translation modes;
+- avoid new roadmap documents unless an older one is retired or linked clearly.
 
-## Milestone 1 — Claim Contract Hardening
+## Milestone 1: Evidence Contracts
 
-**Goal:** every handler emits stable, evidence-backed claims suitable for semantic reduction.
+**Goal:** every displayed fact can be traced to source evidence.
 
-Status: **mostly complete for core handlers**.
+Implemented:
 
-Implemented coverage:
-
-- Whitaker Latin morphology/sense triples.
-- CDSL Sanskrit sense/source-ref triples.
-- Diogenes Latin sense/citation triples.
-- CLTK pronunciation/Lewis-line triples.
-- Heritage morphology triples.
-- Local Gaffiot Latin source-gloss triples.
-- Local DICO Sanskrit source-gloss triples.
-- First exact-gloss WSU reduction and `encounter` CLI output.
+- staged effects and handler versioning;
+- claim/triple projection for core handlers;
+- fixture-backed claim contract tests;
+- DICO/Gaffiot translation records as derived evidence.
 
 Remaining:
 
-- Normalize predicate constants across handlers.
-- Add or document coverage for any secondary/stub handlers.
-- Continue improving reducer-focused inspection workflows.
-- Keep translated DICO/Gaffiot cache hits as derived evidence without replacing source French evidence.
+- continue moving ad hoc predicate strings to canonical constants;
+- keep reducers consuming triples/evidence, not backend-specific claim payloads;
+- add fixtures when handler output semantics change.
 
-## Milestone 2 — Evidence Inspection
+## Milestone 2: Evidence Inspection
 
-**Goal:** developers can answer “where did this fact come from?” from CLI output alone.
+**Goal:** a developer can answer "where did this meaning come from?" without
+scraping pretty output.
 
-Tasks:
+Implemented:
 
-- Improve `plan-exec` summaries with cache status, skipped-call reasons, stage counts, and handler versions.
-- Keep `triples-dump` text and JSON inspection working.
-- Document one end-to-end inspection workflow for Latin and Sanskrit.
+- `plan-exec --output json`;
+- `triples-dump --output json`;
+- predicate/subject/max-count filters for evidence inspection;
+- DICO/Gaffiot source and translation provenance in `encounter`.
 
-## Milestone 3 — Semantic Reduction MVP
+Remaining:
 
-**Goal:** build a deterministic reducer over claims/triples.
+- add narrative examples for a Latin Gaffiot translation and Sanskrit DICO
+  translation;
+- expose translation cache hit/miss diagnostics in JSON/debug output.
 
-MVP:
+## Milestone 3: Reader-Form Reliability
 
-- Extract Witness Sense Units from `has_sense` + `gloss` triples.
-- Cluster exact or near-exact glosses deterministically.
-- Emit stable sense-bucket IDs.
-- Preserve witness claim IDs and evidence.
+**Goal:** the system picks the right headword/form before ranking meanings.
 
-Current implementation covers exact buckets, structured triples JSON, first encounter snapshots across Sanskrit/Latin/Greek, translation-cache golden rows, Heritage analysis display, and structured `plan-exec` summaries. Remaining MVP work is mostly interface hardening: clearer display ranking, better source-specific structuring, and narrative evidence-inspection examples.
+Priority accepted-output targets:
 
-Do not include yet:
+- `virumque -> vir + -que`, not `virus`;
+- `μῆνιν -> μῆνις`, not `μήνιον`, now works for meaning checks and should stay covered;
+- `θεὰ -> θεά`, not `θέα`, now works for meaning checks and should stay covered;
+- `Troiae -> Troia` now works for meaning checks through a general Latin
+  `-ae -> -a` reader-form candidate and should stay covered;
+- `Ἀχιλῆος -> Ἀχιλλεύς` now works in fresh runs through validated Greek epic
+  `-ῆος -> -εύς` candidate generation and should stay covered;
+- `karma -> karman` is now handled when clear Heritage morphology supports the
+  concept headword, and should stay covered by reader-eval.
+- remaining seed misses are strict-mode display gaps, especially Latin/Greek
+  morphology display.
 
-- Embeddings.
-- Full semantic constants.
-- Passage-level context.
-- UI-heavy formatting.
+This milestone should use `reader-eval` fixtures and reports, not hardcoded
+exceptions for famous texts.
 
-## Milestone 4 — Learner-Facing Output
+## Milestone 4: Learner Encounter Quality
 
-**Goal:** display grouped meanings first, backend details second.
+**Goal:** make `encounter` answer the reader before showing full source detail.
 
-Active plan: `docs/plans/active/pedagogy/learner-encounter-roadmap.md`.
+Implemented:
 
-Target order:
+- exact buckets;
+- translation-first ranking;
+- DICO/Gaffiot source preference when present;
+- Sanskrit Heritage analysis rows.
 
-1. Word/headword.
-2. Source-backed analysis or morphology where it is the best guide to the form, especially Sanskrit Heritage.
-3. Sense buckets.
-4. Citations/evidence.
-5. Source disagreements.
+Remaining:
 
-Requirements:
+- compact learner gloss layer above full source entries;
+- source-aware display controls for long LSJ/Lewis/Gaffiot/DICO/CDSL entries;
+- accepted output for representative Sanskrit, Latin, and Greek hard words;
+- better hiding of unrelated candidate noise in default terminal output.
 
-- Snapshot tests for terminal output.
-- Raw JSON remains available for debugging.
-- Single-source or provisional buckets are marked clearly.
-- CDSL learner text should show IAST forms while raw SLP1/source keys remain inspectable.
-- Default output should hide unrelated candidate noise and developer diagnostics.
-- Cached DICO/Gaffiot translations should enrich learner output when exact cache
-  rows exist, without invoking live translation by default.
-- Sanskrit, Latin, and Greek must each have accepted-output examples for a hard
-  common word before this milestone is considered stable.
+## Milestone 5: Translation Cache Operations
 
-## Milestone 5 — Hydration
+**Goal:** make DICO/Gaffiot translation useful at scale without hidden network
+dependencies.
 
-**Goal:** enrich stable claims without changing their identity.
+Implemented:
+
+- `--translation-mode cache`;
+- `--translation-mode auto`;
+- exact cache keys;
+- cache-backed projection into derived English witnesses.
+
+Remaining:
+
+- batch cache warming for word lists and passage vocabulary;
+- timeout/chunking policy for long entries;
+- cache diagnostics in JSON/debug output;
+- default cache-hit enrichment without live translation.
+
+## Milestone 6: Source Structuring And Ranking
+
+**Goal:** refine source blobs into display-safe learner units while preserving
+raw text.
+
+Scope:
+
+- CDSL source segments and notes;
+- translated DICO/Gaffiot parsed glosses;
+- long Diogenes/LSJ and Lewis & Short sections;
+- ranking rules backed by accepted-output tests.
+
+Do not add embeddings or LLM semantic merging in this milestone.
+
+## Milestone 7: Hydration
+
+**Goal:** add labels and links without changing claim, WSU, or bucket identity.
 
 Examples:
 
-- CTS URN expansion.
-- Author/work labels.
-- Dictionary entry links.
+- CTS URN labels;
+- dictionary entry URLs;
+- author/work display labels.
 
-Rule: semantic buckets must be identical with or without hydration.
+Hydration must be optional and rebuildable.
 
-## Milestone 6 — Compounds and Passages
+## Milestone 8: Compounds And Passages
 
-**Goal:** extend word-level lookup/reduction to multi-token Sanskrit and eventually passage reading.
+**Goal:** extend stable word-level evidence into multi-token reading workflows.
 
-Dependency: do not advance broad passage work until Milestones 1–4 are stable.
+Dependencies:
 
-## Deprioritized
+- reader-form reliability;
+- compact learner glosses;
+- fixture-backed encounter output;
+- stable provenance inspection.
 
-- First-class ASGI rebuild before CLI semantics stabilize.
-- Embedding-backed similarity before deterministic buckets exist.
-- Passage interpretation before word-level evidence is reliable.
-- Large CLI refactors before baseline commits.
+Passage-level interpretation should consume word-level claims and buckets. It
+should not bypass the evidence graph.
+
+## Deprioritized Until The Above Is Stable
+
+- first-class ASGI/API product contract;
+- embeddings or broad semantic similarity;
+- opaque generated explanations;
+- UI-heavy formatting;
+- passage interpretation before word-level hit quality is reliable.

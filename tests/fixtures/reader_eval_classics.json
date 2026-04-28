@@ -1,0 +1,125 @@
+{
+  "description": "Reader-oriented evaluation targets from classic opening passages. These fixtures define expected learner outcomes, not exact terminal snapshots.",
+  "version": 1,
+  "passages": [
+    {
+      "id": "aeneid_1_1_7",
+      "language": "lat",
+      "work": "Virgil, Aeneid",
+      "citation": "1.1-7",
+      "tokens": [
+        {
+          "surface": "arma",
+          "expected_lemmas": ["arma"],
+          "expected_gloss_terms": ["arms", "weapons", "war"],
+          "expect_morphology": true,
+          "known_bad_lemmas": ["armo"],
+          "notes": "Should prefer the noun used in arma virumque cano over verb/adjective material."
+        },
+        {
+          "surface": "virumque",
+          "expected_lemmas": ["vir"],
+          "expected_components": ["vir", "-que"],
+          "expected_gloss_terms": ["man", "hero", "and"],
+          "expect_morphology": true,
+          "known_bad_lemmas": ["virus"],
+          "notes": "Reader form should visibly split enclitic -que and route the base word to vir."
+        },
+        {
+          "surface": "cano",
+          "expected_lemmas": ["cano"],
+          "expected_gloss_terms": ["sing", "sing of", "celebrate"],
+          "expect_morphology": true,
+          "known_bad_gloss_terms": ["15th of month"],
+          "notes": "Finite verb should not be led by calendrical noun material."
+        },
+        {
+          "surface": "Troiae",
+          "expected_lemmas": ["Troia"],
+          "expected_gloss_terms": ["Troy", "Trojan"],
+          "expect_morphology": true
+        }
+      ]
+    },
+    {
+      "id": "iliad_1_1_7",
+      "language": "grc",
+      "work": "Homer, Iliad",
+      "citation": "1.1-7",
+      "tokens": [
+        {
+          "surface": "μῆνιν",
+          "expected_lemmas": ["μῆνις"],
+          "expected_gloss_terms": ["wrath", "anger", "rage"],
+          "expect_morphology": true,
+          "known_bad_lemmas": ["μήνιον"],
+          "notes": "Should prefer the epic noun μῆνις over botanical μήνιον."
+        },
+        {
+          "surface": "ἄειδε",
+          "expected_lemmas": ["ἀείδω", "aeidw"],
+          "expected_gloss_terms": ["sing", "chant"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "θεὰ",
+          "expected_lemmas": ["θεά"],
+          "expected_gloss_terms": ["goddess"],
+          "expect_morphology": true,
+          "known_bad_lemmas": ["θέα"],
+          "known_bad_gloss_terms": ["sight", "appearance"],
+          "notes": "Accent-sensitive ranking should distinguish goddess from sight/appearance."
+        },
+        {
+          "surface": "Ἀχιλῆος",
+          "expected_lemmas": ["Ἀχιλλεύς", "Achilles"],
+          "expected_gloss_terms": ["Achilles"],
+          "expect_morphology": true
+        }
+      ]
+    },
+    {
+      "id": "bhagavad_gita_1_1_2",
+      "language": "san",
+      "work": "Bhagavad Gita",
+      "citation": "1.1-2",
+      "tokens": [
+        {
+          "surface": "dharmakṣetre",
+          "expected_lemmas": ["dharmakṣetra"],
+          "expected_components": ["dharma", "kṣetra"],
+          "expected_gloss_terms": ["law-field", "kurukṣetra"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "kurukṣetre",
+          "expected_lemmas": ["kurukṣetra"],
+          "expected_components": ["kuru", "kṣetra"],
+          "expected_gloss_terms": ["Kurukṣetra", "plain", "Delhi"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "samavetāḥ",
+          "expected_lemmas": ["samaveta"],
+          "expected_gloss_terms": ["assembled", "come together", "met"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "yuyutsavaḥ",
+          "expected_lemmas": ["yuyutsu"],
+          "expected_gloss_terms": ["desiring to fight", "wishing to fight", "combat"],
+          "expect_morphology": true,
+          "notes": "Inflected participial form should fall back to yuyutsu for meaning evidence."
+        },
+        {
+          "surface": "karma",
+          "expected_lemmas": ["karman"],
+          "expected_gloss_terms": ["act", "action", "duty", "rite"],
+          "expect_morphology": false,
+          "known_bad_lemmas": ["karma"],
+          "notes": "DICO concept entry is cleaner under karman than the karma compound section."
+        }
+      ]
+    }
+  ]
+}

@@ -1,32 +1,29 @@
-# Semantic Reduction MVP
+# Semantic Reduction Refinement
 
-**Status:** ⏳ TODO  
+**Status:** MVP implemented; refinement pending  
 **Feature Area:** semantic-reduction  
 **Owner Roles:** @architect for design, @coder for implementation, @auditor for contract review
 
 ## Goal
 
-Build the first runtime reducer over claim triples.
+Refine the first runtime reducer over claim triples.
 
-Input:
+Implemented baseline:
 
 - `ClaimEffect` values from `plan-exec` or indexed claims.
-- Triples with `has_sense` and `gloss`.
-
-Output:
-
-- Witness Sense Units.
-- Deterministic sense buckets.
+- WSU extraction from triples with `has_sense` and `gloss`.
+- Deterministic exact buckets.
 - Evidence links back to original claims.
+- `langnet-cli encounter` display over reduced buckets.
 
 ## Scope
 
-### In
+### In For Next Refinement
 
-- Dataclasses for `WitnessSenseUnit`, `SenseBucket`, and `ReductionResult`.
-- Extraction from claim triples.
-- Exact-match and simple deterministic near-match grouping.
-- Service-free fixtures for `lupus` and `agni`.
+- Reader-form eval fixtures.
+- Compact gloss display metadata.
+- Source-aware ranking backed by accepted-output tests.
+- More structured source fields for long dictionary entries.
 
 ### Out
 
@@ -37,11 +34,14 @@ Output:
 
 ## Acceptance Criteria
 
-- Same input claims produce identical bucket IDs across runs.
+- Same input claims continue to produce identical bucket IDs across runs.
 - Every WSU points back to a claim ID and evidence block.
 - No witness appears in two buckets.
+- Reader-form eval fixtures catch known misses before ranking changes land.
 - `just lint-all` and targeted semantic reducer tests pass.
 
-## First Junior Slice
+## First Refinement Slice
 
-Create a hand-written claim fixture with 3–5 triples and expected WSUs. Do not implement clustering in the same task.
+Create reader-form fixtures for `virumque`, `μῆνιν`, `θεὰ`, and
+`karma/karman`. Assert expected top-1/top-3 lemma and rough gloss behavior
+without hardcoding full terminal output.

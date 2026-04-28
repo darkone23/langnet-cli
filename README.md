@@ -18,13 +18,21 @@ just cli lookup lat lupus --output json
 just cli plan lat lupus
 just triples-dump lat lupus whitakers
 devenv shell -- bash -c 'langnet-cli encounter san dharma all --no-cache'
+
+# Use cache-backed DICO/Gaffiot English evidence when available
+just cli encounter lat arma gaffiot --translation-mode cache
+just cli encounter san dharma dico --translation-mode cache
+just cli reader-eval --limit 3 --translation-mode cache
+
+# Explicitly populate missing DICO/Gaffiot translations, then display them
+just cli encounter lat cano gaffiot --translation-mode auto
 ```
 
 ## Language Support
 
 | Language | Lexicon | Morphology | Encoding Support |
 |----------|---------|------------|------------------|
-| **Latin** | Diogenes (Lewis & Short) | Whitaker's Words | UTF-8 |
+| **Latin** | Diogenes (Lewis & Short), local Gaffiot | Whitaker's Words | UTF-8 |
 | **Greek** | Diogenes (Liddell & Scott) | Diogenes + CLTK | UTF-8, Betacode |
 | **Sanskrit** | CDSL (Monier-Williams/AP90), local DICO | Heritage Platform | IAST, Devanagari, SLP1, Velthuis |
 
@@ -48,6 +56,7 @@ After code changes, restart any long-running local process manager so Python mod
 ## Documentation
 
 - **[docs/VISION.md](docs/VISION.md)** - Product vision, audience, and strategic direction
+- **[docs/BASELINE_AND_ROADMAP.md](docs/BASELINE_AND_ROADMAP.md)** - Current working baseline, vision comparison, and next concrete steps
 - **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** - Installation and first queries
 - **[docs/DEVELOPER.md](docs/DEVELOPER.md)** - Development setup and workflow
 - **[docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md)** - Roadmap, task, gap, and risk operating view
@@ -73,7 +82,7 @@ This project uses multi-model AI-assisted development via OpenRouter. See `AGENT
 - External services are required for live lookup; without them `langnet-cli lookup` returns per-tool errors for unavailable sources.
 - The current learner-facing MVP is `langnet-cli encounter`. It reduces claim triples into exact Witness Sense Unit buckets and shows source-backed meanings plus Heritage morphology analysis for Sanskrit.
 - `triples-dump --output json` is the current evidence-inspection surface for claims, triples, source refs, and display metadata.
-- DICO/Gaffiot French source entries are wired as source evidence; cached English translations can be projected into `encounter` with `--use-translation-cache`. Network translation remains explicit cache-population work, not routine lookup.
-- Several open issues remain: CTS URN enrichment is deferred, CDSL entries are still flat source-heavy strings, sense ranking needs more accepted-output examples, and exact buckets are not yet broad semantic merging.
+- DICO/Gaffiot French source entries are wired as source evidence. Cache-backed English translations can be projected into `encounter` with `--translation-mode cache`; missing rows can be populated only when explicitly requested with `--translation-mode auto`.
+- Several open issues remain: CTS URN enrichment is deferred, CDSL entries are still flat source-heavy strings, form/headword ranking needs work for reader forms such as `virumque`, and exact buckets are not yet broad semantic merging.
 - Use `just test-fast` and `just lint-all` for local validation; these recipes enter `devenv` automatically. Restart long-lived servers after code changes.
 - Planning docs live under `docs/plans/`; the canonical roadmap is `docs/ROADMAP.md`, with the active implementation plan at `docs/plans/active/infra/design-to-runtime-roadmap.md`.

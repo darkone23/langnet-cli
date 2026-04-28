@@ -152,6 +152,22 @@ This output should be treated as a prototype learner interface. It is the right 
 
 The accepted-output gallery currently covers representative Sanskrit, Latin, and Greek snapshots in `tests/test_cli_encounter_output.py`. Add new examples there when display ranking or source transforms change.
 
+## `reader-eval`
+
+`reader-eval` runs reader-oriented fixture checks against the same reduced
+encounter path. It is intended for iteration: report current hit quality, fix
+one class of misses, then rerun the same fixture.
+
+```bash
+just cli reader-eval --fixture tests/fixtures/reader_eval_classics.json --translation-mode cache
+just cli reader-eval --language lat --limit 4 --output json
+```
+
+By default the command exits successfully and reports misses. Add
+`--fail-on-miss` only when the selected fixture set is ready to become a gate.
+The current seed fixture lives at `tests/fixtures/reader_eval_classics.json` and
+covers initial Aeneid, Iliad, and Bhagavad Gita opening-token probes.
+
 For Sanskrit, Heritage is the preferred analysis/morphology source. A Heritage-only encounter may show an `Analysis` section without meaning buckets:
 
 ```text
@@ -233,6 +249,20 @@ After a matching cache row exists, inspect the derived English evidence through 
 devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --use-translation-cache --translation-cache-db data/cache/langnet.duckdb --output json'
 devenv shell -- bash -c 'langnet-cli encounter san dharma dico --use-translation-cache --translation-cache-db data/cache/langnet.duckdb --output json'
 ```
+
+`--use-translation-cache` is equivalent to cache-only translation display. To
+populate missing DICO/Gaffiot translations during an explicit lookup, use
+`--translation-mode auto`:
+
+```bash
+devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --translation-mode auto --translation-cache-db data/cache/langnet.duckdb'
+devenv shell -- bash -c 'langnet-cli encounter san dharma dico --translation-mode auto --translation-cache-db data/cache/langnet.duckdb'
+```
+
+This mode reads existing cache rows first, calls OpenRouter only for missing
+translation keys, writes successful translations back to the cache, and then
+displays the projected English evidence. It requires `OPENAI_API_KEY` only when
+a cache miss must be populated.
 
 In the JSON, look for a witness whose `source_tool` is `translation`. Its evidence should include:
 
