@@ -632,11 +632,12 @@ class ToolPlanner:
         # ONLY use the Diogenes parse endpoint (NO word_list)
         base = self._parse_endpoint()
 
-        # Use the pre-resolved canonical form (accentless or betacode)
+        # Use the pre-resolved canonical form for dictionary senses.
         query_value = candidate.encodings.get("accentless") or candidate.lemma
         if not query_value:
             query_value = normalized.original.lower()
         query_value = query_value.lower()
+        surface_query = (normalized.original or "").lower()
         lang_param = self._diogenes_lang(normalized)
 
         # Include parse → extract → derive → claim pipeline
@@ -761,6 +762,89 @@ class ToolPlanner:
                 rationale="Produce citation claims from diogenes derivation",
             )
         )
+
+        if surface_query and surface_query != query_value:
+            surface_fetch_id = "diogenes-surface-parse-1"
+            calls.append(
+                _make_call(
+                    tool="fetch.diogenes",
+                    call_id=surface_fetch_id,
+                    endpoint=base,
+                    params={"do": "parse", "lang": lang_param, "q": surface_query},
+                    opts=_opts(
+                        expected="html",
+                        priority=2,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_FETCH,
+                    ),
+                )
+            )
+            surface_extract_id = "diogenes-surface-extract-1"
+            calls.append(
+                _make_call(
+                    tool="extract.diogenes.html",
+                    call_id=surface_extract_id,
+                    endpoint="internal://diogenes/html_extract",
+                    params={"source_call_id": surface_fetch_id},
+                    opts=_opts(
+                        expected="extraction",
+                        priority=3,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_EXTRACT,
+                    ),
+                )
+            )
+            deps.append(
+                PlanDependency(
+                    from_call_id=surface_fetch_id,
+                    to_call_id=surface_extract_id,
+                    rationale="Parse surface-form Diogenes HTML",
+                )
+            )
+            surface_derive_id = "diogenes-surface-morph-derive-1"
+            calls.append(
+                _make_call(
+                    tool="derive.diogenes.morph",
+                    call_id=surface_derive_id,
+                    endpoint="internal://diogenes/morph_derive",
+                    params={"source_call_id": surface_extract_id},
+                    opts=_opts(
+                        expected="derivation",
+                        priority=4,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_DERIVE,
+                    ),
+                )
+            )
+            deps.append(
+                PlanDependency(
+                    from_call_id=surface_extract_id,
+                    to_call_id=surface_derive_id,
+                    rationale="Derive surface morphology from Diogenes parse",
+                )
+            )
+            surface_claim_id = "claim-diogenes-surface-morph-1"
+            calls.append(
+                _make_call(
+                    tool="claim.diogenes.morph",
+                    call_id=surface_claim_id,
+                    endpoint="internal://claim/diogenes_morph",
+                    params={"source_call_id": surface_derive_id, "morphology_only": "true"},
+                    opts=_opts(
+                        expected="claim",
+                        priority=5,
+                        optional=True,
+                        stage=ToolStage.TOOL_STAGE_CLAIM,
+                    ),
+                )
+            )
+            deps.append(
+                PlanDependency(
+                    from_call_id=surface_derive_id,
+                    to_call_id=surface_claim_id,
+                    rationale="Produce morphology-only claims from surface-form Diogenes parse",
+                )
+            )
 
         # Include CTS hydration
         cts_fetch_id = "cts-fetch-1"

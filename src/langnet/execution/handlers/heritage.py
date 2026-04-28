@@ -399,7 +399,7 @@ def _select_lemma_for_claim(
 
 
 def _build_morphology_object(  # noqa: PLR0913
-    lemma: str,
+    claim_lemma: str,
     word_slp1: str,
     variant: Mapping[str, object],
     analysis: Mapping[str, object],
@@ -410,8 +410,9 @@ def _build_morphology_object(  # noqa: PLR0913
 ) -> dict[str, object]:
     """Build a single morphology object from variant and analysis data."""
     analysis_val = variant.get("analysis", "")
+    lemma = _analysis_lemma(analysis, word_slp1=word_slp1, fallback=claim_lemma)
     morph_obj: dict[str, object] = {
-        "lemma": lemma or word_slp1,
+        "lemma": lemma,
         "form": word_slp1,
         "analysis": analysis_val if isinstance(analysis_val, str) else "",
     }
@@ -433,6 +434,30 @@ def _build_morphology_object(  # noqa: PLR0913
     if variant_features:
         morph_obj["features"] = variant_features
     return morph_obj
+
+
+def _analysis_lemma(
+    analysis: Mapping[str, object],
+    *,
+    word_slp1: str,
+    fallback: str,
+) -> str:
+    word = word_slp1.strip()
+    if word:
+        return word
+    dict_url = analysis.get("dictionary_url")
+    if isinstance(dict_url, str):
+        anchor = _dico_anchor_from_url(dict_url)
+        if anchor:
+            return _velthuis_to_slp1(anchor)
+    return fallback.strip()
+
+
+def _dico_anchor_from_url(url: str) -> str:
+    match = re.search(r"/DICO/[^/#?]+\.html#(?P<entry>[^?]+)", url)
+    if not match:
+        return ""
+    return match.group("entry")
 
 
 def _trim_evidence(evidence: Mapping[str, object]) -> dict[str, object]:

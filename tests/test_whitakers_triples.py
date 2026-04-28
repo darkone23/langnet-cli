@@ -13,6 +13,15 @@ amo, amare, amavi, amatus  V (1st)   [XXXAO]
 love, like; fall in love with; be fond of; have a tendency to;
 """
 
+GAUDIUM_SAMPLE = """gaudi.um             N      2 4 NOM S N                 
+gaudi.um             N      2 4 VOC S N                 
+gaudi.um             N      2 4 ACC S N                 
+gaudium, gaudi(i)  N (2nd) N   [XXXBO]  
+joy, delight, gladness; source/cause of joy; physical/sensual delight;
+everlasting blessedness; gaud/gaudy, bead of rosary (Latham);
+*
+"""
+
 
 def test_whitaker_triples_projection() -> None:
     fetch_call = make_call(
@@ -94,3 +103,16 @@ def test_whitaker_triples_projection() -> None:
     assert ev["claim_id"] == claim.claim_id
     assert ev["response_id"] == raw.response_id
     assert ev["raw_blob_ref"] == "raw_text"
+
+
+def test_whitaker_parser_accumulates_multiline_senses() -> None:
+    wordlist = whitakers._parse_whitaker_output(GAUDIUM_SAMPLE)  # type: ignore[attr-defined]
+
+    assert len(wordlist) == 1
+    assert wordlist[0]["senses"] == [
+        "joy, delight, gladness",
+        "source/cause of joy",
+        "physical/sensual delight",
+        "everlasting blessedness",
+        "gaud/gaudy, bead of rosary (Latham)",
+    ]

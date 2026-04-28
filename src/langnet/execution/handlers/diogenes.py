@@ -715,7 +715,11 @@ def _build_definition_triples(
 
 
 def _build_triples(
-    parsed: Mapping[str, object] | None, lemmas: Sequence[str], base_evidence: Mapping[str, object]
+    parsed: Mapping[str, object] | None,
+    lemmas: Sequence[str],
+    base_evidence: Mapping[str, object],
+    *,
+    include_definitions: bool = True,
 ) -> list[dict[str, object]]:
     """Build RDF-style triples from Diogenes parsed data."""
     if not isinstance(parsed, Mapping):
@@ -746,7 +750,10 @@ def _build_triples(
                     morph_typed, default_lex, base_evidence
                 )
                 triples.extend(perseus_triples)
-        elif chunk_type in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
+        elif include_definitions and chunk_type in {
+            "DiogenesMatchingReference",
+            "DiogenesFuzzyReference",
+        }:
             definitions = chunk_dict.get("definitions")
             if isinstance(definitions, Mapping):
                 defs_typed = cast(Mapping[str, object], definitions)
@@ -786,7 +793,13 @@ def claim_morph(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
         parsed = cast(Mapping[str, object], parsed_val) if isinstance(parsed_val, Mapping) else None
         lemmas_val = value_dict.get("lemmas")
         lemmas_list = cast(Sequence[str], lemmas_val) if isinstance(lemmas_val, Sequence) else []
-        triples = _build_triples(parsed, lemmas_list, base_evidence)
+        morphology_only = call.params.get("morphology_only") == "true"
+        triples = _build_triples(
+            parsed,
+            lemmas_list,
+            base_evidence,
+            include_definitions=not morphology_only,
+        )
         value = {**value, "triples": triples}
     return ClaimEffect(
         claim_id=claim_id,

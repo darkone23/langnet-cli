@@ -7,6 +7,7 @@ import orjson
 from query_spec import ToolStage
 
 from langnet.clients.base import RawResponseEffect
+from langnet.execution.effects import DerivationEffect
 from langnet.execution.handlers import cltk, diogenes, heritage
 from tests.claim_contract import assert_claim_contract, claim_triples, find_triple, make_call
 
@@ -212,3 +213,48 @@ def test_heritage_claim_contract_for_morphology_fixture() -> None:
     assert isinstance(evidence, Mapping)
     assert evidence["source_tool"] == "heritage"
     assert evidence["response_id"] == raw.response_id
+
+
+def test_heritage_morphology_uses_segment_lemma_for_compounds() -> None:
+    derivation = DerivationEffect(
+        derivation_id="drv-heritage-compound",
+        tool="derive.heritage.morph",
+        call_id="derive-heritage",
+        source_call_id="extract-heritage",
+        extraction_id="ext-heritage",
+        kind="heritage_morph",
+        canonical="darmakzetra",
+        payload={
+            "lemma": "dharmakṣetra",
+            "lemma_slp1": "darmakzetra",
+            "heritage_guess": False,
+            "parsed_analyses": [
+                {
+                    "word": "dharma",
+                    "analysis": "iic.",
+                    "analysis_variants": [{"analysis": "iic.", "features": {}}],
+                    "dictionary_url": "https://sanskrit.inria.fr/DICO/34.html#dharma",
+                },
+                {
+                    "word": "kṣetra",
+                    "analysis": "n. sg. loc.",
+                    "analysis_variants": [{"analysis": "n. sg. loc.", "features": {}}],
+                    "dictionary_url": "https://sanskrit.inria.fr/DICO/28.html#k.setra",
+                },
+            ],
+        },
+        provenance_chain=[],
+    )
+    claim_call = make_call(
+        "claim.heritage.morph",
+        "claim-heritage",
+        cast(ToolStage, ToolStage.TOOL_STAGE_CLAIM),
+        params={"source_call_id": "derive-heritage"},
+    )
+
+    claim = heritage.claim_morph(claim_call, derivation)
+
+    triples = claim_triples(claim)
+    ksetra = find_triple(triples, "form:kṣetra", "has_morphology")
+    assert ksetra is not None
+    assert ksetra["object"]["lemma"] == "kṣetra"

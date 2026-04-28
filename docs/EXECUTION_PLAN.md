@@ -49,7 +49,7 @@ Check:
 Start with these known failures:
 
 - `virumque` should resolve to `vir + -que`, not lead with `virus`;
-- `μῆνιν` should prefer `μῆνις`;
+- `μῆνιν` should prefer `μῆνις` and keep surface morphology visible;
 - `θεὰ` should prefer `θεά`;
 - `karma` should route to `karman` when the DICO/MW concept entry is intended.
 

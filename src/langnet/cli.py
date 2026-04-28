@@ -6,6 +6,7 @@ import re
 import subprocess
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TypedDict, cast
@@ -69,6 +70,7 @@ from langnet.translation import (
 
 LanguageHint = query_spec.LanguageHint
 LanguageValue = query_spec.LanguageHint.ValueType
+LATIN_AE_SUFFIX_LEN = 2
 
 
 def _ensure_logging(level: int = logging.INFO) -> None:
@@ -1307,6 +1309,9 @@ def _get_query_value_for_plan(
     text: str, lang_hint, normalize: bool, norm_cfg: NormalizeConfig
 ) -> query_spec.NormalizedQuery:
     """Get the query value for planning, either normalized or passthrough."""
+    if normalize and lang_hint == LanguageHint.LANGUAGE_HINT_GRC and _contains_greek_script(text):
+        return _passthrough_normalized_query(text, lang_hint)
+
     path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     use_memory = norm_cfg.no_cache or not path.exists()
@@ -1323,6 +1328,14 @@ def _get_query_value_for_plan(
                 normalized_result = service.normalize(text, lang_hint)
         return normalized_result.normalized
 
+    return _passthrough_normalized_query(text, lang_hint)
+
+
+def _contains_greek_script(text: str) -> bool:
+    return any("\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff" for char in text)
+
+
+def _passthrough_normalized_query(text: str, lang_hint) -> query_spec.NormalizedQuery:
     # Minimal passthrough NormalizedQuery to satisfy the planner.
     return query_spec.NormalizedQuery(
         original=text,
@@ -1573,6 +1586,9 @@ def _encounter_bucket_gloss(bucket) -> str:
     witness = bucket.witnesses[0] if bucket.witnesses else None
     if witness is None:
         return bucket.display_gloss
+    learner_gloss = witness.evidence.get("learner_gloss")
+    if isinstance(learner_gloss, str) and learner_gloss:
+        return learner_gloss
     display_gloss = witness.evidence.get("display_gloss")
     if isinstance(display_gloss, str) and display_gloss:
         return display_gloss
@@ -1626,51 +1642,278 @@ def _encounter_claim_triples(claim: Mapping[str, object]) -> list[Mapping[str, o
     return [cast(Mapping[str, object], triple) for triple in triples if isinstance(triple, Mapping)]
 
 
+_MORPHOLOGY_FEATURE_PREDICATES = {
+    predicates.HAS_POS,
+    predicates.HAS_CASE,
+    predicates.HAS_NUMBER,
+    predicates.HAS_GENDER,
+    predicates.HAS_PERSON,
+    predicates.HAS_TENSE,
+    predicates.HAS_VOICE,
+    predicates.HAS_MOOD,
+    predicates.HAS_DEGREE,
+    predicates.HAS_DECLENSION,
+    predicates.HAS_CONJUGATION,
+}
+
+
+@dataclass
+class _MorphologyGraph:
+    interp_to_form: dict[str, str]
+    interp_to_lexeme: dict[str, str]
+    interp_features: dict[str, list[str]]
+    interp_source_tools: dict[str, str]
+    form_to_lexeme: dict[str, str]
+    form_features: dict[str, list[str]]
+    form_source_tools: dict[str, str]
+
+
 def _encounter_morphology_rows(
     claims: Sequence[Mapping[str, object]],
+    *,
+    language: str = "",
+    original: str = "",
+    reduction=None,
     max_rows: int = 4,
 ) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     seen: set[tuple[str, str, str, str]] = set()
+    claim_triples = _encounter_claim_triples_with_tools(claims)
+    if _append_direct_morphology_rows(claim_triples, rows, seen, max_rows):
+        return rows
+
+    graph = _build_morphology_graph(claim_triples)
+    _append_graph_morphology_rows(graph, rows, seen, max_rows)
+    if not rows and reduction is not None:
+        rows.extend(
+            _encounter_local_morphology_rows(
+                language=language,
+                original=original,
+                reduction=reduction,
+                max_rows=max_rows,
+            )
+        )
+    return rows
+
+
+def _encounter_claim_triples_with_tools(
+    claims: Sequence[Mapping[str, object]],
+) -> list[tuple[str, Mapping[str, object]]]:
+    triples: list[tuple[str, Mapping[str, object]]] = []
     for claim in claims:
         claim_tool = str(claim.get("tool") or "")
-        for triple in _encounter_claim_triples(claim):
-            if triple.get("predicate") != predicates.HAS_MORPHOLOGY:
-                continue
-            obj = triple.get("object")
-            if not isinstance(obj, Mapping):
-                continue
-            metadata = triple.get("metadata")
-            metadata_dict = (
-                cast(dict[str, object], metadata) if isinstance(metadata, Mapping) else {}
-            )
-            evidence = metadata_dict.get("evidence")
-            source_tool = ""
-            if isinstance(evidence, Mapping):
-                evidence_dict = cast(dict[str, object], evidence)
-                source_tool = str(evidence_dict.get("source_tool") or "")
-            source_tool = source_tool or claim_tool.replace("claim.", "").split(".", 1)[0]
-            obj_dict = cast(dict[str, object], obj)
-            form = str(obj_dict.get("form") or triple.get("subject") or "").removeprefix("form:")
-            lemma = str(obj_dict.get("lemma") or "").removeprefix("lex:")
-            analysis = str(obj_dict.get("analysis") or "").strip()
-            if not analysis or analysis == "?":
-                continue
-            key = (source_tool, form, lemma, analysis)
-            if key in seen:
-                continue
-            seen.add(key)
-            rows.append(
-                {
-                    "source_tool": source_tool,
-                    "form": form,
-                    "lemma": lemma,
-                    "analysis": analysis,
-                }
-            )
-            if len(rows) >= max_rows:
-                return rows
-    return rows
+        triples.extend((claim_tool, triple) for triple in _encounter_claim_triples(claim))
+    return triples
+
+
+def _append_morphology_row(
+    rows: list[dict[str, str]],
+    seen: set[tuple[str, str, str, str]],
+    max_rows: int,
+    row: dict[str, str],
+) -> bool:
+    analysis = row["analysis"].strip()
+    if not analysis or analysis == "?":
+        return False
+    row = {**row, "analysis": analysis}
+    key = (row["source_tool"], row["form"], row["lemma"], row["analysis"])
+    if key in seen:
+        return False
+    seen.add(key)
+    rows.append(row)
+    return len(rows) >= max_rows
+
+
+def _append_direct_morphology_rows(
+    claim_triples: Sequence[tuple[str, Mapping[str, object]]],
+    rows: list[dict[str, str]],
+    seen: set[tuple[str, str, str, str]],
+    max_rows: int,
+) -> bool:
+    for claim_tool, triple in claim_triples:
+        row = _direct_morphology_row(claim_tool, triple)
+        if row is None:
+            continue
+        if _append_morphology_row(rows, seen, max_rows, row):
+            return True
+    return False
+
+
+def _direct_morphology_row(
+    claim_tool: str,
+    triple: Mapping[str, object],
+) -> dict[str, str] | None:
+    if triple.get("predicate") != predicates.HAS_MORPHOLOGY:
+        return None
+    obj = triple.get("object")
+    if not isinstance(obj, Mapping):
+        return None
+    obj_dict = cast(dict[str, object], obj)
+    return {
+        "source_tool": _encounter_triple_source_tool(triple, claim_tool),
+        "form": str(obj_dict.get("form") or triple.get("subject") or "").removeprefix("form:"),
+        "lemma": str(obj_dict.get("lemma") or "").removeprefix("lex:"),
+        "analysis": str(obj_dict.get("analysis") or "").strip(),
+    }
+
+
+def _build_morphology_graph(
+    claim_triples: Sequence[tuple[str, Mapping[str, object]]],
+) -> _MorphologyGraph:
+    graph = _MorphologyGraph(
+        interp_to_form={},
+        interp_to_lexeme={},
+        interp_features={},
+        interp_source_tools={},
+        form_to_lexeme={},
+        form_features={},
+        form_source_tools={},
+    )
+    for claim_tool, triple in claim_triples:
+        subject = str(triple.get("subject") or "")
+        predicate = str(triple.get("predicate") or "")
+        obj = triple.get("object")
+        source_tool = _encounter_triple_source_tool(triple, claim_tool)
+        if _record_morphology_link(graph, subject, predicate, obj, source_tool):
+            continue
+        _record_morphology_feature(graph, subject, predicate, obj, source_tool)
+    return graph
+
+
+def _record_morphology_link(
+    graph: _MorphologyGraph,
+    subject: str,
+    predicate: str,
+    obj: object,
+    source_tool: str,
+) -> bool:
+    if (
+        predicate == predicates.HAS_INTERPRETATION
+        and subject.startswith("form:")
+        and isinstance(obj, str)
+        and obj.startswith("interp:")
+    ):
+        graph.interp_to_form.setdefault(obj, subject.removeprefix("form:"))
+        graph.interp_source_tools.setdefault(obj, source_tool)
+        return True
+    if (
+        predicate == predicates.REALIZES_LEXEME
+        and subject.startswith("interp:")
+        and isinstance(obj, str)
+    ):
+        graph.interp_to_lexeme.setdefault(subject, _display_lexeme_anchor(obj))
+        graph.interp_source_tools.setdefault(subject, source_tool)
+        return True
+    if (
+        predicate == predicates.INFLECTION_OF
+        and subject.startswith("form:")
+        and isinstance(obj, str)
+    ):
+        form = subject.removeprefix("form:")
+        graph.form_to_lexeme.setdefault(form, _display_lexeme_anchor(obj))
+        graph.form_source_tools.setdefault(form, source_tool)
+        return True
+    return False
+
+
+def _record_morphology_feature(
+    graph: _MorphologyGraph,
+    subject: str,
+    predicate: str,
+    obj: object,
+    source_tool: str,
+) -> None:
+    if subject.startswith("interp:") and predicate in _MORPHOLOGY_FEATURE_PREDICATES:
+        values = _encounter_morphology_feature_values(predicate, obj)
+        if values:
+            graph.interp_features.setdefault(subject, []).extend(values)
+            graph.interp_source_tools.setdefault(subject, source_tool)
+        return
+    if subject.startswith("form:") and (
+        predicate in _MORPHOLOGY_FEATURE_PREDICATES or predicate == predicates.HAS_FEATURE
+    ):
+        values = _encounter_morphology_feature_values(predicate, obj)
+        if values:
+            form = subject.removeprefix("form:")
+            graph.form_features.setdefault(form, []).extend(values)
+            graph.form_source_tools.setdefault(form, source_tool)
+
+
+def _append_graph_morphology_rows(
+    graph: _MorphologyGraph,
+    rows: list[dict[str, str]],
+    seen: set[tuple[str, str, str, str]],
+    max_rows: int,
+) -> bool:
+    for interp, features in graph.interp_features.items():
+        form = graph.interp_to_form.get(interp)
+        lemma = graph.interp_to_lexeme.get(interp)
+        if not form or not lemma:
+            continue
+        source_tool = graph.interp_source_tools.get(interp, "")
+        analysis = _encounter_morphology_analysis(features)
+        row = {"source_tool": source_tool, "form": form, "lemma": lemma, "analysis": analysis}
+        if _append_morphology_row(rows, seen, max_rows, row):
+            return True
+
+    for form, features in graph.form_features.items():
+        lemma = graph.form_to_lexeme.get(form, form)
+        source_tool = graph.form_source_tools.get(form, "")
+        analysis = _encounter_morphology_analysis(features)
+        row = {"source_tool": source_tool, "form": form, "lemma": lemma, "analysis": analysis}
+        if _append_morphology_row(rows, seen, max_rows, row):
+            return True
+    return False
+
+
+def _encounter_triple_source_tool(triple: Mapping[str, object], claim_tool: str) -> str:
+    metadata = triple.get("metadata")
+    metadata_dict = cast(dict[str, object], metadata) if isinstance(metadata, Mapping) else {}
+    evidence = metadata_dict.get("evidence")
+    if isinstance(evidence, Mapping):
+        evidence_dict = cast(dict[str, object], evidence)
+        source_tool = str(evidence_dict.get("source_tool") or "")
+        if source_tool:
+            return source_tool
+    return claim_tool.replace("claim.", "").split(".", 1)[0]
+
+
+def _display_lexeme_anchor(value: str) -> str:
+    lemma = value.removeprefix("lex:")
+    return lemma.split("#", 1)[0]
+
+
+def _encounter_morphology_feature_values(predicate: str, obj: object) -> list[str]:
+    if predicate == predicates.HAS_FEATURE:
+        return _encounter_feature_bag_morphology_values(obj)
+
+    value = "" if obj is None else str(obj).strip()
+    if not value or value == "?":
+        return []
+    prefixes = {
+        predicates.HAS_DECLENSION: "declension",
+        predicates.HAS_CONJUGATION: "conjugation",
+        predicates.HAS_DEGREE: "degree",
+    }
+    prefix = prefixes.get(predicate)
+    return [f"{prefix} {value}" if prefix else value]
+
+
+def _encounter_feature_bag_morphology_values(obj: object) -> list[str]:
+    if not isinstance(obj, Mapping):
+        return []
+    obj_dict = cast(Mapping[str, object], obj)
+    tags = obj_dict.get("tags")
+    if isinstance(tags, Sequence) and not isinstance(tags, (str, bytes)):
+        tag_values = [str(tag) for tag in tags if str(tag)]
+        if tag_values:
+            return [f"tags: {', '.join(tag_values)}"]
+    notes = obj_dict.get("notes")
+    return [str(notes)] if isinstance(notes, str) and notes else []
+
+
+def _encounter_morphology_analysis(features: Sequence[str]) -> str:
+    return "; ".join(_dedupe_preserve_order([feature for feature in features if feature]))
 
 
 def _encounter_morphology_fallback_terms(
@@ -1685,13 +1928,14 @@ def _encounter_morphology_fallback_terms(
 
     original_norm = original.strip().lower()
     terms: list[str] = []
-    for row in _encounter_morphology_rows(claims, max_rows=8):
+    morphology_rows = _encounter_morphology_rows(claims, max_rows=8)
+    if any(_is_sanskrit_compound_component(row["analysis"]) for row in morphology_rows):
+        return []
+    for row in morphology_rows:
         form = row["form"].strip()
         lemma = row["lemma"].strip()
         analysis = row["analysis"].strip()
         if not lemma or lemma == "?" or analysis == "?":
-            continue
-        if analysis == "iic." or analysis.startswith("iic "):
             continue
         if form != lemma:
             continue
@@ -1704,6 +1948,72 @@ def _encounter_morphology_fallback_terms(
         if len(terms) >= max_terms:
             break
     return terms
+
+
+def _is_sanskrit_compound_component(analysis: str) -> bool:
+    analysis = analysis.strip()
+    return analysis == "iic." or analysis.startswith("iic ")
+
+
+def _encounter_local_morphology_rows(
+    *,
+    language: str,
+    original: str,
+    reduction,
+    max_rows: int,
+) -> list[dict[str, str]]:
+    if not original:
+        return []
+    if language == "lat":
+        row = _encounter_latin_local_morphology_row(original, reduction)
+        return [row] if row else []
+    if language == "grc":
+        row = _encounter_greek_local_morphology_row(original, reduction)
+        return [row] if row else []
+    return []
+
+
+def _encounter_latin_local_morphology_row(original: str, reduction) -> dict[str, str] | None:
+    surface = original.strip()
+    lower = surface.lower()
+    if not lower.endswith("ae") or len(lower) <= LATIN_AE_SUFFIX_LEN:
+        return None
+    lemma = f"{lower[:-2]}a"
+    reduction_lemmas = {value.lower() for value in _encounter_reduction_lemma_values(reduction)}
+    if lemma not in reduction_lemmas:
+        return None
+    return {
+        "source_tool": "local",
+        "form": surface,
+        "lemma": lemma,
+        "analysis": (
+            "first-declension -ae form; genitive/dative singular or nominative/vocative plural"
+        ),
+    }
+
+
+def _encounter_greek_local_morphology_row(original: str, reduction) -> dict[str, str] | None:
+    surface = original.strip()
+    normalized_surface = strip_accents(surface).casefold()
+    if not normalized_surface.endswith(("ηος", "ηοσ")):
+        return None
+    lemma = _encounter_first_reduction_lemma_with_suffix(reduction, "eus")
+    if not lemma:
+        return None
+    return {
+        "source_tool": "local",
+        "form": surface,
+        "lemma": lemma,
+        "analysis": "epic genitive singular; -ῆος form of a -εύς noun",
+    }
+
+
+def _encounter_first_reduction_lemma_with_suffix(reduction, suffix: str) -> str:
+    for value in _encounter_reduction_lemma_values(reduction):
+        clean = re.sub(r"[^A-Za-z]+", "", value).lower()
+        if clean.endswith(suffix):
+            return value
+    return ""
 
 
 def _encounter_reduction_lemma_values(reduction) -> list[str]:
@@ -1756,7 +2066,151 @@ def _encounter_sanskrit_morphology_lookup_terms(
     )
 
 
-def _encounter_bucket_sort_key(bucket) -> tuple[int, int, str]:
+def _encounter_cdsl_source_order(bucket) -> int:
+    orders: list[int] = []
+    for witness in bucket.witnesses:
+        if witness.source_tool != "cdsl" and witness.evidence.get("source_tool") != "cdsl":
+            continue
+        source_ref = witness.evidence.get("source_ref")
+        if not isinstance(source_ref, str):
+            continue
+        match = re.search(r":(\d+)(?:\.\d+)?$", source_ref)
+        if match:
+            orders.append(int(match.group(1)))
+    return min(orders) if orders else 10**12
+
+
+def _encounter_cdsl_dictionary_order(bucket) -> int:
+    priority = {"mw": 0, "ap90": 1}
+    orders: list[int] = []
+    for witness in bucket.witnesses:
+        if witness.source_tool != "cdsl" and witness.evidence.get("source_tool") != "cdsl":
+            continue
+        source_ref = witness.evidence.get("source_ref")
+        if not isinstance(source_ref, str):
+            continue
+        dict_id = source_ref.split(":", 1)[0].lower()
+        orders.append(priority.get(dict_id, 100))
+    return min(orders) if orders else 10**12
+
+
+def _encounter_gaffiot_source_order(bucket) -> int:
+    orders: list[int] = []
+    for witness in bucket.witnesses:
+        if witness.source_tool != "gaffiot" and witness.evidence.get("source_tool") != "gaffiot":
+            continue
+        source_ref = witness.evidence.get("source_ref")
+        if not isinstance(source_ref, str):
+            continue
+        match = re.search(r"gaffiot_(\d+)$", source_ref)
+        if match:
+            orders.append(int(match.group(1)))
+    return min(orders) if orders else 10**12
+
+
+def _encounter_source_order(bucket, source_tool: str) -> int:
+    orders: list[int] = []
+    for witness in bucket.witnesses:
+        if (
+            witness.source_tool != source_tool
+            and witness.evidence.get("source_tool") != source_tool
+        ):
+            continue
+        source_order = witness.evidence.get("source_order")
+        if isinstance(source_order, int):
+            orders.append(source_order)
+            continue
+        if isinstance(source_order, str):
+            with suppress(ValueError):
+                orders.append(int(source_order))
+    return min(orders) if orders else 10**12
+
+
+def _encounter_diogenes_source_order(bucket) -> tuple[int, ...]:
+    orders: list[tuple[int, ...]] = []
+    for witness in bucket.witnesses:
+        if witness.source_tool != "diogenes" and witness.evidence.get("source_tool") != "diogenes":
+            continue
+        source_ref = witness.evidence.get("source_ref")
+        if not isinstance(source_ref, str) or not source_ref.startswith("diogenes:"):
+            continue
+        parts = source_ref.removeprefix("diogenes:").split(":")
+        numeric_parts: list[int] = []
+        for part in parts:
+            if not part.isdigit():
+                numeric_parts = []
+                break
+            numeric_parts.append(int(part))
+        if not numeric_parts:
+            continue
+        if len(numeric_parts) == 1:
+            orders.append((10**9, *numeric_parts))
+        else:
+            orders.append(tuple(numeric_parts))
+    return min(orders) if orders else (10**12,)
+
+
+def _encounter_bucket_lemma_values(bucket) -> list[str]:
+    values: list[str] = []
+    for witness in bucket.witnesses:
+        lexeme_anchor = getattr(witness, "lexeme_anchor", "")
+        if isinstance(lexeme_anchor, str):
+            values.append(lexeme_anchor.removeprefix("lex:"))
+        display_iast = witness.evidence.get("display_iast")
+        display_slp1 = witness.evidence.get("display_slp1")
+        if isinstance(display_iast, str):
+            values.append(display_iast)
+        if isinstance(display_slp1, str):
+            values.append(cdsl_handlers._slp1_to_iast(display_slp1))  # type: ignore[attr-defined]
+    return _dedupe_preserve_order(values)
+
+
+def _encounter_normalize_lemma(value: str) -> str:
+    return value.removeprefix("lex:").casefold()
+
+
+def _encounter_lemma_compare_keys(value: str) -> set[str]:
+    raw = _encounter_normalize_lemma(value)
+    asciiish = strip_accents(raw)
+    compact = re.sub(r"[^a-z0-9]+", "", asciiish)
+    simplified = compact.replace("aa", "a").replace("ii", "i").replace("uu", "u").replace("z", "s")
+    return {key for key in {raw, compact, simplified} if key}
+
+
+def _encounter_preferred_lemmas_from_morphology(
+    morphology_rows: Sequence[Mapping[str, str]],
+) -> list[str]:
+    lemmas: list[str] = []
+    for row in morphology_rows:
+        lemma = row.get("lemma")
+        if lemma:
+            lemmas.append(lemma)
+    return _dedupe_preserve_order(lemmas)
+
+
+def _encounter_preferred_lemma_rank(
+    bucket,
+    preferred_lemmas: Sequence[str],
+) -> int:
+    if not preferred_lemmas:
+        return 10**12
+    preferred = {
+        key: idx
+        for idx, value in enumerate(preferred_lemmas)
+        if value
+        for key in _encounter_lemma_compare_keys(value)
+    }
+    bucket_lemmas = set().union(
+        *(_encounter_lemma_compare_keys(value) for value in _encounter_bucket_lemma_values(bucket))
+    )
+    ranks = [preferred[lemma] for lemma in bucket_lemmas if lemma in preferred]
+    return min(ranks) if ranks else 10**12
+
+
+def _encounter_bucket_sort_key(
+    bucket,
+    preferred_lemmas: Sequence[str] = (),
+) -> tuple[int, int, int, int, tuple[int, ...], int, str]:
     has_english_translation = any(
         witness.source_tool == "translation"
         or witness.evidence.get("source_tool") == "translation"
@@ -1769,10 +2223,21 @@ def _encounter_bucket_sort_key(bucket) -> tuple[int, int, str]:
         or witness.evidence.get("derived_from_tool") in {"dico", "gaffiot"}
         for witness in bucket.witnesses
     )
+    cdsl_dictionary_order = _encounter_cdsl_dictionary_order(bucket)
+    cdsl_order = _encounter_cdsl_source_order(bucket)
+    source_order = min(
+        cdsl_order,
+        _encounter_gaffiot_source_order(bucket),
+        _encounter_source_order(bucket, "whitaker"),
+    )
     return (
+        _encounter_preferred_lemma_rank(bucket, preferred_lemmas),
         0 if has_english_translation else 1 if has_bilingual_source else 2,
+        cdsl_dictionary_order,
+        source_order,
+        _encounter_diogenes_source_order(bucket),
         -len(bucket.witnesses),
-        bucket.display_gloss.lower(),
+        _encounter_bucket_gloss(bucket).lower(),
     )
 
 
@@ -2165,7 +2630,12 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             click.echo("Forms: " + ", ".join(display_forms[:4]))
         if source_keys and source_keys != display_forms:
             click.echo("Source keys: " + ", ".join(source_keys[:4]))
-        morphology_rows = _encounter_morphology_rows(claims)
+        morphology_rows = _encounter_morphology_rows(
+            claims,
+            language=language,
+            original=text,
+            reduction=reduction,
+        )
         if reduction.warnings:
             for warning in reduction.warnings:
                 if (
@@ -2184,7 +2654,13 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             return
 
         click.echo("\nMeanings")
-        display_buckets = sorted(reduction.buckets, key=_encounter_bucket_sort_key)
+        preferred_lemmas = _dedupe_preserve_order(
+            [*fallback_terms, *_encounter_preferred_lemmas_from_morphology(morphology_rows)]
+        )
+        display_buckets = sorted(
+            reduction.buckets,
+            key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred_lemmas),
+        )
         for idx, bucket in enumerate(display_buckets[:max_buckets], start=1):
             sources = sorted(
                 {witness.source_tool for witness in bucket.witnesses if witness.source_tool}
@@ -2501,12 +2977,25 @@ def reader_eval(  # noqa: PLR0913, PLR0915
                     if len(fallback_reduction.buckets) > original_bucket_count:
                         claims = fallback_claims
                         reduction = fallback_reduction
-            reduction.buckets = sorted(reduction.buckets, key=_encounter_bucket_sort_key)
+            morphology_rows = _encounter_morphology_rows(
+                claims,
+                language=language,
+                original=surface,
+                reduction=reduction,
+                max_rows=8,
+            )
+            preferred_lemmas = _dedupe_preserve_order(
+                [*fallback_terms, *_encounter_preferred_lemmas_from_morphology(morphology_rows)]
+            )
+            reduction.buckets = sorted(
+                reduction.buckets,
+                key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred_lemmas),
+            )
             results.append(
                 evaluate_reader_token(
                     token,
                     asdict(reduction),
-                    morphology_rows=_encounter_morphology_rows(claims, max_rows=8),
+                    morphology_rows=morphology_rows,
                 )
             )
         except Exception as exc:  # noqa: BLE001

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -9,7 +10,16 @@ from unittest.mock import patch
 import duckdb
 from click.testing import CliRunner
 
-from langnet.cli import main
+from langnet.cli import (
+    LanguageHint,
+    NormalizeConfig,
+    _encounter_bucket_sort_key,
+    _encounter_morphology_fallback_terms,
+    _encounter_morphology_rows,
+    _encounter_preferred_lemmas_from_morphology,
+    _get_query_value_for_plan,
+    main,
+)
 from langnet.execution.effects import ClaimEffect, ProvenanceLink
 from langnet.translation import (
     BASE_SYSTEM,
@@ -47,6 +57,183 @@ def _claim_with_triples(
 
 def _translation_language(source_lexicon: str) -> str:
     return "lat" if source_lexicon == "gaffiot" else "san"
+
+
+def test_encounter_morphology_rows_from_interpretation_triples() -> None:
+    claim = _claim_with_triples(
+        tool="whitakers",
+        subject="lex:armum#noun",
+        triples=[
+            {
+                "subject": "form:arma",
+                "predicate": "has_interpretation",
+                "object": "interp:form:arma→lex:armum#noun",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:form:arma→lex:armum#noun",
+                "predicate": "realizes_lexeme",
+                "object": "lex:armum#noun",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:form:arma→lex:armum#noun",
+                "predicate": "has_pos",
+                "object": "noun",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:form:arma→lex:armum#noun",
+                "predicate": "has_case",
+                "object": "nominative",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:form:arma→lex:armum#noun",
+                "predicate": "has_number",
+                "object": "plural",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:form:arma→lex:armum#noun",
+                "predicate": "has_gender",
+                "object": "neuter",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+        ],
+    )
+
+    assert _encounter_morphology_rows([asdict(claim)]) == [
+        {
+            "source_tool": "whitaker",
+            "form": "arma",
+            "lemma": "armum",
+            "analysis": "noun; nominative; plural; neuter",
+        }
+    ]
+
+
+def test_encounter_morphology_rows_from_form_feature_triples() -> None:
+    claim = _claim_with_triples(
+        tool="diogenes",
+        subject="lex:mhnis",
+        triples=[
+            {
+                "subject": "form:mhnis",
+                "predicate": "inflection_of",
+                "object": "lex:mhnis",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "form:mhnis",
+                "predicate": "has_pos",
+                "object": "noun",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "form:mhnis",
+                "predicate": "has_feature",
+                "object": {"tags": ["fem", "sg"], "defs": ["wrath"]},
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+        ],
+    )
+
+    assert _encounter_morphology_rows([asdict(claim)]) == [
+        {
+            "source_tool": "diogenes",
+            "form": "mhnis",
+            "lemma": "mhnis",
+            "analysis": "noun; tags: fem, sg",
+        }
+    ]
+
+
+def test_encounter_adds_local_latin_ae_morphology_when_source_parse_is_empty() -> None:
+    reduction = SimpleNamespace(lexeme_anchors=["lex:troia"], buckets=[])
+
+    assert _encounter_morphology_rows(
+        [],
+        language="lat",
+        original="Troiae",
+        reduction=reduction,
+    ) == [
+        {
+            "source_tool": "local",
+            "form": "Troiae",
+            "lemma": "troia",
+            "analysis": (
+                "first-declension -ae form; genitive/dative singular or nominative/vocative plural"
+            ),
+        }
+    ]
+
+
+def test_encounter_adds_local_greek_epic_eos_morphology_when_source_parse_is_empty() -> None:
+    reduction = SimpleNamespace(lexeme_anchors=["lex:axilleus"], buckets=[])
+
+    assert _encounter_morphology_rows(
+        [],
+        language="grc",
+        original="Ἀχιλῆος",
+        reduction=reduction,
+    ) == [
+        {
+            "source_tool": "local",
+            "form": "Ἀχιλῆος",
+            "lemma": "axilleus",
+            "analysis": "epic genitive singular; -ῆος form of a -εύς noun",
+        }
+    ]
+
+
+def test_get_query_value_for_plan_uses_passthrough_for_greek_script() -> None:
+    query = _get_query_value_for_plan(
+        "ἀρχῇ",
+        LanguageHint.LANGUAGE_HINT_GRC,
+        normalize=True,
+        norm_cfg=NormalizeConfig(
+            diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+            heritage_base="http://localhost:48080",
+            db_path="/path/that/should/not/be/opened.duckdb",
+            no_cache=False,
+            output="pretty",
+        ),
+    )
+
+    assert query.original == "ἀρχῇ"
+    assert query.candidates[0].lemma == "ἀρχῇ"
+    assert query.candidates[0].sources == ["manual"]
+
+
+def test_sanskrit_morphology_fallback_ignores_compound_component_lemmas() -> None:
+    claim = _claim_with_triples(
+        tool="heritage",
+        subject="lex:dharmakṣetra",
+        triples=[
+            {
+                "subject": "form:dharma",
+                "predicate": "has_morphology",
+                "object": {"lemma": "dharma", "form": "dharma", "analysis": "iic."},
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            },
+            {
+                "subject": "form:kṣetra",
+                "predicate": "has_morphology",
+                "object": {"lemma": "kṣetra", "form": "kṣetra", "analysis": "n. sg. loc."},
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            },
+        ],
+    )
+
+    assert (
+        _encounter_morphology_fallback_terms(
+            [asdict(claim)],
+            language="san",
+            original="dharmakṣetre",
+        )
+        == []
+    )
 
 
 def _claim_from_translation_row(row: dict[str, object]) -> ClaimEffect:
@@ -174,6 +361,247 @@ def test_encounter_sanskrit_cdsl_snapshot() -> None:
         "   sources: cdsl; witnesses: 1; confidence: single-witness\n"
         "   refs: mw:1\n"
     )
+
+
+def test_encounter_sorts_cdsl_buckets_by_source_order_before_gloss_text() -> None:
+    early = SimpleNamespace(
+        display_gloss="z later alphabetically",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                evidence={"source_tool": "cdsl", "source_ref": "mw:45268.0"},
+            )
+        ],
+    )
+    late = SimpleNamespace(
+        display_gloss="a earlier alphabetically",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                evidence={"source_tool": "cdsl", "source_ref": "mw:45277.0"},
+            )
+        ],
+    )
+
+    assert sorted([late, early], key=_encounter_bucket_sort_key) == [early, late]
+
+
+def test_encounter_sorts_cdsl_mw_before_ap90() -> None:
+    mw = SimpleNamespace(
+        display_gloss="mw gloss",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                evidence={"source_tool": "cdsl", "source_ref": "mw:168320.0"},
+            )
+        ],
+    )
+    ap90 = SimpleNamespace(
+        display_gloss="ap90 gloss",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                evidence={"source_tool": "cdsl", "source_ref": "ap90:23529.0"},
+            )
+        ],
+    )
+
+    assert sorted([ap90, mw], key=_encounter_bucket_sort_key) == [mw, ap90]
+
+
+def test_encounter_sorts_whitaker_buckets_by_source_order_before_gloss_text() -> None:
+    early = SimpleNamespace(
+        display_gloss="z later alphabetically",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="whitaker",
+                evidence={"source_tool": "whitaker", "source_order": 0},
+            )
+        ],
+    )
+    late = SimpleNamespace(
+        display_gloss="a earlier alphabetically",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="whitaker",
+                evidence={"source_tool": "whitaker", "source_order": 1},
+            )
+        ],
+    )
+
+    assert sorted([late, early], key=_encounter_bucket_sort_key) == [early, late]
+
+
+def test_encounter_sorts_gaffiot_buckets_by_source_order_before_gloss_text() -> None:
+    early = SimpleNamespace(
+        display_gloss="z sum, esse",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                evidence={"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_64300"},
+            )
+        ],
+    )
+    late = SimpleNamespace(
+        display_gloss="a adjacent entry",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                evidence={"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_64301"},
+            )
+        ],
+    )
+
+    assert sorted([late, early], key=_encounter_bucket_sort_key) == [early, late]
+
+
+def test_encounter_sorts_diogenes_sense_order_before_gloss_text() -> None:
+    primary = SimpleNamespace(
+        display_gloss="z beginning, origin",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="diogenes",
+                evidence={"source_tool": "diogenes", "source_ref": "diogenes:00:00"},
+            )
+        ],
+    )
+    subsidiary = SimpleNamespace(
+        display_gloss="a first principle",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="diogenes",
+                evidence={"source_tool": "diogenes", "source_ref": "diogenes:00:00:01:00"},
+            )
+        ],
+    )
+
+    assert sorted([subsidiary, primary], key=_encounter_bucket_sort_key) == [
+        primary,
+        subsidiary,
+    ]
+
+
+def test_encounter_demotes_diogenes_headword_header_below_numbered_sense() -> None:
+    header = SimpleNamespace(
+        display_gloss="a headword and inflectional header",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="diogenes",
+                evidence={"source_tool": "diogenes", "source_ref": "diogenes:00"},
+            )
+        ],
+    )
+    primary = SimpleNamespace(
+        display_gloss="z god, the deity",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="diogenes",
+                evidence={"source_tool": "diogenes", "source_ref": "diogenes:00:00"},
+            )
+        ],
+    )
+
+    assert sorted([header, primary], key=_encounter_bucket_sort_key) == [primary, header]
+
+
+def test_encounter_preferred_lemma_sort_overrides_source_priority() -> None:
+    surface_match = SimpleNamespace(
+        display_gloss="surface dictionary material",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="dico",
+                lexeme_anchor="lex:tva",
+                evidence={"source_tool": "dico"},
+            )
+        ],
+    )
+    morphology_match = SimpleNamespace(
+        display_gloss="pronoun dictionary material",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                lexeme_anchor="lex:yuzmad",
+                evidence={"source_tool": "cdsl", "display_iast": "yuṣmad"},
+            )
+        ],
+    )
+
+    assert sorted(
+        [surface_match, morphology_match],
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, ["yuṣmad"]),
+    ) == [morphology_match, surface_match]
+
+
+def test_encounter_preferred_lemma_sort_preserves_analysis_order() -> None:
+    first_analysis = SimpleNamespace(
+        display_gloss="principium noun evidence",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                lexeme_anchor="lex:principium",
+                evidence={"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_53107"},
+            )
+        ],
+    )
+    second_analysis = SimpleNamespace(
+        display_gloss="principio verb evidence",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                lexeme_anchor="lex:principio",
+                evidence={"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_53106"},
+            )
+        ],
+    )
+    morphology_rows = [
+        {
+            "source_tool": "whitaker",
+            "form": "principio",
+            "lemma": "principium",
+            "analysis": "noun; dative; singular; neuter; ablative",
+        },
+        {
+            "source_tool": "whitaker",
+            "form": "principio",
+            "lemma": "principio",
+            "analysis": "verb; present; active; indicative",
+        },
+    ]
+
+    preferred = _encounter_preferred_lemmas_from_morphology(morphology_rows)
+
+    assert sorted(
+        [second_analysis, first_analysis],
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred),
+    ) == [first_analysis, second_analysis]
+
+
+def test_encounter_preferred_lemma_sort_matches_sanskrit_transliteration_variants() -> None:
+    dico_bucket = SimpleNamespace(
+        display_gloss="DICO Varuna material",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="dico",
+                lexeme_anchor="lex:varu.na",
+                evidence={"source_tool": "dico"},
+            )
+        ],
+    )
+    cdsl_bucket = SimpleNamespace(
+        display_gloss="CDSL Varuna material",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                lexeme_anchor="lex:varuRa",
+                evidence={"source_tool": "cdsl", "display_iast": "varuṇa"},
+            )
+        ],
+    )
+
+    assert sorted(
+        [cdsl_bucket, dico_bucket],
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, ["varuṇa"]),
+    ) == [dico_bucket, cdsl_bucket]
 
 
 def test_encounter_sanskrit_heritage_analysis_snapshot() -> None:

@@ -11,6 +11,7 @@ from langnet.clients import (
     RawResponseEffect,
     SubprocessToolClient,
 )
+from langnet.execution.clients import WhitakerFetchClient
 
 HTTP_OK = 200
 
@@ -66,3 +67,22 @@ def test_subprocess_tool_client_captures_stdout() -> None:
 
     assert effect.status_code == 0
     assert effect.body.strip() == b"hello"
+
+
+def test_whitaker_fetch_client_does_not_pass_metadata_as_lookup_terms(tmp_path: Path) -> None:
+    script = tmp_path / "argv_echo.py"
+    script.write_text(
+        "#!/usr/bin/env python3\nimport sys\nsys.stdout.write('\\n'.join(sys.argv[1:]))\n",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+
+    client = WhitakerFetchClient(str(script))
+    effect = client.execute(
+        call_id="ww-call",
+        endpoint="whitakers-words",
+        params={"word": "gaudium", "stage": "TOOL_STAGE_FETCH", "source_call_id": ""},
+    )
+
+    assert effect.status_code == 0
+    assert effect.body.decode("utf-8") == "gaudium"

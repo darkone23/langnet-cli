@@ -272,4 +272,6 @@ class WhitakerFetchClient:
         params = params or {}
         word = params.get("word") or params.get("q") or ""
         client = SubprocessToolClient(tool=self.tool, command=[self.binary, word])
-        return client.execute(call_id=call_id, endpoint=endpoint, params=params)
+        # Whitaker's Words treats every argv token as a lookup term. Do not pass
+        # LangNet planning metadata such as "stage=..." as extra subprocess args.
+        return client.execute(call_id=call_id, endpoint=endpoint)

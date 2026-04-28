@@ -76,16 +76,23 @@ Remaining:
 Priority accepted-output targets:
 
 - `virumque -> vir + -que`, not `virus`;
-- `μῆνιν -> μῆνις`, not `μήνιον`, now works for meaning checks and should stay covered;
+- `μῆνιν -> μῆνις`, not `μήνιον`, now works for meaning and morphology checks and should stay covered;
 - `θεὰ -> θεά`, not `θέα`, now works for meaning checks and should stay covered;
 - `Troiae -> Troia` now works for meaning checks through a general Latin
-  `-ae -> -a` reader-form candidate and should stay covered;
+  `-ae -> -a` reader-form candidate, with a conservative local `-ae`
+  morphology fallback when source parsers have no row;
 - `Ἀχιλῆος -> Ἀχιλλεύς` now works in fresh runs through validated Greek epic
   `-ῆος -> -εύς` candidate generation and should stay covered;
 - `karma -> karman` is now handled when clear Heritage morphology supports the
   concept headword, and should stay covered by reader-eval.
-- remaining seed misses are strict-mode display gaps, especially Latin/Greek
-  morphology display.
+- Sanskrit compound morphology now preserves segment-level lemmas in Heritage
+  rows, so compounds such as `dharmakṣetre` can display `dharma -> dharma` and
+  `kṣetra -> kṣetra`.
+- Latin morphology display now reads Whitaker interpretation triples; Greek
+  `ἄειδε`, `θεὰ`, and `μῆνιν` show Diogenes form-feature rows.
+- local morphology fallbacks now cover the previous strict seed misses for
+  Latin `Troiae` and Greek `Ἀχιλῆος`; source-backed morphology remains the
+  higher-fidelity target.
 
 This milestone should use `reader-eval` fixtures and reports, not hardcoded
 exceptions for famous texts.

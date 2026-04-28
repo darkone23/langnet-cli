@@ -162,17 +162,46 @@ Report command:
 Current live checkpoint:
 
 - `just cli reader-eval --no-cache --translation-mode cache --output json`
-- strict grammar+meaning hit rate: 5/13
+- strict grammar+meaning hit rate: 13/13
 - meaning-only hit rate: 13/13
 - Sanskrit now passes all five seed tokens after display-form matching,
   no-bucket morphology fallback, and `karma -> karman` enrichment from clear
-  Heritage morphology. Latin has good meaning hits but lacks displayed
-  morphology; `Troiae` now reaches `troia` through a general Latin `-ae -> -a`
-  reader-form candidate. Greek `μῆνιν` and `θεὰ` now land on the intended
-  entries for meaning checks. Greek epic proper-name genitives such as
-  `Ἀχιλῆος` now reach validated `-εύς` headwords such as `Ἀχιλλεύς` when
-  Diogenes confirms the generated headword. Latin and Greek still lack
-  displayed morphology rows in the reader-eval fixture.
+  Heritage morphology. Heritage compound morphology rows now use segment-level
+  lemmas, so `dharmakṣetre` displays `kṣetra -> kṣetra` rather than stamping
+  every segment with the compound headword. Latin now shows morphology rows
+  from existing Whitaker interpretation triples, and `Troiae` reaches `troia`
+  for meaning through a general Latin `-ae -> -a` reader-form candidate.
+  Encounter now adds a conservative local `-ae` morphology row when source
+  parsers have no surface analysis but the reduction already resolves the
+  lemma. Greek `ἄειδε` and `θεὰ` now show
+  morphology rows from Diogenes form-feature triples. Greek surface-form
+  Diogenes parses now run as morphology-only companions when normalization
+  changes the token, so `μῆνιν` also shows `fem acc sg` morphology without
+  allowing fuzzy surface dictionary senses to pollute ranking. Greek epic
+  proper-name genitives such as `Ἀχιλῆος` reach validated `-εύς` headwords such
+  as `Ἀχιλλεύς` for meaning evidence when Diogenes confirms the generated
+  headword, and encounter now adds a conservative local epic-genitive
+  morphology row when source parsers have no surface analysis.
+
+Corpus expansion fixture:
+
+- `tests/fixtures/reader_eval_corpus_expansion.json`
+- covers Jerome/Vulgate John 1:1, Greek New Testament John 1:1, the Taittiriya
+  Upanishad invocation, and Taittiriya Samhita 1.1.1.
+- live checkpoint:
+  `just cli reader-eval --fixture tests/fixtures/reader_eval_corpus_expansion.json --db-path examples/debug/corpus-probes/corpus-reader-eval-4.duckdb --translation-mode off --output json`
+- strict grammar+meaning hit rate: 14/14
+- meaning-only hit rate: 14/14
+- This checkpoint verifies raw source evidence without cached translations. It
+  also covers Greek-script direct lookup (`ἀρχῇ`), Diogenes source-order
+  ranking (`θεόν`), Gaffiot source-order ranking (`erat`), and Sanskrit
+  morphology-fallback ranking (`tvā -> yuṣmad`). Encounter also uses ordered
+  morphology rows as preferred display lemmas, so ambiguous forms such as Latin
+  `principio` can lead with the analyzed noun `principium` without hiding the
+  alternate verb analysis.
+
+The full cached reader-eval checkpoint now passes 13/13 strict and 13/13
+meaning checks. This is a seed-fixture baseline, not a general release guarantee.
 
 Cache caveat:
 
@@ -228,6 +257,16 @@ Started:
 - Greek normalization now adds validated epic `-εύς` headword candidates for
   `-ῆος` genitives, so `Ἀχιλῆος` can reach the Achilles entry without a
   word-specific runtime branch.
+- Encounter morphology display now reads both direct `has_morphology` triples
+  and general form/interp feature triples, so existing Whitaker and Diogenes
+  morphology evidence counts for reader-eval strict mode.
+- Greek planning now preserves a morphology-only surface-form Diogenes parse
+  beside the canonical lookup when normalization changes the query, improving
+  reader-form morphology for forms such as `μῆνιν` without adding fuzzy
+  dictionary senses.
+- Heritage morphology projection now preserves segment-level lemmas in Sanskrit
+  compounds, improving learner display and provenance inspection without
+  adding collection-specific runtime exceptions.
 
 Sanskrit collection note: collection expansion should use the same discipline:
 add reusable alias/stem/compound rules backed by fixtures from the collection,
@@ -300,8 +339,8 @@ Dependencies:
 ## Current Recommended Queue
 
 1. Add reader-eval fixtures for the three classic openings.
-2. Fix `virumque`, `μῆνιν`, `θεὰ`, and `karma/karman` routing with accepted
-   tests.
+2. Fix `virumque`, keep `karma/karman` and `θεὰ` covered, and continue Greek
+   surface morphology routing with accepted tests.
 3. Implement compact gloss derivation/display for translated DICO/Gaffiot
    witnesses.
 4. Make cache-backed translations default enrichment when exact rows already

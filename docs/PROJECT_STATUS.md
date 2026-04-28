@@ -13,7 +13,7 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 
 | Area | Grade | Status |
 | --- | --- | --- |
-| Build and validation | A | `just lint-all` and `just test-fast` pass; current fast suite is 195 tests. |
+| Build and validation | A | `just lint-all` and `just test-fast` pass; current fast suite is over 220 tests. |
 | CLI surface | B+ | Commands exist; `encounter` is the current learner-facing path. DICO/Gaffiot translation modes are wired. Default output is still too source-first for learners. |
 | Planner/executor | B+ | Tool plans and staged execution are implemented. |
 | Claims/evidence | A- | Core handlers have fixture-backed claim contract coverage; CDSL/DICO/Gaffiot evidence paths are stronger. |
@@ -36,6 +36,12 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 - Learner output tests: snapshot-style coverage exists for representative Sanskrit CDSL, Sanskrit Heritage analysis, Latin Gaffiot, Greek Diogenes, DICO/Gaffiot translated-cache output, stale-normalization recovery, and multi-witness ranking in `encounter`.
 - Translation cache: schema/key helpers, demo cache writes, cache-hit projection into derived translation triples, explicit `encounter --translation-mode auto` cache-miss population, Gaffiot/DICO golden rows, and accepted `encounter` output for translated-cache hits.
 - Diagnostic fuzz audit: 50 words per language currently show 100% any-evidence coverage for Latin, Greek, and Sanskrit; Sanskrit Heritage is 50/50 for morphology evidence and 43/50 for gloss evidence.
+- Real-input fuzz probes saved under `examples/debug/fuzz_real_inputs_2026_04_28*`
+  show 100% tool-level hits for the sampled Latin, Greek, and Sanskrit classic
+  reader forms. These are diagnostic evidence, not release gates.
+- Sanskrit Heritage morphology now preserves segment-level lemmas in compound
+  rows, improving learner display and provenance inspection for Sanskrit
+  compounds.
 
 ## Current Gaps
 
@@ -43,8 +49,18 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 - Current `encounter` samples expose concrete learner-experience failures:
   Sanskrit can still leak CDSL source notation; Latin can show unrelated
   normalized candidates (`virumque` -> `virus`); Greek can still expose large
-  LSJ sections without a concise learner summary, even though validated Homeric
-  `-ῆος -> -εύς` routing now handles `Ἀχιλῆος -> Ἀχιλλεύς` in fresh runs.
+  LSJ sections without a concise learner summary. Fresh reader-eval now reaches
+  13/13 meaning hits and 13/13 strict hits on the seed classic-opening fixture.
+  The last two strict misses were morphology-only gaps for Latin `Troiae` and
+  Greek `Ἀχιλῆος`; encounter now covers them with conservative local fallback
+  morphology rows when the lexical reduction has already resolved the lemma.
+- The first corpus-expansion fixture covers Vulgate John 1:1, Greek New
+  Testament John 1:1, the Taittiriya Upanishad invocation, and Taittiriya
+  Samhita 1.1.1. It currently passes 14/14 strict and 14/14 meaning checks with
+  `--translation-mode off`, exercising raw Gaffiot/DICO/CDSL/Diogenes evidence.
+  The latest learner-display pass uses ordered morphology lemmas to rank
+  meanings, improving cases such as `principio -> principium` while preserving
+  competing analyses for inspection.
 - Semantic reduction is exact-match only; no synonym merging, mature sense ranking, or structured learner-display gloss parsing yet.
 - Evidence inspection works in text and JSON; `OUTPUT_GUIDE.md` now includes Sanskrit CDSL and DICO/Gaffiot translation-cache walkthroughs.
 - Fuzz recipes are diagnostic only; query/compare modes still reflect older API assumptions. The current 50-word audit under `examples/debug/fuzz_audit_2026_04_27/` is useful evidence coverage, not a release gate.
@@ -58,8 +74,8 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 1. Use `docs/BASELINE_AND_ROADMAP.md` for the current working checkpoint and next concrete steps.
 2. Use `reader-eval` to measure the seed classic-opening fixture and capture
    hit-rate changes as fixes land.
-3. Fix remaining high-impact reader misses: displayed morphology for
-   Latin/Greek forms and `virumque` component display/ranking.
+3. Replace local morphology fallback rows with source-backed morphology where
+   possible, and improve `virumque` component display/ranking.
 4. Add a compact learner-gloss layer over full translated DICO/Gaffiot evidence.
 5. Run `just validate-stabilization` for each source/evidence/display slice before taking the next one.
 
@@ -80,6 +96,7 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 - Active implementation plan: `docs/plans/active/infra/design-to-runtime-roadmap.md`
 - Stabilization planning session: `docs/plans/active/infra/stabilization-planning-session.md`
 - Learner encounter roadmap: `docs/plans/active/pedagogy/learner-encounter-roadmap.md`
+- Real-input fuzzing plan: `docs/plans/active/pedagogy/real-input-fuzzing-roadmap.md`
 - Goals: `docs/GOALS.md`
 - Pedagogical philosophy: `docs/PEDAGOGICAL_PHILOSOPHY.md`
 - Architecture: `docs/technical/ARCHITECTURE.md`

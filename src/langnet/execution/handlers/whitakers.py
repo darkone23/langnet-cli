@@ -68,6 +68,7 @@ class WhitakerWord(TypedDict, total=False):
     raw_lines: list[str]
     codeline: WhitakerCodeline
     senses: list[str]
+    notes: list[str]
     unknown: list[str]
 
 
@@ -415,7 +416,7 @@ def _process_chunk(
         lines.append(txt)
         if line_type == "sense":
             data = SensesReducer.reduce(txt)
-            word.update(data)
+            _merge_sense_data(word, data)
         elif line_type == "term-facts":
             terms.append(FactsReducer.reduce(txt))
         elif line_type == "term-code":
@@ -426,6 +427,23 @@ def _process_chunk(
     if not unknown:
         word.pop("unknown", None)
     return word if lines else None
+
+
+def _merge_sense_data(word: WhitakerWord, data: Mapping[str, object]) -> None:
+    """Accumulate multi-line Whitaker senses without clobbering earlier lines."""
+    senses_val = data.get("senses")
+    if isinstance(senses_val, Sequence) and not isinstance(senses_val, (str, bytes)):
+        senses = word.setdefault("senses", [])
+        for sense in senses_val:
+            if isinstance(sense, str) and sense not in senses:
+                senses.append(sense)
+
+    notes_val = data.get("notes")
+    if isinstance(notes_val, Sequence) and not isinstance(notes_val, (str, bytes)):
+        notes = word.setdefault("notes", [])
+        for note in notes_val:
+            if isinstance(note, str) and note not in notes:
+                notes.append(note)
 
 
 def _fixup_word(word: WhitakerWord) -> WhitakerWord:
@@ -607,13 +625,14 @@ def _build_sense_triples(
 ) -> list[dict[str, object]]:
     """Build triples for word senses."""
     triples: list[dict[str, object]] = []
-    for sense in senses:
+    for index, sense in enumerate(senses):
         sense_txt = sense.strip()
         if not sense_txt:
             continue
+        sense_evidence = {**base_evidence, "source_order": index}
         sense_anchor = _sense_anchor(lex_anchor, sense_txt)
-        triples.append(_make_triple(lex_anchor, predicates.HAS_SENSE, sense_anchor, base_evidence))
-        triples.append(_make_triple(sense_anchor, predicates.GLOSS, sense_txt, base_evidence))
+        triples.append(_make_triple(lex_anchor, predicates.HAS_SENSE, sense_anchor, sense_evidence))
+        triples.append(_make_triple(sense_anchor, predicates.GLOSS, sense_txt, sense_evidence))
     return triples
 
 

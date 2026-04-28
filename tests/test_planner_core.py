@@ -187,6 +187,32 @@ def test_greek_plan_uses_parse_only() -> None:
     assert any(c.tool.startswith("claim.cts_index") for c in plan.tool_calls)
 
 
+def test_greek_plan_adds_surface_morphology_parse_when_normalized() -> None:
+    normalized = NormalizedQuery(
+        original="μῆνιν",
+        language=LanguageHint.LANGUAGE_HINT_GRC,
+        candidates=[
+            CanonicalCandidate(
+                lemma="μῆνις",
+                encodings={"accentless": "μηνις"},
+                sources=["diogenes_parse"],
+            ),
+        ],
+        normalizations=[],
+    )
+
+    plan = ToolPlanner(PlannerConfig(max_candidates=2)).build(normalized)
+
+    canonical_call = next(c for c in plan.tool_calls if c.call_id == "diogenes-parse-1")
+    assert canonical_call.params.get("q") == "μηνις"
+    surface_call = next(c for c in plan.tool_calls if c.call_id == "diogenes-surface-parse-1")
+    assert surface_call.params.get("q") == "μῆνιν"
+    surface_claim = next(
+        c for c in plan.tool_calls if c.call_id == "claim-diogenes-surface-morph-1"
+    )
+    assert surface_claim.params.get("morphology_only") == "true"
+
+
 def test_plan_hash_is_stable_for_same_input() -> None:
     """KNOWN ISSUE: Plan hash may not be stable due to protobuf MessageToDict serialization."""
     planner = ToolPlanner()

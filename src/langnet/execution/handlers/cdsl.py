@@ -63,20 +63,44 @@ _CDSL_TOKEN_RE = re.compile(
 )
 _CDSL_SLP1_MARKERS = set("AIUFXEOKGNCJYRWQTDPSMH")
 _MIN_MARKED_CDSL_TOKEN_LEN = 2
-_CDSL_SOURCE_ABBREVIATIONS = {
-    "AV",
-    "Bhag",
-    "ChUp",
-    "L",
-    "MBh",
-    "Mn",
-    "PadmaP",
-    "RV",
-    "Suśr",
-    "Vop",
-    "Yājñ",
-    "NārP",
-}
+_MAX_SHORT_CITATION_WORDS = 3
+_CDSL_SOURCE_ABBREVIATIONS: frozenset[str] = frozenset(
+    {
+        "AV",
+        "Bhag",
+        "Bhāṣāp",
+        "Bhartṛ",
+        "Bg",
+        "Buddh",
+        "ChUp",
+        "Hit",
+        "IW",
+        "Kāv",
+        "Ku",
+        "L",
+        "MBh",
+        "Me",
+        "Mn",
+        "Ms",
+        "PadmaP",
+        "Pañcat",
+        "Pāṇ",
+        "R",
+        "Ragh",
+        "RPrāt",
+        "RV",
+        "Ś",
+        "ŚBr",
+        "Tarkas",
+        "Uṇ",
+        "Up",
+        "VS",
+        "Suśr",
+        "Vop",
+        "Yājñ",
+        "NārP",
+    }
+)
 _HERITAGE_S_DOT_PLACEHOLDER = "\u0000"
 
 
@@ -228,6 +252,112 @@ def cdsl_display_gloss(
         source_slp1=source_slp1,
         display_iast=display_iast,
     )
+
+
+def cdsl_learner_gloss(
+    text: str,
+    *,
+    source_slp1: str = "",
+    display_iast: str = "",
+) -> str:
+    """
+    Build a short display helper from a CDSL source entry.
+
+    The raw gloss remains the evidence-bearing object. This helper only removes
+    leading headword/grammar/source scaffolding when a cleaner meaning phrase is
+    visible in the same source text.
+    """
+    display = cdsl_display_gloss(text, source_slp1=source_slp1, display_iast=display_iast)
+    candidates = [
+        _strip_cdsl_learner_noise(part, display_iast=display_iast, source_slp1=source_slp1)
+        for part in display.split(";")
+    ]
+    usable = [candidate for candidate in candidates if _is_cdsl_learner_gloss_candidate(candidate)]
+    if not usable:
+        return display
+    return "; ".join(usable[:2])
+
+
+def _strip_cdsl_learner_noise(text: str, *, display_iast: str = "", source_slp1: str = "") -> str:
+    cleaned = re.sub(r"^\s*\d+\.\s*", "", text).strip()
+    first_match = re.match(r"^(\S+)\s+", cleaned)
+    if first_match:
+        first = first_match.group(1).strip(".,")
+        first_key = _clean_cdsl_slp1_for_display(first).casefold()
+        source_key = _clean_cdsl_slp1_for_display(source_slp1).casefold()
+        if (
+            display_iast
+            and first.casefold() == display_iast.casefold()
+            or source_key
+            and first_key == source_key
+            or _token_looks_like_cdsl_slp1(first)
+            and first.strip(".") not in _CDSL_SOURCE_ABBREVIATIONS
+        ):
+            cleaned = cleaned[first_match.end() :].strip()
+    cleaned = _strip_cdsl_grammar_prefix(cleaned)
+    cleaned = _strip_leading_parentheticals(cleaned)
+    cleaned = _strip_cdsl_grammar_prefix(cleaned)
+    cleaned = re.sub(r"^,\s*", "", cleaned).strip()
+    cleaned = _strip_cdsl_trailing_source_tail(cleaned)
+    return cleaned.rstrip(" ,")
+
+
+def _strip_cdsl_grammar_prefix(text: str) -> str:
+    return re.sub(r"^(?:m|f|n|a|ind|v|cl|nom|acc|loc|gen|dat|instr)\.\s+", "", text)
+
+
+def _strip_leading_parentheticals(text: str) -> str:
+    cleaned = text.strip()
+    while cleaned.startswith("("):
+        depth = 0
+        end_index: int | None = None
+        for index, char in enumerate(cleaned):
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0:
+                    end_index = index
+                    break
+        if end_index is None:
+            return cleaned
+        cleaned = cleaned[end_index + 1 :].lstrip(" .,")
+    return cleaned
+
+
+def _strip_cdsl_trailing_source_tail(text: str) -> str:
+    sorted_abbreviations: list[str] = sorted(
+        (str(abbreviation) for abbreviation in _CDSL_SOURCE_ABBREVIATIONS),
+        key=lambda abbreviation: len(abbreviation),
+        reverse=True,
+    )
+    abbreviations = "|".join(re.escape(abbreviation) for abbreviation in sorted_abbreviations)
+    citation_token = (
+        rf"(?:{abbreviations})\.?|"
+        r"[A-ZĀ-ŽŚ][A-Za-zĀ-žŚśāīūṛṝḷḹṅñṇṭḍṣṃḥ]+\.?|"
+        r"&c\.|\([^)]*\)|\d+|[, ]+"
+    )
+    return re.sub(
+        rf",\s*(?:{citation_token})+$",
+        "",
+        text,
+    ).strip()
+
+
+def _is_cdsl_learner_gloss_candidate(text: str) -> bool:
+    if not text:
+        return False
+    lowered = text.lower()
+    if lowered.startswith(("cf.", "see ", "also ", "ifc.", "opp.", "v. ")):
+        return False
+    if "," not in text and "." in text and len(text.split()) <= _MAX_SHORT_CITATION_WORDS:
+        return False
+    if _strip_cdsl_trailing_source_tail(f"meaning, {text}") == "meaning":
+        return False
+    tokens = _source_abbreviation_tokens(text)
+    if tokens and all(token in _CDSL_SOURCE_ABBREVIATIONS for token in tokens):
+        return False
+    return any(ch.isalpha() for ch in text)
 
 
 def _source_abbreviation_tokens(text: str) -> list[str]:
@@ -873,6 +1003,11 @@ def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
                     source_slp1=display_slp1,
                     display_iast=display_iast,
                 )
+                learner_gloss = cdsl_learner_gloss(
+                    gloss,
+                    source_slp1=display_slp1,
+                    display_iast=display_iast,
+                )
                 evidence = _make_base_evidence(call, derivation, claim_id, source_ref_str)
                 sense_anchor = _sense_anchor(subject, gloss, source_ref_str)
                 display_metadata = _trim_evidence(
@@ -897,6 +1032,7 @@ def claim_sense(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
                             {
                                 "source_ref": source_ref_str,
                                 "display_gloss": display_gloss,
+                                "learner_gloss": learner_gloss,
                                 "source_entry": dict(source_entry),
                                 "source_segments": list(source_segments),
                                 "source_notes": dict(source_notes) if source_notes else None,

@@ -73,11 +73,18 @@ Current examples show that evidence existence is not the same as learner quality
 source strings, `lupus` can show unrelated normalized Latin candidates, and
 `logos` can expose large LSJ sections without a concise sense summary.
 Recent reader probes produced concrete high-priority fixes: `μῆνιν` now routes
-to `μῆνις`, `θεὰ` now routes to `θεά`, `karma` can enrich toward `karman` when
-Heritage morphology supports it, `Troiae` can reach `Troia`, and fresh Greek
-runs can route epic `-ῆος` genitives such as `Ἀχιλῆος` to validated `-εύς`
-headwords. Remaining form-hygiene work includes `virumque` component
-display/ranking and Latin/Greek morphology display in learner output.
+to `μῆνις` and carries surface morphology, `θεὰ` now routes to `θεά`, `karma`
+can enrich toward `karman` when Heritage morphology supports it, `Troiae` can
+reach `Troia` for meaning and local morphology fallback, and fresh Greek runs
+can route epic `-ῆος` genitives such as
+`Ἀχιλῆος` to validated `-εύς` headwords. Encounter now displays morphology rows
+from existing Whitaker interpretation triples and Diogenes form-feature triples.
+Remaining form-hygiene work includes `virumque` component display/ranking and
+source-backed morphology for fallback-covered forms such as Latin `Troiae` and
+Greek `Ἀχιλῆος`, where current source tools can reach the lexical entry but
+not a structured surface analysis row. Sanskrit compound morphology
+rows now preserve segment-level lemmas, so Heritage analyses no longer stamp
+every segment with the compound headword.
 
 ## Recommended Next Steps
 

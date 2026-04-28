@@ -1,0 +1,128 @@
+{
+  "description": "Reader-oriented evaluation targets from additional corpus openings: Jerome's Vulgate, the Greek New Testament, and Taittiriya Vedic material.",
+  "version": 1,
+  "passages": [
+    {
+      "id": "vulgate_john_1_1",
+      "language": "lat",
+      "work": "Jerome, Vulgate",
+      "citation": "John 1:1",
+      "tokens": [
+        {
+          "surface": "principio",
+          "expected_lemmas": ["principium"],
+          "expected_gloss_terms": ["beginning", "commencement", "origin"],
+          "expect_morphology": true,
+          "notes": "In principio should recover the second-declension noun even though the surface also admits a verb."
+        },
+        {
+          "surface": "erat",
+          "expected_lemmas": ["sum"],
+          "expected_gloss_terms": ["be", "to be", "exist"],
+          "expect_morphology": true,
+          "known_bad_gloss_terms": ["= eum"],
+          "notes": "Should prefer the finite form of sum/esse over the adjacent archaic Gaffiot entry."
+        },
+        {
+          "surface": "verbum",
+          "expected_lemmas": ["verbum"],
+          "expected_gloss_terms": ["word", "speech", "expression"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "Deum",
+          "expected_lemmas": ["deus"],
+          "expected_gloss_terms": ["God", "god", "divinity"],
+          "expect_morphology": true
+        }
+      ]
+    },
+    {
+      "id": "greek_nt_john_1_1",
+      "language": "grc",
+      "work": "Greek New Testament",
+      "citation": "John 1:1",
+      "tokens": [
+        {
+          "surface": "ἀρχῇ",
+          "expected_lemmas": ["arxh", "ἀρχή"],
+          "expected_gloss_terms": ["beginning", "origin"],
+          "expect_morphology": true,
+          "notes": "Greek-script reader input should use Diogenes directly rather than stalling in normalization."
+        },
+        {
+          "surface": "ἦν",
+          "expected_lemmas": ["eimi", "εἰμί"],
+          "expected_gloss_terms": ["to be", "is", "happen"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "λόγος",
+          "expected_lemmas": ["logos", "λόγος"],
+          "expected_gloss_terms": ["account", "word", "reason"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "θεόν",
+          "expected_lemmas": ["qeos", "θεός"],
+          "expected_gloss_terms": ["God", "Deity", "god"],
+          "expect_morphology": true
+        }
+      ]
+    },
+    {
+      "id": "taittiriya_upanishad_invocation",
+      "language": "san",
+      "work": "Taittiriya Upanishad",
+      "citation": "Siksa Valli invocation",
+      "tokens": [
+        {
+          "surface": "śam",
+          "expected_lemmas": ["śam", "śam_2"],
+          "expected_gloss_terms": ["blessing", "welfare", "happiness", "bonheur"],
+          "expect_morphology": true,
+          "notes": "The auspicious particle should remain visible even when sam is also returned."
+        },
+        {
+          "surface": "mitraḥ",
+          "expected_lemmas": ["mitra"],
+          "expected_gloss_terms": ["Mitra", "friend", "ami"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "varuṇaḥ",
+          "expected_lemmas": ["varuṇa"],
+          "expected_gloss_terms": ["Varuṇa", "Sky", "ocean"],
+          "expect_morphology": true
+        }
+      ]
+    },
+    {
+      "id": "taittiriya_samhita_1_1_1",
+      "language": "san",
+      "work": "Taittiriya Samhita",
+      "citation": "1.1.1",
+      "tokens": [
+        {
+          "surface": "iṣe",
+          "expected_lemmas": ["iṣa", "iṣ"],
+          "expected_gloss_terms": ["refreshment", "sap", "strength", "rafraîchissement"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "ūrje",
+          "expected_lemmas": ["ūrja", "ūrj"],
+          "expected_gloss_terms": ["strength", "power", "vigour", "force"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "tvā",
+          "expected_lemmas": ["yuṣmad", "tvad"],
+          "expected_gloss_terms": ["2nd personal pron", "acc. tvā", "you"],
+          "expect_morphology": true,
+          "notes": "The morphology fallback should expose the pronoun lemma even when tva dictionary material also appears."
+        }
+      ]
+    }
+  ]
+}

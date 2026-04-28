@@ -294,6 +294,17 @@ def test_cdsl_display_gloss_preserves_citation_segments() -> None:
     assert "RV" in display
 
 
+def test_cdsl_learner_gloss_compacts_source_entry_without_dropping_raw_gloss() -> None:
+    text = (
+        "karman n. ( A m. , L. ), (√ kṛ , Uṇ. iv, 144 ), "
+        "act, action, performance, business, RV. ; AV. ; ŚBr. ; MBh. &c."
+    )
+
+    assert cdsl.cdsl_learner_gloss(text, source_slp1="karman", display_iast="karman") == (
+        "act, action, performance, business"
+    )
+
+
 def test_cdsl_claim_preserves_raw_gloss_but_adds_display_gloss() -> None:
     fetch_call = make_call(
         "fetch.cdsl",
@@ -360,6 +371,10 @@ def test_cdsl_claim_preserves_raw_gloss_but_adds_display_gloss() -> None:
     assert gloss["metadata"]["display_gloss"] == (
         "1. mokṣa m. moksha, liberation; release from worldly existence; cf. MBh. ; PadmaP. ; RV."
     )
+    expected_learner_gloss = "moksha, liberation; release from worldly existence"
+    assert gloss["metadata"]["learner_gloss"] == expected_learner_gloss, gloss["metadata"][
+        "learner_gloss"
+    ]
     assert gloss["metadata"]["source_segments"] == [
         {
             "index": 0,
