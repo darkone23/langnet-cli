@@ -30,6 +30,7 @@ def test_cdsl_claim_preserves_source_ref_and_evidence() -> None:
             "lnum": "123",
             "plain_text": "fire; sacrificial fire",
             "body": "<H><s>agni</s><lex>m.</lex></H>",
+            "page_ref": "001-a",
         }
     ]
     raw = RawResponseEffect(
@@ -89,6 +90,7 @@ def test_cdsl_claim_preserves_source_ref_and_evidence() -> None:
         "key_iast": "agni",
         "key2_slp1": "agni",
         "key2_iast": "agni",
+        "page_ref": "001-a",
     }
     assert metadata["source_segments"] == [
         {
@@ -233,6 +235,68 @@ def test_cdsl_slp1_iast_round_trip_covers_common_sanskrit_letters() -> None:
     assert "SrAdDa" in cdsl._candidate_keys("zrAddha")
     assert "SradDA" in cdsl._candidate_keys("śraddhā")
     assert cdsl._to_slp1("vi.s.nu") == "vizRu"
+
+
+def test_cdsl_body_metadata_uses_standard_sanskrit_case_numbering() -> None:
+    assert cdsl._parse_body_metadata(
+        '<H><s>Darmam</s><lex>m.</lex> accusative singular <info lex="m" n="sg"/></H>'
+    ) == {
+        "gender": ["masculine"],
+        "pos_hint": "m",
+        "case": "2",
+        "number": "sg",
+        "grammar_tags": {"number_marker": "sg"},
+        "sanskrit_form": "Darmam",
+        "sanskrit_form_slp1": "Darmam",
+        "sanskrit_form_iast": "dharmam",
+    }
+
+    assert (
+        cdsl._parse_body_metadata("<H><s>DarmAt</s><lex>m.</lex> ablative singular</H>")["case"]
+        == "5"
+    )
+    assert (
+        cdsl._parse_body_metadata("<H><s>Darmasya</s><lex>m.</lex> genitive singular</H>")["case"]
+        == "6"
+    )
+    assert (
+        cdsl._parse_body_metadata("<H><s>Darme</s><lex>m.</lex> locative singular</H>")["case"]
+        == "7"
+    )
+    assert (
+        cdsl._parse_body_metadata("<H><s>Darma</s><lex>m.</lex> vocative singular</H>")["case"]
+        == "8"
+    )
+
+
+def test_cdsl_body_metadata_parses_compound_info_gender_sets() -> None:
+    grammar = cdsl._parse_body_metadata(
+        '<H><s>agni</s><lex>mfn.</lex> all-gender form <info lex="m:f#n"/></H>'
+    )
+    assert grammar["gender"] == ["masculine", "feminine", "neuter"]
+    assert grammar["pos_hint"] == "mfn"
+
+
+def test_cdsl_body_metadata_captures_cologne_xml_lessons() -> None:
+    grammar = cdsl._parse_body_metadata(
+        "<body><s>agni</s><lex>m. <ab>comp.</ab><ab>Uṇ.</ab></lex> "
+        '(√ <s>ag</s>), fire; see <ls>L.</ls> and <ls n="TS.">1.2</ls>; '
+        'cf. <s1>agnI</s1><info lex="m:f#A:n"/></body>'
+    )
+
+    assert grammar["gender"] == ["masculine", "feminine", "neuter"]
+    assert grammar["sanskrit_form"] == "agni"
+    assert grammar["etymology"] == {"type": "verb_root", "root": "ag"}
+    assert grammar["grammar_tags"] == {
+        "abbreviations": ["comp.", "Uṇ."],
+        "compound": True,
+        "declension": "A",
+    }
+    assert grammar["references"] == [
+        {"source": "L.", "type": "lexicon"},
+        {"source": "TS. 1.2", "type": "lexicon"},
+        {"source": "agnI", "type": "cross_reference"},
+    ]
 
 
 def test_cdsl_display_text_converts_source_tokens_without_rewriting_english() -> None:

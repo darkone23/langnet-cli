@@ -20,7 +20,13 @@ from langnet.execution.effects import (
     stable_effect_id,
 )
 from langnet.execution.handlers.local_raw import local_raw_response_id
-from langnet.execution.source_text import display_text, source_segments_from_text, trim_empty
+from langnet.execution.source_text import (
+    compact_source_gloss,
+    display_text,
+    learner_segments_from_text,
+    source_segments_from_text,
+    trim_empty,
+)
 from langnet.normalizer.utils import strip_accents
 
 
@@ -141,6 +147,8 @@ def gaffiot_entry_triples(entry: dict) -> list[dict]:
         segment_type="definition_segment",
         labels=["definition"],
     )
+    learner_gloss = compact_source_gloss(gloss)
+    learner_segments = learner_segments_from_text(gloss)
 
     return [
         {
@@ -153,14 +161,18 @@ def gaffiot_entry_triples(entry: dict) -> list[dict]:
             "subject": sense_anchor,
             "predicate": predicates.GLOSS,
             "object": display_gloss,
-            "metadata": {
-                "evidence": evidence,
-                "source_lang": "fr",
-                "source_ref": source_ref,
-                "display_gloss": display_gloss,
-                "source_entry": source_entry,
-                "source_segments": source_segments,
-            },
+            "metadata": trim_empty(
+                {
+                    "evidence": evidence,
+                    "source_lang": "fr",
+                    "source_ref": source_ref,
+                    "display_gloss": display_gloss,
+                    "learner_gloss": learner_gloss,
+                    "learner_segments": learner_segments,
+                    "source_entry": source_entry,
+                    "source_segments": source_segments,
+                }
+            ),
         },
     ]
 

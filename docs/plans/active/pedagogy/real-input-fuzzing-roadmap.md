@@ -79,6 +79,20 @@ the default learner display is already good.
 - Preferred-lemma matching is transliteration-tolerant for common Sanskrit
   display variants, so DICO remains preferred for same-headword cases such as
   `varuṇaḥ` / `varu.na` and `ūrje` / `uurja`.
+- `encounter` now has a compact learner-gloss display pass. It prefers parsed
+  cached glosses, existing learner-gloss metadata, translated segment display
+  text, and then conservative source-entry compaction. When that compact line
+  differs from the full dictionary evidence, the full evidence line remains
+  visible.
+- The compact-gloss implementation was refactored during the quality pass into
+  named limits and compiled patterns, keeping the display logic inspectable and
+  source-backed rather than word-specific.
+- The compact-gloss logic now lives in the shared source-text layer. DICO and
+  Gaffiot claim triples emit `learner_gloss` and typed `learner_segments`, so
+  the terminal display consumes source metadata instead of rediscovering all
+  structure at the end of the pipeline. The Sanskrit `dharma` live probe now
+  shows `loi, condition, nature propre` with the full DICO entry retained as
+  evidence.
 
 ## Active Work Queue
 
@@ -161,6 +175,87 @@ Validation:
 ```bash
 just autobot fuzz list
 just fuzz-tools
+just validate-stabilization
+```
+
+### 5. Compact Gloss Source Structuring
+
+Goal: move from conservative display compaction to typed learner segments while
+preserving source accountability.
+
+Tasks:
+
+- Extend source-specific segment extraction tests beyond the first DICO/Gaffiot
+  learner summary pass, especially for long CDSL and Diogenes entries.
+- Store short gloss, grammar preamble, examples/citations, and full evidence as
+  distinct metadata where the source format makes that reliable.
+- Keep the current compact display as a fallback for unstructured entries, not
+  as the long-term semantic model.
+
+Validation:
+
+```bash
+just test test_cli_encounter_output test_claim_contracts
+just cli reader-eval --fixture tests/fixtures/reader_eval_corpus_expansion.json --translation-mode off --output json
+just validate-stabilization
+```
+
+### 6. Dictionary Entry Grammar Fuzzing
+
+Goal: treat dictionary-entry parsing as a grammar-and-classification program,
+not as a pile of one-off string rules.
+
+Current status:
+
+- `entry-analyze` now exposes a diagnostic entry-analysis surface for raw
+  dictionary entries.
+- DICO and Gaffiot have initial Lark entry-shell grammars.
+- Diogenes/Lewis entry analysis reuses the existing `diogenes_entry.lark`
+  parser.
+- `tests/fixtures/source_entry_analysis_fuzz.json` starts a deterministic
+  corpus covering DICO, Gaffiot, Diogenes/Lewis, and a CDSL fallback case.
+
+Dictionary tracks:
+
+- **DICO / Sanskrit-French:** parse headword, bracketed form, grammar markers,
+  first definition, continuations, cross-references, and bracketed source
+  references. Keep French prose classification separate from the entry shell.
+- **Gaffiot / Latin-French:** parse morphology preamble, numbered senses,
+  example tails, author citations, and parallel example separators. Expect high
+  ambiguity and use Earley where needed.
+- **Diogenes / Lewis & Short / LSJ:** reuse and extend existing Lark grammar;
+  fuzz Latin and Greek entries separately because citation and morphology
+  conventions differ.
+- **CDSL / Sanskrit dictionaries:** plan a dedicated grammar for source-note
+  suffixes and grammar prefixes, but continue preserving the existing XML/HTML
+  source structure. CDSL is the highest Sanskrit priority because long entries
+  can mix meaning, grammar, compounds, source abbreviations, and history.
+- **Whitaker's Words:** keep current line reducers as the source of truth for
+  now; consider grammar-backed analysis only after the dictionary/facts/senses
+  reducers have fixture fuzz coverage.
+- **Heritage DICO links:** parse linked DICO dictionary entries through the DICO
+  track. Keep Heritage morphology and dictionary-entry parsing as separate
+  evidence classes.
+
+Fuzzing policy:
+
+- Prefer deterministic corpus fuzzing first: real entry strings, source labels,
+  and minimum invariants such as "must parse", "must preserve raw text", "must
+  extract this source reference", or "must not treat this source note as a
+  learner gloss".
+- Add live/backend fuzzing only as diagnostic output under `examples/debug/`.
+  Live variation should not gate the test suite.
+- Every corpus case should preserve raw evidence even when grammar parsing
+  fails.
+- New grammars must expose parse status and parser name in diagnostic output so
+  failures are measurable.
+
+Validation:
+
+```bash
+just test test_source_text_analysis test_diogenes_parser test_french_parser test_cdsl_triples
+just cli entry-analyze --source-tool gaffiot --output json \
+  "'ĭī, n. (princeps), 1 commencement : principio Cic. Off. 1, 11'"
 just validate-stabilization
 ```
 

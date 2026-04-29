@@ -101,16 +101,6 @@ fuzz-compare:
 fuzz-all:
     just fuzz-tools
 
-# Read V1 codesketch implementations
-read-codesketch-diogenes:
-    cat ./codesketch/src/langnet/diogenes/core.py
-
-read-codesketch-whitakers:
-    cat ./codesketch/src/langnet/whitakers_words/core.py
-
-read-codesketch-cltk:
-    cat ./codesketch/src/langnet/classics_toolkit/core.py
-
 # Parse Diogenes HTML and dump the raw parsed JSON (pre-triples). Optional endpoint override.
 diogenes-parse lang word endpoint="":
     devenv shell -- bash -c 'langnet-cli parse diogenes "$@"' _ "{{lang}}" "{{word}}" --opt "{{endpoint}}" --no-normalize --format json

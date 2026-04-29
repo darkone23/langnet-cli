@@ -1,8 +1,0 @@
-<div>
-  <table>
-    <tr>
-      <td>yoga</td>
-      <td>voc. sg. masc.</td>
-    </tr>
-  </table>
-</div>

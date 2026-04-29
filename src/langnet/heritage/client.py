@@ -31,7 +31,7 @@ class HeritageHTTPClient:
     """
     Minimal Heritage Platform client focused on canonicalization.
 
-    This is a thin port of the codesketch implementation: it uses sktsearch to
+    This is a thin port of the earlier implementation: it uses sktsearch to
     retrieve canonical Velthuis/Devanagari forms for bare ASCII/HK inputs.
     """
 

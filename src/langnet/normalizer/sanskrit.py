@@ -293,17 +293,17 @@ class SanskritNormalizer(LanguageNormalizer):
         sanscript = self._load_sanscript_module()
         if sanscript is not None:
             try:
-                src_scheme = (
-                    sanscript.HK if source_encoding in {ENC_ASCII, ENC_HK} else sanscript.VELTHUIS
+                encodings[ENC_SLP1] = sanscript.transliterate(
+                    canonical, sanscript.VELTHUIS, sanscript.SLP1
                 )
-
-                encodings[ENC_SLP1] = sanscript.transliterate(canonical, src_scheme, sanscript.SLP1)
-                encodings[ENC_IAST] = sanscript.transliterate(canonical, src_scheme, sanscript.IAST)
+                encodings[ENC_IAST] = sanscript.transliterate(
+                    canonical, sanscript.VELTHUIS, sanscript.IAST
+                )
                 encodings[ENC_DEVANAGARI] = sanscript.transliterate(
-                    canonical, src_scheme, sanscript.DEVANAGARI
+                    canonical, sanscript.VELTHUIS, sanscript.DEVANAGARI
                 )
                 encodings[ENC_HK] = sanscript.transliterate(
-                    canonical, src_scheme, sanscript.HK
+                    canonical, sanscript.VELTHUIS, sanscript.HK
                 ).lower()
 
                 steps.append(
@@ -458,18 +458,24 @@ class SanskritNormalizer(LanguageNormalizer):
         return [v for v in variants if v]
 
     def _detect_encoding(self, text: str) -> str:
+        encoding = ENC_ASCII
         if any(DEVANAGARI_UNICODE_START <= ord(c) <= DEVANAGARI_UNICODE_END for c in text):
-            return ENC_DEVANAGARI
+            encoding = ENC_DEVANAGARI
+        elif self._contains_iast(text):
+            encoding = ENC_IAST
+        elif self._looks_like_velthuis(text):
+            encoding = ENC_VELTHUIS
+        elif "sh" not in text.lower():
+            detected_encoding = self._detect_with_library(text)
+            if detected_encoding == ENC_HK and any(marker in text for marker in "RN"):
+                encoding = ENC_HK
+            elif self._is_slp1_compatible(text):
+                encoding = ENC_SLP1
+            elif detected_encoding != ENC_ASCII:
+                encoding = detected_encoding
+        return encoding
 
-        if self._contains_iast(text):
-            return ENC_IAST
-
-        if self._looks_like_velthuis(text):
-            return ENC_VELTHUIS
-
-        if self._is_slp1_compatible(text):
-            return ENC_SLP1
-
+    def _detect_with_library(self, text: str) -> str:
         detected_encoding = ENC_ASCII
         detect_module = self._load_detect_module()
         if detect_module is not None:
@@ -507,19 +513,46 @@ class SanskritNormalizer(LanguageNormalizer):
             return False
         return any(c.isupper() for c in text)
 
-    def _to_velthuis(self, text: str, encoding: str, steps: list[NormalizationStep]) -> str:
-        if encoding in {ENC_ASCII, ENC_HK}:
-            velthuis = text.replace("Sh", "S").replace("sh", "z").lower()
-            if velthuis != text.lower():
-                steps.append(
-                    NormalizationStep(
-                        operation="to_heritage_velthuis",
-                        input=text,
-                        output=velthuis,
-                        tool="ascii_to_velthuis_map",
-                    )
+    def _ascii_to_velthuis(self, text: str, steps: list[NormalizationStep]) -> str:
+        velthuis = text.replace("Sh", "S").replace("sh", "z").lower()
+        if velthuis != text.lower():
+            steps.append(
+                NormalizationStep(
+                    operation="to_heritage_velthuis",
+                    input=text,
+                    output=velthuis,
+                    tool="ascii_to_velthuis_map",
                 )
-            return velthuis
+            )
+        return velthuis
+
+    def _hk_to_velthuis(self, text: str, steps: list[NormalizationStep]) -> str | None:
+        sanscript = self._load_sanscript_module()
+        if sanscript is None:
+            return None
+        try:
+            velthuis = sanscript.transliterate(text, sanscript.HK, sanscript.VELTHUIS).lower()
+        except Exception:  # noqa: BLE001
+            return None
+        if velthuis != text:
+            steps.append(
+                NormalizationStep(
+                    operation="to_heritage_velthuis",
+                    input=text,
+                    output=velthuis,
+                    tool="indic_transliteration.sanscript",
+                )
+            )
+        return velthuis
+
+    def _to_velthuis(self, text: str, encoding: str, steps: list[NormalizationStep]) -> str:
+        if encoding == ENC_ASCII:
+            return self._ascii_to_velthuis(text, steps)
+
+        if encoding == ENC_HK:
+            converted = self._hk_to_velthuis(text, steps)
+            if converted is not None:
+                return converted
 
         if encoding in {ENC_DEVANAGARI, ENC_IAST}:
             vel = to_heritage_velthuis(text).lower()

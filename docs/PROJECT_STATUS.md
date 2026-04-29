@@ -5,7 +5,7 @@
 
 ## Summary
 
-LangNet has crossed the foundation threshold. The CLI, planner, staged executor, storage indexes, core backend handlers, exact WSU reduction, and first `encounter` output exist. Sanskrit follows a clearer Heritage-first model: Heritage is the preferred morphology/analysis source, while CDSL and DICO supplement meaning/gloss evidence. DICO/Gaffiot now support cache-backed English translation projection, plus explicit cache-miss population through `--translation-mode auto`.
+LangNet has crossed the foundation threshold. The CLI, planner, staged executor, storage indexes, core backend handlers, exact WSU reduction, and first `encounter` output exist. Sanskrit follows a clearer Heritage-first model: Heritage is the preferred morphology/analysis source, while CDSL and DICO supplement meaning/gloss evidence. DICO/Gaffiot now support cache-backed English translation projection, plus explicit cache-miss population through `--translation-mode auto`. DICO/Gaffiot claim triples now carry compact learner-gloss metadata, and `encounter` keeps full dictionary evidence available underneath the short display line.
 
 The main project risk is no longer "can the system run?" It is "can we put the right evidence first for a reader without hiding or damaging the sources?"
 
@@ -14,10 +14,10 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 | Area | Grade | Status |
 | --- | --- | --- |
 | Build and validation | A | `just lint-all` and `just test-fast` pass; current fast suite is over 220 tests. |
-| CLI surface | B+ | Commands exist; `encounter` is the current learner-facing path. DICO/Gaffiot translation modes are wired. Default output is still too source-first for learners. |
+| CLI surface | B+ | Commands exist; `encounter` is the current learner-facing path. DICO/Gaffiot translation modes are wired. Compact gloss display has started, but source structuring is still early. |
 | Planner/executor | B+ | Tool plans and staged execution are implemented. |
 | Claims/evidence | A- | Core handlers have fixture-backed claim contract coverage; CDSL/DICO/Gaffiot evidence paths are stronger. |
-| Semantic reduction | C+ | Exact claim-to-WSU extraction and bucket display exist; semantic merging, headword ranking, and compact learner display are still early. |
+| Semantic reduction | C+ | Exact claim-to-WSU extraction and bucket display exist; headword ranking and compact display are improving, while semantic merging remains deferred. |
 | Documentation | B+ | Active docs are classified by purpose; archive retained for old reports/plans. |
 | Release hygiene | C+ | Many changes are still uncommitted and should be checkpointed. |
 
@@ -34,6 +34,12 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 - Reduction: service-free WSU extraction, exact gloss buckets, and `encounter` terminal output.
 - Inspection: `triples-dump --output json` exposes structured claims/triples without scraping text output; `plan-exec --output json` summarizes cache status, stage counts, skipped calls, handler versions, and claims.
 - Learner output tests: snapshot-style coverage exists for representative Sanskrit CDSL, Sanskrit Heritage analysis, Latin Gaffiot, Greek Diogenes, DICO/Gaffiot translated-cache output, stale-normalization recovery, and multi-witness ranking in `encounter`.
+- Compact learner display: `encounter` prefers parsed cached glosses,
+  source-provided learner glosses, translated segment display text, and then
+  conservative source-entry compaction. DICO and Gaffiot now emit
+  `learner_gloss` and typed `learner_segments` at claim time. When the compact
+  line differs from the full dictionary text, the full evidence remains visible
+  below it.
 - Translation cache: schema/key helpers, demo cache writes, cache-hit projection into derived translation triples, explicit `encounter --translation-mode auto` cache-miss population, Gaffiot/DICO golden rows, and accepted `encounter` output for translated-cache hits.
 - Diagnostic fuzz audit: 50 words per language currently show 100% any-evidence coverage for Latin, Greek, and Sanskrit; Sanskrit Heritage is 50/50 for morphology evidence and 43/50 for gloss evidence.
 - Real-input fuzz probes saved under `examples/debug/fuzz_real_inputs_2026_04_28*`
@@ -58,9 +64,10 @@ The main project risk is no longer "can the system run?" It is "can we put the r
   Testament John 1:1, the Taittiriya Upanishad invocation, and Taittiriya
   Samhita 1.1.1. It currently passes 14/14 strict and 14/14 meaning checks with
   `--translation-mode off`, exercising raw Gaffiot/DICO/CDSL/Diogenes evidence.
-  The latest learner-display pass uses ordered morphology lemmas to rank
-  meanings, improving cases such as `principio -> principium` while preserving
-  competing analyses for inspection.
+  The latest learner-display passes use ordered morphology lemmas to rank
+  meanings and claim-time compact learner metadata for DICO/Gaffiot, improving
+  cases such as `principio -> principium` and Sanskrit `dharma` while preserving
+  competing analyses and full source evidence for inspection.
 - Semantic reduction is exact-match only; no synonym merging, mature sense ranking, or structured learner-display gloss parsing yet.
 - Evidence inspection works in text and JSON; `OUTPUT_GUIDE.md` now includes Sanskrit CDSL and DICO/Gaffiot translation-cache walkthroughs.
 - Fuzz recipes are diagnostic only; query/compare modes still reflect older API assumptions. The current 50-word audit under `examples/debug/fuzz_audit_2026_04_27/` is useful evidence coverage, not a release gate.
@@ -76,7 +83,9 @@ The main project risk is no longer "can the system run?" It is "can we put the r
    hit-rate changes as fixes land.
 3. Replace local morphology fallback rows with source-backed morphology where
    possible, and improve `virumque` component display/ranking.
-4. Add a compact learner-gloss layer over full translated DICO/Gaffiot evidence.
+4. Harden compact learner glosses by adding typed source segments for
+   DICO/Gaffiot/CDSL/Diogenes instead of relying on broad source-string
+   compaction.
 5. Run `just validate-stabilization` for each source/evidence/display slice before taking the next one.
 
 ## Decision Log

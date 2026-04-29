@@ -8,6 +8,7 @@ from typing import TypedDict, cast
 from bs4 import BeautifulSoup, Tag
 from query_spec import ToolCallSpec
 
+from langnet.citation import perseus_ref_to_cts_urn
 from langnet.clients.base import RawResponseEffect
 from langnet.execution import predicates
 from langnet.execution.effects import (
@@ -269,14 +270,7 @@ def _to_cts_urn(ref: str | None) -> str | None:
     """
     if not ref:
         return None
-    ref = ref.strip()
-    match = re.match(r"perseus:abo:([a-z]+),([0-9]+),([0-9]+):(.*)", ref)
-    if not match:
-        return None
-    ns_raw, author, work, loc = match.groups()
-    ns = "latinLit" if ns_raw.startswith(("phi", "lat")) else "greekLit"
-    loc = loc.replace(":", ".")
-    return f"urn:cts:{ns}:{ns_raw}{author}.{ns_raw}{work}:{loc}"
+    return perseus_ref_to_cts_urn(ref.strip())
 
 
 def _handle_morphology(soup: BeautifulSoup) -> DiogenesMorphology:
@@ -376,7 +370,7 @@ def _determine_chunk_type(
 
 def _parse_diogenes_html(html: str) -> DiogenesParsedResult:
     """
-    Parse diogenes HTML into a structure roughly mirroring codesketch DiogenesScraper output.
+    Parse Diogenes HTML into the structure expected by the staged handler.
     """
     if not html:
         return {"chunks": [], "dg_parsed": False, "chunk_types": []}

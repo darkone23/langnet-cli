@@ -42,6 +42,7 @@ from langnet.execution.handlers import heritage as heritage_handlers
 from langnet.execution.handlers.diogenes import _parse_diogenes_html
 from langnet.execution.handlers.whitakers import _parse_whitaker_output
 from langnet.execution.registry import default_registry
+from langnet.execution.source_text import analyze_source_entry, compact_source_gloss
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
 from langnet.normalizer.utils import strip_accents
@@ -71,6 +72,8 @@ from langnet.translation import (
 LanguageHint = query_spec.LanguageHint
 LanguageValue = query_spec.LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
+ENCOUNTER_LEARNER_GLOSS_MAX_CHARS = 120
+ENCOUNTER_LEARNER_GLOSS_ITEM_LIMIT = 4
 
 
 def _ensure_logging(level: int = logging.INFO) -> None:
@@ -1373,6 +1376,101 @@ def _filter_plan_tools(plan, tool_filter: str) -> None:
     plan.dependencies.extend(filtered_deps)
 
 
+@main.command("entry-analyze")
+@click.argument("text", required=False)
+@click.option(
+    "--file",
+    "text_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Read the source entry from a UTF-8 text file instead of an argument.",
+)
+@click.option(
+    "--source-tool",
+    default="unknown",
+    show_default=True,
+    help="Source label to include in the diagnostic output.",
+)
+@click.option(
+    "--max-items",
+    default=12,
+    show_default=True,
+    type=click.IntRange(1, 50),
+    help="Maximum extracted items per category.",
+)
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def entry_analyze(
+    text: str | None,
+    text_file: Path | None,
+    source_tool: str,
+    max_items: int,
+    output_format: str,
+) -> None:
+    """
+    Inspect one raw dictionary entry for glosses, citations, examples, and references.
+    """
+    raw_text = _entry_analyze_text(text, text_file)
+    payload = analyze_source_entry(raw_text, source_tool=source_tool, max_items=max_items)
+    if output_format == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    _display_entry_analysis(payload)
+
+
+def _entry_analyze_text(text: str | None, text_file: Path | None) -> str:
+    if text and text_file:
+        raise click.UsageError("Pass entry text or --file, not both.")
+    if text_file:
+        return text_file.read_text(encoding="utf-8")
+    if text:
+        return text
+    raise click.UsageError("Pass entry text or --file.")
+
+
+def _display_entry_analysis(payload: Mapping[str, object]) -> None:
+    click.echo(f"Entry analysis ({payload.get('source_tool', 'unknown')})")
+    grammar_parse = payload.get("grammar_parse")
+    if isinstance(grammar_parse, Mapping):
+        grammar_map = cast(Mapping[str, object], grammar_parse)
+        parser = grammar_map.get("parser", "unknown")
+        status = "parsed" if grammar_map.get("parsed") is True else "fallback"
+        click.echo(f"Grammar: {parser} ({status})")
+    learner_gloss = str(payload.get("learner_gloss") or "")
+    if learner_gloss:
+        click.echo(f"Learner gloss: {learner_gloss}")
+    _display_entry_analysis_items("Gloss candidates", payload.get("gloss_candidates"))
+    _display_entry_analysis_items("Citations", payload.get("citations"))
+    _display_entry_analysis_items("Source references", payload.get("source_references"))
+    _display_entry_analysis_items("Examples", payload.get("examples"))
+    _display_entry_analysis_items("Source segments", payload.get("source_segments"))
+
+
+def _display_entry_analysis_items(label: str, value: object) -> None:
+    if not isinstance(value, list) or not value:
+        return
+    click.echo(label + ":")
+    for item in value:
+        if not isinstance(item, Mapping):
+            continue
+        item_map = cast(Mapping[str, object], item)
+        text = str(item_map.get("text") or item_map.get("display_text") or "")
+        if not text:
+            continue
+        kind = str(item_map.get("kind") or item_map.get("segment_type") or "")
+        prefix = f"  - [{kind}] " if kind else "  - "
+        suffix = ""
+        citation = item_map.get("citation")
+        if citation:
+            suffix = f" ({citation})"
+        click.echo(f"{prefix}{text}{suffix}")
+
+
 @main.command("triples-dump")
 @click.argument("language")
 @click.argument("text")
@@ -1586,9 +1684,6 @@ def _encounter_bucket_gloss(bucket) -> str:
     witness = bucket.witnesses[0] if bucket.witnesses else None
     if witness is None:
         return bucket.display_gloss
-    learner_gloss = witness.evidence.get("learner_gloss")
-    if isinstance(learner_gloss, str) and learner_gloss:
-        return learner_gloss
     display_gloss = witness.evidence.get("display_gloss")
     if isinstance(display_gloss, str) and display_gloss:
         return display_gloss
@@ -1601,6 +1696,61 @@ def _encounter_bucket_gloss(bucket) -> str:
         source_slp1=display_slp1 if isinstance(display_slp1, str) else "",
         display_iast=display_iast if isinstance(display_iast, str) else "",
     )
+
+
+def _encounter_bucket_learner_gloss(
+    bucket,
+    *,
+    max_chars: int = ENCOUNTER_LEARNER_GLOSS_MAX_CHARS,
+) -> str:
+    witness = bucket.witnesses[0] if bucket.witnesses else None
+    if witness is None:
+        return _encounter_compact_gloss(bucket.display_gloss, max_chars=max_chars)
+
+    parsed_glosses = _encounter_string_sequence(witness.evidence.get("parsed_glosses"))
+    if parsed_glosses:
+        return _shorten(
+            ", ".join(_dedupe_preserve_order(parsed_glosses)[:ENCOUNTER_LEARNER_GLOSS_ITEM_LIMIT]),
+            max_chars,
+        )
+
+    learner_gloss = witness.evidence.get("learner_gloss")
+    if isinstance(learner_gloss, str) and learner_gloss:
+        return _encounter_compact_gloss(learner_gloss, max_chars=max_chars)
+
+    translated_segments = witness.evidence.get("translated_segments")
+    segment_gloss = _encounter_first_segment_display(translated_segments)
+    if segment_gloss:
+        return _encounter_compact_gloss(segment_gloss, max_chars=max_chars)
+
+    return _encounter_compact_gloss(_encounter_bucket_gloss(bucket), max_chars=max_chars)
+
+
+def _encounter_string_sequence(value: object) -> list[str]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return []
+    return [text for item in value if (text := str(item).strip())]
+
+
+def _encounter_first_segment_display(segments: object) -> str:
+    if not isinstance(segments, Sequence) or isinstance(segments, (str, bytes)):
+        return ""
+    for segment in segments:
+        if not isinstance(segment, Mapping):
+            continue
+        segment_mapping = cast(Mapping[str, object], segment)
+        display_text = segment_mapping.get("display_text")
+        if isinstance(display_text, str) and display_text.strip():
+            return display_text.strip()
+    return ""
+
+
+def _encounter_compact_gloss(
+    gloss: str,
+    *,
+    max_chars: int = ENCOUNTER_LEARNER_GLOSS_MAX_CHARS,
+) -> str:
+    return compact_source_gloss(gloss, max_chars=max_chars)
 
 
 def _encounter_source_refs(bucket) -> list[str]:
@@ -2666,7 +2816,16 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 {witness.source_tool for witness in bucket.witnesses if witness.source_tool}
             )
             source_text = ", ".join(sources) if sources else "unknown"
-            click.echo(f"{idx}. {_shorten(_encounter_bucket_gloss(bucket), max_gloss_chars)}")
+            learner_gloss = _encounter_bucket_learner_gloss(bucket, max_chars=max_gloss_chars)
+            evidence_gloss = _encounter_bucket_gloss(bucket)
+            displayed_gloss = _shorten(learner_gloss or evidence_gloss, max_gloss_chars)
+            click.echo(f"{idx}. {displayed_gloss}")
+            if (
+                learner_gloss
+                and learner_gloss != evidence_gloss
+                and displayed_gloss != _shorten(evidence_gloss, max_gloss_chars)
+            ):
+                click.echo(f"   evidence: {_shorten(evidence_gloss, max_gloss_chars)}")
             click.echo(
                 f"   sources: {source_text}; witnesses: {len(bucket.witnesses)}; "
                 f"confidence: {bucket.confidence_label}"

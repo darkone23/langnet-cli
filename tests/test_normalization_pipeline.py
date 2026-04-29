@@ -188,6 +188,38 @@ def test_iast_to_velthuis_canonical() -> None:
     assert any(step.operation == "to_heritage_velthuis" for step in steps)
 
 
+def test_sanskrit_normalizer_handles_harvard_kyoto_retroflex_markers() -> None:
+    normalizer = SanskritNormalizer()
+
+    krsna_steps: list[NormalizationStep] = []
+    krsna_candidates = normalizer.canonical_candidates("kRSNa", krsna_steps)
+    krsna = krsna_candidates[0]
+    assert krsna.encodings["velthuis"] == "k.r.s.na"
+    assert krsna.encodings["slp1"] == "kfzRa"
+    assert krsna.encodings["iast"] == "kṛṣṇa"
+    assert any(step.operation == "detect_encoding" and step.output == "hk" for step in krsna_steps)
+
+    visnu_steps: list[NormalizationStep] = []
+    visnu_candidates = normalizer.canonical_candidates("viSNu", visnu_steps)
+    visnu = visnu_candidates[0]
+    assert visnu.encodings["velthuis"] == "vi.s.nu"
+    assert visnu.encodings["slp1"] == "vizRu"
+    assert visnu.encodings["iast"] == "viṣṇu"
+    assert any(step.operation == "detect_encoding" and step.output == "hk" for step in visnu_steps)
+
+
+def test_sanskrit_normalizer_still_accepts_slp1_cdsl_style_forms() -> None:
+    steps: list[NormalizationStep] = []
+    normalizer = SanskritNormalizer()
+    candidates = normalizer.canonical_candidates("DarmaH", steps)
+
+    candidate = candidates[0]
+    assert candidate.encodings["velthuis"] == "dharma.h"
+    assert candidate.encodings["slp1"] == "DarmaH"
+    assert candidate.encodings["iast"] == "dharmaḥ"
+    assert any(step.operation == "detect_encoding" and step.output == "slp1" for step in steps)
+
+
 def test_normalization_service_uses_index(tmp_path: Path) -> None:
     db_path = tmp_path / "norm.duckdb"
     conn = duckdb.connect(database=str(db_path))

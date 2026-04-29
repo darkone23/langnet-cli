@@ -1,0 +1,25 @@
+// Lark grammar for Gaffiot French/Latin dictionary entry shells.
+//
+// Gaffiot entries often include a compact morphology preamble followed by
+// numbered senses and citation-rich examples. This grammar captures that outer
+// shell for diagnostics; detailed citation/example typing is a later pass.
+
+?start: entry
+
+entry: numbered_entry | unnumbered_entry
+
+numbered_entry: preamble? numbered_sense example_tail?
+unnumbered_entry: TEXT
+
+preamble: PREAMBLE
+numbered_sense: NUMBER definition ":"
+definition: DEFINITION_TEXT
+example_tail: TEXT
+
+NUMBER.4: /\d+/
+PREAMBLE.3: /.+?(?=\b\d+\s+[^:;|]+:)/
+DEFINITION_TEXT.2: /[^:;|]+/
+TEXT.1: /.+/s
+
+%import common.WS_INLINE
+%ignore WS_INLINE

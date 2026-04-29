@@ -1,0 +1,65 @@
+[
+  {
+    "id": "dico-dharma-basic",
+    "source_tool": "dico",
+    "entry": "dharma [ dharman ] m. n. loi, condition, nature propre | devoir religieux [ Mah. ] ; cf. svadharma",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:dico_entry",
+      "learner_gloss_contains": "loi",
+      "source_reference_contains": "Mah."
+    }
+  },
+  {
+    "id": "dico-agni-reference",
+    "source_tool": "dico",
+    "entry": "agni [ agni ] m. feu, feu sacré | dieu du feu [ RV. ]",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:dico_entry",
+      "learner_gloss_contains": "feu",
+      "source_reference_contains": "RV."
+    }
+  },
+  {
+    "id": "gaffiot-principium-citations",
+    "source_tool": "gaffiot",
+    "entry": "ĭī, n. (princeps), 1 commencement : nec principium nec finem habere Cic. CM 78, n'avoir ni commencement ni fin || principio Cic. Off. 1, 11",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:gaffiot_entry",
+      "learner_gloss_contains": "commencement",
+      "citation_contains": "Cic. Off. 1, 11"
+    }
+  },
+  {
+    "id": "gaffiot-lupus-short",
+    "source_tool": "gaffiot",
+    "entry": "ī, m., loup",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:gaffiot_entry",
+      "learner_gloss_contains": "loup"
+    }
+  },
+  {
+    "id": "diogenes-latin-lewis-simple",
+    "source_tool": "diogenes",
+    "entry": "lupus, -i, m. I. a wolf, Cic.; Hor.",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:diogenes_entry",
+      "learner_gloss_contains": "a wolf"
+    }
+  },
+  {
+    "id": "cdsl-mw-source-notes",
+    "source_tool": "cdsl",
+    "entry": "1. mokza m. moksha, liberation; release from worldly existence; cf. MBh. ; PadmaP. ; RV.",
+    "expect": {
+      "parsed": false,
+      "learner_gloss_contains": "moksha",
+      "source_reference_contains": "RV."
+    }
+  }
+]

@@ -73,7 +73,7 @@ class HeritagePayload(TypedDict, total=False):
 
 def _velthuis_to_slp1(text: str) -> str:
     """
-    Lightweight Velthuis → SLP1 converter (mirrors codesketch cologne/core).
+    Lightweight Velthuis -> SLP1 converter.
     Keeps things simple for anchoring while fuller parser support is wired.
     """
     if not text:
@@ -92,7 +92,7 @@ def _velthuis_to_slp1(text: str) -> str:
 
 @lru_cache(maxsize=1)
 def _abbr_index() -> dict[str, dict[str, str]]:
-    """Load Heritage abbreviation metadata (ported from codesketch)."""
+    """Load Heritage abbreviation metadata."""
     abbr_path = Path(__file__).with_name("abbr_data.json")
     try:
         return json.loads(abbr_path.read_text(encoding="utf-8"))
@@ -622,7 +622,7 @@ def claim_morph(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect
     )
 
 
-# --- Analysis parsing helpers (trimmed codesketch port) ---
+# --- Analysis parsing helpers ---
 
 GENDER_MAP = {
     "m": "masculine",

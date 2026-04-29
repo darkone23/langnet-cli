@@ -1,8 +1,0 @@
-<div>
-  <table>
-    <tr>
-      <td>agni</td>
-      <td>?</td>
-    </tr>
-  </table>
-</div>

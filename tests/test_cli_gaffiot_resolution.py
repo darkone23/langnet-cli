@@ -186,6 +186,16 @@ def test_gaffiot_entry_triples_mark_source_language_and_evidence() -> None:
     assert triples[1]["metadata"]["evidence"]["source_tool"] == "gaffiot"
     assert triples[1]["metadata"]["evidence"]["variant_num"] == 1
     assert triples[1]["metadata"]["display_gloss"] == "ī, m., loup"
+    assert triples[1]["metadata"]["learner_gloss"] == "loup"
+    assert triples[1]["metadata"]["learner_segments"] == [
+        {
+            "index": 0,
+            "raw_text": "loup",
+            "display_text": "loup",
+            "segment_type": "learner_gloss",
+            "labels": ["definition", "learner_summary"],
+        }
+    ]
     assert triples[1]["metadata"]["source_entry"] == {
         "dict": "gaffiot",
         "source_ref": "gaffiot:gaffiot_1",
@@ -204,6 +214,18 @@ def test_gaffiot_entry_triples_mark_source_language_and_evidence() -> None:
             "labels": ["definition"],
         }
     ]
+
+
+def test_gaffiot_entry_triples_extract_numbered_first_sense_as_learner_gloss() -> None:
+    triples = gaffiot_entry_triples(
+        {
+            "entry_id": "gaffiot_53107",
+            "headword_norm": "principium",
+            "plain_text": "ĭī, n. (princeps), 1 commencement : nec principium nec finem habere",
+        }
+    )
+
+    assert triples[1]["metadata"]["learner_gloss"] == "commencement"
 
 
 def test_gaffiot_staged_handlers_emit_claim_triples() -> None:

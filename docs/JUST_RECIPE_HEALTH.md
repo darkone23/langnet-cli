@@ -49,9 +49,9 @@ These were probed successfully:
 - `devenv shell -- bash -c 'python3 .justscripts/lex_translation_demo.py --dry-run --limit 1 --mode latin'`
 - `devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --translation-mode cache --translation-cache-db data/cache/langnet.duckdb'`
 - `devenv shell -- bash -c 'langnet-cli encounter san dharma dico --translation-mode cache --translation-cache-db data/cache/langnet.duckdb'`
-- `just read-codesketch-diogenes`
-- `just read-codesketch-whitakers`
-- `just read-codesketch-cltk`
+- Legacy sketch-reading recipes were removed during the `codesketch/`
+  retirement audit. Runtime and verification recipes now target `src/`
+  implementations directly.
 - `just lint-all`
 - `just test-fast`
 

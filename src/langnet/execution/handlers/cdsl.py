@@ -639,7 +639,7 @@ def _filter_best_cdsl_matches(
     return [entry for rank, entry in ranked if rank == best_rank]
 
 
-# --- Body parsing helpers (trimmed from codesketch cologne/parser) ---
+# --- Body parsing helpers ---
 
 _GENDER_MAP = {
     "m": "masculine",
@@ -648,23 +648,26 @@ _GENDER_MAP = {
     "mfn": ["masculine", "feminine", "neuter"],
 }
 _NUMBER_MAP = {"sg": "sg", "singular": "sg", "pl": "pl", "plural": "pl", "du": "du", "dual": "du"}
+_DECLENSION_RE = re.compile(r"#([A-Za-z])")
+_ROOT_RE = re.compile(r"[√\u221a]\s*([A-Za-z]+)")
 _CASE_MAP = {
     "nom": "1",
     "nominative": "1",
-    "acc": "5",
-    "accusative": "5",
-    "gen": "2",
-    "genitive": "2",
+    "acc": "2",
+    "accusative": "2",
+    "inst": "3",
+    "instr": "3",
+    "instrumental": "3",
     "dat": "4",
     "dative": "4",
+    "abl": "5",
+    "ablative": "5",
+    "gen": "6",
+    "genitive": "6",
     "loc": "7",
     "locative": "7",
-    "abl": "6",
-    "ablative": "6",
     "voc": "8",
     "vocative": "8",
-    "inst": "3",
-    "instrumental": "3",
 }
 
 
@@ -678,23 +681,49 @@ def _parse_lex_element(lex_elem, grammar: dict[str, object]) -> None:
     pos_match = lex_text.split(".")[0]
     if pos_match:
         grammar["pos_hint"] = pos_match
+    abbreviations = [
+        ab.text.strip() for ab in lex_elem.findall("ab") if ab.text and ab.text.strip()
+    ]
+    if abbreviations:
+        tags = _grammar_tags(grammar)
+        tags["abbreviations"] = abbreviations
+        if any("comp" in value.lower() for value in abbreviations):
+            tags["compound"] = True
 
 
 def _parse_info_element(info_elem, grammar: dict[str, object]) -> None:
     """Parse info element for gender and number markers."""
     lex_attr = info_elem.get("lex", "")
     if lex_attr:
-        gender_val = _GENDER_MAP.get(lex_attr)
-        if gender_val:
-            grammar["gender"] = gender_val if isinstance(gender_val, list) else [gender_val]
+        gender_values: list[str] = []
+        for part in re.split(r"[:#]", lex_attr):
+            gender_val = _GENDER_MAP.get(part)
+            if isinstance(gender_val, list):
+                gender_values.extend(gender_val)
+            elif gender_val:
+                gender_values.append(gender_val)
+        if gender_values:
+            grammar["gender"] = list(dict.fromkeys(gender_values))
+        declension = _declension_from_lex_attr(lex_attr)
+        if declension:
+            _grammar_tags(grammar)["declension"] = declension
     n_val = info_elem.get("n")
     if n_val:
-        if "grammar_tags" not in grammar:
-            grammar["grammar_tags"] = {}
-        tags_val = grammar["grammar_tags"]
-        if isinstance(tags_val, dict):
-            tags = cast(dict[str, object], tags_val)
-            tags["number_marker"] = n_val
+        _grammar_tags(grammar)["number_marker"] = n_val
+
+
+def _grammar_tags(grammar: dict[str, object]) -> dict[str, object]:
+    tags_val = grammar.setdefault("grammar_tags", {})
+    if isinstance(tags_val, dict):
+        return cast(dict[str, object], tags_val)
+    tags: dict[str, object] = {}
+    grammar["grammar_tags"] = tags
+    return tags
+
+
+def _declension_from_lex_attr(lex_attr: str) -> str | None:
+    match = _DECLENSION_RE.search(lex_attr)
+    return match.group(1) if match else None
 
 
 def _parse_body_text_features(body_text: str, grammar: dict[str, object]) -> None:
@@ -708,6 +737,31 @@ def _parse_body_text_features(body_text: str, grammar: dict[str, object]) -> Non
         if pattern in lower:
             grammar.setdefault("number", num_code)
             break
+    root_match = _ROOT_RE.search(body_text)
+    if root_match:
+        grammar["etymology"] = {
+            "type": "verb_root",
+            "root": root_match.group(1),
+        }
+    elif "√" in body_text or "\u221a" in body_text or "root" in lower or "radical" in lower:
+        grammar["etymology"] = {"type": "verb_root"}
+
+
+def _parse_body_references(root, grammar: dict[str, object]) -> None:
+    references: list[dict[str, str]] = []
+    for ls_elem in root.findall(".//ls"):
+        source = (ls_elem.text or "").strip()
+        implied = ls_elem.get("n", "").strip()
+        if implied:
+            source = f"{implied} {source}".strip()
+        if source:
+            references.append({"source": source, "type": "lexicon"})
+    for s1_elem in root.findall(".//s1"):
+        source = (s1_elem.text or "").strip()
+        if source:
+            references.append({"source": source, "type": "cross_reference"})
+    if references:
+        grammar["references"] = references
 
 
 def _parse_body_metadata(body_xml: str) -> dict[str, object]:
@@ -738,6 +792,8 @@ def _parse_body_metadata(body_xml: str) -> dict[str, object]:
         grammar["sanskrit_form"] = sanskrit_form
         grammar["sanskrit_form_slp1"] = sanskrit_form
         grammar["sanskrit_form_iast"] = _slp1_to_iast(sanskrit_form)
+
+    _parse_body_references(root, grammar)
 
     return grammar
 
@@ -811,16 +867,12 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
 
         grammar_input = body_val if isinstance(body_val, str) else ""
         grammar = _parse_body_metadata(grammar_input)
-        source_entry = _trim_evidence(
-            {
-                "dict": dict_id,
-                "line_number": lnum_val,
-                "source_ref": source_ref,
-                "key_slp1": lemma_slp1,
-                "key_iast": lemma_iast,
-                "key2_slp1": key2_slp1,
-                "key2_iast": _slp1_to_iast(key2_slp1) if key2_slp1 else "",
-            }
+        source_entry = _cdsl_source_entry(
+            entry,
+            source_ref=source_ref,
+            key_slp1=lemma_slp1,
+            key_iast=lemma_iast,
+            key2_slp1=key2_slp1,
         )
         segments = _source_segments(
             gloss,
@@ -879,6 +931,28 @@ def derive_sense(call: ToolCallSpec, extraction: ExtractionEffect) -> Derivation
 
 def _trim_evidence(evidence: Mapping[str, object]) -> dict[str, object]:
     return {k: v for k, v in evidence.items() if v is not None and v != ""}
+
+
+def _cdsl_source_entry(
+    entry: Mapping[str, object],
+    *,
+    source_ref: str,
+    key_slp1: str,
+    key_iast: str,
+    key2_slp1: str,
+) -> dict[str, object]:
+    return _trim_evidence(
+        {
+            "dict": entry.get("dict_id"),
+            "line_number": entry.get("lnum"),
+            "source_ref": source_ref,
+            "key_slp1": key_slp1,
+            "key_iast": key_iast,
+            "key2_slp1": key2_slp1,
+            "key2_iast": _slp1_to_iast(key2_slp1) if key2_slp1 else "",
+            "page_ref": entry.get("page_ref"),
+        }
+    )
 
 
 def _extract_response_id(provenance: list[ProvenanceLink] | None) -> str | None:

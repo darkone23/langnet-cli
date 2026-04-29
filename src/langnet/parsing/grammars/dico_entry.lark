@@ -1,0 +1,24 @@
+// Lark grammar for DICO Sanskrit/French dictionary entry shells.
+//
+// This grammar intentionally parses only the stable outer shape:
+// headword, optional bracketed stem, short grammar markers, definition text,
+// and optional pipe-separated continuation. Deeper definition/reference
+// classification remains a later pass because DICO prose is highly ambiguous.
+
+?start: entry
+
+entry: headword? grammar_marker* definition continuation?
+
+headword: WORD bracket_form?
+bracket_form: "[" BRACKET_TEXT "]"
+grammar_marker: POS_MARKER
+definition: TEXT
+continuation: "|" TEXT
+
+POS_MARKER.4: /(mfn|adj|adv|pron|part|pn|m|f|n|v)\./
+WORD.3: /[A-Za-zĀ-ž._#-]+/
+BRACKET_TEXT.2: /[^\]]+/
+TEXT.1: /[^|]+/
+
+%import common.WS
+%ignore WS

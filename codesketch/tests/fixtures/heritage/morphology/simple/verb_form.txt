@@ -1,8 +1,0 @@
-<div>
-  <table>
-    <tr>
-      <td>bhavati</td>
-      <td>3 sg. pres. act. ind.</td>
-    </tr>
-  </table>
-</div>

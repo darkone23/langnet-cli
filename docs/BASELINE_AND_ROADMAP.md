@@ -51,6 +51,13 @@ continue to use fixtures rather than live services.
 - Exact deterministic sense buckets are wired into `langnet-cli encounter`.
 - `encounter` displays source-backed meanings, source refs, source language,
   translation provenance, and Sanskrit Heritage analysis rows.
+- `encounter` now prints a compact learner gloss when source metadata or a
+  dictionary-entry shape supports one, while retaining the full source evidence
+  line when the compact gloss is a derived display summary.
+- DICO and Gaffiot claim triples now carry `learner_gloss` and typed
+  `learner_segments` metadata in addition to full `source_entry` and
+  `source_segments`; CDSL already carries source-specific learner display
+  metadata.
 - `triples-dump --output json` and `plan-exec --output json` are the inspection
   surfaces for claims, triples, cache status, skipped calls, and handler stages.
 
@@ -76,7 +83,8 @@ Observed quality is strong for source-faithful dictionary translation:
 Observed limitations:
 
 - live cache population can be slow for long entries;
-- translations are full dictionary entries, not compact learner glosses;
+- cached translations remain full dictionary entries; the compact learner line is
+  a source-backed display summary, not a replacement translation record;
 - headword routing still matters, e.g. `virumque` can route to `virus`, and
   `karma` is less useful than `karman` for the DICO concept entry.
 
@@ -97,9 +105,16 @@ Examples:
 
 ### 2. Compact Learner Glosses
 
-DICO/Gaffiot translations are high quality, but they remain full-entry evidence.
-The learner display needs a short gloss layer above the full translated source
-entry.
+The first compact learner-gloss layer is now wired into `encounter`. It prefers
+parsed cached glosses, source-provided learner gloss metadata, translated
+segment display text, and then conservative source-entry compaction. DICO and
+Gaffiot now emit claim-time learner gloss metadata, so the learner line is not
+recomputed only at the terminal display boundary. The full source-backed
+evidence remains visible when the compact line differs.
+
+This is intentionally display-only. The remaining work is to make typed source
+segments richer and source-specific before using compact glosses for broad
+semantic merging or passage-level interpretation.
 
 Examples:
 
@@ -198,7 +213,9 @@ Corpus expansion fixture:
   morphology-fallback ranking (`tvā -> yuṣmad`). Encounter also uses ordered
   morphology rows as preferred display lemmas, so ambiguous forms such as Latin
   `principio` can lead with the analyzed noun `principium` without hiding the
-  alternate verb analysis.
+  alternate verb analysis. The compact learner-gloss pass keeps this evidence
+  visible while shortening the first line, e.g. Gaffiot `principium` can display
+  `commencement` with the full source entry preserved below as evidence.
 
 The full cached reader-eval checkpoint now passes 13/13 strict and 13/13
 meaning checks. This is a seed-fixture baseline, not a general release guarantee.

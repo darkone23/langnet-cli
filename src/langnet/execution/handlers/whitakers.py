@@ -3,9 +3,6 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Mapping, Sequence
-from importlib.util import module_from_spec, spec_from_file_location
-from pathlib import Path
-from types import ModuleType
 from typing import Any, Protocol, TypedDict, cast
 
 from query_spec import ToolCallSpec
@@ -20,6 +17,7 @@ from langnet.execution.effects import (
     stable_effect_id,
 )
 from langnet.execution.versioning import versioned
+from langnet.parsing.whitakers import CodesReducer, FactsReducer, SensesReducer
 
 
 class Reducer(Protocol):
@@ -72,7 +70,6 @@ class WhitakerWord(TypedDict, total=False):
     unknown: list[str]
 
 
-_WHITAKER_MODULES: dict[str, ModuleType] = {}
 _ANCHOR_UNKNOWN_POS = "unknown"
 _SOURCE_TOOL = "whitaker"
 _POS_CODE_MAP = {
@@ -106,7 +103,7 @@ _FACT_PRED_MAP = {
 }
 _CODELINE_FEATURE_KEYS = ("source", "age", "area", "geo", "notes")
 
-# Rich code-to-label maps (adapted from the codesketch whitakers_words core)
+# Rich Whitaker code-to-label maps.
 _TENSE_MAP = {
     "PRES": "present",
     "IMP": "imperfect",
@@ -232,33 +229,8 @@ _SOURCE_MAP = {
 }
 
 
-def _load_whitaker_parser(module_name: str) -> ModuleType:
-    if module_name in _WHITAKER_MODULES:
-        return _WHITAKER_MODULES[module_name]
-    root = Path(__file__).resolve().parents[4]
-    path = (
-        root
-        / "codesketch"
-        / "src"
-        / "langnet"
-        / "whitakers_words"
-        / "lineparsers"
-        / f"{module_name}.py"
-    )
-    spec = spec_from_file_location(f"codesketch.whitakers.{module_name}", path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot load Whitaker parser module {module_name}")
-    module = module_from_spec(spec)
-    spec.loader.exec_module(module)
-    _WHITAKER_MODULES[module_name] = module
-    return module
-
-
 def _load_reducers() -> tuple[type[Reducer], type[Reducer], type[Reducer]]:
-    senses = _load_whitaker_parser("parse_senses")
-    codes = _load_whitaker_parser("parse_term_codes")
-    facts = _load_whitaker_parser("parse_term_facts")
-    return senses.SensesReducer, codes.CodesReducer, facts.FactsReducer
+    return SensesReducer, CodesReducer, FactsReducer
 
 
 def _normalize_surface(term: str | None) -> str | None:

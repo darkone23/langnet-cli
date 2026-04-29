@@ -7,7 +7,7 @@ from typing import TypedDict, cast
 from bs4 import BeautifulSoup, Tag
 
 """
-Lightweight Heritage HTML extractor (ported from codesketch).
+Lightweight Heritage HTML extractor.
 
 Extracts solution blocks with [word]{analysis} patterns, attached navy links
 (dictionary URLs), CSS color hints, and span segments between solution markers.
@@ -44,7 +44,7 @@ class _PatternEntry:
 class HeritageHTMLExtractor:
     """
     Extract patterns/segments from Heritage morphology HTML.
-    Mirrors the codesketch extractor but trimmed for current handler needs.
+    Mirrors the earlier extractor but trimmed for current handler needs.
     """
 
     _pattern_re = re.compile(r"\[([^\]]+)\]\{([^}]+)\}")

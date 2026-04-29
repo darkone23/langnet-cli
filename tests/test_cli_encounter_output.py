@@ -14,6 +14,7 @@ from langnet.cli import (
     LanguageHint,
     NormalizeConfig,
     _encounter_bucket_sort_key,
+    _encounter_compact_gloss,
     _encounter_morphology_fallback_terms,
     _encounter_morphology_rows,
     _encounter_preferred_lemmas_from_morphology,
@@ -147,6 +148,18 @@ def test_encounter_morphology_rows_from_form_feature_triples() -> None:
             "analysis": "noun; tags: fem, sg",
         }
     ]
+
+
+def test_encounter_compact_gloss_extracts_learner_summary_from_source_entry() -> None:
+    assert (
+        _encounter_compact_gloss(
+            "ĭī, n. (princeps), 1 commencement : nec principium nec finem habere"
+        )
+        == "commencement"
+    )
+    assert _encounter_compact_gloss("God, the Deity, in general sense, both sg. and pl.") == (
+        "God, the Deity, in general sense"
+    )
 
 
 def test_encounter_adds_local_latin_ae_morphology_when_source_parse_is_empty() -> None:
@@ -361,6 +374,63 @@ def test_encounter_sanskrit_cdsl_snapshot() -> None:
         "   sources: cdsl; witnesses: 1; confidence: single-witness\n"
         "   refs: mw:1\n"
     )
+
+
+def test_encounter_prints_compact_learner_gloss_with_evidence_line() -> None:
+    triples = [
+        {
+            "subject": "lex:principium",
+            "predicate": "has_sense",
+            "object": "sense:lex:principium#1",
+            "metadata": {
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_53107",
+                }
+            },
+        },
+        {
+            "subject": "sense:lex:principium#1",
+            "predicate": "gloss",
+            "object": (
+                "ĭī, n. (princeps), 1 commencement : nec principium nec finem habere "
+                "Cic. CM 78, n'avoir ni commencement ni fin"
+            ),
+            "metadata": {
+                "source_lang": "fr",
+                "display_gloss": (
+                    "ĭī, n. (princeps), 1 commencement : nec principium nec finem habere "
+                    "Cic. CM 78, n'avoir ni commencement ni fin"
+                ),
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_53107",
+                },
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="gaffiot", subject="lex:principium", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "principium",
+                "gaffiot",
+                "--max-buckets",
+                "1",
+                "--max-gloss-chars",
+                "80",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    assert "1. commencement\n" in cli_result.output
+    assert "   evidence: ĭī, n. (princeps), 1 commencement :" in cli_result.output
 
 
 def test_encounter_sorts_cdsl_buckets_by_source_order_before_gloss_text() -> None:

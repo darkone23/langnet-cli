@@ -236,6 +236,16 @@ def test_dico_entry_triples_mark_source_language_and_evidence() -> None:
     assert triples[1]["metadata"]["source_lang"] == "fr"
     assert triples[1]["metadata"]["evidence"]["source_tool"] == "dico"
     assert triples[1]["metadata"]["display_gloss"] == "loi, condition"
+    assert triples[1]["metadata"]["learner_gloss"] == "loi, condition"
+    assert triples[1]["metadata"]["learner_segments"] == [
+        {
+            "index": 0,
+            "raw_text": "loi, condition",
+            "display_text": "loi, condition",
+            "segment_type": "learner_gloss",
+            "labels": ["definition", "learner_summary"],
+        }
+    ]
     assert triples[1]["metadata"]["source_entry"] == {
         "dict": "dico",
         "source_ref": "dico:34.html#dharma:0",
@@ -254,6 +264,23 @@ def test_dico_entry_triples_mark_source_language_and_evidence() -> None:
             "labels": ["definition"],
         }
     ]
+
+
+def test_dico_entry_triples_strip_short_grammar_preamble_for_learner_gloss() -> None:
+    triples = dico_entry_triples(
+        {
+            "entry_id": "dharma",
+            "occurrence": 0,
+            "headword_norm": "dharma",
+            "plain_text": "dharma [ dharman ] m. n. loi, condition, nature propre | loi physique",
+            "source_page": "34",
+        }
+    )
+
+    assert triples[1]["metadata"]["learner_gloss"] == "loi, condition, nature propre"
+    assert triples[1]["metadata"]["display_gloss"] == (
+        "dharma [ dharman ] m. n. loi, condition, nature propre | loi physique"
+    )
 
 
 def test_dico_staged_handlers_emit_claim_triples() -> None:

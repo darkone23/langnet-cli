@@ -120,7 +120,7 @@ Based on the original plan's "Deferred Items" section, here are recommended next
 **Complexity**: Medium (60% complete)
 
 **What's Needed**:
-- Wire `codesketch/semantic_reducer` into runtime
+- Wire the claim/triple-native reducer in `src/langnet/reduction` into runtime
 - Replace legacy semantic converter
 - Consolidate multiple sources into sense buckets
 - Group synonymous definitions across dictionaries
