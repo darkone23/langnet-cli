@@ -9,12 +9,15 @@ from unittest.mock import patch
 
 import duckdb
 from click.testing import CliRunner
+from query_spec import CanonicalCandidate, NormalizedQuery
 
 from langnet.cli import (
     LanguageHint,
     NormalizeConfig,
     _encounter_bucket_sort_key,
     _encounter_compact_gloss,
+    _encounter_foster_display,
+    _encounter_lemma_compare_keys,
     _encounter_morphology_fallback_terms,
     _encounter_morphology_rows,
     _encounter_preferred_lemmas_from_morphology,
@@ -150,6 +153,16 @@ def test_encounter_morphology_rows_from_form_feature_triples() -> None:
     ]
 
 
+def test_encounter_foster_display_renders_full_learner_labels() -> None:
+    assert _encounter_foster_display("lat", "noun; nominative; plural; neuter") == (
+        "Naming Function; Group; Neuter"
+    )
+    assert _encounter_foster_display("san", "m. sg. voc.") == ("Calling Function; Single; Male")
+    assert _encounter_foster_display("san", "n. sg. acc. | n. sg. nom.") == (
+        "Receiving Function; Single; Neuter / Naming Function; Single; Neuter"
+    )
+
+
 def test_encounter_compact_gloss_extracts_learner_summary_from_source_entry() -> None:
     assert (
         _encounter_compact_gloss(
@@ -217,6 +230,42 @@ def test_get_query_value_for_plan_uses_passthrough_for_greek_script() -> None:
     assert query.original == "ἀρχῇ"
     assert query.candidates[0].lemma == "ἀρχῇ"
     assert query.candidates[0].sources == ["manual"]
+
+
+def test_get_query_value_for_plan_normalizes_greek_epic_eos_form() -> None:
+    normalized = NormalizedQuery(
+        original="Ἀχιλῆος",
+        language=LanguageHint.LANGUAGE_HINT_GRC,
+        candidates=[
+            CanonicalCandidate(
+                lemma="ἀχιλλεύς",
+                sources=["diogenes_word_list_epic_eus"],
+            )
+        ],
+    )
+    service = SimpleNamespace(
+        normalize=lambda _text, _lang_hint: SimpleNamespace(normalized=normalized)
+    )
+
+    with patch("langnet.cli._create_normalization_service", return_value=service):
+        query = _get_query_value_for_plan(
+            "Ἀχιλῆος",
+            LanguageHint.LANGUAGE_HINT_GRC,
+            normalize=True,
+            norm_cfg=NormalizeConfig(
+                diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                heritage_base="http://localhost:48080",
+                db_path="examples/debug/nonexistent/test-normalize.duckdb",
+                no_cache=True,
+                output="pretty",
+            ),
+        )
+
+    assert query.candidates[0].lemma == "ἀχιλλεύς"
+
+
+def test_lemma_compare_keys_include_pos_anchor_base() -> None:
+    assert "armum" in _encounter_lemma_compare_keys("armum#noun")
 
 
 def test_sanskrit_morphology_fallback_ignores_compound_component_lemmas() -> None:
@@ -433,6 +482,72 @@ def test_encounter_prints_compact_learner_gloss_with_evidence_line() -> None:
     assert "   evidence: ĭī, n. (princeps), 1 commencement :" in cli_result.output
 
 
+def test_encounter_prints_structured_cdsl_source_notes_below_refs() -> None:
+    triples = [
+        {
+            "subject": "lex:Darma",
+            "predicate": "has_sense",
+            "object": "sense:lex:Darma#notes",
+            "metadata": {
+                "evidence": {"source_tool": "cdsl", "source_ref": "mw:201"},
+                "display_iast": "dharma",
+                "display_slp1": "Darma",
+            },
+        },
+        {
+            "subject": "sense:lex:Darma#notes",
+            "predicate": "gloss",
+            "object": "law, duty; see Mn. ; MBh. ; religious merit",
+            "metadata": {
+                "display_gloss": "law, duty; see Mn. ; MBh. ; religious merit",
+                "learner_gloss": "law, duty",
+                "source_ref": "mw:201",
+                "display_iast": "dharma",
+                "display_slp1": "Darma",
+                "source_notes": {
+                    "cross_reference_segments": ["see Mn."],
+                    "source_reference_segments": ["MBh."],
+                    "recognized_abbreviations": ["Mn", "MBh"],
+                },
+                "evidence": {"source_tool": "cdsl", "source_ref": "mw:201"},
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="cdsl", subject="lex:Darma", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "san",
+                "dharma",
+                "cdsl",
+                "--max-buckets",
+                "1",
+                "--max-gloss-chars",
+                "80",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    assert cli_result.output == (
+        "dharma [san]\n"
+        "============\n"
+        "Forms: dharma\n"
+        "Source keys: Darma\n"
+        "\n"
+        "Meanings\n"
+        "1. law, duty\n"
+        "   evidence: law, duty; see Mn. ; MBh. ; religious merit\n"
+        "   sources: cdsl; witnesses: 1; confidence: single-witness\n"
+        "   refs: mw:201\n"
+        "   source notes: cross refs: see Mn.; source refs: MBh.\n"
+    )
+
+
 def test_encounter_sorts_cdsl_buckets_by_source_order_before_gloss_text() -> None:
     early = SimpleNamespace(
         display_gloss="z later alphabetically",
@@ -602,6 +717,34 @@ def test_encounter_preferred_lemma_sort_overrides_source_priority() -> None:
     ) == [morphology_match, surface_match]
 
 
+def test_encounter_reduction_lemma_order_can_promote_selected_homograph() -> None:
+    canus = SimpleNamespace(
+        display_gloss="white, gray",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                lexeme_anchor="lex:canus",
+                evidence={"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_10263"},
+            )
+        ],
+    )
+    cano = SimpleNamespace(
+        display_gloss="sing of; celebrate",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="diogenes",
+                lexeme_anchor="lex:cano",
+                evidence={"source_tool": "diogenes", "source_ref": "diogenes:00:00"},
+            )
+        ],
+    )
+
+    assert sorted(
+        [canus, cano],
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, ["cano", "canus"]),
+    ) == [cano, canus]
+
+
 def test_encounter_preferred_lemma_sort_preserves_analysis_order() -> None:
     first_analysis = SimpleNamespace(
         display_gloss="principium noun evidence",
@@ -644,6 +787,67 @@ def test_encounter_preferred_lemma_sort_preserves_analysis_order() -> None:
         [second_analysis, first_analysis],
         key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred),
     ) == [first_analysis, second_analysis]
+
+
+def test_encounter_preferred_lemma_sort_demotes_tackon_before_content_word() -> None:
+    tackon_bucket = SimpleNamespace(
+        display_gloss="-que = and",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="whitaker",
+                lexeme_anchor="lex:que#tackon",
+                evidence={"source_tool": "whitaker"},
+            )
+        ],
+    )
+    content_bucket = SimpleNamespace(
+        display_gloss="man; hero",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                lexeme_anchor="lex:vir",
+                evidence={"source_tool": "gaffiot"},
+            )
+        ],
+    )
+    surface_homograph_bucket = SimpleNamespace(
+        display_gloss="virus",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="whitaker",
+                lexeme_anchor="lex:virum#noun",
+                evidence={"source_tool": "whitaker"},
+            )
+        ],
+    )
+    morphology_rows = [
+        {
+            "source_tool": "whitaker",
+            "form": "que",
+            "lemma": "que",
+            "analysis": "tackon",
+        },
+        {
+            "source_tool": "whitaker",
+            "form": "virum",
+            "lemma": "virum",
+            "analysis": "noun; declension 2; nominative; singular; neuter; accusative",
+        },
+        {
+            "source_tool": "whitaker",
+            "form": "virum",
+            "lemma": "vir",
+            "analysis": "noun; declension 2; accusative; singular; masculine",
+        },
+    ]
+
+    preferred = _encounter_preferred_lemmas_from_morphology(morphology_rows)
+
+    assert preferred == ["vir", "virum", "que"]
+    assert sorted(
+        [tackon_bucket, surface_homograph_bucket, content_bucket],
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred),
+    ) == [content_bucket, surface_homograph_bucket, tackon_bucket]
 
 
 def test_encounter_preferred_lemma_sort_matches_sanskrit_transliteration_variants() -> None:
@@ -720,7 +924,9 @@ def test_encounter_sanskrit_heritage_analysis_snapshot() -> None:
 
     assert cli_result.exit_code == 0, cli_result.output
     assert cli_result.output == (
-        "dharma [san]\n============\n\nAnalysis\n- dharma -> dharma: m. sg. voc. (heritage)\n"
+        "dharma [san]\n============\n\nAnalysis\n"
+        "- dharma -> dharma: m. sg. voc. "
+        "[Foster: Calling Function; Single; Male] (heritage)\n"
     )
 
 
@@ -816,7 +1022,8 @@ def test_encounter_follows_sanskrit_morphology_lemma_when_surface_has_no_meaning
         "for meaning evidence.\n"
         "\n"
         "Analysis\n"
-        "- yuyutsu -> yuyutsu: m. pl. voc. (heritage)\n"
+        "- yuyutsu -> yuyutsu: m. pl. voc. "
+        "[Foster: Calling Function; Group; Male] (heritage)\n"
         "\n"
         "Meanings\n"
         "1. desiring to fight\n"
@@ -904,7 +1111,9 @@ def test_encounter_enriches_sanskrit_surface_with_clear_morphology_lemma() -> No
         "Warning: Followed Sanskrit morphology lemma for additional meaning evidence.\n"
         "\n"
         "Analysis\n"
-        "- karman -> karman: n. sg. acc. | n. sg. nom. (heritage)\n"
+        "- karman -> karman: n. sg. acc. | n. sg. nom. "
+        "[Foster: Receiving Function; Single; Neuter / Naming Function; Single; Neuter] "
+        "(heritage)\n"
         "\n"
         "Meanings\n"
         "1. act, action, duty, rite\n"
@@ -1127,7 +1336,6 @@ def test_encounter_latin_translation_cache_snapshot() -> None:
                     "lat",
                     "lupus",
                     "gaffiot",
-                    "--use-translation-cache",
                     "--translation-cache-db",
                     str(cache_path),
                     "--translation-model",
@@ -1156,6 +1364,177 @@ def test_encounter_latin_translation_cache_snapshot() -> None:
         "   refs: gaffiot:gaffiot_38776\n"
         "   source language: fr\n"
     )
+
+
+def test_encounter_translation_mode_off_ignores_default_cache_hits() -> None:
+    model = "test:model"
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "translation.duckdb"
+        key = build_translation_key(
+            source_lexicon="gaffiot",
+            entry_id="gaffiot_38776",
+            occurrence=1,
+            headword_norm="lupus",
+            source_text="loup",
+            model=model,
+            prompt=BASE_SYSTEM,
+            hint="\n".join(default_hints_for_language("lat")),
+        )
+        conn = duckdb.connect(str(cache_path))
+        try:
+            TranslationCache(conn).upsert(
+                TranslationRecord(
+                    key=key,
+                    translated_text="wolf",
+                    status="ok",
+                    duration_ms=5,
+                )
+            )
+        finally:
+            conn.close()
+
+        triples = [
+            {
+                "subject": "lex:lupus",
+                "predicate": "has_sense",
+                "object": "sense:lex:lupus#gaffiot-loup",
+                "metadata": {
+                    "evidence": {
+                        "source_tool": "gaffiot",
+                        "source_ref": "gaffiot:gaffiot_38776",
+                        "variant_num": 1,
+                    }
+                },
+            },
+            {
+                "subject": "sense:lex:lupus#gaffiot-loup",
+                "predicate": "gloss",
+                "object": "loup",
+                "metadata": {
+                    "source_lang": "fr",
+                    "source_ref": "gaffiot:gaffiot_38776",
+                    "evidence": {
+                        "source_tool": "gaffiot",
+                        "source_ref": "gaffiot:gaffiot_38776",
+                        "variant_num": 1,
+                    },
+                },
+            },
+        ]
+        result = SimpleNamespace(
+            claims=[_claim_with_triples(tool="gaffiot", subject="lex:lupus", triples=triples)]
+        )
+
+        with patch("langnet.cli._execute_lookup_plan", return_value=result):
+            cli_result = CliRunner().invoke(
+                main,
+                [
+                    "encounter",
+                    "lat",
+                    "lupus",
+                    "gaffiot",
+                    "--translation-mode",
+                    "off",
+                    "--translation-cache-db",
+                    str(cache_path),
+                    "--translation-model",
+                    model,
+                    "--max-buckets",
+                    "1",
+                    "--max-gloss-chars",
+                    "80",
+                ],
+            )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    assert "1. loup\n" in cli_result.output
+    assert "wolf" not in cli_result.output
+    assert "translated from:" not in cli_result.output
+
+
+def test_translation_warm_populates_wordlist_cache() -> None:
+    model = "test:model"
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "translation.duckdb"
+        wordlist = Path(tmpdir) / "words.txt"
+        wordlist.write_text("lupus\n", encoding="utf-8")
+        triples = [
+            {
+                "subject": "lex:lupus",
+                "predicate": "has_sense",
+                "object": "sense:lex:lupus#gaffiot-loup",
+                "metadata": {
+                    "evidence": {
+                        "source_tool": "gaffiot",
+                        "source_ref": "gaffiot:gaffiot_38776",
+                        "variant_num": 1,
+                    }
+                },
+            },
+            {
+                "subject": "sense:lex:lupus#gaffiot-loup",
+                "predicate": "gloss",
+                "object": "loup",
+                "metadata": {
+                    "source_lang": "fr",
+                    "source_ref": "gaffiot:gaffiot_38776",
+                    "evidence": {
+                        "source_tool": "gaffiot",
+                        "source_ref": "gaffiot:gaffiot_38776",
+                        "variant_num": 1,
+                    },
+                },
+            },
+        ]
+        result = SimpleNamespace(
+            claims=[_claim_with_triples(tool="gaffiot", subject="lex:lupus", triples=triples)]
+        )
+
+        with (
+            patch("langnet.cli._execute_lookup_plan", return_value=result),
+            patch("langnet.cli._encounter_translation_callback", return_value=lambda _: "wolf"),
+        ):
+            cli_result = CliRunner().invoke(
+                main,
+                [
+                    "translation-warm",
+                    "lat",
+                    str(wordlist),
+                    "--tool-filter",
+                    "gaffiot",
+                    "--translation-cache-db",
+                    str(cache_path),
+                    "--translation-model",
+                    model,
+                    "--output",
+                    "json",
+                ],
+            )
+
+        assert cli_result.exit_code == 0, cli_result.output
+        payload = json.loads(cli_result.output)
+        assert payload["summary"]["terms"] == 1
+        assert payload["summary"]["before_missing"] == 1
+        assert payload["summary"]["written"] == 1
+        assert payload["summary"]["after_hits"] == 1
+
+        key = build_translation_key(
+            source_lexicon="gaffiot",
+            entry_id="gaffiot_38776",
+            occurrence=1,
+            headword_norm="lupus",
+            source_text="loup",
+            model=model,
+            prompt=BASE_SYSTEM,
+            hint="\n".join(default_hints_for_language("lat")),
+        )
+        conn = duckdb.connect(str(cache_path), read_only=True)
+        try:
+            record = TranslationCache(conn, read_only=True).get(key)
+        finally:
+            conn.close()
+        assert record is not None
+        assert record.translated_text == "wolf"
 
 
 def test_encounter_translation_mode_auto_populates_missing_cache() -> None:
@@ -1385,6 +1764,71 @@ def test_encounter_json_projects_all_translation_golden_rows() -> None:
             assert translated_witness["evidence"]["source_lexicon"] == source_lexicon
             assert translated_witness["evidence"]["source_ref"] == row["source_ref"]
             assert translated_witness["evidence"]["parsed_glosses"]
+            assert payload["translation_cache"]["cache_available"] is True
+            assert payload["translation_cache"]["before"] == {
+                "total": 1,
+                "hits": 1,
+                "missing": 0,
+                "errors": 0,
+                "empty": 0,
+            }
+            assert payload["translation_cache"]["after"] == {
+                "total": 1,
+                "hits": 1,
+                "missing": 0,
+                "errors": 0,
+                "empty": 0,
+            }
+            assert payload["translation_cache"]["written"] == 0
+
+
+def test_encounter_json_reports_translation_cache_miss() -> None:
+    fixture = json.loads(TRANSLATION_FIXTURE_PATH.read_text())
+    row = fixture["rows"][0]
+    model = str(fixture["model"])
+    source_lexicon = str(row["source_lexicon"])
+    language = _translation_language(source_lexicon)
+    result = SimpleNamespace(claims=[_claim_from_translation_row(row)])
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "translation.duckdb"
+        conn = duckdb.connect(str(cache_path))
+        conn.close()
+
+        with patch("langnet.cli._execute_lookup_plan", return_value=result):
+            cli_result = CliRunner().invoke(
+                main,
+                [
+                    "encounter",
+                    language,
+                    str(row["headword_norm"]),
+                    source_lexicon,
+                    "--translation-cache-db",
+                    str(cache_path),
+                    "--translation-model",
+                    model,
+                    "--output",
+                    "json",
+                ],
+            )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    assert payload["translation_cache"]["cache_available"] is True
+    assert payload["translation_cache"]["before"] == {
+        "total": 1,
+        "hits": 0,
+        "missing": 1,
+        "errors": 0,
+        "empty": 0,
+    }
+    assert payload["translation_cache"]["after"] == {
+        "total": 1,
+        "hits": 0,
+        "missing": 1,
+        "errors": 0,
+        "empty": 0,
+    }
+    assert payload["translation_cache"]["written"] == 0
 
 
 def test_encounter_prefers_multi_witness_bucket_snapshot() -> None:

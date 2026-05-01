@@ -10,6 +10,7 @@ from langnet.translation.projection import (
     TranslationSource,
     populate_missing_translations,
     project_cached_translations,
+    translation_cache_status_counts,
     translation_source_from_evidence,
 )
 from langnet.translation.prompts import (
@@ -35,5 +36,6 @@ __all__ = [
     "populate_missing_translations",
     "project_cached_translations",
     "text_hash",
+    "translation_cache_status_counts",
     "translation_source_from_evidence",
 ]

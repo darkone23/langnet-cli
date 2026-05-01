@@ -61,8 +61,9 @@ just cli plan lat lupus
 just cli plan-exec lat lupus
 just triples-dump lat lupus whitakers
 
-just cli encounter lat cano gaffiot --translation-mode cache
-just cli encounter san karman dico --translation-mode cache
+just cli encounter lat cano gaffiot
+just cli encounter san karman dico
+just cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffiot --dry-run
 ```
 
 Use `--translation-mode auto` only when you intentionally want to populate

@@ -51,8 +51,9 @@ This plan reconciles `docs/technical/design/` with the current codebase and defi
 - Hydration (e.g. CTS reference expansion) is still not a separate stage/tool.
 - Passage/compound work should not outrun stable word-level claims and sense buckets.
 - Accepted-output coverage is still too small to call the learner interface stable.
-- Reader-form ranking has known misses: `virumque`, `μῆνιν`, `θεὰ`, and
-  `karma/karman`.
+- Reader-form ranking has improved for `virumque`, `μῆνιν`, `θεὰ`, and
+  `karma/karman`; contextual Latin homographs such as `cano` remain active
+  learner-display work.
 
 ## Strategic Sequence
 

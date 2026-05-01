@@ -51,6 +51,7 @@ def summarize_reader_eval(results: Sequence[Mapping[str, Any]]) -> dict[str, Any
     total = len(results)
     passed = sum(1 for result in results if result.get("passed") is True)
     meaning_passed = sum(1 for result in results if result.get("meaning_passed") is True)
+    top_passed = sum(1 for result in results if result.get("top_passed") is True)
     failed = total - passed
     return {
         "total": total,
@@ -60,6 +61,9 @@ def summarize_reader_eval(results: Sequence[Mapping[str, Any]]) -> dict[str, Any
         "meaning_passed": meaning_passed,
         "meaning_failed": total - meaning_passed,
         "meaning_hit_rate": meaning_passed / total if total else 0.0,
+        "top_passed": top_passed,
+        "top_failed": total - top_passed,
+        "top_hit_rate": top_passed / total if total else 0.0,
     }
 
 
@@ -96,7 +100,12 @@ def evaluate_reader_token(
     known_bad_gloss_terms = _strings(token.get("known_bad_gloss_terms"))
 
     lemma_hit = _any_lemma_member(expected_lemmas, actual_lemmas)
+    top_lemma_hit = not expected_lemmas or _any_lemma_member(expected_lemmas, first_bucket_lemmas)
     gloss_hit = _any_normalized_substring(expected_gloss_terms, text_blob)
+    top_gloss_hit = not expected_gloss_terms or _any_normalized_substring(
+        expected_gloss_terms,
+        top_text_blob,
+    )
     component_hit = not expected_components or _all_normalized_substrings(
         expected_components,
         text_blob,
@@ -107,19 +116,28 @@ def evaluate_reader_token(
 
     checks = {
         "lemma_hit": lemma_hit,
+        "top_lemma_hit": top_lemma_hit,
         "gloss_hit": gloss_hit,
+        "top_gloss_hit": top_gloss_hit,
         "component_hit": component_hit,
         "morphology_hit": morphology_hit,
         "known_bad_lemma_not_top": not known_bad_lemma_top,
         "known_bad_gloss_not_top": not known_bad_gloss_top,
     }
     meaning_checks = {key: value for key, value in checks.items() if key != "morphology_hit"}
+    top_checks = {
+        "top_lemma_hit": top_lemma_hit,
+        "top_gloss_hit": top_gloss_hit,
+        "known_bad_lemma_not_top": not known_bad_lemma_top,
+        "known_bad_gloss_not_top": not known_bad_gloss_top,
+    }
     return {
         "passage_id": token.get("passage_id", ""),
         "language": token.get("language", ""),
         "surface": token.get("surface", ""),
         "passed": all(checks.values()),
         "meaning_passed": all(meaning_checks.values()),
+        "top_passed": all(top_checks.values()),
         "checks": checks,
         "expected": {
             "lemmas": expected_lemmas,

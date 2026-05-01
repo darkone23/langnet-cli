@@ -275,6 +275,29 @@ def populate_missing_translations(
     return written
 
 
+def translation_cache_status_counts(
+    *,
+    claims: Sequence[Mapping[str, Any]],
+    language: str,
+    model: str,
+    cache: TranslationCache,
+) -> dict[str, int]:
+    """Count cache status for translatable DICO/Gaffiot French gloss projections."""
+    counts = {"total": 0, "hits": 0, "missing": 0, "errors": 0, "empty": 0}
+    for projection in _translation_projections(claims=claims, language=language, model=model):
+        counts["total"] += 1
+        record = cache.get(projection.key)
+        if record is None:
+            counts["missing"] += 1
+        elif record.status == "ok" and record.translated_text:
+            counts["hits"] += 1
+        elif record.status == "empty":
+            counts["empty"] += 1
+        else:
+            counts["errors"] += 1
+    return counts
+
+
 def _translated_triples(
     *,
     projection: TranslationProjection,

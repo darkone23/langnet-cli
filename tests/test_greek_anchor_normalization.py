@@ -36,6 +36,42 @@ def test_diogenes_triples_use_greek_anchors() -> None:
     assert any(t["predicate"] == "has_sense" and t["subject"] == "lex:logos" for t in triples)
 
 
+def test_diogenes_definition_triples_add_learner_source_structure() -> None:
+    base_evidence = {"source_tool": "diogenes", "call_id": "c1", "claim_id": "cl1"}
+    parsed = {
+        "chunks": [
+            {
+                "chunk_type": "DiogenesMatchingReference",
+                "reference_id": "lsj:logos",
+                "definitions": {
+                    "term": "λόγος",
+                    "blocks": [
+                        {
+                            "entryid": "logos-1",
+                            "entry": "λόγος, ου, ὁ: word; speech; account; reason | example",
+                        }
+                    ],
+                },
+            }
+        ]
+    }
+
+    triples = dio_handlers._build_triples(parsed, ["λόγος"], base_evidence)
+    gloss = next(triple for triple in triples if triple["predicate"] == "gloss")
+
+    assert gloss["metadata"]["learner_gloss"] == "word; speech; account; reason"
+    assert gloss["metadata"]["learner_segments"] == [
+        {
+            "index": 0,
+            "raw_text": "word; speech; account; reason",
+            "display_text": "word; speech; account; reason",
+            "segment_type": "learner_gloss",
+            "labels": ["definition", "learner_summary"],
+        }
+    ]
+    assert gloss["metadata"]["source_segments"][0]["segment_type"] == "dictionary_entry"
+
+
 def test_diogenes_surface_morphology_triples_can_exclude_definitions() -> None:
     base_evidence = {"source_tool": "diogenes", "call_id": "c1", "claim_id": "cl1"}
     parsed = {

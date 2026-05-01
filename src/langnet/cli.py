@@ -4,8 +4,9 @@ import logging
 import os
 import re
 import subprocess
+import time
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -47,6 +48,7 @@ from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
 from langnet.normalizer.utils import strip_accents
 from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
+from langnet.pedagogy.foster import foster_codes_for_features
 from langnet.planner.core import PlannerConfig, ToolPlanner
 from langnet.reader_eval import (
     evaluate_reader_token,
@@ -67,6 +69,7 @@ from langnet.translation import (
     TranslationCache,
     populate_missing_translations,
     project_cached_translations,
+    translation_cache_status_counts,
 )
 
 LanguageHint = query_spec.LanguageHint
@@ -74,6 +77,138 @@ LanguageValue = query_spec.LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
 ENCOUNTER_LEARNER_GLOSS_MAX_CHARS = 120
 ENCOUNTER_LEARNER_GLOSS_ITEM_LIMIT = 4
+
+_FOSTER_DISPLAY_LABELS = {
+    "NAMING": "Naming Function",
+    "CALLING": "Calling Function",
+    "RECEIVING": "Receiving Function",
+    "POSSESSING": "Possessing Function",
+    "TO_FOR": "To-For Function",
+    "BY_WITH_FROM_IN": "By-With-From-In Function",
+    "IN_WHERE": "In-Where Function",
+    "MALE": "Male",
+    "FEMALE": "Female",
+    "NEUTER": "Neuter",
+    "SINGLE": "Single",
+    "PAIR": "Pair",
+    "GROUP": "Group",
+    "TIME_NOW": "Time-Now",
+    "TIME_LATER": "Time-Later",
+    "TIME_WAS_DOING": "Time-Was-Doing",
+    "TIME_PAST": "Time-Past",
+    "TIME_HAD_DONE": "Time-Had-Done",
+    "ONCE_DONE": "Once-Done",
+    "STATEMENT": "Statement",
+    "WISH_MAY_BE": "Wish-May-Be",
+    "MAYBE_WILL_DO": "Maybe-Will-Do",
+    "COMMAND": "Command",
+    "DOING": "Doing",
+    "BEING_DONE_TO": "Being Done To",
+    "FOR_SELF": "For Self",
+    "PARTICIPLE": "Participle",
+}
+
+_FOSTER_DISPLAY_ORDER = (
+    "case",
+    "number",
+    "gender",
+    "tense",
+    "mood",
+    "voice",
+    "participle",
+    "pos",
+)
+
+_FOSTER_ANALYSIS_ALIASES = {
+    "case": {
+        "1": "1",
+        "2": "2",
+        "3": "3",
+        "4": "4",
+        "5": "5",
+        "6": "6",
+        "7": "7",
+        "8": "8",
+        "nom": "nom",
+        "nominative": "nominative",
+        "voc": "voc",
+        "vocative": "vocative",
+        "acc": "acc",
+        "accusative": "accusative",
+        "gen": "gen",
+        "genitive": "genitive",
+        "dat": "dat",
+        "dative": "dative",
+        "abl": "abl",
+        "ablative": "ablative",
+        "loc": "loc",
+        "locative": "locative",
+        "instr": "instr",
+        "inst": "inst",
+        "instrumental": "instrumental",
+    },
+    "gender": {
+        "m": "m",
+        "masc": "masculine",
+        "masculine": "masculine",
+        "f": "f",
+        "fem": "feminine",
+        "feminine": "feminine",
+        "n": "n",
+        "neut": "neuter",
+        "neuter": "neuter",
+    },
+    "number": {
+        "sg": "sg",
+        "sing": "singular",
+        "singular": "singular",
+        "du": "du",
+        "dual": "dual",
+        "pl": "pl",
+        "plur": "plural",
+        "plural": "plural",
+    },
+    "tense": {
+        "pres": "pres",
+        "present": "present",
+        "fut": "fut",
+        "future": "future",
+        "imperf": "imperf",
+        "imperfect": "imperfect",
+        "perf": "perf",
+        "perfect": "perfect",
+        "aor": "aor",
+        "aorist": "aorist",
+        "plupf": "plupf",
+        "pluperfect": "pluperfect",
+    },
+    "mood": {
+        "indic": "indic",
+        "indicative": "indicative",
+        "subj": "subj",
+        "subjunctive": "subjunctive",
+        "opt": "opt",
+        "optative": "optative",
+        "imper": "imper",
+        "imperative": "imperative",
+    },
+    "voice": {
+        "act": "act",
+        "active": "active",
+        "mid": "mid",
+        "middle": "middle",
+        "pass": "pass",
+        "passive": "passive",
+        "depon": "deponent",
+        "deponent": "deponent",
+        "semi-depon": "semi-deponent",
+        "semi-deponent": "semi-deponent",
+    },
+    "participle": {
+        "part": "part",
+        "participle": "participle",
+    },
+}
 
 
 def _ensure_logging(level: int = logging.INFO) -> None:
@@ -1312,7 +1447,12 @@ def _get_query_value_for_plan(
     text: str, lang_hint, normalize: bool, norm_cfg: NormalizeConfig
 ) -> query_spec.NormalizedQuery:
     """Get the query value for planning, either normalized or passthrough."""
-    if normalize and lang_hint == LanguageHint.LANGUAGE_HINT_GRC and _contains_greek_script(text):
+    if (
+        normalize
+        and lang_hint == LanguageHint.LANGUAGE_HINT_GRC
+        and _contains_greek_script(text)
+        and not _requires_greek_script_normalization(text)
+    ):
         return _passthrough_normalized_query(text, lang_hint)
 
     path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
@@ -1336,6 +1476,11 @@ def _get_query_value_for_plan(
 
 def _contains_greek_script(text: str) -> bool:
     return any("\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff" for char in text)
+
+
+def _requires_greek_script_normalization(text: str) -> bool:
+    normalized = strip_accents(text.strip()).casefold()
+    return normalized.endswith(("ηος", "ηοσ"))
 
 
 def _passthrough_normalized_query(text: str, lang_hint) -> query_spec.NormalizedQuery:
@@ -1652,6 +1797,19 @@ def _shorten(text: str, max_chars: int) -> str:
     return normalized[: max_chars - 1].rstrip() + "…"
 
 
+def _encounter_display_length_note(
+    displayed_gloss: str,
+    evidence_gloss: str,
+    *,
+    label: str = "shown",
+) -> str:
+    evidence_chars = len(re.sub(r"\s+", " ", evidence_gloss).strip())
+    displayed_chars = len(displayed_gloss)
+    if evidence_chars <= displayed_chars:
+        return ""
+    return f"{label}: {displayed_chars}/{evidence_chars} chars"
+
+
 def _dedupe_preserve_order(values: list[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -1781,6 +1939,27 @@ def _encounter_translation_sources(bucket) -> list[str]:
     return _dedupe_preserve_order(sources)
 
 
+def _encounter_source_note_summary(bucket, *, max_items: int = 3) -> str:
+    witness = bucket.witnesses[0] if bucket.witnesses else None
+    if witness is None:
+        return ""
+    source_notes = witness.evidence.get("source_notes")
+    if not isinstance(source_notes, Mapping):
+        return ""
+    parts: list[str] = []
+    cross_refs = _encounter_string_sequence(source_notes.get("cross_reference_segments"))
+    if cross_refs:
+        parts.append(f"cross refs: {', '.join(cross_refs[:max_items])}")
+    source_refs = _encounter_string_sequence(source_notes.get("source_reference_segments"))
+    if source_refs:
+        parts.append(f"source refs: {', '.join(source_refs[:max_items])}")
+    if not parts:
+        generic_refs = _encounter_string_sequence(source_notes.get("source_references"))
+        if generic_refs:
+            parts.append(f"source refs: {', '.join(generic_refs[:max_items])}")
+    return "; ".join(parts)
+
+
 def _encounter_claim_triples(claim: Mapping[str, object]) -> list[Mapping[str, object]]:
     value = claim.get("value")
     if not isinstance(value, Mapping):
@@ -1899,12 +2078,16 @@ def _direct_morphology_row(
     if not isinstance(obj, Mapping):
         return None
     obj_dict = cast(dict[str, object], obj)
-    return {
+    row = {
         "source_tool": _encounter_triple_source_tool(triple, claim_tool),
         "form": str(obj_dict.get("form") or triple.get("subject") or "").removeprefix("form:"),
         "lemma": str(obj_dict.get("lemma") or "").removeprefix("lex:"),
         "analysis": str(obj_dict.get("analysis") or "").strip(),
     }
+    solution_number = obj_dict.get("solution_number")
+    if solution_number is not None:
+        row["solution_number"] = str(solution_number)
+    return row
 
 
 def _build_morphology_graph(
@@ -2066,6 +2249,45 @@ def _encounter_morphology_analysis(features: Sequence[str]) -> str:
     return "; ".join(_dedupe_preserve_order([feature for feature in features if feature]))
 
 
+def _encounter_foster_display(language: str, analysis: str) -> str:
+    alternatives = [
+        _encounter_foster_display_alternative(language, alternative)
+        for alternative in analysis.split("|")
+    ]
+    return " / ".join(_dedupe_preserve_order([value for value in alternatives if value]))
+
+
+def _encounter_foster_display_alternative(language: str, analysis: str) -> str:
+    features = _encounter_foster_features_from_analysis(analysis)
+    if not features:
+        return ""
+    codes = foster_codes_for_features(language, features)
+    labels = [
+        _FOSTER_DISPLAY_LABELS.get(codes[key], codes[key].replace("_", " ").title())
+        for key in _FOSTER_DISPLAY_ORDER
+        if key in codes
+    ]
+    return "; ".join(_dedupe_preserve_order(labels))
+
+
+def _encounter_foster_features_from_analysis(analysis: str) -> dict[str, str]:
+    normalized = analysis.lower().replace("_", "-")
+    if "future perfect" in normalized:
+        normalized = normalized.replace("future perfect", "futperf")
+    if "semi deponent" in normalized:
+        normalized = normalized.replace("semi deponent", "semi-deponent")
+    tokens = re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)?", normalized)
+    features: dict[str, str] = {}
+    for feature_key, aliases in _FOSTER_ANALYSIS_ALIASES.items():
+        for token in tokens:
+            if token in aliases:
+                features[feature_key] = aliases[token]
+                break
+    if "participle" in features:
+        features.setdefault("pos", features["participle"])
+    return features
+
+
 def _encounter_morphology_fallback_terms(
     claims: Sequence[Mapping[str, object]],
     *,
@@ -2076,28 +2298,107 @@ def _encounter_morphology_fallback_terms(
     if language != "san":
         return []
 
-    original_norm = original.strip().lower()
-    terms: list[str] = []
     morphology_rows = _encounter_morphology_rows(claims, max_rows=8)
     if any(_is_sanskrit_compound_component(row["analysis"]) for row in morphology_rows):
         return []
+
+    candidates = _encounter_sanskrit_morphology_fallback_candidates(
+        morphology_rows,
+        original=original,
+    )
+    if not candidates:
+        return []
+    selected_candidates = _encounter_preferred_sanskrit_morphology_candidates(candidates)
+    return _encounter_candidate_terms(selected_candidates, max_terms=max_terms)
+
+
+def _encounter_sanskrit_morphology_fallback_candidates(
+    morphology_rows: Sequence[Mapping[str, str]],
+    *,
+    original: str,
+) -> list[tuple[int | None, int, str]]:
+    original_norm = original.strip().lower()
+    candidates: list[tuple[int | None, int, str]] = []
     for row in morphology_rows:
-        form = row["form"].strip()
-        lemma = row["lemma"].strip()
-        analysis = row["analysis"].strip()
-        if not lemma or lemma == "?" or analysis == "?":
+        term = _encounter_sanskrit_candidate_term(row, original_norm=original_norm)
+        if not term:
             continue
-        if form != lemma:
-            continue
-        if lemma.lower() == original_norm:
-            continue
-        if "_" in lemma:
-            continue
-        if lemma not in terms:
-            terms.append(lemma)
+        candidates.append((_encounter_morphology_solution_number(row), len(candidates), term))
+    return candidates
+
+
+def _encounter_sanskrit_candidate_term(
+    row: Mapping[str, str],
+    *,
+    original_norm: str,
+) -> str:
+    form = row["form"].strip()
+    lemma = row["lemma"].strip()
+    analysis = row["analysis"].strip()
+    term = _encounter_sanskrit_morphology_lookup_term(lemma)
+    if not term or analysis == "?":
+        return ""
+    if form != lemma:
+        return ""
+    if term.lower() == original_norm:
+        return ""
+    if "_" in term:
+        return ""
+    return term
+
+
+def _encounter_candidate_terms(
+    candidates: Sequence[tuple[int | None, int, str]],
+    *,
+    max_terms: int,
+) -> list[str]:
+    terms: list[str] = []
+    for _solution_number, _index, term in candidates:
+        if term not in terms:
+            terms.append(term)
         if len(terms) >= max_terms:
             break
     return terms
+
+
+def _encounter_sanskrit_morphology_lookup_term(lemma: str) -> str:
+    lemma = lemma.strip()
+    if not lemma or lemma == "?":
+        return ""
+    return re.sub(r"_\d+$", "", lemma)
+
+
+def _encounter_morphology_solution_number(row: Mapping[str, str]) -> int | None:
+    raw = row.get("solution_number")
+    if raw is None:
+        return None
+    with suppress(ValueError):
+        return int(raw)
+    return None
+
+
+def _encounter_preferred_sanskrit_morphology_candidates(
+    candidates: Sequence[tuple[int | None, int, str]],
+) -> list[tuple[int | None, int, str]]:
+    numbered = [candidate for candidate in candidates if candidate[0] is not None]
+    if not numbered:
+        return list(candidates)
+
+    solution_sizes: dict[int, int] = {}
+    for solution_number, _index, _term in numbered:
+        if solution_number is None:
+            continue
+        solution_sizes[solution_number] = solution_sizes.get(solution_number, 0) + 1
+    if not solution_sizes:
+        return list(candidates)
+
+    smallest_solution_size = min(solution_sizes.values())
+    preferred_solutions = {
+        solution_number
+        for solution_number, size in solution_sizes.items()
+        if size == smallest_solution_size
+    }
+    return [candidate for candidate in candidates if candidate[0] in preferred_solutions]
 
 
 def _is_sanskrit_compound_component(analysis: str) -> bool:
@@ -2177,6 +2478,16 @@ def _encounter_reduction_lemma_values(reduction) -> list[str]:
                 values.append(display_iast)
             if isinstance(display_slp1, str):
                 values.append(cdsl_handlers._slp1_to_iast(display_slp1))  # type: ignore[attr-defined]
+    return _dedupe_preserve_order(values)
+
+
+def _encounter_preferred_lemmas_from_reduction(reduction) -> list[str]:
+    values: list[str] = []
+    for value in _encounter_reduction_lemma_values(reduction):
+        normalized = value.casefold()
+        if normalized == "que" or normalized.endswith("#tackon"):
+            continue
+        values.append(value)
     return _dedupe_preserve_order(values)
 
 
@@ -2321,21 +2632,45 @@ def _encounter_normalize_lemma(value: str) -> str:
 
 def _encounter_lemma_compare_keys(value: str) -> set[str]:
     raw = _encounter_normalize_lemma(value)
+    base = raw.split("#", 1)[0]
     asciiish = strip_accents(raw)
+    base_asciiish = strip_accents(base)
     compact = re.sub(r"[^a-z0-9]+", "", asciiish)
+    base_compact = re.sub(r"[^a-z0-9]+", "", base_asciiish)
     simplified = compact.replace("aa", "a").replace("ii", "i").replace("uu", "u").replace("z", "s")
-    return {key for key in {raw, compact, simplified} if key}
+    base_simplified = (
+        base_compact.replace("aa", "a").replace("ii", "i").replace("uu", "u").replace("z", "s")
+    )
+    return {key for key in {raw, base, compact, base_compact, simplified, base_simplified} if key}
 
 
 def _encounter_preferred_lemmas_from_morphology(
     morphology_rows: Sequence[Mapping[str, str]],
 ) -> list[str]:
     lemmas: list[str] = []
-    for row in morphology_rows:
+    ordered_rows = sorted(
+        enumerate(morphology_rows),
+        key=lambda item: _encounter_morphology_lemma_preference_key(item[1], item[0]),
+    )
+    for _idx, row in ordered_rows:
         lemma = row.get("lemma")
         if lemma:
             lemmas.append(lemma)
     return _dedupe_preserve_order(lemmas)
+
+
+def _encounter_morphology_lemma_preference_key(
+    row: Mapping[str, str],
+    idx: int,
+) -> tuple[int, int]:
+    analysis = row.get("analysis", "").casefold()
+    if "tackon" in analysis:
+        return (2, idx)
+    form = row.get("form", "").strip().casefold()
+    lemma = row.get("lemma", "").strip().casefold()
+    if form and form == lemma and ("noun" in analysis or "adjective" in analysis):
+        return (1, idx)
+    return (0, idx)
 
 
 def _encounter_preferred_lemma_rank(
@@ -2425,12 +2760,111 @@ def _openrouter_translation_callback(model: str):
     return translate
 
 
+def _encounter_translation_callback(model: str):
+    translate = _openrouter_translation_callback(model)
+
+    def _translate_with_progress(projection) -> str:
+        source = projection.source
+        label = f"{source.source_lexicon}:{source.entry_id}:{source.occurrence}"
+        sent_chars = len(projection.source_text)
+        click.echo(
+            f"translation start: {label} source_chars={sent_chars} sent_chars={sent_chars}",
+            err=True,
+        )
+        start = time.perf_counter()
+        try:
+            translated = translate(projection)
+        except Exception:
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            click.echo(f"translation failed: {label} elapsed_ms={elapsed_ms}", err=True)
+            raise
+        elapsed_ms = int((time.perf_counter() - start) * 1000)
+        click.echo(
+            f"translation finished: {label} elapsed_ms={elapsed_ms} output_chars={len(translated)}",
+            err=True,
+        )
+        return translated
+
+    return _translate_with_progress
+
+
 def _resolve_translation_mode(use_translation_cache: bool, translation_mode: str) -> str:
     if translation_mode == "do-it-all":
         return "auto"
     if use_translation_cache and translation_mode == "off":
         return "cache"
     return translation_mode
+
+
+def _encounter_translation_diagnostics(
+    *,
+    mode: str,
+    cache_path: Path,
+    model: str,
+    populate: bool,
+) -> dict[str, object]:
+    return {
+        "mode": mode,
+        "cache_db": str(cache_path),
+        "model": model,
+        "cache_available": False,
+        "populate": populate,
+        "written": 0,
+        "before": _empty_translation_counts(),
+        "after": _empty_translation_counts(),
+        "batches": [],
+    }
+
+
+def _encounter_apply_translation_cache(  # noqa: PLR0913
+    *,
+    claims: list[Mapping[str, object]],
+    language: str,
+    model: str,
+    cache: TranslationCache,
+    populate: bool,
+    translate: Callable[[object], str],
+    diagnostics: dict[str, object],
+    context: str,
+) -> list[Mapping[str, object]]:
+    before = translation_cache_status_counts(
+        claims=claims,
+        language=language,
+        model=model,
+        cache=cache,
+    )
+    written = 0
+    if populate:
+        written = populate_missing_translations(
+            claims=claims,
+            language=language,
+            model=model,
+            cache=cache,
+            translate=translate,
+        )
+    after = translation_cache_status_counts(
+        claims=claims,
+        language=language,
+        model=model,
+        cache=cache,
+    )
+    _merge_translation_counts(cast(dict[str, int], diagnostics["before"]), before)
+    _merge_translation_counts(cast(dict[str, int], diagnostics["after"]), after)
+    diagnostics["written"] = cast(int, diagnostics["written"]) + written
+    cast(list[dict[str, object]], diagnostics["batches"]).append(
+        {
+            "context": context,
+            "before": before,
+            "written": written,
+            "after": after,
+        }
+    )
+    return project_cached_translations(
+        claims=claims,
+        language=language,
+        model=model,
+        cache=cache,
+    )
 
 
 def _execute_lookup_plan(  # noqa: PLR0913
@@ -2491,6 +2925,239 @@ def _execute_lookup_plan(  # noqa: PLR0913
             claim_index=claim_index,
             plan_response_index=plan_response_index,
             allow_cache=False,
+        )
+
+
+def _translation_warm_terms(wordlist: Path, *, limit: int | None = None) -> list[str]:
+    terms: list[str] = []
+    seen: set[str] = set()
+    for raw_line in wordlist.read_text(encoding="utf-8").splitlines():
+        term = raw_line.split("#", 1)[0].strip()
+        if not term or term in seen:
+            continue
+        terms.append(term)
+        seen.add(term)
+        if limit is not None and len(terms) >= limit:
+            break
+    return terms
+
+
+def _add_translation_counts(
+    total: dict[str, int],
+    counts: Mapping[str, int],
+    *,
+    prefix: str = "",
+) -> None:
+    for key, value in counts.items():
+        total[f"{prefix}{key}"] = total.get(f"{prefix}{key}", 0) + int(value)
+
+
+def _empty_translation_counts() -> dict[str, int]:
+    return {"total": 0, "hits": 0, "missing": 0, "errors": 0, "empty": 0}
+
+
+def _merge_translation_counts(total: dict[str, int], counts: Mapping[str, int]) -> None:
+    for key, value in counts.items():
+        total[key] = total.get(key, 0) + int(value)
+
+
+@main.command("translation-warm")
+@click.argument("language", type=click.Choice(["lat", "san"], case_sensitive=False))
+@click.argument(
+    "wordlist",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--tool-filter",
+    default="all",
+    show_default=True,
+    help="Restrict lookup tools before collecting DICO/Gaffiot translation candidates.",
+)
+@click.option(
+    "--limit",
+    type=click.IntRange(min=1),
+    help="Maximum number of non-empty wordlist terms to process.",
+)
+@click.option(
+    "--normalize/--no-normalize",
+    default=True,
+    show_default=True,
+    help="Normalize input before querying tools.",
+)
+@click.option(
+    "--diogenes-endpoint",
+    default="http://localhost:8888/Diogenes.cgi",
+    show_default=True,
+    help="Diogenes CGI endpoint.",
+)
+@click.option(
+    "--diogenes-parse-endpoint",
+    default=None,
+    help="Optional Diogenes morphology endpoint.",
+)
+@click.option(
+    "--heritage-base",
+    default="http://localhost:48080",
+    show_default=True,
+    help="Base URL for Heritage Platform.",
+)
+@click.option(
+    "--db-path",
+    type=click.Path(),
+    help=(
+        "Path to persistent DuckDB cache for normalization (defaults to data/cache/langnet.duckdb)."
+    ),
+)
+@click.option(
+    "--no-cache",
+    is_flag=True,
+    help="Skip normalization cache lookups and writes for each lookup.",
+)
+@click.option(
+    "--include-cltk/--no-include-cltk",
+    default=False,
+    show_default=True,
+    help="Include CLTK in the plan (may be slow due to warmup).",
+)
+@click.option(
+    "--translation-cache-db",
+    default="data/cache/langnet.duckdb",
+    show_default=True,
+    help="DuckDB cache receiving entry_translations rows.",
+)
+@click.option(
+    "--translation-model",
+    default="openai:google/gemini-3.1-pro-preview",
+    show_default=True,
+    help="Model id used when computing translation cache keys.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Inspect cache hits/misses without calling the translation model or writing rows.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def translation_warm(  # noqa: PLR0913, PLR0915
+    language: str,
+    wordlist: Path,
+    tool_filter: str,
+    limit: int | None,
+    normalize: bool,
+    diogenes_endpoint: str,
+    diogenes_parse_endpoint: str | None,
+    heritage_base: str,
+    db_path: str | None,
+    no_cache: bool,
+    include_cltk: bool,
+    translation_cache_db: str,
+    translation_model: str,
+    dry_run: bool,
+    output: str,
+) -> None:
+    """Warm DICO/Gaffiot translation cache rows for a word list."""
+    terms = _translation_warm_terms(wordlist, limit=limit)
+    cache_path = Path(translation_cache_db)
+    if dry_run and not cache_path.exists():
+        translation_conn = duckdb.connect(database=":memory:")
+        translation_cache = TranslationCache(translation_conn)
+    else:
+        if not dry_run:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+        translation_conn = duckdb.connect(str(cache_path), read_only=dry_run)
+        translation_cache = TranslationCache(translation_conn, read_only=dry_run)
+
+    translate = None if dry_run else _encounter_translation_callback(translation_model)
+    term_summaries: list[dict[str, object]] = []
+    totals: dict[str, int] = {
+        "terms": len(terms),
+        "written": 0,
+    }
+
+    try:
+        for term in terms:
+            result = _execute_lookup_plan(
+                language=language,
+                text=term,
+                tool_filter=tool_filter,
+                normalize=normalize,
+                diogenes_endpoint=diogenes_endpoint,
+                diogenes_parse_endpoint=diogenes_parse_endpoint,
+                heritage_base=heritage_base,
+                db_path=db_path,
+                no_cache=no_cache,
+                include_cltk=include_cltk,
+            )
+            claims = _claims_as_mappings(result)
+            before = translation_cache_status_counts(
+                claims=claims,
+                language=language,
+                model=translation_model,
+                cache=translation_cache,
+            )
+            written = 0
+            if not dry_run and before["total"] > before["hits"]:
+                assert translate is not None
+                written = populate_missing_translations(
+                    claims=claims,
+                    language=language,
+                    model=translation_model,
+                    cache=translation_cache,
+                    translate=translate,
+                )
+            after = translation_cache_status_counts(
+                claims=claims,
+                language=language,
+                model=translation_model,
+                cache=translation_cache,
+            )
+            totals["written"] += written
+            _add_translation_counts(totals, before, prefix="before_")
+            _add_translation_counts(totals, after, prefix="after_")
+            term_summaries.append(
+                {
+                    "term": term,
+                    "before": before,
+                    "written": written,
+                    "after": after,
+                }
+            )
+    finally:
+        translation_conn.close()
+
+    payload = {
+        "language": language,
+        "wordlist": str(wordlist),
+        "translation_cache_db": str(cache_path),
+        "translation_model": translation_model,
+        "dry_run": dry_run,
+        "summary": totals,
+        "terms": term_summaries,
+    }
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+
+    action = "Dry run" if dry_run else "Warm"
+    click.echo(
+        f"{action}: terms={totals['terms']} "
+        f"projections={totals.get('before_total', 0)} "
+        f"hits={totals.get('before_hits', 0)} "
+        f"missing={totals.get('before_missing', 0)} "
+        f"written={totals['written']}"
+    )
+    for item in term_summaries:
+        before = cast(Mapping[str, int], item["before"])
+        after = cast(Mapping[str, int], item["after"])
+        click.echo(
+            f"- {item['term']}: projections={before['total']} "
+            f"hits={before['hits']} missing={before['missing']} "
+            f"written={item['written']} after_hits={after['hits']}"
         )
 
 
@@ -2567,10 +3234,10 @@ def _execute_lookup_plan(  # noqa: PLR0913
 @click.option(
     "--translation-mode",
     type=click.Choice(["off", "cache", "populate", "auto", "do-it-all"]),
-    default="off",
+    default="cache",
     show_default=True,
     help=(
-        "French source translation mode: off, cache-only, or populate missing "
+        "French source translation mode: cache-only, off, or populate missing "
         "DICO/Gaffiot rows via OpenRouter before display. do-it-all is an alias for auto."
     ),
 )
@@ -2582,9 +3249,15 @@ def _execute_lookup_plan(  # noqa: PLR0913
 )
 @click.option(
     "--translation-model",
-    default="openai:google/gemma-4-31b-it",
+    default="openai:google/gemini-3.1-pro-preview",
     show_default=True,
     help="Model id used when computing translation cache keys.",
+)
+@click.option(
+    "--foster-labels/--no-foster-labels",
+    default=True,
+    show_default=True,
+    help="Show optional Foster functional grammar labels beside morphology analysis.",
 )
 def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     language: str,
@@ -2604,6 +3277,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     translation_mode: str,
     translation_cache_db: str,
     translation_model: str,
+    foster_labels: bool,
 ):
     """
     Show a compact, source-backed learner encounter for one word.
@@ -2628,40 +3302,51 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             use_translation_cache,
             translation_mode,
         )
-        if resolved_translation_mode != "off":
-            cache_path = Path(translation_cache_db)
-            populate_translations = resolved_translation_mode in {"populate", "auto"}
-            if cache_path.exists() or populate_translations:
-                if populate_translations:
-                    cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path = Path(translation_cache_db)
+        populate_translations = resolved_translation_mode in {"populate", "auto"}
+        translation_diagnostics = _encounter_translation_diagnostics(
+            mode=resolved_translation_mode,
+            cache_path=cache_path,
+            model=translation_model,
+            populate=populate_translations,
+        )
+        translation_callback = _encounter_translation_callback(translation_model)
+        if resolved_translation_mode != "off" and (cache_path.exists() or populate_translations):
+            if populate_translations:
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
                 translation_conn = duckdb.connect(
-                    str(cache_path), read_only=not populate_translations
+                    str(cache_path),
+                    read_only=not populate_translations,
                 )
+            except Exception as exc:  # noqa: BLE001
+                translation_diagnostics["error"] = str(exc)
+                if populate_translations:
+                    raise click.ClickException(
+                        f"Unable to open translation cache {translation_cache_db}: {exc}"
+                    ) from exc
+            if translation_conn is not None:
                 translation_cache = TranslationCache(
                     translation_conn,
                     read_only=not populate_translations,
                 )
+                translation_diagnostics["cache_available"] = True
+            if translation_cache is not None:
                 try:
-                    if populate_translations:
-                        populate_missing_translations(
-                            claims=claims,
-                            language=language,
-                            model=translation_model,
-                            cache=translation_cache,
-                            translate=_openrouter_translation_callback(translation_model),
-                        )
-                    claims = project_cached_translations(
+                    claims = _encounter_apply_translation_cache(
                         claims=claims,
                         language=language,
                         model=translation_model,
                         cache=translation_cache,
+                        populate=populate_translations,
+                        translate=translation_callback,
+                        diagnostics=translation_diagnostics,
+                        context="initial",
                     )
                 except Exception as exc:  # noqa: BLE001
                     raise click.ClickException(
                         f"Unable to use translation cache {translation_cache_db}: {exc}"
                     ) from exc
-            elif output != "json":
-                click.echo(f"Translation cache unavailable: {translation_cache_db}")
 
         reduction = reduce_claims(query=text, language=language, claims=claims)
         if _encounter_should_retry_uncached(
@@ -2685,19 +3370,15 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             fresh_claims = _claims_as_mappings(fresh_result)
             if translation_cache is not None:
                 try:
-                    if resolved_translation_mode in {"populate", "auto"}:
-                        populate_missing_translations(
-                            claims=fresh_claims,
-                            language=language,
-                            model=translation_model,
-                            cache=translation_cache,
-                            translate=_openrouter_translation_callback(translation_model),
-                        )
-                    fresh_claims = project_cached_translations(
+                    fresh_claims = _encounter_apply_translation_cache(
                         claims=fresh_claims,
                         language=language,
                         model=translation_model,
                         cache=translation_cache,
+                        populate=populate_translations,
+                        translate=translation_callback,
+                        diagnostics=translation_diagnostics,
+                        context="retry",
                     )
                 except Exception as exc:  # noqa: BLE001
                     raise click.ClickException(
@@ -2712,6 +3393,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     "normalization."
                 )
 
+        morphology_claims = claims
         fallback_terms, fallback_warning = _encounter_sanskrit_morphology_lookup_terms(
             claims=claims,
             language=language,
@@ -2738,19 +3420,15 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 term_claims = _claims_as_mappings(fallback_result)
                 if translation_cache is not None:
                     try:
-                        if resolved_translation_mode in {"populate", "auto"}:
-                            populate_missing_translations(
-                                claims=term_claims,
-                                language=language,
-                                model=translation_model,
-                                cache=translation_cache,
-                                translate=_openrouter_translation_callback(translation_model),
-                            )
-                        term_claims = project_cached_translations(
+                        term_claims = _encounter_apply_translation_cache(
                             claims=term_claims,
                             language=language,
                             model=translation_model,
                             cache=translation_cache,
+                            populate=populate_translations,
+                            translate=translation_callback,
+                            diagnostics=translation_diagnostics,
+                            context=f"fallback:{fallback_term}",
                         )
                     except Exception as exc:  # noqa: BLE001
                         raise click.ClickException(
@@ -2769,8 +3447,28 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     if fallback_warning:
                         reduction.warnings.append(fallback_warning)
 
+        morphology_rows = _encounter_morphology_rows(
+            morphology_claims,
+            language=language,
+            original=text,
+            reduction=reduction,
+        )
+        preferred_lemmas = _dedupe_preserve_order(
+            [
+                *fallback_terms,
+                *_encounter_preferred_lemmas_from_reduction(reduction),
+                *_encounter_preferred_lemmas_from_morphology(morphology_rows),
+            ]
+        )
+        reduction.buckets = sorted(
+            reduction.buckets,
+            key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred_lemmas),
+        )
+
         if output == "json":
-            click.echo(orjson.dumps(asdict(reduction), option=orjson.OPT_INDENT_2).decode("utf-8"))
+            payload = asdict(reduction)
+            payload["translation_cache"] = translation_diagnostics
+            click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
             return
 
         click.echo(f"{text} [{language}]")
@@ -2780,12 +3478,6 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             click.echo("Forms: " + ", ".join(display_forms[:4]))
         if source_keys and source_keys != display_forms:
             click.echo("Source keys: " + ", ".join(source_keys[:4]))
-        morphology_rows = _encounter_morphology_rows(
-            claims,
-            language=language,
-            original=text,
-            reduction=reduction,
-        )
         if reduction.warnings:
             for warning in reduction.warnings:
                 if (
@@ -2799,19 +3491,19 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             click.echo("\nAnalysis")
             for row in morphology_rows:
                 source = row["source_tool"] or "unknown"
-                click.echo(f"- {row['form']} -> {row['lemma']}: {row['analysis']} ({source})")
+                foster_display = (
+                    _encounter_foster_display(language, row["analysis"]) if foster_labels else ""
+                )
+                foster_suffix = f" [Foster: {foster_display}]" if foster_display else ""
+                click.echo(
+                    f"- {row['form']} -> {row['lemma']}: "
+                    f"{row['analysis']}{foster_suffix} ({source})"
+                )
         if not reduction.buckets:
             return
 
         click.echo("\nMeanings")
-        preferred_lemmas = _dedupe_preserve_order(
-            [*fallback_terms, *_encounter_preferred_lemmas_from_morphology(morphology_rows)]
-        )
-        display_buckets = sorted(
-            reduction.buckets,
-            key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred_lemmas),
-        )
-        for idx, bucket in enumerate(display_buckets[:max_buckets], start=1):
+        for idx, bucket in enumerate(reduction.buckets[:max_buckets], start=1):
             sources = sorted(
                 {witness.source_tool for witness in bucket.witnesses if witness.source_tool}
             )
@@ -2823,9 +3515,21 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             if (
                 learner_gloss
                 and learner_gloss != evidence_gloss
-                and displayed_gloss != _shorten(evidence_gloss, max_gloss_chars)
+                and displayed_gloss
+                != (displayed_evidence := _shorten(evidence_gloss, max_gloss_chars))
             ):
-                click.echo(f"   evidence: {_shorten(evidence_gloss, max_gloss_chars)}")
+                click.echo(f"   evidence: {displayed_evidence}")
+                evidence_length_note = _encounter_display_length_note(
+                    displayed_evidence,
+                    evidence_gloss,
+                    label="evidence shown",
+                )
+                if evidence_length_note:
+                    click.echo(f"   {evidence_length_note}")
+            else:
+                length_note = _encounter_display_length_note(displayed_gloss, evidence_gloss)
+                if length_note:
+                    click.echo(f"   {length_note}")
             click.echo(
                 f"   sources: {source_text}; witnesses: {len(bucket.witnesses)}; "
                 f"confidence: {bucket.confidence_label}"
@@ -2833,6 +3537,9 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             source_refs = _encounter_source_refs(bucket)
             if source_refs:
                 click.echo(f"   refs: {', '.join(source_refs[:3])}")
+            source_note_summary = _encounter_source_note_summary(bucket)
+            if source_note_summary:
+                click.echo(f"   source notes: {source_note_summary}")
             translation_sources = _encounter_translation_sources(bucket)
             if translation_sources:
                 click.echo(f"   translated from: {', '.join(translation_sources[:3])}")
@@ -2845,8 +3552,8 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             )
             if source_langs:
                 click.echo(f"   source language: {', '.join(source_langs)}")
-        if len(display_buckets) > max_buckets:
-            click.echo(f"\n({len(display_buckets) - max_buckets} more bucket(s) hidden)")
+        if len(reduction.buckets) > max_buckets:
+            click.echo(f"\n({len(reduction.buckets) - max_buckets} more bucket(s) hidden)")
     finally:
         if translation_conn is not None:
             translation_conn.close()
@@ -2920,8 +3627,11 @@ def _reader_eval_display(report: Mapping[str, object]) -> None:
     hit_rate = _reader_eval_float(summary_map.get("hit_rate"))
     meaning_passed = _reader_eval_int(summary_map.get("meaning_passed"))
     meaning_hit_rate = _reader_eval_float(summary_map.get("meaning_hit_rate"))
+    top_passed = _reader_eval_int(summary_map.get("top_passed"))
+    top_hit_rate = _reader_eval_float(summary_map.get("top_hit_rate"))
     click.echo(f"Reader eval: {passed}/{total} passed ({hit_rate:.0%} hit rate); {failed} failed")
     click.echo(f"Meaning: {meaning_passed}/{total} ({meaning_hit_rate:.0%} hit rate)")
+    click.echo(f"Top answer: {top_passed}/{total} ({top_hit_rate:.0%} hit rate)")
 
     results = report.get("results")
     if not isinstance(results, list):
@@ -3031,7 +3741,7 @@ def _reader_eval_display(report: Mapping[str, object]) -> None:
 )
 @click.option(
     "--translation-model",
-    default="openai:google/gemma-4-31b-it",
+    default="openai:google/gemini-3.1-pro-preview",
     show_default=True,
     help="Model id used when computing translation cache keys.",
 )
@@ -3095,6 +3805,7 @@ def reader_eval(  # noqa: PLR0913, PLR0915
                 translation_model=translation_model,
             )
             reduction = reduce_claims(query=surface, language=language, claims=claims)
+            morphology_claims = claims
             fallback_terms, _fallback_warning = _encounter_sanskrit_morphology_lookup_terms(
                 claims=claims,
                 language=language,
@@ -3137,14 +3848,18 @@ def reader_eval(  # noqa: PLR0913, PLR0915
                         claims = fallback_claims
                         reduction = fallback_reduction
             morphology_rows = _encounter_morphology_rows(
-                claims,
+                morphology_claims,
                 language=language,
                 original=surface,
                 reduction=reduction,
                 max_rows=8,
             )
             preferred_lemmas = _dedupe_preserve_order(
-                [*fallback_terms, *_encounter_preferred_lemmas_from_morphology(morphology_rows)]
+                [
+                    *fallback_terms,
+                    *_encounter_preferred_lemmas_from_reduction(reduction),
+                    *_encounter_preferred_lemmas_from_morphology(morphology_rows),
+                ]
             )
             reduction.buckets = sorted(
                 reduction.buckets,

@@ -1,6 +1,6 @@
 # Working Baseline And Roadmap
 
-**Date:** 2026-04-28  
+**Date:** 2026-04-29  
 **Mode:** stabilization before expansion
 
 This document is the current checkpoint for continuing LangNet development. It
@@ -28,7 +28,8 @@ reader who asks, "what does this word mean here?"
 
 - CLI-first product surface.
 - Commands: `lookup`, `parse`, `normalize`, `plan`, `plan-exec`,
-  `triples-dump`, `encounter`, `reader-eval`, `databuild`, and `index`.
+  `triples-dump`, `encounter`, `reader-eval`, `translation-warm`,
+  `databuild`, and `index`.
 - Deterministic planning over normalized queries.
 - Staged execution: fetch -> extract -> derive -> claim.
 - DuckDB-backed caches and indexes for normalization, staged effects, claims,
@@ -66,10 +67,16 @@ continue to use fixtures rather than live services.
 - DICO/Gaffiot French source entries are source evidence.
 - Cache-backed English translations are derived evidence, not replacement
   facts.
-- `--translation-mode cache` reads exact cache hits.
+- `encounter` defaults to cache-only enrichment and reads exact cache hits when
+  the configured translation cache DB exists.
+- `--translation-mode off` disables translation projection.
 - `--translation-mode auto` explicitly populates missing DICO/Gaffiot
   translations through OpenRouter, writes cache rows, then projects the cached
   English evidence.
+- `translation-warm` explicitly populates missing DICO/Gaffiot translation
+  cache rows for a word list before learner lookup.
+- `encounter --output json` includes translation-cache availability and
+  hit/miss/write diagnostics.
 - `--use-translation-cache` remains supported as the older cache-only spelling.
 - Translation cache identity includes source lexicon, entry, occurrence,
   headword, source text hash, source/target language, model, prompt hash, and
@@ -85,8 +92,9 @@ Observed limitations:
 - live cache population can be slow for long entries;
 - cached translations remain full dictionary entries; the compact learner line is
   a source-backed display summary, not a replacement translation record;
-- headword routing still matters, e.g. `virumque` can route to `virus`, and
-  `karma` is less useful than `karman` for the DICO concept entry.
+- headword routing still matters, e.g. contextual Latin homographs such as
+  `cano` can surface competing non-reader senses, and `karma` is less useful
+  than `karman` for the DICO concept entry without Heritage morphology support.
 
 ## Current Gaps Against The Vision
 
@@ -97,7 +105,9 @@ right learner answer.
 
 Examples:
 
-- `virumque` should lead with `vir + -que`; it can currently surface `virus`.
+- Latin reader forms should lead with the content word while preserving
+  enclitic evidence; `virumque` now leads with `vir + -que`, but related
+  contextual homograph ranking remains active work.
 - Greek `μῆνιν` should prefer `μῆνις`, not `μήνιον`.
 - Greek `θεὰ` should prefer `θεά`, not `θέα`.
 - Sanskrit `karma` should route to `karman` when the intended DICO concept
@@ -130,11 +140,21 @@ grammar, citations, abbreviations, examples, and glosses in one source string.
 The system preserves the evidence, but learner display still needs safer typed
 segments before broad ranking or semantic merging can be trusted.
 
+The current source-structuring slice now uses CDSL source-note segments in
+`encounter` output and adds Diogenes learner-gloss/learner-segment metadata for
+dictionary definition triples. This is still display metadata over preserved
+raw source text, not semantic merging.
+
 ### 4. Reader Evaluation
 
 Coverage audits show whether evidence exists. They do not yet measure whether
 the first screen answers a reader's question. The project needs reader-oriented
 fixtures with tolerant assertions, not brittle full-output snapshots only.
+
+`reader-eval` now reports overall, meaning, and top-answer hit rates. The
+classic-opening fixture is the current stabilization gate; the corpus-expansion
+fixture is intentionally stricter forward pressure for ranking and compact
+display work.
 
 ### 5. Passage And Context
 
@@ -205,8 +225,8 @@ Corpus expansion fixture:
   Upanishad invocation, and Taittiriya Samhita 1.1.1.
 - live checkpoint:
   `just cli reader-eval --fixture tests/fixtures/reader_eval_corpus_expansion.json --db-path examples/debug/corpus-probes/corpus-reader-eval-4.duckdb --translation-mode off --output json`
-- strict grammar+meaning hit rate: 14/14
-- meaning-only hit rate: 14/14
+- strict grammar+meaning hit rate: 15/15
+- meaning-only hit rate: 15/15
 - This checkpoint verifies raw source evidence without cached translations. It
   also covers Greek-script direct lookup (`ἀρχῇ`), Diogenes source-order
   ranking (`θεόν`), Gaffiot source-order ranking (`erat`), and Sanskrit
@@ -217,8 +237,10 @@ Corpus expansion fixture:
   visible while shortening the first line, e.g. Gaffiot `principium` can display
   `commencement` with the full source entry preserved below as evidence.
 
-The full cached reader-eval checkpoint now passes 13/13 strict and 13/13
-meaning checks. This is a seed-fixture baseline, not a general release guarantee.
+The current reader-eval checkpoints pass 13/13 strict and meaning checks for
+the classic-opening seed fixture and 15/15 strict and meaning checks for the
+corpus-expansion fixture. This is a seed-fixture baseline, not a general
+release guarantee.
 
 Cache caveat:
 
@@ -243,8 +265,10 @@ Goal: make the selected learner target reliable.
 
 Priority fixes:
 
-- Latin enclitic/form routing: `virumque -> vir + -que`.
-- Latin finite verb/noun ambiguity where exact form favors the reader sense.
+- Latin enclitic/form routing: keep `virumque -> vir + -que` covered while
+  preserving tackon evidence below the content word.
+- Latin finite verb/noun ambiguity where exact form favors the reader sense,
+  especially `cano`.
 - Latin first-declension/proper-name forms: `Troiae -> Troia` through general
   form candidates, not text-specific exceptions.
 - Greek accent-sensitive ranking: `θεὰ -> θεά`, `μῆνιν -> μῆνις`.
@@ -258,9 +282,7 @@ Started:
 
 - Gaffiot lookup now receives the full ordered Latin normalization candidate
   list, so a non-selected but relevant lemma such as `vir` can still reach the
-  local bilingual dictionary. The remaining `virumque` work is explicit
-  enclitic/component display and ranking the reader target above unrelated
-  candidates.
+  local bilingual dictionary.
 - Sanskrit reader forms with Heritage morphology but no surface-form meaning
   buckets now follow the morphology lemma for meaning evidence, as with
   `yuyutsavaḥ -> yuyutsu`.
@@ -277,6 +299,9 @@ Started:
 - Encounter morphology display now reads both direct `has_morphology` triples
   and general form/interp feature triples, so existing Whitaker and Diogenes
   morphology evidence counts for reader-eval strict mode.
+- Encounter lemma ranking now demotes tackon-only and same-form nominal
+  analyses behind clearer content-word morphology, so `virumque` leads with
+  `vir` instead of `-que` or `virus`.
 - Greek planning now preserves a morphology-only surface-form Diogenes parse
   beside the canonical lookup when normalization changes the query, improving
   reader-form morphology for forms such as `μῆνιν` without adding fuzzy
@@ -309,8 +334,9 @@ calls.
 
 Tasks:
 
-- add batch/cache-warming commands for headword lists and passage word lists;
-- add cache hit/miss diagnostics in JSON/debug output;
+- extend `translation-warm` ergonomics for passage vocabulary and larger
+  batches;
+- add optional pretty/debug cache diagnostics;
 - add timeout/chunking policy for long entries;
 - keep default encounter network-free.
 
@@ -355,13 +381,14 @@ Dependencies:
 
 ## Current Recommended Queue
 
-1. Add reader-eval fixtures for the three classic openings.
-2. Fix `virumque`, keep `karma/karman` and `θεὰ` covered, and continue Greek
-   surface morphology routing with accepted tests.
+1. Keep the classic-opening `reader-eval` fixture green on strict/top-answer
+   checks.
+2. Use the corpus-expansion fixture as the next ranking backlog, starting with
+   `principio`, `Deum`, `λόγος`, `śam`, `iṣe`, `ūrje`, and `tvā`.
 3. Implement compact gloss derivation/display for translated DICO/Gaffiot
    witnesses.
-4. Make cache-backed translations default enrichment when exact rows already
-   exist, while keeping live population explicit.
-5. Add translation cache warming for a word list.
-6. Update source-structuring fixtures for CDSL and long LSJ/Gaffiot entries.
-7. Reassess passage-level work only after the above passes.
+4. Continue source-structuring fixtures for CDSL, Diogenes/LSJ, and long
+   Gaffiot entries.
+5. Add passage-vocabulary cache-warming ergonomics after the word-level gate is
+   stable.
+6. Reassess passage-level work only after the above passes.

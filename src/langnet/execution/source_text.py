@@ -66,9 +66,13 @@ def compact_source_gloss(
         text = numbered.group(1).strip()
     elif ":" in text and text.index(":") <= COMPACT_GLOSS_MAX_PREFIX_CHARS:
         prefix = text[: text.index(":")].strip()
+        suffix = text[text.index(":") + 1 :].strip()
         if _COMPACT_SECTION_PREFIX_RE.match(prefix):
             return _shorten_display(text, max_chars)
-        text = prefix
+        if _looks_like_lexical_header(prefix) and suffix:
+            text = _COMPACT_ENTRY_BREAK_RE.split(suffix, maxsplit=1)[0].strip()
+        else:
+            text = prefix
     else:
         text = _COMPACT_ENTRY_BREAK_RE.split(text, maxsplit=1)[0].strip()
     text = _trim_lexical_preamble(text)
@@ -197,6 +201,10 @@ def analyze_source_entry(
 
 def _trim_lexical_preamble(text: str) -> str:
     return _COMPACT_LEXICAL_PREAMBLE_RE.sub("", text, count=1).strip(" ,;")
+
+
+def _looks_like_lexical_header(text: str) -> bool:
+    return "," in text and any(ch.isalpha() for ch in text)
 
 
 def _limit_gloss_items(

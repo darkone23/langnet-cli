@@ -65,6 +65,13 @@ Use translated or source-backed entries to derive short display helpers:
 The compact gloss is display metadata. It must not replace the source or
 translated witness.
 
+Current source-structuring progress:
+
+- CDSL source-note segments are preserved and can be shown below source refs in
+  `encounter`.
+- Diogenes definition triples carry `learner_gloss` and `learner_segments` so
+  LSJ/Lewis-style entries have a compact learner summary available downstream.
+
 ### Translation Cache
 
 Keep current behavior:
@@ -72,11 +79,13 @@ Keep current behavior:
 - `--translation-mode cache`: read exact cache hits only;
 - `--translation-mode auto`: explicitly populate missing rows, then display;
 - default encounter: no hidden network call.
+- `translation-warm`: explicitly populate missing rows for a word list.
+- `encounter --output json`: report cache availability, hit/miss counts, and
+  writes.
 
 Next additions:
 
-- batch cache warming for word lists;
-- cache hit/miss diagnostics in JSON/debug output;
+- optional pretty/debug cache diagnostics;
 - timeout/chunking policy for long entries.
 
 ## Validation Loop

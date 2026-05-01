@@ -79,8 +79,9 @@ Current learner failures:
 - Gaffiot translations are used when the caller requests `--translation-mode
   cache` or `--translation-mode auto`; default lookup remains network-free and
   source-first.
-- Reader-form routing is still weak: `virumque` can lead to `virus` instead of
-  `vir + -que`.
+- Reader-form routing has improved for `virumque`: the content word `vir` now
+  leads while `-que` remains visible as tackon evidence. Latin contextual
+  homographs such as `cano` still need better learner-first ranking.
 
 ### Greek
 
@@ -224,6 +225,9 @@ for source-fidelity review.
 Goal: turn source blobs into displayable learner sense units without losing
 source content.
 
+Status: started. CDSL source-note segments are surfaced in `encounter`, and
+Diogenes definition triples now carry learner-gloss/learner-segment metadata.
+
 Tasks:
 
 - Add a display-layer structure for each WSU:
@@ -266,6 +270,10 @@ provenance.
 
 Goal: make existing cached DICO/Gaffiot translations help learners without
 creating hidden network dependency.
+
+Status: implemented for `encounter` cache-hit projection, explicit word-list
+warming through `translation-warm`, and JSON hit/miss diagnostics through
+`encounter --output json`. Pretty/debug diagnostics remain a possible follow-up.
 
 Tasks:
 

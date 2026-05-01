@@ -209,7 +209,7 @@ def build_entry_translation_key(entry: dict, mode: str, model: str, hints: Itera
 )
 @click.option(
     "--model",
-    default="openai:google/gemma-4-31b-it",
+    default="openai:google/gemini-3.1-pro-preview",
     show_default=True,
     help="Model id to use via aisuite/OpenRouter.",
 )

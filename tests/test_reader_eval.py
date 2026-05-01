@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from langnet.cli import main
+from langnet.cli import _encounter_morphology_fallback_terms, main
 from langnet.execution.effects import ClaimEffect, ProvenanceLink
 from langnet.reader_eval import evaluate_reader_token, summarize_reader_eval
 
@@ -33,6 +33,56 @@ def _claim_with_triples(
         ],
         handler_version="test",
     )
+
+
+def test_sanskrit_fallback_prefers_numbered_heritage_lemma_solution() -> None:
+    claims = [
+        {
+            "tool": "claim.heritage.morph",
+            "value": {
+                "triples": [
+                    {
+                        "subject": "form:bhū_1",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "form": "bhū_1",
+                            "lemma": "bhū_1",
+                            "analysis": "imp. [1] ac. sg. 3",
+                            "solution_number": 1,
+                        },
+                    },
+                    {
+                        "subject": "form:bhū_1",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "form": "bhū_1",
+                            "lemma": "bhū_1",
+                            "analysis": "imp. [1] ac. sg. 2",
+                            "solution_number": 2,
+                        },
+                    },
+                    {
+                        "subject": "form:tu",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "form": "tu",
+                            "lemma": "tu",
+                            "analysis": "ind.",
+                            "solution_number": 2,
+                        },
+                    },
+                ]
+            },
+        }
+    ]
+
+    terms = _encounter_morphology_fallback_terms(
+        claims,
+        language="san",
+        original="bhavatu",
+    )
+
+    assert terms == ["bhū"]
 
 
 def test_reader_eval_scores_expected_lemma_gloss_and_morphology() -> None:
@@ -80,6 +130,9 @@ def test_reader_eval_scores_expected_lemma_gloss_and_morphology() -> None:
         "meaning_passed": 1,
         "meaning_failed": 0,
         "meaning_hit_rate": 1.0,
+        "top_passed": 1,
+        "top_failed": 0,
+        "top_hit_rate": 1.0,
     }
 
 
@@ -138,6 +191,38 @@ def test_reader_eval_allows_known_bad_lemma_below_first_bucket() -> None:
 
     assert result["checks"]["known_bad_lemma_not_top"] is True
     assert result["checks"]["lemma_hit"] is True
+
+
+def test_reader_eval_flags_expected_answer_below_first_bucket() -> None:
+    result = evaluate_reader_token(
+        {
+            "passage_id": "aeneid_1_1_7",
+            "language": "lat",
+            "surface": "cano",
+            "expected_lemmas": ["cano"],
+            "expected_gloss_terms": ["sing"],
+            "expect_morphology": False,
+        },
+        {
+            "lexeme_anchors": ["lex:cano", "lex:canus"],
+            "buckets": [
+                {
+                    "display_gloss": "white, gray",
+                    "witnesses": [{"lexeme_anchor": "lex:canus", "gloss": "white, gray"}],
+                },
+                {
+                    "display_gloss": "sing; celebrate",
+                    "witnesses": [{"lexeme_anchor": "lex:cano", "gloss": "sing; celebrate"}],
+                },
+            ],
+        },
+    )
+
+    assert result["checks"]["lemma_hit"] is True
+    assert result["checks"]["top_lemma_hit"] is False
+    assert result["checks"]["top_gloss_hit"] is False
+    assert result["top_passed"] is False
+    assert result["meaning_passed"] is False
 
 
 def test_reader_eval_matches_sanskrit_iast_expected_to_slp1_anchor() -> None:
@@ -293,5 +378,8 @@ def test_reader_eval_command_reports_json_with_patched_lookup(tmp_path: Path) ->
         "meaning_passed": 1,
         "meaning_failed": 0,
         "meaning_hit_rate": 1.0,
+        "top_passed": 1,
+        "top_failed": 0,
+        "top_hit_rate": 1.0,
     }
     assert payload["results"][0]["surface"] == "lupus"

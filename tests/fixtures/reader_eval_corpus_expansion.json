@@ -94,6 +94,15 @@
           "expected_lemmas": ["varuṇa"],
           "expected_gloss_terms": ["Varuṇa", "Sky", "ocean"],
           "expect_morphology": true
+        },
+        {
+          "surface": "bhavatu",
+          "expected_lemmas": ["bhū", "bu", "bhu"],
+          "expected_gloss_terms": ["become", "be", "exist"],
+          "expect_morphology": true,
+          "known_bad_lemmas": ["tu"],
+          "known_bad_gloss_terms": ["however", "on the contrary", "mais"],
+          "notes": "Finite verb forms should follow the Heritage numbered root lemma before particle-only segmentations."
         }
       ]
     },

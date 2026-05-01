@@ -52,8 +52,8 @@ just cli plan lat lupus
 just cli plan-exec lat lupus
 just triples-dump lat lupus whitakers
 
-just cli encounter lat arma gaffiot --translation-mode cache
-just cli encounter san dharma dico --translation-mode cache
+just cli encounter lat arma gaffiot
+just cli encounter san dharma dico
 
 just cli reader-eval --limit 3 --translation-mode cache
 ```
@@ -70,6 +70,7 @@ just cli reader-eval --limit 3 --translation-mode cache
 | `triples-dump` | Print claim triples and evidence for inspection. |
 | `encounter` | Current learner-facing MVP: reduced meaning buckets plus source-backed analysis. |
 | `reader-eval` | Run reader-oriented fixture checks against live encounter reductions. |
+| `translation-warm` | Explicitly warm DICO/Gaffiot translation cache rows from a word list. |
 | `databuild` | Build local data/indexes. |
 | `index` | Inspect or manage storage indexes/caches. |
 
@@ -82,12 +83,15 @@ derived evidence stored in the local translation cache.
 
 ```bash
 # Read exact cache hits only; no network call.
-just cli encounter lat cano gaffiot --translation-mode cache
-just cli encounter san karman dico --translation-mode cache
+just cli encounter lat cano gaffiot
+just cli encounter san karman dico
 
 # Explicitly populate missing rows through OpenRouter, then display them.
 just cli encounter lat cano gaffiot --translation-mode auto
 just cli encounter san karman dico --translation-mode auto
+
+# Warm a word list ahead of learner lookup.
+just cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffiot
 ```
 
 `--translation-mode auto` requires `OPENAI_API_KEY` only when a cache miss must

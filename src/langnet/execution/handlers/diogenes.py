@@ -18,7 +18,13 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
-from langnet.execution.source_text import display_text, source_segments_from_text, trim_empty
+from langnet.execution.source_text import (
+    compact_source_gloss,
+    display_text,
+    learner_segments_from_text,
+    source_segments_from_text,
+    trim_empty,
+)
 from langnet.execution.versioning import versioned
 from langnet.normalizer.utils import contains_greek, normalize_greekish_token, strip_accents
 from langnet.parsing.integration import enrich_extraction_with_parsed_header
@@ -665,6 +671,8 @@ def _build_definition_triples(
                     segment_type="dictionary_entry",
                     labels=["dictionary_entry"],
                 )
+                learner_gloss = compact_source_gloss(entry_txt)
+                learner_segments = learner_segments_from_text(entry_txt)
                 triples.append(
                     _make_triple(lex_anchor, predicates.HAS_SENSE, sense_anchor, base_evidence)
                 )
@@ -677,6 +685,8 @@ def _build_definition_triples(
                         {
                             "source_ref": source_ref,
                             "display_gloss": display_text(gloss),
+                            "learner_gloss": learner_gloss,
+                            "learner_segments": learner_segments,
                             "source_entry": source_entry,
                             "source_segments": source_segments,
                         },

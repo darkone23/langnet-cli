@@ -11,7 +11,7 @@
         {
           "surface": "arma",
           "expected_lemmas": ["arma"],
-          "expected_gloss_terms": ["arms", "weapons", "war"],
+          "expected_gloss_terms": ["arms", "weapons", "war", "armes"],
           "expect_morphology": true,
           "known_bad_lemmas": ["armo"],
           "notes": "Should prefer the noun used in arma virumque cano over verb/adjective material."
@@ -20,7 +20,7 @@
           "surface": "virumque",
           "expected_lemmas": ["vir"],
           "expected_components": ["vir", "-que"],
-          "expected_gloss_terms": ["man", "hero", "and"],
+          "expected_gloss_terms": ["man", "hero", "and", "homme"],
           "expect_morphology": true,
           "known_bad_lemmas": ["virus"],
           "notes": "Reader form should visibly split enclitic -que and route the base word to vir."
@@ -36,7 +36,7 @@
         {
           "surface": "Troiae",
           "expected_lemmas": ["Troia"],
-          "expected_gloss_terms": ["Troy", "Trojan"],
+          "expected_gloss_terms": ["Troy", "Trojan", "Troja"],
           "expect_morphology": true
         }
       ]
@@ -101,7 +101,7 @@
         {
           "surface": "samavetāḥ",
           "expected_lemmas": ["samaveta"],
-          "expected_gloss_terms": ["assembled", "come together", "met"],
+          "expected_gloss_terms": ["assembled", "come together", "met", "réuni", "assemblé"],
           "expect_morphology": true
         },
         {

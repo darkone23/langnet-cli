@@ -229,3 +229,38 @@ def test_greek_rerank_prefers_validated_epic_eus_candidate() -> None:
 
     assert result.normalized.candidates[0].lemma == "ἀχιλλεύς"
     conn.close()
+
+
+def test_stale_cached_greek_epic_eus_result_is_recomputed() -> None:
+    conn = duckdb.connect(database=":memory:")
+    ensure_norm_schema(conn)
+    index = NormalizationIndex(conn)
+    stale = NormalizedQuery(
+        original="Ἀχιλῆος",
+        language=LanguageHint.LANGUAGE_HINT_GRC,
+        candidates=[
+            CanonicalCandidate(
+                lemma="ἀχιλλειος",
+                encodings={},
+                sources=["diogenes_parse", "diogenes_word_list"],
+            )
+        ],
+    )
+    index.upsert(
+        query_hash=_hash_query("Ἀχιλῆος", LanguageHint.LANGUAGE_HINT_GRC),
+        raw_query="Ἀχιλῆος",
+        language=str(LanguageHint.LANGUAGE_HINT_GRC).lower(),
+        normalized=stale,
+    )
+    svc = NormalizationService(
+        conn,
+        diogenes_config=DiogenesConfig(greek_client=cast(DiogenesClient, GreekEpicEusDiogenes())),
+        use_cache=True,
+    )
+
+    result = svc.normalize("Ἀχιλῆος", LanguageHint.LANGUAGE_HINT_GRC)
+
+    lemmas = [candidate.lemma for candidate in result.normalized.candidates]
+    assert result.normalized.candidates[0].lemma == "ἀχιλλεύς", lemmas
+    assert "diogenes_word_list_epic_eus" in result.normalized.candidates[0].sources
+    conn.close()

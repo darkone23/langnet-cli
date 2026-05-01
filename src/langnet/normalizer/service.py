@@ -12,7 +12,12 @@ from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.normalization_index import NormalizationIndex
 from langnet.storage.normalization_index import ensure_schema as ensure_norm_schema
 
-from .core import NormalizationResult, QueryNormalizer, _hash_query
+from .core import (
+    NormalizationResult,
+    QueryNormalizer,
+    _greek_epic_eus_candidates,
+    _hash_query,
+)
 from .sanskrit import HeritageClientProtocol
 from .utils import strip_accents
 
@@ -140,7 +145,8 @@ class NormalizationService:
             cached = self.index.get(query_hash)
             if cached is not None:
                 reranked = self._rerank_candidates(raw_query, language, cached)
-                return NormalizationResult(query_hash=query_hash, normalized=reranked)
+                if not self._cached_greek_epic_eus_is_stale(raw_query, language, reranked):
+                    return NormalizationResult(query_hash=query_hash, normalized=reranked)
 
         self._ensure_normalizer()
         assert self.normalizer is not None
@@ -166,6 +172,30 @@ class NormalizationService:
             )
 
         return NormalizationResult(query_hash=result.query_hash, normalized=reranked)
+
+    def _cached_greek_epic_eus_is_stale(
+        self,
+        raw_query: str,
+        language: LanguageValue,
+        normalized: NormalizedQuery,
+    ) -> bool:
+        if language != LanguageHint.LANGUAGE_HINT_GRC:
+            return False
+        text = raw_query.strip().lower()
+        if not strip_accents(text).casefold().endswith(("ηος", "ηοσ")):
+            return False
+        expected = {
+            _normalize_greek_reader_form(candidate)
+            for candidate in _greek_epic_eus_candidates(text)
+            if candidate
+        }
+        if not expected:
+            return False
+        actual = {
+            _normalize_greek_reader_form(candidate.lemma or "")
+            for candidate in normalized.candidates
+        }
+        return expected.isdisjoint(actual)
 
     def _rerank_candidates(
         self, raw_query: str, language: LanguageValue, normalized: NormalizedQuery

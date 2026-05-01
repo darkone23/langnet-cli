@@ -1,6 +1,6 @@
 # Project Status
 
-**Date:** 2026-04-28  
+**Date:** 2026-04-29  
 **Overall grade:** B / 85%
 
 ## Summary
@@ -53,21 +53,20 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 
 - `lookup` output is still backend-keyed; `encounter` is better but not yet a release-quality learner interface.
 - Current `encounter` samples expose concrete learner-experience failures:
-  Sanskrit can still leak CDSL source notation; Latin can show unrelated
-  normalized candidates (`virumque` -> `virus`); Greek can still expose large
-  LSJ sections without a concise learner summary. Fresh reader-eval now reaches
-  13/13 meaning hits and 13/13 strict hits on the seed classic-opening fixture.
-  The last two strict misses were morphology-only gaps for Latin `Troiae` and
-  Greek `Ἀχιλῆος`; encounter now covers them with conservative local fallback
-  morphology rows when the lexical reduction has already resolved the lemma.
+  Sanskrit can still leak CDSL source notation, Latin/Gaffiot can still expose
+  long source entries before compact learner prose, and Greek can still expose
+  large LSJ sections without a concise learner summary. Fresh reader-eval with
+  `--no-cache --translation-mode off` now reaches 13/13 meaning hits and 13/13
+  top-answer hits on the seed classic-opening fixture. Latin `cano` now leads
+  with the singing/chanting verb, and `virumque` leads with `vir` while
+  preserving `-que` tackon evidence below the content word.
 - The first corpus-expansion fixture covers Vulgate John 1:1, Greek New
   Testament John 1:1, the Taittiriya Upanishad invocation, and Taittiriya
-  Samhita 1.1.1. It currently passes 14/14 strict and 14/14 meaning checks with
-  `--translation-mode off`, exercising raw Gaffiot/DICO/CDSL/Diogenes evidence.
-  The latest learner-display passes use ordered morphology lemmas to rank
-  meanings and claim-time compact learner metadata for DICO/Gaffiot, improving
-  cases such as `principio -> principium` and Sanskrit `dharma` while preserving
-  competing analyses and full source evidence for inspection.
+  Samhita 1.1.1. With the stricter top-answer checks it is no longer a completed
+  gate: it still exposes ranking/normalization work such as `principio`,
+  `Deum`, `λόγος`, `śam`, `iṣe`, `ūrje`, and `tvā`. This is useful forward
+  pressure rather than a regression in evidence coverage; the expected evidence
+  still appears, but not always in the first learner-facing bucket.
 - Semantic reduction is exact-match only; no synonym merging, mature sense ranking, or structured learner-display gloss parsing yet.
 - Evidence inspection works in text and JSON; `OUTPUT_GUIDE.md` now includes Sanskrit CDSL and DICO/Gaffiot translation-cache walkthroughs.
 - Fuzz recipes are diagnostic only; query/compare modes still reflect older API assumptions. The current 50-word audit under `examples/debug/fuzz_audit_2026_04_27/` is useful evidence coverage, not a release gate.
@@ -79,10 +78,12 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 ## Immediate Priorities
 
 1. Use `docs/BASELINE_AND_ROADMAP.md` for the current working checkpoint and next concrete steps.
-2. Use `reader-eval` to measure the seed classic-opening fixture and capture
-   hit-rate changes as fixes land.
+2. Treat `reader-eval` as two tiers: the classic-opening fixture is now a
+   stabilization gate, while the corpus-expansion fixture is the next ranking
+   backlog.
 3. Replace local morphology fallback rows with source-backed morphology where
-   possible, and improve `virumque` component display/ranking.
+   possible, and continue improving corpus-expansion top-answer misses such as
+   `principio`, `λόγος`, and Vedic dative/pronoun forms.
 4. Harden compact learner glosses by adding typed source segments for
    DICO/Gaffiot/CDSL/Diogenes instead of relying on broad source-string
    compaction.

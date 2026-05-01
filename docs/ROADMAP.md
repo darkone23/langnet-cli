@@ -75,14 +75,16 @@ Remaining:
 
 Priority accepted-output targets:
 
-- `virumque -> vir + -que`, not `virus`;
+- `virumque -> vir + -que`, not `virus`, now leads with `vir` while preserving
+  tackon evidence below the content word;
 - `μῆνιν -> μῆνις`, not `μήνιον`, now works for meaning and morphology checks and should stay covered;
 - `θεὰ -> θεά`, not `θέα`, now works for meaning checks and should stay covered;
 - `Troiae -> Troia` now works for meaning checks through a general Latin
   `-ae -> -a` reader-form candidate, with a conservative local `-ae`
   morphology fallback when source parsers have no row;
-- `Ἀχιλῆος -> Ἀχιλλεύς` now works in fresh runs through validated Greek epic
-  `-ῆος -> -εύς` candidate generation and should stay covered;
+- `Ἀχιλῆος -> Ἀχιλλεύς` now works through validated Greek epic `-ῆος -> -εύς`
+  candidate generation. Stale cache rows for this pattern are detected and
+  recomputed instead of silently preserving the older `Ἀχίλλειος` route;
 - `karma -> karman` is now handled when clear Heritage morphology supports the
   concept headword, and should stay covered by reader-eval.
 - Sanskrit compound morphology now preserves segment-level lemmas in Heritage
@@ -97,6 +99,14 @@ Priority accepted-output targets:
 This milestone should use `reader-eval` fixtures and reports, not hardcoded
 exceptions for famous texts.
 
+Current gate:
+
+- `tests/fixtures/reader_eval_classics.json` is the stabilization fixture and
+  should remain 13/13 on strict/top-answer checks.
+- `tests/fixtures/reader_eval_corpus_expansion.json` is the forward-ranking
+  fixture. It intentionally exposes remaining top-answer misses in Vulgate,
+  Greek NT, and Vedic material.
+
 ## Milestone 4: Learner Encounter Quality
 
 **Goal:** make `encounter` answer the reader before showing full source detail.
@@ -107,12 +117,14 @@ Implemented:
 - translation-first ranking;
 - DICO/Gaffiot source preference when present;
 - Sanskrit Heritage analysis rows.
+- reader-eval reports separate overall, meaning, and top-answer hit rates.
 
 Remaining:
 
+- fix corpus-expansion top-answer misses (`principio`, `Deum`, `λόγος`, `śam`,
+  `iṣe`, `ūrje`, `tvā`);
 - compact learner gloss layer above full source entries;
 - source-aware display controls for long LSJ/Lewis/Gaffiot/DICO/CDSL entries;
-- accepted output for representative Sanskrit, Latin, and Greek hard words;
 - better hiding of unrelated candidate noise in default terminal output.
 
 ## Milestone 5: Translation Cache Operations
@@ -126,18 +138,28 @@ Implemented:
 - `--translation-mode auto`;
 - exact cache keys;
 - cache-backed projection into derived English witnesses.
+- default `encounter` cache-hit enrichment when the cache DB exists, without
+  live translation.
+- `translation-warm` for explicit word-list cache warming.
+- JSON translation cache diagnostics for `encounter --output json`.
 
 Remaining:
 
-- batch cache warming for word lists and passage vocabulary;
+- passage-vocabulary cache warming ergonomics;
 - timeout/chunking policy for long entries;
-- cache diagnostics in JSON/debug output;
-- default cache-hit enrichment without live translation.
+- optional pretty/debug cache diagnostics;
 
 ## Milestone 6: Source Structuring And Ranking
 
 **Goal:** refine source blobs into display-safe learner units while preserving
 raw text.
+
+Started:
+
+- CDSL source-note segments can appear as compact `source notes` below source
+  refs in `encounter`, while raw CDSL gloss text remains visible as evidence.
+- Diogenes definition triples now carry learner gloss and learner segment
+  metadata for LSJ/Lewis-style dictionary entries.
 
 Scope:
 

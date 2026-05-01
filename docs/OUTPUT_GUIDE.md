@@ -140,12 +140,12 @@ The JSON shape keeps claim metadata separate from triple metadata so tools can i
 
 ## `encounter`
 
-`encounter` is the current learner-facing path. It runs staged evidence, projects cache-backed translations when requested, reduces source glosses into exact buckets, and prints a compact word encounter.
+`encounter` is the current learner-facing path. It runs staged evidence, projects exact cache-backed translations when the configured cache exists, reduces source glosses into exact buckets, and prints a compact word encounter.
 
 ```bash
 devenv shell langnet-cli -- encounter san dharma cdsl --max-buckets 5
 devenv shell langnet-cli -- encounter san agni heritage --no-cache
-devenv shell langnet-cli -- encounter lat lupus gaffiot --use-translation-cache
+devenv shell langnet-cli -- encounter lat lupus gaffiot
 ```
 
 This output should be treated as a prototype learner interface. It is the right surface for examples and snapshots, but not yet a stable product schema.
@@ -167,6 +167,8 @@ By default the command exits successfully and reports misses. Add
 `--fail-on-miss` only when the selected fixture set is ready to become a gate.
 The current seed fixture lives at `tests/fixtures/reader_eval_classics.json` and
 covers initial Aeneid, Iliad, and Bhagavad Gita opening-token probes.
+The summary separates broad evidence hits from first-screen learner quality:
+overall pass rate, meaning pass rate, and top-answer pass rate.
 
 For Sanskrit, Heritage is the preferred analysis/morphology source. A Heritage-only encounter may show an `Analysis` section without meaning buckets:
 
@@ -210,6 +212,11 @@ In the JSON, inspect the matching `gloss` triple:
 
 That separation is the current evidence contract: learner output can be cleaner than source text, but source text remains inspectable.
 
+When CDSL source notes are present, `encounter` may show them below the source
+refs as compact provenance hints, for example `source notes: cross refs: ...;
+source refs: ...`. The raw gloss still remains available as the evidence line
+and in `triples-dump`.
+
 ### Evidence Walkthrough: DICO/Gaffiot Translation Cache
 
 DICO and Gaffiot now follow the same evidence shape for French dictionary-entry
@@ -246,18 +253,33 @@ In those source triples:
 After a matching cache row exists, inspect the derived English evidence through `encounter`:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --use-translation-cache --translation-cache-db data/cache/langnet.duckdb --output json'
-devenv shell -- bash -c 'langnet-cli encounter san dharma dico --use-translation-cache --translation-cache-db data/cache/langnet.duckdb --output json'
+devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --translation-cache-db data/cache/langnet.duckdb --output json'
+devenv shell -- bash -c 'langnet-cli encounter san dharma dico --translation-cache-db data/cache/langnet.duckdb --output json'
 ```
 
-`--use-translation-cache` is equivalent to cache-only translation display. To
-populate missing DICO/Gaffiot translations during an explicit lookup, use
+To populate missing DICO/Gaffiot translations during an explicit lookup, use
 `--translation-mode auto`:
 
 ```bash
 devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --translation-mode auto --translation-cache-db data/cache/langnet.duckdb'
 devenv shell -- bash -c 'langnet-cli encounter san dharma dico --translation-mode auto --translation-cache-db data/cache/langnet.duckdb'
 ```
+
+To warm translations ahead of reading, place one term per line in a text file
+and run `translation-warm`. This is explicit cache population, so it may call
+the configured model for cache misses:
+
+```bash
+devenv shell -- bash -c 'langnet-cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffiot --translation-cache-db data/cache/langnet.duckdb'
+devenv shell -- bash -c 'langnet-cli translation-warm san examples/debug/sanskrit_words.txt --tool-filter dico --translation-cache-db data/cache/langnet.duckdb'
+```
+
+Use `--dry-run --output json` to inspect how many translation projections are
+already cached or missing without making network calls.
+
+`encounter --output json` includes a top-level `translation_cache` object with
+the resolved mode, cache DB path, availability, hit/miss counts before and after
+projection, and any rows written by explicit population.
 
 This mode reads existing cache rows first, calls OpenRouter only for missing
 translation keys, writes successful translations back to the cache, and then

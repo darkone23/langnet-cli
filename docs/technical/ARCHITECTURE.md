@@ -38,6 +38,7 @@ lookup output / evidence inspection / exact WSU reduction / encounter output
 | `triples-dump` | inspect claim triples and evidence |
 | `encounter` | show the current learner-facing reduced output |
 | `reader-eval` | score reader fixtures against encounter reductions |
+| `translation-warm` | populate DICO/Gaffiot translation cache rows from a word list |
 | `databuild` | build offline data/indexes |
 | `index` | inspect/manage storage indexes |
 
@@ -118,6 +119,7 @@ Implemented:
 - Translation-cache projection for cached DICO/Gaffiot English gloss evidence.
 - Explicit `encounter --translation-mode auto` cache-miss population for
   DICO/Gaffiot translations.
+- Word-list DICO/Gaffiot translation-cache warming through `translation-warm`.
 
 Not implemented yet:
 
