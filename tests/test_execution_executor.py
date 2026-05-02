@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 import duckdb
+from filelock import FileLock
 from query_spec import (
     LanguageHint,
     NormalizedQuery,
@@ -26,6 +27,13 @@ from langnet.storage.claim_index import ClaimIndex
 from langnet.storage.derivation_index import DerivationIndex
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.extraction_index import ExtractionIndex
+from langnet.storage.path_indices import (
+    PathClaimIndex,
+    PathDerivationIndex,
+    PathExtractionIndex,
+    PathPlanResponseIndex,
+    PathRawResponseIndex,
+)
 from langnet.storage.plan_index import PlanResponseIndex, apply_schema
 
 
@@ -49,6 +57,19 @@ class _FakeClient:
             headers={},
             body=body,
         )
+
+
+class _LockAssertingClient(_FakeClient):
+    def __init__(self, tool: str, db_path) -> None:
+        super().__init__(tool=tool)
+        self.db_path = db_path
+
+    def execute(
+        self, call_id: str, endpoint: str, params: Mapping[str, str] | None = None
+    ) -> RawResponseEffect:
+        with FileLock(f"{self.db_path}.lock", timeout=0.05):
+            pass
+        return super().execute(call_id, endpoint, params)
 
 
 def _build_plan() -> ToolPlan:
@@ -282,6 +303,43 @@ def test_executor_runs_all_stages_and_caches_fetch() -> None:
     assert second.raw_effects and second.claims
     # No new fetch call when using cache
     assert second.from_cache is True
+
+
+def test_path_indexes_do_not_hold_file_lock_during_fetch(tmp_path) -> None:
+    db_path = tmp_path / "runtime.duckdb"
+    first_client = _LockAssertingClient(tool="fetch.dummy", db_path=db_path)
+
+    first = execute_plan_staged(
+        plan=_build_plan(),
+        clients={first_client.tool: first_client},
+        registry=_registry(),
+        raw_index=PathRawResponseIndex(db_path),
+        extraction_index=PathExtractionIndex(db_path),
+        derivation_index=PathDerivationIndex(db_path),
+        claim_index=PathClaimIndex(db_path),
+        plan_response_index=PathPlanResponseIndex(db_path),
+        allow_cache=True,
+    )
+
+    assert first.raw_effects and first.claims
+    assert first_client.calls == ["call-fetch"]
+
+    second_client = _LockAssertingClient(tool="fetch.dummy", db_path=db_path)
+    second = execute_plan_staged(
+        plan=_build_plan(),
+        clients={second_client.tool: second_client},
+        registry=_registry(),
+        raw_index=PathRawResponseIndex(db_path),
+        extraction_index=PathExtractionIndex(db_path),
+        derivation_index=PathDerivationIndex(db_path),
+        claim_index=PathClaimIndex(db_path),
+        plan_response_index=PathPlanResponseIndex(db_path),
+        allow_cache=True,
+    )
+
+    assert second.from_cache is True
+    assert second.raw_effects and second.claims
+    assert second_client.calls == []
 
 
 def test_executor_reports_optional_skipped_calls() -> None:

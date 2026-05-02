@@ -1,11 +1,24 @@
 from __future__ import annotations
 
 import contextlib
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
 import duckdb
 from filelock import FileLock
+
+DEFAULT_DUCKDB_LOCK_TIMEOUT_SECONDS = 30.0
+
+
+def _duckdb_lock_timeout_seconds() -> float:
+    raw = os.getenv("LANGNET_DUCKDB_LOCK_TIMEOUT_SECONDS")
+    if not raw:
+        return DEFAULT_DUCKDB_LOCK_TIMEOUT_SECONDS
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return DEFAULT_DUCKDB_LOCK_TIMEOUT_SECONDS
 
 
 @contextlib.contextmanager
@@ -37,7 +50,10 @@ def connect_duckdb(
 
     lock_ctx = contextlib.nullcontext()
     if lock and not read_only:
-        lock_ctx = FileLock(f"{path_obj}.lock")
+        lock_ctx = FileLock(
+            f"{path_obj}.lock",
+            timeout=_duckdb_lock_timeout_seconds(),
+        )
 
     with lock_ctx:
         conn = duckdb.connect(database=db_uri, read_only=read_only)

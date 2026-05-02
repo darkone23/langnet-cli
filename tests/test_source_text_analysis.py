@@ -23,6 +23,7 @@ def test_analyze_source_entry_extracts_dico_gloss_and_references() -> None:
     gloss_candidates = cast(list[dict[str, object]], analysis["gloss_candidates"])
     grammar_parse = cast(dict[str, object], analysis["grammar_parse"])
     source_references = cast(list[dict[str, object]], analysis["source_references"])
+    source_segments = cast(list[dict[str, object]], analysis["source_segments"])
     assert gloss_candidates[0] == {
         "text": "loi, condition, nature propre",
         "kind": "grammar_definition",
@@ -38,6 +39,13 @@ def test_analyze_source_entry_extracts_dico_gloss_and_references() -> None:
         "kind": "cross_reference",
         "labels": ["cross_reference", "source_reference"],
     } in source_references
+    assert source_segments[-1] == {
+        "index": 1,
+        "raw_text": "cf. svadharma",
+        "display_text": "cf. svadharma",
+        "segment_type": "cross_reference_segment",
+        "labels": ["cross_reference", "source_reference"],
+    }
 
 
 def test_analyze_source_entry_extracts_gaffiot_citations_and_examples() -> None:
@@ -52,12 +60,20 @@ def test_analyze_source_entry_extracts_gaffiot_citations_and_examples() -> None:
     citations = cast(list[dict[str, object]], analysis["citations"])
     examples = cast(list[dict[str, object]], analysis["examples"])
     grammar_parse = cast(dict[str, object], analysis["grammar_parse"])
+    source_segments = cast(list[dict[str, object]], analysis["source_segments"])
     citation_texts = [item["text"] for item in citations]
     assert "Cic. CM 78" in citation_texts
     assert "Cic. Off. 1, 11" in citation_texts
     assert examples[0]["citation"] == "Cic. CM 78"
     assert examples[0]["labels"] == ["example", "citation", "grammar_parse"]
     assert grammar_parse["parser"] == "lark:gaffiot_entry"
+    assert source_segments[-1] == {
+        "index": 1,
+        "raw_text": "principio Cic. Off. 1, 11",
+        "display_text": "principio Cic. Off. 1, 11",
+        "segment_type": "example_segment",
+        "labels": ["example", "citation", "source_reference"],
+    }
 
 
 def test_entry_analyze_cli_outputs_json() -> None:

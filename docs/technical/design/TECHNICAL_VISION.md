@@ -34,6 +34,10 @@ Implemented today:
 - Translation-cache projection for cache-backed DICO/Gaffiot English gloss evidence.
 - Explicit DICO/Gaffiot cache-miss population through `encounter
   --translation-mode auto`.
+- Encounter JSON ranking explanations for downstream CLI/web renderers.
+- Encounter display, ranking, and translation-cache orchestration helpers that
+  keep pretty output, JSON output, and future web/API callers on shared policy
+  code.
 - Fixture-backed tests for core claim contracts.
 
 Not implemented yet:
@@ -43,6 +47,7 @@ Not implemented yet:
   source-specific structuring across all representative examples.
 - Hydration as a separate optional enrichment layer.
 - Passage-level interpretation.
+- Native web/API entrypoint; near-term web work should consume CLI JSON first.
 
 ## Pipeline Layers
 

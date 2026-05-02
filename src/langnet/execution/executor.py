@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import cast
+from typing import Protocol, cast
 
 import structlog
 from query_spec import ExecutedPlan, ToolCallSpec, ToolPlan, ToolResponseRef, ToolStage
@@ -15,11 +15,6 @@ from langnet.execution.effects import ClaimEffect, DerivationEffect, ExtractionE
 from langnet.execution.versioning import get_handler_version
 from langnet.logging import setup_logging
 from langnet.planner.core import stable_plan_hash
-from langnet.storage.claim_index import ClaimIndex
-from langnet.storage.derivation_index import DerivationIndex
-from langnet.storage.effects_index import RawResponseIndex
-from langnet.storage.extraction_index import ExtractionIndex
-from langnet.storage.plan_index import PlanResponseIndex
 
 ExtractHandler = Callable[[ToolCallSpec, RawResponseEffect], ExtractionEffect]
 DeriveHandler = Callable[[ToolCallSpec, ExtractionEffect], DerivationEffect]
@@ -45,6 +40,32 @@ class SkippedCall:
     stage: str
     reason: str
     source_call_id: str | None = None
+
+
+class RawResponseIndexProtocol(Protocol):
+    def get(self, response_id: str) -> RawResponseEffect | None: ...
+
+    def store(self, effect: RawResponseEffect) -> ToolResponseRef: ...
+
+
+class ExtractionIndexProtocol(Protocol):
+    def store_effect(self, effect: ExtractionEffect) -> str: ...
+
+
+class DerivationIndexProtocol(Protocol):
+    def store_effect(self, effect: DerivationEffect) -> str: ...
+
+
+class ClaimIndexProtocol(Protocol):
+    def store_effect(self, effect: ClaimEffect) -> str: ...
+
+
+class PlanResponseIndexProtocol(Protocol):
+    def get(self, plan_hash: str) -> ExecutedPlan | None: ...
+
+    def upsert(
+        self, plan_hash: str, plan_id: str, response_refs: Sequence[ToolResponseRef]
+    ) -> None: ...
 
 
 class ToolRegistry:
@@ -113,10 +134,10 @@ class _ExecutionContext:
     logger: object
     clients: Mapping[str, ToolClient]
     registry: ToolRegistry
-    raw_index: RawResponseIndex
-    extraction_index: ExtractionIndex
-    derivation_index: DerivationIndex
-    claim_index: ClaimIndex
+    raw_index: RawResponseIndexProtocol
+    extraction_index: ExtractionIndexProtocol
+    derivation_index: DerivationIndexProtocol
+    claim_index: ClaimIndexProtocol
 
 
 def _stage_name(stage: int) -> str:
@@ -146,8 +167,8 @@ def _initialize_cache_and_state(  # noqa: PLR0913
     plan: ToolPlan,  # type: ignore
     plan_hash: str,
     allow_cache: bool,
-    plan_response_index: PlanResponseIndex | None,
-    raw_index: RawResponseIndex,
+    plan_response_index: PlanResponseIndexProtocol | None,
+    raw_index: RawResponseIndexProtocol,
     logger: object,
 ) -> tuple[ExecutedPlan, _ExecutionState, list[RawResponseEffect]]:
     """Initialize cache and execution state from plan response index."""
@@ -488,11 +509,11 @@ def execute_plan_staged(  # noqa: PLR0913
     clients: Mapping[str, ToolClient],
     registry: ToolRegistry,
     *,
-    raw_index: RawResponseIndex,
-    extraction_index: ExtractionIndex,
-    derivation_index: DerivationIndex,
-    claim_index: ClaimIndex,
-    plan_response_index: PlanResponseIndex | None = None,
+    raw_index: RawResponseIndexProtocol,
+    extraction_index: ExtractionIndexProtocol,
+    derivation_index: DerivationIndexProtocol,
+    claim_index: ClaimIndexProtocol,
+    plan_response_index: PlanResponseIndexProtocol | None = None,
     allow_cache: bool = True,
 ) -> ExecutionArtifacts:
     """

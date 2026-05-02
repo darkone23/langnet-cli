@@ -34,8 +34,12 @@ def test_documented_command_help() -> None:
         "plan-exec",
         "triples-dump",
         "databuild",
+        "doctor",
         "index",
+        "langs",
         "normalize",
+        "translation-cache",
+        "tools",
     ]
     for command in commands:
         _assert_help([command])
@@ -44,3 +48,8 @@ def test_documented_command_help() -> None:
 def test_index_subcommand_help() -> None:
     for command in ["status", "clear", "rebuild"]:
         _assert_help(["index", command])
+
+
+def test_translation_cache_subcommand_help() -> None:
+    for command in ["status", "clear"]:
+        _assert_help(["translation-cache", command])

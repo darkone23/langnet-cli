@@ -221,8 +221,109 @@ def test_reader_eval_flags_expected_answer_below_first_bucket() -> None:
     assert result["checks"]["lemma_hit"] is True
     assert result["checks"]["top_lemma_hit"] is False
     assert result["checks"]["top_gloss_hit"] is False
+    assert result["checks"]["top_answer_hit"] is False
     assert result["top_passed"] is False
-    assert result["meaning_passed"] is False
+    assert result["meaning_passed"] is True
+
+
+def test_reader_eval_top_answer_allows_surface_lemma_with_correct_top_gloss() -> None:
+    result = evaluate_reader_token(
+        {
+            "passage_id": "vulgate_john_1_1",
+            "language": "lat",
+            "surface": "Deum",
+            "expected_lemmas": ["deus"],
+            "expected_gloss_terms": ["God"],
+            "expect_morphology": False,
+        },
+        {
+            "lexeme_anchors": ["lex:deum#noun", "lex:deus"],
+            "buckets": [
+                {
+                    "display_gloss": "God (Christian text)",
+                    "witnesses": [
+                        {
+                            "lexeme_anchor": "lex:deum#noun",
+                            "gloss": "God (Christian text)",
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert result["checks"]["lemma_hit"] is True
+    assert result["checks"]["top_lemma_hit"] is True
+    assert result["checks"]["top_gloss_hit"] is True
+    assert result["checks"]["top_answer_hit"] is True
+    assert result["passed"] is True
+    assert result["top_passed"] is True
+
+
+def test_reader_eval_matches_latin_pluralia_tantum_surface_to_whitaker_anchor() -> None:
+    result = evaluate_reader_token(
+        {
+            "passage_id": "aeneid_1_1_7",
+            "language": "lat",
+            "surface": "arma",
+            "expected_lemmas": ["arma"],
+            "expected_gloss_terms": ["arms"],
+            "expect_morphology": False,
+        },
+        {
+            "lexeme_anchors": ["lex:armum#noun"],
+            "buckets": [
+                {
+                    "display_gloss": "arms (pl.), weapons, armor, shield",
+                    "witnesses": [
+                        {
+                            "lexeme_anchor": "lex:armum#noun",
+                            "gloss": "arms (pl.), weapons, armor, shield",
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert result["checks"]["top_lemma_hit"] is True
+    assert result["passed"] is True
+
+
+def test_reader_eval_uses_dico_source_headword_for_top_lemma() -> None:
+    result = evaluate_reader_token(
+        {
+            "passage_id": "taittiriya_upanishad_invocation",
+            "language": "san",
+            "surface": "śam",
+            "expected_lemmas": ["śam", "śam_2"],
+            "expected_gloss_terms": ["bonheur"],
+            "expect_morphology": False,
+        },
+        {
+            "lexeme_anchors": ["lex:zam"],
+            "buckets": [
+                {
+                    "display_gloss": "śam_2 part. bénédiction, bonheur",
+                    "witnesses": [
+                        {
+                            "lexeme_anchor": "lex:zam",
+                            "gloss": "śam_2 part. bénédiction, bonheur",
+                            "evidence": {
+                                "source_entry": {
+                                    "headword_roma": "śam",
+                                    "headword_norm": "zam",
+                                }
+                            },
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert result["checks"]["top_lemma_hit"] is True
+    assert result["passed"] is True
 
 
 def test_reader_eval_matches_sanskrit_iast_expected_to_slp1_anchor() -> None:

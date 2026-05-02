@@ -13,6 +13,10 @@ LangNet has a working CLI-first word-level evidence engine:
 - source inspection through `plan-exec` and `triples-dump`;
 - Latin, Greek, and Sanskrit backend coverage;
 - DICO/Gaffiot source evidence plus cache-backed English translation evidence.
+- `encounter --output json` with display and ranking metadata for downstream
+  renderers.
+- Encounter display, ranking, and translation-cache orchestration are isolated
+  in helper modules with CLI compatibility wrappers.
 
 The project remains in stabilization. The next work is learner-quality
 refinement, not broad product expansion.
@@ -66,8 +70,7 @@ Implemented:
 Remaining:
 
 - add narrative examples for a Latin Gaffiot translation and Sanskrit DICO
-  translation;
-- expose translation cache hit/miss diagnostics in JSON/debug output.
+  translation.
 
 ## Milestone 3: Reader-Form Reliability
 
@@ -102,10 +105,10 @@ exceptions for famous texts.
 Current gate:
 
 - `tests/fixtures/reader_eval_classics.json` is the stabilization fixture and
-  should remain 13/13 on strict/top-answer checks.
+  should remain 13/13 on strict/meaning/top-answer checks.
 - `tests/fixtures/reader_eval_corpus_expansion.json` is the forward-ranking
-  fixture. It intentionally exposes remaining top-answer misses in Vulgate,
-  Greek NT, and Vedic material.
+  fixture. It currently has 15/15 strict, broad meaning, and top-answer
+  coverage.
 
 ## Milestone 4: Learner Encounter Quality
 
@@ -118,14 +121,46 @@ Implemented:
 - DICO/Gaffiot source preference when present;
 - Sanskrit Heritage analysis rows.
 - reader-eval reports separate overall, meaning, and top-answer hit rates.
+- typed source-detail summaries can be shown or hidden with
+  `--source-details/--no-source-details`.
+- encounter header, morphology analysis, Foster labels, and meaning rows are
+  assembled as display-layer view objects before the CLI renders them.
+- preferred-lemma ranking support is isolated in `encounter_ranking`.
+- source-order ranking and bucket sort-key assembly are isolated in
+  `encounter_ranking`.
+- translation-cache mode resolution, diagnostics aggregation, and
+  projection/population batches are isolated in `encounter_translation`.
+- `encounter --output json` includes schema/request metadata and a
+  display-ready header, analysis, and meaning payload aligned to sorted
+  buckets.
+- Display meaning rows include per-entry witness metadata summaries, and the
+  success/error JSON shapes are documented with JSON Schema files.
 
 Remaining:
 
-- fix corpus-expansion top-answer misses (`principio`, `Deum`, `λόγος`, `śam`,
-  `iṣe`, `ūrje`, `tvā`);
-- compact learner gloss layer above full source entries;
-- source-aware display controls for long LSJ/Lewis/Gaffiot/DICO/CDSL entries;
+- extend compact learner gloss coverage above full source entries;
+- expand typed source-segment fixtures for long LSJ/Lewis/Gaffiot/DICO/CDSL entries;
+- broaden source-aware display controls for citations, cross-references, and examples;
+- continue extracting encounter rendering/ranking policy out of `cli.py`;
+- broaden JSON contract snapshots across Greek and Sanskrit examples;
 - better hiding of unrelated candidate noise in default terminal output.
+
+## Milestone 4A: Web Interface Enablement
+
+**Goal:** make a thin web layer possible without forking semantic behavior.
+
+Initial approach:
+
+- treat `langnet-cli encounter ... --output json` as the stable machine-readable
+  contract;
+- let a small web service call the CLI as a subprocess with timeouts, argument
+  whitelisting, and structured error handling;
+- render JSON fields, not pretty output;
+- keep live translation population explicit and out of ordinary page loads.
+
+Next planning reference:
+
+- `docs/plans/todo/infra/web-interface-enablement.md`
 
 ## Milestone 5: Translation Cache Operations
 
@@ -142,6 +177,8 @@ Implemented:
   live translation.
 - `translation-warm` for explicit word-list cache warming.
 - JSON translation cache diagnostics for `encounter --output json`.
+- Reusable `encounter_translation` helpers cover mode aliases, counter
+  aggregation, and apply-cache batches.
 
 Remaining:
 
@@ -156,8 +193,19 @@ raw text.
 
 Started:
 
-- CDSL source-note segments can appear as compact `source notes` below source
-  refs in `encounter`, while raw CDSL gloss text remains visible as evidence.
+- CDSL source-note segments and generic typed `source_segments` can appear as
+  compact `source notes` below source refs in `encounter`, while raw gloss text
+  remains visible as evidence.
+- `EncounterMeaningView` now carries display gloss, evidence line, provenance,
+  source refs, source-detail summary, translation provenance, and source
+  language before the CLI prints it.
+- `EncounterHeaderView` now carries forms and source keys before the CLI prints
+  the encounter heading metadata.
+- `EncounterAnalysisView` now carries morphology analysis display text and
+  optional Foster labels before the CLI prints analysis rows.
+- `encounter_ranking` now owns preferred-lemma comparison and morphology-driven
+  lemma preference helpers, source-order helpers, learner-quality ordering, and
+  final bucket sort-key assembly.
 - Diogenes definition triples now carry learner gloss and learner segment
   metadata for LSJ/Lewis-style dictionary entries.
 

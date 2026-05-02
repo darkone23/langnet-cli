@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langnet.local/schemas/tools.v1.schema.json",
+  "title": "LangNet tool catalog response",
+  "type": "object",
+  "required": ["schema_version", "command", "languages", "tools", "pseudo_filters"],
+  "properties": {
+    "schema_version": { "const": "langnet.tools.v1" },
+    "command": { "type": "string" },
+    "languages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/language" }
+    },
+    "tools": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/tool" }
+    },
+    "pseudo_filters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pseudoFilter" }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "language": {
+      "type": "object",
+      "required": ["code", "label", "tool_filter"],
+      "properties": {
+        "code": { "enum": ["lat", "grc", "san"] },
+        "label": { "type": "string" },
+        "tool_filter": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "tool": {
+      "type": "object",
+      "required": [
+        "language",
+        "tool_filter",
+        "accepted_filter",
+        "label",
+        "role",
+        "source_tools",
+        "plan_tools",
+        "default_enabled",
+        "translation_capable",
+        "dictionaries",
+        "notes"
+      ],
+      "properties": {
+        "language": { "enum": ["lat", "grc", "san"] },
+        "tool_filter": { "type": "string" },
+        "accepted_filter": { "type": "string" },
+        "label": { "type": "string" },
+        "role": { "type": "string" },
+        "source_tools": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "plan_tools": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "default_enabled": { "type": "boolean" },
+        "translation_capable": { "type": "boolean" },
+        "dictionaries": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "pseudoFilter": {
+      "type": "object",
+      "required": ["tool_filter", "label", "languages"],
+      "properties": {
+        "tool_filter": { "type": "string" },
+        "label": { "type": "string" },
+        "languages": {
+          "type": "array",
+          "items": { "enum": ["lat", "grc", "san"] }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

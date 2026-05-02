@@ -70,6 +70,37 @@ Use the third argument to narrow the tool family. Examples:
 - `cdsl`
 - `all`
 
+Use `langs --output json` and `tools --output json` to list the supported
+language and `tool_filter` values for subprocess callers. For example:
+
+```bash
+just cli langs --output json
+just cli tools san --output json
+```
+
+The JSON response includes `schema_version`, language metadata,
+`tool_filter`/`accepted_filter`, underlying staged `plan_tools`, source-tool
+names, default-enabled status, and whether a source can participate in cached
+translation projection. Sanskrit MW and AP90 are currently represented as CDSL
+sub-dictionaries under the `cdsl` tool.
+
+The self-description schemas live in:
+
+- `docs/schemas/languages.v1.schema.json`
+- `docs/schemas/tools.v1.schema.json`
+
+Use `doctor` when a subprocess caller needs a local, non-network readiness
+check for the CLI surface, schema files, translation cache path, translation
+dependencies, and optional tools:
+
+```bash
+just cli doctor --output json
+just cli doctor --require-openai-key --output json
+```
+
+The readiness JSON uses schema version `langnet.doctor.v1`; its schema lives at
+`docs/schemas/doctor.v1.schema.json`.
+
 Current output is text by default. Use `--output json` for structured inspection.
 
 Current `triples-dump --output json` shape:
@@ -148,9 +179,79 @@ devenv shell langnet-cli -- encounter san agni heritage --no-cache
 devenv shell langnet-cli -- encounter lat lupus gaffiot
 ```
 
-This output should be treated as a prototype learner interface. It is the right surface for examples and snapshots, but not yet a stable product schema.
+Pretty output should be treated as a prototype learner interface. It is the
+right surface for examples and snapshots, but not the machine contract. Use
+`encounter --output json` for downstream renderers.
 
 The accepted-output gallery currently covers representative Sanskrit, Latin, and Greek snapshots in `tests/test_cli_encounter_output.py`. Add new examples there when display ranking or source transforms change.
+
+### JSON Contract
+
+`encounter --output json` keeps the raw reduction fields for compatibility:
+
+- `query`, `language`, `lexeme_anchors`, `buckets`, `unbucketed_witnesses`, and
+  `warnings`;
+- `buckets[*].witnesses[*].evidence`, which remains the provenance-rich source
+  evidence;
+- `ranking`, aligned by index with the sorted `buckets` list;
+- `translation_cache`, with cache availability, hit/miss counts, and population
+  batches.
+
+New renderer-facing fields are additive:
+
+- `schema_version`: currently `langnet.encounter.v1`;
+- `request`: normalized request metadata such as language, text, tool filter,
+  cache mode, and translation mode;
+- `display.header`: forms and source keys ready for a first-screen header;
+- `display.analysis`: morphology rows with `display_text` and Foster labels;
+- `display.meanings`: display-ready meaning rows aligned by `bucket_id` to
+  `buckets`, including source refs, source-detail summaries, translation
+  provenance, source languages, witness counts, and confidence labels;
+- `display.meanings[*].entries`: one stable summary per witness with common
+  entry metadata such as source tool, source ref, headword, entry id,
+  dictionary, source-entry summary, typed source notes, raw blob reference, and
+  translation provenance;
+- `display.options`: rendering controls used to build display strings.
+
+Web/API consumers should render `display.*`, inspect `ranking` for ordering
+reasons, and keep `buckets[*].witnesses[*].evidence` available for provenance
+expansion. They should not scrape pretty output.
+
+The current schemas live in:
+
+- `docs/schemas/encounter.v1.schema.json`
+- `docs/schemas/encounter-error.v1.schema.json`
+
+The schema is intentionally additive-friendly: consumers can rely on required
+fields for the current iteration, while future compatible fields can be added
+without changing `schema_version`.
+
+When `encounter --output json` fails after command dispatch, stdout is still
+JSON and the process exits nonzero. The error shape is:
+
+```json
+{
+  "schema_version": "langnet.encounter.error.v1",
+  "ok": false,
+  "request": {
+    "language": "lat",
+    "text": "lupus",
+    "tool_filter": "gaffiot",
+    "normalize": true,
+    "no_cache": false,
+    "include_cltk": false,
+    "translation_mode": "off"
+  },
+  "error": {
+    "code": "encounter_failed",
+    "type": "RuntimeError",
+    "message": "backend unavailable"
+  }
+}
+```
+
+Callers should parse stdout first when they requested JSON, even when the exit
+status is nonzero.
 
 ## `reader-eval`
 
@@ -168,7 +269,9 @@ By default the command exits successfully and reports misses. Add
 The current seed fixture lives at `tests/fixtures/reader_eval_classics.json` and
 covers initial Aeneid, Iliad, and Bhagavad Gita opening-token probes.
 The summary separates broad evidence hits from first-screen learner quality:
-overall pass rate, meaning pass rate, and top-answer pass rate.
+overall strict pass rate, broad meaning pass rate, and top-answer pass rate.
+`top_lemma_hit` remains visible as a diagnostic because some backends expose an
+inflected surface as the top lemma even when the first gloss is useful.
 
 For Sanskrit, Heritage is the preferred analysis/morphology source. A Heritage-only encounter may show an `Analysis` section without meaning buckets:
 
@@ -204,7 +307,7 @@ In the JSON, inspect the matching `gloss` triple:
 - `object` is the raw CDSL source-near gloss.
 - `metadata.display_gloss` is the conservative learner-display string used by `encounter` when present. It should preserve source content unless a future parser separates notes into explicit fields.
 - `metadata.source_entry` identifies the CDSL row and source keys, including dictionary id, line number, `source_ref`, SLP1 key, and IAST key.
-- `metadata.source_segments` is an ordered, source-complete split of the raw gloss text. Each segment has `raw_text` and `display_text`; unrecognized segments remain unclassified.
+- `metadata.source_segments` is an ordered, source-complete split of the raw gloss text. Each segment has `raw_text`, `display_text`, and, where recognized, `segment_type` plus `labels` such as `definition`, `cross_reference`, `source_reference`, `citation`, or `example`.
 - `metadata.source_notes`, when present, summarizes confidently typed cross-reference/source-reference segments. It does not replace or remove the original segments.
 - `metadata.source_ref` identifies the dictionary row, such as `mw:<line>`.
 - `metadata.evidence.response_id`, `extraction_id`, `derivation_id`, and `claim_id` show the runtime path that produced the triple.
@@ -212,10 +315,11 @@ In the JSON, inspect the matching `gloss` triple:
 
 That separation is the current evidence contract: learner output can be cleaner than source text, but source text remains inspectable.
 
-When CDSL source notes are present, `encounter` may show them below the source
-refs as compact provenance hints, for example `source notes: cross refs: ...;
-source refs: ...`. The raw gloss still remains available as the evidence line
-and in `triples-dump`.
+When typed source notes or typed source segments are present, `encounter` may
+show them below the source refs as compact provenance hints, for example
+`source notes: cross refs: ...; source refs: ...; examples: ...`. Pass
+`--no-source-details` for a quieter first screen. The raw gloss still remains
+available as the evidence line and in `triples-dump`.
 
 ### Evidence Walkthrough: DICO/Gaffiot Translation Cache
 
@@ -280,6 +384,24 @@ already cached or missing without making network calls.
 `encounter --output json` includes a top-level `translation_cache` object with
 the resolved mode, cache DB path, availability, hit/miss counts before and after
 projection, and any rows written by explicit population.
+
+Use `translation-cache` for cache maintenance without touching lookup or
+normalization rows:
+
+```bash
+just cli translation-cache status --output json
+just cli translation-cache clear --yes --output json
+```
+
+The maintenance JSON uses schema version `langnet.translation_cache.v1`; its
+schema lives at `docs/schemas/translation-cache.v1.schema.json`.
+
+It also includes a top-level `ranking` array aligned to the sorted bucket list.
+Each item reports the bucket sort key, preferred-lemma rank, learner-quality
+score, source-order signals, translation/bilingual source flags, source tools,
+bucket lemmas, and short human-readable reasons. This is the preferred surface
+for future web renderers that need to explain why one meaning appears before
+another.
 
 This mode reads existing cache rows first, calls OpenRouter only for missing
 translation keys, writes successful translations back to the cache, and then
@@ -381,10 +503,10 @@ Runtime triples preserve those source-near forms as evidence:
 - `display_slp1` is the CDSL/source key.
 - `display_gloss` is a conservative learner-facing gloss string for CDSL entries. It currently preserves source content and applies display-safe transliteration transforms only.
 - `source_entry` identifies the dictionary row and CDSL source keys.
-- `source_segments` stores ordered raw/display segment pairs without classifying or removing source text.
+- `source_segments` stores ordered raw/display segment pairs with conservative `segment_type` and `labels` where recognized; unrecognized source text remains present rather than removed.
 - `source_encoding` is usually `slp1`.
 
-The `encounter` command uses these fields for display. It shows IAST forms first and source keys separately, and it prefers `display_gloss` when present. The raw CDSL entry text remains available as the `gloss` triple object with source references.
+The `encounter` command uses these fields for display. It shows IAST forms first and source keys separately, prefers `display_gloss` when present, and summarizes typed cross-reference/source-reference/example segments as compact source notes unless `--no-source-details` is passed. The raw CDSL entry text remains available as the `gloss` triple object with source references.
 
 ## Evidence Fields
 

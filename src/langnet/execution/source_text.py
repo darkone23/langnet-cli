@@ -6,7 +6,7 @@ from typing import cast
 
 from langnet.parsing.source_entry_analysis import parse_source_entry
 
-_SEGMENT_SPLIT_RE = re.compile(r"[;\n¶]+")
+_SEGMENT_SPLIT_RE = re.compile(r"\s+\|\|+\s+|[;\n¶]+")
 _COMPACT_ENTRY_BREAK_RE = re.compile(r"\s+\|+\s+|\s+—\s+")
 _COMPACT_HEADWORD_NUMBER_RE = re.compile(r"\b1\s+([^:;|]{2,120})(?=[:;|])")
 _COMPACT_INFLECTION_TAG_RE = re.compile(r"\b(?:sg|pl|nom|acc|gen|dat|abl)\.")
@@ -112,13 +112,19 @@ def source_segments_from_text(
         segment = raw_segment.strip()
         if not segment:
             continue
+        display = display_text(segment)
+        classified_type, classified_labels = _classify_source_segment(
+            display,
+            default_segment_type=segment_type,
+            default_labels=labels or [],
+        )
         segments.append(
             {
                 "index": len(segments),
                 "raw_text": segment,
-                "display_text": display_text(segment),
-                "segment_type": segment_type,
-                "labels": list(labels or []),
+                "display_text": display,
+                "segment_type": classified_type,
+                "labels": classified_labels,
             }
         )
     if segments:
@@ -126,15 +132,83 @@ def source_segments_from_text(
     stripped = raw_text.strip()
     if not stripped:
         return []
+    display = display_text(stripped)
+    classified_type, classified_labels = _classify_source_segment(
+        display,
+        default_segment_type=segment_type,
+        default_labels=labels or [],
+    )
     return [
         {
             "index": 0,
             "raw_text": stripped,
-            "display_text": display_text(stripped),
-            "segment_type": segment_type,
-            "labels": list(labels or []),
+            "display_text": display,
+            "segment_type": classified_type,
+            "labels": classified_labels,
         }
     ]
+
+
+def _classify_source_segment(
+    text: str,
+    *,
+    default_segment_type: str,
+    default_labels: list[str],
+) -> tuple[str, list[str]]:
+    segment_type = default_segment_type
+    labels = list(default_labels)
+    if "translation" in default_labels:
+        return segment_type, labels
+    clean = display_text(text).strip(" ;,")
+    if re.match(r"^(?:cf|see)\.\s+", clean, re.IGNORECASE):
+        segment_type = _classified_segment_type(default_segment_type, "cross_reference_segment")
+        labels = _merge_labels(
+            default_labels,
+            ["cross_reference", "source_reference"],
+            replace_definition=True,
+        )
+    elif _SOURCE_ABBREVIATION_RE.match(clean) or _is_bracket_source_reference_segment(clean):
+        segment_type = _classified_segment_type(default_segment_type, "source_reference_segment")
+        labels = _merge_labels(
+            default_labels,
+            ["source_reference"],
+            replace_definition=True,
+        )
+    elif _CLASSICAL_CITATION_RE.search(clean) and _looks_like_example_text(clean):
+        segment_type = _classified_segment_type(default_segment_type, "example_segment")
+        labels = _merge_labels(
+            default_labels,
+            ["example", "citation", "source_reference"],
+            replace_definition=True,
+        )
+    elif clean and _is_probable_definition_segment(clean):
+        segment_type = _classified_segment_type(default_segment_type, "definition_segment")
+        labels = _merge_labels(default_labels, ["definition"])
+    return segment_type, labels
+
+
+def _classified_segment_type(default_segment_type: str, classified_segment_type: str) -> str:
+    if default_segment_type in {"dictionary_entry", "dictionary_line"}:
+        return default_segment_type
+    return classified_segment_type
+
+
+def _is_bracket_source_reference_segment(text: str) -> bool:
+    match = re.fullmatch(r"\[([^\]]{1,64})\]", text)
+    return bool(match and _looks_like_source_reference(display_text(match.group(1))))
+
+
+def _merge_labels(
+    base: list[str],
+    additions: list[str],
+    *,
+    replace_definition: bool = False,
+) -> list[str]:
+    labels = [label for label in base if not (replace_definition and label == "definition")]
+    for label in additions:
+        if label not in labels:
+            labels.append(label)
+    return labels
 
 
 def analyze_source_entry(

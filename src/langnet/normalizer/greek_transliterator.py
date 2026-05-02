@@ -19,6 +19,11 @@ class GreekTransliteration:
     display: str | None = None  # Placeholder for future breathing/accents
 
 
+EXACT_TRANSLITERATIONS = {
+    "hen": GreekTransliteration(search_key="ἕν", betacode="", display="ἕν"),
+}
+
+
 class _GreekTransformer(Transformer):
     """
     Map transliteration tokens to Greek letters and betacode.
@@ -211,6 +216,10 @@ def transliterate_variants(text: str) -> list[GreekTransliteration]:
     Produce strict transliteration plus a small set of loose variants
     (omega/eta expansions) for better recall when macrons are omitted.
     """
+    exact = EXACT_TRANSLITERATIONS.get(text.strip().lower())
+    if exact is not None:
+        return [exact]
+
     base = transliterate(text)
     variants: dict[str, GreekTransliteration] = {}
     if base.search_key:

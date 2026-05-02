@@ -18,6 +18,7 @@ from .core import (
     _greek_epic_eus_candidates,
     _hash_query,
 )
+from .greek_transliterator import transliterate_variants
 from .sanskrit import HeritageClientProtocol
 from .utils import strip_accents
 
@@ -212,6 +213,8 @@ class NormalizationService:
         if language != LanguageHint.LANGUAGE_HINT_GRC:
             return normalized
 
+        normalized = _enrich_greek_cached_candidates(raw_query, normalized)
+
         try:
             from langnet.diogenes.client import (  # noqa: PLC0415
                 _levenshtein,
@@ -224,11 +227,7 @@ class NormalizationService:
         if len(candidates) <= 1:
             return normalized
 
-        target_source = raw_query
-        for step in normalized.normalizations:
-            if step.operation == "greek_transliterate" and step.output:
-                target_source = step.output
-                break
+        target_source = _greek_rerank_target_source(raw_query, normalized)
         target = _normalize_for_distance(target_source)
         target_reader_form = _final_grave_to_acute(target_source)
         target_reader_norm = _normalize_greek_reader_form(target_reader_form)
@@ -282,6 +281,40 @@ def _enrich_latin_cached_candidates(raw_query: str, normalized: NormalizedQuery)
         )
     )
     return normalized
+
+
+def _enrich_greek_cached_candidates(raw_query: str, normalized: NormalizedQuery) -> NormalizedQuery:
+    text = raw_query.strip().lower()
+    if not text or any(
+        "\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff" for char in text
+    ):
+        return normalized
+    existing = {candidate.lemma for candidate in normalized.candidates}
+    for variant in transliterate_variants(text):
+        if not variant.search_key or variant.search_key in existing:
+            continue
+        normalized.candidates.append(
+            CanonicalCandidate(
+                lemma=variant.search_key,
+                encodings={"betacode": variant.betacode} if variant.betacode else {},
+                sources=["local"],
+            )
+        )
+        existing.add(variant.search_key)
+    return normalized
+
+
+def _greek_rerank_target_source(raw_query: str, normalized: NormalizedQuery) -> str:
+    for step in normalized.normalizations:
+        if step.operation == "greek_transliterate" and step.output:
+            return step.output
+    text = raw_query.strip().lower()
+    if not text or any(
+        "\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff" for char in text
+    ):
+        return raw_query
+    variants = transliterate_variants(text)
+    return variants[0].search_key if variants else raw_query
 
 
 def _candidate_freq(candidate) -> int:

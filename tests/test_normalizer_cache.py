@@ -27,13 +27,17 @@ class GreekDiogenes:
     ):
         self.parse_lemmas = parse_lemmas or []
         self.word_list_lemmas = word_list_lemmas or []
+        self.parse_queries: list[str] = []
+        self.word_list_queries: list[str] = []
 
     def fetch_parse(self, query: str, lang: str = "grc"):
         from langnet.diogenes.client import ParseResult  # noqa: PLC0415
 
+        self.parse_queries.append(query)
         return ParseResult(query=query, lemmas=self.parse_lemmas, matched=bool(self.parse_lemmas))
 
     def fetch_word_list(self, query: str, limit: int = 50) -> WordListResult:
+        self.word_list_queries.append(query)
         return WordListResult(
             query=query,
             lemmas=self.word_list_lemmas,
@@ -176,6 +180,52 @@ def test_cached_latin_results_are_enriched_with_ae_to_a_candidate() -> None:
         candidates = {candidate.lemma: candidate for candidate in result.normalized.candidates}
         assert "troia" in candidates
         assert candidates["troia"].sources == ["local_form_rule"]
+        conn_read.close()
+
+
+def test_ascii_greek_normalization_skips_raw_diogenes_parse() -> None:
+    conn = duckdb.connect(database=":memory:")
+    dio = GreekDiogenes(word_list_lemmas=["ἕν"])
+    svc = NormalizationService(
+        conn,
+        diogenes_config=DiogenesConfig(greek_client=cast(DiogenesClient, dio)),
+        use_cache=False,
+    )
+
+    result = svc.normalize("hen", LanguageHint.LANGUAGE_HINT_GRC)
+
+    assert dio.parse_queries == []
+    assert "hen" not in dio.word_list_queries
+    assert dio.word_list_queries == ["ἕν"]
+    assert result.normalized.candidates[0].lemma == "ἕν"
+    conn.close()
+
+
+def test_cached_ascii_greek_results_are_enriched_with_exact_transliteration() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "canon.duckdb"
+        conn = duckdb.connect(str(db_path))
+        ensure_norm_schema(conn)
+        index = NormalizationIndex(conn)
+        stale = NormalizedQuery(
+            original="hen",
+            language=LanguageHint.LANGUAGE_HINT_GRC,
+            candidates=[CanonicalCandidate(lemma="εν", encodings={}, sources=["local"])],
+        )
+        index.upsert(
+            query_hash=_hash_query("hen", LanguageHint.LANGUAGE_HINT_GRC),
+            raw_query="hen",
+            language=str(LanguageHint.LANGUAGE_HINT_GRC).lower(),
+            normalized=stale,
+            source_response_ids=None,
+        )
+        conn.close()
+
+        conn_read = duckdb.connect(str(db_path))
+        svc = NormalizationService(conn_read, use_cache=True)
+        result = svc.normalize("hen", LanguageHint.LANGUAGE_HINT_GRC)
+
+        assert result.normalized.candidates[0].lemma == "ἕν"
         conn_read.close()
 
 

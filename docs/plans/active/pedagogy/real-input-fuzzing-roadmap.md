@@ -31,13 +31,15 @@ Current live fixture checkpoint:
 - `just cli reader-eval --no-cache --translation-mode cache --output json`
 - strict hit rate: 13/13
 - meaning hit rate: 13/13
+- top-answer hit rate: 13/13
 - Sanskrit seed tokens: 5/5 strict, 5/5 meaning
 
 Corpus expansion checkpoint:
 
 - `just cli reader-eval --fixture tests/fixtures/reader_eval_corpus_expansion.json --db-path examples/debug/corpus-probes/corpus-reader-eval-4.duckdb --translation-mode off --output json`
-- strict hit rate: 14/14
-- meaning hit rate: 14/14
+- strict hit rate: 15/15
+- meaning hit rate: 15/15
+- top-answer hit rate: 15/15
 - coverage: Jerome/Vulgate John 1:1, Greek New Testament John 1:1,
   Taittiriya Upanishad invocation, and Taittiriya Samhita 1.1.1.
 
@@ -76,6 +78,10 @@ the default learner display is already good.
 - Morphology rows now provide ordered preferred lemmas for learner-display
   ranking. This lets analyzed forms such as Latin `principio` lead with the
   noun `principium` while preserving the visible alternate verb analysis.
+- Learner-quality ranking now demotes metalinguistic/cross-reference headings
+  and derivative-only Sanskrit entries when a more direct reader answer is
+  available. The corpus-expansion fixture now reaches 15/15 broad meaning and
+  15/15 top-answer checks without cached translations.
 - Preferred-lemma matching is transliteration-tolerant for common Sanskrit
   display variants, so DICO remains preferred for same-headword cases such as
   `varuṇaḥ` / `varu.na` and `ūrje` / `uurja`.
@@ -93,6 +99,10 @@ the default learner display is already good.
   structure at the end of the pipeline. The Sanskrit `dharma` live probe now
   shows `loi, condition, nature propre` with the full DICO entry retained as
   evidence.
+- Generic source segmentation now recognizes clear cross-reference, source
+  reference, and citation/example segments while preserving the original source
+  text. This gives the next display pass typed material to hide or show without
+  scraping dictionary strings.
 
 ## Active Work Queue
 

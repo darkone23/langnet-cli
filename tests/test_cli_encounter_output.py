@@ -8,7 +8,9 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import duckdb
+import jsonschema
 from click.testing import CliRunner
+from filelock import FileLock
 from query_spec import CanonicalCandidate, NormalizedQuery
 
 from langnet.cli import (
@@ -20,11 +22,14 @@ from langnet.cli import (
     _encounter_lemma_compare_keys,
     _encounter_morphology_fallback_terms,
     _encounter_morphology_rows,
+    _encounter_preferred_lemmas_for_sorting,
     _encounter_preferred_lemmas_from_morphology,
     _get_query_value_for_plan,
     main,
 )
 from langnet.execution.effects import ClaimEffect, ProvenanceLink
+from langnet.normalizer.core import NormalizationResult, _hash_query
+from langnet.storage.normalization_index import ensure_schema as ensure_normalization_schema
 from langnet.translation import (
     BASE_SYSTEM,
     TranslationCache,
@@ -34,6 +39,9 @@ from langnet.translation import (
 )
 
 TRANSLATION_FIXTURE_PATH = Path("tests/fixtures/translation_cache_golden_rows.json")
+ENCOUNTER_SCHEMA_PATH = Path("docs/schemas/encounter.v1.schema.json")
+ENCOUNTER_ERROR_SCHEMA_PATH = Path("docs/schemas/encounter-error.v1.schema.json")
+GAFFIOT_LUPUS_SOURCE_ORDER = 38776
 
 
 def _claim_with_triples(
@@ -61,6 +69,11 @@ def _claim_with_triples(
 
 def _translation_language(source_lexicon: str) -> str:
     return "lat" if source_lexicon == "gaffiot" else "san"
+
+
+def _assert_matches_schema(payload: object, schema_path: Path) -> None:
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(schema).validate(payload)
 
 
 def test_encounter_morphology_rows_from_interpretation_triples() -> None:
@@ -264,6 +277,43 @@ def test_get_query_value_for_plan_normalizes_greek_epic_eos_form() -> None:
     assert query.candidates[0].lemma == "ἀχιλλεύς"
 
 
+def test_get_query_value_for_plan_does_not_hold_cache_lock_during_normalization() -> None:
+    with TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "langnet.duckdb"
+        with duckdb.connect(str(db_path)) as conn:
+            ensure_normalization_schema(conn)
+
+        class LockCheckingService:
+            def normalize(self, text: str, lang_hint: int) -> NormalizationResult:
+                with FileLock(f"{db_path}.lock", timeout=0):
+                    pass
+                normalized = NormalizedQuery(
+                    original=text,
+                    language=lang_hint,
+                    candidates=[CanonicalCandidate(lemma="hen", encodings={}, sources=["fixture"])],
+                )
+                return NormalizationResult(
+                    query_hash=_hash_query(text, lang_hint),
+                    normalized=normalized,
+                )
+
+        with patch("langnet.cli._create_normalization_service", return_value=LockCheckingService()):
+            query = _get_query_value_for_plan(
+                "hen",
+                LanguageHint.LANGUAGE_HINT_GRC,
+                normalize=True,
+                norm_cfg=NormalizeConfig(
+                    diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                    heritage_base="http://localhost:48080",
+                    db_path=str(db_path),
+                    no_cache=False,
+                    output="pretty",
+                ),
+            )
+
+        assert query.candidates[0].lemma == "hen"
+
+
 def test_lemma_compare_keys_include_pos_anchor_base() -> None:
     assert "armum" in _encounter_lemma_compare_keys("armum#noun")
 
@@ -425,6 +475,283 @@ def test_encounter_sanskrit_cdsl_snapshot() -> None:
     )
 
 
+def test_encounter_json_includes_ranking_explanations() -> None:
+    triples = [
+        {
+            "subject": "lex:lupus",
+            "predicate": "has_sense",
+            "object": "sense:lex:lupus#wolf",
+            "metadata": {
+                "evidence": {"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_38776"}
+            },
+        },
+        {
+            "subject": "sense:lex:lupus#wolf",
+            "predicate": "gloss",
+            "object": "wolf",
+            "metadata": {
+                "display_gloss": "wolf",
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_38776",
+                },
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="gaffiot", subject="lex:lupus", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "lupus",
+                "gaffiot",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    assert len(payload["ranking"]) == 1
+    ranking = payload["ranking"][0]
+    assert ranking["display_gloss"] == "wolf"
+    assert ranking["has_bilingual_source"] is True
+    assert ranking["source_order"] == GAFFIOT_LUPUS_SOURCE_ORDER
+    assert "has DICO/Gaffiot bilingual source evidence" in ranking["reasons"]
+
+
+def test_encounter_json_includes_public_contract_display_views() -> None:
+    triples = [
+        {
+            "subject": "form:arma",
+            "predicate": "has_interpretation",
+            "object": "interp:form:arma→lex:armum#noun",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+        {
+            "subject": "interp:form:arma→lex:armum#noun",
+            "predicate": "realizes_lexeme",
+            "object": "lex:armum#noun",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+        {
+            "subject": "interp:form:arma→lex:armum#noun",
+            "predicate": "has_pos",
+            "object": "noun",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+        {
+            "subject": "interp:form:arma→lex:armum#noun",
+            "predicate": "has_case",
+            "object": "nominative",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+        {
+            "subject": "interp:form:arma→lex:armum#noun",
+            "predicate": "has_number",
+            "object": "plural",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+        {
+            "subject": "interp:form:arma→lex:armum#noun",
+            "predicate": "has_gender",
+            "object": "neuter",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+        {
+            "subject": "lex:arma",
+            "predicate": "has_sense",
+            "object": "sense:lex:arma#gaffiot",
+            "metadata": {
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_123",
+                }
+            },
+        },
+        {
+            "subject": "sense:lex:arma#gaffiot",
+            "predicate": "gloss",
+            "object": "weapons; arms; cf. armum",
+            "metadata": {
+                "display_gloss": "weapons; arms",
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_123",
+                    "raw_blob_ref": "tei_xml",
+                    "source_entry": {
+                        "dict": "gaffiot",
+                        "entry_id": "gaffiot_123",
+                        "headword_norm": "arma",
+                        "source_ref": "gaffiot:gaffiot_123",
+                        "source_text": "weapons; arms; cf. armum",
+                    },
+                    "source_segments": [
+                        {
+                            "display_text": "cf. armum",
+                            "labels": ["cross_reference", "source_reference"],
+                        }
+                    ],
+                },
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="latin", subject="lex:arma", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "arma",
+                "all",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+                "--max-gloss-chars",
+                "20",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    _assert_matches_schema(payload, ENCOUNTER_SCHEMA_PATH)
+    assert payload["query"] == "arma"
+    assert payload["schema_version"] == "langnet.encounter.v1"
+    assert payload["request"] == {
+        "language": "lat",
+        "text": "arma",
+        "tool_filter": "all",
+        "normalize": True,
+        "no_cache": False,
+        "include_cltk": False,
+        "translation_mode": "off",
+    }
+    assert payload["display"]["header"] == {"forms": ["arma"], "source_keys": []}
+    assert payload["display"]["analysis"] == [
+        {
+            "form": "arma",
+            "lemma": "armum",
+            "analysis": "noun; nominative; plural; neuter",
+            "source": "whitaker",
+            "foster_display": "Naming Function; Group; Neuter",
+            "display_text": (
+                "arma -> armum: noun; nominative; plural; neuter "
+                "[Foster: Naming Function; Group; Neuter] (whitaker)"
+            ),
+        }
+    ]
+    assert payload["display"]["meanings"][0]["bucket_id"] == payload["buckets"][0]["bucket_id"]
+    assert payload["display"]["meanings"][0]["display_gloss"] == "weapons; arms"
+    assert payload["display"]["meanings"][0]["evidence_gloss"] == ""
+    assert payload["display"]["meanings"][0]["source_refs"] == ["gaffiot:gaffiot_123"]
+    assert payload["display"]["meanings"][0]["source_detail_summary"] == {
+        "cross_refs": ["cf. armum"],
+        "source_refs": [],
+        "examples": [],
+        "text": "cross refs: cf. armum",
+    }
+    assert payload["display"]["meanings"][0]["entries"] == [
+        {
+            "witness_id": payload["buckets"][0]["witnesses"][0]["wsu_id"],
+            "lexeme_anchor": "lex:arma",
+            "sense_anchor": "sense:lex:arma#gaffiot",
+            "claim_id": "clm-latin",
+            "source_tool": "gaffiot",
+            "source_ref": "gaffiot:gaffiot_123",
+            "source_lang": "",
+            "gloss_lang": "",
+            "display_form": "arma",
+            "source_key": "",
+            "headword": "arma",
+            "entry_id": "gaffiot_123",
+            "dictionary": "gaffiot",
+            "raw_blob_ref": "tei_xml",
+            "source_encoding": "",
+            "source_entry": {
+                "dict": "gaffiot",
+                "entry_id": "gaffiot_123",
+                "headword_norm": "arma",
+                "source_ref": "gaffiot:gaffiot_123",
+                "source_text_chars": 24,
+                "has_source_text": True,
+            },
+            "source_detail_summary": {
+                "cross_refs": ["cf. armum"],
+                "source_refs": [],
+                "examples": [],
+                "text": "cross refs: cf. armum",
+            },
+            "translation": {
+                "available": False,
+                "translation_id": "",
+                "source_lexicon": "",
+                "source_text_lang": "",
+                "target_lang": "",
+                "model": "",
+                "source_text_hash": "",
+                "derived_from_tool": "",
+                "derived_from_sense": "",
+            },
+        }
+    ]
+    assert payload["display"]["options"] == {
+        "max_gloss_chars": 20,
+        "foster_labels": True,
+        "source_details": True,
+    }
+
+
+def test_encounter_json_returns_structured_error_on_lookup_failure() -> None:
+    with patch("langnet.cli._execute_lookup_plan", side_effect=RuntimeError("backend unavailable")):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "lupus",
+                "gaffiot",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+            ],
+        )
+
+    assert cli_result.exit_code == 1
+    payload = json.loads(cli_result.output)
+    _assert_matches_schema(payload, ENCOUNTER_ERROR_SCHEMA_PATH)
+    assert payload == {
+        "schema_version": "langnet.encounter.error.v1",
+        "ok": False,
+        "request": {
+            "language": "lat",
+            "text": "lupus",
+            "tool_filter": "gaffiot",
+            "normalize": True,
+            "no_cache": False,
+            "include_cltk": False,
+            "translation_mode": "off",
+        },
+        "error": {
+            "code": "encounter_failed",
+            "type": "RuntimeError",
+            "message": "backend unavailable",
+        },
+    }
+
+
 def test_encounter_prints_compact_learner_gloss_with_evidence_line() -> None:
     triples = [
         {
@@ -548,6 +875,152 @@ def test_encounter_prints_structured_cdsl_source_notes_below_refs() -> None:
     )
 
 
+def test_encounter_summarizes_typed_source_segments_below_refs() -> None:
+    triples = [
+        {
+            "subject": "lex:principium",
+            "predicate": "has_sense",
+            "object": "sense:lex:principium#segments",
+            "metadata": {
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_53107",
+                }
+            },
+        },
+        {
+            "subject": "sense:lex:principium#segments",
+            "predicate": "gloss",
+            "object": (
+                "ĭī, n. (princeps), 1 beginning || principio Cic. Off. 1, 11; cf. principium; Verg."
+            ),
+            "metadata": {
+                "source_lang": "fr",
+                "display_gloss": (
+                    "ĭī, n. (princeps), 1 beginning || principio Cic. Off. 1, 11; "
+                    "cf. principium; Verg."
+                ),
+                "learner_gloss": "beginning",
+                "source_ref": "gaffiot:gaffiot_53107",
+                "source_segments": [
+                    {
+                        "raw_text": "ĭī, n. (princeps), 1 beginning",
+                        "display_text": "ĭī, n. (princeps), 1 beginning",
+                        "segment_type": "definition_segment",
+                        "labels": ["definition"],
+                    },
+                    {
+                        "raw_text": "principio Cic. Off. 1, 11",
+                        "display_text": "principio Cic. Off. 1, 11",
+                        "segment_type": "example_segment",
+                        "labels": ["example", "citation", "source_reference"],
+                    },
+                    {
+                        "raw_text": "cf. principium",
+                        "display_text": "cf. principium",
+                        "segment_type": "cross_reference_segment",
+                        "labels": ["cross_reference", "source_reference"],
+                    },
+                    {
+                        "raw_text": "Verg.",
+                        "display_text": "Verg.",
+                        "segment_type": "source_reference_segment",
+                        "labels": ["source_reference"],
+                    },
+                ],
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_53107",
+                },
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="gaffiot", subject="lex:principium", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "principium",
+                "gaffiot",
+                "--max-buckets",
+                "1",
+                "--max-gloss-chars",
+                "90",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    assert "1. beginning\n" in cli_result.output
+    assert "   refs: gaffiot:gaffiot_53107\n" in cli_result.output
+    assert (
+        "   source notes: cross refs: cf. principium; source refs: Verg.; "
+        "examples: principio Cic. Off. 1, 11\n"
+    ) in cli_result.output
+
+
+def test_encounter_source_details_toggle_hides_typed_source_segment_summary() -> None:
+    triples = [
+        {
+            "subject": "lex:principium",
+            "predicate": "has_sense",
+            "object": "sense:lex:principium#segments",
+            "metadata": {
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_53107",
+                }
+            },
+        },
+        {
+            "subject": "sense:lex:principium#segments",
+            "predicate": "gloss",
+            "object": "beginning; cf. principium",
+            "metadata": {
+                "display_gloss": "beginning; cf. principium",
+                "learner_gloss": "beginning",
+                "source_ref": "gaffiot:gaffiot_53107",
+                "source_segments": [
+                    {
+                        "raw_text": "cf. principium",
+                        "display_text": "cf. principium",
+                        "segment_type": "cross_reference_segment",
+                        "labels": ["cross_reference", "source_reference"],
+                    },
+                ],
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_53107",
+                },
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="gaffiot", subject="lex:principium", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "principium",
+                "gaffiot",
+                "--max-buckets",
+                "1",
+                "--no-source-details",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    assert "source notes:" not in cli_result.output
+
+
 def test_encounter_sorts_cdsl_buckets_by_source_order_before_gloss_text() -> None:
     early = SimpleNamespace(
         display_gloss="z later alphabetically",
@@ -592,6 +1065,82 @@ def test_encounter_sorts_cdsl_mw_before_ap90() -> None:
     )
 
     assert sorted([ap90, mw], key=_encounter_bucket_sort_key) == [mw, ap90]
+
+
+def test_encounter_promotes_direct_pronoun_gloss_over_metalinguistic_cdsl_line() -> None:
+    metalinguistic = SimpleNamespace(
+        display_gloss="also considered by native grammarians to be the base of the cases yuṣmān",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                lexeme_anchor="lex:yuzmad",
+                evidence={
+                    "source_tool": "cdsl",
+                    "source_ref": "mw:172214.1",
+                    "display_iast": "yuṣmad",
+                    "display_gloss": (
+                        "also considered by native grammarians to be the base of the cases yuṣmān"
+                    ),
+                },
+            )
+        ],
+    )
+    learner_pronoun = SimpleNamespace(
+        display_gloss="yuṣmad The base of the second personal pronoun; Thou, you",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                lexeme_anchor="lex:yuzmad",
+                evidence={
+                    "source_tool": "cdsl",
+                    "source_ref": "ap90:23854.0",
+                    "display_iast": "yuṣmad",
+                    "display_gloss": "yuṣmad The base of the second personal pronoun; Thou, you",
+                },
+            )
+        ],
+    )
+
+    assert sorted(
+        [metalinguistic, learner_pronoun],
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, ["yuṣmad"]),
+    ) == [learner_pronoun, metalinguistic]
+
+
+def test_encounter_promotes_auspicious_particle_over_sanskrit_root_entry() -> None:
+    root_entry = SimpleNamespace(
+        display_gloss="śam_1 v. travailler, se fatiguer; s'apaiser; être calme",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="dico",
+                lexeme_anchor="lex:zam",
+                evidence={
+                    "source_tool": "dico",
+                    "source_ref": "dico:63.html#zam#1:0",
+                    "display_gloss": "śam_1 v. travailler, se fatiguer; s'apaiser; être calme",
+                },
+            )
+        ],
+    )
+    particle_entry = SimpleNamespace(
+        display_gloss="śam_2 part. bénédiction, bonheur; bien-être",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="dico",
+                lexeme_anchor="lex:zam",
+                evidence={
+                    "source_tool": "dico",
+                    "source_ref": "dico:63.html#zam#2:0",
+                    "display_gloss": "śam_2 part. bénédiction, bonheur; bien-être",
+                },
+            )
+        ],
+    )
+
+    assert sorted([root_entry, particle_entry], key=_encounter_bucket_sort_key) == [
+        particle_entry,
+        root_entry,
+    ]
 
 
 def test_encounter_sorts_whitaker_buckets_by_source_order_before_gloss_text() -> None:
@@ -664,6 +1213,37 @@ def test_encounter_sorts_diogenes_sense_order_before_gloss_text() -> None:
         primary,
         subsidiary,
     ]
+
+
+def test_encounter_demotes_diogenes_cross_reference_heading_below_numbered_sense() -> None:
+    heading = SimpleNamespace(
+        display_gloss="I. computation, reckoning (cf. λέγω (B) II).",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="diogenes",
+                evidence={
+                    "source_tool": "diogenes",
+                    "source_ref": "diogenes:00:00",
+                    "display_gloss": "I. computation, reckoning (cf. λέγω (B) II).",
+                },
+            )
+        ],
+    )
+    numbered = SimpleNamespace(
+        display_gloss="1. account of money handled",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="diogenes",
+                evidence={
+                    "source_tool": "diogenes",
+                    "source_ref": "diogenes:00:00:00",
+                    "display_gloss": "1. account of money handled",
+                },
+            )
+        ],
+    )
+
+    assert sorted([numbered, heading], key=_encounter_bucket_sort_key) == [numbered, heading]
 
 
 def test_encounter_demotes_diogenes_headword_header_below_numbered_sense() -> None:
@@ -787,6 +1367,94 @@ def test_encounter_preferred_lemma_sort_preserves_analysis_order() -> None:
         [second_analysis, first_analysis],
         key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred),
     ) == [first_analysis, second_analysis]
+
+
+def test_encounter_combined_preferred_lemmas_use_morphology_before_reduction_order() -> None:
+    reduction = SimpleNamespace(
+        lexeme_anchors=["lex:principio", "lex:principium"],
+        buckets=[],
+    )
+    morphology_rows = [
+        {
+            "source_tool": "whitaker",
+            "form": "principio",
+            "lemma": "principio",
+            "analysis": "verb; present; active; indicative",
+        },
+        {
+            "source_tool": "whitaker",
+            "form": "principio",
+            "lemma": "principium",
+            "analysis": "noun; dative; singular; neuter; ablative",
+        },
+    ]
+
+    assert _encounter_preferred_lemmas_for_sorting(reduction, morphology_rows) == [
+        "principium",
+        "principio",
+    ]
+
+
+def test_encounter_preferred_lemma_rank_keeps_base_lemma_before_tagged_variant() -> None:
+    principium = SimpleNamespace(
+        display_gloss="commencement",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                lexeme_anchor="lex:principium",
+                evidence={"source_tool": "gaffiot"},
+            )
+        ],
+    )
+    principio = SimpleNamespace(
+        display_gloss="begin to speak",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="whitaker",
+                lexeme_anchor="lex:principio#verb",
+                evidence={"source_tool": "whitaker"},
+            )
+        ],
+    )
+    preferred = ["principium", "principio", "principio#verb", "principium#noun"]
+
+    assert sorted(
+        [principio, principium],
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred),
+    ) == [principium, principio]
+
+
+def test_encounter_strong_learner_gloss_can_promote_common_verb_homograph() -> None:
+    adjective = SimpleNamespace(
+        display_gloss="white, gray",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                lexeme_anchor="lex:canus",
+                evidence={"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_10263"},
+            )
+        ],
+    )
+    verb = SimpleNamespace(
+        display_gloss="sing of; celebrate",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="diogenes",
+                lexeme_anchor="lex:cano",
+                evidence={
+                    "source_tool": "diogenes",
+                    "source_ref": "diogenes:00:00",
+                    "display_gloss": "sing of; celebrate",
+                },
+            )
+        ],
+    )
+    preferred = ["canus", "canum", "cano"]
+
+    assert sorted(
+        [adjective, verb],
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred),
+    ) == [verb, adjective]
 
 
 def test_encounter_preferred_lemma_sort_demotes_tackon_before_content_word() -> None:
@@ -1753,6 +2421,7 @@ def test_encounter_json_projects_all_translation_golden_rows() -> None:
 
             assert cli_result.exit_code == 0, cli_result.output
             payload = json.loads(cli_result.output)
+            _assert_matches_schema(payload, ENCOUNTER_SCHEMA_PATH)
             translated_buckets = [
                 bucket
                 for bucket in payload["buckets"]

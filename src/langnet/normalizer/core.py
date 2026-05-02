@@ -28,10 +28,7 @@ else:
     _normalize_for_distance = None
 
 from .base import LanguageNormalizer
-from .greek_transliterator import (
-    transliterate,
-    transliterate_variants,
-)
+from .greek_transliterator import transliterate_variants
 from .utils import contains_greek, normalize_greekish_token, strip_accents
 
 LanguageValue = LanguageHint.ValueType
@@ -205,6 +202,8 @@ class GreekNormalizer(LanguageNormalizer):
     ) -> None:
         """Extract lemmas from Diogenes morphological parse (primary method)."""
         if self.diogenes is None:
+            return
+        if not contains_greek(text):
             return
         try:
             parse = self.diogenes.fetch_parse(text, lang="grc")
@@ -415,34 +414,38 @@ class GreekNormalizer(LanguageNormalizer):
             candidates.append(CanonicalCandidate(lemma=base, encodings=encodings, sources=sources))
         else:
             ascii_lower = base.lower()
-            encodings: dict[str, str] = {}
             sources = ["local"]
 
-            trans = transliterate(ascii_lower)
-            if trans.search_key:
+            variants = transliterate_variants(ascii_lower)
+            if variants:
+                first_variant = variants[0]
                 if not _has_transliterate_step(steps, ascii_lower):
                     steps.append(
                         NormalizationStep(
                             operation="greek_transliterate",
                             input=ascii_lower,
-                            output=trans.search_key,
+                            output=first_variant.search_key,
                             tool="greek_transliterator",
                         )
                     )
-                if trans.betacode:
-                    encodings["betacode"] = trans.betacode
-                candidates.append(
-                    CanonicalCandidate(lemma=trans.search_key, encodings=encodings, sources=sources)
-                )
-                stripped = strip_accents(trans.search_key)
-                if stripped != trans.search_key:
-                    encodings["accentless"] = stripped
+                seen_variants: set[str] = set()
+                for trans in variants:
+                    if not trans.search_key or trans.search_key in seen_variants:
+                        continue
+                    seen_variants.add(trans.search_key)
+                    encodings: dict[str, str] = {}
+                    if trans.betacode:
+                        encodings["betacode"] = trans.betacode
                     candidates.append(
-                        CanonicalCandidate(lemma=stripped, encodings=encodings, sources=sources)
+                        CanonicalCandidate(
+                            lemma=trans.search_key,
+                            encodings=encodings,
+                            sources=sources,
+                        )
                     )
             else:
                 candidates.append(
-                    CanonicalCandidate(lemma=ascii_lower, encodings=encodings, sources=sources)
+                    CanonicalCandidate(lemma=ascii_lower, encodings={}, sources=sources)
                 )
 
         return candidates

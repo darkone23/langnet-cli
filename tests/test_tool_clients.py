@@ -14,6 +14,8 @@ from langnet.clients import (
 from langnet.execution.clients import WhitakerFetchClient
 
 HTTP_OK = 200
+DEFAULT_HTTP_TIMEOUT = 10.0
+CUSTOM_HTTP_TIMEOUT = 1.5
 
 
 class _FakeResponse:
@@ -28,19 +30,21 @@ class _FakeResponse:
 class _FakeSession:
     def __init__(self, response: _FakeResponse):
         self._response = response
+        self.timeout = None
 
-    def get(self, endpoint, params=None):  # noqa: ANN001, D401
+    def get(self, endpoint, params=None, timeout=None):  # noqa: ANN001, D401
+        self.timeout = timeout
         return self._response
 
-    def post(self, endpoint, data=None):  # noqa: ANN001, D401
+    def post(self, endpoint, data=None, timeout=None):  # noqa: ANN001, D401
+        self.timeout = timeout
         return self._response
 
 
 def test_http_tool_client_emits_raw_response(tmp_path: Path) -> None:
     fake_response = _FakeResponse(b"ok", headers={"Content-Type": "application/json"})
-    client = HttpToolClient(
-        tool="dummy", session=cast(requests.Session, _FakeSession(fake_response))
-    )
+    fake_session = _FakeSession(fake_response)
+    client = HttpToolClient(tool="dummy", session=cast(requests.Session, fake_session))
     effect = client.execute(call_id="call-1", endpoint="http://example.com", params={"q": "x"})
 
     assert isinstance(effect, RawResponseEffect)
@@ -48,6 +52,21 @@ def test_http_tool_client_emits_raw_response(tmp_path: Path) -> None:
     assert effect.status_code == HTTP_OK
     assert effect.content_type == "application/json"
     assert effect.body == b"ok"
+    assert fake_session.timeout == DEFAULT_HTTP_TIMEOUT
+
+
+def test_http_tool_client_accepts_explicit_timeout() -> None:
+    fake_response = _FakeResponse(b"ok")
+    fake_session = _FakeSession(fake_response)
+    client = HttpToolClient(
+        tool="dummy",
+        session=cast(requests.Session, fake_session),
+        timeout=CUSTOM_HTTP_TIMEOUT,
+    )
+
+    client.execute(call_id="call-1", endpoint="http://example.com", params={"q": "x"})
+
+    assert fake_session.timeout == CUSTOM_HTTP_TIMEOUT
 
 
 def test_file_tool_client_reads_bytes(tmp_path: Path) -> None:

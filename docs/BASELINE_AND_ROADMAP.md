@@ -1,6 +1,6 @@
 # Working Baseline And Roadmap
 
-**Date:** 2026-04-29  
+**Date:** 2026-05-01  
 **Mode:** stabilization before expansion
 
 This document is the current checkpoint for continuing LangNet development. It
@@ -81,6 +81,9 @@ continue to use fixtures rather than live services.
 - Translation cache identity includes source lexicon, entry, occurrence,
   headword, source text hash, source/target language, model, prompt hash, and
   hint hash.
+- Translation-cache mode resolution, hit/miss diagnostics, and
+  projection/population batch handling now live in `encounter_translation`, so
+  CLI and future web/API entrypoints can share the same orchestration logic.
 
 Observed quality is strong for source-faithful dictionary translation:
 
@@ -199,6 +202,7 @@ Current live checkpoint:
 - `just cli reader-eval --no-cache --translation-mode cache --output json`
 - strict grammar+meaning hit rate: 13/13
 - meaning-only hit rate: 13/13
+- top-answer hit rate: 13/13
 - Sanskrit now passes all five seed tokens after display-form matching,
   no-bucket morphology fallback, and `karma -> karman` enrichment from clear
   Heritage morphology. Heritage compound morphology rows now use segment-level
@@ -227,6 +231,7 @@ Corpus expansion fixture:
   `just cli reader-eval --fixture tests/fixtures/reader_eval_corpus_expansion.json --db-path examples/debug/corpus-probes/corpus-reader-eval-4.duckdb --translation-mode off --output json`
 - strict grammar+meaning hit rate: 15/15
 - meaning-only hit rate: 15/15
+- top-answer hit rate: 15/15
 - This checkpoint verifies raw source evidence without cached translations. It
   also covers Greek-script direct lookup (`ἀρχῇ`), Diogenes source-order
   ranking (`θεόν`), Gaffiot source-order ranking (`erat`), and Sanskrit
@@ -237,10 +242,10 @@ Corpus expansion fixture:
   visible while shortening the first line, e.g. Gaffiot `principium` can display
   `commencement` with the full source entry preserved below as evidence.
 
-The current reader-eval checkpoints pass 13/13 strict and meaning checks for
-the classic-opening seed fixture and 15/15 strict and meaning checks for the
-corpus-expansion fixture. This is a seed-fixture baseline, not a general
-release guarantee.
+The current reader-eval checkpoints pass 13/13 strict, meaning, and top-answer
+checks for the classic-opening seed fixture. The corpus-expansion fixture
+passes 15/15 strict, meaning, and top-answer checks.
+This is a seed-fixture baseline, not a general release guarantee.
 
 Cache caveat:
 
@@ -383,9 +388,9 @@ Dependencies:
 
 1. Keep the classic-opening `reader-eval` fixture green on strict/top-answer
    checks.
-2. Use the corpus-expansion fixture as the next ranking backlog, starting with
-   `principio`, `Deum`, `λόγος`, `śam`, `iṣe`, `ūrje`, and `tvā`.
-3. Implement compact gloss derivation/display for translated DICO/Gaffiot
+2. Keep the corpus-expansion fixture green while adding new real reader
+   forms.
+3. Extend compact gloss derivation/display for translated DICO/Gaffiot
    witnesses.
 4. Continue source-structuring fixtures for CDSL, Diogenes/LSJ, and long
    Gaffiot entries.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Mapping
 
@@ -14,11 +15,16 @@ class HttpToolClient:
     """
 
     def __init__(
-        self, tool: str, method: str = "GET", session: requests.Session | None = None
+        self,
+        tool: str,
+        method: str = "GET",
+        session: requests.Session | None = None,
+        timeout: float | None = None,
     ) -> None:
         self.tool = tool
         self.method = method.upper()
         self.session = session or requests.Session()
+        self.timeout = timeout if timeout is not None else _default_timeout()
 
     def execute(
         self, call_id: str, endpoint: str, params: Mapping[str, str] | None = None
@@ -34,9 +40,9 @@ class HttpToolClient:
 
         start = time.perf_counter()
         response = (
-            self.session.post(endpoint, data=http_params)
+            self.session.post(endpoint, data=http_params, timeout=self.timeout)
             if self.method == "POST"
-            else self.session.get(endpoint, params=http_params)
+            else self.session.get(endpoint, params=http_params, timeout=self.timeout)
         )
         duration_ms = int((time.perf_counter() - start) * 1000)
 
@@ -52,3 +58,11 @@ class HttpToolClient:
             body=response.content,
             fetch_duration_ms=duration_ms,
         )
+
+
+def _default_timeout() -> float:
+    raw = os.getenv("LANGNET_HTTP_TIMEOUT_SECONDS", "10")
+    try:
+        return max(0.1, float(raw))
+    except ValueError:
+        return 10.0

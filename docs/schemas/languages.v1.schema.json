@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langnet.local/schemas/languages.v1.schema.json",
+  "title": "LangNet language catalog response",
+  "type": "object",
+  "required": ["schema_version", "languages"],
+  "properties": {
+    "schema_version": { "const": "langnet.languages.v1" },
+    "languages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/language" }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "language": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "aliases",
+        "default_tool_filter",
+        "tools_command",
+        "encounter_command"
+      ],
+      "properties": {
+        "code": { "enum": ["lat", "grc", "san"] },
+        "label": { "type": "string" },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "default_tool_filter": { "type": "string" },
+        "tools_command": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "encounter_command": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langnet.local/schemas/doctor.v1.schema.json",
+  "title": "LangNet CLI doctor response",
+  "type": "object",
+  "required": ["schema_version", "ok", "summary", "runtime", "checks"],
+  "properties": {
+    "schema_version": { "const": "langnet.doctor.v1" },
+    "ok": { "type": "boolean" },
+    "summary": {
+      "type": "object",
+      "required": ["checks", "failures", "warnings"],
+      "properties": {
+        "checks": { "type": "integer", "minimum": 0 },
+        "failures": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["python", "cwd"],
+      "properties": {
+        "python": { "type": "string" },
+        "cwd": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "checks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "check": {
+      "type": "object",
+      "required": ["id", "status", "severity", "message", "metadata"],
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "enum": ["pass", "warn", "fail"] },
+        "severity": { "enum": ["info", "warning", "error"] },
+        "message": { "type": "string" },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

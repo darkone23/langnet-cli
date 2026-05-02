@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import importlib.util
 import logging
 import os
 import re
 import subprocess
+import sys
 import time
 from collections import Counter
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -18,6 +20,7 @@ import humanize
 import orjson
 import query_spec
 import requests
+from filelock import Timeout as FileLockTimeout
 from query_spec import ToolCallSpec, ToolStage
 
 from langnet.cli_databuild import databuild
@@ -28,6 +31,45 @@ from langnet.cli_triples import (
 )
 from langnet.clients.base import ToolClient
 from langnet.clients.http import HttpToolClient
+from langnet.encounter_display import (
+    build_analysis_views,
+    build_display_payload,
+    build_header_view,
+    build_meaning_view,
+    foster_display_for_analysis,
+    foster_features_from_analysis,
+    shorten_text,
+)
+from langnet.encounter_ranking import (
+    bucket_learner_quality_order,
+    bucket_lemma_values,
+    bucket_quality_text,
+    bucket_ranking_explanation,
+    bucket_sort_key,
+    bucket_source_tools,
+    cdsl_dictionary_order,
+    cdsl_source_order,
+    diogenes_source_order,
+    effective_preferred_lemma_rank,
+    gaffiot_source_order,
+    generic_source_order,
+    lemma_compare_keys,
+    morphology_lemma_preference_key,
+    normalize_lemma,
+    preferred_lemma_rank,
+    preferred_lemmas_for_sorting,
+    preferred_lemmas_from_morphology,
+    preferred_lemmas_from_reduction,
+    reduction_lemma_values,
+)
+from langnet.encounter_translation import (
+    add_translation_counts,
+    apply_translation_cache,
+    empty_translation_counts,
+    encounter_translation_diagnostics,
+    merge_translation_counts,
+    resolve_translation_mode,
+)
 from langnet.execution import predicates
 from langnet.execution.clients import (
     StubToolClient,
@@ -45,10 +87,10 @@ from langnet.execution.handlers.whitakers import _parse_whitaker_output
 from langnet.execution.registry import default_registry
 from langnet.execution.source_text import analyze_source_entry, compact_source_gloss
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
+from langnet.normalizer.core import NormalizationResult, _hash_query
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
 from langnet.normalizer.utils import strip_accents
 from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
-from langnet.pedagogy.foster import foster_codes_for_features
 from langnet.planner.core import PlannerConfig, ToolPlanner
 from langnet.reader_eval import (
     evaluate_reader_token,
@@ -62,11 +104,22 @@ from langnet.storage.db import connect_duckdb
 from langnet.storage.derivation_index import DerivationIndex
 from langnet.storage.effects_index import RawResponseIndex
 from langnet.storage.extraction_index import ExtractionIndex
+from langnet.storage.normalization_index import NormalizationIndex
+from langnet.storage.normalization_index import ensure_schema as ensure_normalization_schema
+from langnet.storage.path_indices import (
+    PathClaimIndex,
+    PathDerivationIndex,
+    PathExtractionIndex,
+    PathPlanResponseIndex,
+    PathRawResponseIndex,
+)
 from langnet.storage.paths import all_db_paths, normalization_db_path
 from langnet.storage.plan_index import PlanResponseIndex, apply_schema
+from langnet.tool_catalog import canonical_language, catalog_payload, language_payload
 from langnet.translation import (
     BASE_SYSTEM,
     TranslationCache,
+    apply_translation_schema,
     populate_missing_translations,
     project_cached_translations,
     translation_cache_status_counts,
@@ -77,138 +130,10 @@ LanguageValue = query_spec.LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
 ENCOUNTER_LEARNER_GLOSS_MAX_CHARS = 120
 ENCOUNTER_LEARNER_GLOSS_ITEM_LIMIT = 4
-
-_FOSTER_DISPLAY_LABELS = {
-    "NAMING": "Naming Function",
-    "CALLING": "Calling Function",
-    "RECEIVING": "Receiving Function",
-    "POSSESSING": "Possessing Function",
-    "TO_FOR": "To-For Function",
-    "BY_WITH_FROM_IN": "By-With-From-In Function",
-    "IN_WHERE": "In-Where Function",
-    "MALE": "Male",
-    "FEMALE": "Female",
-    "NEUTER": "Neuter",
-    "SINGLE": "Single",
-    "PAIR": "Pair",
-    "GROUP": "Group",
-    "TIME_NOW": "Time-Now",
-    "TIME_LATER": "Time-Later",
-    "TIME_WAS_DOING": "Time-Was-Doing",
-    "TIME_PAST": "Time-Past",
-    "TIME_HAD_DONE": "Time-Had-Done",
-    "ONCE_DONE": "Once-Done",
-    "STATEMENT": "Statement",
-    "WISH_MAY_BE": "Wish-May-Be",
-    "MAYBE_WILL_DO": "Maybe-Will-Do",
-    "COMMAND": "Command",
-    "DOING": "Doing",
-    "BEING_DONE_TO": "Being Done To",
-    "FOR_SELF": "For Self",
-    "PARTICIPLE": "Participle",
-}
-
-_FOSTER_DISPLAY_ORDER = (
-    "case",
-    "number",
-    "gender",
-    "tense",
-    "mood",
-    "voice",
-    "participle",
-    "pos",
-)
-
-_FOSTER_ANALYSIS_ALIASES = {
-    "case": {
-        "1": "1",
-        "2": "2",
-        "3": "3",
-        "4": "4",
-        "5": "5",
-        "6": "6",
-        "7": "7",
-        "8": "8",
-        "nom": "nom",
-        "nominative": "nominative",
-        "voc": "voc",
-        "vocative": "vocative",
-        "acc": "acc",
-        "accusative": "accusative",
-        "gen": "gen",
-        "genitive": "genitive",
-        "dat": "dat",
-        "dative": "dative",
-        "abl": "abl",
-        "ablative": "ablative",
-        "loc": "loc",
-        "locative": "locative",
-        "instr": "instr",
-        "inst": "inst",
-        "instrumental": "instrumental",
-    },
-    "gender": {
-        "m": "m",
-        "masc": "masculine",
-        "masculine": "masculine",
-        "f": "f",
-        "fem": "feminine",
-        "feminine": "feminine",
-        "n": "n",
-        "neut": "neuter",
-        "neuter": "neuter",
-    },
-    "number": {
-        "sg": "sg",
-        "sing": "singular",
-        "singular": "singular",
-        "du": "du",
-        "dual": "dual",
-        "pl": "pl",
-        "plur": "plural",
-        "plural": "plural",
-    },
-    "tense": {
-        "pres": "pres",
-        "present": "present",
-        "fut": "fut",
-        "future": "future",
-        "imperf": "imperf",
-        "imperfect": "imperfect",
-        "perf": "perf",
-        "perfect": "perfect",
-        "aor": "aor",
-        "aorist": "aorist",
-        "plupf": "plupf",
-        "pluperfect": "pluperfect",
-    },
-    "mood": {
-        "indic": "indic",
-        "indicative": "indicative",
-        "subj": "subj",
-        "subjunctive": "subjunctive",
-        "opt": "opt",
-        "optative": "optative",
-        "imper": "imper",
-        "imperative": "imperative",
-    },
-    "voice": {
-        "act": "act",
-        "active": "active",
-        "mid": "mid",
-        "middle": "middle",
-        "pass": "pass",
-        "passive": "passive",
-        "depon": "deponent",
-        "deponent": "deponent",
-        "semi-depon": "semi-deponent",
-        "semi-deponent": "semi-deponent",
-    },
-    "participle": {
-        "part": "part",
-        "participle": "participle",
-    },
-}
+ENCOUNTER_JSON_SCHEMA_VERSION = "langnet.encounter.v1"
+ENCOUNTER_JSON_ERROR_SCHEMA_VERSION = "langnet.encounter.error.v1"
+TRANSLATION_CACHE_SCHEMA_VERSION = "langnet.translation_cache.v1"
+DOCTOR_SCHEMA_VERSION = "langnet.doctor.v1"
 
 
 def _ensure_logging(level: int = logging.INFO) -> None:
@@ -377,6 +302,40 @@ def _print_plan(plan, output: str) -> None:
             click.echo(f"  {dep.get('from')} -> {dep.get('to')}  ({dep.get('why')})")
 
 
+def _encounter_json_error_payload(  # noqa: PLR0913
+    *,
+    language: str,
+    text: str,
+    tool_filter: str,
+    normalize: bool,
+    no_cache: bool,
+    include_cltk: bool,
+    translation_mode: str,
+    exc: Exception,
+) -> dict[str, object]:
+    message = exc.format_message() if isinstance(exc, click.ClickException) else str(exc)
+    if not message:
+        message = exc.__class__.__name__
+    return {
+        "schema_version": ENCOUNTER_JSON_ERROR_SCHEMA_VERSION,
+        "ok": False,
+        "request": {
+            "language": language,
+            "text": text,
+            "tool_filter": tool_filter,
+            "normalize": normalize,
+            "no_cache": no_cache,
+            "include_cltk": include_cltk,
+            "translation_mode": translation_mode,
+        },
+        "error": {
+            "code": "click_error" if isinstance(exc, click.ClickException) else "encounter_failed",
+            "type": exc.__class__.__name__,
+            "message": message,
+        },
+    }
+
+
 @dataclass
 class NormalizeConfig:
     diogenes_endpoint: str
@@ -436,6 +395,111 @@ def _create_normalization_service(
         effects_index=effects_index,
         read_only=read_only,
     )
+
+
+def _normalization_result_uncached(
+    config: NormalizeConfig,
+    text: str,
+    lang_hint: LanguageValue,
+) -> NormalizationResult:
+    compute_config = NormalizeConfig(
+        diogenes_endpoint=config.diogenes_endpoint,
+        heritage_base=config.heritage_base,
+        db_path=config.db_path,
+        no_cache=True,
+        output=config.output,
+    )
+    with duckdb.connect(database=":memory:") as conn:
+        service = _create_normalization_service(compute_config, conn, read_only=False)
+        return service.normalize(text, lang_hint)
+
+
+def _normalization_cache_get(
+    *,
+    config: NormalizeConfig,
+    path: Path,
+    text: str,
+    lang_hint: LanguageValue,
+) -> NormalizationResult | None:
+    if not path.exists():
+        return None
+    query_hash = _hash_query(text, lang_hint)
+    with connect_duckdb(path, read_only=False, lock=True) as conn:
+        ensure_normalization_schema(conn)
+        cached = NormalizationIndex(conn).get(query_hash)
+        if cached is not None:
+            service = _create_normalization_service(config, conn, read_only=False)
+            cached = service._rerank_candidates(text, lang_hint, cached)
+            if service._cached_greek_epic_eus_is_stale(text, lang_hint, cached):
+                cached = None
+    if cached is None:
+        return None
+    return NormalizationResult(query_hash=query_hash, normalized=cached)
+
+
+def _normalization_cache_upsert(
+    *,
+    path: Path,
+    text: str,
+    lang_hint: LanguageValue,
+    result: NormalizationResult,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with connect_duckdb(path, read_only=False, lock=True) as conn:
+        ensure_normalization_schema(conn)
+        NormalizationIndex(conn).upsert(
+            query_hash=result.query_hash,
+            raw_query=text,
+            language=str(lang_hint).lower(),
+            normalized=result.normalized,
+        )
+
+
+def _normalize_with_short_cache_lock(
+    config: NormalizeConfig,
+    text: str,
+    lang_hint: LanguageValue,
+    *,
+    use_cache: bool = True,
+) -> NormalizationResult:
+    path = Path(config.db_path).expanduser() if config.db_path else normalization_db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    cache_enabled = use_cache and not config.no_cache
+    if cache_enabled:
+        cached = _normalization_cache_get(
+            config=config,
+            path=path,
+            text=text,
+            lang_hint=lang_hint,
+        )
+        if cached is not None:
+            return cached
+
+    result = _normalization_result_uncached(config, text, lang_hint)
+    if cache_enabled:
+        _normalization_cache_upsert(path=path, text=text, lang_hint=lang_hint, result=result)
+    return result
+
+
+class _PathTranslationCache:
+    """Translation cache facade that does not hold DuckDB open during model calls."""
+
+    def __init__(self, path: Path, *, read_only: bool = False) -> None:
+        self.path = path
+        self.read_only = read_only
+
+    def get(self, key) -> object | None:
+        if not self.path.exists():
+            return None
+        with connect_duckdb(self.path, read_only=False, lock=True) as conn:
+            return TranslationCache(conn, read_only=True).get(key)
+
+    def upsert(self, record) -> str:
+        if self.read_only:
+            raise RuntimeError("translation cache is read-only")
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with connect_duckdb(self.path, read_only=False, lock=True) as conn:
+            return TranslationCache(conn, read_only=False).upsert(record)
 
 
 def _norm_text_for_compare(s: str) -> str:
@@ -507,20 +571,13 @@ def _normalize_word_for_tool(
     Run the normalizer and return the best candidate lemma/text for downstream tool calls.
     """
     lang_hint = _parse_language(language)
-    path = Path(config.db_path).expanduser() if config.db_path else normalization_db_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    use_memory = config.no_cache or not use_cache or not path.exists()
-
-    if use_memory:
-        with duckdb.connect(database=":memory:") as conn:
-            service = _create_normalization_service(config, conn, read_only=False)
-            normalized = service.normalize(text, lang_hint)
-            return _pick_best_normalization_candidate(normalized, text)
-    read_only = config.no_cache
-    with connect_duckdb(path, read_only=read_only, lock=not read_only) as conn:
-        service = _create_normalization_service(config, conn, read_only=read_only)
-        normalized = service.normalize(text, lang_hint)
-        return _pick_best_normalization_candidate(normalized, text)
+    normalized = _normalize_with_short_cache_lock(
+        config,
+        text,
+        lang_hint,
+        use_cache=use_cache,
+    )
+    return _pick_best_normalization_candidate(normalized, text)
 
 
 def _diogenes_query_url(base: str, lang: str, word: str) -> str:
@@ -533,20 +590,8 @@ def _diogenes_query_url(base: str, lang: str, word: str) -> str:
 
 def _normalize_impl(config: NormalizeConfig, language: str, text: str) -> None:
     lang_hint = _parse_language(language)
-    path = Path(config.db_path).expanduser() if config.db_path else normalization_db_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    use_memory = config.no_cache and not path.exists()
-    if use_memory:
-        with duckdb.connect(database=":memory:") as conn:
-            service = _create_normalization_service(config, conn, read_only=False)
-            result = service.normalize(text, lang_hint)
-            _print_result(result, config.output)
-    else:
-        read_only = config.no_cache
-        with connect_duckdb(path, read_only=read_only, lock=not read_only) as conn:
-            service = _create_normalization_service(config, conn, read_only=read_only)
-            result = service.normalize(text, lang_hint)
-            _print_result(result, config.output)
+    result = _normalize_with_short_cache_lock(config, text, lang_hint)
+    _print_result(result, config.output)
 
 
 def _plan_impl(config: PlanCliConfig, language: str, text: str) -> None:
@@ -558,48 +603,20 @@ def _plan_impl(config: PlanCliConfig, language: str, text: str) -> None:
         no_cache=config.no_cache,
         output=config.output,
     )
-    path = (
-        Path(norm_config.db_path).expanduser() if norm_config.db_path else normalization_db_path()
+    normalized = _normalize_with_short_cache_lock(norm_config, text, lang_hint)
+    planner = ToolPlanner(
+        PlannerConfig(
+            diogenes_endpoint=config.diogenes_endpoint,
+            diogenes_parse_endpoint=config.diogenes_parse_endpoint,
+            heritage_base_url=config.heritage_base,
+            heritage_max_results=config.heritage_max_results,
+            include_whitakers=config.include_whitakers,
+            max_candidates=config.max_candidates,
+        )
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    use_memory = norm_config.no_cache and not path.exists()
-    if use_memory:
-        with duckdb.connect(database=":memory:") as conn:
-            service = _create_normalization_service(norm_config, conn, read_only=False)
-            normalized = service.normalize(text, lang_hint)
-
-            planner = ToolPlanner(
-                PlannerConfig(
-                    diogenes_endpoint=config.diogenes_endpoint,
-                    diogenes_parse_endpoint=config.diogenes_parse_endpoint,
-                    heritage_base_url=config.heritage_base,
-                    heritage_max_results=config.heritage_max_results,
-                    include_whitakers=config.include_whitakers,
-                    max_candidates=config.max_candidates,
-                )
-            )
-            candidate = planner.select_candidate(normalized.normalized)
-            plan = planner.build(normalized.normalized, candidate)
-            _print_plan(plan, config.output)
-    else:
-        read_only = norm_config.no_cache
-        with connect_duckdb(path, read_only=read_only, lock=not read_only) as conn:
-            service = _create_normalization_service(norm_config, conn, read_only=read_only)
-            normalized = service.normalize(text, lang_hint)
-
-            planner = ToolPlanner(
-                PlannerConfig(
-                    diogenes_endpoint=config.diogenes_endpoint,
-                    diogenes_parse_endpoint=config.diogenes_parse_endpoint,
-                    heritage_base_url=config.heritage_base,
-                    heritage_max_results=config.heritage_max_results,
-                    include_whitakers=config.include_whitakers,
-                    max_candidates=config.max_candidates,
-                )
-            )
-            candidate = planner.select_candidate(normalized.normalized)
-            plan = planner.build(normalized.normalized, candidate)
-            _print_plan(plan, config.output)
+    candidate = planner.select_candidate(normalized.normalized)
+    plan = planner.build(normalized.normalized, candidate)
+    _print_plan(plan, config.output)
 
 
 # Index management commands (Task 2: Foundation Work)
@@ -701,6 +718,348 @@ def main() -> None:
 # Register subcommands
 main.add_command(index)
 main.add_command(databuild)
+
+
+@main.command("tools")
+@click.argument("language", required=False)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def tools(language: str | None, output: str) -> None:
+    """List tool_filter values accepted by learner-facing commands."""
+    if language and canonical_language(language) is None:
+        raise click.UsageError(f"Unsupported language '{language}'. Use lat|grc|san.")
+
+    payload = catalog_payload(language, command="encounter")
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+
+    click.echo("Tool filters")
+    languages = cast(Sequence[Mapping[str, object]], payload["languages"])
+    tools_payload = cast(Sequence[Mapping[str, object]], payload["tools"])
+    for lang_map in languages:
+        click.echo(f"\n{lang_map['label']} ({lang_map['code']})")
+        click.echo("  all - All default tools for the language")
+        for entry in tools_payload:
+            if entry.get("language") != lang_map["code"]:
+                continue
+            suffix = " [translation-capable]" if entry.get("translation_capable") else ""
+            click.echo(f"  {entry['tool_filter']} - {entry['label']} ({entry['role']}){suffix}")
+
+
+@main.command("langs")
+@click.argument("language", required=False)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def langs(language: str | None, output: str) -> None:
+    """List supported language codes and aliases."""
+    if language and canonical_language(language) is None:
+        raise click.UsageError(f"Unsupported language '{language}'. Use lat|grc|san.")
+
+    payload = language_payload(language)
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+
+    click.echo("Languages")
+    languages = cast(Sequence[Mapping[str, object]], payload["languages"])
+    for lang_map in languages:
+        aliases = cast(Sequence[str], lang_map["aliases"])
+        click.echo(f"  {lang_map['code']} - {lang_map['label']} (aliases: {', '.join(aliases)})")
+
+
+def _doctor_check(  # noqa: PLR0913
+    checks: list[dict[str, object]],
+    *,
+    check_id: str,
+    status: str,
+    severity: str,
+    message: str,
+    metadata: Mapping[str, object] | None = None,
+) -> None:
+    checks.append(
+        {
+            "id": check_id,
+            "status": status,
+            "severity": severity,
+            "message": message,
+            "metadata": dict(metadata or {}),
+        }
+    )
+
+
+def _doctor_schema_checks(checks: list[dict[str, object]]) -> None:
+    schema_paths = [
+        Path("docs/schemas/languages.v1.schema.json"),
+        Path("docs/schemas/tools.v1.schema.json"),
+        Path("docs/schemas/encounter.v1.schema.json"),
+        Path("docs/schemas/encounter-error.v1.schema.json"),
+        Path("docs/schemas/translation-cache.v1.schema.json"),
+        Path("docs/schemas/doctor.v1.schema.json"),
+    ]
+    for schema_path in schema_paths:
+        if not schema_path.exists():
+            _doctor_check(
+                checks,
+                check_id=f"schema:{schema_path.name}",
+                status="fail",
+                severity="error",
+                message="JSON schema file is missing.",
+                metadata={"path": str(schema_path)},
+            )
+            continue
+        try:
+            orjson.loads(schema_path.read_bytes())
+        except orjson.JSONDecodeError as exc:
+            _doctor_check(
+                checks,
+                check_id=f"schema:{schema_path.name}",
+                status="fail",
+                severity="error",
+                message="JSON schema file is not valid JSON.",
+                metadata={"path": str(schema_path), "error": str(exc)},
+            )
+            continue
+        _doctor_check(
+            checks,
+            check_id=f"schema:{schema_path.name}",
+            status="pass",
+            severity="info",
+            message="JSON schema file is present and parseable.",
+            metadata={"path": str(schema_path)},
+        )
+
+
+def _doctor_catalog_checks(checks: list[dict[str, object]]) -> None:
+    languages = language_payload()
+    tools_payload = catalog_payload()
+    language_rows = cast(Sequence[Mapping[str, object]], languages["languages"])
+    tool_rows = cast(Sequence[Mapping[str, object]], tools_payload["tools"])
+    language_codes = {str(row.get("code")) for row in language_rows}
+    tool_filters = {
+        (str(row.get("language")), str(row.get("tool_filter")))
+        for row in tool_rows
+        if row.get("language") and row.get("tool_filter")
+    }
+    expected_languages = {"lat", "grc", "san"}
+    expected_tools = {
+        ("lat", "gaffiot"),
+        ("grc", "diogenes"),
+        ("san", "cdsl"),
+        ("san", "dico"),
+        ("san", "heritage"),
+    }
+    missing_languages = sorted(expected_languages - language_codes)
+    missing_tools = sorted(expected_tools - tool_filters)
+    if missing_languages or missing_tools:
+        _doctor_check(
+            checks,
+            check_id="catalog:surface",
+            status="fail",
+            severity="error",
+            message="CLI self-description is missing expected languages or tools.",
+            metadata={"missing_languages": missing_languages, "missing_tools": missing_tools},
+        )
+        return
+    _doctor_check(
+        checks,
+        check_id="catalog:surface",
+        status="pass",
+        severity="info",
+        message="CLI self-description exposes expected language and tool surface.",
+        metadata={"languages": sorted(language_codes), "tool_count": len(tool_rows)},
+    )
+
+
+def _doctor_translation_checks(
+    checks: list[dict[str, object]],
+    *,
+    translation_cache_db: str,
+    require_openai_key: bool,
+) -> None:
+    cache_path = Path(translation_cache_db)
+    cache_status = _translation_cache_status_payload(cache_path)
+    cache_error = cache_status.get("error")
+    cache_parent = cache_path.parent
+    parent_ready = (
+        cache_parent.exists()
+        and os.access(cache_parent, os.W_OK)
+        or (
+            not cache_parent.exists()
+            and cache_parent.parent.exists()
+            and os.access(cache_parent.parent, os.W_OK)
+        )
+    )
+    if parent_ready:
+        row_count = cache_status["row_count"]
+        _doctor_check(
+            checks,
+            check_id="translation_cache:path",
+            status="pass",
+            severity="info",
+            message="Translation cache directory exists or can be created.",
+            metadata={
+                "cache_db": str(cache_path),
+                "exists": bool(cache_status["exists"]),
+                "row_count": row_count if isinstance(row_count, int) else 0,
+            },
+        )
+    else:
+        _doctor_check(
+            checks,
+            check_id="translation_cache:path",
+            status="fail",
+            severity="error",
+            message="Translation cache directory is missing or not writable.",
+            metadata={"cache_db": str(cache_path), "parent": str(cache_parent)},
+        )
+
+    if cache_error:
+        _doctor_check(
+            checks,
+            check_id="translation_cache:available",
+            status="fail",
+            severity="error",
+            message="Translation cache exists but could not be opened.",
+            metadata={"cache_db": str(cache_path), "error": str(cache_error)},
+        )
+    else:
+        _doctor_check(
+            checks,
+            check_id="translation_cache:available",
+            status="pass",
+            severity="info",
+            message="Translation cache is available or not yet created.",
+            metadata={"cache_db": str(cache_path), "exists": bool(cache_status["exists"])},
+        )
+
+    aisuite_available = importlib.util.find_spec("aisuite") is not None
+    _doctor_check(
+        checks,
+        check_id="translation:aisuite",
+        status="pass" if aisuite_available else "warn",
+        severity="info" if aisuite_available else "warning",
+        message=(
+            "aisuite is importable."
+            if aisuite_available
+            else "aisuite is not importable; translation population will fail."
+        ),
+    )
+
+    has_openai_key = bool(os.environ.get("OPENAI_API_KEY"))
+    openai_status = "pass" if has_openai_key else ("fail" if require_openai_key else "warn")
+    openai_severity = "info" if has_openai_key else ("error" if require_openai_key else "warning")
+    _doctor_check(
+        checks,
+        check_id="translation:openai_key",
+        status=openai_status,
+        severity=openai_severity,
+        message=(
+            "OPENAI_API_KEY is set."
+            if has_openai_key
+            else (
+                "OPENAI_API_KEY is not set; cache hits still work, but cache misses cannot "
+                "populate."
+            )
+        ),
+    )
+
+
+def _doctor_optional_tool_checks(checks: list[dict[str, object]]) -> None:
+    whitaker_binary = find_whitaker_binary()
+    _doctor_check(
+        checks,
+        check_id="optional_tool:whitakers",
+        status="pass" if whitaker_binary else "warn",
+        severity="info" if whitaker_binary else "warning",
+        message=(
+            "Whitaker's Words binary was found."
+            if whitaker_binary
+            else (
+                "Whitaker's Words binary was not found; Latin Whitaker evidence may be unavailable."
+            )
+        ),
+        metadata={"binary": whitaker_binary or ""},
+    )
+
+
+def _doctor_payload(*, translation_cache_db: str, require_openai_key: bool) -> dict[str, object]:
+    checks: list[dict[str, object]] = []
+    _doctor_schema_checks(checks)
+    _doctor_catalog_checks(checks)
+    _doctor_translation_checks(
+        checks,
+        translation_cache_db=translation_cache_db,
+        require_openai_key=require_openai_key,
+    )
+    _doctor_optional_tool_checks(checks)
+    failures = [check for check in checks if check["status"] == "fail"]
+    warnings = [check for check in checks if check["status"] == "warn"]
+    return {
+        "schema_version": DOCTOR_SCHEMA_VERSION,
+        "ok": not failures,
+        "summary": {
+            "checks": len(checks),
+            "failures": len(failures),
+            "warnings": len(warnings),
+        },
+        "runtime": {
+            "python": sys.version.split()[0],
+            "cwd": str(Path.cwd()),
+        },
+        "checks": checks,
+    }
+
+
+@main.command("doctor")
+@click.option(
+    "--translation-cache-db",
+    default="data/cache/langnet.duckdb",
+    show_default=True,
+    help="DuckDB cache containing entry_translations rows.",
+)
+@click.option(
+    "--require-openai-key",
+    is_flag=True,
+    help="Fail when OPENAI_API_KEY is not set.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def doctor(translation_cache_db: str, require_openai_key: bool, output: str) -> None:
+    """Check local CLI assumptions without making network calls."""
+    payload = _doctor_payload(
+        translation_cache_db=translation_cache_db,
+        require_openai_key=require_openai_key,
+    )
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+    else:
+        summary = cast(Mapping[str, int], payload["summary"])
+        status = "OK" if payload["ok"] else "FAIL"
+        click.echo(
+            f"Doctor: {status} "
+            f"checks={summary['checks']} failures={summary['failures']} "
+            f"warnings={summary['warnings']}"
+        )
+        for check in cast(Sequence[Mapping[str, object]], payload["checks"]):
+            click.echo(f"- {check['status']} {check['id']}: {check['message']}")
+    if not payload["ok"]:
+        raise click.exceptions.Exit(1)
 
 
 @main.command()
@@ -1296,44 +1655,54 @@ def _plan_exec_impl(config: PlanExecConfig, language: str, text: str) -> None:
     )
     path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    with connect_duckdb(path, read_only=False, lock=True) as conn:
-        service = _create_normalization_service(norm_cfg, conn, read_only=False)
-        normalized = service.normalize(text, lang_hint)
+    normalized = _normalize_with_short_cache_lock(
+        norm_cfg,
+        text,
+        lang_hint,
+        use_cache=not config.no_cache,
+    )
 
-        planner = ToolPlanner(
-            PlannerConfig(
-                diogenes_endpoint=config.diogenes_endpoint,
-                diogenes_parse_endpoint=config.diogenes_parse_endpoint,
-                heritage_base_url=config.heritage_base,
-                heritage_max_results=config.heritage_max_results,
-                include_whitakers=config.include_whitakers,
-                max_candidates=config.max_candidates,
-            )
+    planner = ToolPlanner(
+        PlannerConfig(
+            diogenes_endpoint=config.diogenes_endpoint,
+            diogenes_parse_endpoint=config.diogenes_parse_endpoint,
+            heritage_base_url=config.heritage_base,
+            heritage_max_results=config.heritage_max_results,
+            include_whitakers=config.include_whitakers,
+            max_candidates=config.max_candidates,
         )
-        candidate = planner.select_candidate(normalized.normalized)
-        plan = planner.build(normalized.normalized, candidate)
+    )
+    candidate = planner.select_candidate(normalized.normalized)
+    plan = planner.build(normalized.normalized, candidate)
 
-        apply_schema(conn)
+    registry = default_registry(use_stubs=config.use_stub_handlers)
+    clients = _build_exec_clients(plan, config.diogenes_endpoint, config.use_stub_handlers)
 
-        raw_index = RawResponseIndex(conn)
-        extraction_index = ExtractionIndex(conn)
-        derivation_index = DerivationIndex(conn)
-        claim_index = ClaimIndex(conn)
-        plan_response_index = PlanResponseIndex(conn)
-
-        registry = default_registry(use_stubs=config.use_stub_handlers)
-        clients = _build_exec_clients(plan, config.diogenes_endpoint, config.use_stub_handlers)
-
+    if config.no_cache:
+        with duckdb.connect(database=":memory:") as conn:
+            apply_schema(conn)
+            result = execute_plan_staged(
+                plan=plan,
+                clients=clients,
+                registry=registry,
+                raw_index=RawResponseIndex(conn),
+                extraction_index=ExtractionIndex(conn),
+                derivation_index=DerivationIndex(conn),
+                claim_index=ClaimIndex(conn),
+                plan_response_index=None,
+                allow_cache=False,
+            )
+    else:
         result = execute_plan_staged(
             plan=plan,
             clients=clients,
             registry=registry,
-            raw_index=raw_index,
-            extraction_index=extraction_index,
-            derivation_index=derivation_index,
-            claim_index=claim_index,
-            plan_response_index=plan_response_index,
-            allow_cache=not config.no_cache,
+            raw_index=PathRawResponseIndex(path),
+            extraction_index=PathExtractionIndex(path),
+            derivation_index=PathDerivationIndex(path),
+            claim_index=PathClaimIndex(path),
+            plan_response_index=PathPlanResponseIndex(path),
+            allow_cache=True,
         )
 
     if config.output == "json":
@@ -1455,20 +1824,8 @@ def _get_query_value_for_plan(
     ):
         return _passthrough_normalized_query(text, lang_hint)
 
-    path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    use_memory = norm_cfg.no_cache or not path.exists()
-
     if normalize:
-        if use_memory:
-            with duckdb.connect(database=":memory:") as norm_conn:
-                service = _create_normalization_service(norm_cfg, norm_conn, read_only=False)
-                normalized_result = service.normalize(text, lang_hint)
-        else:
-            read_only = norm_cfg.no_cache
-            with connect_duckdb(path, read_only=read_only, lock=not read_only) as norm_conn:
-                service = _create_normalization_service(norm_cfg, norm_conn, read_only=read_only)
-                normalized_result = service.normalize(text, lang_hint)
+        normalized_result = _normalize_with_short_cache_lock(norm_cfg, text, lang_hint)
         return normalized_result.normalized
 
     return _passthrough_normalized_query(text, lang_hint)
@@ -1791,23 +2148,7 @@ def _encounter_should_retry_uncached(
 
 
 def _shorten(text: str, max_chars: int) -> str:
-    normalized = re.sub(r"\s+", " ", text).strip()
-    if len(normalized) <= max_chars:
-        return normalized
-    return normalized[: max_chars - 1].rstrip() + "…"
-
-
-def _encounter_display_length_note(
-    displayed_gloss: str,
-    evidence_gloss: str,
-    *,
-    label: str = "shown",
-) -> str:
-    evidence_chars = len(re.sub(r"\s+", " ", evidence_gloss).strip())
-    displayed_chars = len(displayed_gloss)
-    if evidence_chars <= displayed_chars:
-        return ""
-    return f"{label}: {displayed_chars}/{evidence_chars} chars"
+    return shorten_text(text, max_chars)
 
 
 def _dedupe_preserve_order(values: list[str]) -> list[str]:
@@ -1818,24 +2159,6 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
             seen.add(value)
             out.append(value)
     return out
-
-
-def _encounter_display_forms(reduction) -> tuple[list[str], list[str]]:
-    forms: list[str] = []
-    source_keys: list[str] = []
-    for bucket in reduction.buckets:
-        for witness in bucket.witnesses:
-            display_iast = witness.evidence.get("display_iast")
-            display_slp1 = witness.evidence.get("display_slp1")
-            if isinstance(display_iast, str) and display_iast:
-                forms.append(display_iast)
-            else:
-                forms.append(witness.lexeme_anchor.removeprefix("lex:"))
-            if isinstance(display_slp1, str) and display_slp1:
-                source_keys.append(display_slp1)
-    if not forms:
-        forms = [anchor.removeprefix("lex:") for anchor in reduction.lexeme_anchors]
-    return _dedupe_preserve_order(forms), _dedupe_preserve_order(source_keys)
 
 
 def _encounter_bucket_gloss(bucket) -> str:
@@ -1909,55 +2232,6 @@ def _encounter_compact_gloss(
     max_chars: int = ENCOUNTER_LEARNER_GLOSS_MAX_CHARS,
 ) -> str:
     return compact_source_gloss(gloss, max_chars=max_chars)
-
-
-def _encounter_source_refs(bucket) -> list[str]:
-    refs = [
-        str(witness.evidence.get("source_ref"))
-        for witness in bucket.witnesses
-        if witness.evidence.get("source_ref")
-    ]
-    return _dedupe_preserve_order(refs)
-
-
-def _encounter_translation_sources(bucket) -> list[str]:
-    sources: list[str] = []
-    for witness in bucket.witnesses:
-        evidence = witness.evidence
-        if (
-            witness.source_tool != "translation"
-            and evidence.get("source_tool") != "translation"
-            and evidence.get("translation_id") is None
-        ):
-            continue
-        source_lexicon = evidence.get("source_lexicon")
-        derived_from_tool = evidence.get("derived_from_tool")
-        if isinstance(source_lexicon, str) and source_lexicon:
-            sources.append(source_lexicon)
-        elif isinstance(derived_from_tool, str) and derived_from_tool:
-            sources.append(derived_from_tool)
-    return _dedupe_preserve_order(sources)
-
-
-def _encounter_source_note_summary(bucket, *, max_items: int = 3) -> str:
-    witness = bucket.witnesses[0] if bucket.witnesses else None
-    if witness is None:
-        return ""
-    source_notes = witness.evidence.get("source_notes")
-    if not isinstance(source_notes, Mapping):
-        return ""
-    parts: list[str] = []
-    cross_refs = _encounter_string_sequence(source_notes.get("cross_reference_segments"))
-    if cross_refs:
-        parts.append(f"cross refs: {', '.join(cross_refs[:max_items])}")
-    source_refs = _encounter_string_sequence(source_notes.get("source_reference_segments"))
-    if source_refs:
-        parts.append(f"source refs: {', '.join(source_refs[:max_items])}")
-    if not parts:
-        generic_refs = _encounter_string_sequence(source_notes.get("source_references"))
-        if generic_refs:
-            parts.append(f"source refs: {', '.join(generic_refs[:max_items])}")
-    return "; ".join(parts)
 
 
 def _encounter_claim_triples(claim: Mapping[str, object]) -> list[Mapping[str, object]]:
@@ -2250,42 +2524,15 @@ def _encounter_morphology_analysis(features: Sequence[str]) -> str:
 
 
 def _encounter_foster_display(language: str, analysis: str) -> str:
-    alternatives = [
-        _encounter_foster_display_alternative(language, alternative)
-        for alternative in analysis.split("|")
-    ]
-    return " / ".join(_dedupe_preserve_order([value for value in alternatives if value]))
+    return foster_display_for_analysis(language, analysis)
 
 
 def _encounter_foster_display_alternative(language: str, analysis: str) -> str:
-    features = _encounter_foster_features_from_analysis(analysis)
-    if not features:
-        return ""
-    codes = foster_codes_for_features(language, features)
-    labels = [
-        _FOSTER_DISPLAY_LABELS.get(codes[key], codes[key].replace("_", " ").title())
-        for key in _FOSTER_DISPLAY_ORDER
-        if key in codes
-    ]
-    return "; ".join(_dedupe_preserve_order(labels))
+    return foster_display_for_analysis(language, analysis)
 
 
 def _encounter_foster_features_from_analysis(analysis: str) -> dict[str, str]:
-    normalized = analysis.lower().replace("_", "-")
-    if "future perfect" in normalized:
-        normalized = normalized.replace("future perfect", "futperf")
-    if "semi deponent" in normalized:
-        normalized = normalized.replace("semi deponent", "semi-deponent")
-    tokens = re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)?", normalized)
-    features: dict[str, str] = {}
-    for feature_key, aliases in _FOSTER_ANALYSIS_ALIASES.items():
-        for token in tokens:
-            if token in aliases:
-                features[feature_key] = aliases[token]
-                break
-    if "participle" in features:
-        features.setdefault("pos", features["participle"])
-    return features
+    return foster_features_from_analysis(analysis)
 
 
 def _encounter_morphology_fallback_terms(
@@ -2468,27 +2715,11 @@ def _encounter_first_reduction_lemma_with_suffix(reduction, suffix: str) -> str:
 
 
 def _encounter_reduction_lemma_values(reduction) -> list[str]:
-    values = [anchor.removeprefix("lex:") for anchor in reduction.lexeme_anchors]
-    for bucket in reduction.buckets:
-        for witness in bucket.witnesses:
-            values.append(witness.lexeme_anchor.removeprefix("lex:"))
-            display_iast = witness.evidence.get("display_iast")
-            display_slp1 = witness.evidence.get("display_slp1")
-            if isinstance(display_iast, str):
-                values.append(display_iast)
-            if isinstance(display_slp1, str):
-                values.append(cdsl_handlers._slp1_to_iast(display_slp1))  # type: ignore[attr-defined]
-    return _dedupe_preserve_order(values)
+    return reduction_lemma_values(reduction)
 
 
 def _encounter_preferred_lemmas_from_reduction(reduction) -> list[str]:
-    values: list[str] = []
-    for value in _encounter_reduction_lemma_values(reduction):
-        normalized = value.casefold()
-        if normalized == "que" or normalized.endswith("#tackon"):
-            continue
-        values.append(value)
-    return _dedupe_preserve_order(values)
+    return preferred_lemmas_from_reduction(reduction)
 
 
 def _encounter_sanskrit_morphology_lookup_terms(
@@ -2528,201 +2759,93 @@ def _encounter_sanskrit_morphology_lookup_terms(
 
 
 def _encounter_cdsl_source_order(bucket) -> int:
-    orders: list[int] = []
-    for witness in bucket.witnesses:
-        if witness.source_tool != "cdsl" and witness.evidence.get("source_tool") != "cdsl":
-            continue
-        source_ref = witness.evidence.get("source_ref")
-        if not isinstance(source_ref, str):
-            continue
-        match = re.search(r":(\d+)(?:\.\d+)?$", source_ref)
-        if match:
-            orders.append(int(match.group(1)))
-    return min(orders) if orders else 10**12
+    return cdsl_source_order(bucket)
 
 
 def _encounter_cdsl_dictionary_order(bucket) -> int:
-    priority = {"mw": 0, "ap90": 1}
-    orders: list[int] = []
-    for witness in bucket.witnesses:
-        if witness.source_tool != "cdsl" and witness.evidence.get("source_tool") != "cdsl":
-            continue
-        source_ref = witness.evidence.get("source_ref")
-        if not isinstance(source_ref, str):
-            continue
-        dict_id = source_ref.split(":", 1)[0].lower()
-        orders.append(priority.get(dict_id, 100))
-    return min(orders) if orders else 10**12
+    return cdsl_dictionary_order(bucket)
+
+
+def _encounter_bucket_learner_quality_order(bucket) -> int:
+    return bucket_learner_quality_order(bucket, bucket_gloss=_encounter_bucket_gloss)
+
+
+def _encounter_bucket_quality_text(bucket) -> str:
+    return bucket_quality_text(bucket, bucket_gloss=_encounter_bucket_gloss)
+
+
+def _encounter_bucket_source_tools(bucket) -> set[str]:
+    return bucket_source_tools(bucket)
 
 
 def _encounter_gaffiot_source_order(bucket) -> int:
-    orders: list[int] = []
-    for witness in bucket.witnesses:
-        if witness.source_tool != "gaffiot" and witness.evidence.get("source_tool") != "gaffiot":
-            continue
-        source_ref = witness.evidence.get("source_ref")
-        if not isinstance(source_ref, str):
-            continue
-        match = re.search(r"gaffiot_(\d+)$", source_ref)
-        if match:
-            orders.append(int(match.group(1)))
-    return min(orders) if orders else 10**12
+    return gaffiot_source_order(bucket)
 
 
 def _encounter_source_order(bucket, source_tool: str) -> int:
-    orders: list[int] = []
-    for witness in bucket.witnesses:
-        if (
-            witness.source_tool != source_tool
-            and witness.evidence.get("source_tool") != source_tool
-        ):
-            continue
-        source_order = witness.evidence.get("source_order")
-        if isinstance(source_order, int):
-            orders.append(source_order)
-            continue
-        if isinstance(source_order, str):
-            with suppress(ValueError):
-                orders.append(int(source_order))
-    return min(orders) if orders else 10**12
+    return generic_source_order(bucket, source_tool)
 
 
 def _encounter_diogenes_source_order(bucket) -> tuple[int, ...]:
-    orders: list[tuple[int, ...]] = []
-    for witness in bucket.witnesses:
-        if witness.source_tool != "diogenes" and witness.evidence.get("source_tool") != "diogenes":
-            continue
-        source_ref = witness.evidence.get("source_ref")
-        if not isinstance(source_ref, str) or not source_ref.startswith("diogenes:"):
-            continue
-        parts = source_ref.removeprefix("diogenes:").split(":")
-        numeric_parts: list[int] = []
-        for part in parts:
-            if not part.isdigit():
-                numeric_parts = []
-                break
-            numeric_parts.append(int(part))
-        if not numeric_parts:
-            continue
-        if len(numeric_parts) == 1:
-            orders.append((10**9, *numeric_parts))
-        else:
-            orders.append(tuple(numeric_parts))
-    return min(orders) if orders else (10**12,)
+    return diogenes_source_order(bucket)
 
 
 def _encounter_bucket_lemma_values(bucket) -> list[str]:
-    values: list[str] = []
-    for witness in bucket.witnesses:
-        lexeme_anchor = getattr(witness, "lexeme_anchor", "")
-        if isinstance(lexeme_anchor, str):
-            values.append(lexeme_anchor.removeprefix("lex:"))
-        display_iast = witness.evidence.get("display_iast")
-        display_slp1 = witness.evidence.get("display_slp1")
-        if isinstance(display_iast, str):
-            values.append(display_iast)
-        if isinstance(display_slp1, str):
-            values.append(cdsl_handlers._slp1_to_iast(display_slp1))  # type: ignore[attr-defined]
-    return _dedupe_preserve_order(values)
+    return bucket_lemma_values(bucket)
 
 
 def _encounter_normalize_lemma(value: str) -> str:
-    return value.removeprefix("lex:").casefold()
+    return normalize_lemma(value)
 
 
 def _encounter_lemma_compare_keys(value: str) -> set[str]:
-    raw = _encounter_normalize_lemma(value)
-    base = raw.split("#", 1)[0]
-    asciiish = strip_accents(raw)
-    base_asciiish = strip_accents(base)
-    compact = re.sub(r"[^a-z0-9]+", "", asciiish)
-    base_compact = re.sub(r"[^a-z0-9]+", "", base_asciiish)
-    simplified = compact.replace("aa", "a").replace("ii", "i").replace("uu", "u").replace("z", "s")
-    base_simplified = (
-        base_compact.replace("aa", "a").replace("ii", "i").replace("uu", "u").replace("z", "s")
-    )
-    return {key for key in {raw, base, compact, base_compact, simplified, base_simplified} if key}
+    return lemma_compare_keys(value)
 
 
 def _encounter_preferred_lemmas_from_morphology(
     morphology_rows: Sequence[Mapping[str, str]],
 ) -> list[str]:
-    lemmas: list[str] = []
-    ordered_rows = sorted(
-        enumerate(morphology_rows),
-        key=lambda item: _encounter_morphology_lemma_preference_key(item[1], item[0]),
-    )
-    for _idx, row in ordered_rows:
-        lemma = row.get("lemma")
-        if lemma:
-            lemmas.append(lemma)
-    return _dedupe_preserve_order(lemmas)
+    return preferred_lemmas_from_morphology(morphology_rows)
+
+
+def _encounter_preferred_lemmas_for_sorting(
+    reduction,
+    morphology_rows: Sequence[Mapping[str, str]],
+    fallback_terms: Sequence[str] = (),
+) -> list[str]:
+    return preferred_lemmas_for_sorting(reduction, morphology_rows, fallback_terms)
 
 
 def _encounter_morphology_lemma_preference_key(
     row: Mapping[str, str],
     idx: int,
 ) -> tuple[int, int]:
-    analysis = row.get("analysis", "").casefold()
-    if "tackon" in analysis:
-        return (2, idx)
-    form = row.get("form", "").strip().casefold()
-    lemma = row.get("lemma", "").strip().casefold()
-    if form and form == lemma and ("noun" in analysis or "adjective" in analysis):
-        return (1, idx)
-    return (0, idx)
+    return morphology_lemma_preference_key(row, idx)
 
 
 def _encounter_preferred_lemma_rank(
     bucket,
     preferred_lemmas: Sequence[str],
 ) -> int:
-    if not preferred_lemmas:
-        return 10**12
-    preferred = {
-        key: idx
-        for idx, value in enumerate(preferred_lemmas)
-        if value
-        for key in _encounter_lemma_compare_keys(value)
-    }
-    bucket_lemmas = set().union(
-        *(_encounter_lemma_compare_keys(value) for value in _encounter_bucket_lemma_values(bucket))
-    )
-    ranks = [preferred[lemma] for lemma in bucket_lemmas if lemma in preferred]
-    return min(ranks) if ranks else 10**12
+    return preferred_lemma_rank(bucket, preferred_lemmas)
+
+
+def _encounter_effective_preferred_lemma_rank(
+    bucket,
+    preferred_lemmas: Sequence[str],
+    learner_quality_order: int,
+) -> int:
+    return effective_preferred_lemma_rank(bucket, preferred_lemmas, learner_quality_order)
 
 
 def _encounter_bucket_sort_key(
     bucket,
     preferred_lemmas: Sequence[str] = (),
-) -> tuple[int, int, int, int, tuple[int, ...], int, str]:
-    has_english_translation = any(
-        witness.source_tool == "translation"
-        or witness.evidence.get("source_tool") == "translation"
-        or witness.evidence.get("source_lang") == "en"
-        for witness in bucket.witnesses
-    )
-    has_bilingual_source = any(
-        witness.source_tool in {"dico", "gaffiot"}
-        or witness.evidence.get("source_tool") in {"dico", "gaffiot"}
-        or witness.evidence.get("derived_from_tool") in {"dico", "gaffiot"}
-        for witness in bucket.witnesses
-    )
-    cdsl_dictionary_order = _encounter_cdsl_dictionary_order(bucket)
-    cdsl_order = _encounter_cdsl_source_order(bucket)
-    source_order = min(
-        cdsl_order,
-        _encounter_gaffiot_source_order(bucket),
-        _encounter_source_order(bucket, "whitaker"),
-    )
-    return (
-        _encounter_preferred_lemma_rank(bucket, preferred_lemmas),
-        0 if has_english_translation else 1 if has_bilingual_source else 2,
-        cdsl_dictionary_order,
-        source_order,
-        _encounter_diogenes_source_order(bucket),
-        -len(bucket.witnesses),
-        _encounter_bucket_gloss(bucket).lower(),
+) -> tuple[int, int, int, int, int, int, tuple[int, ...], int, str]:
+    return bucket_sort_key(
+        bucket,
+        preferred_lemmas,
+        bucket_gloss=_encounter_bucket_gloss,
     )
 
 
@@ -2789,11 +2912,7 @@ def _encounter_translation_callback(model: str):
 
 
 def _resolve_translation_mode(use_translation_cache: bool, translation_mode: str) -> str:
-    if translation_mode == "do-it-all":
-        return "auto"
-    if use_translation_cache and translation_mode == "off":
-        return "cache"
-    return translation_mode
+    return resolve_translation_mode(use_translation_cache, translation_mode)
 
 
 def _encounter_translation_diagnostics(
@@ -2803,67 +2922,34 @@ def _encounter_translation_diagnostics(
     model: str,
     populate: bool,
 ) -> dict[str, object]:
-    return {
-        "mode": mode,
-        "cache_db": str(cache_path),
-        "model": model,
-        "cache_available": False,
-        "populate": populate,
-        "written": 0,
-        "before": _empty_translation_counts(),
-        "after": _empty_translation_counts(),
-        "batches": [],
-    }
+    return encounter_translation_diagnostics(
+        mode=mode,
+        cache_path=cache_path,
+        model=model,
+        populate=populate,
+    )
 
 
 def _encounter_apply_translation_cache(  # noqa: PLR0913
     *,
-    claims: list[Mapping[str, object]],
+    claims: Sequence[Mapping[str, object]],
     language: str,
     model: str,
     cache: TranslationCache,
     populate: bool,
-    translate: Callable[[object], str],
+    translate,
     diagnostics: dict[str, object],
     context: str,
 ) -> list[Mapping[str, object]]:
-    before = translation_cache_status_counts(
+    return apply_translation_cache(
         claims=claims,
         language=language,
         model=model,
         cache=cache,
-    )
-    written = 0
-    if populate:
-        written = populate_missing_translations(
-            claims=claims,
-            language=language,
-            model=model,
-            cache=cache,
-            translate=translate,
-        )
-    after = translation_cache_status_counts(
-        claims=claims,
-        language=language,
-        model=model,
-        cache=cache,
-    )
-    _merge_translation_counts(cast(dict[str, int], diagnostics["before"]), before)
-    _merge_translation_counts(cast(dict[str, int], diagnostics["after"]), after)
-    diagnostics["written"] = cast(int, diagnostics["written"]) + written
-    cast(list[dict[str, object]], diagnostics["batches"]).append(
-        {
-            "context": context,
-            "before": before,
-            "written": written,
-            "after": after,
-        }
-    )
-    return project_cached_translations(
-        claims=claims,
-        language=language,
-        model=model,
-        cache=cache,
+        populate=populate,
+        translate=translate,
+        diagnostics=diagnostics,
+        context=context,
     )
 
 
@@ -2948,17 +3034,164 @@ def _add_translation_counts(
     *,
     prefix: str = "",
 ) -> None:
-    for key, value in counts.items():
-        total[f"{prefix}{key}"] = total.get(f"{prefix}{key}", 0) + int(value)
+    add_translation_counts(total, counts, prefix=prefix)
 
 
 def _empty_translation_counts() -> dict[str, int]:
-    return {"total": 0, "hits": 0, "missing": 0, "errors": 0, "empty": 0}
+    return empty_translation_counts()
 
 
 def _merge_translation_counts(total: dict[str, int], counts: Mapping[str, int]) -> None:
-    for key, value in counts.items():
-        total[key] = total.get(key, 0) + int(value)
+    merge_translation_counts(total, counts)
+
+
+def _translation_cache_count_rows(conn: duckdb.DuckDBPyConnection) -> int:
+    try:
+        row = conn.execute("SELECT COUNT(*) FROM entry_translations").fetchone()
+    except duckdb.CatalogException:
+        return 0
+    return int(row[0]) if row is not None else 0
+
+
+def _translation_cache_group_counts(conn: duckdb.DuckDBPyConnection, column: str) -> dict[str, int]:
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT COALESCE({column}, ''), COUNT(*)
+            FROM entry_translations
+            GROUP BY 1
+            ORDER BY 1
+            """
+        ).fetchall()
+    except duckdb.CatalogException:
+        return {}
+    return {str(key or "unknown"): int(count) for key, count in rows}
+
+
+def _translation_cache_status_payload(cache_path: Path) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "schema_version": TRANSLATION_CACHE_SCHEMA_VERSION,
+        "cache_db": str(cache_path),
+        "exists": cache_path.exists(),
+        "available": True,
+        "row_count": 0,
+        "status_counts": {},
+        "source_lexicon_counts": {},
+        "model_counts": {},
+    }
+    if not cache_path.exists():
+        return payload
+    try:
+        with connect_duckdb(cache_path, read_only=False, lock=True) as conn:
+            payload["row_count"] = _translation_cache_count_rows(conn)
+            payload["status_counts"] = _translation_cache_group_counts(conn, "status")
+            payload["source_lexicon_counts"] = _translation_cache_group_counts(
+                conn,
+                "source_lexicon",
+            )
+            payload["model_counts"] = _translation_cache_group_counts(conn, "model")
+    except FileLockTimeout as exc:
+        payload["available"] = False
+        payload["error"] = f"Timed out waiting for DuckDB cache lock: {exc}"
+    except Exception as exc:  # noqa: BLE001
+        payload["available"] = False
+        payload["error"] = str(exc)
+    return payload
+
+
+def _translation_cache_clear_payload(cache_path: Path) -> dict[str, object]:
+    before = _translation_cache_status_payload(cache_path)
+    if before.get("error"):
+        return {
+            "schema_version": TRANSLATION_CACHE_SCHEMA_VERSION,
+            "cache_db": str(cache_path),
+            "deleted": 0,
+            "before": before,
+            "after": before,
+            "error": before["error"],
+        }
+    row_count = before["row_count"]
+    deleted = row_count if isinstance(row_count, int) else 0
+    if cache_path.exists():
+        with connect_duckdb(cache_path, read_only=False, lock=True) as conn:
+            apply_translation_schema(conn)
+            conn.execute("DELETE FROM entry_translations")
+    after = _translation_cache_status_payload(cache_path)
+    return {
+        "schema_version": TRANSLATION_CACHE_SCHEMA_VERSION,
+        "cache_db": str(cache_path),
+        "deleted": deleted,
+        "before": before,
+        "after": after,
+    }
+
+
+@click.group("translation-cache")
+def translation_cache_cli() -> None:
+    """Inspect and clear cached DICO/Gaffiot translation rows."""
+
+
+@translation_cache_cli.command("status")
+@click.option(
+    "--translation-cache-db",
+    default="data/cache/langnet.duckdb",
+    show_default=True,
+    help="DuckDB cache containing entry_translations rows.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def translation_cache_status(translation_cache_db: str, output: str) -> None:
+    """Show translation cache row counts."""
+    payload = _translation_cache_status_payload(Path(translation_cache_db))
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+
+    click.echo(
+        f"Translation cache: {payload['cache_db']} "
+        f"exists={payload['exists']} rows={payload['row_count']}"
+    )
+    status_counts = cast(Mapping[str, int], payload["status_counts"])
+    if status_counts:
+        click.echo(
+            "Statuses: " + ", ".join(f"{status}={count}" for status, count in status_counts.items())
+        )
+
+
+@translation_cache_cli.command("clear")
+@click.option(
+    "--translation-cache-db",
+    default="data/cache/langnet.duckdb",
+    show_default=True,
+    help="DuckDB cache containing entry_translations rows.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.confirmation_option(
+    "--yes",
+    prompt="Delete all cached DICO/Gaffiot translation rows?",
+)
+def translation_cache_clear(translation_cache_db: str, output: str) -> None:
+    """Delete cached DICO/Gaffiot translation rows only."""
+    payload = _translation_cache_clear_payload(Path(translation_cache_db))
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+
+    click.echo(f"Cleared {payload['deleted']} translation row(s) from {payload['cache_db']}.")
+
+
+main.add_command(translation_cache_cli)
 
 
 @main.command("translation-warm")
@@ -3063,14 +3296,9 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     """Warm DICO/Gaffiot translation cache rows for a word list."""
     terms = _translation_warm_terms(wordlist, limit=limit)
     cache_path = Path(translation_cache_db)
-    if dry_run and not cache_path.exists():
-        translation_conn = duckdb.connect(database=":memory:")
-        translation_cache = TranslationCache(translation_conn)
-    else:
-        if not dry_run:
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-        translation_conn = duckdb.connect(str(cache_path), read_only=dry_run)
-        translation_cache = TranslationCache(translation_conn, read_only=dry_run)
+    if not dry_run:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+    translation_cache = _PathTranslationCache(cache_path, read_only=dry_run)
 
     translate = None if dry_run else _encounter_translation_callback(translation_model)
     term_summaries: list[dict[str, object]] = []
@@ -3079,56 +3307,53 @@ def translation_warm(  # noqa: PLR0913, PLR0915
         "written": 0,
     }
 
-    try:
-        for term in terms:
-            result = _execute_lookup_plan(
-                language=language,
-                text=term,
-                tool_filter=tool_filter,
-                normalize=normalize,
-                diogenes_endpoint=diogenes_endpoint,
-                diogenes_parse_endpoint=diogenes_parse_endpoint,
-                heritage_base=heritage_base,
-                db_path=db_path,
-                no_cache=no_cache,
-                include_cltk=include_cltk,
-            )
-            claims = _claims_as_mappings(result)
-            before = translation_cache_status_counts(
+    for term in terms:
+        result = _execute_lookup_plan(
+            language=language,
+            text=term,
+            tool_filter=tool_filter,
+            normalize=normalize,
+            diogenes_endpoint=diogenes_endpoint,
+            diogenes_parse_endpoint=diogenes_parse_endpoint,
+            heritage_base=heritage_base,
+            db_path=db_path,
+            no_cache=no_cache,
+            include_cltk=include_cltk,
+        )
+        claims = _claims_as_mappings(result)
+        before = translation_cache_status_counts(
+            claims=claims,
+            language=language,
+            model=translation_model,
+            cache=translation_cache,  # type: ignore[arg-type]
+        )
+        written = 0
+        if not dry_run and before["total"] > before["hits"]:
+            assert translate is not None
+            written = populate_missing_translations(
                 claims=claims,
                 language=language,
                 model=translation_model,
-                cache=translation_cache,
+                cache=translation_cache,  # type: ignore[arg-type]
+                translate=translate,
             )
-            written = 0
-            if not dry_run and before["total"] > before["hits"]:
-                assert translate is not None
-                written = populate_missing_translations(
-                    claims=claims,
-                    language=language,
-                    model=translation_model,
-                    cache=translation_cache,
-                    translate=translate,
-                )
-            after = translation_cache_status_counts(
-                claims=claims,
-                language=language,
-                model=translation_model,
-                cache=translation_cache,
-            )
-            totals["written"] += written
-            _add_translation_counts(totals, before, prefix="before_")
-            _add_translation_counts(totals, after, prefix="after_")
-            term_summaries.append(
-                {
-                    "term": term,
-                    "before": before,
-                    "written": written,
-                    "after": after,
-                }
-            )
-    finally:
-        translation_conn.close()
+        after = translation_cache_status_counts(
+            claims=claims,
+            language=language,
+            model=translation_model,
+            cache=translation_cache,  # type: ignore[arg-type]
+        )
+        totals["written"] += written
+        _add_translation_counts(totals, before, prefix="before_")
+        _add_translation_counts(totals, after, prefix="after_")
+        term_summaries.append(
+            {
+                "term": term,
+                "before": before,
+                "written": written,
+                "after": after,
+            }
+        )
 
     payload = {
         "language": language,
@@ -3259,6 +3484,12 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     show_default=True,
     help="Show optional Foster functional grammar labels beside morphology analysis.",
 )
+@click.option(
+    "--source-details/--no-source-details",
+    default=True,
+    show_default=True,
+    help="Show compact typed source notes from dictionary source segments.",
+)
 def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     language: str,
     text: str,
@@ -3278,25 +3509,25 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     translation_cache_db: str,
     translation_model: str,
     foster_labels: bool,
+    source_details: bool,
 ):
     """
     Show a compact, source-backed learner encounter for one word.
     """
-    translation_cache: TranslationCache | None = None
-    translation_conn = None
-    result = _execute_lookup_plan(
-        language=language,
-        text=text,
-        tool_filter=tool_filter,
-        normalize=normalize,
-        diogenes_endpoint=diogenes_endpoint,
-        diogenes_parse_endpoint=diogenes_parse_endpoint,
-        heritage_base=heritage_base,
-        db_path=db_path,
-        no_cache=no_cache,
-        include_cltk=include_cltk,
-    )
+    translation_cache: _PathTranslationCache | None = None
     try:
+        result = _execute_lookup_plan(
+            language=language,
+            text=text,
+            tool_filter=tool_filter,
+            normalize=normalize,
+            diogenes_endpoint=diogenes_endpoint,
+            diogenes_parse_endpoint=diogenes_parse_endpoint,
+            heritage_base=heritage_base,
+            db_path=db_path,
+            no_cache=no_cache,
+            include_cltk=include_cltk,
+        )
         claims = _claims_as_mappings(result)
         resolved_translation_mode = _resolve_translation_mode(
             use_translation_cache,
@@ -3314,39 +3545,26 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
         if resolved_translation_mode != "off" and (cache_path.exists() or populate_translations):
             if populate_translations:
                 cache_path.parent.mkdir(parents=True, exist_ok=True)
+            translation_cache = _PathTranslationCache(
+                cache_path,
+                read_only=not populate_translations,
+            )
+            translation_diagnostics["cache_available"] = True
             try:
-                translation_conn = duckdb.connect(
-                    str(cache_path),
-                    read_only=not populate_translations,
+                claims = _encounter_apply_translation_cache(
+                    claims=claims,
+                    language=language,
+                    model=translation_model,
+                    cache=translation_cache,  # type: ignore[arg-type]
+                    populate=populate_translations,
+                    translate=translation_callback,
+                    diagnostics=translation_diagnostics,
+                    context="initial",
                 )
             except Exception as exc:  # noqa: BLE001
-                translation_diagnostics["error"] = str(exc)
-                if populate_translations:
-                    raise click.ClickException(
-                        f"Unable to open translation cache {translation_cache_db}: {exc}"
-                    ) from exc
-            if translation_conn is not None:
-                translation_cache = TranslationCache(
-                    translation_conn,
-                    read_only=not populate_translations,
-                )
-                translation_diagnostics["cache_available"] = True
-            if translation_cache is not None:
-                try:
-                    claims = _encounter_apply_translation_cache(
-                        claims=claims,
-                        language=language,
-                        model=translation_model,
-                        cache=translation_cache,
-                        populate=populate_translations,
-                        translate=translation_callback,
-                        diagnostics=translation_diagnostics,
-                        context="initial",
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    raise click.ClickException(
-                        f"Unable to use translation cache {translation_cache_db}: {exc}"
-                    ) from exc
+                raise click.ClickException(
+                    f"Unable to use translation cache {translation_cache_db}: {exc}"
+                ) from exc
 
         reduction = reduce_claims(query=text, language=language, claims=claims)
         if _encounter_should_retry_uncached(
@@ -3374,7 +3592,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                         claims=fresh_claims,
                         language=language,
                         model=translation_model,
-                        cache=translation_cache,
+                        cache=translation_cache,  # type: ignore[arg-type]
                         populate=populate_translations,
                         translate=translation_callback,
                         diagnostics=translation_diagnostics,
@@ -3414,7 +3632,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     diogenes_parse_endpoint=diogenes_parse_endpoint,
                     heritage_base=heritage_base,
                     db_path=db_path,
-                    no_cache=no_cache,
+                    no_cache=True,
                     include_cltk=include_cltk,
                 )
                 term_claims = _claims_as_mappings(fallback_result)
@@ -3424,7 +3642,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                             claims=term_claims,
                             language=language,
                             model=translation_model,
-                            cache=translation_cache,
+                            cache=translation_cache,  # type: ignore[arg-type]
                             populate=populate_translations,
                             translate=translation_callback,
                             diagnostics=translation_diagnostics,
@@ -3453,12 +3671,10 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             original=text,
             reduction=reduction,
         )
-        preferred_lemmas = _dedupe_preserve_order(
-            [
-                *fallback_terms,
-                *_encounter_preferred_lemmas_from_reduction(reduction),
-                *_encounter_preferred_lemmas_from_morphology(morphology_rows),
-            ]
+        preferred_lemmas = _encounter_preferred_lemmas_for_sorting(
+            reduction,
+            morphology_rows,
+            fallback_terms,
         )
         reduction.buckets = sorted(
             reduction.buckets,
@@ -3467,17 +3683,50 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
         if output == "json":
             payload = asdict(reduction)
+            payload["schema_version"] = ENCOUNTER_JSON_SCHEMA_VERSION
+            payload["request"] = {
+                "language": language,
+                "text": text,
+                "tool_filter": tool_filter,
+                "normalize": normalize,
+                "no_cache": no_cache,
+                "include_cltk": include_cltk,
+                "translation_mode": resolved_translation_mode,
+            }
+            payload["display"] = build_display_payload(
+                reduction,
+                morphology_rows,
+                language=language,
+                max_gloss_chars=max_gloss_chars,
+                include_foster=foster_labels,
+                include_source_details=source_details,
+                bucket_gloss=_encounter_bucket_gloss,
+                bucket_learner_gloss=lambda bucket: _encounter_bucket_learner_gloss(
+                    bucket,
+                    max_chars=max_gloss_chars,
+                ),
+            )
+            payload["ranking"] = [
+                asdict(
+                    bucket_ranking_explanation(
+                        bucket,
+                        preferred_lemmas,
+                        bucket_gloss=_encounter_bucket_gloss,
+                    )
+                )
+                for bucket in reduction.buckets
+            ]
             payload["translation_cache"] = translation_diagnostics
             click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
             return
 
         click.echo(f"{text} [{language}]")
         click.echo("=" * (len(text) + len(language) + 3))
-        display_forms, source_keys = _encounter_display_forms(reduction)
-        if display_forms:
-            click.echo("Forms: " + ", ".join(display_forms[:4]))
-        if source_keys and source_keys != display_forms:
-            click.echo("Source keys: " + ", ".join(source_keys[:4]))
+        header_view = build_header_view(reduction)
+        if header_view.forms:
+            click.echo("Forms: " + ", ".join(header_view.forms[:4]))
+        if header_view.source_keys and header_view.source_keys != header_view.forms:
+            click.echo("Source keys: " + ", ".join(header_view.source_keys[:4]))
         if reduction.warnings:
             for warning in reduction.warnings:
                 if (
@@ -3489,74 +3738,72 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
         if morphology_rows:
             click.echo("\nAnalysis")
-            for row in morphology_rows:
-                source = row["source_tool"] or "unknown"
-                foster_display = (
-                    _encounter_foster_display(language, row["analysis"]) if foster_labels else ""
-                )
-                foster_suffix = f" [Foster: {foster_display}]" if foster_display else ""
-                click.echo(
-                    f"- {row['form']} -> {row['lemma']}: "
-                    f"{row['analysis']}{foster_suffix} ({source})"
-                )
+            for analysis_view in build_analysis_views(
+                morphology_rows,
+                language=language,
+                include_foster=foster_labels,
+            ):
+                click.echo(f"- {analysis_view.display_text}")
         if not reduction.buckets:
             return
 
         click.echo("\nMeanings")
         for idx, bucket in enumerate(reduction.buckets[:max_buckets], start=1):
-            sources = sorted(
-                {witness.source_tool for witness in bucket.witnesses if witness.source_tool}
-            )
-            source_text = ", ".join(sources) if sources else "unknown"
             learner_gloss = _encounter_bucket_learner_gloss(bucket, max_chars=max_gloss_chars)
             evidence_gloss = _encounter_bucket_gloss(bucket)
-            displayed_gloss = _shorten(learner_gloss or evidence_gloss, max_gloss_chars)
-            click.echo(f"{idx}. {displayed_gloss}")
-            if (
-                learner_gloss
-                and learner_gloss != evidence_gloss
-                and displayed_gloss
-                != (displayed_evidence := _shorten(evidence_gloss, max_gloss_chars))
-            ):
-                click.echo(f"   evidence: {displayed_evidence}")
-                evidence_length_note = _encounter_display_length_note(
-                    displayed_evidence,
-                    evidence_gloss,
-                    label="evidence shown",
-                )
-                if evidence_length_note:
-                    click.echo(f"   {evidence_length_note}")
-            else:
-                length_note = _encounter_display_length_note(displayed_gloss, evidence_gloss)
-                if length_note:
-                    click.echo(f"   {length_note}")
-            click.echo(
-                f"   sources: {source_text}; witnesses: {len(bucket.witnesses)}; "
-                f"confidence: {bucket.confidence_label}"
+            meaning_view = build_meaning_view(
+                bucket,
+                learner_gloss=learner_gloss,
+                evidence_gloss=evidence_gloss,
+                max_gloss_chars=max_gloss_chars,
+                include_source_details=source_details,
             )
-            source_refs = _encounter_source_refs(bucket)
-            if source_refs:
-                click.echo(f"   refs: {', '.join(source_refs[:3])}")
-            source_note_summary = _encounter_source_note_summary(bucket)
+            click.echo(f"{idx}. {meaning_view.display_gloss}")
+            if meaning_view.evidence_gloss:
+                click.echo(f"   evidence: {meaning_view.evidence_gloss}")
+                if meaning_view.evidence_length_note:
+                    click.echo(f"   {meaning_view.evidence_length_note}")
+            elif meaning_view.length_note:
+                click.echo(f"   {meaning_view.length_note}")
+            click.echo(
+                f"   sources: {meaning_view.source_text}; "
+                f"witnesses: {meaning_view.witness_count}; "
+                f"confidence: {meaning_view.confidence_label}"
+            )
+            if meaning_view.source_refs:
+                click.echo(f"   refs: {', '.join(meaning_view.source_refs[:3])}")
+            source_note_summary = meaning_view.source_detail_summary.format()
             if source_note_summary:
                 click.echo(f"   source notes: {source_note_summary}")
-            translation_sources = _encounter_translation_sources(bucket)
-            if translation_sources:
-                click.echo(f"   translated from: {', '.join(translation_sources[:3])}")
-            source_langs = sorted(
-                {
-                    str(witness.evidence.get("source_lang"))
-                    for witness in bucket.witnesses
-                    if witness.evidence.get("source_lang")
-                }
-            )
-            if source_langs:
-                click.echo(f"   source language: {', '.join(source_langs)}")
+            if meaning_view.translation_sources:
+                click.echo(f"   translated from: {', '.join(meaning_view.translation_sources[:3])}")
+            if meaning_view.source_langs:
+                click.echo(f"   source language: {', '.join(meaning_view.source_langs)}")
         if len(reduction.buckets) > max_buckets:
             click.echo(f"\n({len(reduction.buckets) - max_buckets} more bucket(s) hidden)")
-    finally:
-        if translation_conn is not None:
-            translation_conn.close()
+    except Exception as exc:
+        if output == "json":
+            resolved_error_mode = _resolve_translation_mode(
+                use_translation_cache,
+                translation_mode,
+            )
+            click.echo(
+                orjson.dumps(
+                    _encounter_json_error_payload(
+                        language=language,
+                        text=text,
+                        tool_filter=tool_filter,
+                        normalize=normalize,
+                        no_cache=no_cache,
+                        include_cltk=include_cltk,
+                        translation_mode=resolved_error_mode,
+                        exc=exc,
+                    ),
+                    option=orjson.OPT_INDENT_2,
+                ).decode("utf-8")
+            )
+            raise click.exceptions.Exit(1) from exc
+        raise
 
 
 def _reader_eval_translation_claims(
@@ -3578,22 +3825,21 @@ def _reader_eval_translation_claims(
 
     if populate_translations:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-    with duckdb.connect(str(cache_path), read_only=not populate_translations) as conn:
-        cache = TranslationCache(conn, read_only=not populate_translations)
-        if populate_translations:
-            populate_missing_translations(
-                claims=claims,
-                language=language,
-                model=translation_model,
-                cache=cache,
-                translate=_openrouter_translation_callback(translation_model),
-            )
-        return project_cached_translations(
+    cache = _PathTranslationCache(cache_path, read_only=not populate_translations)
+    if populate_translations:
+        populate_missing_translations(
             claims=claims,
             language=language,
             model=translation_model,
-            cache=cache,
+            cache=cache,  # type: ignore[arg-type]
+            translate=_openrouter_translation_callback(translation_model),
         )
+    return project_cached_translations(
+        claims=claims,
+        language=language,
+        model=translation_model,
+        cache=cache,  # type: ignore[arg-type]
+    )
 
 
 def _reader_eval_int(value: object) -> int:
@@ -3826,7 +4072,7 @@ def reader_eval(  # noqa: PLR0913, PLR0915
                         diogenes_parse_endpoint=diogenes_parse_endpoint,
                         heritage_base=heritage_base,
                         db_path=db_path,
-                        no_cache=no_cache,
+                        no_cache=True,
                         include_cltk=include_cltk,
                     )
                     fallback_claims.extend(
@@ -3854,12 +4100,10 @@ def reader_eval(  # noqa: PLR0913, PLR0915
                 reduction=reduction,
                 max_rows=8,
             )
-            preferred_lemmas = _dedupe_preserve_order(
-                [
-                    *fallback_terms,
-                    *_encounter_preferred_lemmas_from_reduction(reduction),
-                    *_encounter_preferred_lemmas_from_morphology(morphology_rows),
-                ]
+            preferred_lemmas = _encounter_preferred_lemmas_for_sorting(
+                reduction,
+                morphology_rows,
+                fallback_terms,
             )
             reduction.buckets = sorted(
                 reduction.buckets,

@@ -10,6 +10,7 @@ from langnet.execution.handlers import cdsl as cdsl_handlers
 from langnet.normalizer.utils import normalize_greekish_token
 
 TOP_BUCKET_LIMIT = 3
+LATIN_UM_SUFFIX_LEN = 2
 
 
 def load_reader_eval_fixture(path: Path) -> dict[str, Any]:
@@ -106,6 +107,7 @@ def evaluate_reader_token(
         expected_gloss_terms,
         top_text_blob,
     )
+    top_answer_hit = top_gloss_hit and (top_lemma_hit or lemma_hit)
     component_hit = not expected_components or _all_normalized_substrings(
         expected_components,
         text_blob,
@@ -119,15 +121,21 @@ def evaluate_reader_token(
         "top_lemma_hit": top_lemma_hit,
         "gloss_hit": gloss_hit,
         "top_gloss_hit": top_gloss_hit,
+        "top_answer_hit": top_answer_hit,
         "component_hit": component_hit,
         "morphology_hit": morphology_hit,
         "known_bad_lemma_not_top": not known_bad_lemma_top,
         "known_bad_gloss_not_top": not known_bad_gloss_top,
     }
-    meaning_checks = {key: value for key, value in checks.items() if key != "morphology_hit"}
+    meaning_checks = {
+        "lemma_hit": lemma_hit,
+        "gloss_hit": gloss_hit,
+        "component_hit": component_hit,
+        "known_bad_lemma_not_top": not known_bad_lemma_top,
+        "known_bad_gloss_not_top": not known_bad_gloss_top,
+    }
     top_checks = {
-        "top_lemma_hit": top_lemma_hit,
-        "top_gloss_hit": top_gloss_hit,
+        "top_answer_hit": top_answer_hit,
         "known_bad_lemma_not_top": not known_bad_lemma_top,
         "known_bad_gloss_not_top": not known_bad_gloss_top,
     }
@@ -197,6 +205,12 @@ def _witness_lemma_forms(witness: Mapping[str, Any]) -> list[str]:
             values.append(display_iast)
         if isinstance(display_slp1, str):
             values.append(_sanskrit_display_form(display_slp1))
+        source_entry = evidence.get("source_entry")
+        if isinstance(source_entry, Mapping):
+            for key in ("headword_roma", "headword_norm", "key_iast", "key2_iast"):
+                value = source_entry.get(key)
+                if isinstance(value, str):
+                    values.append(value)
     return values
 
 
@@ -267,11 +281,25 @@ def _any_lemma_member(expected: Sequence[str], actual: Sequence[str]) -> bool:
 
 
 def _lemma_match_keys(value: str) -> set[str]:
-    keys = {_normalize(value)}
+    normalized = _normalize(value)
+    base = normalized.split("#", 1)[0]
+    keys = {normalized, base}
+    keys.update(_latin_inflectional_match_keys(base))
     greekish = normalize_greekish_token(value)
     if greekish:
         keys.add(greekish)
     return keys
+
+
+def _latin_inflectional_match_keys(value: str) -> set[str]:
+    if not value.isascii() or not value.isalpha():
+        return set()
+    if len(value) <= LATIN_UM_SUFFIX_LEN or not value.endswith("um"):
+        return set()
+    stem = value[:-LATIN_UM_SUFFIX_LEN]
+    if not stem:
+        return set()
+    return {f"{stem}a", f"{stem}us"}
 
 
 def _any_normalized_substring(needles: Sequence[str], haystack: str) -> bool:

@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import unquote
 
-import duckdb
 import orjson
 from query_spec import ToolCallSpec
 
@@ -32,6 +31,7 @@ from langnet.execution.source_text import (
 )
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.normalizer.utils import strip_accents
+from langnet.storage.db import connect_duckdb_ro
 
 _DICO_URL_RE = re.compile(r"/DICO/(?P<page>[^/#?]+)\.html#(?P<entry>[^?]+)")
 
@@ -108,7 +108,7 @@ def lookup_dico_entries(refs: list[tuple[str, str]], db_path: Path | None = None
         return []
 
     entries: list[dict] = []
-    with duckdb.connect(str(db_path), read_only=True) as conn:
+    with connect_duckdb_ro(db_path) as conn:
         for source_page, entry_id in refs:
             rows = conn.execute(
                 """
@@ -156,7 +156,7 @@ def lookup_dico_entries_by_headword(
         return []
 
     placeholders = ",".join(["?"] * len(keys))
-    with duckdb.connect(str(db_path), read_only=True) as conn:
+    with connect_duckdb_ro(db_path) as conn:
         rows = conn.execute(
             f"""
             SELECT

@@ -6,7 +6,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
-import duckdb
 import orjson
 from query_spec import ToolCallSpec
 
@@ -28,6 +27,7 @@ from langnet.execution.source_text import (
     trim_empty,
 )
 from langnet.normalizer.utils import strip_accents
+from langnet.storage.db import connect_duckdb_ro
 
 
 def normalize_gaffiot_headword(raw: str) -> str:
@@ -69,7 +69,7 @@ def lookup_gaffiot_entries_by_headword(
 
     entries: list[dict] = []
     placeholders = ",".join(["?"] * len(keys))
-    with duckdb.connect(str(db_path), read_only=True) as conn:
+    with connect_duckdb_ro(db_path) as conn:
         rows = conn.execute(
             f"""
             SELECT

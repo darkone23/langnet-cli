@@ -225,12 +225,19 @@ for source-fidelity review.
 Goal: turn source blobs into displayable learner sense units without losing
 source content.
 
-Status: started. CDSL source-note segments are surfaced in `encounter`, and
-Diogenes definition triples now carry learner-gloss/learner-segment metadata.
+Status: started. CDSL source-note segments and generic typed
+`source_segments` are surfaced as compact `source notes` in `encounter`.
+`--no-source-details` hides that summary for a quieter first screen. Header rows
+analysis rows, Foster labels, and meaning rows are now assembled as
+`EncounterHeaderView`, `EncounterAnalysisView`, and `EncounterMeaningView`
+display objects before CLI rendering. Diogenes definition triples now carry
+learner-gloss/learner-segment metadata.
+Preferred-lemma ranking helpers, source-order ranking, learner-quality ordering,
+and final bucket sort-key assembly now live in `encounter_ranking`.
 
 Tasks:
 
-- Add a display-layer structure for each WSU:
+- Add or continue refining display-layer structure for each WSU:
   - `learner_gloss`
   - `source_gloss`
   - `grammar_label`
@@ -355,13 +362,14 @@ explicit inspection modes.
 Tasks:
 
 - Add or refine flags:
+  - `--source-details/--no-source-details`
   - `--show-source`
   - `--show-candidates`
   - `--debug`
   - `--output json`
 - Move cache-retry and cache-miss diagnostics out of default text output.
-- Keep source refs visible by default, but place long source entries behind
-  `--show-source`.
+- Keep source refs visible by default, summarize typed source details behind
+  `--source-details`, and place long source entries behind `--show-source`.
 - Update `docs/OUTPUT_GUIDE.md` with before/after examples.
 
 Acceptance:

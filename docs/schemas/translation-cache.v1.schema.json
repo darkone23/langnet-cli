@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langnet.local/schemas/translation-cache.v1.schema.json",
+  "title": "LangNet translation cache status or clear response",
+  "type": "object",
+  "required": ["schema_version", "cache_db"],
+  "properties": {
+    "schema_version": { "const": "langnet.translation_cache.v1" },
+    "cache_db": { "type": "string" },
+    "exists": { "type": "boolean" },
+    "row_count": { "type": "integer", "minimum": 0 },
+    "status_counts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "source_lexicon_counts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "model_counts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "deleted": { "type": "integer", "minimum": 0 },
+    "before": { "$ref": "#" },
+    "after": { "$ref": "#" }
+  },
+  "additionalProperties": true
+}

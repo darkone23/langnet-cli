@@ -37,6 +37,18 @@ to an opaque display string. When a handler has dictionary-entry text, attach:
 - `source_segments`: conservative ordered segments with `raw_text`, `display_text`, `segment_type`, and `labels`
 - `source_notes`: optional summary of confidently typed note/reference segments
 
+Display code should consume these fields through a small display summary layer
+rather than by scraping raw gloss strings in the CLI. The current
+`encounter_display` helper merges explicit `source_notes` with typed
+`source_segments` into a `SourceDetailSummary` for cross-references, source
+references, and examples, then assembles printable meaning-row metadata in
+`EncounterMeaningView`. Encounter heading forms and source keys are assembled in
+`EncounterHeaderView`, and morphology analysis rows plus optional Foster labels
+are assembled in `EncounterAnalysisView` for the same reason.
+Preferred-lemma ranking helpers, source-order ranking, learner-quality ordering,
+and bucket sort-key assembly live in `encounter_ranking`; ranking remains
+separate from display view construction.
+
 For translated DICO/Gaffiot output, cached English translations are derived
 witnesses. They should carry translation evidence plus parsed display helpers:
 
