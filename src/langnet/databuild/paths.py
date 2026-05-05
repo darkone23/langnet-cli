@@ -77,3 +77,11 @@ def default_dico_path() -> Path:
     """
     # built from heritage htdocs
     return build_dir() / "lex_dico.duckdb"
+
+
+def default_diogenes_path(language: str) -> Path:
+    """
+    Default output path for a crawled Diogenes dictionary index.
+    """
+    normalized = "grc" if language.lower() in {"grc", "grk", "greek"} else "lat"
+    return build_dir() / f"lex_diogenes_{normalized}.duckdb"

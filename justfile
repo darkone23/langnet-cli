@@ -1,23 +1,25 @@
+set positional-arguments
+
 # List available just commands
 default:
     just -l
 
 # run langnet-cli tool
 cli *args:
-    devenv shell -- bash -c 'langnet-cli "$@"' _ {{ args }}
+    bash ./.justscripts/run-langnet-cli "$@"
 
 # Convenience wrappers for click subcommands
 cli-normalize *args:
-    devenv shell -- bash -c 'langnet-cli normalize "$@"' _ {{ args }}
+    bash ./.justscripts/run-langnet-cli normalize "$@"
 
 cli-plan *args:
-    devenv shell -- bash -c 'langnet-cli plan "$@"' _ {{ args }}
+    bash ./.justscripts/run-langnet-cli plan "$@"
 
 cli-plan-exec *args:
-    devenv shell -- bash -c 'langnet-cli plan-exec "$@"' _ {{ args }}
+    bash ./.justscripts/run-langnet-cli plan-exec "$@"
 
 cli-databuild *args:
-    devenv shell -- bash -c 'langnet-cli databuild "$@"' _ {{ args }}
+    bash ./.justscripts/run-langnet-cli databuild "$@"
 
 # Generate Python protobuf code from langnet-spec
 codegen:
@@ -54,7 +56,7 @@ validate-stabilization:
 
 # nose2 -s tests --config tests/nose2.cfg <...>
 test *args:
-    devenv shell -- nose2 -s tests --config tests/nose2.cfg {{ args }}
+    devenv shell -- nose2 -s tests --config tests/nose2.cfg "$@"
 
 # Run all tests including benchmarks (use 'benchmark' for benchmarks only)
 test-fast:
@@ -71,19 +73,19 @@ clean-cache:
 
 # Format code with ruff (supports --check, --diff, etc.)
 ruff-format *args:
-    devenv shell -- ruff format src/ tests/ ./.justscripts/ {{ args }}
+    devenv shell -- ruff format src/ tests/ ./.justscripts/ "$@"
 
 # Lint code with ruff
 ruff-check *args:
-    devenv shell -- ruff check src/ tests/ ./.justscripts {{ args }}
+    devenv shell -- ruff check src/ tests/ ./.justscripts "$@"
 
 # Type check with ty
 typecheck *args:
-    devenv shell -- ty check src/ tests/ ./.justscripts {{ args }}
+    devenv shell -- ty check src/ tests/ ./.justscripts "$@"
 
 # project level automation tool
 autobot *args:
-    devenv shell -- python3 .justscripts/autobot.py {{ args }}
+    devenv shell -- python3 .justscripts/autobot.py "$@"
 
 # Probe backend parser commands through the fuzz harness; requires local tool dependencies
 fuzz-tools:
@@ -115,4 +117,4 @@ triples-dump lang word tool="all":
 
 # Translate sample lexicon rows (French -> English) using aisuite/OpenRouter.
 translate-lex *opts:
-    devenv shell -- python3 ./.justscripts/lex_translation_demo.py {{ opts }}
+    devenv shell -- python3 ./.justscripts/lex_translation_demo.py "$@"

@@ -44,6 +44,7 @@ def test_doctor_json_reports_cli_assumptions_without_network() -> None:
     assert "translation_cache:path" in check_ids
     assert "translation:openai_key" in check_ids
     assert "schema:word_of_day.v1.schema.json" in check_ids
+    assert "schema:word_index.v1.schema.json" in check_ids
 
 
 def test_doctor_can_require_openai_key_for_translation_population() -> None:
@@ -72,7 +73,7 @@ def test_doctor_can_require_openai_key_for_translation_population() -> None:
     assert openai_check["status"] == "fail"
 
 
-def test_doctor_json_reports_cache_lock_contention() -> None:
+def test_doctor_json_uses_read_only_cache_status_under_writer_lock() -> None:
     with TemporaryDirectory() as tmpdir:
         cache_path = Path(tmpdir) / "langnet.duckdb"
         with duckdb.connect(str(cache_path)):
@@ -97,11 +98,11 @@ def test_doctor_json_reports_cache_lock_contention() -> None:
         finally:
             lock.release()
 
-    assert result.exit_code == 1, result.output
+    assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     _assert_matches_schema(payload)
-    assert payload["ok"] is False
+    assert payload["ok"] is True
     cache_check = next(
         check for check in payload["checks"] if check["id"] == "translation_cache:available"
     )
-    assert cache_check["status"] == "fail"
+    assert cache_check["status"] == "pass"

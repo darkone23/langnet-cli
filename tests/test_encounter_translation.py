@@ -288,3 +288,42 @@ def test_path_translation_cache_does_not_hold_lock_during_model_call() -> None:
         with duckdb.connect(str(cache_path), read_only=True) as conn:
             row = conn.execute("SELECT translated_text FROM entry_translations").fetchone()
         assert row == ("law; duty",)
+
+
+def test_path_translation_cache_reads_without_waiting_for_writer_file_lock() -> None:
+    source_text = "loi; devoir"
+    model = "test-model"
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "langnet.duckdb"
+        with duckdb.connect(str(cache_path)) as conn:
+            cache = TranslationCache(conn)
+            cache.upsert(
+                TranslationRecord(
+                    key=_translation_key(source_text=source_text, model=model),
+                    translated_text="law; duty",
+                    status="ok",
+                    duration_ms=5,
+                )
+            )
+
+        cache = _PathTranslationCache(cache_path, read_only=True)
+        key = _translation_key(source_text=source_text, model=model)
+        with FileLock(f"{cache_path}.lock", timeout=0):
+            record = cast(TranslationRecord | None, cache.get(key))
+
+    assert record is not None
+    assert record.translated_text == "law; duty"
+
+
+def test_path_translation_cache_read_lock_failure_is_cache_miss(monkeypatch) -> None:
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "langnet.duckdb"
+        cache_path.touch()
+        cache = _PathTranslationCache(cache_path, read_only=True)
+
+        def fail_connect(*_args, **_kwargs):
+            raise duckdb.IOException("database is locked")
+
+        monkeypatch.setattr("langnet.cli.connect_duckdb", fail_connect)
+
+        assert cache.get(_translation_key(source_text="loi; devoir", model="test-model")) is None

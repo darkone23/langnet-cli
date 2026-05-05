@@ -126,6 +126,12 @@ from langnet.translation import (
     project_cached_translations,
     translation_cache_status_counts,
 )
+from langnet.word_index import (
+    word_index_list_payload,
+    word_index_neighborhood_payload,
+    word_index_sources_payload,
+    word_index_wheel_payload,
+)
 from langnet.word_of_day import (
     WordCandidate,
     WordOfDayOptions,
@@ -142,8 +148,11 @@ ENCOUNTER_MAX_COMPONENTS = 4
 SANSKRIT_AN_STEM_MIN_CHARS = 3
 ENCOUNTER_JSON_SCHEMA_VERSION = "langnet.encounter.v1"
 ENCOUNTER_JSON_ERROR_SCHEMA_VERSION = "langnet.encounter.error.v1"
+DATABASE_BUSY_RETRY_AFTER_MS = 1500
 TRANSLATION_CACHE_SCHEMA_VERSION = "langnet.translation_cache.v1"
 DOCTOR_SCHEMA_VERSION = "langnet.doctor.v1"
+WORD_INDEX_CONTEXT_RADIUS = 1
+WORD_INDEX_SOURCES = {"all", "cdsl", "dico", "gaffiot", "diogenes"}
 
 
 def _ensure_logging(level: int = logging.INFO) -> None:
@@ -319,6 +328,7 @@ def _encounter_json_error_payload(  # noqa: PLR0913
     tool_filter: str,
     normalize: bool,
     no_cache: bool,
+    cache_policy: str,
     include_cltk: bool,
     translation_mode: str,
     exc: Exception,
@@ -330,20 +340,57 @@ def _encounter_json_error_payload(  # noqa: PLR0913
         "schema_version": ENCOUNTER_JSON_ERROR_SCHEMA_VERSION,
         "ok": False,
         "request": {
+            "command": "encounter",
             "language": language,
             "text": text,
             "tool_filter": tool_filter,
             "normalize": normalize,
             "no_cache": no_cache,
+            "cache_policy": cache_policy,
+            "normalization_cache_writes": cache_policy == "read-write",
             "include_cltk": include_cltk,
             "translation_mode": translation_mode,
+            "translation_cache_writes": translation_mode in {"populate", "auto"},
         },
-        "error": {
-            "code": "click_error" if isinstance(exc, click.ClickException) else "encounter_failed",
+        "error": _encounter_json_error_details(exc, message),
+    }
+
+
+def _encounter_json_error_details(exc: Exception, message: str) -> dict[str, object]:
+    if _is_database_busy_exception(exc):
+        return {
+            "code": "database_busy",
+            "kind": "database_busy",
+            "command": "encounter",
             "type": exc.__class__.__name__,
             "message": message,
-        },
+            "retryable": True,
+            "retry_after_ms": DATABASE_BUSY_RETRY_AFTER_MS,
+            "readonly_available": True,
+        }
+    return {
+        "code": "click_error" if isinstance(exc, click.ClickException) else "encounter_failed",
+        "command": "encounter",
+        "type": exc.__class__.__name__,
+        "message": message,
     }
+
+
+def _is_database_busy_exception(exc: BaseException) -> bool:
+    current: BaseException | None = exc
+    while current is not None:
+        if isinstance(current, FileLockTimeout):
+            return True
+        if isinstance(current, duckdb.Error):
+            message = str(current).casefold()
+            if (
+                "lock" in message
+                or "conflicting lock" in message
+                or "database is locked" in message
+            ):
+                return True
+        current = current.__cause__ or current.__context__
+    return False
 
 
 @dataclass
@@ -353,6 +400,7 @@ class NormalizeConfig:
     db_path: str | None
     no_cache: bool
     output: str
+    cache_policy: str = "read-write"
 
 
 @dataclass
@@ -418,6 +466,7 @@ def _normalization_result_uncached(
         db_path=config.db_path,
         no_cache=True,
         output=config.output,
+        cache_policy="off",
     )
     with duckdb.connect(database=":memory:") as conn:
         service = _create_normalization_service(compute_config, conn, read_only=False)
@@ -434,17 +483,23 @@ def _normalization_cache_get(
     if not path.exists():
         return None
     query_hash = _hash_query(text, lang_hint)
-    with connect_duckdb(path, read_only=False, lock=True) as conn:
-        ensure_normalization_schema(conn)
-        cached = NormalizationIndex(conn).get(query_hash)
-        if cached is not None:
-            service = _create_normalization_service(config, conn, read_only=False)
-            if service._cached_greek_compatibility_is_stale(text, lang_hint, cached):
-                cached = None
-            else:
-                cached = service._rerank_candidates(text, lang_hint, cached)
-                if service._cached_greek_epic_eus_is_stale(text, lang_hint, cached):
+    try:
+        with connect_duckdb(path, read_only=True, lock=False, allow_create=False) as conn:
+            cached = NormalizationIndex(conn).get(query_hash)
+            if cached is not None:
+                service = _create_normalization_service(config, conn, read_only=True)
+                if service._cached_greek_compatibility_is_stale(text, lang_hint, cached):
                     cached = None
+                else:
+                    cached = service._rerank_candidates(text, lang_hint, cached)
+                    if service._cached_reader_completion_is_stale(
+                        text,
+                        lang_hint,
+                        cached,
+                    ) or service._cached_greek_epic_eus_is_stale(text, lang_hint, cached):
+                        cached = None
+    except duckdb.Error:
+        cached = None
     if cached is None:
         return None
     return NormalizationResult(query_hash=query_hash, normalized=cached)
@@ -477,7 +532,8 @@ def _normalize_with_short_cache_lock(
 ) -> NormalizationResult:
     path = Path(config.db_path).expanduser() if config.db_path else normalization_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    cache_enabled = use_cache and not config.no_cache
+    cache_policy = _effective_cache_policy(config)
+    cache_enabled = use_cache and cache_policy != "off"
     if cache_enabled:
         cached = _normalization_cache_get(
             config=config,
@@ -489,9 +545,17 @@ def _normalize_with_short_cache_lock(
             return cached
 
     result = _normalization_result_uncached(config, text, lang_hint)
-    if cache_enabled:
+    if cache_enabled and cache_policy == "read-write":
         _normalization_cache_upsert(path=path, text=text, lang_hint=lang_hint, result=result)
     return result
+
+
+def _effective_cache_policy(config: NormalizeConfig) -> str:
+    if config.no_cache:
+        return "off"
+    if config.cache_policy in {"read-write", "read-only", "off"}:
+        return config.cache_policy
+    return "read-write"
 
 
 class _PathTranslationCache:
@@ -504,8 +568,11 @@ class _PathTranslationCache:
     def get(self, key) -> object | None:
         if not self.path.exists():
             return None
-        with connect_duckdb(self.path, read_only=False, lock=True) as conn:
-            return TranslationCache(conn, read_only=True).get(key)
+        try:
+            with connect_duckdb(self.path, read_only=True, lock=False, allow_create=False) as conn:
+                return TranslationCache(conn, read_only=True).get(key)
+        except duckdb.Error:
+            return None
 
     def upsert(self, record) -> str:
         if self.read_only:
@@ -789,6 +856,310 @@ def langs(language: str | None, output: str) -> None:
     for lang_map in languages:
         aliases = cast(Sequence[str], lang_map["aliases"])
         click.echo(f"  {lang_map['code']} - {lang_map['label']} (aliases: {', '.join(aliases)})")
+
+
+@click.group("word-index")
+def word_index_cli() -> None:
+    """Explore locally indexed dictionary headwords."""
+
+
+@word_index_cli.command("sources")
+@click.argument("language", default="all")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def word_index_sources(language: str, output: str) -> None:
+    """List available word-index sources."""
+    try:
+        payload = word_index_sources_payload(language)
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    _emit_word_index_payload(payload, output=output)
+
+
+@word_index_cli.command("list")
+@click.argument("language", default="all")
+@click.option(
+    "--source",
+    default="all",
+    show_default=True,
+    help="Source filter: all, cdsl, dico, gaffiot, or diogenes.",
+)
+@click.option("--prefix", default="", help="Optional headword prefix filter.")
+@click.option("--limit", default=50, show_default=True, type=click.IntRange(1, 500))
+@click.option("--cursor", default=None, help="Opaque pagination cursor from prior response.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def word_index_list(  # noqa: PLR0913
+    language: str,
+    source: str,
+    prefix: str,
+    limit: int,
+    cursor: str | None,
+    output: str,
+) -> None:
+    """List indexed headwords."""
+    try:
+        payload = word_index_list_payload(
+            language,
+            source=source,
+            prefix=prefix,
+            limit=limit,
+            cursor=cursor,
+        )
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    _emit_word_index_payload(payload, output=output)
+
+
+@word_index_cli.command("neighborhood")
+@click.argument("language")
+@click.argument("query")
+@click.option(
+    "--source",
+    default="all",
+    show_default=True,
+    help="Source filter: all, cdsl, dico, gaffiot, or diogenes.",
+)
+@click.option("--radius", default=10, show_default=True, type=click.IntRange(1, 100))
+@click.option(
+    "--merge",
+    type=click.Choice(["auto", "none", "lexeme"]),
+    default="auto",
+    show_default=True,
+    help="Merge source-local groups into lexeme cards.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def word_index_neighborhood(  # noqa: PLR0913
+    language: str, query: str, source: str, radius: int, merge: str, output: str
+) -> None:
+    """Show indexed words before and after a term."""
+    _run_word_index_neighborhood(language, query, source, radius, merge, output)
+
+
+def _run_word_index_neighborhood(  # noqa: PLR0913
+    language: str, query: str, source: str, radius: int, merge: str, output: str
+) -> None:
+    try:
+        payload = word_index_neighborhood_payload(
+            language,
+            query,
+            source=source,
+            radius=radius,
+            merge=merge,
+        )
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    _emit_word_index_payload(payload, output=output)
+
+
+@word_index_cli.command("nearby")
+@click.argument("language")
+@click.argument("query")
+@click.option(
+    "--source",
+    default="all",
+    show_default=True,
+    help="Source filter: all, cdsl, dico, gaffiot, or diogenes.",
+)
+@click.option("--radius", default=10, show_default=True, type=click.IntRange(1, 100))
+@click.option(
+    "--merge",
+    type=click.Choice(["auto", "none", "lexeme"]),
+    default="auto",
+    show_default=True,
+    help="Merge source-local groups into lexeme cards.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def word_index_nearby(  # noqa: PLR0913
+    language: str, query: str, source: str, radius: int, merge: str, output: str
+) -> None:
+    """Alias for neighborhood: find indexed words near a search query."""
+    _run_word_index_neighborhood(language, query, source, radius, merge, output)
+
+
+@word_index_cli.command("wheel")
+@click.argument("language", default="all")
+@click.option(
+    "--language",
+    "language_option",
+    default=None,
+    help="Language filter: all, lat, grc, or san. Overrides the positional language.",
+)
+@click.option(
+    "--source",
+    default="all",
+    show_default=True,
+    help="Source filter: all, cdsl, dico, gaffiot, or diogenes.",
+)
+@click.option("--count", default=12, show_default=True, type=click.IntRange(1, 100))
+@click.option("--seed", default=None, help="Seed for deterministic word selection.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def word_index_wheel(  # noqa: PLR0913
+    language: str,
+    language_option: str | None,
+    source: str,
+    count: int,
+    seed: str | None,
+    output: str,
+) -> None:
+    """Return a deterministic wheel of indexed study words."""
+    requested_language = language_option or language
+    try:
+        payload = word_index_wheel_payload(
+            requested_language,
+            source=source,
+            count=count,
+            seed=seed,
+        )
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    _emit_word_index_payload(payload, output=output)
+
+
+def _emit_word_index_payload(payload: Mapping[str, object], *, output: str) -> None:  # noqa: C901
+    if output == "json":
+        click.echo(orjson.dumps(dict(payload), option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    request = cast(Mapping[str, object], payload.get("request") or {})
+    mode = request.get("mode")
+    click.echo(f"Word index: {mode}")
+    sources = payload.get("sources")
+    if mode == "sources" and isinstance(sources, Sequence):
+        for source in sources:
+            if not isinstance(source, Mapping):
+                continue
+            source_map = cast(Mapping[str, object], source)
+            status = "available" if source_map.get("available") else "missing"
+            count = source_map.get("entry_count")
+            click.echo(
+                f"- {source_map.get('language')}:"
+                f"{source_map.get('source')}:"
+                f"{source_map.get('dictionary')} "
+                f"{status} entries={count}"
+            )
+        return
+    items = payload.get("items")
+    if isinstance(items, Sequence):
+        for item in items:
+            if isinstance(item, Mapping):
+                click.echo(_word_index_item_line(cast(Mapping[str, object], item)))
+    neighborhood = payload.get("neighborhood")
+    if isinstance(neighborhood, Mapping):
+        _echo_word_index_neighborhood(cast(Mapping[str, object], neighborhood))
+    warnings = payload.get("warnings")
+    if isinstance(warnings, Sequence):
+        for warning in warnings:
+            if isinstance(warning, Mapping):
+                warning_map = cast(Mapping[str, object], warning)
+                click.echo(f"Warning: {warning_map.get('message')}", err=True)
+
+
+def _word_index_item_line(item: Mapping[str, object]) -> str:
+    display = item.get("display")
+    display_map = (
+        cast(Mapping[str, object], display)
+        if isinstance(display, Mapping)
+        else cast(Mapping[str, object], {})
+    )
+    romanized = (
+        display_map.get("transliteration") or item.get("lookup") or item.get("canonical_name")
+    )
+    native = item.get("canonical_name")
+    suffix = f" ({native})" if native and native != romanized else ""
+    source_label = _word_index_source_label(item)
+    return f"- {item.get('language')}:{source_label} {romanized}{suffix}"
+
+
+def _word_index_source_label(item: Mapping[str, object]) -> str:
+    source_count = item.get("source_count")
+    if not isinstance(source_count, int) or source_count <= 1:
+        return str(item.get("source") or "")
+
+    sources = item.get("sources")
+    if not isinstance(sources, Sequence) or isinstance(sources, (str, bytes)):
+        return str(item.get("source") or "all")
+    labels = []
+    for source in sources:
+        if not isinstance(source, Mapping):
+            continue
+        source_id = str(source.get("source") or "")
+        dictionary = str(source.get("dictionary") or "")
+        if source_id and dictionary and source_id != dictionary:
+            labels.append(f"{source_id}/{dictionary}")
+        elif source_id:
+            labels.append(source_id)
+    return "+".join(labels) if labels else str(item.get("source") or "all")
+
+
+def _echo_word_index_neighborhood(neighborhood: Mapping[str, object]) -> None:  # noqa: C901
+    if neighborhood.get("policy") == "merged_lexeme":
+        click.echo(
+            f"Neighborhood: {neighborhood.get('language')}:"
+            f"{neighborhood.get('source')} merged_lexeme"
+        )
+        items = neighborhood.get("items")
+        if isinstance(items, Sequence) and not isinstance(items, (str, bytes)):
+            for item in items:
+                if not isinstance(item, Mapping):
+                    continue
+                item_map = cast(Mapping[str, object], item)
+                position = item_map.get("position") or "nearby"
+                click.echo(f"  {position}: {_word_index_item_line(item_map).removeprefix('- ')}")
+        return
+    groups = neighborhood.get("groups")
+    if isinstance(groups, Sequence):
+        for group in groups:
+            if isinstance(group, Mapping):
+                _echo_word_index_neighborhood(cast(Mapping[str, object], group))
+        return
+    anchor = neighborhood.get("anchor")
+    click.echo(f"Neighborhood: {neighborhood.get('language')}:{neighborhood.get('source')}")
+    if isinstance(anchor, Mapping):
+        click.echo(
+            f"  anchor "
+            f"{_word_index_item_line(cast(Mapping[str, object], anchor)).removeprefix('- ')}"
+        )
+    for label in ("before", "after"):
+        values = neighborhood.get(label)
+        if isinstance(values, Sequence):
+            rendered = [
+                _word_index_item_line(cast(Mapping[str, object], item)).removeprefix("- ")
+                for item in values
+                if isinstance(item, Mapping)
+            ]
+            if rendered:
+                click.echo(f"  {label}: " + "; ".join(rendered))
+
+
+main.add_command(word_index_cli)
 
 
 def _exclude_recent_terms(path: Path | None) -> list[str]:
@@ -1374,7 +1745,8 @@ def _word_of_day_probe_reduction(  # noqa: PLR0913
         diogenes_parse_endpoint=diogenes_parse_endpoint,
         heritage_base=heritage_base,
         db_path=db_path,
-        no_cache=no_cache,
+        # Recommendation probes must not contend for the shared DuckDB writer lock.
+        no_cache=True,
         include_cltk=include_cltk,
     )
     claims = _claims_as_mappings(result)
@@ -1770,6 +2142,7 @@ def _doctor_schema_checks(checks: list[dict[str, object]]) -> None:
         Path("docs/schemas/encounter-error.v1.schema.json"),
         Path("docs/schemas/translation-cache.v1.schema.json"),
         Path("docs/schemas/word_of_day.v1.schema.json"),
+        Path("docs/schemas/word_index.v1.schema.json"),
         Path("docs/schemas/doctor.v1.schema.json"),
     ]
     for schema_path in schema_paths:
@@ -4076,6 +4449,244 @@ def _encounter_component_meaning_payload(
     }
 
 
+def _encounter_word_index_query_candidates(
+    text: str,
+    reduction,
+    preferred_lemmas: Sequence[str],
+) -> list[str]:
+    candidates: list[str] = [text]
+    candidates.extend(preferred_lemmas)
+    for anchor in getattr(reduction, "lexeme_anchors", []) or []:
+        if not isinstance(anchor, str):
+            continue
+        value = anchor.removeprefix("lex:").strip()
+        if value:
+            candidates.append(value)
+    for bucket in getattr(reduction, "buckets", []) or []:
+        for witness in getattr(bucket, "witnesses", []) or []:
+            evidence = getattr(witness, "evidence", {})
+            if not isinstance(evidence, Mapping):
+                continue
+            candidates.extend(_encounter_word_index_evidence_terms(evidence))
+    return _dedupe_preserve_order(
+        [
+            candidate.strip()
+            for candidate in candidates
+            if _encounter_word_index_candidate_is_useful(candidate)
+        ]
+    )[:8]
+
+
+def _encounter_word_index_evidence_terms(evidence: Mapping[str, object]) -> list[str]:
+    terms: list[str] = []
+    for key in (
+        "display_iast",
+        "display_slp1",
+        "headword",
+        "source_key",
+        "source_headword",
+    ):
+        value = evidence.get(key)
+        if isinstance(value, str) and value.strip():
+            terms.append(value.strip())
+    source_entry = evidence.get("source_entry")
+    if isinstance(source_entry, Mapping):
+        for key in (
+            "key_iast",
+            "key_slp1",
+            "key2_iast",
+            "key2_slp1",
+            "headword_roma",
+            "headword_norm",
+        ):
+            value = source_entry.get(key)
+            if isinstance(value, str) and value.strip():
+                terms.append(value.strip())
+    return terms
+
+
+def _encounter_word_index_candidate_is_useful(value: str) -> bool:
+    candidate = value.strip()
+    if not candidate:
+        return False
+    return not re.fullmatch(r"\d+(?::\d+)+", candidate)
+
+
+def _encounter_word_index_context(
+    *,
+    language: str,
+    text: str,
+    tool_filter: str,
+    query_candidates: Sequence[str] | None = None,
+) -> dict[str, object]:
+    source = _encounter_word_index_source(tool_filter)
+    candidates = _dedupe_preserve_order(
+        [candidate for candidate in (query_candidates or [text]) if candidate]
+    )
+    context: dict[str, object] = {
+        "request": {
+            "language": language,
+            "query": text,
+            "query_candidates": candidates,
+            "source": source,
+            "radius": WORD_INDEX_CONTEXT_RADIUS,
+        },
+        "primary_result_contiguity": {
+            "scope": "encounter_sense_buckets",
+            "contiguous": False,
+            "reason": (
+                "Encounter buckets are ranked meaning evidence, not a contiguous "
+                "dictionary or wheel window."
+            ),
+        },
+        "lookup_strategy": {
+            "inline_window_entries": False,
+            "source_neighborhood_command": "word-index nearby",
+            "wheel_neighborhood_status": "planned",
+        },
+        "anchors": [],
+        "warnings": [],
+    }
+    warnings: list[object] = []
+    anchors: list[dict[str, object]] = []
+    seen_anchor_keys: set[tuple[str, str, str]] = set()
+    for candidate in candidates:
+        try:
+            payload = word_index_neighborhood_payload(
+                language,
+                candidate,
+                source=source,
+                radius=WORD_INDEX_CONTEXT_RADIUS,
+            )
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(
+                {
+                    "source": source,
+                    "query": candidate,
+                    "message": (f"word-index context unavailable: {type(exc).__name__}: {exc}"),
+                }
+            )
+            continue
+        warnings.extend(cast(Sequence[object], payload.get("warnings") or []))
+        for anchor in _encounter_word_index_anchors(
+            payload.get("neighborhood"),
+            query=candidate,
+        ):
+            key = (
+                str(anchor.get("source") or ""),
+                str(anchor.get("dictionary") or ""),
+                str(anchor.get("index_entry_id") or ""),
+            )
+            if key in seen_anchor_keys:
+                continue
+            seen_anchor_keys.add(key)
+            anchors.append(anchor)
+    anchors = _encounter_word_index_preferred_anchors(anchors)
+    context["warnings"] = _dedupe_word_index_warnings(warnings)
+    context["anchors"] = anchors
+    return context
+
+
+def _encounter_word_index_preferred_anchors(
+    anchors: Sequence[dict[str, object]],
+) -> list[dict[str, object]]:
+    exact = [anchor for anchor in anchors if anchor.get("anchor_status") == "exact"]
+    return exact or list(anchors)
+
+
+def _dedupe_word_index_warnings(warnings: Sequence[object]) -> list[object]:
+    deduped: list[object] = []
+    seen: set[str] = set()
+    for warning in warnings:
+        key = orjson.dumps(warning, option=orjson.OPT_SORT_KEYS).decode("utf-8")
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(warning)
+    return deduped
+
+
+def _encounter_word_index_source(tool_filter: str) -> str:
+    normalized = tool_filter.strip().lower()
+    return normalized if normalized in WORD_INDEX_SOURCES else "all"
+
+
+def _encounter_word_index_anchors(
+    neighborhood: object,
+    *,
+    query: str,
+) -> list[dict[str, object]]:
+    if not isinstance(neighborhood, Mapping):
+        return []
+    groups = neighborhood.get("groups")
+    if isinstance(groups, Sequence) and not isinstance(groups, (str, bytes)):
+        anchors: list[dict[str, object]] = []
+        for group in groups:
+            anchors.extend(_encounter_word_index_anchors(group, query=query))
+        return anchors
+
+    anchor = neighborhood.get("anchor")
+    if not isinstance(anchor, Mapping):
+        return []
+
+    window = neighborhood.get("window")
+    before = _encounter_word_index_entry_sequence(neighborhood.get("before"))
+    after = _encounter_word_index_entry_sequence(neighborhood.get("after"))
+    entries = [*before, anchor, *after]
+    return [
+        {
+            "language": anchor.get("language", ""),
+            "query": query,
+            "source": anchor.get("source", ""),
+            "dictionary": anchor.get("dictionary", ""),
+            "anchor_status": neighborhood.get("anchor_status", ""),
+            "lexeme_id": anchor.get("lexeme_id", ""),
+            "wheel_id": anchor.get("wheel_id", ""),
+            "wheel_order_key": anchor.get("wheel_order_key", ""),
+            "canonical_name": anchor.get("canonical_name", ""),
+            "canonical_key": anchor.get("canonical_key", ""),
+            "source_name": anchor.get("source_name", ""),
+            "source_ref": anchor.get("source_ref", ""),
+            "index_entry_id": anchor.get("index_entry_id", ""),
+            "source_order_id": anchor.get("source_order_id", ""),
+            "source_order_key": anchor.get("source_order_key", ""),
+            "window": _encounter_word_index_window_summary(window, entries),
+        }
+    ]
+
+
+def _encounter_word_index_entry_sequence(value: object) -> list[Mapping[str, object]]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return []
+    return [cast(Mapping[str, object], item) for item in value if isinstance(item, Mapping)]
+
+
+def _encounter_word_index_window_summary(
+    window: object,
+    entries: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    summary = dict(cast(Mapping[str, object], window)) if isinstance(window, Mapping) else {}
+    source_order_ids = [
+        str(item.get("source_order_id") or "") for item in entries if item.get("source_order_id")
+    ]
+    source_order_keys = [
+        str(item.get("source_order_key") or "") for item in entries if item.get("source_order_key")
+    ]
+    index_entry_ids = [
+        str(item.get("index_entry_id") or "") for item in entries if item.get("index_entry_id")
+    ]
+    if source_order_ids:
+        summary["min_source_order_id"] = source_order_ids[0]
+        summary["max_source_order_id"] = source_order_ids[-1]
+    if source_order_keys:
+        summary["min_source_order_key"] = source_order_keys[0]
+        summary["max_source_order_key"] = source_order_keys[-1]
+    if index_entry_ids:
+        summary["min_index_entry_id"] = index_entry_ids[0]
+        summary["max_index_entry_id"] = index_entry_ids[-1]
+    return summary
+
+
 def _encounter_component_display_line(component: Mapping[str, object]) -> str:
     display = str(component.get("display") or component.get("lemma") or "")
     role = str(component.get("role") or "component")
@@ -4308,6 +4919,7 @@ def _execute_lookup_plan(  # noqa: PLR0913
     db_path: str | None,
     no_cache: bool,
     include_cltk: bool,
+    cache_policy: str = "read-write",
 ):
     lang_hint = _parse_language(language)
     norm_cfg = NormalizeConfig(
@@ -4316,6 +4928,7 @@ def _execute_lookup_plan(  # noqa: PLR0913
         db_path=db_path,
         no_cache=no_cache,
         output="pretty",
+        cache_policy=cache_policy,
     )
     query_value = _get_query_value_for_plan(text, lang_hint, normalize, norm_cfg)
     planner = ToolPlanner(
@@ -4425,7 +5038,7 @@ def _translation_cache_status_payload(cache_path: Path) -> dict[str, object]:
     if not cache_path.exists():
         return payload
     try:
-        with connect_duckdb(cache_path, read_only=False, lock=True) as conn:
+        with connect_duckdb(cache_path, read_only=True, lock=False, allow_create=False) as conn:
             payload["row_count"] = _translation_cache_count_rows(conn)
             payload["status_counts"] = _translation_cache_group_counts(conn, "status")
             payload["source_lexicon_counts"] = _translation_cache_group_counts(
@@ -4768,6 +5381,16 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     help="Skip normalization cache lookups and writes for this invocation.",
 )
 @click.option(
+    "--cache-policy",
+    type=click.Choice(["read-write", "read-only", "off"]),
+    default="read-write",
+    show_default=True,
+    help=(
+        "Normalization cache behavior. read-only may read warmed rows but never writes; "
+        "off skips normalization cache reads and writes."
+    ),
+)
+@click.option(
     "--include-cltk/--no-include-cltk",
     default=False,
     show_default=True,
@@ -4843,6 +5466,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     heritage_base: str,
     db_path: str | None,
     no_cache: bool,
+    cache_policy: str,
     include_cltk: bool,
     max_buckets: int,
     max_gloss_chars: int,
@@ -4857,6 +5481,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     """
     Show a compact, source-backed learner encounter for one word.
     """
+    cache_policy = "off" if no_cache else cache_policy
     translation_cache: _PathTranslationCache | None = None
     try:
         result = _execute_lookup_plan(
@@ -4870,6 +5495,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             db_path=db_path,
             no_cache=no_cache,
             include_cltk=include_cltk,
+            cache_policy=cache_policy,
         )
         claims = _claims_as_mappings(result)
         resolved_translation_mode = _resolve_translation_mode(
@@ -5048,13 +5674,17 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             payload = asdict(reduction)
             payload["schema_version"] = ENCOUNTER_JSON_SCHEMA_VERSION
             payload["request"] = {
+                "command": "encounter",
                 "language": language,
                 "text": text,
                 "tool_filter": tool_filter,
                 "normalize": normalize,
                 "no_cache": no_cache,
+                "cache_policy": cache_policy,
+                "normalization_cache_writes": cache_policy == "read-write",
                 "include_cltk": include_cltk,
                 "translation_mode": resolved_translation_mode,
+                "translation_cache_writes": populate_translations,
             }
             payload["display"] = build_display_payload(
                 reduction,
@@ -5083,6 +5713,16 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 for bucket in reduction.buckets
             ]
             payload["translation_cache"] = translation_diagnostics
+            payload["word_index"] = _encounter_word_index_context(
+                language=language,
+                text=text,
+                tool_filter=tool_filter,
+                query_candidates=_encounter_word_index_query_candidates(
+                    text,
+                    reduction,
+                    preferred_lemmas,
+                ),
+            )
             click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
             return
 
@@ -5165,6 +5805,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                         tool_filter=tool_filter,
                         normalize=normalize,
                         no_cache=no_cache,
+                        cache_policy=cache_policy,
                         include_cltk=include_cltk,
                         translation_mode=resolved_error_mode,
                         exc=exc,

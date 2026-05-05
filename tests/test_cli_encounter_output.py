@@ -6,6 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import patch
 
 import duckdb
@@ -15,6 +16,7 @@ from filelock import FileLock
 from query_spec import CanonicalCandidate, NormalizedQuery
 
 from langnet.cli import (
+    DATABASE_BUSY_RETRY_AFTER_MS,
     LanguageHint,
     NormalizeConfig,
     _encounter_bucket_sort_key,
@@ -26,7 +28,10 @@ from langnet.cli import (
     _encounter_morphology_rows,
     _encounter_preferred_lemmas_for_sorting,
     _encounter_preferred_lemmas_from_morphology,
+    _encounter_word_index_context,
     _get_query_value_for_plan,
+    _normalization_cache_get,
+    _normalize_with_short_cache_lock,
     main,
 )
 from langnet.execution.effects import ClaimEffect, ProvenanceLink
@@ -44,6 +49,7 @@ TRANSLATION_FIXTURE_PATH = Path("tests/fixtures/translation_cache_golden_rows.js
 ENCOUNTER_SCHEMA_PATH = Path("docs/schemas/encounter.v1.schema.json")
 ENCOUNTER_ERROR_SCHEMA_PATH = Path("docs/schemas/encounter-error.v1.schema.json")
 GAFFIOT_LUPUS_SOURCE_ORDER = 38776
+WORD_INDEX_FIXTURE_WINDOW_SIZE = 3
 
 
 def _claim_with_triples(
@@ -346,6 +352,63 @@ def test_get_query_value_for_plan_does_not_hold_cache_lock_during_normalization(
             )
 
         assert query.candidates[0].lemma == "hen"
+
+
+def test_normalization_cache_get_uses_read_only_connection_while_writer_open() -> None:
+    with TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "langnet.duckdb"
+        with duckdb.connect(str(db_path)) as conn:
+            ensure_normalization_schema(conn)
+
+        writer = duckdb.connect(str(db_path))
+        try:
+            cached = _normalization_cache_get(
+                config=NormalizeConfig(
+                    diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                    heritage_base="http://localhost:48080",
+                    db_path=str(db_path),
+                    no_cache=False,
+                    output="pretty",
+                ),
+                path=db_path,
+                text="hen",
+                lang_hint=LanguageHint.LANGUAGE_HINT_GRC,
+            )
+        finally:
+            writer.close()
+
+    assert cached is None
+
+
+def test_normalization_read_only_cache_policy_never_creates_or_writes_cache() -> None:
+    with TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "langnet.duckdb"
+        normalized = NormalizedQuery(
+            original="lupus",
+            language=LanguageHint.LANGUAGE_HINT_LAT,
+            candidates=[CanonicalCandidate(lemma="lupus", encodings={}, sources=["fixture"])],
+        )
+        uncached = NormalizationResult(
+            query_hash=_hash_query("lupus", LanguageHint.LANGUAGE_HINT_LAT),
+            normalized=normalized,
+        )
+
+        with patch("langnet.cli._normalization_result_uncached", return_value=uncached):
+            result = _normalize_with_short_cache_lock(
+                NormalizeConfig(
+                    diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                    heritage_base="http://localhost:48080",
+                    db_path=str(db_path),
+                    no_cache=False,
+                    output="json",
+                    cache_policy="read-only",
+                ),
+                "lupus",
+                LanguageHint.LANGUAGE_HINT_LAT,
+            )
+
+        assert result.normalized.candidates[0].lemma == "lupus"
+        assert not db_path.exists()
 
 
 def test_lemma_compare_keys_include_pos_anchor_base() -> None:
@@ -659,6 +722,140 @@ def test_encounter_json_includes_ranking_explanations() -> None:
     assert "has DICO/Gaffiot bilingual source evidence" in ranking["reasons"]
 
 
+def test_encounter_word_index_context_projects_anchor_handles_without_inline_window() -> None:
+    payload = {
+        "warnings": [],
+        "neighborhood": {
+            "language": "lat",
+            "query": "lupus",
+            "source": "gaffiot",
+            "dictionary": "gaffiot",
+            "anchor_status": "exact",
+            "before": [
+                {
+                    "index_entry_id": "word-index:lat:gaffiot:gaffiot:before",
+                    "source_order_id": "word-order:lat:gaffiot:gaffiot:000122",
+                    "source_order_key": "000122",
+                }
+            ],
+            "anchor": {
+                "language": "lat",
+                "source": "gaffiot",
+                "dictionary": "gaffiot",
+                "lexeme_id": "lexeme:lat:lupus",
+                "canonical_name": "lupus",
+                "canonical_key": "lupus",
+                "source_name": "lupus",
+                "source_ref": "gaffiot:gaffiot_123",
+                "index_entry_id": "word-index:lat:gaffiot:gaffiot:anchor",
+                "source_order_id": "word-order:lat:gaffiot:gaffiot:000123",
+                "source_order_key": "000123",
+            },
+            "after": [
+                {
+                    "index_entry_id": "word-index:lat:gaffiot:gaffiot:after",
+                    "source_order_id": "word-order:lat:gaffiot:gaffiot:000124",
+                    "source_order_key": "000124",
+                }
+            ],
+            "window": {
+                "policy": "source_entry_contiguous",
+                "contiguous": True,
+                "collapsed": False,
+                "before_count": 1,
+                "after_count": 1,
+                "source_entry_count": 3,
+            },
+        },
+    }
+
+    with patch("langnet.cli.word_index_neighborhood_payload", return_value=payload) as nearby:
+        context = _encounter_word_index_context(
+            language="lat",
+            text="lupus",
+            tool_filter="gaffiot",
+        )
+
+    nearby.assert_called_once_with("lat", "lupus", source="gaffiot", radius=1)
+    assert context["primary_result_contiguity"]["contiguous"] is False
+    assert context["lookup_strategy"]["inline_window_entries"] is False
+    anchors = cast(list[dict[str, object]], context["anchors"])
+    assert len(anchors) == 1
+    anchor = anchors[0]
+    assert anchor["query"] == "lupus"
+    assert anchor["lexeme_id"] == "lexeme:lat:lupus"
+    assert anchor["canonical_key"] == "lupus"
+    assert anchor["index_entry_id"] == "word-index:lat:gaffiot:gaffiot:anchor"
+    assert "before" not in anchor
+    assert "after" not in anchor
+    window = cast(dict[str, object], anchor["window"])
+    assert window["policy"] == "source_entry_contiguous"
+    assert window["contiguous"] is True
+    assert window["source_entry_count"] == WORD_INDEX_FIXTURE_WINDOW_SIZE
+    assert window["min_source_order_id"] == "word-order:lat:gaffiot:gaffiot:000122"
+    assert window["max_source_order_id"] == "word-order:lat:gaffiot:gaffiot:000124"
+    assert window["min_index_entry_id"] == "word-index:lat:gaffiot:gaffiot:before"
+    assert window["max_index_entry_id"] == "word-index:lat:gaffiot:gaffiot:after"
+
+
+def test_encounter_word_index_context_prefers_exact_anchor_over_raw_nearest() -> None:
+    def payload_for(_language: str, query: str, *, source: str, radius: int) -> dict[str, object]:
+        assert source == "all"
+        assert radius == 1
+        if query == "thomas":
+            return {
+                "warnings": [],
+                "neighborhood": {
+                    "anchor_status": "nearest",
+                    "before": [],
+                    "after": [],
+                    "anchor": {
+                        "language": "grc",
+                        "source": "diogenes",
+                        "dictionary": "lsj",
+                        "lexeme_id": "lexeme:grc:tomas",
+                        "canonical_name": "τομάς",
+                        "canonical_key": "tomas",
+                        "source_name": "τομάς",
+                        "index_entry_id": "word-index:grc:diogenes:lsj:tomas",
+                    },
+                    "window": {},
+                },
+            }
+        return {
+            "warnings": [],
+            "neighborhood": {
+                "anchor_status": "exact",
+                "before": [],
+                "after": [],
+                "anchor": {
+                    "language": "grc",
+                    "source": "diogenes",
+                    "dictionary": "lsj",
+                    "lexeme_id": "lexeme:grc:qaumazo",
+                    "canonical_name": "θαυμάζω",
+                    "canonical_key": "qaumazo",
+                    "source_name": "θαυμάζω",
+                    "index_entry_id": "word-index:grc:diogenes:lsj:qaumazo",
+                },
+                "window": {},
+            },
+        }
+
+    with patch("langnet.cli.word_index_neighborhood_payload", side_effect=payload_for):
+        context = _encounter_word_index_context(
+            language="grc",
+            text="thomas",
+            tool_filter="all",
+            query_candidates=["thomas", "θαυμάζω"],
+        )
+
+    anchors = cast(list[dict[str, object]], context["anchors"])
+    assert [anchor["anchor_status"] for anchor in anchors] == ["exact"]
+    assert anchors[0]["canonical_key"] == "qaumazo"
+    assert anchors[0]["query"] == "θαυμάζω"
+
+
 def test_encounter_json_includes_public_contract_display_views() -> None:
     triples = [
         {
@@ -762,13 +959,17 @@ def test_encounter_json_includes_public_contract_display_views() -> None:
     assert payload["query"] == "arma"
     assert payload["schema_version"] == "langnet.encounter.v1"
     assert payload["request"] == {
+        "command": "encounter",
         "language": "lat",
         "text": "arma",
         "tool_filter": "all",
         "normalize": True,
         "no_cache": False,
+        "cache_policy": "read-write",
+        "normalization_cache_writes": True,
         "include_cltk": False,
         "translation_mode": "off",
+        "translation_cache_writes": False,
     }
     assert payload["display"]["header"] == {"forms": ["arma"], "source_keys": []}
     assert payload["display"]["analysis"] == [
@@ -1260,20 +1461,61 @@ def test_encounter_json_returns_structured_error_on_lookup_failure() -> None:
         "schema_version": "langnet.encounter.error.v1",
         "ok": False,
         "request": {
+            "command": "encounter",
             "language": "lat",
             "text": "lupus",
             "tool_filter": "gaffiot",
             "normalize": True,
             "no_cache": False,
+            "cache_policy": "read-write",
+            "normalization_cache_writes": True,
             "include_cltk": False,
             "translation_mode": "off",
+            "translation_cache_writes": False,
         },
         "error": {
             "code": "encounter_failed",
+            "command": "encounter",
             "type": "RuntimeError",
             "message": "backend unavailable",
         },
     }
+
+
+def test_encounter_json_returns_retryable_database_busy_error() -> None:
+    locked = duckdb.IOException(
+        'IO Error: Could not set lock on file "data/cache/langnet.duckdb": Conflicting lock is held'
+    )
+    with patch("langnet.cli._execute_lookup_plan", side_effect=locked):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "lupus",
+                "gaffiot",
+                "--output",
+                "json",
+                "--translation-mode",
+                "cache",
+                "--cache-policy",
+                "read-only",
+            ],
+        )
+
+    assert cli_result.exit_code == 1
+    payload = json.loads(cli_result.output)
+    _assert_matches_schema(payload, ENCOUNTER_ERROR_SCHEMA_PATH)
+    assert payload["request"]["command"] == "encounter"
+    assert payload["request"]["cache_policy"] == "read-only"
+    assert payload["request"]["normalization_cache_writes"] is False
+    assert payload["request"]["translation_cache_writes"] is False
+    assert payload["error"]["code"] == "database_busy"
+    assert payload["error"]["kind"] == "database_busy"
+    assert payload["error"]["command"] == "encounter"
+    assert payload["error"]["retryable"] is True
+    assert payload["error"]["retry_after_ms"] == DATABASE_BUSY_RETRY_AFTER_MS
+    assert payload["error"]["readonly_available"] is True
 
 
 def test_encounter_prints_compact_learner_gloss_with_evidence_line() -> None:

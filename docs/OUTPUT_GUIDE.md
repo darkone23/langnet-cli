@@ -88,6 +88,7 @@ The self-description schemas live in:
 
 - `docs/schemas/languages.v1.schema.json`
 - `docs/schemas/tools.v1.schema.json`
+- `docs/schemas/word_index.v1.schema.json`
 
 `word-of-day --output json` and `recommend-words --output json` return learner
 recommendation cards using schema version `langnet.word_of_day.v1`. The schema
@@ -106,6 +107,91 @@ headword. Cards also include a short gloss, a learner note about why the word is
 worth studying, and an optional encounter probe summary. The probe summary is
 cache-only for translation evidence; these commands should not hide live
 translation latency inside ordinary recommendation rendering.
+
+`word-index --output json` commands return source-backed headword index rows
+using schema version `langnet.word_index.v1`.
+
+```bash
+just cli word-index sources --output json
+just cli word-index list all --source all --limit 25 --output json
+just cli word-index neighborhood san dharma --source dico --radius 8 --output json
+just cli word-index nearby san satya --source all --radius 5 --output json
+just cli word-index nearby san satya --source all --radius 5 --merge none --output json
+just cli word-index nearby san धर्म --source cdsl --radius 8 --output json
+just cli word-index nearby grc physis --source all --radius 8 --output json
+just cli word-index nearby grc λόγος --source diogenes --radius 8 --output json
+just cli word-index nearby grc logos --source diogenes --radius 8 --output json
+just cli word-index wheel all --count 12 --seed daily --output json
+just cli word-index wheel --language grc --source all --count 12 --seed daily --output json
+```
+
+Word-index rows distinguish source-local naming from LangNet's normalized
+contract. `source_name` is the exact source/index headword key, `canonical_name`
+is the learner-facing normalized lemma, `canonical_key` is the stable ASCII-ish
+index key, and `lookup` is the value passed to `encounter` for source inspection.
+Rows also carry durable domain identifiers: `lexeme_id` identifies the
+source-independent language/canonical-key word, `wheel_id` is the stable
+wheel-facing handle for that lexeme, `wheel_order_key` is the canonical total
+ordering key, `index_entry_id` identifies the exact source-backed row, and
+`source_order_id` is a squuid-like stable sortable ID derived from the source
+ordering key plus a short uniqueness hash. The structured `ids` object repeats
+those IDs with the source reference for web/front-end callers. Rows also include
+structured `display` metadata and an `encounter` request object that can be used
+to inspect the source entry in detail. `word-index list --source all` is
+lexeme-centered: rows with the same `lexeme_id` are collapsed into one card,
+ordered by `wheel_order_key`, and the exact source rows are listed under
+`source_entries`. With `--source all`, nearby/neighborhood output now defaults
+to `merge=lexeme`: the top-level neighborhood has `policy = "merged_lexeme"`,
+an `anchor`, and learner-facing `items[]` with one row per `lexeme_id`.
+Source-local provenance remains available under `neighborhood.groups[]`. Pass
+`--merge none` to return only the older source-local grouped shape. Specific
+source/dictionary neighborhoods remain source-order neighborhoods and declare
+that with `window.policy = "source_entry_contiguous"`, `window.contiguous =
+true`, and `window.collapsed = false`. Merged neighborhoods are collapsed from
+the selected source windows, with the anchor lexeme rehydrated from the exact
+matching source rows before the radius window is applied. Thus
+`anchor.source_entries` is stable across radius changes; `--radius` controls
+neighboring lexemes, not the current word's provenance. Merged neighborhoods are
+canonical lexeme cards, but not yet a materialized global cross-source
+lexeme-radius slice. Cross-language similarity is intentionally a later explicit
+mode. For mixed wheels within a language, keep
+`--source all` and select the language with the positional argument or
+`--language grc`; `--source` remains reserved for backend/source families such
+as `cdsl`, `dico`, `gaffiot`, and `diogenes`. Wheel output is also
+lexeme-centered: rows with the same `lexeme_id` are collapsed into one wheel
+card, and the exact source rows are listed under `source_entries`. Wheels with
+`--source all` balance available source/dictionary buckets while selecting
+lexeme cards, rather than returning duplicate cards for the same word from
+different sources.
+Native-script queries are accepted where the source index can be projected to a
+stable canonical key: Sanskrit Devanagari is expanded through the existing
+Velthuis/CDSL path, and Greek Unicode is expanded to the same ASCII key used by
+Diogenes lookup rows. Common Greek Latinized forms are also normalized for the
+word index, so `physis` can resolve to the indexed Diogenes key `fusis`.
+
+Diogenes Greek/Latin neighborhoods require a local built index. Full indexes
+should use direct Diogenes XML import when the local Diogenes data files are
+available:
+
+```bash
+just cli-databuild diogenes-index lat --mode direct --max-entries 0
+just cli-databuild diogenes-index grc --mode direct --max-entries 0
+just cli word-index neighborhood lat amo --source diogenes --radius 8 --output json
+just cli word-index neighborhood grc apo --source diogenes --radius 8 --output json
+```
+
+For fixed windows around a seed, use CGI crawl mode:
+
+```bash
+just cli-databuild diogenes-index lat --mode crawl --seed-word amo --max-entries 1000
+just cli-databuild diogenes-index grc --mode crawl --seed-word apo --max-entries 1000
+```
+
+The direct builder imports Diogenes' local XML dictionary files. The crawl
+builder talks to `Perseus.cgi` and follows `prev_entry`/`next_entry` navigation
+offsets. Both write `data/build/lex_diogenes_lat.duckdb` or
+`data/build/lex_diogenes_grc.duckdb`. Runtime `word-index` commands only read
+those DuckDB files; they do not crawl live.
 
 Use `doctor` when a subprocess caller needs a local, non-network readiness
 check for the CLI surface, schema files, translation cache path, translation
@@ -238,6 +324,13 @@ New renderer-facing fields are additive:
   entry metadata such as source tool, source ref, headword, entry id,
   dictionary, source-entry summary, typed source notes, raw blob reference, and
   translation provenance;
+- `word_index`: compact index context for follow-up navigation. It deliberately
+  does not inline nearby rows. Instead it reports that primary encounter buckets
+  are ranked sense evidence rather than a contiguous dictionary slice, then
+  exposes anchor handles such as `lexeme_id`, `index_entry_id`,
+  `source_order_id`, `source_order_key`, and min/max source-window bounds. Use
+  those handles with `word-index nearby` now, and with the planned unified
+  wheel-neighborhood surface later;
 - `components` and `display.components`: optional structured component links
   when a morphology tool exposes a likely decomposition, such as Sanskrit
   compound members from Heritage `iic.` rows or Latin Whitaker tackons. These

@@ -34,6 +34,7 @@ MIN_SANSKRIT_CONFIDENCE = 0.5
 MAX_ASCII_CODE = 127
 DEVANAGARI_UNICODE_START = 0x0900
 DEVANAGARI_UNICODE_END = 0x097F
+ASCII_FINAL_VOWEL_COMPLETION_MIN_LENGTH = 4
 
 
 class HeritageClientProtocol(Protocol):
@@ -151,6 +152,79 @@ def _normalize_for_comparison(text: str) -> str:
     return normalized
 
 
+def _ascii_fold_for_reader_match(text: str) -> str:
+    """Fold Sanskrit diacritics to a reader-typed ASCII comparison key."""
+    replacements = {
+        "ā": "aa",
+        "ī": "ii",
+        "ū": "uu",
+        "ṛ": "r",
+        "ṝ": "rr",
+        "ḷ": "l",
+        "ḹ": "ll",
+        "ṃ": "m",
+        "ṁ": "m",
+        "ṅ": "n",
+        "ñ": "n",
+        "ṇ": "n",
+        "ṭ": "t",
+        "ḍ": "d",
+        "ṣ": "s",
+        "ś": "s",
+        "ḥ": "h",
+    }
+    return "".join(replacements.get(char, char) for char in text)
+
+
+def _reader_fold_score(input_text: str, candidate_norms: list[str]) -> tuple[int, int, int, int]:
+    input_fold = _ascii_fold_for_reader_match(_normalize_for_comparison(input_text))
+    folded = [_ascii_fold_for_reader_match(norm) for norm in candidate_norms if norm]
+    if not input_fold or not folded:
+        return (1, 1, 10**9, 10**9)
+    best = min(
+        folded,
+        key=lambda norm: (
+            _levenshtein(input_fold, norm),
+            abs(len(input_fold) - len(norm)),
+            len(norm),
+        ),
+    )
+    exact = 0 if best == input_fold else 1
+    prefix = 0 if best.startswith(input_fold) or input_fold.startswith(best) else 1
+    return (
+        exact,
+        prefix,
+        _levenshtein(input_fold, best),
+        abs(len(input_fold) - len(best)),
+    )
+
+
+def sanskrit_candidate_sort_key(input_text: str, candidate: CanonicalCandidate) -> tuple:
+    encodings = candidate.encodings or {}
+    candidate_norms = [
+        norm
+        for norm in (
+            _normalize_for_comparison(candidate.lemma or ""),
+            _normalize_for_comparison(encodings.get(ENC_IAST, "")),
+            _normalize_for_comparison(encodings.get(ENC_VELTHUIS, "")),
+            _normalize_for_comparison(encodings.get(ENC_SLP1, "")),
+        )
+        if norm
+    ]
+    reader_score = _reader_fold_score(input_text, candidate_norms)
+    input_norm = _normalize_for_comparison(input_text)
+    best_norm = min(
+        candidate_norms or [""],
+        key=lambda norm: (_levenshtein(input_norm, norm), abs(len(input_norm) - len(norm))),
+    )
+    return (
+        *reader_score,
+        _levenshtein(input_norm, best_norm),
+        abs(len(input_norm) - len(best_norm)),
+        candidate.lemma or "",
+    )
+
+
 def _rank_heritage_matches(input_text: str, matches: list[SktSearchMatch]) -> list[SktSearchMatch]:
     """Rank Heritage matches by similarity to input."""
     if len(matches) <= 1:
@@ -160,6 +234,10 @@ def _rank_heritage_matches(input_text: str, matches: list[SktSearchMatch]) -> li
 
     @dataclass(order=True)
     class RankedMatch:
+        reader_exact: int
+        reader_prefix: int
+        reader_dist: int
+        reader_len_diff: int
         dist: int
         len_diff: int
         canonical: str = ""
@@ -182,8 +260,16 @@ def _rank_heritage_matches(input_text: str, matches: list[SktSearchMatch]) -> li
         )
         dist = _levenshtein(input_norm, best_norm)
         len_diff = abs(len(input_norm) - len(best_norm))
+        reader_exact, reader_prefix, reader_dist, reader_len_diff = _reader_fold_score(
+            input_text,
+            candidate_norms,
+        )
         ranked.append(
             RankedMatch(
+                reader_exact=reader_exact,
+                reader_prefix=reader_prefix,
+                reader_dist=reader_dist,
+                reader_len_diff=reader_len_diff,
                 dist=dist,
                 len_diff=len_diff,
                 canonical=m.canonical,
@@ -226,33 +312,12 @@ class SanskritNormalizer(LanguageNormalizer):
 
         velthuis_form = self._to_velthuis(stripped, encoding, steps)
 
-        candidates: list[CanonicalCandidate] = []
-
-        heritage_query = self._strip_to_alpha(velthuis_form)
-        if heritage_query:
-            matches = self.heritage.all_matches(heritage_query)
-            if matches:
-                ranked_matches = _rank_heritage_matches(stripped, matches)
-                steps.append(
-                    NormalizationStep(
-                        operation="heritage_sktsearch",
-                        input=heritage_query,
-                        output=";".join(m.display for m in ranked_matches),
-                        tool="heritage_sktsearch",
-                    )
-                )
-                for match in ranked_matches:
-                    encodings: dict[str, str] = {
-                        "velthuis": match.canonical,
-                        "iast": match.display,
-                    }
-                    candidates.append(
-                        CanonicalCandidate(
-                            lemma=match.display,
-                            encodings=encodings,
-                            sources=["heritage_sktsearch"],
-                        )
-                    )
+        candidates = self._heritage_candidates_for_reader_query(
+            stripped,
+            encoding,
+            velthuis_form,
+            steps,
+        )
 
         # Ambiguity fallback: heuristically diacritize ASCII and retry Heritage when no matches.
         if not candidates and encoding == ENC_ASCII:
@@ -281,6 +346,50 @@ class SanskritNormalizer(LanguageNormalizer):
                 seen.add(c.lemma)
                 result.append(c)
         return result
+
+    def _heritage_candidates_for_reader_query(
+        self,
+        stripped: str,
+        encoding: str,
+        velthuis_form: str,
+        steps: list[NormalizationStep],
+    ) -> list[CanonicalCandidate]:
+        heritage_query = self._strip_to_alpha(velthuis_form)
+        if not heritage_query:
+            return []
+
+        matches = self.heritage.all_matches(heritage_query)
+        if encoding in {ENC_ASCII, ENC_HK, ENC_SLP1}:
+            matches.extend(
+                self._final_vowel_completion_matches(
+                    stripped,
+                    heritage_query,
+                    steps,
+                )
+            )
+        if not matches:
+            return []
+
+        ranked_matches = _rank_heritage_matches(stripped, matches)
+        steps.append(
+            NormalizationStep(
+                operation="heritage_sktsearch",
+                input=heritage_query,
+                output=";".join(m.display for m in ranked_matches),
+                tool="heritage_sktsearch",
+            )
+        )
+        return [
+            CanonicalCandidate(
+                lemma=match.display,
+                encodings={
+                    ENC_VELTHUIS: match.canonical,
+                    ENC_IAST: match.display,
+                },
+                sources=["heritage_sktsearch"],
+            )
+            for match in ranked_matches
+        ]
 
     def _build_encodings(
         self,
@@ -400,6 +509,46 @@ class SanskritNormalizer(LanguageNormalizer):
             if candidates:
                 break
         return candidates
+
+    def _final_vowel_completion_matches(
+        self,
+        original_text: str,
+        heritage_query: str,
+        steps: list[NormalizationStep],
+    ) -> list[SktSearchMatch]:
+        """
+        Add bounded Sanskrit final-vowel completions for reader-style truncated ASCII.
+
+        This catches common searches like ``karun`` where the user is aiming for
+        ``karuṇa``/``karuṇā`` but Heritage's bare ``sktsearch`` prefers ``karin``.
+        """
+        raw = original_text.strip().lower()
+        if (
+            len(raw) < ASCII_FINAL_VOWEL_COMPLETION_MIN_LENGTH
+            or not raw.isascii()
+            or not raw[-1].isalpha()
+            or raw[-1] in "aeiou"
+        ):
+            return []
+        matches: list[SktSearchMatch] = []
+        seen = {(match.canonical, match.display) for match in matches}
+        for query in (f"{heritage_query}a", f"{heritage_query}aa"):
+            for match in self.heritage.all_matches(query):
+                key = (match.canonical, match.display)
+                if key in seen:
+                    continue
+                seen.add(key)
+                matches.append(match)
+            if matches:
+                steps.append(
+                    NormalizationStep(
+                        operation="heritage_final_vowel_completion",
+                        input=original_text,
+                        output=query,
+                        tool="heritage_sktsearch",
+                    )
+                )
+        return matches
 
     def _heritage_user_feedback(
         self, velthuis_form: str, original_text: str, steps: list[NormalizationStep]

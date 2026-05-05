@@ -40,7 +40,8 @@
       "items": { "type": "object" },
       "additionalItems": true
     },
-    "translation_cache": { "type": "object" }
+    "translation_cache": { "type": "object" },
+    "word_index": { "$ref": "#/$defs/wordIndexContext" }
   },
   "additionalProperties": true,
   "$defs": {
@@ -52,17 +53,24 @@
         "tool_filter",
         "normalize",
         "no_cache",
+        "cache_policy",
+        "normalization_cache_writes",
         "include_cltk",
-        "translation_mode"
+        "translation_mode",
+        "translation_cache_writes"
       ],
       "properties": {
+        "command": { "type": "string" },
         "language": { "type": "string" },
         "text": { "type": "string" },
         "tool_filter": { "type": "string" },
         "normalize": { "type": "boolean" },
         "no_cache": { "type": "boolean" },
+        "cache_policy": { "type": "string" },
+        "normalization_cache_writes": { "type": "boolean" },
         "include_cltk": { "type": "boolean" },
-        "translation_mode": { "type": "string" }
+        "translation_mode": { "type": "string" },
+        "translation_cache_writes": { "type": "boolean" }
       },
       "additionalProperties": true
     },
@@ -292,6 +300,85 @@
         "source_refs": { "type": "array", "items": { "type": "string" } },
         "examples": { "type": "array", "items": { "type": "string" } },
         "text": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "wordIndexContext": {
+      "type": "object",
+      "required": [
+        "request",
+        "primary_result_contiguity",
+        "lookup_strategy",
+        "anchors",
+        "warnings"
+      ],
+      "properties": {
+        "request": { "type": "object" },
+        "primary_result_contiguity": {
+          "type": "object",
+          "required": ["scope", "contiguous", "reason"],
+          "properties": {
+            "scope": { "const": "encounter_sense_buckets" },
+            "contiguous": { "const": false },
+            "reason": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "lookup_strategy": {
+          "type": "object",
+          "required": ["inline_window_entries"],
+          "properties": {
+            "inline_window_entries": { "const": false },
+            "source_neighborhood_command": { "type": "string" },
+            "wheel_neighborhood_status": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "anchors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/wordIndexAnchor" }
+        },
+        "warnings": { "type": "array", "items": { "type": "object" } }
+      },
+      "additionalProperties": true
+    },
+    "wordIndexAnchor": {
+      "type": "object",
+      "required": [
+        "language",
+        "query",
+        "source",
+        "dictionary",
+        "anchor_status",
+        "lexeme_id",
+        "wheel_id",
+        "wheel_order_key",
+        "canonical_name",
+        "canonical_key",
+        "source_name",
+        "source_ref",
+        "index_entry_id",
+        "source_order_id",
+        "source_order_key",
+        "window"
+      ],
+      "properties": {
+        "language": { "type": "string" },
+        "query": { "type": "string" },
+        "source": { "type": "string" },
+        "dictionary": { "type": "string" },
+        "anchor_status": { "type": "string" },
+        "lexeme_id": { "type": "string" },
+        "wheel_id": { "type": "string" },
+        "wheel_order_key": { "type": "string" },
+        "canonical_name": { "type": "string" },
+        "canonical_key": { "type": "string" },
+        "source_name": { "type": "string" },
+        "source_ref": { "type": "string" },
+        "index_entry_id": { "type": "string" },
+        "source_order_id": { "type": "string" },
+        "source_order_key": { "type": "string" },
+        "window": { "type": "object" }
       },
       "additionalProperties": true
     },

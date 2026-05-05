@@ -82,6 +82,22 @@ class BuildDicoConfig:
     force: bool
 
 
+@dataclass
+class BuildDiogenesConfig:
+    language: str
+    mode: str
+    endpoint: str
+    source_path: str | None
+    output: str | None
+    seed_word: str | None
+    max_entries: int | None
+    batch_size: int
+    request_timeout_s: float
+    polite_delay_s: float
+    wipe: bool
+    force: bool
+
+
 def _build_cts_impl(config: BuildCtsConfig) -> None:
     _ensure_logging()
     from langnet.databuild.cts import CtsBuildConfig, CtsUrnBuilder  # noqa: PLC0415
@@ -158,6 +174,37 @@ def _build_dico_impl(config: BuildDicoConfig) -> None:
         force_rebuild=config.force,
     )
     builder = DicoBuilder(builder_config)
+    result = builder.build()
+    _print_build_result(result)
+
+
+def _build_diogenes_impl(config: BuildDiogenesConfig) -> None:
+    _ensure_logging()
+    from langnet.databuild.diogenes import (  # noqa: PLC0415
+        DiogenesBuildConfig,
+        DiogenesBuilder,
+    )
+    from langnet.databuild.paths import default_diogenes_path  # noqa: PLC0415
+
+    language = "grc" if config.language.lower() in {"grc", "grk", "greek"} else "lat"
+    output_path = (
+        Path(config.output).expanduser() if config.output else default_diogenes_path(language)
+    )
+    builder_config = DiogenesBuildConfig(
+        language=language,  # type: ignore[arg-type]
+        mode=config.mode,  # type: ignore[arg-type]
+        endpoint=config.endpoint,
+        source_path=Path(config.source_path).expanduser() if config.source_path else None,
+        output_path=output_path,
+        seed_word=config.seed_word,
+        max_entries=config.max_entries,
+        batch_size=config.batch_size,
+        request_timeout_s=config.request_timeout_s,
+        polite_delay_s=config.polite_delay_s,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+    )
+    builder = DiogenesBuilder(builder_config)
     result = builder.build()
     _print_build_result(result)
 
@@ -364,3 +411,102 @@ def build_dico(  # noqa: PLR0913
         force=force,
     )
     _build_dico_impl(config)
+
+
+@databuild.command("diogenes-index")
+@click.argument("language", type=click.Choice(["lat", "grc", "grk", "latin", "greek"]))
+@click.option(
+    "--endpoint",
+    default="http://localhost:8888/Perseus.cgi",
+    show_default=True,
+    help="Diogenes Perseus.cgi endpoint.",
+)
+@click.option(
+    "--mode",
+    type=click.Choice(["auto", "direct", "crawl"]),
+    default="auto",
+    show_default=True,
+    help="Build from local XML source when available, or crawl Diogenes CGI links.",
+)
+@click.option(
+    "--source",
+    "source_path",
+    type=click.Path(),
+    default=None,
+    help="Path to Diogenes XML dictionary source; auto-detected when omitted.",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output DuckDB path (defaults to data/build/lex_diogenes_<lang>.duckdb)",
+)
+@click.option(
+    "--seed-word",
+    default=None,
+    help="Seed dictionary lookup; defaults to 'amo' for Latin and 'apo' for Greek.",
+)
+@click.option(
+    "--max-entries",
+    type=int,
+    default=1000,
+    show_default=True,
+    help="Maximum entries to crawl; pass 0 for no explicit crawl limit.",
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=5000,
+    show_default=True,
+    help="Rows per insert batch.",
+)
+@click.option(
+    "--request-timeout",
+    "request_timeout_s",
+    type=float,
+    default=10.0,
+    show_default=True,
+    help="HTTP timeout per Diogenes request, in seconds.",
+)
+@click.option(
+    "--polite-delay",
+    "polite_delay_s",
+    type=float,
+    default=0.0,
+    show_default=True,
+    help="Sleep between crawled entries, in seconds.",
+)
+@click.option(
+    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_diogenes_index(  # noqa: PLR0913
+    language: str,
+    endpoint: str,
+    mode: str,
+    source_path: str | None,
+    output: str | None,
+    seed_word: str | None,
+    max_entries: int | None,
+    batch_size: int,
+    request_timeout_s: float,
+    polite_delay_s: float,
+    wipe: bool,
+    force: bool,
+):
+    """Build a Diogenes word index by crawling previous/next dictionary links."""
+    config = BuildDiogenesConfig(
+        language=language,
+        mode=mode,
+        endpoint=endpoint,
+        source_path=source_path,
+        output=output,
+        seed_word=seed_word,
+        max_entries=None if max_entries == 0 else max_entries,
+        batch_size=batch_size,
+        request_timeout_s=request_timeout_s,
+        polite_delay_s=polite_delay_s,
+        wipe=wipe,
+        force=force,
+    )
+    _build_diogenes_impl(config)

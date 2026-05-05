@@ -15,17 +15,24 @@
         "tool_filter",
         "normalize",
         "no_cache",
+        "cache_policy",
+        "normalization_cache_writes",
         "include_cltk",
-        "translation_mode"
+        "translation_mode",
+        "translation_cache_writes"
       ],
       "properties": {
+        "command": { "type": "string" },
         "language": { "type": "string" },
         "text": { "type": "string" },
         "tool_filter": { "type": "string" },
         "normalize": { "type": "boolean" },
         "no_cache": { "type": "boolean" },
+        "cache_policy": { "type": "string" },
+        "normalization_cache_writes": { "type": "boolean" },
         "include_cltk": { "type": "boolean" },
-        "translation_mode": { "type": "string" }
+        "translation_mode": { "type": "string" },
+        "translation_cache_writes": { "type": "boolean" }
       },
       "additionalProperties": true
     },
@@ -34,8 +41,13 @@
       "required": ["code", "type", "message"],
       "properties": {
         "code": { "type": "string" },
+        "kind": { "type": "string" },
+        "command": { "type": "string" },
         "type": { "type": "string" },
-        "message": { "type": "string" }
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "retry_after_ms": { "type": "integer" },
+        "readonly_available": { "type": "boolean" }
       },
       "additionalProperties": true
     }

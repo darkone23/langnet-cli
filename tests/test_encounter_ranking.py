@@ -57,6 +57,54 @@ def test_preferred_lemmas_from_morphology_demotes_tackon_rows() -> None:
     assert preferred_lemmas_from_morphology(morphology_rows) == ["vir", "virum", "que"]
 
 
+def test_preferred_lemmas_from_morphology_promotes_exact_finite_verb_lemma() -> None:
+    morphology_rows = [
+        {
+            "source_tool": "whitaker",
+            "form": "disco",
+            "lemma": "discus",
+            "analysis": "noun; declension 2; nominative; singular; masculine",
+        },
+        {
+            "source_tool": "whitaker",
+            "form": "disco",
+            "lemma": "disco",
+            "analysis": "verb; conjugation 3; present; active; indicative; 1; singular",
+        },
+    ]
+
+    assert preferred_lemmas_from_morphology(morphology_rows) == ["disco", "discus"]
+
+
+def test_bucket_sort_key_prefers_exact_finite_verb_lemma_over_form_homograph() -> None:
+    verb = SimpleNamespace(
+        display_gloss="learn",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                lexeme_anchor="lex:disco",
+                evidence={"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_21250"},
+            )
+        ],
+    )
+    noun = SimpleNamespace(
+        display_gloss="disc; dish",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="gaffiot",
+                lexeme_anchor="lex:discus",
+                evidence={"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_21326"},
+            )
+        ],
+    )
+    preferred = ["disco", "discus"]
+
+    assert sorted([noun, verb], key=lambda bucket: bucket_sort_key(bucket, preferred)) == [
+        verb,
+        noun,
+    ]
+
+
 def test_preferred_lemmas_for_sorting_uses_morphology_before_reduction_order() -> None:
     reduction = SimpleNamespace(
         lexeme_anchors=["lex:principio", "lex:principium"],

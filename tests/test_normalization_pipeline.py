@@ -5,11 +5,12 @@ from pathlib import Path
 
 import duckdb
 from heritage_spec import MonierWilliamsResult, SktSearchResult
-from query_spec import LanguageHint, NormalizationStep
+from query_spec import CanonicalCandidate, LanguageHint, NormalizationStep, NormalizedQuery
 
 from langnet.diogenes.client import ParseResult, WordListResult
 from langnet.normalizer.core import (
     QueryNormalizer,
+    _hash_query,
     normalize_with_index,
 )
 from langnet.normalizer.sanskrit import HeritageClientProtocol, SanskritNormalizer
@@ -132,6 +133,29 @@ class _AmbiguousHeritage(_FakeHeritage):
         ]
 
 
+class _KarunaAmbiguousHeritage(_FakeHeritage):
+    def fetch_all_matches(self, query: str) -> list[HeritageMatch]:
+        return [
+            HeritageMatch(canonical="kar.na", display="karṇa", entry_url=""),
+            HeritageMatch(canonical="karu.naa", display="karuṇā", entry_url=""),
+        ]
+
+
+class _KarunTruncatedHeritage(_FakeHeritage):
+    def fetch_all_matches(self, query: str) -> list[HeritageMatch]:
+        if query == "karun":
+            return [
+                HeritageMatch(canonical="karin", display="karin", entry_url=""),
+                HeritageMatch(canonical="kaarin", display="kārin", entry_url=""),
+            ]
+        if query == "karuna":
+            return [
+                HeritageMatch(canonical="karu.na", display="karuṇa", entry_url=""),
+                HeritageMatch(canonical="karu.naa", display="karuṇā", entry_url=""),
+            ]
+        return []
+
+
 def test_sanskrit_normalizer_enrichment_prefers_heritage() -> None:
     steps: list[NormalizationStep] = []
     normalizer = SanskritNormalizer(heritage_client=_FakeHeritage())
@@ -180,6 +204,74 @@ def test_sanskrit_normalizer_ranks_exact_display_match_before_related_forms() ->
         "śraddhā_2",
         "śrāddha",
     ]
+
+
+def test_sanskrit_normalizer_prefers_reader_ascii_fold_over_unrelated_retroflex() -> None:
+    steps: list[NormalizationStep] = []
+    normalizer = SanskritNormalizer(heritage_client=_KarunaAmbiguousHeritage())
+
+    candidates = normalizer.canonical_candidates("karuna", steps)
+
+    assert [candidate.lemma for candidate in candidates[:2]] == ["karuṇā", "karṇa"]
+
+
+def test_sanskrit_cached_candidates_are_reranked_with_reader_ascii_fold() -> None:
+    conn = duckdb.connect(database=":memory:")
+    service = NormalizationService(conn, heritage_client=_KarunaAmbiguousHeritage())
+    normalized = service.normalize("karuna", LanguageHint.LANGUAGE_HINT_SAN).normalized
+    cached = service.normalize("karuna", LanguageHint.LANGUAGE_HINT_SAN).normalized
+
+    assert [candidate.lemma for candidate in normalized.candidates[:2]] == ["karuṇā", "karṇa"]
+    assert [candidate.lemma for candidate in cached.candidates[:2]] == ["karuṇā", "karṇa"]
+
+
+def test_sanskrit_stale_cached_consonant_final_reader_form_is_recomputed() -> None:
+    conn = duckdb.connect(database=":memory:")
+    apply_schema(conn)
+    index = NormalizationIndex(conn)
+    raw_query = "karun"
+    language = LanguageHint.LANGUAGE_HINT_SAN
+    index.upsert(
+        query_hash=_hash_query(raw_query, language),
+        raw_query=raw_query,
+        language=str(language).lower(),
+        normalized=NormalizedQuery(
+            original=raw_query,
+            language=language,
+            candidates=[
+                CanonicalCandidate(
+                    lemma="karin",
+                    encodings={"velthuis": "karin", "iast": "karin"},
+                    sources=["heritage_sktsearch"],
+                ),
+                CanonicalCandidate(
+                    lemma="kārin",
+                    encodings={"velthuis": "kaarin", "iast": "kārin"},
+                    sources=["heritage_sktsearch"],
+                ),
+            ],
+            normalizations=[],
+        ),
+    )
+    service = NormalizationService(conn, heritage_client=_KarunTruncatedHeritage())
+
+    normalized = service.normalize(raw_query, language).normalized
+
+    assert [candidate.lemma for candidate in normalized.candidates[:3]] == [
+        "karuṇa",
+        "karuṇā",
+        "karin",
+    ]
+
+
+def test_sanskrit_normalizer_completes_truncated_final_vowel_before_heritage_guess() -> None:
+    steps: list[NormalizationStep] = []
+    normalizer = SanskritNormalizer(heritage_client=_KarunTruncatedHeritage())
+
+    candidates = normalizer.canonical_candidates("karun", steps)
+
+    assert [candidate.lemma for candidate in candidates[:3]] == ["karuṇa", "karuṇā", "karin"]
+    assert any(step.operation == "heritage_final_vowel_completion" for step in steps)
 
 
 def test_devanagari_to_velthuis_canonical() -> None:

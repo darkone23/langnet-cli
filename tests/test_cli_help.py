@@ -40,6 +40,7 @@ def test_documented_command_help() -> None:
         "normalize",
         "translation-cache",
         "tools",
+        "word-index",
         "word-of-day",
         "recommend-words",
     ]
@@ -55,3 +56,34 @@ def test_index_subcommand_help() -> None:
 def test_translation_cache_subcommand_help() -> None:
     for command in ["status", "clear"]:
         _assert_help(["translation-cache", command])
+
+
+def test_word_index_subcommand_help() -> None:
+    for command in ["sources", "list", "neighborhood", "nearby", "wheel"]:
+        _assert_help(["word-index", command])
+
+
+def test_word_index_wheel_accepts_language_option() -> None:
+    result = CliRunner().invoke(
+        main,
+        [
+            "word-index",
+            "wheel",
+            "--language",
+            "grc",
+            "--source",
+            "diogenes",
+            "--count",
+            "1",
+            "--output",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert '"language": "grc"' in result.output
+
+
+def test_databuild_subcommand_help() -> None:
+    for command in ["cts", "cdsl", "gaffiot", "dico", "diogenes-index"]:
+        _assert_help(["databuild", command])

@@ -19,11 +19,12 @@ from .core import (
     _hash_query,
 )
 from .greek_transliterator import transliterate_variants
-from .sanskrit import HeritageClientProtocol
+from .sanskrit import HeritageClientProtocol, sanskrit_candidate_sort_key
 from .utils import normalize_greek_compatibility, strip_accents
 
 LanguageValue = LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
+SANSKRIT_READER_COMPLETION_MIN_LEN = 4
 
 if TYPE_CHECKING:
     from langnet.diogenes.client import DiogenesClient
@@ -152,7 +153,11 @@ class NormalizationService:
                 cached = None
             if cached is not None:
                 reranked = self._rerank_candidates(raw_query, language, cached)
-                if not self._cached_greek_epic_eus_is_stale(raw_query, language, reranked):
+                if not self._cached_reader_completion_is_stale(
+                    raw_query,
+                    language,
+                    reranked,
+                ) and not self._cached_greek_epic_eus_is_stale(raw_query, language, reranked):
                     return NormalizationResult(query_hash=query_hash, normalized=reranked)
 
         self._ensure_normalizer()
@@ -230,6 +235,27 @@ class NormalizationService:
             return expected not in non_local_actual
         return expected not in all_actual
 
+    def _cached_reader_completion_is_stale(
+        self,
+        raw_query: str,
+        language: LanguageValue,
+        normalized: NormalizedQuery,
+    ) -> bool:
+        if language != LanguageHint.LANGUAGE_HINT_SAN:
+            return False
+        text = raw_query.strip().lower()
+        if (
+            len(text) < SANSKRIT_READER_COMPLETION_MIN_LEN
+            or not text.isascii()
+            or not text[-1].isalpha()
+            or text[-1] in "aeiou"
+        ):
+            return False
+        return all(
+            sanskrit_candidate_sort_key(raw_query, candidate)[1] != 0
+            for candidate in normalized.candidates
+        )
+
     def _rerank_candidates(
         self, raw_query: str, language: LanguageValue, normalized: NormalizedQuery
     ) -> NormalizedQuery:
@@ -240,10 +266,8 @@ class NormalizationService:
         keeps omega/omicron and betacode/Unicode variants aligned to the best
         frequency match without forcing a cache clear.
         """
-        if language == LanguageHint.LANGUAGE_HINT_LAT:
-            return _enrich_latin_cached_candidates(raw_query, normalized)
         if language != LanguageHint.LANGUAGE_HINT_GRC:
-            return normalized
+            return _rerank_non_greek_candidates(raw_query, language, normalized)
 
         normalized = _enrich_greek_cached_candidates(raw_query, normalized)
 
@@ -295,6 +319,28 @@ class NormalizationService:
         normalized.candidates.clear()
         normalized.candidates.extend(ordered)
         return normalized
+
+
+def _rerank_non_greek_candidates(
+    raw_query: str,
+    language: LanguageValue,
+    normalized: NormalizedQuery,
+) -> NormalizedQuery:
+    if language == LanguageHint.LANGUAGE_HINT_LAT:
+        return _enrich_latin_cached_candidates(raw_query, normalized)
+    if language == LanguageHint.LANGUAGE_HINT_SAN:
+        return _rerank_sanskrit_candidates(raw_query, normalized)
+    return normalized
+
+
+def _rerank_sanskrit_candidates(raw_query: str, normalized: NormalizedQuery) -> NormalizedQuery:
+    candidates = list(normalized.candidates)
+    if len(candidates) <= 1:
+        return normalized
+    candidates.sort(key=lambda candidate: sanskrit_candidate_sort_key(raw_query, candidate))
+    normalized.candidates.clear()
+    normalized.candidates.extend(candidates)
+    return normalized
 
 
 def _enrich_latin_cached_candidates(raw_query: str, normalized: NormalizedQuery) -> NormalizedQuery:

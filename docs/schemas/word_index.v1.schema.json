@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langnet.local/schemas/word_index.v1.schema.json",
+  "title": "LangNet word index response",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "request",
+    "sources",
+    "items",
+    "neighborhood",
+    "pagination",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": { "const": "langnet.word_index.v1" },
+    "request": { "$ref": "#/$defs/request" },
+    "sources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sourceStatus" }
+    },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/item" }
+    },
+    "neighborhood": {
+      "anyOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/neighborhood" },
+        { "$ref": "#/$defs/mergedNeighborhood" },
+        {
+          "type": "object",
+          "required": ["groups"],
+          "properties": {
+            "groups": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/neighborhood" }
+            }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "pagination": { "$ref": "#/$defs/pagination" },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning" }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "request": {
+      "type": "object",
+      "required": ["language", "mode"],
+      "properties": {
+        "language": { "type": "string" },
+        "source": { "type": "string" },
+        "mode": { "enum": ["sources", "list", "neighborhood", "wheel"] },
+        "query": { "type": "string" },
+        "prefix": { "type": "string" },
+        "limit": { "type": "integer", "minimum": 1 },
+        "count": { "type": "integer", "minimum": 1 },
+        "radius": { "type": "integer", "minimum": 1 },
+        "merge": { "enum": ["auto", "none", "lexeme"] },
+        "cursor": { "type": ["string", "null"] },
+        "seed": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "sourceStatus": {
+      "type": "object",
+      "required": ["source", "language", "dictionary", "available", "entry_count", "path"],
+      "properties": {
+        "source": { "type": "string" },
+        "language": { "enum": ["lat", "grc", "san"] },
+        "dictionary": { "type": "string" },
+        "available": { "type": "boolean" },
+        "entry_count": { "type": "integer", "minimum": 0 },
+        "path": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "item": {
+      "type": "object",
+      "required": [
+        "language",
+        "source",
+        "dictionary",
+        "kind",
+        "lexeme_id",
+        "wheel_id",
+        "wheel_order_key",
+        "index_entry_id",
+        "source_order_id",
+        "canonical_name",
+        "canonical_key",
+        "source_name",
+        "lookup",
+        "display",
+        "sort_key",
+        "source_order_key",
+        "source_ref",
+        "encounter"
+      ],
+      "properties": {
+        "language": { "enum": ["lat", "grc", "san"] },
+        "source": { "type": "string" },
+        "dictionary": { "type": "string" },
+        "kind": { "enum": ["headword"] },
+        "lexeme_id": { "type": "string", "minLength": 1 },
+        "wheel_id": { "type": "string", "minLength": 1 },
+        "wheel_order_key": { "type": "string", "minLength": 1 },
+        "index_entry_id": { "type": "string", "minLength": 1 },
+        "source_order_id": { "type": "string", "minLength": 1 },
+        "canonical_name": { "type": "string", "minLength": 1 },
+        "canonical_key": { "type": "string", "minLength": 1 },
+        "source_name": { "type": "string", "minLength": 1 },
+        "lookup": { "type": "string", "minLength": 1 },
+        "display": { "$ref": "#/$defs/display" },
+        "sort_key": { "type": "string" },
+        "source_order_key": { "type": "string" },
+        "source_ref": { "type": "string" },
+        "ids": { "$ref": "#/$defs/itemIds" },
+        "source_count": { "type": "integer", "minimum": 1 },
+        "source_entry_count": { "type": "integer", "minimum": 1 },
+        "sources": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceBrief" }
+        },
+        "source_entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceEntry" }
+        },
+        "encounter": { "$ref": "#/$defs/encounterRequest" },
+        "metadata": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "sourceBrief": {
+      "type": "object",
+      "required": ["source", "dictionary"],
+      "properties": {
+        "source": { "type": "string" },
+        "dictionary": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "sourceEntry": {
+      "type": "object",
+      "required": ["index_entry_id", "source_order_id", "source", "dictionary", "source_ref"],
+      "properties": {
+        "index_entry_id": { "type": "string", "minLength": 1 },
+        "source_order_id": { "type": "string", "minLength": 1 },
+        "wheel_id": { "type": "string", "minLength": 1 },
+        "wheel_order_key": { "type": "string", "minLength": 1 },
+        "source": { "type": "string" },
+        "dictionary": { "type": "string" },
+        "source_name": { "type": "string" },
+        "source_display": { "type": "string" },
+        "source_ref": { "type": "string" },
+        "source_order_key": { "type": "string" },
+        "display": { "$ref": "#/$defs/display" },
+        "encounter": { "$ref": "#/$defs/encounterRequest" },
+        "metadata": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "itemIds": {
+      "type": "object",
+      "required": ["lexeme", "wheel", "index_entry", "source_order", "source_ref"],
+      "properties": {
+        "lexeme": { "type": "string", "minLength": 1 },
+        "wheel": { "type": "string", "minLength": 1 },
+        "index_entry": { "type": "string", "minLength": 1 },
+        "source_order": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "display": {
+      "type": "object",
+      "required": ["primary", "transliteration", "source_key"],
+      "properties": {
+        "primary": { "type": "string" },
+        "transliteration": { "type": "string" },
+        "source_key": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "encounterRequest": {
+      "type": "object",
+      "required": ["language", "q", "dictionary"],
+      "properties": {
+        "language": { "enum": ["lat", "grc", "san"] },
+        "q": { "type": "string" },
+        "dictionary": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "neighborhood": {
+      "type": "object",
+      "required": [
+        "language",
+        "source",
+        "dictionary",
+        "anchor",
+        "before",
+        "after",
+        "radius",
+        "neighborhood_kind",
+        "anchor_status",
+        "window"
+      ],
+      "properties": {
+        "language": { "enum": ["lat", "grc", "san"] },
+        "source": { "type": "string" },
+        "dictionary": { "type": "string" },
+        "anchor": { "$ref": "#/$defs/item" },
+        "before": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/item" }
+        },
+        "after": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/item" }
+        },
+        "radius": { "type": "integer", "minimum": 1 },
+        "neighborhood_kind": { "enum": ["lexical_order", "lookup_alternatives"] },
+        "anchor_status": { "enum": ["exact", "nearest", "not_found"] },
+        "window": { "$ref": "#/$defs/window" }
+      },
+      "additionalProperties": true
+    },
+    "mergedNeighborhood": {
+      "type": "object",
+      "required": [
+        "policy",
+        "language",
+        "source",
+        "dictionary",
+        "anchor",
+        "items",
+        "groups",
+        "radius",
+        "neighborhood_kind",
+        "anchor_status",
+        "window"
+      ],
+      "properties": {
+        "policy": { "const": "merged_lexeme" },
+        "language": { "enum": ["lat", "grc", "san", ""] },
+        "source": { "const": "all" },
+        "dictionary": { "const": "merged" },
+        "anchor": {
+          "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/item" }]
+        },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/mergedItem" }
+        },
+        "groups": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/neighborhood" }
+        },
+        "radius": { "type": "integer", "minimum": 1 },
+        "neighborhood_kind": { "const": "merged_lexeme" },
+        "anchor_status": { "enum": ["exact", "nearest", "not_found"] },
+        "window": { "$ref": "#/$defs/mergedWindow" }
+      },
+      "additionalProperties": true
+    },
+    "mergedItem": {
+      "allOf": [
+        { "$ref": "#/$defs/item" },
+        {
+          "type": "object",
+          "required": ["position"],
+          "properties": {
+            "position": { "enum": ["before", "anchor", "after", "nearby"] },
+            "match": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "mergedWindow": {
+      "type": "object",
+      "required": ["policy", "contiguous", "collapsed"],
+      "properties": {
+        "policy": { "const": "merged_lexeme_from_source_windows" },
+        "contiguous": { "const": false },
+        "collapsed": { "const": true },
+        "before_count": { "type": "integer", "minimum": 0 },
+        "after_count": { "type": "integer", "minimum": 0 },
+        "source_group_count": { "type": "integer", "minimum": 0 },
+        "lexeme_count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "window": {
+      "type": "object",
+      "required": ["policy", "contiguous", "collapsed"],
+      "properties": {
+        "policy": { "enum": ["source_entry_contiguous"] },
+        "contiguous": { "const": true },
+        "collapsed": { "const": false },
+        "before_count": { "type": "integer", "minimum": 0 },
+        "after_count": { "type": "integer", "minimum": 0 },
+        "source_entry_count": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "pagination": {
+      "type": "object",
+      "required": ["next_cursor", "prev_cursor"],
+      "properties": {
+        "next_cursor": { "type": ["string", "null"] },
+        "prev_cursor": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "warning": {
+      "type": "object",
+      "required": ["message"],
+      "properties": {
+        "source": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

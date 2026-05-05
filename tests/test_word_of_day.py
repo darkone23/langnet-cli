@@ -14,6 +14,7 @@ from langnet.cli import (
     _word_of_day_llm_call,
     _word_of_day_parse_finalized_cards,
     _word_of_day_parse_synthesized_candidates,
+    _word_of_day_probe_reduction,
     _word_of_day_probe_translation_mode,
     _word_of_day_system_prompt,
     main,
@@ -188,6 +189,30 @@ def test_word_of_day_probe_translation_mode_never_populates() -> None:
     assert _word_of_day_probe_translation_mode("auto") == "cache"
     assert _word_of_day_probe_translation_mode("populate") == "cache"
     assert _word_of_day_probe_translation_mode("do-it-all") == "cache"
+
+
+def test_word_of_day_probe_reduction_forces_cacheless_lookup_execution() -> None:
+    with (
+        patch("langnet.cli._execute_lookup_plan") as execute_lookup,
+        patch("langnet.cli._claims_as_mappings", return_value=[]),
+    ):
+        _word_of_day_probe_reduction(
+            language="san",
+            text="agni",
+            dictionary="all",
+            normalize=True,
+            diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+            diogenes_parse_endpoint=None,
+            heritage_base="http://localhost:48080",
+            db_path="data/cache/langnet.duckdb",
+            no_cache=False,
+            include_cltk=False,
+            translation_mode="off",
+            translation_cache_db="data/cache/langnet.duckdb",
+            translation_model="openai:test",
+        )
+
+    assert execute_lookup.call_args.kwargs["no_cache"] is True
 
 
 def test_word_of_day_auto_translation_mode_uses_cache_probe_with_warning() -> None:

@@ -144,6 +144,8 @@ def morphology_lemma_preference_key(
         return (2, idx)
     form = row.get("form", "").strip().casefold()
     lemma = row.get("lemma", "").strip().casefold()
+    if form and form == lemma and _is_exact_finite_verb_lemma_form(analysis):
+        return (-1, idx)
     if (
         form
         and form == lemma
@@ -151,6 +153,18 @@ def morphology_lemma_preference_key(
     ):
         return (1, idx)
     return (0, idx)
+
+
+def _is_exact_finite_verb_lemma_form(analysis: str) -> bool:
+    tokens = set(re.split(r"[^a-z0-9]+", analysis.casefold()))
+    return (
+        bool({"verb", "v"} & tokens)
+        and bool({"present", "pres"} & tokens)
+        and bool({"active"} & tokens)
+        and bool({"indicative", "ind"} & tokens)
+        and bool({"1", "first", "1st"} & tokens)
+        and bool({"singular", "s"} & tokens)
+    )
 
 
 def preferred_lemma_rank(

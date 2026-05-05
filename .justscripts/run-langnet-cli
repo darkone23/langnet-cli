@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd -- "${script_dir}/.." && pwd)"
+venv_cli="${repo_root}/.devenv/state/venv/bin/langnet-cli"
+
+cd "${repo_root}"
+export PYTHONPATH="${repo_root}/src:${repo_root}/vendor/langnet-spec/generated/python${PYTHONPATH:+:${PYTHONPATH}}"
+
+if [[ ! -x "${venv_cli}" ]]; then
+  devenv shell -- true >/dev/null
+fi
+
+if [[ -x "${venv_cli}" ]]; then
+  exec "${venv_cli}" "$@"
+fi
+
+exec devenv shell -- langnet-cli "$@"
