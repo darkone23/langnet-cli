@@ -21,6 +21,8 @@ class GreekTransliteration:
 
 EXACT_TRANSLITERATIONS = {
     "hen": GreekTransliteration(search_key="ἕν", betacode="", display="ἕν"),
+    "homo": GreekTransliteration(search_key="ὁμός", betacode="", display="ὁμός"),
+    "homos": GreekTransliteration(search_key="ὁμός", betacode="", display="ὁμός"),
 }
 
 
@@ -267,11 +269,11 @@ def _eta_omega_variants(base_key: str) -> list[str]:
 
 def _prioritized_omega_variants(raw_text: str, base_key: str) -> list[str]:
     """
-    Prefer an omega replacement for terminal -os when input uses 'o' or 'w' as omega.
+    Prefer an omega replacement only when the input explicitly marks omega.
     """
     out: list[str] = []
     lower = raw_text.lower()
-    if base_key.endswith("ος") and ("w" in lower or lower.endswith("os") or lower.endswith("ws")):
+    if base_key.endswith("ος") and ("w" in lower or "ō" in lower or "ô" in lower):
         omega_terminal = base_key[:-2] + "ως"
         out.append(omega_terminal)
     return out

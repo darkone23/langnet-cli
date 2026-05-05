@@ -43,6 +43,7 @@ def test_doctor_json_reports_cli_assumptions_without_network() -> None:
     assert "catalog:surface" in check_ids
     assert "translation_cache:path" in check_ids
     assert "translation:openai_key" in check_ids
+    assert "schema:word_of_day.v1.schema.json" in check_ids
 
 
 def test_doctor_can_require_openai_key_for_translation_population() -> None:

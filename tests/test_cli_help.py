@@ -40,6 +40,8 @@ def test_documented_command_help() -> None:
         "normalize",
         "translation-cache",
         "tools",
+        "word-of-day",
+        "recommend-words",
     ]
     for command in commands:
         _assert_help([command])

@@ -37,6 +37,8 @@ lookup output / evidence inspection / exact WSU reduction / encounter output
 | `plan-exec` | execute the full staged pipeline |
 | `triples-dump` | inspect claim triples and evidence |
 | `encounter` | show the current learner-facing reduced output |
+| `word-of-day` | emit learner recommendation cards with optional encounter probe summaries |
+| `recommend-words` | request several learner recommendation cards on demand |
 | `reader-eval` | score reader fixtures against encounter reductions |
 | `translation-warm` | populate DICO/Gaffiot translation cache rows from a word list |
 | `databuild` | build offline data/indexes |
@@ -120,12 +122,17 @@ Implemented:
 - Explicit `encounter --translation-mode auto` cache-miss population for
   DICO/Gaffiot translations.
 - Word-list DICO/Gaffiot translation-cache warming through `translation-warm`.
+- Compact learner glosses above full source dictionary entries for several
+  source families, including DICO-aware handling for long Sanskrit entries.
+- Source-headword-aware encounter ranking for exact dictionary hits.
+- Schema-backed `word-of-day` / `recommend-words` recommendation output.
 
 Not implemented yet:
 
 - Release-quality learner-facing semantic output.
-- Compact learner glosses over full translated/source dictionary entries.
-- Reader-form/headword ranking for known hard cases.
+- Complete typed source segmentation for all long LSJ/Lewis/Gaffiot/DICO/CDSL
+  entries.
+- Reader-form/headword ranking for remaining hard cases.
 - First-class ASGI/API surface as a product contract.
 - Passage-level interpretation.
 - Broad semantic merging beyond exact buckets.

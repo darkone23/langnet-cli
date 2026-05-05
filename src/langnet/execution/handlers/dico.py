@@ -23,7 +23,7 @@ from langnet.execution.effects import (
 )
 from langnet.execution.handlers.local_raw import local_raw_response_id
 from langnet.execution.source_text import (
-    compact_source_gloss,
+    compact_dico_source_gloss,
     display_text,
     learner_segments_from_text,
     source_segments_from_text,
@@ -225,8 +225,8 @@ def dico_entry_triples(entry: dict) -> list[dict]:
         segment_type="definition_segment",
         labels=["definition"],
     )
-    learner_gloss = compact_source_gloss(gloss)
-    learner_segments = learner_segments_from_text(gloss)
+    learner_gloss = compact_dico_source_gloss(gloss)
+    learner_segments = learner_segments_from_text(gloss, source_tool="dico")
     return [
         {
             "subject": lex_anchor,

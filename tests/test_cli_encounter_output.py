@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -18,6 +19,7 @@ from langnet.cli import (
     NormalizeConfig,
     _encounter_bucket_sort_key,
     _encounter_compact_gloss,
+    _encounter_component_candidates,
     _encounter_foster_display,
     _encounter_lemma_compare_keys,
     _encounter_morphology_fallback_terms,
@@ -245,6 +247,38 @@ def test_get_query_value_for_plan_uses_passthrough_for_greek_script() -> None:
     assert query.candidates[0].sources == ["manual"]
 
 
+def test_get_query_value_for_plan_normalizes_greek_compatibility_symbol() -> None:
+    normalized = NormalizedQuery(
+        original="ὄμϐρος",
+        language=LanguageHint.LANGUAGE_HINT_GRC,
+        candidates=[
+            CanonicalCandidate(
+                lemma="ὄμβρος",
+                sources=["diogenes_word_list"],
+            )
+        ],
+    )
+    service = SimpleNamespace(
+        normalize=lambda _text, _lang_hint: SimpleNamespace(normalized=normalized)
+    )
+
+    with patch("langnet.cli._create_normalization_service", return_value=service):
+        query = _get_query_value_for_plan(
+            "ὄμϐρος",
+            LanguageHint.LANGUAGE_HINT_GRC,
+            normalize=True,
+            norm_cfg=NormalizeConfig(
+                diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                heritage_base="http://localhost:48080",
+                db_path="examples/debug/nonexistent/test-normalize.duckdb",
+                no_cache=True,
+                output="pretty",
+            ),
+        )
+
+    assert query.candidates[0].lemma == "ὄμβρος"
+
+
 def test_get_query_value_for_plan_normalizes_greek_epic_eos_form() -> None:
     normalized = NormalizedQuery(
         original="Ἀχιλῆος",
@@ -346,6 +380,104 @@ def test_sanskrit_morphology_fallback_ignores_compound_component_lemmas() -> Non
         )
         == []
     )
+
+
+def test_encounter_sanskrit_component_candidates_follow_compound_solution() -> None:
+    rows = [
+        {
+            "source_tool": "heritage",
+            "form": "aṣṭan",
+            "lemma": "aṣṭan",
+            "analysis": "iic.",
+            "solution_number": "1",
+        },
+        {
+            "source_tool": "heritage",
+            "form": "aṅga_1",
+            "lemma": "aṅga_1",
+            "analysis": "n. sg. voc.",
+            "solution_number": "1",
+        },
+        {
+            "source_tool": "heritage",
+            "form": "aṣṭan",
+            "lemma": "aṣṭan",
+            "analysis": "* pl. nom.",
+            "solution_number": "2",
+        },
+        {
+            "source_tool": "heritage",
+            "form": "aṅga_2",
+            "lemma": "aṅga_2",
+            "analysis": "ind.",
+            "solution_number": "2",
+        },
+    ]
+
+    assert _encounter_component_candidates(rows, language="san") == [
+        {
+            "surface": "aṣṭan",
+            "lemma": "aṣṭan",
+            "display": "aṣṭan",
+            "role": "initial",
+            "analysis": "iic.",
+            "source_tool": "heritage",
+            "lookup_terms": ["aṣṭan", "aṣṭa"],
+        },
+        {
+            "surface": "aṅga_1",
+            "lemma": "aṅga_1",
+            "display": "aṅga",
+            "role": "final",
+            "analysis": "n. sg. voc.",
+            "source_tool": "heritage",
+            "lookup_terms": ["aṅga"],
+        },
+    ]
+
+
+def test_encounter_latin_component_candidates_link_tackon_and_base() -> None:
+    rows = [
+        {
+            "source_tool": "whitaker",
+            "form": "que",
+            "lemma": "que",
+            "analysis": "tackon",
+        },
+        {
+            "source_tool": "whitaker",
+            "form": "virum",
+            "lemma": "virum",
+            "analysis": "noun; declension 2; nominative; singular; neuter; accusative",
+        },
+        {
+            "source_tool": "whitaker",
+            "form": "virum",
+            "lemma": "vir",
+            "analysis": "noun; declension 2; accusative; singular; masculine",
+        },
+    ]
+
+    assert _encounter_component_candidates(rows, language="lat") == [
+        {
+            "surface": "virum",
+            "lemma": "vir",
+            "display": "vir",
+            "role": "base",
+            "analysis": "noun; declension 2; accusative; singular; masculine",
+            "source_tool": "whitaker",
+            "lookup_terms": ["vir"],
+        },
+        {
+            "surface": "que",
+            "lemma": "que",
+            "display": "-que",
+            "role": "tackon",
+            "analysis": "tackon",
+            "source_tool": "whitaker",
+            "lookup_terms": ["que"],
+        },
+    ]
 
 
 def _claim_from_translation_row(row: dict[str, object]) -> ClaimEffect:
@@ -711,6 +843,398 @@ def test_encounter_json_includes_public_contract_display_views() -> None:
         "foster_labels": True,
         "source_details": True,
     }
+
+
+def test_encounter_json_links_sanskrit_compound_components() -> None:
+    surface_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="fixture",
+                subject="lex:azwanga",
+                triples=[
+                    {
+                        "subject": "form:aṣṭan",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "lemma": "aṣṭan",
+                            "form": "aṣṭan",
+                            "analysis": "iic.",
+                            "solution_number": "1",
+                        },
+                        "metadata": {"evidence": {"source_tool": "heritage"}},
+                    },
+                    {
+                        "subject": "form:aṅga_1",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "lemma": "aṅga_1",
+                            "form": "aṅga_1",
+                            "analysis": "n. sg. voc.",
+                            "solution_number": "1",
+                        },
+                        "metadata": {"evidence": {"source_tool": "heritage"}},
+                    },
+                    {
+                        "subject": "lex:azwanga",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:azwanga#eight",
+                        "metadata": {
+                            "evidence": {"source_tool": "cdsl", "source_ref": "mw:20308.0"},
+                            "display_iast": "aṣṭāṅga",
+                            "display_slp1": "azwANga",
+                        },
+                    },
+                    {
+                        "subject": "sense:lex:azwanga#eight",
+                        "predicate": "gloss",
+                        "object": "consisting of eight parts or members",
+                        "metadata": {
+                            "evidence": {"source_tool": "cdsl", "source_ref": "mw:20308.0"},
+                            "display_iast": "aṣṭāṅga",
+                            "display_slp1": "azwANga",
+                        },
+                    },
+                ],
+            )
+        ]
+    )
+    ashtan_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="dico",
+                subject="lex:a.s.tan",
+                triples=[
+                    {
+                        "subject": "lex:a.s.tan",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:a.s.tan#eight",
+                        "metadata": {
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:7.html#a.s.tan:0",
+                                "source_entry": {
+                                    "dict": "dico",
+                                    "headword_norm": "a.s.tan",
+                                    "headword_roma": "aṣṭan",
+                                    "source_ref": "dico:7.html#a.s.tan:0",
+                                },
+                            }
+                        },
+                    },
+                    {
+                        "subject": "sense:lex:a.s.tan#eight",
+                        "predicate": "gloss",
+                        "object": "the number eight",
+                        "metadata": {
+                            "display_gloss": "the number eight",
+                            "source_lang": "fr",
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:7.html#a.s.tan:0",
+                                "source_lang": "fr",
+                                "source_entry": {
+                                    "dict": "dico",
+                                    "headword_norm": "a.s.tan",
+                                    "headword_roma": "aṣṭan",
+                                    "source_ref": "dico:7.html#a.s.tan:0",
+                                },
+                            },
+                        },
+                    },
+                ],
+            )
+        ]
+    )
+    anga_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="dico",
+                subject="lex:a.nga",
+                triples=[
+                    {
+                        "subject": "lex:a.nga_2",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:a.nga#particle",
+                        "metadata": {
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:8.html#a.nga:2",
+                                "source_entry": {
+                                    "dict": "dico",
+                                    "headword_norm": "a.nga",
+                                    "headword_roma": "aṅga",
+                                },
+                            }
+                        },
+                    },
+                    {
+                        "subject": "sense:lex:a.nga#particle",
+                        "predicate": "gloss",
+                        "object": "aṅga_2 part. emphatic particle",
+                        "metadata": {
+                            "display_gloss": "aṅga_2 part. emphatic particle",
+                            "source_lang": "fr",
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:8.html#a.nga:2",
+                                "source_lang": "fr",
+                            },
+                        },
+                    },
+                    {
+                        "subject": "lex:a.nga_1",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:a.nga#member",
+                        "metadata": {
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:8.html#a.nga:1",
+                                "source_entry": {
+                                    "dict": "dico",
+                                    "headword_norm": "a.nga",
+                                    "headword_roma": "aṅga",
+                                },
+                            }
+                        },
+                    },
+                    {
+                        "subject": "sense:lex:a.nga#member",
+                        "predicate": "gloss",
+                        "object": "member; limb; body division",
+                        "metadata": {
+                            "display_gloss": "member; limb; body division",
+                            "source_lang": "fr",
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:8.html#a.nga:1",
+                                "source_lang": "fr",
+                            },
+                        },
+                    },
+                ],
+            )
+        ]
+    )
+
+    with patch(
+        "langnet.cli._execute_lookup_plan",
+        side_effect=[surface_result, ashtan_result, anga_result],
+    ):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "san",
+                "ashtanga",
+                "all",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+                "--max-buckets",
+                "1",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    _assert_matches_schema(payload, ENCOUNTER_SCHEMA_PATH)
+    assert payload["display"]["components"] == payload["components"]
+    assert payload["display"]["meanings"][0]["display_gloss"] == (
+        "consisting of eight parts or members"
+    )
+    assert [(component["display"], component["role"]) for component in payload["components"]] == [
+        ("aṣṭan", "initial"),
+        ("aṅga", "final"),
+    ]
+    assert payload["components"][0]["lookup_terms"] == ["aṣṭan", "aṣṭa"]
+    assert payload["components"][0]["evidence"]["status"] == "linked"
+    assert payload["components"][0]["evidence"]["source"] == "component_lookup"
+    assert payload["components"][0]["evidence"]["lookup_tool_filter"] == "dico"
+    assert (
+        payload["components"][0]["evidence"]["meanings"][0]["display_gloss"] == "the number eight"
+    )
+    assert payload["components"][1]["evidence"]["meanings"][0]["display_gloss"] == (
+        "member; limb; body division"
+    )
+
+
+def test_encounter_translation_mode_auto_projects_component_lookup_claims() -> None:
+    surface_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="fixture",
+                subject="lex:azwanga",
+                triples=[
+                    {
+                        "subject": "form:aṣṭan",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "lemma": "aṣṭan",
+                            "form": "aṣṭan",
+                            "analysis": "iic.",
+                            "solution_number": "1",
+                        },
+                        "metadata": {"evidence": {"source_tool": "heritage"}},
+                    },
+                    {
+                        "subject": "form:aṅga_1",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "lemma": "aṅga_1",
+                            "form": "aṅga_1",
+                            "analysis": "n. sg. voc.",
+                            "solution_number": "1",
+                        },
+                        "metadata": {"evidence": {"source_tool": "heritage"}},
+                    },
+                    {
+                        "subject": "lex:azwanga",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:azwanga#whole",
+                        "metadata": {"evidence": {"source_tool": "cdsl"}},
+                    },
+                    {
+                        "subject": "sense:lex:azwanga#whole",
+                        "predicate": "gloss",
+                        "object": "consisting of eight parts or members",
+                        "metadata": {"evidence": {"source_tool": "cdsl"}},
+                    },
+                ],
+            )
+        ]
+    )
+    ashtan_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="dico-ashtan",
+                subject="lex:a.s.tan",
+                triples=[
+                    {
+                        "subject": "lex:a.s.tan",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:a.s.tan#eight",
+                        "metadata": {
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:7.html#a.s.tan:0",
+                            }
+                        },
+                    },
+                    {
+                        "subject": "sense:lex:a.s.tan#eight",
+                        "predicate": "gloss",
+                        "object": "le nombre huit",
+                        "metadata": {
+                            "source_lang": "fr",
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:7.html#a.s.tan:0",
+                                "source_lang": "fr",
+                            },
+                        },
+                    },
+                ],
+            )
+        ]
+    )
+    anga_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="dico-anga",
+                subject="lex:a.nga",
+                triples=[
+                    {
+                        "subject": "lex:a.nga",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:a.nga#member",
+                        "metadata": {
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:8.html#a.nga:1",
+                            }
+                        },
+                    },
+                    {
+                        "subject": "sense:lex:a.nga#member",
+                        "predicate": "gloss",
+                        "object": "membre; partie du corps",
+                        "metadata": {
+                            "source_lang": "fr",
+                            "evidence": {
+                                "source_tool": "dico",
+                                "source_ref": "dico:8.html#a.nga:1",
+                                "source_lang": "fr",
+                            },
+                        },
+                    },
+                ],
+            )
+        ]
+    )
+    contexts: list[str] = []
+
+    def fake_apply_translation_cache(**kwargs):
+        context = kwargs["context"]
+        contexts.append(context)
+        claims = deepcopy(list(kwargs["claims"]))
+        display_by_context = {
+            "component:aṣṭan": "eight",
+            "component:aṅga": "member; body part",
+        }
+        display = display_by_context.get(context)
+        if display is None:
+            return claims
+        for claim in claims:
+            value = claim.get("value")
+            triples = value.get("triples") if isinstance(value, dict) else None
+            if not isinstance(triples, list):
+                continue
+            for triple in triples:
+                if triple.get("predicate") != "gloss":
+                    continue
+                metadata = triple.setdefault("metadata", {})
+                metadata["display_gloss"] = display
+                metadata["source_lang"] = "en"
+                evidence = metadata.setdefault("evidence", {})
+                evidence["source_lang"] = "en"
+        return claims
+
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "translations.duckdb"
+        with (
+            patch(
+                "langnet.cli._execute_lookup_plan",
+                side_effect=[surface_result, ashtan_result, anga_result],
+            ),
+            patch(
+                "langnet.cli._encounter_apply_translation_cache",
+                side_effect=fake_apply_translation_cache,
+            ),
+        ):
+            cli_result = CliRunner().invoke(
+                main,
+                [
+                    "encounter",
+                    "san",
+                    "ashtanga",
+                    "all",
+                    "--output",
+                    "json",
+                    "--translation-mode",
+                    "auto",
+                    "--translation-cache-db",
+                    str(cache_path),
+                ],
+            )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    assert contexts == ["initial", "component:aṣṭan", "component:aṅga"]
+    assert payload["components"][0]["evidence"]["meanings"][0]["display_gloss"] == "eight"
+    assert payload["components"][1]["evidence"]["meanings"][0]["display_gloss"] == (
+        "member; body part"
+    )
 
 
 def test_encounter_json_returns_structured_error_on_lookup_failure() -> None:
@@ -1543,7 +2067,41 @@ def test_encounter_preferred_lemma_sort_matches_sanskrit_transliteration_variant
     assert sorted(
         [cdsl_bucket, dico_bucket],
         key=lambda bucket: _encounter_bucket_sort_key(bucket, ["varuṇa"]),
-    ) == [dico_bucket, cdsl_bucket]
+    ) == [cdsl_bucket, dico_bucket]
+
+
+def test_encounter_sort_prefers_exact_source_headword_deva() -> None:
+    near_bucket = SimpleNamespace(
+        display_gloss="puraṇa [obj. pṝ ] m. océan.",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="dico",
+                lexeme_anchor="lex:pura.na",
+                evidence={
+                    "source_tool": "dico",
+                    "source_entry": {"headword_deva": "पुरण", "headword_norm": "pura.na"},
+                },
+            )
+        ],
+    )
+    exact_bucket = SimpleNamespace(
+        display_gloss="purāṇa old; ancient tale",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="dico",
+                lexeme_anchor="lex:puraa.na",
+                evidence={
+                    "source_tool": "dico",
+                    "source_entry": {"headword_deva": "पुराण", "headword_norm": "puraa.na"},
+                },
+            )
+        ],
+    )
+
+    assert sorted(
+        [near_bucket, exact_bucket],
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, ["पुराण"]),
+    ) == [exact_bucket, near_bucket]
 
 
 def test_encounter_sanskrit_heritage_analysis_snapshot() -> None:

@@ -229,6 +229,77 @@ def test_cached_ascii_greek_results_are_enriched_with_exact_transliteration() ->
         conn_read.close()
 
 
+def test_cached_homo_results_are_reranked_to_real_headword() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "canon.duckdb"
+        conn = duckdb.connect(str(db_path))
+        ensure_norm_schema(conn)
+        index = NormalizationIndex(conn)
+        stale = NormalizedQuery(
+            original="homo",
+            language=LanguageHint.LANGUAGE_HINT_GRC,
+            candidates=[
+                CanonicalCandidate(lemma="ὁμο.", encodings={}, sources=["diogenes_word_list"]),
+                CanonicalCandidate(lemma="ὁμο", encodings={}, sources=["diogenes_word_list"]),
+                CanonicalCandidate(lemma="ὁμός", encodings={}, sources=["diogenes_word_list"]),
+            ],
+        )
+        index.upsert(
+            query_hash=_hash_query("homo", LanguageHint.LANGUAGE_HINT_GRC),
+            raw_query="homo",
+            language=str(LanguageHint.LANGUAGE_HINT_GRC).lower(),
+            normalized=stale,
+            source_response_ids=None,
+        )
+        conn.close()
+
+        conn_read = duckdb.connect(str(db_path))
+        svc = NormalizationService(conn_read, use_cache=True)
+        result = svc.normalize("homo", LanguageHint.LANGUAGE_HINT_GRC)
+
+        assert result.normalized.candidates[0].lemma == "ὁμός"
+        conn_read.close()
+
+
+def test_cached_greek_compatibility_symbol_result_is_recomputed() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "canon.duckdb"
+        conn = duckdb.connect(str(db_path))
+        ensure_norm_schema(conn)
+        index = NormalizationIndex(conn)
+        stale = NormalizedQuery(
+            original="ὄμϐρος",
+            language=LanguageHint.LANGUAGE_HINT_GRC,
+            candidates=[CanonicalCandidate(lemma="α-", encodings={}, sources=["diogenes_parse"])],
+        )
+        index.upsert(
+            query_hash=_hash_query("ὄμϐρος", LanguageHint.LANGUAGE_HINT_GRC),
+            raw_query="ὄμϐρος",
+            language=str(LanguageHint.LANGUAGE_HINT_GRC).lower(),
+            normalized=stale,
+            source_response_ids=None,
+        )
+        conn.close()
+
+        conn_read = duckdb.connect(str(db_path))
+        dio = GreekDiogenes(parse_lemmas=["ombros"], word_list_lemmas=["ὄμβρος"])
+        svc = NormalizationService(
+            conn_read,
+            diogenes_config=DiogenesConfig(greek_client=cast(DiogenesClient, dio)),
+            use_cache=True,
+        )
+        result = svc.normalize("ὄμϐρος", LanguageHint.LANGUAGE_HINT_GRC)
+
+        assert dio.parse_queries == ["ὄμβρος"]
+        assert dio.word_list_queries == ["ὄμβρος"]
+        assert "α-" not in [candidate.lemma for candidate in result.normalized.candidates]
+        assert {candidate.lemma for candidate in result.normalized.candidates} >= {
+            "ombros",
+            "ὄμβρος",
+        }
+        conn_read.close()
+
+
 def test_greek_rerank_prefers_lexical_sigma_candidate_over_surface_nu() -> None:
     conn = duckdb.connect(database=":memory:")
     svc = NormalizationService(

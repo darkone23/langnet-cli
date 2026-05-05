@@ -235,6 +235,9 @@ def test_cdsl_slp1_iast_round_trip_covers_common_sanskrit_letters() -> None:
     assert "SrAdDa" in cdsl._candidate_keys("zrAddha")
     assert "SradDA" in cdsl._candidate_keys("śraddhā")
     assert cdsl._to_slp1("vi.s.nu") == "vizRu"
+    assert cdsl._to_slp1("ahafkaara") == "ahaNkAra"
+    assert "ahaMkAra" in cdsl._candidate_keys("ahafkaara")
+    assert "ahaMkAra" in cdsl._candidate_keys("ahaṅkāra")
 
 
 def test_cdsl_body_metadata_uses_standard_sanskrit_case_numbering() -> None:
@@ -655,6 +658,52 @@ def test_cdsl_fetch_preserves_case_sensitive_slp1_ranking(tmp_path: Path) -> Non
 
     rows = orjson.loads(response.body)
     assert [row["key"] for row in rows] == ["Darma"]
+
+
+def test_cdsl_fetch_reaches_ahamkara_from_heritage_nasal_key(tmp_path: Path) -> None:
+    db_path = tmp_path / "cdsl_mw.duckdb"
+    with duckdb.connect(str(db_path)) as conn:
+        conn.execute(
+            """
+            CREATE TABLE entries (
+                dict_id VARCHAR,
+                key VARCHAR,
+                key2 VARCHAR,
+                key_normalized VARCHAR,
+                key2_normalized VARCHAR,
+                lnum VARCHAR,
+                body VARCHAR,
+                plain_text VARCHAR,
+                data VARCHAR
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "mw",
+                "ahaMkAra",
+                "ahaM-kAra",
+                "ahamkara",
+                "aham-kara",
+                "21688",
+                "",
+                "conception of one's individuality, self-consciousness",
+                "",
+            ),
+        )
+
+    with patch("langnet.execution.handlers.cdsl.default_cdsl_path", return_value=db_path):
+        response = cdsl.CdslFetchClient().execute(
+            "cdsl-1",
+            "duckdb",
+            {"dict": "mw", "lemma": "ahafkAra"},
+        )
+
+    rows = orjson.loads(response.body)
+    assert [row["key"] for row in rows] == ["ahaMkAra"]
 
 
 def test_cdsl_match_filter_preserves_lowercase_slp1_query() -> None:

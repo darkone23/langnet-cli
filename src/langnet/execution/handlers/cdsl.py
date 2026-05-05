@@ -102,6 +102,7 @@ _CDSL_SOURCE_ABBREVIATIONS: frozenset[str] = frozenset(
     }
 )
 _HERITAGE_S_DOT_PLACEHOLDER = "\u0000"
+_HERITAGE_N_PLACEHOLDER = "\u0001"
 
 
 def _heritage_velthuis_to_slp1_basic(text: str) -> str:
@@ -129,11 +130,13 @@ def _heritage_velthuis_to_slp1_basic(text: str) -> str:
         ("uu", "U"),
     ]
     out = text.replace(".s", _HERITAGE_S_DOT_PLACEHOLDER)
+    out = out.replace("f", _HERITAGE_N_PLACEHOLDER)
     for old, new in replacements:
         out = out.replace(old, new)
     for old, new in _ASCII_DIGRAPH_TO_SLP1.items():
         out = out.replace(old, new)
     out = out.replace("z", "S")
+    out = out.replace(_HERITAGE_N_PLACEHOLDER, "N")
     return out.replace(_HERITAGE_S_DOT_PLACEHOLDER, "z")
 
 
@@ -141,6 +144,8 @@ def _looks_like_slp1(text: str) -> bool:
     if any(marker in text for marker in _VELTHUIS_MARKERS):
         return False
     lowered = text.lower()
+    if any(pair in lowered for pair in ("aa", "ii", "uu")):
+        return False
     if any(pair in lowered for pair in _ASCII_DIGRAPH_TO_SLP1):
         return False
     return bool(text) and all(c.lower() in _SLP1_CHARS for c in text if c.isalpha())
@@ -548,6 +553,24 @@ def _slp1_to_ascii(text: str) -> str:
     return _strip_accents(_slp1_to_iast(text))
 
 
+def _nasalized_slp1_key_variants(text: str) -> set[str]:
+    """
+    Add CDSL key alternates for anusvara and homorganic nasal ambiguity.
+
+    Heritage can canonicalize `ahaṃkāra` as `ahaṅkāra`, while MW keys the entry
+    as `ahaMkAra`. Keep both spellings available for lookup.
+    """
+    if not text:
+        return set()
+    variants: set[str] = set()
+    for old, new in (("N", "M"), ("M", "N"), ("f", "M"), ("f", "N")):
+        converted = re.sub(rf"{old}(?=[kKgG])", new, text)
+        if converted != text:
+            variants.add(converted)
+            variants.add(converted.lower())
+    return variants
+
+
 def _candidate_keys(lemma: str) -> list[str]:
     raw = (lemma or "").strip()
     if not raw:
@@ -568,10 +591,12 @@ def _candidate_keys(lemma: str) -> list[str]:
         if slp1:
             variants.add(slp1)
             variants.add(slp1.lower())
+            variants.update(_nasalized_slp1_key_variants(slp1))
             if not slp1.endswith("H"):
                 visarga = f"{slp1}H"
                 variants.add(visarga)
                 variants.add(visarga.lower())
+                variants.update(_nasalized_slp1_key_variants(visarga))
         slp1_ascii = _slp1_to_ascii(seed)
         if slp1_ascii:
             variants.add(slp1_ascii)
@@ -588,9 +613,15 @@ def _preferred_slp1_keys(lemma: str) -> list[str]:
         slp1 = _to_slp1(seed)
         if slp1 and slp1 not in preferred:
             preferred.append(slp1)
+        for variant in _nasalized_slp1_key_variants(slp1):
+            if variant not in preferred:
+                preferred.append(variant)
         visarga = f"{slp1}H" if slp1 and not slp1.endswith("H") else ""
         if visarga and visarga not in preferred:
             preferred.append(visarga)
+        for variant in _nasalized_slp1_key_variants(visarga):
+            if variant not in preferred:
+                preferred.append(variant)
     return preferred
 
 

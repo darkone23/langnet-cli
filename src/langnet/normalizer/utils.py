@@ -19,6 +19,11 @@ def strip_accents(text: str) -> str:
     )
 
 
+def normalize_greek_compatibility(text: str) -> str:
+    """Fold Greek compatibility glyphs, such as ϐ, to ordinary Greek letters."""
+    return unicodedata.normalize("NFKC", text)
+
+
 def contains_greek(text: str) -> bool:
     """Detect if a string contains Greek code points."""
     for char in text:
@@ -70,7 +75,7 @@ def normalize_greekish_token(text: str) -> str | None:
     """
     if not text:
         return None
-    cleaned = strip_accents(text).strip()
+    cleaned = strip_accents(normalize_greek_compatibility(text)).strip()
     candidate: str | None = None
     if contains_greek(cleaned):
         candidate = cleaned

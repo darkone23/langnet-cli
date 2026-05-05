@@ -17,6 +17,8 @@ LangNet has a working CLI-first word-level evidence engine:
   renderers.
 - Encounter display, ranking, and translation-cache orchestration are isolated
   in helper modules with CLI compatibility wrappers.
+- `word-of-day` and `recommend-words` expose schema-backed learner
+  recommendation cards with optional encounter probe summaries.
 
 The project remains in stabilization. The next work is learner-quality
 refinement, not broad product expansion.
@@ -29,6 +31,7 @@ Current state:
 
 - `just ruff-check` and `just typecheck` pass.
 - Focused `encounter` and translation projection tests pass.
+- `word-of-day` JSON output is schema-backed and covered by tests.
 - CLI recipes route through the maintained `langnet-cli` surface.
 - Stale root quick-start content has been replaced with current pointers.
 
@@ -135,6 +138,12 @@ Implemented:
   buckets.
 - Display meaning rows include per-entry witness metadata summaries, and the
   success/error JSON shapes are documented with JSON Schema files.
+- DICO-aware compact learner glosses preserve useful later sense sections while
+  leaving long source text inspectable in JSON.
+- Source-headword metadata contributes to ranking, so exact source entries can
+  beat near forms without overriding clear morphology-backed lemmas.
+- `word-of-day` and `recommend-words` provide learner recommendation cards
+  without becoming a separate semantic pipeline.
 
 Remaining:
 

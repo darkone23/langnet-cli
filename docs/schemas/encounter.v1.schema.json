@@ -31,6 +31,10 @@
     "warnings": { "type": "array", "items": { "type": "string" } },
     "request": { "$ref": "#/$defs/request" },
     "display": { "$ref": "#/$defs/display" },
+    "components": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/component" }
+    },
     "ranking": {
       "type": "array",
       "items": { "type": "object" },
@@ -74,6 +78,10 @@
         "meanings": {
           "type": "array",
           "items": { "$ref": "#/$defs/meaningRow" }
+        },
+        "components": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/component" }
         },
         "options": {
           "type": "object",
@@ -144,6 +152,65 @@
           "type": "array",
           "items": { "$ref": "#/$defs/entrySummary" }
         }
+      },
+      "additionalProperties": true
+    },
+    "component": {
+      "type": "object",
+      "required": [
+        "surface",
+        "lemma",
+        "display",
+        "role",
+        "analysis",
+        "source_tool",
+        "lookup_terms",
+        "evidence"
+      ],
+      "properties": {
+        "surface": { "type": "string" },
+        "lemma": { "type": "string" },
+        "display": { "type": "string" },
+        "role": { "type": "string" },
+        "analysis": { "type": "string" },
+        "source_tool": { "type": "string" },
+        "lookup_terms": { "type": "array", "items": { "type": "string" } },
+        "evidence": { "$ref": "#/$defs/componentEvidence" }
+      },
+      "additionalProperties": true
+    },
+    "componentEvidence": {
+      "type": "object",
+      "required": ["status", "source", "lookup_tool_filter", "meanings", "error"],
+      "properties": {
+        "status": { "type": "string" },
+        "source": { "type": "string" },
+        "lookup_tool_filter": { "type": "string" },
+        "meanings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/componentMeaning" }
+        },
+        "error": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "componentMeaning": {
+      "type": "object",
+      "required": [
+        "bucket_id",
+        "display_gloss",
+        "sources",
+        "source_text",
+        "source_refs",
+        "source_langs"
+      ],
+      "properties": {
+        "bucket_id": { "type": "string" },
+        "display_gloss": { "type": "string" },
+        "sources": { "type": "array", "items": { "type": "string" } },
+        "source_text": { "type": "string" },
+        "source_refs": { "type": "array", "items": { "type": "string" } },
+        "source_langs": { "type": "array", "items": { "type": "string" } }
       },
       "additionalProperties": true
     },

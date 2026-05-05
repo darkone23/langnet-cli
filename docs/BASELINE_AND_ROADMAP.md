@@ -1,6 +1,6 @@
 # Working Baseline And Roadmap
 
-**Date:** 2026-05-01  
+**Date:** 2026-05-02
 **Mode:** stabilization before expansion
 
 This document is the current checkpoint for continuing LangNet development. It
@@ -28,8 +28,8 @@ reader who asks, "what does this word mean here?"
 
 - CLI-first product surface.
 - Commands: `lookup`, `parse`, `normalize`, `plan`, `plan-exec`,
-  `triples-dump`, `encounter`, `reader-eval`, `translation-warm`,
-  `databuild`, and `index`.
+  `triples-dump`, `encounter`, `word-of-day`, `recommend-words`,
+  `reader-eval`, `translation-warm`, `databuild`, and `index`.
 - Deterministic planning over normalized queries.
 - Staged execution: fetch -> extract -> derive -> claim.
 - DuckDB-backed caches and indexes for normalization, staged effects, claims,
@@ -59,6 +59,15 @@ continue to use fixtures rather than live services.
   `learner_segments` metadata in addition to full `source_entry` and
   `source_segments`; CDSL already carries source-specific learner display
   metadata.
+- DICO compact display now preserves useful later sense sections from long
+  entries, and JSON exposes source length/evidence notes so callers can tell
+  upstream ellipses apart from display summarization.
+- Source-headword metadata participates in encounter ranking, improving exact
+  DICO cases such as `पुराण` without overriding clear morphology-backed
+  headword choices.
+- `word-of-day` and `recommend-words` return schema-backed learner
+  recommendation cards and can include verified encounter probe summaries when
+  source evidence is available.
 - `triples-dump --output json` and `plan-exec --output json` are the inspection
   surfaces for claims, triples, cache status, skipped calls, and handler stages.
 

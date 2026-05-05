@@ -19,7 +19,7 @@ def test_analyze_source_entry_extracts_dico_gloss_and_references() -> None:
         source_tool="dico",
     )
 
-    assert analysis["learner_gloss"] == "loi, condition, nature propre"
+    assert analysis["learner_gloss"] == ("loi, condition, nature propre; devoir religieux [ Mah. ]")
     gloss_candidates = cast(list[dict[str, object]], analysis["gloss_candidates"])
     grammar_parse = cast(dict[str, object], analysis["grammar_parse"])
     source_references = cast(list[dict[str, object]], analysis["source_references"])
@@ -46,6 +46,22 @@ def test_analyze_source_entry_extracts_dico_gloss_and_references() -> None:
         "segment_type": "cross_reference_segment",
         "labels": ["cross_reference", "source_reference"],
     }
+
+
+def test_analyze_source_entry_preserves_dico_later_sense_sections() -> None:
+    analysis = analyze_source_entry(
+        "purāṇa [ purā -na ] a. m. n. f. purāṇī vieux, ancien, antique ; fané — "
+        "n. antiquité ; vieille légende, histoire ancienne | lit. «récit d'antan», "
+        "recueil mythologique et religieux ; un purāṇa traite traditionnellement "
+        "de cinq sujets",
+        source_tool="dico",
+    )
+
+    learner_gloss = str(analysis["learner_gloss"])
+    learner_segments = cast(list[dict[str, object]], analysis["learner_segments"])
+    assert "vieille légende" in learner_gloss
+    assert "récit d'antan" in learner_gloss
+    assert learner_segments[0]["display_text"] == learner_gloss
 
 
 def test_analyze_source_entry_extracts_gaffiot_citations_and_examples() -> None:

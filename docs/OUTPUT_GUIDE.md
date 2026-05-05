@@ -89,6 +89,24 @@ The self-description schemas live in:
 - `docs/schemas/languages.v1.schema.json`
 - `docs/schemas/tools.v1.schema.json`
 
+`word-of-day --output json` and `recommend-words --output json` return learner
+recommendation cards using schema version `langnet.word_of_day.v1`. The schema
+lives at `docs/schemas/word_of_day.v1.schema.json`.
+
+```bash
+just cli word-of-day san --output json
+just cli recommend-words grc --count 3 --output json
+```
+
+Recommendation cards include `canonical_name` for the learner-facing headword
+projection, plus a structured `canonical` object with `script`, `source`,
+`transliteration`, `source_key`, and `lexeme`. Sanskrit cards prefer
+Devanagari, Greek cards prefer UTF-8 Greek, and Latin cards keep the Latin
+headword. Cards also include a short gloss, a learner note about why the word is
+worth studying, and an optional encounter probe summary. The probe summary is
+cache-only for translation evidence; these commands should not hide live
+translation latency inside ordinary recommendation rendering.
+
 Use `doctor` when a subprocess caller needs a local, non-network readiness
 check for the CLI surface, schema files, translation cache path, translation
 dependencies, and optional tools:
@@ -185,6 +203,15 @@ right surface for examples and snapshots, but not the machine contract. Use
 
 The accepted-output gallery currently covers representative Sanskrit, Latin, and Greek snapshots in `tests/test_cli_encounter_output.py`. Add new examples there when display ranking or source transforms change.
 
+Long source entries are expected. The compact display line is a learner summary,
+not a replacement for source evidence. JSON consumers should inspect
+`display.meanings[*].entries[*]`, `source_entry`, `source_text_chars`, and
+`evidence_length_note` when they need to explain whether a visible ellipsis came
+from LangNet compaction or from an upstream source entry. For example, DICO can
+return source text that itself ends with `...`; LangNet should still rank exact
+headword matches first and preserve the useful learner sense in
+`display_gloss`.
+
 ### JSON Contract
 
 `encounter --output json` keeps the raw reduction fields for compatibility:
@@ -211,6 +238,13 @@ New renderer-facing fields are additive:
   entry metadata such as source tool, source ref, headword, entry id,
   dictionary, source-entry summary, typed source notes, raw blob reference, and
   translation provenance;
+- `components` and `display.components`: optional structured component links
+  when a morphology tool exposes a likely decomposition, such as Sanskrit
+  compound members from Heritage `iic.` rows or Latin Whitaker tackons. These
+  links include the component surface, lemma, learner display form, role,
+  analysis, lookup terms, and linked evidence status/meanings. They are
+  supporting evidence for rendering partial links; they do not replace or
+  reorder the primary `display.meanings` buckets;
 - `display.options`: rendering controls used to build display strings.
 
 Web/API consumers should render `display.*`, inspect `ranking` for ordering

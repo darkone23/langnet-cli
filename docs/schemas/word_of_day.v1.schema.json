@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langnet.local/schemas/word_of_day.v1.schema.json",
+  "title": "LangNet word recommendation response",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "suggested_ttl_seconds",
+    "generator",
+    "request",
+    "items",
+    "warnings",
+    "exhaustion"
+  ],
+  "properties": {
+    "schema_version": { "const": "langnet.word_of_day.v1" },
+    "generated_at": { "type": "string" },
+    "suggested_ttl_seconds": { "type": "integer", "minimum": 0 },
+    "generator": { "$ref": "#/$defs/generator" },
+    "request": { "$ref": "#/$defs/request" },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/item" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning" }
+    },
+    "exhaustion": { "$ref": "#/$defs/exhaustion" }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "generator": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "seed",
+        "mode",
+        "fresh",
+        "nonce",
+        "rotation_key",
+        "candidate_source"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "seed": { "type": ["string", "null"] },
+        "mode": { "enum": ["seeded", "rotation", "nondeterministic"] },
+        "fresh": { "type": "boolean" },
+        "nonce": { "type": ["string", "null"] },
+        "rotation_key": { "type": ["string", "null"] },
+        "candidate_source": { "enum": ["auto", "llm", "curated"] }
+      },
+      "additionalProperties": true
+    },
+    "request": {
+      "type": "object",
+      "required": [
+        "languages",
+        "count",
+        "level",
+        "dictionary",
+        "reader_lang",
+        "translation_mode",
+        "include_ambiguous",
+        "require_clean_primary",
+        "max_source_chars",
+        "avoid"
+      ],
+      "properties": {
+        "languages": {
+          "type": "array",
+          "items": { "enum": ["san", "grc", "lat"] },
+          "minItems": 1
+        },
+        "count": { "type": "integer", "minimum": 1 },
+        "level": { "enum": ["beginner", "intermediate", "deep"] },
+        "dictionary": { "type": "string" },
+        "reader_lang": { "type": "string" },
+        "translation_mode": {
+          "enum": ["off", "cache", "populate", "auto", "do-it-all"]
+        },
+        "include_ambiguous": { "type": "boolean" },
+        "require_clean_primary": { "type": "boolean" },
+        "max_source_chars": { "type": "integer", "minimum": 0 },
+        "avoid": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "item": {
+      "type": "object",
+      "required": [
+        "language",
+        "query",
+        "key",
+        "display",
+        "canonical_name",
+        "canonical",
+        "primary_lexeme",
+        "lexeme_anchors",
+        "summary",
+        "learner_note",
+        "mnemonic",
+        "difficulty",
+        "confidence",
+        "ambiguity",
+        "recommended_request",
+        "source_basis",
+        "ui",
+        "novelty"
+      ],
+      "properties": {
+        "language": { "enum": ["san", "grc", "lat"] },
+        "query": { "type": "string", "minLength": 1 },
+        "key": { "type": "string", "minLength": 1 },
+        "display": { "type": "string" },
+        "canonical_name": { "type": "string", "minLength": 1 },
+        "canonical": { "$ref": "#/$defs/canonicalTerm" },
+        "primary_lexeme": { "type": "string" },
+        "lexeme_anchors": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "summary": { "type": "string", "minLength": 1 },
+        "learner_note": { "type": "string", "minLength": 1 },
+        "mnemonic": { "type": "string" },
+        "difficulty": { "enum": ["beginner", "intermediate", "deep"] },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "ambiguity": { "$ref": "#/$defs/ambiguity" },
+        "recommended_request": { "$ref": "#/$defs/recommendedRequest" },
+        "source_basis": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceBasis" },
+          "minItems": 1
+        },
+        "ui": { "$ref": "#/$defs/ui" },
+        "novelty": { "$ref": "#/$defs/novelty" }
+      },
+      "additionalProperties": true
+    },
+    "canonicalTerm": {
+      "type": "object",
+      "required": ["name", "script", "source", "transliteration", "source_key", "lexeme"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "script": { "type": "string" },
+        "source": { "type": "string" },
+        "transliteration": { "type": "string" },
+        "source_key": { "type": "string" },
+        "lexeme": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "ambiguity": {
+      "type": "object",
+      "required": ["has_multiple_lexemes", "lexeme_count", "note"],
+      "properties": {
+        "has_multiple_lexemes": { "type": "boolean" },
+        "lexeme_count": { "type": "integer", "minimum": 0 },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "recommendedRequest": {
+      "type": "object",
+      "required": ["language", "q", "dictionary", "translation", "backend"],
+      "properties": {
+        "language": { "enum": ["san", "grc", "lat"] },
+        "q": { "type": "string", "minLength": 1 },
+        "dictionary": { "type": "string" },
+        "translation": { "type": "string" },
+        "backend": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "sourceBasis": {
+      "type": "object",
+      "required": ["tool", "source_ref", "lexeme_anchor", "evidence"],
+      "properties": {
+        "tool": { "type": "string" },
+        "source_ref": { "type": "string" },
+        "lexeme_anchor": { "type": "string" },
+        "evidence": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "ui": {
+      "type": "object",
+      "required": ["href_query", "badge", "short_gloss"],
+      "properties": {
+        "href_query": { "type": "string" },
+        "badge": { "type": "string" },
+        "short_gloss": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "novelty": {
+      "type": "object",
+      "required": ["is_repeat", "avoided_recent_count", "fresh_requested", "reason"],
+      "properties": {
+        "is_repeat": { "type": "boolean" },
+        "avoided_recent_count": { "type": "integer", "minimum": 0 },
+        "fresh_requested": { "type": "boolean" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "warning": {
+      "type": "object",
+      "required": ["language", "query", "message"],
+      "properties": {
+        "language": { "type": "string" },
+        "query": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "exhaustion": {
+      "type": "object",
+      "required": ["fresh_requested", "fresh_satisfied", "reason"],
+      "properties": {
+        "fresh_requested": { "type": "boolean" },
+        "fresh_satisfied": { "type": "boolean" },
+        "reason": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    }
+  }
+}

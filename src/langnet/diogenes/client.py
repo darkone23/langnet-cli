@@ -45,6 +45,7 @@ class WordListEntry:
 class RankedLemma:
     """Sortable lemma ranking."""
 
+    fragment_sort: int
     dist: int
     ratio_sort: float
     norm_len: int
@@ -62,6 +63,10 @@ STOPWORDS = {
     "the",
     "quality",
 }
+
+
+def _word_list_fragment_penalty(lemma: str) -> int:
+    return 1 if lemma.startswith(".") or lemma.endswith(".") else 0
 
 
 def _normalize_for_distance(text: str) -> str:
@@ -330,6 +335,7 @@ class DiogenesClient:
             ratio = (count / total) if total else 0.0
             ranked.append(
                 RankedLemma(
+                    fragment_sort=_word_list_fragment_penalty(lemma),
                     dist=dist,
                     ratio_sort=-ratio,
                     norm_len=len(norm),

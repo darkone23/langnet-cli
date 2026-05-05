@@ -55,6 +55,9 @@ just triples-dump lat lupus whitakers
 just cli encounter lat arma gaffiot
 just cli encounter san dharma dico
 
+just cli word-of-day san --output json
+just cli recommend-words lat --count 3
+
 just cli reader-eval --limit 3 --translation-mode cache
 ```
 
@@ -69,6 +72,8 @@ just cli reader-eval --limit 3 --translation-mode cache
 | `plan-exec` | Run normalize → plan → fetch/extract/derive/claim. |
 | `triples-dump` | Print claim triples and evidence for inspection. |
 | `encounter` | Current learner-facing MVP: reduced meaning buckets plus source-backed analysis. |
+| `word-of-day` | Recommend learner words with terse glosses, learner notes, and verified encounter summaries when available. |
+| `recommend-words` | Alias-style recommendation command for requesting several learner word cards on demand. |
 | `reader-eval` | Run reader-oriented fixture checks against live encounter reductions. |
 | `translation-warm` | Explicitly warm DICO/Gaffiot translation cache rows from a word list. |
 | `databuild` | Build local data/indexes. |
@@ -119,3 +124,4 @@ just test tests.test_cdsl_triples
 - **CLTK unavailable**: install required CLTK model data and ensure `CLTK_DATA` points to a writable directory.
 - **Stale server behavior**: restart long-running processes after code changes; Python modules are cached in running servers.
 - **Need provenance**: use `plan-exec` or `triples-dump`, not only `lookup --output pretty`.
+- **Long source entries**: compact display lines are summaries. Use `--output json` to inspect `source_text`, `source_text_chars`, `evidence_length_note`, and per-entry metadata.

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import multiprocessing
 import os
+import queue as queue_module
 import re
 import subprocess
 import sys
@@ -12,7 +14,7 @@ from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import click
 import duckdb
@@ -89,7 +91,7 @@ from langnet.execution.source_text import analyze_source_entry, compact_source_g
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.normalizer.core import NormalizationResult, _hash_query
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
-from langnet.normalizer.utils import strip_accents
+from langnet.normalizer.utils import normalize_greek_compatibility, strip_accents
 from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
 from langnet.planner.core import PlannerConfig, ToolPlanner
 from langnet.reader_eval import (
@@ -124,12 +126,20 @@ from langnet.translation import (
     project_cached_translations,
     translation_cache_status_counts,
 )
+from langnet.word_of_day import (
+    WordCandidate,
+    WordOfDayOptions,
+    generate_word_of_day_payload,
+    resolve_word_of_day_languages,
+)
 
 LanguageHint = query_spec.LanguageHint
 LanguageValue = query_spec.LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
 ENCOUNTER_LEARNER_GLOSS_MAX_CHARS = 120
 ENCOUNTER_LEARNER_GLOSS_ITEM_LIMIT = 4
+ENCOUNTER_MAX_COMPONENTS = 4
+SANSKRIT_AN_STEM_MIN_CHARS = 3
 ENCOUNTER_JSON_SCHEMA_VERSION = "langnet.encounter.v1"
 ENCOUNTER_JSON_ERROR_SCHEMA_VERSION = "langnet.encounter.error.v1"
 TRANSLATION_CACHE_SCHEMA_VERSION = "langnet.translation_cache.v1"
@@ -429,9 +439,12 @@ def _normalization_cache_get(
         cached = NormalizationIndex(conn).get(query_hash)
         if cached is not None:
             service = _create_normalization_service(config, conn, read_only=False)
-            cached = service._rerank_candidates(text, lang_hint, cached)
-            if service._cached_greek_epic_eus_is_stale(text, lang_hint, cached):
+            if service._cached_greek_compatibility_is_stale(text, lang_hint, cached):
                 cached = None
+            else:
+                cached = service._rerank_candidates(text, lang_hint, cached)
+                if service._cached_greek_epic_eus_is_stale(text, lang_hint, cached):
+                    cached = None
     if cached is None:
         return None
     return NormalizationResult(query_hash=query_hash, normalized=cached)
@@ -778,6 +791,957 @@ def langs(language: str | None, output: str) -> None:
         click.echo(f"  {lang_map['code']} - {lang_map['label']} (aliases: {', '.join(aliases)})")
 
 
+def _exclude_recent_terms(path: Path | None) -> list[str]:
+    if path is None:
+        return []
+    raw = path.read_text(encoding="utf-8")
+    with suppress(orjson.JSONDecodeError):
+        parsed = orjson.loads(raw)
+        return _word_of_day_terms_from_json(parsed)
+    terms: list[str] = []
+    for raw_line in raw.splitlines():
+        for term in raw_line.split(","):
+            cleaned = term.strip()
+            if cleaned:
+                terms.append(cleaned)
+    return terms
+
+
+def _word_of_day_terms_from_json(value: object) -> list[str]:
+    terms: list[str] = []
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return [cleaned] if cleaned else []
+    if isinstance(value, Mapping):
+        value_map = cast(Mapping[str, object], value)
+        for key in ("key", "query"):
+            item = value_map.get(key)
+            if isinstance(item, str) and item.strip():
+                terms.append(item.strip())
+        for item in value_map.values():
+            terms.extend(_word_of_day_terms_from_json(item))
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        for item in value:
+            terms.extend(_word_of_day_terms_from_json(item))
+    return _dedupe_preserve_order(terms)
+
+
+def _word_of_day_avoid_terms(avoid: str | None, exclude_recent: Path | None) -> list[str]:
+    terms = _exclude_recent_terms(exclude_recent)
+    if avoid:
+        terms.extend(part.strip() for part in avoid.split(",") if part.strip())
+    return _dedupe_preserve_order(terms)
+
+
+def _word_of_day_probe_translation_mode(translation_mode: str) -> str:
+    resolved = _resolve_translation_mode(False, translation_mode)
+    if resolved in {"auto", "populate"}:
+        return "cache"
+    return resolved
+
+
+def _word_of_day_system_prompt() -> str:
+    return (
+        "You propose classical-language dictionary lookup candidates for learners. "
+        "Return only JSON. Use romanized single-token queries that a CLI dictionary can "
+        "verify for Sanskrit, Ancient Greek, and Latin. Avoid proper names unless clearly "
+        "pedagogical. Write in a sober scholarly-humanist register: concise, learned, "
+        "philological, and suitable for a classical reader. Let Erasmus, Ramon Llull, "
+        "Albertus Magnus, and Giordano Bruno serve only as a tonal compass toward learned "
+        "seriousness and disciplined curiosity, without archaic imitation or florid "
+        "pastiche. Mild eccentricity is welcome only when it grows from real philology, "
+        "semantic range, morphology, reception, or textual context. Avoid random novelty, "
+        "casual sound-alike associations, and any etymological claim that is not "
+        "historically defensible."
+    )
+
+
+def _word_of_day_user_prompt(prompt: Mapping[str, object]) -> str:
+    return (
+        "Return JSON shaped as "
+        '{"items":[{"language":"lat|grc|san","query":"...",'
+        '"summary":"3-10 word English learner gloss",'
+        '"difficulty":"beginner|intermediate|deep","mnemonic":"..."}]}. '
+        "The mnemonic must be a brief scholarly memory note grounded in morphology, "
+        "semantic range, etymology, or textual context. If no such note is safe, keep it "
+        "plain and descriptive. "
+        f"Request: {orjson.dumps(dict(prompt)).decode('utf-8')}"
+    )
+
+
+def _word_of_day_remaining_timeout(
+    started: float,
+    timeout_ms: int,
+) -> float | None:
+    if timeout_ms <= 0:
+        return None
+    remaining = timeout_ms / 1000 - (time.monotonic() - started)
+    if remaining <= 0:
+        raise click.ClickException("word-of-day generation timed out before LLM request")
+    return max(1.0, remaining)
+
+
+def _word_of_day_llm_error_message(exc: Exception) -> str:
+    return f"{type(exc).__name__}: {exc}"
+
+
+def _word_of_day_llm_call(
+    call_name: str,
+    kwargs: Mapping[str, object],
+    timeout_seconds: float | None,
+) -> Any:
+    if timeout_seconds is None:
+        return _word_of_day_dispatch_llm_call(call_name, dict(kwargs))
+    ctx = multiprocessing.get_context("fork")
+    result_queue = ctx.Queue(maxsize=1)
+    process = ctx.Process(
+        target=_word_of_day_llm_process_worker,
+        args=(call_name, dict(kwargs), result_queue),
+    )
+    process.start()
+    process.join(timeout_seconds)
+    if process.is_alive():
+        process.terminate()
+        process.join(2)
+        if process.is_alive():
+            process.kill()
+            process.join(2)
+        raise TimeoutError(f"LLM word recommendation timed out after {timeout_seconds:.1f}s")
+    try:
+        status, payload = result_queue.get_nowait()
+    except queue_module.Empty as exc:
+        exitcode = process.exitcode
+        raise click.ClickException(
+            f"LLM word recommendation exited without a response (exit code {exitcode})."
+        ) from exc
+    if status == "ok":
+        return payload
+    raise click.ClickException(str(payload))
+
+
+def _word_of_day_llm_process_worker(
+    call_name: str,
+    kwargs: dict[str, object],
+    result_queue,
+) -> None:
+    try:
+        result_queue.put(("ok", _word_of_day_dispatch_llm_call(call_name, kwargs)))
+    except Exception as exc:  # noqa: BLE001
+        result_queue.put(("error", _word_of_day_llm_error_message(exc)))
+
+
+def _word_of_day_dispatch_llm_call(call_name: str, kwargs: dict[str, object]) -> Any:
+    if call_name == "synthesize":
+        return _word_of_day_synthesize_candidates_direct(
+            languages=cast(Sequence[str], kwargs["languages"]),
+            count=cast(int, kwargs["count"]),
+            level=cast(str, kwargs["level"]),
+            avoid_terms=cast(Sequence[str], kwargs["avoid_terms"]),
+            nonce=cast(str | None, kwargs["nonce"]),
+            rotation_key=cast(str | None, kwargs["rotation_key"]),
+            model=cast(str, kwargs["model"]),
+            timeout_seconds=cast(float | None, kwargs["timeout_seconds"]),
+        )
+    if call_name == "finalize":
+        return _word_of_day_finalize_payload_with_llm_direct(
+            payload=cast(dict[str, object], kwargs["payload"]),
+            model=cast(str, kwargs["model"]),
+            timeout_seconds=cast(float | None, kwargs["timeout_seconds"]),
+        )
+    raise ValueError(f"Unknown word-of-day LLM call: {call_name}")
+
+
+def _word_of_day_synthesize_candidates(  # noqa: PLR0913
+    *,
+    languages: Sequence[str],
+    count: int,
+    level: str,
+    avoid_terms: Sequence[str],
+    nonce: str | None,
+    rotation_key: str | None,
+    model: str,
+    timeout_seconds: float | None,
+) -> dict[str, list[WordCandidate]]:
+    return cast(
+        dict[str, list[WordCandidate]],
+        _word_of_day_llm_call(
+            "synthesize",
+            {
+                "languages": languages,
+                "count": count,
+                "level": level,
+                "avoid_terms": avoid_terms,
+                "nonce": nonce,
+                "rotation_key": rotation_key,
+                "model": model,
+                "timeout_seconds": timeout_seconds,
+            },
+            timeout_seconds,
+        ),
+    )
+
+
+def _word_of_day_synthesize_candidates_direct(  # noqa: PLR0913
+    *,
+    languages: Sequence[str],
+    count: int,
+    level: str,
+    avoid_terms: Sequence[str],
+    nonce: str | None,
+    rotation_key: str | None,
+    model: str,
+    timeout_seconds: float | None,
+) -> dict[str, list[WordCandidate]]:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise click.ClickException("Set OPENAI_API_KEY before using LLM word recommendations.")
+    api_base = os.getenv(
+        "OPENAI_API_BASE",
+        os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1"),
+    )
+    os.environ["OPENAI_BASE_URL"] = api_base
+    try:
+        import aisuite as ai  # noqa: PLC0415
+    except ImportError as exc:
+        raise click.ClickException("aisuite is required for LLM word recommendations.") from exc
+
+    client = ai.Client({"api_key": api_key})
+    per_language = max(count * 4, count + 4)
+    prompt = {
+        "languages": list(languages),
+        "per_language": per_language,
+        "level": level,
+        "avoid": list(avoid_terms),
+        "nonce": nonce or "",
+        "rotation_key": rotation_key or "",
+    }
+    request_kwargs: dict[str, object] = {}
+    if timeout_seconds is not None:
+        request_kwargs["timeout"] = timeout_seconds
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": _word_of_day_system_prompt()},
+            {"role": "user", "content": _word_of_day_user_prompt(prompt)},
+        ],
+        **request_kwargs,
+    )
+    content = response.choices[0].message.content or ""
+    return _word_of_day_parse_synthesized_candidates(content, languages=languages)
+
+
+def _word_of_day_finalize_payload_with_llm(
+    payload: dict[str, object],
+    *,
+    model: str,
+    timeout_seconds: float | None,
+) -> dict[str, object]:
+    return cast(
+        dict[str, object],
+        _word_of_day_llm_call(
+            "finalize",
+            {
+                "payload": payload,
+                "model": model,
+                "timeout_seconds": timeout_seconds,
+            },
+            timeout_seconds,
+        ),
+    )
+
+
+def _word_of_day_finalize_payload_with_llm_direct(
+    payload: dict[str, object],
+    *,
+    model: str,
+    timeout_seconds: float | None,
+) -> dict[str, object]:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise click.ClickException("Set OPENAI_API_KEY before using LLM word recommendations.")
+    api_base = os.getenv(
+        "OPENAI_API_BASE",
+        os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1"),
+    )
+    os.environ["OPENAI_BASE_URL"] = api_base
+    try:
+        import aisuite as ai  # noqa: PLC0415
+    except ImportError as exc:
+        raise click.ClickException("aisuite is required for LLM word recommendations.") from exc
+
+    client = ai.Client({"api_key": api_key})
+    finalization_input = _word_of_day_finalization_input(payload)
+    request_kwargs: dict[str, object] = {}
+    if timeout_seconds is not None:
+        request_kwargs["timeout"] = timeout_seconds
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": _word_of_day_finalizer_system_prompt()},
+            {
+                "role": "user",
+                "content": _word_of_day_finalizer_user_prompt(finalization_input),
+            },
+        ],
+        **request_kwargs,
+    )
+    content = response.choices[0].message.content or ""
+    updates = _word_of_day_parse_finalized_cards(content)
+    _word_of_day_apply_finalized_cards(payload, updates)
+    return payload
+
+
+def _word_of_day_finalizer_system_prompt() -> str:
+    return (
+        "You write final learner cards from verified dictionary evidence. Return only JSON. "
+        "Do not propose new words. Use only the supplied source_basis evidence and metadata. "
+        "The summary field is a terse English gloss in 1-5 words, preferably a compact "
+        "gloss cluster. "
+        "Write learner_note as one concise sentence explaining why this is a good word for "
+        "learners: morphology, semantic range, commonness, ambiguity, cultural value, or "
+        "textual importance. The learner_note must not be a longer definition. "
+        "Use a sober scholarly-humanist "
+        "register with disciplined curiosity: memorable, philological, and historically "
+        "grounded. Mild eccentricity is acceptable only when it grows from the evidence. "
+        "Avoid random novelty, casual sound-alike associations, and unsupported etymology. "
+        "If the evidence is thin, keep the card plain and conservative."
+    )
+
+
+def _word_of_day_finalizer_user_prompt(finalization_input: Mapping[str, object]) -> str:
+    return (
+        "Return JSON shaped as "
+        '{"items":[{"key":"language:query","summary":"...",'
+        '"learner_note":"...","mnemonic":"..."}]}. '
+        "Use summary for the short gloss. Use learner_note for why the word is worth "
+        "learning. "
+        "Verified source-backed items: "
+        f"{orjson.dumps(dict(finalization_input)).decode('utf-8')}"
+    )
+
+
+def _word_of_day_finalization_input(payload: Mapping[str, object]) -> dict[str, object]:
+    items = payload.get("items")
+    compact_items: list[dict[str, object]] = []
+    if isinstance(items, Sequence) and not isinstance(items, (str, bytes)):
+        for raw_item in items:
+            if not isinstance(raw_item, Mapping):
+                continue
+            item = cast(Mapping[str, object], raw_item)
+            compact_items.append(
+                {
+                    "key": item.get("key"),
+                    "language": item.get("language"),
+                    "query": item.get("query"),
+                    "display": item.get("display"),
+                    "canonical_name": item.get("canonical_name"),
+                    "canonical": item.get("canonical"),
+                    "primary_lexeme": item.get("primary_lexeme"),
+                    "lexeme_anchors": item.get("lexeme_anchors"),
+                    "current_summary": item.get("summary"),
+                    "source_basis": item.get("source_basis"),
+                    "ambiguity": item.get("ambiguity"),
+                }
+            )
+    return {"items": compact_items}
+
+
+def _word_of_day_parse_finalized_cards(content: str) -> dict[str, dict[str, str]]:
+    payload_text = content.strip()
+    if payload_text.startswith("```"):
+        payload_text = re.sub(r"^```(?:json)?\s*", "", payload_text)
+        payload_text = re.sub(r"\s*```$", "", payload_text)
+    try:
+        payload = orjson.loads(payload_text)
+    except orjson.JSONDecodeError as exc:
+        raise click.ClickException(f"LLM word card response was not valid JSON: {exc}")
+    items = payload.get("items") if isinstance(payload, Mapping) else None
+    if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
+        raise click.ClickException("LLM word card response did not contain items[].")
+    updates: dict[str, dict[str, str]] = {}
+    for raw_item in items:
+        if not isinstance(raw_item, Mapping):
+            continue
+        item = cast(Mapping[str, object], raw_item)
+        key = str(item.get("key") or "").strip().lower()
+        if not key:
+            continue
+        summary = str(item.get("summary") or "").strip()
+        learner_note = str(item.get("learner_note") or "").strip()
+        mnemonic = str(item.get("mnemonic") or "").strip()
+        if _word_of_day_has_unsuitable_learner_text(summary, learner_note, mnemonic):
+            continue
+        updates[key] = {
+            "summary": summary,
+            "learner_note": learner_note,
+            "mnemonic": mnemonic,
+        }
+    return updates
+
+
+def _word_of_day_apply_finalized_cards(
+    payload: dict[str, object],
+    updates: Mapping[str, Mapping[str, str]],
+) -> None:
+    items = payload.get("items")
+    if not isinstance(items, list):
+        return
+    for raw_item in items:
+        if not isinstance(raw_item, dict):
+            continue
+        item = cast(dict[str, object], raw_item)
+        key = str(item.get("key") or "").strip().lower()
+        update = updates.get(key)
+        if not update:
+            continue
+        summary = update.get("summary", "").strip()
+        if summary:
+            item["summary"] = _word_of_day_terse_summary(summary)
+            ui = item.get("ui")
+            if isinstance(ui, dict):
+                cast(dict[str, object], ui)["short_gloss"] = _word_of_day_short_gloss(
+                    str(item["summary"])
+                )
+        learner_note = update.get("learner_note", "").strip()
+        if learner_note:
+            item["learner_note"] = learner_note
+        mnemonic = update.get("mnemonic", "").strip()
+        if mnemonic:
+            item["mnemonic"] = mnemonic
+
+
+def _word_of_day_short_gloss(summary: str) -> str:
+    return summary.split(";", 1)[0].split(",", 1)[0].strip()
+
+
+def _word_of_day_terse_summary(summary: str) -> str:
+    return shorten_text(summary.strip(), 48)
+
+
+def _word_of_day_parse_synthesized_candidates(
+    content: str,
+    *,
+    languages: Sequence[str],
+) -> dict[str, list[WordCandidate]]:
+    payload_text = content.strip()
+    if payload_text.startswith("```"):
+        payload_text = re.sub(r"^```(?:json)?\s*", "", payload_text)
+        payload_text = re.sub(r"\s*```$", "", payload_text)
+    try:
+        payload = orjson.loads(payload_text)
+    except orjson.JSONDecodeError as exc:
+        raise click.ClickException(f"LLM word recommendation response was not valid JSON: {exc}")
+    items = payload.get("items") if isinstance(payload, Mapping) else None
+    if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
+        raise click.ClickException("LLM word recommendation response did not contain items[].")
+    allowed_languages = set(languages)
+    pools: dict[str, list[WordCandidate]] = {language: [] for language in languages}
+    seen: set[str] = set()
+    for raw_item in items:
+        if not isinstance(raw_item, Mapping):
+            continue
+        item = cast(Mapping[str, object], raw_item)
+        language = str(item.get("language") or "").strip().lower()
+        query = str(item.get("query") or "").strip()
+        if language not in allowed_languages or not query:
+            continue
+        key = f"{language}:{query.lower()}"
+        if key in seen or not re.fullmatch(r"[\w\-āīūṛṝḷṅñṭḍṇśṣṃḥôōêē]+", query, re.I):
+            continue
+        seen.add(key)
+        difficulty = str(item.get("difficulty") or "beginner").strip().lower()
+        if difficulty not in {"beginner", "intermediate", "deep"}:
+            difficulty = "beginner"
+        mnemonic = str(item.get("mnemonic") or "").strip()
+        summary = str(item.get("summary") or "").strip()
+        if _word_of_day_has_unsuitable_learner_text(summary, mnemonic):
+            continue
+        pools[language].append(WordCandidate(language, query, difficulty, mnemonic, summary))
+    return {language: candidates for language, candidates in pools.items() if candidates}
+
+
+_UNSUITABLE_LEARNER_TEXT_PATTERNS = (
+    r"\bsuperhero\b",
+    r"\bcomic[- ]?book\b",
+    r"\bmeme\b",
+    r"\bmascot\b",
+    r"\bcartoon\b",
+    r"\bvideo game\b",
+    r"\bpokemon\b",
+    r"\bharry potter\b",
+    r"\bstar wars\b",
+    r"\bpun\b",
+    r"\bjoke\b",
+    r"\bsounds like\b",
+    r"\brhymes with\b",
+    r"\bpop[- ]?culture\b",
+    r"\binternet[- ]?culture\b",
+    r"\bbrand\b",
+)
+
+
+def _word_of_day_has_unsuitable_learner_text(*values: str) -> bool:
+    text = " ".join(value for value in values if value).lower()
+    return any(re.search(pattern, text) for pattern in _UNSUITABLE_LEARNER_TEXT_PATTERNS)
+
+
+def _word_of_day_candidate_pools(  # noqa: PLR0913
+    *,
+    languages: Sequence[str],
+    count: int,
+    level: str,
+    avoid_terms: Sequence[str],
+    nonce: str | None,
+    rotation_key: str | None,
+    candidate_source: str,
+    recommendation_model: str,
+    started: float,
+    timeout_ms: int,
+    warnings: list[dict[str, str]],
+) -> dict[str, list[WordCandidate]] | None:
+    if candidate_source == "curated":
+        return None
+    try:
+        candidate_pools = _word_of_day_synthesize_candidates(
+            languages=languages,
+            count=count,
+            level=level,
+            avoid_terms=avoid_terms,
+            nonce=nonce,
+            rotation_key=rotation_key,
+            model=recommendation_model,
+            timeout_seconds=_word_of_day_remaining_timeout(started, timeout_ms),
+        )
+        missing_languages = [
+            language for language in languages if not candidate_pools.get(language)
+        ]
+        if missing_languages:
+            message = (
+                "LLM candidate synthesis returned no candidates for "
+                f"{', '.join(missing_languages)}."
+            )
+            if candidate_source == "llm":
+                raise click.ClickException(message)
+            warnings.append(
+                {
+                    "language": "",
+                    "query": "",
+                    "message": f"{message} Fell back to curated pools.",
+                }
+            )
+            return None
+        return candidate_pools
+    except Exception as exc:
+        if candidate_source == "llm":
+            if isinstance(exc, click.ClickException):
+                raise
+            raise click.ClickException(_word_of_day_llm_error_message(exc)) from exc
+        warnings.append(
+            {
+                "language": "",
+                "query": "",
+                "message": (
+                    "LLM candidate synthesis unavailable; fell back to curated pools. "
+                    f"{_word_of_day_llm_error_message(exc)}"
+                ),
+            }
+        )
+        return None
+
+
+def _word_of_day_probe_reduction(  # noqa: PLR0913
+    *,
+    language: str,
+    text: str,
+    dictionary: str,
+    normalize: bool,
+    diogenes_endpoint: str,
+    diogenes_parse_endpoint: str | None,
+    heritage_base: str,
+    db_path: str | None,
+    no_cache: bool,
+    include_cltk: bool,
+    translation_mode: str,
+    translation_cache_db: str,
+    translation_model: str,
+):
+    result = _execute_lookup_plan(
+        language=language,
+        text=text,
+        tool_filter=dictionary,
+        normalize=normalize,
+        diogenes_endpoint=diogenes_endpoint,
+        diogenes_parse_endpoint=diogenes_parse_endpoint,
+        heritage_base=heritage_base,
+        db_path=db_path,
+        no_cache=no_cache,
+        include_cltk=include_cltk,
+    )
+    claims = _claims_as_mappings(result)
+    resolved_translation_mode = _resolve_translation_mode(False, translation_mode)
+    populate_translations = resolved_translation_mode in {"populate", "auto"}
+    cache_path = Path(translation_cache_db)
+    if resolved_translation_mode != "off" and (cache_path.exists() or populate_translations):
+        if populate_translations:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+        diagnostics = _encounter_translation_diagnostics(
+            mode=resolved_translation_mode,
+            cache_path=cache_path,
+            model=translation_model,
+            populate=populate_translations,
+        )
+        diagnostics["cache_available"] = True
+        translation_cache = _PathTranslationCache(
+            cache_path,
+            read_only=not populate_translations,
+        )
+        claims = _encounter_apply_translation_cache(
+            claims=claims,
+            language=language,
+            model=translation_model,
+            cache=translation_cache,  # type: ignore[arg-type]
+            populate=populate_translations,
+            translate=_encounter_translation_callback(translation_model),
+            diagnostics=diagnostics,
+            context="word-of-day",
+        )
+    reduction = reduce_claims(query=text, language=language, claims=claims)
+    morphology_rows = _encounter_morphology_rows(
+        claims,
+        language=language,
+        original=text,
+        reduction=reduction,
+    )
+    preferred_lemmas = _encounter_preferred_lemmas_for_sorting(
+        reduction,
+        morphology_rows,
+        [],
+        [text],
+    )
+    reduction.buckets = sorted(
+        reduction.buckets,
+        key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred_lemmas),
+    )
+    return reduction
+
+
+def _emit_word_recommendations(  # noqa: PLR0913
+    *,
+    language: str,
+    count: int,
+    seed: str | None,
+    level: str,
+    dictionary: str,
+    reader_lang: str,
+    translation_mode: str,
+    max_source_chars: int,
+    avoid: str | None,
+    exclude_recent: Path | None,
+    fresh: bool,
+    nonce: str | None,
+    rotation_key: str | None,
+    candidate_source: str,
+    recommendation_model: str,
+    include_ambiguous: bool,
+    require_clean_primary: bool,
+    timeout_ms: int,
+    normalize: bool,
+    diogenes_endpoint: str,
+    diogenes_parse_endpoint: str | None,
+    heritage_base: str,
+    db_path: str | None,
+    no_cache: bool,
+    include_cltk: bool,
+    translation_cache_db: str,
+    translation_model: str,
+    output: str,
+) -> None:
+    started = time.monotonic()
+    try:
+        languages = resolve_word_of_day_languages(language)
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    avoid_terms = _word_of_day_avoid_terms(avoid, exclude_recent)
+    synthesis_warnings: list[dict[str, str]] = []
+    probe_translation_mode = _word_of_day_probe_translation_mode(translation_mode)
+    if probe_translation_mode != _resolve_translation_mode(False, translation_mode):
+        synthesis_warnings.append(
+            {
+                "language": "",
+                "query": "",
+                "message": (
+                    "word-of-day uses cached translations during recommendation probing; "
+                    "skipped translation population for bounded response time."
+                ),
+            }
+        )
+    candidate_pools = _word_of_day_candidate_pools(
+        languages=languages,
+        count=count,
+        level=level,
+        avoid_terms=avoid_terms,
+        nonce=nonce,
+        rotation_key=rotation_key,
+        candidate_source=candidate_source,
+        recommendation_model=recommendation_model,
+        started=started,
+        timeout_ms=timeout_ms,
+        warnings=synthesis_warnings,
+    )
+    options = WordOfDayOptions(
+        count=count,
+        level=level,
+        dictionary=dictionary,
+        reader_lang=reader_lang,
+        translation_mode=translation_mode,
+        max_source_chars=max_source_chars,
+        include_ambiguous=include_ambiguous,
+        require_clean_primary=require_clean_primary,
+        timeout_ms=timeout_ms,
+        seed=seed,
+        fresh=fresh,
+        avoid=tuple(avoid_terms),
+        nonce=nonce,
+        rotation_key=rotation_key,
+        candidate_source=candidate_source if candidate_pools is not None else "curated",
+    )
+
+    def probe(probe_language: str, query: str):
+        return _word_of_day_probe_reduction(
+            language=probe_language,
+            text=query,
+            dictionary=dictionary,
+            normalize=normalize,
+            diogenes_endpoint=diogenes_endpoint,
+            diogenes_parse_endpoint=diogenes_parse_endpoint,
+            heritage_base=heritage_base,
+            db_path=db_path,
+            no_cache=no_cache,
+            include_cltk=include_cltk,
+            translation_mode=probe_translation_mode,
+            translation_cache_db=translation_cache_db,
+            translation_model=translation_model,
+        )
+
+    payload = generate_word_of_day_payload(
+        languages=languages,
+        options=options,
+        probe_encounter=probe,
+        bucket_gloss=_encounter_bucket_gloss,
+        bucket_learner_gloss=lambda bucket: _encounter_bucket_learner_gloss(
+            bucket,
+            max_chars=80,
+        ),
+        exclude_terms=[],
+        candidate_pools=candidate_pools,
+    )
+    if synthesis_warnings:
+        payload["warnings"] = [*synthesis_warnings, *payload["warnings"]]
+    if candidate_pools is not None and payload.get("items"):
+        try:
+            payload = _word_of_day_finalize_payload_with_llm(
+                payload,
+                model=recommendation_model,
+                timeout_seconds=_word_of_day_remaining_timeout(started, timeout_ms),
+            )
+        except Exception as exc:
+            if candidate_source == "llm":
+                if isinstance(exc, click.ClickException):
+                    raise
+                raise click.ClickException(_word_of_day_llm_error_message(exc)) from exc
+            payload["warnings"] = [
+                {
+                    "language": "",
+                    "query": "",
+                    "message": (
+                        "LLM card finalization unavailable; returned source-derived cards. "
+                        f"{_word_of_day_llm_error_message(exc)}"
+                    ),
+                },
+                *cast(list[dict[str, str]], payload["warnings"]),
+            ]
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    _print_word_recommendations(payload)
+
+
+def _print_word_recommendations(payload: Mapping[str, object]) -> None:
+    items = payload.get("items")
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, Mapping):
+                continue
+            item_map = cast(Mapping[str, object], item)
+            badge: object = item_map.get("language")
+            ui = item_map.get("ui")
+            ui_map: Mapping[str, object] | None = None
+            if isinstance(ui, Mapping):
+                ui_map = cast(Mapping[str, object], ui)
+                badge = ui_map.get("badge") or badge
+            display = item_map.get("canonical_name") or item_map.get("display")
+            click.echo(f"{badge}: {display} - {item_map.get('summary')}")
+            click.echo(f"  Query: {item_map.get('query')}")
+            click.echo(f"  Note: {item_map.get('learner_note')}")
+            if ui_map is not None and ui_map.get("href_query"):
+                click.echo(f"  Link params: {ui_map['href_query']}")
+            click.echo()
+    warnings = payload.get("warnings")
+    if isinstance(warnings, list) and warnings:
+        click.echo("Warnings:")
+        for warning in warnings:
+            if not isinstance(warning, Mapping):
+                continue
+            warning_map = cast(Mapping[str, object], warning)
+            message = warning_map.get("message")
+            language = warning_map.get("language")
+            query = warning_map.get("query")
+            prefix = ":".join(str(part) for part in (language, query) if part)
+            click.echo(f"- {prefix}: {message}" if prefix else f"- {message}")
+
+
+@main.command("word-of-day")
+@click.argument("language", default="all")
+@click.option("--count", default=1, show_default=True, type=click.IntRange(1, 10))
+@click.option("--seed", help="Optional deterministic seed for reproducible recommendations.")
+@click.option(
+    "--level",
+    type=click.Choice(["beginner", "intermediate", "deep"]),
+    default="beginner",
+    show_default=True,
+)
+@click.option("--dictionary", default="all", show_default=True)
+@click.option("--reader-lang", default="en", show_default=True)
+@click.option(
+    "--translation-mode",
+    type=click.Choice(["off", "cache", "populate", "auto", "do-it-all"]),
+    default="cache",
+    show_default=True,
+)
+@click.option("--max-source-chars", default=140, show_default=True, type=click.IntRange(20, 1000))
+@click.option("--avoid", help="Comma-separated language:query keys or raw query terms to avoid.")
+@click.option(
+    "--exclude-recent",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Path to a newline- or CSV-style list of recently shown query terms.",
+)
+@click.option("--fresh", is_flag=True, help="Prefer suggestions outside --avoid/--exclude-recent.")
+@click.option("--nonce", help="Caller-provided entropy for refresh actions.")
+@click.option("--rotation-key", help="Stable caller/session key for repeatable rotations.")
+@click.option(
+    "--candidate-source",
+    type=click.Choice(["auto", "llm", "curated"]),
+    default="auto",
+    show_default=True,
+    help="Use OpenRouter synthesis when available, require it, or use curated pools only.",
+)
+@click.option(
+    "--recommendation-model",
+    default="openai:google/gemini-3.1-pro-preview",
+    show_default=True,
+    help="Model id used for LLM candidate synthesis.",
+)
+@click.option("--include-ambiguous", is_flag=True, help="Allow multiple-lexeme candidates.")
+@click.option(
+    "--require-clean-primary/--allow-fallback-ambiguous",
+    default=False,
+    show_default=True,
+    help="Require one clear primary lexeme instead of falling back to marked ambiguity.",
+)
+@click.option("--timeout-ms", default=45000, show_default=True, type=click.IntRange(0, 120000))
+@click.option("--normalize/--no-normalize", default=True, show_default=True)
+@click.option(
+    "--diogenes-endpoint",
+    default="http://localhost:8888/Diogenes.cgi",
+    show_default=True,
+)
+@click.option("--diogenes-parse-endpoint")
+@click.option("--heritage-base", default="http://localhost:48080", show_default=True)
+@click.option("--db-path", type=click.Path())
+@click.option("--no-cache", is_flag=True)
+@click.option("--include-cltk/--no-include-cltk", default=False, show_default=True)
+@click.option(
+    "--translation-cache-db",
+    default="data/cache/langnet.duckdb",
+    show_default=True,
+)
+@click.option(
+    "--translation-model",
+    default="openai:google/gemini-3.1-pro-preview",
+    show_default=True,
+)
+@click.option(
+    "--output",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    show_default=True,
+)
+def word_of_day(  # noqa: PLR0913
+    language: str,
+    count: int,
+    seed: str | None,
+    level: str,
+    dictionary: str,
+    reader_lang: str,
+    translation_mode: str,
+    max_source_chars: int,
+    avoid: str | None,
+    exclude_recent: Path | None,
+    fresh: bool,
+    nonce: str | None,
+    rotation_key: str | None,
+    candidate_source: str,
+    recommendation_model: str,
+    include_ambiguous: bool,
+    require_clean_primary: bool,
+    timeout_ms: int,
+    normalize: bool,
+    diogenes_endpoint: str,
+    diogenes_parse_endpoint: str | None,
+    heritage_base: str,
+    db_path: str | None,
+    no_cache: bool,
+    include_cltk: bool,
+    translation_cache_db: str,
+    translation_model: str,
+    output: str,
+) -> None:
+    """Recommend source-verified learner words to look up in detail."""
+    _emit_word_recommendations(
+        language=language,
+        count=count,
+        seed=seed,
+        level=level,
+        dictionary=dictionary,
+        reader_lang=reader_lang,
+        translation_mode=translation_mode,
+        max_source_chars=max_source_chars,
+        avoid=avoid,
+        exclude_recent=exclude_recent,
+        fresh=fresh,
+        nonce=nonce,
+        rotation_key=rotation_key,
+        candidate_source=candidate_source,
+        recommendation_model=recommendation_model,
+        include_ambiguous=include_ambiguous,
+        require_clean_primary=require_clean_primary,
+        timeout_ms=timeout_ms,
+        normalize=normalize,
+        diogenes_endpoint=diogenes_endpoint,
+        diogenes_parse_endpoint=diogenes_parse_endpoint,
+        heritage_base=heritage_base,
+        db_path=db_path,
+        no_cache=no_cache,
+        include_cltk=include_cltk,
+        translation_cache_db=translation_cache_db,
+        translation_model=translation_model,
+        output=output,
+    )
+
+
+main.add_command(word_of_day, "recommend-words")
+
+
 def _doctor_check(  # noqa: PLR0913
     checks: list[dict[str, object]],
     *,
@@ -805,6 +1769,7 @@ def _doctor_schema_checks(checks: list[dict[str, object]]) -> None:
         Path("docs/schemas/encounter.v1.schema.json"),
         Path("docs/schemas/encounter-error.v1.schema.json"),
         Path("docs/schemas/translation-cache.v1.schema.json"),
+        Path("docs/schemas/word_of_day.v1.schema.json"),
         Path("docs/schemas/doctor.v1.schema.json"),
     ]
     for schema_path in schema_paths:
@@ -1836,6 +2801,9 @@ def _contains_greek_script(text: str) -> bool:
 
 
 def _requires_greek_script_normalization(text: str) -> bool:
+    stripped = text.strip()
+    if normalize_greek_compatibility(stripped) != stripped:
+        return True
     normalized = strip_accents(text.strip()).casefold()
     return normalized.endswith(("ηος", "ηοσ"))
 
@@ -2758,6 +3726,380 @@ def _encounter_sanskrit_morphology_lookup_terms(
     )
 
 
+def _encounter_component_links(  # noqa: PLR0913
+    *,
+    language: str,
+    original: str,
+    tool_filter: str,
+    normalize: bool,
+    diogenes_endpoint: str,
+    diogenes_parse_endpoint: str | None,
+    heritage_base: str,
+    db_path: str | None,
+    include_cltk: bool,
+    morphology_rows: Sequence[Mapping[str, str]],
+    reduction,
+    max_gloss_chars: int,
+    translation_cache: _PathTranslationCache | None = None,
+    populate_translations: bool = False,
+    translation_model: str = "",
+    translation_callback=None,
+    translation_diagnostics: dict[str, object] | None = None,
+) -> list[dict[str, object]]:
+    components = _encounter_component_candidates(morphology_rows, language=language)
+    if not components:
+        return []
+
+    links: list[dict[str, object]] = []
+    for component in components:
+        lookup_terms = cast(list[str], component.get("lookup_terms", []))
+        buckets = _encounter_component_buckets_from_reduction(reduction, lookup_terms)
+        evidence_source = "primary_reduction" if buckets else ""
+        lookup_tool_filter = ""
+        error = ""
+        if not buckets and _encounter_should_lookup_component(language, component):
+            lookup_tool_filter = _encounter_component_lookup_tool_filter(language, tool_filter)
+            buckets, error = _encounter_lookup_component_buckets(
+                language=language,
+                lookup_terms=lookup_terms,
+                context=f"component:{component.get('display') or lookup_terms[0]}",
+                lookup_tool_filter=lookup_tool_filter,
+                normalize=normalize,
+                diogenes_endpoint=diogenes_endpoint,
+                diogenes_parse_endpoint=diogenes_parse_endpoint,
+                heritage_base=heritage_base,
+                db_path=db_path,
+                include_cltk=include_cltk,
+                translation_cache=translation_cache,
+                populate_translations=populate_translations,
+                translation_model=translation_model,
+                translation_callback=translation_callback,
+                translation_diagnostics=translation_diagnostics,
+            )
+            if buckets:
+                evidence_source = "component_lookup"
+        buckets = _encounter_sort_component_buckets(buckets, component)
+        meanings = [
+            _encounter_component_meaning_payload(bucket, max_gloss_chars=max_gloss_chars)
+            for bucket in buckets[:2]
+        ]
+        links.append(
+            {
+                **component,
+                "evidence": {
+                    "status": "linked" if meanings else "unlinked",
+                    "source": evidence_source,
+                    "lookup_tool_filter": lookup_tool_filter,
+                    "meanings": meanings,
+                    "error": error,
+                },
+            }
+        )
+    return links
+
+
+def _encounter_component_candidates(
+    morphology_rows: Sequence[Mapping[str, str]],
+    *,
+    language: str,
+) -> list[dict[str, object]]:
+    if language == "san":
+        return _encounter_sanskrit_component_candidates(morphology_rows)
+    if language == "lat":
+        return _encounter_latin_component_candidates(morphology_rows)
+    return []
+
+
+def _encounter_sanskrit_component_candidates(
+    morphology_rows: Sequence[Mapping[str, str]],
+) -> list[dict[str, object]]:
+    if not any(_is_sanskrit_compound_component(row.get("analysis", "")) for row in morphology_rows):
+        return []
+    selected_rows = _encounter_sanskrit_component_solution_rows(morphology_rows)
+    components: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
+    for row in selected_rows:
+        analysis = row.get("analysis", "").strip()
+        if _encounter_analysis_is_particle_only(analysis):
+            continue
+        lemma = row.get("lemma", "").strip()
+        if not lemma:
+            continue
+        role = "initial" if _is_sanskrit_compound_component(analysis) else "final"
+        lookup_terms = _encounter_sanskrit_component_lookup_terms(lemma)
+        if not lookup_terms:
+            continue
+        key = (role, lookup_terms[0])
+        if key in seen:
+            continue
+        seen.add(key)
+        components.append(
+            {
+                "surface": row.get("form", ""),
+                "lemma": lemma,
+                "display": _encounter_display_component_lemma(lemma),
+                "role": role,
+                "analysis": analysis,
+                "source_tool": row.get("source_tool", ""),
+                "lookup_terms": lookup_terms,
+            }
+        )
+        if len(components) >= ENCOUNTER_MAX_COMPONENTS:
+            break
+    return components
+
+
+def _encounter_sanskrit_component_solution_rows(
+    morphology_rows: Sequence[Mapping[str, str]],
+) -> list[Mapping[str, str]]:
+    groups: dict[str, list[Mapping[str, str]]] = {}
+    group_order: list[str] = []
+    for row in morphology_rows:
+        key = row.get("solution_number") or "_unscoped"
+        if key not in groups:
+            groups[key] = []
+            group_order.append(key)
+        groups[key].append(row)
+    for key in group_order:
+        rows = groups[key]
+        if any(_is_sanskrit_compound_component(row.get("analysis", "")) for row in rows):
+            return rows
+    return list(morphology_rows)
+
+
+def _encounter_latin_component_candidates(
+    morphology_rows: Sequence[Mapping[str, str]],
+) -> list[dict[str, object]]:
+    tackon_rows = [row for row in morphology_rows if "tackon" in row.get("analysis", "").casefold()]
+    if not tackon_rows:
+        return []
+    base_rows = [
+        row
+        for row in morphology_rows
+        if "tackon" not in row.get("analysis", "").casefold()
+        and row.get("lemma", "")
+        and row.get("lemma") != row.get("form")
+    ]
+    if not base_rows:
+        base_rows = [
+            row
+            for row in morphology_rows
+            if "tackon" not in row.get("analysis", "").casefold() and row.get("lemma", "")
+        ]
+
+    components: list[dict[str, object]] = []
+    if base_rows:
+        base = base_rows[0]
+        lemma = base.get("lemma", "")
+        components.append(
+            {
+                "surface": base.get("form", ""),
+                "lemma": lemma,
+                "display": lemma,
+                "role": "base",
+                "analysis": base.get("analysis", ""),
+                "source_tool": base.get("source_tool", ""),
+                "lookup_terms": [lemma],
+            }
+        )
+    for row in tackon_rows[:2]:
+        lemma = row.get("lemma", "")
+        if not lemma:
+            continue
+        components.append(
+            {
+                "surface": row.get("form", ""),
+                "lemma": lemma,
+                "display": f"-{lemma}",
+                "role": "tackon",
+                "analysis": row.get("analysis", ""),
+                "source_tool": row.get("source_tool", ""),
+                "lookup_terms": [lemma],
+            }
+        )
+    return components
+
+
+def _encounter_analysis_is_particle_only(analysis: str) -> bool:
+    normalized = analysis.strip().casefold()
+    return normalized in {"ind.", "ind", "particle", "part.", "tackon"}
+
+
+def _encounter_sanskrit_component_lookup_terms(lemma: str) -> list[str]:
+    base = _encounter_sanskrit_morphology_lookup_term(lemma)
+    if not base:
+        return []
+    terms: list[str] = []
+    terms.append(base)
+    if base.endswith("an") and len(base) > SANSKRIT_AN_STEM_MIN_CHARS:
+        terms.append(f"{base[:-2]}a")
+    return _dedupe_preserve_order(terms)
+
+
+def _encounter_display_component_lemma(lemma: str) -> str:
+    return _encounter_sanskrit_morphology_lookup_term(lemma) or lemma
+
+
+def _encounter_component_buckets_from_reduction(
+    reduction,
+    lookup_terms: Sequence[str],
+) -> list[object]:
+    if not lookup_terms:
+        return []
+    lookup_keys = set().union(*(lemma_compare_keys(term) for term in lookup_terms))
+    buckets: list[object] = []
+    for bucket in reduction.buckets:
+        bucket_keys = set().union(
+            *(lemma_compare_keys(value) for value in bucket_lemma_values(bucket))
+        )
+        if lookup_keys & bucket_keys:
+            buckets.append(bucket)
+    return buckets
+
+
+def _encounter_should_lookup_component(language: str, component: Mapping[str, object]) -> bool:
+    return language == "san" and component.get("role") in {"initial", "final"}
+
+
+def _encounter_component_lookup_tool_filter(language: str, tool_filter: str) -> str:
+    normalized = tool_filter.lower()
+    if language == "san" and normalized in {"all", "dico"}:
+        return "dico"
+    return tool_filter
+
+
+def _encounter_lookup_component_buckets(  # noqa: PLR0913
+    *,
+    language: str,
+    lookup_terms: Sequence[str],
+    context: str,
+    lookup_tool_filter: str,
+    normalize: bool,
+    diogenes_endpoint: str,
+    diogenes_parse_endpoint: str | None,
+    heritage_base: str,
+    db_path: str | None,
+    include_cltk: bool,
+    translation_cache: _PathTranslationCache | None,
+    populate_translations: bool,
+    translation_model: str,
+    translation_callback,
+    translation_diagnostics: dict[str, object] | None,
+) -> tuple[list[object], str]:
+    last_error = ""
+    for term in lookup_terms:
+        try:
+            result = _execute_lookup_plan(
+                language=language,
+                text=term,
+                tool_filter=lookup_tool_filter,
+                normalize=normalize,
+                diogenes_endpoint=diogenes_endpoint,
+                diogenes_parse_endpoint=diogenes_parse_endpoint,
+                heritage_base=heritage_base,
+                db_path=db_path,
+                no_cache=True,
+                include_cltk=include_cltk,
+            )
+            claims = _claims_as_mappings(result)
+            if translation_cache is not None and translation_diagnostics is not None:
+                claims = _encounter_apply_translation_cache(
+                    claims=claims,
+                    language=language,
+                    model=translation_model,
+                    cache=translation_cache,  # type: ignore[arg-type]
+                    populate=populate_translations,
+                    translate=translation_callback,
+                    diagnostics=translation_diagnostics,
+                    context=context,
+                )
+            reduction = reduce_claims(query=term, language=language, claims=claims)
+            preferred = _encounter_preferred_lemmas_for_sorting(reduction, [], [term])
+            reduction.buckets = sorted(
+                reduction.buckets,
+                key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred),
+            )
+            if reduction.buckets:
+                return list(reduction.buckets), ""
+        except Exception as exc:  # noqa: BLE001
+            last_error = f"{type(exc).__name__}: {exc}"
+    return [], last_error
+
+
+def _encounter_sort_component_buckets(
+    buckets: Sequence[object],
+    component: Mapping[str, object],
+) -> list[object]:
+    return [
+        bucket
+        for _idx, bucket in sorted(
+            enumerate(buckets),
+            key=lambda item: (
+                _encounter_component_bucket_pos_penalty(item[1], component),
+                item[0],
+            ),
+        )
+    ]
+
+
+def _encounter_component_bucket_pos_penalty(
+    bucket: object,
+    component: Mapping[str, object],
+) -> int:
+    if _encounter_analysis_is_particle_only(str(component.get("analysis") or "")):
+        return 0
+    text = _encounter_bucket_quality_text(bucket)
+    if any(term in text for term in (" part.", " particle", " ind.")):
+        return 1
+    return 0
+
+
+def _encounter_component_meaning_payload(
+    bucket,
+    *,
+    max_gloss_chars: int,
+) -> dict[str, object]:
+    view = build_meaning_view(
+        bucket,
+        learner_gloss=_encounter_bucket_learner_gloss(bucket, max_chars=max_gloss_chars),
+        evidence_gloss=_encounter_bucket_gloss(bucket),
+        max_gloss_chars=max_gloss_chars,
+        include_source_details=True,
+    )
+    return {
+        "bucket_id": str(getattr(bucket, "bucket_id", "")),
+        "display_gloss": view.display_gloss,
+        "sources": list(view.sources),
+        "source_text": view.source_text,
+        "source_refs": list(view.source_refs),
+        "source_langs": list(view.source_langs),
+    }
+
+
+def _encounter_component_display_line(component: Mapping[str, object]) -> str:
+    display = str(component.get("display") or component.get("lemma") or "")
+    role = str(component.get("role") or "component")
+    lookup_terms = component.get("lookup_terms")
+    lookup_text = ""
+    if isinstance(lookup_terms, Sequence) and not isinstance(lookup_terms, (str, bytes)):
+        values = [str(term) for term in lookup_terms if str(term)]
+        if values and values[0] != display:
+            lookup_text = f"; lookup: {values[0]}"
+    evidence = component.get("evidence")
+    evidence_map = cast(Mapping[str, object], evidence) if isinstance(evidence, Mapping) else {}
+    meanings = evidence_map.get("meanings")
+    gloss = ""
+    source_text = ""
+    if isinstance(meanings, Sequence) and not isinstance(meanings, (str, bytes)) and meanings:
+        first = meanings[0]
+        if isinstance(first, Mapping):
+            gloss = str(first.get("display_gloss") or "")
+            source_text = str(first.get("source_text") or "")
+    suffix = f": {gloss}" if gloss else ""
+    source_suffix = f" [{source_text}]" if source_text else ""
+    return f"- {display} ({role}{lookup_text}){suffix}{source_suffix}"
+
+
 def _encounter_cdsl_source_order(bucket) -> int:
     return cdsl_source_order(bucket)
 
@@ -2812,8 +4154,9 @@ def _encounter_preferred_lemmas_for_sorting(
     reduction,
     morphology_rows: Sequence[Mapping[str, str]],
     fallback_terms: Sequence[str] = (),
+    surface_terms: Sequence[str] = (),
 ) -> list[str]:
-    return preferred_lemmas_for_sorting(reduction, morphology_rows, fallback_terms)
+    return preferred_lemmas_for_sorting(reduction, morphology_rows, fallback_terms, surface_terms)
 
 
 def _encounter_morphology_lemma_preference_key(
@@ -3675,10 +5018,30 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             reduction,
             morphology_rows,
             fallback_terms,
+            [text],
         )
         reduction.buckets = sorted(
             reduction.buckets,
             key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred_lemmas),
+        )
+        component_links = _encounter_component_links(
+            language=language,
+            original=text,
+            tool_filter=tool_filter,
+            normalize=normalize,
+            diogenes_endpoint=diogenes_endpoint,
+            diogenes_parse_endpoint=diogenes_parse_endpoint,
+            heritage_base=heritage_base,
+            db_path=db_path,
+            include_cltk=include_cltk,
+            morphology_rows=morphology_rows,
+            reduction=reduction,
+            max_gloss_chars=max_gloss_chars,
+            translation_cache=translation_cache,
+            populate_translations=populate_translations,
+            translation_model=translation_model,
+            translation_callback=translation_callback,
+            translation_diagnostics=translation_diagnostics,
         )
 
         if output == "json":
@@ -3706,6 +5069,9 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     max_chars=max_gloss_chars,
                 ),
             )
+            if isinstance(payload["display"], dict):
+                payload["display"]["components"] = component_links
+            payload["components"] = component_links
             payload["ranking"] = [
                 asdict(
                     bucket_ranking_explanation(
@@ -3744,6 +5110,10 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 include_foster=foster_labels,
             ):
                 click.echo(f"- {analysis_view.display_text}")
+        if component_links:
+            click.echo("\nComponents")
+            for component in component_links:
+                click.echo(_encounter_component_display_line(component))
         if not reduction.buckets:
             return
 

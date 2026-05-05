@@ -63,6 +63,8 @@ just triples-dump lat lupus whitakers
 
 just cli encounter lat cano gaffiot
 just cli encounter san karman dico
+just cli word-of-day san --output json
+just cli recommend-words grc --count 3 --output json
 just cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffiot --dry-run
 ```
 

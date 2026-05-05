@@ -11,13 +11,14 @@ _COMPACT_ENTRY_BREAK_RE = re.compile(r"\s+\|+\s+|\s+—\s+")
 _COMPACT_HEADWORD_NUMBER_RE = re.compile(r"\b1\s+([^:;|]{2,120})(?=[:;|])")
 _COMPACT_INFLECTION_TAG_RE = re.compile(r"\b(?:sg|pl|nom|acc|gen|dat|abl)\.")
 _COMPACT_LEXICAL_PREAMBLE_RE = re.compile(
-    r"^(?:[A-Za-zĀ-ž./_-]{1,64}(?:\s+\[[^\]]+\])?,\s*|"
-    r"[A-Za-zĀ-ž./_-]{1,64}\s+\[[^\]]+\]\s*)?"
+    r"^(?:[^\s\[]+(?:\s+\[[^\]]+\])?,\s*|"
+    r"[^\s\[]+\s+\[[^\]]+\]\s*)?"
     r"(?:(?:mfn|m|f|n|a|adj|v|adv|pn|pron|part)\.,?\s*)+",
     re.IGNORECASE,
 )
 _COMPACT_SECTION_PREFIX_RE = re.compile(r"^(?:[IVX]+|[A-Z])\.\s")
 COMPACT_GLOSS_DEFAULT_MAX_CHARS = 120
+DICO_COMPACT_GLOSS_DEFAULT_MAX_CHARS = 180
 COMPACT_GLOSS_DEFAULT_MAX_ITEMS = 4
 COMPACT_GLOSS_MAX_PREFIX_CHARS = 100
 COMPACT_GLOSS_MAX_ITEM_WORDS = 5
@@ -80,13 +81,49 @@ def compact_source_gloss(
     return _shorten_display(text, max_chars)
 
 
+def compact_dico_source_gloss(
+    raw_text: str,
+    *,
+    max_chars: int = DICO_COMPACT_GLOSS_DEFAULT_MAX_CHARS,
+    max_items: int = COMPACT_GLOSS_DEFAULT_MAX_ITEMS + 1,
+) -> str:
+    """
+    Return a compact learner gloss for DICO entries.
+
+    DICO often uses em dashes and pipes to separate grammatical/sense sections,
+    not to mark disposable tail matter. Treat those separators as sense breaks
+    so long concept entries do not hide their most useful noun senses.
+    """
+    text = display_text(raw_text)
+    if not text:
+        return ""
+    text = re.sub(r"^\d+\.\s+", "", text)
+    text = re.sub(r"\s+[—|]+\s+", "; ", text)
+    text = _trim_lexical_preamble(text)
+    parts = [
+        part.strip()
+        for part in re.split(r"\s*;\s*", text)
+        if part.strip() and not re.match(r"^(?:cf|see)\.\s+", part.strip(), re.IGNORECASE)
+    ]
+    if parts:
+        text = "; ".join(parts[:max_items])
+    return _shorten_display(text, max_chars)
+
+
 def learner_segments_from_text(
     raw_text: str,
     *,
     max_chars: int = COMPACT_GLOSS_DEFAULT_MAX_CHARS,
+    source_tool: str = "unknown",
 ) -> list[dict[str, object]]:
     """Build typed learner-summary segments while preserving full source text elsewhere."""
-    learner_gloss = compact_source_gloss(raw_text, max_chars=max_chars)
+    if source_tool.strip().lower() == "dico" and max_chars == COMPACT_GLOSS_DEFAULT_MAX_CHARS:
+        max_chars = DICO_COMPACT_GLOSS_DEFAULT_MAX_CHARS
+    learner_gloss = (
+        compact_dico_source_gloss(raw_text, max_chars=max_chars)
+        if source_tool.strip().lower() == "dico"
+        else compact_source_gloss(raw_text, max_chars=max_chars)
+    )
     if not learner_gloss:
         return []
     return [
@@ -227,12 +264,15 @@ def analyze_source_entry(
     display = display_text(raw_text)
     grammar_parse = parse_source_entry(source_tool, raw_text)
     grammar_definition = _grammar_definition_text(grammar_parse)
-    learner_gloss = (
-        _shorten_display(grammar_definition, COMPACT_GLOSS_DEFAULT_MAX_CHARS)
-        if grammar_definition
-        else compact_source_gloss(raw_text)
-    )
-    learner_segments = learner_segments_from_text(raw_text)
+    if source_tool.strip().lower() == "dico":
+        learner_gloss = compact_dico_source_gloss(raw_text)
+    else:
+        learner_gloss = (
+            _shorten_display(grammar_definition, COMPACT_GLOSS_DEFAULT_MAX_CHARS)
+            if grammar_definition
+            else compact_source_gloss(raw_text)
+        )
+    learner_segments = learner_segments_from_text(raw_text, source_tool=source_tool)
     source_segments = source_segments_from_text(raw_text)
     citations = _citation_items(display, max_items=max_items)
     source_references = _source_reference_items(display, source_segments, max_items=max_items)

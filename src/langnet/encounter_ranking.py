@@ -4,11 +4,13 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, field
+from typing import cast
 
 from langnet.execution.handlers import cdsl as cdsl_handlers
 from langnet.normalizer.utils import strip_accents
 
 RANKING_MISSING = 10**12
+BARE_CROSS_REFERENCE_MAX_CHARS = 240
 BucketGlossFn = Callable[[object], str]
 
 
@@ -61,6 +63,13 @@ def bucket_lemma_values(bucket: object) -> list[str]:
             values.append(display_iast)
         if isinstance(display_slp1, str):
             values.append(cdsl_handlers._slp1_to_iast(display_slp1))  # type: ignore[attr-defined]
+        source_entry = evidence.get("source_entry")
+        if isinstance(source_entry, Mapping):
+            source_entry_data = cast("Mapping[str, object]", source_entry)
+            for key in ("headword_deva", "headword_roma", "headword_norm", "term"):
+                value = source_entry_data.get(key)
+                if isinstance(value, str) and value.strip():
+                    values.append(value.strip())
     return _dedupe_preserve_order(values)
 
 
@@ -79,7 +88,20 @@ def lemma_compare_keys(value: str) -> set[str]:
     base_simplified = (
         base_compact.replace("aa", "a").replace("ii", "i").replace("uu", "u").replace("z", "s")
     )
-    return {key for key in {raw, base, compact, base_compact, simplified, base_simplified} if key}
+    slp1_ascii = compact.replace("f", "r").replace("F", "r")
+    base_slp1_ascii = base_compact.replace("f", "r").replace("F", "r")
+    keys = {
+        raw,
+        base,
+        compact,
+        base_compact,
+        simplified,
+        base_simplified,
+        slp1_ascii,
+        base_slp1_ascii,
+    }
+    keys.update({key[:-1] for key in list(keys) if key.endswith(("h", "ḥ")) and len(key) > 1})
+    return {key for key in keys if key}
 
 
 def preferred_lemmas_from_morphology(
@@ -101,11 +123,13 @@ def preferred_lemmas_for_sorting(
     reduction: object,
     morphology_rows: Sequence[Mapping[str, str]],
     fallback_terms: Sequence[str] = (),
+    surface_terms: Sequence[str] = (),
 ) -> list[str]:
     return _dedupe_preserve_order(
         [
             *fallback_terms,
             *preferred_lemmas_from_morphology(morphology_rows),
+            *surface_terms,
             *preferred_lemmas_from_reduction(reduction),
         ]
     )
@@ -167,7 +191,6 @@ def bucket_sort_key(
 ) -> tuple[int, int, int, int, int, int, tuple[int, ...], int, str]:
     gloss = _bucket_gloss(bucket, bucket_gloss)
     witnesses = _bucket_witnesses(bucket)
-    has_english_translation = _has_english_translation(witnesses)
     has_bilingual_source = _has_bilingual_source(witnesses)
     cdsl_order = cdsl_source_order(bucket)
     source_order = min(
@@ -178,7 +201,7 @@ def bucket_sort_key(
     learner_quality_order = bucket_learner_quality_order(bucket, bucket_gloss=bucket_gloss)
     return (
         effective_preferred_lemma_rank(bucket, preferred_lemmas, learner_quality_order),
-        0 if has_english_translation else 1,
+        source_preference_order(bucket),
         learner_quality_order,
         0 if has_bilingual_source else 1,
         cdsl_dictionary_order(bucket),
@@ -289,16 +312,76 @@ def bucket_learner_quality_order(
     source_tools = bucket_source_tools(bucket)
     score = 0
 
+    score += _generic_quality_adjustment(text)
+    pedagogical_score = _sanskrit_pedagogical_term_score(text)
+    if pedagogical_score < 0:
+        score = min(score, pedagogical_score)
+    score += _pronoun_quality_adjustment(text)
+    score += _auspicious_particle_adjustment(text, source_tools)
+    score += _source_specific_quality_adjustment(text, source_tools)
+
+    return score
+
+
+def _generic_quality_adjustment(text: str) -> int:
+    score = 0
     if "also considered by native grammarians" in text or "base of the cases" in text:
         score += 80
     if "as used in comp" in text and not any(term in text for term in ("you", "thou")):
         score += 30
+    if _looks_like_bare_cross_reference(text):
+        score += 40
+    if any(term in text for term in ("sing of", " to sing", " chant", "celebrate")):
+        score -= 250
+    return score
 
+
+def _looks_like_bare_cross_reference(text: str) -> bool:
+    return (
+        "(see " in text
+        and len(text) < BARE_CROSS_REFERENCE_MAX_CHARS
+        and not any(
+            marker in text
+            for marker in (
+                ";",
+                " | ",
+                " cf. ",
+                " rv.",
+                " mbh.",
+                " mn.",
+                " śbr.",
+                " vs.",
+            )
+        )
+    )
+
+
+def _sanskrit_pedagogical_term_score(text: str) -> int:
+    score = 0
+    simple_promotions = (
+        ("restraint of the mind", -90),
+        ("positive duties", -80),
+        ("agreement, contract, promise, vow", -40),
+    )
+    for term, promotion in simple_promotions:
+        if term in text:
+            score = min(score, promotion)
+    if any(term in text for term in ("voluntary penance", "religious observance")):
+        score = min(score, -70)
+    if "rule or law" in text and any(term in text for term in ("necessity", "obligation")):
+        score = min(score, -60)
+    return score
+
+
+def _pronoun_quality_adjustment(text: str) -> int:
     if any(term in text for term in ("2nd personal pron", "second personal pron")) and any(
         term in text for term in ("you", "thou", "acc. tv", "accusative")
     ):
-        score -= 30
+        return -30
+    return 0
 
+
+def _auspicious_particle_adjustment(text: str, source_tools: set[str]) -> int:
     if (
         ("dico" in source_tools or "cdsl" in source_tools)
         and any(term in text for term in ("part.", "particle", "ind."))
@@ -315,18 +398,19 @@ def bucket_learner_quality_order(
             )
         )
     ):
-        score -= 30
+        return -30
+    return 0
 
+
+def _source_specific_quality_adjustment(text: str, source_tools: set[str]) -> int:
+    score = 0
     if "dico" in source_tools and any(term in text for term in ("[agt.", " ifc.")):
         score += 20
     if "cdsl" in source_tools and re.search(r"\bcl\.\s*\d", text) and " to " in text:
         score -= 15
-    if any(term in text for term in ("sing of", " to sing", " chant", "celebrate")):
-        score -= 250
 
     if "diogenes" in source_tools and re.match(r"^[ivxlcdm]+\.\s+", text) and "(cf." in text:
         score += 30
-
     return score
 
 
@@ -376,6 +460,27 @@ def _has_bilingual_source(witnesses: Sequence[object]) -> bool:
         or _witness_evidence(witness).get("derived_from_tool") in {"dico", "gaffiot"}
         for witness in witnesses
     )
+
+
+def _has_source_dictionary_english(witnesses: Sequence[object]) -> bool:
+    english_source_tools = {"cdsl", "diogenes", "whitaker", "whitakers"}
+    return any(
+        _witness_source_tool(witness) in english_source_tools
+        or _witness_evidence(witness).get("source_tool") in english_source_tools
+        or _witness_evidence(witness).get("source_lang") == "en"
+        for witness in witnesses
+    )
+
+
+def source_preference_order(bucket: object) -> int:
+    witnesses = _bucket_witnesses(bucket)
+    if _has_english_translation(witnesses):
+        return 0
+    if _has_source_dictionary_english(witnesses):
+        return 1
+    if _has_bilingual_source(witnesses):
+        return 2
+    return 3
 
 
 def gaffiot_source_order(bucket: object) -> int:

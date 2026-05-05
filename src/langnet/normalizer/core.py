@@ -29,7 +29,12 @@ else:
 
 from .base import LanguageNormalizer
 from .greek_transliterator import transliterate_variants
-from .utils import contains_greek, normalize_greekish_token, strip_accents
+from .utils import (
+    contains_greek,
+    normalize_greek_compatibility,
+    normalize_greekish_token,
+    strip_accents,
+)
 
 LanguageValue = LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
@@ -528,6 +533,19 @@ class QueryNormalizer:
                 )
             )
             current = stripped
+
+        if language == LanguageHint.LANGUAGE_HINT_GRC:
+            compatible = normalize_greek_compatibility(current)
+            if compatible != current:
+                steps.append(
+                    NormalizationStep(
+                        operation="greek_compatibility_fold",
+                        input=current,
+                        output=compatible,
+                        tool="unicode_normalizer",
+                    )
+                )
+                current = compatible
 
         lowered = current.lower()
         if lowered != current:

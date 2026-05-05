@@ -20,7 +20,7 @@ from .core import (
 )
 from .greek_transliterator import transliterate_variants
 from .sanskrit import HeritageClientProtocol
-from .utils import strip_accents
+from .utils import normalize_greek_compatibility, strip_accents
 
 LanguageValue = LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
@@ -144,6 +144,12 @@ class NormalizationService:
         cached = None
         if self.use_cache:
             cached = self.index.get(query_hash)
+            if cached is not None and self._cached_greek_compatibility_is_stale(
+                raw_query,
+                language,
+                cached,
+            ):
+                cached = None
             if cached is not None:
                 reranked = self._rerank_candidates(raw_query, language, cached)
                 if not self._cached_greek_epic_eus_is_stale(raw_query, language, reranked):
@@ -197,6 +203,32 @@ class NormalizationService:
             for candidate in normalized.candidates
         }
         return expected.isdisjoint(actual)
+
+    def _cached_greek_compatibility_is_stale(
+        self,
+        raw_query: str,
+        language: LanguageValue,
+        normalized: NormalizedQuery,
+    ) -> bool:
+        if language != LanguageHint.LANGUAGE_HINT_GRC:
+            return False
+        text = raw_query.strip().lower()
+        compatible = normalize_greek_compatibility(text)
+        if compatible == text:
+            return False
+        expected = _normalize_greek_reader_form(compatible)
+        all_actual = {
+            strip_accents(candidate.lemma or "").casefold().replace("ς", "σ")
+            for candidate in normalized.candidates
+        }
+        non_local_actual = {
+            strip_accents(candidate.lemma or "").casefold().replace("ς", "σ")
+            for candidate in normalized.candidates
+            if "local" not in set(candidate.sources)
+        }
+        if non_local_actual:
+            return expected not in non_local_actual
+        return expected not in all_actual
 
     def _rerank_candidates(
         self, raw_query: str, language: LanguageValue, normalized: NormalizedQuery
@@ -285,9 +317,17 @@ def _enrich_latin_cached_candidates(raw_query: str, normalized: NormalizedQuery)
 
 def _enrich_greek_cached_candidates(raw_query: str, normalized: NormalizedQuery) -> NormalizedQuery:
     text = raw_query.strip().lower()
-    if not text or any(
-        "\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff" for char in text
-    ):
+    if not text:
+        return normalized
+    if any("\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff" for char in text):
+        compatible = normalize_greek_compatibility(text)
+        if compatible == text:
+            return normalized
+        existing = {candidate.lemma for candidate in normalized.candidates}
+        if compatible not in existing:
+            normalized.candidates.append(
+                CanonicalCandidate(lemma=compatible, encodings={}, sources=["local"])
+            )
         return normalized
     existing = {candidate.lemma for candidate in normalized.candidates}
     for variant in transliterate_variants(text):
@@ -305,16 +345,18 @@ def _enrich_greek_cached_candidates(raw_query: str, normalized: NormalizedQuery)
 
 
 def _greek_rerank_target_source(raw_query: str, normalized: NormalizedQuery) -> str:
+    text = raw_query.strip().lower()
+    if not text:
+        return raw_query
+    if any("\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff" for char in text):
+        return normalize_greek_compatibility(raw_query)
+    variants = transliterate_variants(text)
+    if variants:
+        return variants[0].search_key
     for step in normalized.normalizations:
         if step.operation == "greek_transliterate" and step.output:
             return step.output
-    text = raw_query.strip().lower()
-    if not text or any(
-        "\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff" for char in text
-    ):
-        return raw_query
-    variants = transliterate_variants(text)
-    return variants[0].search_key if variants else raw_query
+    return raw_query
 
 
 def _candidate_freq(candidate) -> int:
@@ -335,17 +377,18 @@ def _greek_reader_priority(
     lemma = candidate.lemma or ""
     lemma_norm = _normalize_greek_reader_form(lemma)
     sources = set(candidate.sources)
+    priority = 1
     if "diogenes_word_list_epic_eus" in sources:
-        return 0
-    if lemma == target_reader_form and lemma != target_source:
-        return 0
-    if _is_greek_nu_to_sigma_parse_candidate(lemma_norm, surface_norm, sources):
-        return 0
-    if lemma_norm == target_reader_norm and lemma != strip_accents(lemma):
-        return 1
-    if lemma_norm == surface_norm and lemma == strip_accents(lemma):
-        return 2
-    return 1
+        priority = 0
+    elif _is_greek_nu_to_sigma_parse_candidate(lemma_norm, surface_norm, sources):
+        priority = -1
+    elif _is_greek_word_list_fragment(lemma):
+        priority = 3
+    elif lemma == target_reader_form and target_reader_form != strip_accents(target_reader_form):
+        priority = 0
+    elif lemma_norm == surface_norm and lemma == strip_accents(lemma):
+        priority = 2
+    return priority
 
 
 def _is_greek_nu_to_sigma_parse_candidate(
@@ -361,6 +404,10 @@ def _is_greek_nu_to_sigma_parse_candidate(
     )
 
 
+def _is_greek_word_list_fragment(lemma: str) -> bool:
+    return lemma.startswith(".") or lemma.endswith(".")
+
+
 def _final_grave_to_acute(text: str) -> str:
     decomposed = list(unicodedata.normalize("NFD", text))
     for idx in range(len(decomposed) - 1, -1, -1):
@@ -374,4 +421,4 @@ def _final_grave_to_acute(text: str) -> str:
 
 
 def _normalize_greek_reader_form(text: str) -> str:
-    return strip_accents(text).casefold().replace("ς", "σ")
+    return strip_accents(normalize_greek_compatibility(text)).casefold().replace("ς", "σ")

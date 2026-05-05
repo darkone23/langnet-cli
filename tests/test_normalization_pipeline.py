@@ -78,6 +78,20 @@ class _FakeDiogenes:
         return ParseResult(query=query, lemmas=["lupus", "lupum"], matched=True)
 
 
+class _GreekCompatibilityDiogenes:
+    def __init__(self) -> None:
+        self.parse_queries: list[str] = []
+        self.word_list_queries: list[str] = []
+
+    def fetch_parse(self, query: str, lang: str = "grc") -> ParseResult:
+        self.parse_queries.append(query)
+        return ParseResult(query=query, lemmas=["ombros"], matched=True)
+
+    def fetch_word_list(self, query: str) -> WordListResult:
+        self.word_list_queries.append(query)
+        return WordListResult(query=query, lemmas=["ὄμβρος"], matched=True)
+
+
 class _GreekEpicEusDiogenes:
     def fetch_word_list(self, query: str) -> WordListResult:
         lemmas_by_query = {
@@ -244,6 +258,22 @@ def test_greek_normalizer_uses_diogenes_wordlist() -> None:
     assert "λόγος" in lemmas
     assert any("diogenes_word_list" in c.sources for c in result.normalized.candidates)
     assert any(step.operation == "diogenes_word_list" for step in result.normalized.normalizations)
+
+
+def test_greek_normalizer_folds_compatibility_beta_symbol_before_diogenes() -> None:
+    diogenes = _GreekCompatibilityDiogenes()
+    normalizer = QueryNormalizer(diogenes_greek_client=diogenes)
+
+    result = normalizer.normalize("ὄμϐρος", LanguageHint.LANGUAGE_HINT_GRC)
+
+    assert diogenes.parse_queries == ["ὄμβρος"]
+    assert diogenes.word_list_queries == ["ὄμβρος"]
+    assert result.normalized.normalizations[0].operation == "greek_compatibility_fold"
+    assert result.normalized.normalizations[0].output == "ὄμβρος"
+    assert {candidate.lemma for candidate in result.normalized.candidates} >= {
+        "ombros",
+        "ὄμβρος",
+    }
 
 
 def test_latin_normalizer_uses_diogenes_parse() -> None:

@@ -1,11 +1,11 @@
 # Project Status
 
-**Date:** 2026-05-01  
+**Date:** 2026-05-02
 **Overall grade:** B / 85%
 
 ## Summary
 
-LangNet has crossed the foundation threshold. The CLI, planner, staged executor, storage indexes, core backend handlers, exact WSU reduction, and first `encounter` output exist. Sanskrit follows a clearer Heritage-first model: Heritage is the preferred morphology/analysis source, while CDSL and DICO supplement meaning/gloss evidence. DICO/Gaffiot now support cache-backed English translation projection, plus explicit cache-miss population through `--translation-mode auto`. DICO/Gaffiot claim triples now carry compact learner-gloss metadata, and `encounter` keeps full dictionary evidence available underneath the short display line. Header, analysis-row, meaning-row, source-detail, Foster-label, ranking, and translation-cache summaries now flow through encounter helper modules instead of CLI-local string scraping.
+LangNet has crossed the foundation threshold. The CLI, planner, staged executor, storage indexes, core backend handlers, exact WSU reduction, and first `encounter` output exist. Sanskrit follows a clearer Heritage-first model: Heritage is the preferred morphology/analysis source, while CDSL and DICO supplement meaning/gloss evidence. DICO/Gaffiot now support cache-backed English translation projection, plus explicit cache-miss population through `--translation-mode auto`. DICO/Gaffiot claim triples now carry compact learner-gloss metadata, and `encounter` keeps full dictionary evidence available underneath the short display line. Header, analysis-row, meaning-row, source-detail, Foster-label, ranking, and translation-cache summaries now flow through encounter helper modules instead of CLI-local string scraping. Learner recommendation commands now expose schema-backed `word-of-day` and `recommend-words` output with encounter probe summaries.
 
 The main project risk is no longer "can the system run?" It is "can we put the right evidence first for a reader without hiding or damaging the sources?"
 
@@ -13,17 +13,17 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 
 | Area | Grade | Status |
 | --- | --- | --- |
-| Build and validation | A | `just lint-all` and `just test-fast` pass; current fast suite is over 320 tests. |
+| Build and validation | A | `just ruff-format --check`, `just ruff-check`, `just typecheck`, focused stabilization tests, and full `just test` pass; current full suite is 370 tests. |
 | CLI surface | B+ | Commands exist; `encounter` is the current learner-facing path. DICO/Gaffiot translation modes are wired. Compact gloss display and source-detail toggles have started, but the interface is still an MVP. |
 | Planner/executor | B+ | Tool plans and staged execution are implemented. |
 | Claims/evidence | A- | Core handlers have fixture-backed claim contract coverage; CDSL/DICO/Gaffiot evidence paths are stronger. |
 | Semantic reduction | C+ | Exact claim-to-WSU extraction and bucket display exist; headword ranking and compact display are improving, while semantic merging remains deferred. |
-| Documentation | B+ | Active docs are classified by purpose; archive retained for old reports/plans. |
+| Documentation | B+ | Active docs are classified by purpose; README, getting-started, output guide, roadmap, and status docs are aligned with the current CLI-first surface. |
 | Release hygiene | C+ | Many changes are still uncommitted and should be checkpointed. |
 
 ## Implemented Runtime
 
-- CLI commands: `lookup`, `parse`, `normalize`, `plan`, `plan-exec`, `triples-dump`, `encounter`, `databuild`, `index`.
+- CLI commands: `lookup`, `parse`, `normalize`, `plan`, `plan-exec`, `triples-dump`, `encounter`, `word-of-day`, `recommend-words`, `reader-eval`, `translation-warm`, `databuild`, `index`.
 - Language coverage:
   - Latin: Whitaker, Diogenes, CLTK, local Gaffiot source entries.
   - Greek: Diogenes, CLTK/spaCy where configured.
@@ -52,6 +52,15 @@ The main project risk is no longer "can the system run?" It is "can we put the r
   reduction-derived preferred lemmas, source-order ranking, learner-quality
   ordering, and final bucket sort-key assembly now live in `encounter_ranking`,
   with compatibility wrappers left in the CLI.
+- Source-headword ranking now considers source entry headword metadata, so exact
+  Sanskrit DICO headwords such as `पुराण` can outrank near forms such as
+  `पुरण` without regressing morphology-supported cases such as `karma ->
+  karman`.
+- Long DICO entries now use DICO-aware learner-gloss compaction that preserves
+  later useful sense sections before falling back to full source inspection.
+  Upstream source text can still end with ellipses, but JSON exposes source
+  length and evidence notes so callers can distinguish upstream clipping from
+  display summarization.
 - JSON contract: `encounter --output json` now includes schema/request metadata,
   display-ready header/analysis/meaning rows, and ranking explanations aligned
   to sorted buckets, giving future web/API renderers structured fields instead
@@ -72,14 +81,17 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 - Sanskrit Heritage morphology now preserves segment-level lemmas in compound
   rows, improving learner display and provenance inspection for Sanskrit
   compounds.
+- `word-of-day` and `recommend-words` emit `langnet.word_of_day.v1` JSON,
+  enforce an LLM subprocess deadline, and verify recommendations against
+  encounter probes when available.
 
 ## Current Gaps
 
 - `lookup` output is still backend-keyed; `encounter` is better but not yet a release-quality learner interface.
 - Current `encounter` samples expose concrete learner-experience failures:
-  Sanskrit can still leak CDSL source notation, Latin/Gaffiot can still expose
-  long source entries before compact learner prose, and Greek can still expose
-  large LSJ sections without a concise learner summary. Fresh reader-eval with
+  Sanskrit CDSL can still leak source notation, Latin/Gaffiot and Greek/LSJ
+  still need broader typed source segmentation, and some long source entries
+  require better example/citation handling. Fresh reader-eval with
   `--no-cache --translation-mode off` now reaches 13/13 meaning hits, 13/13
   top-answer hits, and 13/13 strict hits on the seed classic-opening fixture.
   Latin `cano` now leads with the singing/chanting verb, and `virumque` leads

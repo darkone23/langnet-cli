@@ -25,6 +25,13 @@ def test_lemma_compare_keys_include_pos_anchor_base() -> None:
     assert "armum" in lemma_compare_keys("armum#noun")
 
 
+def test_lemma_compare_keys_match_sanskrit_slp1_vocalic_r_and_visarga() -> None:
+    assert lemma_compare_keys("pravṛtti") & lemma_compare_keys("pravftti")
+    assert lemma_compare_keys("pravṛtti") & lemma_compare_keys("pravṛttiḥ")
+    assert lemma_compare_keys("niyama") & lemma_compare_keys("niyamaḥ")
+    assert lemma_compare_keys("niyama") & lemma_compare_keys("niyamah")
+
+
 def test_preferred_lemmas_from_morphology_demotes_tackon_rows() -> None:
     morphology_rows = [
         {
@@ -172,6 +179,78 @@ def test_bucket_sort_key_combines_source_order_and_quality_policy() -> None:
     )
 
     assert sorted([numbered, heading], key=bucket_sort_key) == [numbered, heading]
+
+
+def test_bucket_sort_key_prefers_source_english_over_untranslated_dico() -> None:
+    dico = SimpleNamespace(
+        display_gloss="niyama discipline morale",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="dico",
+                lexeme_anchor="lex:niyama",
+                evidence={
+                    "source_tool": "dico",
+                    "source_lang": "fr",
+                    "source_entry": {"headword_norm": "niyama"},
+                },
+            )
+        ],
+    )
+    cdsl = SimpleNamespace(
+        display_gloss="restraint of the mind",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                lexeme_anchor="lex:niyama",
+                evidence={
+                    "source_tool": "cdsl",
+                    "display_iast": "niyama",
+                    "source_ref": "mw:109142.0",
+                },
+            )
+        ],
+    )
+
+    assert sorted([dico, cdsl], key=lambda bucket: bucket_sort_key(bucket, ["niyama"])) == [
+        cdsl,
+        dico,
+    ]
+
+
+def test_bucket_sort_key_demotes_bare_cross_reference_senses() -> None:
+    cross_ref = SimpleNamespace(
+        display_gloss="1. iṣa mfn. seeking (see gav-iṣa ).",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                lexeme_anchor="lex:iza",
+                evidence={
+                    "source_tool": "cdsl",
+                    "display_iast": "iṣa",
+                    "source_ref": "mw:29541.0",
+                },
+            )
+        ],
+    )
+    definition = SimpleNamespace(
+        display_gloss="2. iṣa mfn. possessing sap and strength",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                lexeme_anchor="lex:iza",
+                evidence={
+                    "source_tool": "cdsl",
+                    "display_iast": "iṣa",
+                    "source_ref": "mw:29598.0",
+                },
+            )
+        ],
+    )
+
+    assert sorted(
+        [cross_ref, definition],
+        key=lambda bucket: bucket_sort_key(bucket, ["iṣa"]),
+    ) == [definition, cross_ref]
 
 
 def test_bucket_ranking_explanation_reports_sort_factors_and_reasons() -> None:

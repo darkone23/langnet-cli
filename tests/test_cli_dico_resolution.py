@@ -277,7 +277,9 @@ def test_dico_entry_triples_strip_short_grammar_preamble_for_learner_gloss() -> 
         }
     )
 
-    assert triples[1]["metadata"]["learner_gloss"] == "loi, condition, nature propre"
+    assert triples[1]["metadata"]["learner_gloss"] == (
+        "loi, condition, nature propre; loi physique"
+    )
     assert triples[1]["metadata"]["display_gloss"] == (
         "dharma [ dharman ] m. n. loi, condition, nature propre | loi physique"
     )
