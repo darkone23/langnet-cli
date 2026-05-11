@@ -19,6 +19,7 @@
       "type": "array",
       "items": { "$ref": "#/$defs/sourceStatus" }
     },
+    "order": { "$ref": "#/$defs/order" },
     "items": {
       "type": "array",
       "items": { "$ref": "#/$defs/item" }
@@ -32,6 +33,7 @@
           "type": "object",
           "required": ["groups"],
           "properties": {
+            "order": { "$ref": "#/$defs/order" },
             "groups": {
               "type": "array",
               "items": { "$ref": "#/$defs/neighborhood" }
@@ -121,6 +123,7 @@
         "sort_key": { "type": "string" },
         "source_order_key": { "type": "string" },
         "source_ref": { "type": "string" },
+        "order": { "$ref": "#/$defs/order" },
         "ids": { "$ref": "#/$defs/itemIds" },
         "source_count": { "type": "integer", "minimum": 1 },
         "source_entry_count": { "type": "integer", "minimum": 1 },
@@ -160,6 +163,7 @@
         "source_display": { "type": "string" },
         "source_ref": { "type": "string" },
         "source_order_key": { "type": "string" },
+        "order": { "$ref": "#/$defs/order" },
         "display": { "$ref": "#/$defs/display" },
         "encounter": { "$ref": "#/$defs/encounterRequest" },
         "metadata": { "type": "object" }
@@ -228,6 +232,7 @@
         "radius": { "type": "integer", "minimum": 1 },
         "neighborhood_kind": { "enum": ["lexical_order", "lookup_alternatives"] },
         "anchor_status": { "enum": ["exact", "nearest", "not_found"] },
+        "order": { "$ref": "#/$defs/order" },
         "window": { "$ref": "#/$defs/window" }
       },
       "additionalProperties": true
@@ -266,6 +271,7 @@
         "radius": { "type": "integer", "minimum": 1 },
         "neighborhood_kind": { "const": "merged_lexeme" },
         "anchor_status": { "enum": ["exact", "nearest", "not_found"] },
+        "order": { "$ref": "#/$defs/order" },
         "window": { "$ref": "#/$defs/mergedWindow" }
       },
       "additionalProperties": true
@@ -326,6 +332,40 @@
       "properties": {
         "source": { "type": "string" },
         "message": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "order": {
+      "type": "object",
+      "required": ["policy", "label", "collation", "key", "display_key", "explanation"],
+      "properties": {
+        "policy": {
+          "enum": [
+            "source-native",
+            "language-native",
+            "canonical-key",
+            "source-window-merge",
+            "seeded-discovery",
+            "fallback"
+          ]
+        },
+        "label": { "type": "string" },
+        "collation": {
+          "enum": [
+            "sa-varga",
+            "sa-devanagari",
+            "grc-lexical",
+            "lat-lexical",
+            "source",
+            "canonical-key",
+            "seeded-discovery",
+            "merged-source-window",
+            "fallback"
+          ]
+        },
+        "key": { "type": "string" },
+        "display_key": { "type": "string" },
+        "explanation": { "type": "string" }
       },
       "additionalProperties": true
     }

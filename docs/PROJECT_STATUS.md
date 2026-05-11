@@ -1,11 +1,18 @@
 # Project Status
 
-**Date:** 2026-05-02
+**Date:** 2026-05-11
 **Overall grade:** B / 85%
 
 ## Summary
 
 LangNet has crossed the foundation threshold. The CLI, planner, staged executor, storage indexes, core backend handlers, exact WSU reduction, and first `encounter` output exist. Sanskrit follows a clearer Heritage-first model: Heritage is the preferred morphology/analysis source, while CDSL and DICO supplement meaning/gloss evidence. DICO/Gaffiot now support cache-backed English translation projection, plus explicit cache-miss population through `--translation-mode auto`. DICO/Gaffiot claim triples now carry compact learner-gloss metadata, and `encounter` keeps full dictionary evidence available underneath the short display line. Header, analysis-row, meaning-row, source-detail, Foster-label, ranking, and translation-cache summaries now flow through encounter helper modules instead of CLI-local string scraping. Learner recommendation commands now expose schema-backed `word-of-day` and `recommend-words` output with encounter probe summaries.
+
+The current source-backed V1 paradigm and word-index ordering slices are stable:
+`paradigm` and `paradigm-resolve` expose Heritage/Diogenes-backed tables and
+resolution metadata, while `word-index` exposes explicit order metadata plus
+native section rails. Sanskrit now has a 52-item varnamala section rail with
+CDSL SLP1 anchors that preserve phoneme distinctions such as ण/न, श/ष/स, and
+क्ष/ज्ञ.
 
 The main project risk is no longer "can the system run?" It is "can we put the right evidence first for a reader without hiding or damaging the sources?"
 
@@ -13,17 +20,17 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 
 | Area | Grade | Status |
 | --- | --- | --- |
-| Build and validation | A | `just ruff-format --check`, `just ruff-check`, `just typecheck`, focused stabilization tests, and full `just test` pass; current full suite is 370 tests. |
+| Build and validation | A | Current closure verification passes: focused word-index/paradigm tests, live Sanskrit smoke checks, `just lint-all`, and `just test-fast`; current fast suite is 493 tests. |
 | CLI surface | B+ | Commands exist; `encounter` is the current learner-facing path. DICO/Gaffiot translation modes are wired. Compact gloss display and source-detail toggles have started, but the interface is still an MVP. |
 | Planner/executor | B+ | Tool plans and staged execution are implemented. |
 | Claims/evidence | A- | Core handlers have fixture-backed claim contract coverage; CDSL/DICO/Gaffiot evidence paths are stronger. |
 | Semantic reduction | C+ | Exact claim-to-WSU extraction and bucket display exist; headword ranking and compact display are improving, while semantic merging remains deferred. |
 | Documentation | B+ | Active docs are classified by purpose; README, getting-started, output guide, roadmap, and status docs are aligned with the current CLI-first surface. |
-| Release hygiene | C+ | Many changes are still uncommitted and should be checkpointed. |
+| Release hygiene | B- | Completed plans are moving out of `active/`; uncommitted stabilization/docs changes should still be checkpointed before larger work. |
 
 ## Implemented Runtime
 
-- CLI commands: `lookup`, `parse`, `normalize`, `plan`, `plan-exec`, `triples-dump`, `encounter`, `word-of-day`, `recommend-words`, `reader-eval`, `translation-warm`, `databuild`, `index`.
+- CLI commands: `lookup`, `parse`, `normalize`, `plan`, `plan-exec`, `triples-dump`, `encounter`, `word-of-day`, `recommend-words`, `reader-eval`, `translation-warm`, `translation-cache`, `word-index`, `entry-analyze`, `doctor`, `langs`, `tools`, `databuild`, and `index`.
 - Language coverage:
   - Latin: Whitaker, Diogenes, CLTK, local Gaffiot source entries.
   - Greek: Diogenes, CLTK/spaCy where configured.
@@ -84,10 +91,29 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 - `word-of-day` and `recommend-words` emit `langnet.word_of_day.v1` JSON,
   enforce an LLM subprocess deadline, and verify recommendations against
   encounter probes when available.
+- `word-index` JSON exposes explicit `order` objects for source-local rows,
+  collapsed lexeme cards, merged neighborhoods, grouped source windows, and
+  seeded discovery wheels. This keeps durable keys such as `wheel_order_key`
+  and `source_order_key` from being mistaken for a universal native alphabet.
+- `word-index sections` exposes native browsing rails. Sanskrit uses a 52-item
+  varnamala rail with learner-facing labels and source-native CDSL SLP1 anchors
+  for correct dictionary neighborhoods.
+- `paradigm` and `paradigm-resolve` expose source-backed inflectional table
+  support. Sanskrit noun declensions and verb conjugations are fetched from
+  Heritage; Latin and Greek tables are fetched from Diogenes. Resolution keeps
+  native grammar features separate from shared functional relations and avoids
+  guessing when required metadata is missing.
 
 ## Current Gaps
 
 - `lookup` output is still backend-keyed; `encounter` is better but not yet a release-quality learner interface.
+- Sanskrit word-index source rows currently preserve source/index sequence and
+  label it as `collation = "source"`; the section rail is varnamala-aware, but a
+  standalone full varga-order key remains a future enhancement.
+- Paradigm support is source-backed V1, not a complete local morphology engine.
+  Arbitrary reverse analysis, local template generation, Sanskrit compound
+  decomposition, cross-language aligned paradigm views, and highlight rendering
+  remain future work.
 - Current `encounter` samples expose concrete learner-experience failures:
   Sanskrit CDSL can still leak source notation, Latin/Gaffiot and Greek/LSJ
   still need broader typed source segmentation, and some long source entries
@@ -104,7 +130,7 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 - Evidence inspection works in text and JSON; `OUTPUT_GUIDE.md` now includes Sanskrit CDSL and DICO/Gaffiot translation-cache walkthroughs.
 - Fuzz recipes are diagnostic only; query/compare modes still reflect older API assumptions. The current 50-word audit under `examples/debug/fuzz_audit_2026_04_27/` is useful evidence coverage, not a release gate.
 - CLTK may fail cleanly when model data is absent.
-- Active planning needs discipline: one canonical roadmap, scoped task files, archive old reports.
+- Active planning needs discipline: one canonical roadmap, scoped task files, and completed plans kept out of `docs/plans/active/`.
 - External services remain required for live lookup.
 - CDSL learner display is improved and fixture-backed, but CDSL entries are still flat strings with source abbreviations and citations mixed into gloss text.
 
@@ -130,6 +156,7 @@ The main project risk is no longer "can the system run?" It is "can we put the r
 - Deterministic reduction comes before embeddings or semantic constants.
 - Passage/compound work must reuse word-level claims and buckets, not bypass them.
 - Stabilization work has priority over new learner-facing features until the baseline is committed and inspectable.
+- Run Just/devenv recipe probes sequentially; parallel recipe audits can produce misleading positional-argument failures.
 
 ## Canonical References
 

@@ -21,6 +21,7 @@ from langnet.cli import (
 )
 from langnet.reduction.models import ReductionResult, SenseBucket, WitnessSenseUnit
 from langnet.word_of_day import (
+    _CANDIDATE_POOLS,
     WordCandidate,
     WordOfDayOptions,
     build_word_of_day_item,
@@ -28,6 +29,9 @@ from langnet.word_of_day import (
 )
 
 RECOMMEND_WORDS_COUNT = 2
+GREEK_MOTD_BATCH_COUNT = 5
+GREEK_MOTD_MIN_BEGINNER_CANDIDATES = 50
+GREEK_MOTD_MIN_CURATED_CANDIDATES = 365
 SUBPROCESS_TIMEOUT_TEST_MAX_SECONDS = 2
 WORD_OF_DAY_SCHEMA_PATH = Path("docs/schemas/word_of_day.v1.schema.json")
 
@@ -80,6 +84,49 @@ def _fake_reduction(
                 confidence_label="single-witness",
             )
         ],
+    )
+
+
+def _fake_reduction_with_buckets(
+    language: str,
+    query: str,
+    glosses: list[str],
+) -> ReductionResult:
+    buckets: list[SenseBucket] = []
+    for idx, display_gloss in enumerate(glosses):
+        witness = WitnessSenseUnit(
+            wsu_id=f"wsu:{language}:{query}:{idx}",
+            lexeme_anchor=f"lex:{query}",
+            sense_anchor=f"sense:lex:{query}#{idx}",
+            gloss=display_gloss,
+            normalized_gloss=display_gloss,
+            source_tool="fixture",
+            claim_id=f"claim-fixture-{idx}",
+            source_triple_subject=f"lex:{query}",
+            evidence={
+                "source_tool": "fixture",
+                "source_ref": f"fixture:{idx}",
+                "source_entry": {
+                    "source_ref": f"fixture:{idx}",
+                    "term": query,
+                    "source_text": display_gloss,
+                },
+            },
+        )
+        buckets.append(
+            SenseBucket(
+                bucket_id=f"bucket:{language}:{query}:{idx}",
+                normalized_gloss=display_gloss,
+                display_gloss=display_gloss,
+                witnesses=[witness],
+                confidence_label="single-witness",
+            )
+        )
+    return ReductionResult(
+        query=query,
+        language=language,
+        lexeme_anchors=[f"lex:{query}"],
+        buckets=buckets,
     )
 
 
@@ -273,6 +320,142 @@ def test_word_of_day_fresh_avoids_recent_keys_when_possible() -> None:
     assert item["novelty"]["is_repeat"] is False
     assert payload["exhaustion"]["fresh_satisfied"] is True
     assert seen == ["rex"]
+
+
+def test_greek_curated_pool_is_year_scale_and_not_logos_dependent() -> None:
+    greek_candidates = list(_CANDIDATE_POOLS["grc"])
+    beginner_queries = [
+        candidate.query for candidate in greek_candidates if candidate.difficulty == "beginner"
+    ]
+
+    assert len(greek_candidates) >= GREEK_MOTD_MIN_CURATED_CANDIDATES
+    assert len(beginner_queries) >= GREEK_MOTD_MIN_BEGINNER_CANDIDATES
+    assert beginner_queries.count("logos") == 1
+    assert "agathos" not in beginner_queries
+    assert "hen" not in beginner_queries
+    for expected in ("chronos", "sophia", "kratos", "physis", "polis"):
+        assert expected in beginner_queries
+
+
+def test_word_of_day_fresh_greek_avoid_logos_returns_non_logos_batch() -> None:
+    runner = CliRunner()
+    with patch("langnet.cli._word_of_day_probe_reduction") as probe:
+        probe.side_effect = lambda **kwargs: _fake_reduction(kwargs["language"], kwargs["text"])
+        result = runner.invoke(
+            main,
+            [
+                "word-of-day",
+                "grc",
+                "--count",
+                str(GREEK_MOTD_BATCH_COUNT),
+                "--level",
+                "beginner",
+                "--seed",
+                "greek-diversity",
+                "--fresh",
+                "--avoid",
+                "grc:logos,logos",
+                "--output",
+                "json",
+                "--candidate-source",
+                "curated",
+            ],
+        )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    _assert_matches_word_of_day_schema(payload)
+    keys = [item["key"] for item in payload["items"]]
+    assert len(keys) == GREEK_MOTD_BATCH_COUNT
+    assert "grc:logos" not in keys
+    assert len(set(keys)) == len(keys)
+    assert payload["exhaustion"]["fresh_satisfied"] is True
+
+
+def test_word_of_day_reports_candidate_validation_diagnostics() -> None:
+    options = WordOfDayOptions(
+        count=1,
+        level="beginner",
+        dictionary="all",
+        reader_lang="en",
+        translation_mode="cache",
+        max_source_chars=80,
+        include_ambiguous=False,
+        require_clean_primary=False,
+        timeout_ms=0,
+        seed="diagnostics",
+        fresh=False,
+        candidate_source="curated",
+    )
+
+    def probe(_language: str, query: str) -> ReductionResult:
+        if query == "logos":
+            return ReductionResult(query=query, language="grc", lexeme_anchors=[], buckets=[])
+        return _fake_reduction("grc", query)
+
+    payload = generate_word_of_day_payload(
+        languages=["grc"],
+        options=options,
+        probe_encounter=probe,
+        bucket_gloss=lambda bucket: bucket.display_gloss,
+        bucket_learner_gloss=lambda bucket: bucket.display_gloss,
+        candidate_pools={
+            "grc": [
+                WordCandidate("grc", "logos", "beginner"),
+            ]
+        },
+    )
+
+    diagnostics = payload["diagnostics"]
+    greek = diagnostics["languages"]["grc"]
+    assert diagnostics["candidate_source"] == "curated"
+    assert greek["pool_size"] == 1
+    assert greek["eligible_count"] == 1
+    assert greek["probed_count"] == 1
+    assert greek["accepted_count"] == 0
+    assert greek["rejected_count"] == 1
+    assert greek["rejections"] == [{"query": "logos", "reason": "no_usable_buckets"}]
+
+
+def test_greek_curated_recommendations_prefer_paradigm_capable_keys() -> None:
+    with patch("random.Random.shuffle", lambda _self, _values: None):
+        payload = generate_word_of_day_payload(
+            languages=["grc"],
+            options=_options(seed="greek-paradigm-priority"),
+            probe_encounter=_fake_reduction,
+            bucket_gloss=lambda bucket: bucket.display_gloss,
+            bucket_learner_gloss=lambda bucket: bucket.display_gloss,
+            candidate_pools={
+                "grc": [
+                    WordCandidate("grc", "hodos", "beginner"),
+                    WordCandidate("grc", "logos", "beginner"),
+                ]
+            },
+            exclude_terms=[],
+        )
+
+    assert payload["items"][0]["query"] == "logos"
+    assert payload["items"][0]["canonical"]["source_key"] == "lo/gos"
+
+
+def test_greek_curated_recommendations_prefer_core_paradigm_keys() -> None:
+    with patch("random.Random.shuffle", lambda _self, _values: None):
+        payload = generate_word_of_day_payload(
+            languages=["grc"],
+            options=_options(seed="greek-core-paradigm-priority"),
+            probe_encounter=_fake_reduction,
+            bucket_gloss=lambda bucket: bucket.display_gloss,
+            bucket_learner_gloss=lambda bucket: bucket.display_gloss,
+            candidate_pools={
+                "grc": [
+                    WordCandidate("grc", "selene", "beginner"),
+                    WordCandidate("grc", "logos", "beginner"),
+                ]
+            },
+            exclude_terms=[],
+        )
+
+    assert payload["items"][0]["query"] == "logos"
 
 
 def test_word_of_day_marks_repeat_when_fresh_exhausted() -> None:
@@ -595,6 +778,28 @@ def test_word_of_day_keeps_supported_llm_summary_hint() -> None:
     assert item["summary"] == "single unity"
 
 
+def test_word_of_day_prefers_bucket_that_supports_curated_summary_hint() -> None:
+    reduction = _fake_reduction_with_buckets(
+        "grc",
+        "glossa",
+        [
+            "in Music, a technical stop of a pipe",
+            "tongue; language; speech",
+        ],
+    )
+    item = build_word_of_day_item(
+        candidate=WordCandidate("grc", "glossa", summary_hint="tongue; language"),
+        reduction=reduction,
+        options=_options(),
+        bucket_gloss=lambda bucket: bucket.display_gloss,
+        bucket_learner_gloss=lambda bucket: bucket.display_gloss,
+    )
+
+    assert item is not None
+    assert item["summary"] == "tongue; language"
+    assert item["source_basis"][0]["evidence"] == "tongue; language; speech"
+
+
 def test_word_of_day_projects_sanskrit_devanagari_canonical_name() -> None:
     reduction = _fake_reduction("san", "dharma")
     source_entry = reduction.buckets[0].witnesses[0].evidence["source_entry"]
@@ -638,6 +843,7 @@ def test_word_of_day_projects_greek_unicode_canonical_name() -> None:
     assert item["canonical"]["script"] == "Greek"
     assert item["canonical"]["source"] == "source_entry.term"
     assert item["canonical"]["transliteration"] == "logos"
+    assert item["canonical"]["source_key"] == "lo/gos"
 
 
 def test_word_of_day_strips_greek_example_tail_from_summary() -> None:

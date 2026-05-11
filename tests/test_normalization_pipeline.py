@@ -156,6 +156,27 @@ class _KarunTruncatedHeritage(_FakeHeritage):
         return []
 
 
+class _SanjayaHeritage(_FakeHeritage):
+    def fetch_all_matches(self, query: str) -> list[HeritageMatch]:
+        if query == "sa~njaya":
+            return [HeritageMatch(canonical="sa~njaya", display="sañjaya", entry_url="")]
+        return []
+
+
+class _PasyaHeritage(_FakeHeritage):
+    def fetch_all_matches(self, query: str) -> list[HeritageMatch]:
+        if query == "pazya":
+            return [HeritageMatch(canonical="pazya", display="paśya", entry_url="")]
+        return []
+
+
+class _DhimataHeritage(_FakeHeritage):
+    def fetch_all_matches(self, query: str) -> list[HeritageMatch]:
+        if query == "dhiimataa":
+            return [HeritageMatch(canonical="dhiimat", display="dhīmat", entry_url="")]
+        return []
+
+
 def test_sanskrit_normalizer_enrichment_prefers_heritage() -> None:
     steps: list[NormalizationStep] = []
     normalizer = SanskritNormalizer(heritage_client=_FakeHeritage())
@@ -274,6 +295,20 @@ def test_sanskrit_normalizer_completes_truncated_final_vowel_before_heritage_gue
     assert any(step.operation == "heritage_final_vowel_completion" for step in steps)
 
 
+def test_sanskrit_normalizer_maps_reader_n_before_j_to_palatal_nasal() -> None:
+    normalizer = SanskritNormalizer(heritage_client=_SanjayaHeritage())
+
+    full_steps: list[NormalizationStep] = []
+    full_candidates = normalizer.canonical_candidates("sanjaya", full_steps)
+    truncated_steps: list[NormalizationStep] = []
+    truncated_candidates = normalizer.canonical_candidates("sanjay", truncated_steps)
+
+    assert full_candidates[0].lemma == "sañjaya"
+    assert truncated_candidates[0].lemma == "sañjaya"
+    assert any(step.operation == "heritage_retry_variant" for step in full_steps)
+    assert any(step.operation == "heritage_retry_variant" for step in truncated_steps)
+
+
 def test_devanagari_to_velthuis_canonical() -> None:
     steps: list[NormalizationStep] = []
     normalizer = SanskritNormalizer()
@@ -292,6 +327,28 @@ def test_iast_to_velthuis_canonical() -> None:
     lemmas = [c.lemma.lower() for c in candidates]
     assert "ziva" in lemmas, lemmas
     assert any(step.operation == "to_heritage_velthuis" for step in steps)
+
+
+def test_sanskrit_normalizer_accepts_mixed_iast_ascii_sibilant_digraph() -> None:
+    steps: list[NormalizationStep] = []
+    normalizer = SanskritNormalizer(heritage_client=_PasyaHeritage())
+    candidates = normalizer.canonical_candidates("Paśhya", steps)
+
+    assert candidates[0].lemma == "paśya"
+    assert candidates[0].encodings["velthuis"] == "pazya"
+    assert any(step.operation == "mixed_iast_ascii_digraph" for step in steps)
+
+
+def test_sanskrit_normalizer_retries_reader_ascii_long_vowels_for_dhimata() -> None:
+    steps: list[NormalizationStep] = []
+    normalizer = SanskritNormalizer(heritage_client=_DhimataHeritage())
+    candidates = normalizer.canonical_candidates("dhimata", steps)
+
+    assert candidates[0].lemma == "dhīmat"
+    assert candidates[0].encodings["velthuis"] == "dhiimat"
+    assert any(
+        step.operation == "heritage_retry_variant" and step.input == "dhīmatā" for step in steps
+    )
 
 
 def test_sanskrit_normalizer_handles_harvard_kyoto_retroflex_markers() -> None:

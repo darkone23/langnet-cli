@@ -14,9 +14,13 @@ from urllib.parse import urlencode
 from langnet.execution.source_text import compact_source_gloss
 from langnet.normalizer.greek_transliterator import transliterate_variants
 from langnet.normalizer.utils import contains_greek
+from langnet.paradigm.greek_learner_keys import (
+    greek_learner_paradigm_hint,
+    greek_learner_paradigm_priority,
+)
 
 WORD_OF_DAY_SCHEMA_VERSION = "langnet.word_of_day.v1"
-WORD_OF_DAY_GENERATOR_VERSION = "0.1.0"
+WORD_OF_DAY_GENERATOR_VERSION = "0.2.0"
 WORD_OF_DAY_SUMMARY_MAX_CHARS = 48
 SUPPORTED_LANGUAGES = ("san", "grc", "lat")
 
@@ -54,6 +58,542 @@ BucketGloss = Callable[[Any], str]
 BucketLearnerGloss = Callable[[Any], str]
 
 
+def _candidate_block(
+    language: str,
+    difficulty: str,
+    queries: Sequence[str],
+) -> tuple[WordCandidate, ...]:
+    return tuple(
+        WordCandidate(
+            language=language,
+            query=query,
+            difficulty=difficulty,
+            summary_hint=_SUMMARY_HINTS.get((language, query), ""),
+        )
+        for query in queries
+    )
+
+
+_SUMMARY_HINTS = {
+    ("grc", "logos"): "word; speech; account; reason",
+    ("grc", "homo"): "same; common; shared",
+    ("grc", "polis"): "city; civic community",
+    ("grc", "chronos"): "time",
+    ("grc", "sophia"): "wisdom; skill",
+    ("grc", "kratos"): "strength; power; rule",
+    ("grc", "physis"): "nature; growth",
+    ("grc", "theos"): "god; divine being",
+    ("grc", "psyche"): "life; soul; breath",
+    ("grc", "bios"): "life; livelihood",
+    ("grc", "dike"): "justice; lawsuit",
+    ("grc", "ergon"): "work; deed",
+    ("grc", "oikos"): "house; household",
+    ("grc", "philos"): "friend; beloved",
+    ("grc", "phos"): "light",
+    ("grc", "aner"): "man; husband",
+    ("grc", "gyne"): "woman; wife",
+    ("grc", "cheir"): "hand",
+    ("grc", "paideia"): "education; culture",
+    ("grc", "arete"): "excellence; virtue",
+    ("grc", "arche"): "beginning; rule",
+    ("grc", "thalassa"): "sea",
+    ("grc", "ge"): "earth; land",
+    ("grc", "ouranos"): "heaven; sky",
+    ("grc", "helios"): "sun",
+    ("grc", "selene"): "moon",
+    ("grc", "nyx"): "night",
+    ("grc", "hemera"): "day",
+    ("grc", "pyr"): "fire",
+    ("grc", "hydor"): "water",
+    ("grc", "pneuma"): "breath; spirit",
+    ("grc", "soma"): "body",
+    ("grc", "haima"): "blood",
+    ("grc", "kephale"): "head",
+    ("grc", "ophthalmos"): "eye",
+    ("grc", "glossa"): "tongue; language",
+    ("grc", "kardia"): "heart",
+    ("grc", "nous"): "mind",
+    ("grc", "patēr"): "father",
+    ("grc", "mētēr"): "mother",
+    ("grc", "huios"): "son",
+    ("grc", "thugatēr"): "daughter",
+    ("grc", "adelphos"): "brother",
+    ("grc", "pais"): "child; servant",
+    ("grc", "doulos"): "slave; servant",
+    ("grc", "basileus"): "king",
+    ("grc", "stratos"): "army",
+    ("grc", "naus"): "ship",
+    ("grc", "hippos"): "horse",
+    ("grc", "kuon"): "dog",
+    ("grc", "leon"): "lion",
+    ("grc", "ornis"): "bird",
+    ("grc", "ichthys"): "fish",
+    ("grc", "dendron"): "tree",
+    ("grc", "anthos"): "flower",
+    ("grc", "karpos"): "fruit",
+    ("grc", "sitos"): "grain; food",
+    ("grc", "oinos"): "wine",
+    ("grc", "artos"): "bread",
+    ("grc", "hodos"): "road; way",
+    ("grc", "agora"): "marketplace; assembly",
+    ("grc", "nomos"): "law; custom",
+    ("grc", "boulē"): "counsel; plan",
+    ("grc", "phobos"): "horror; fear",
+    ("grc", "chara"): "joy",
+    ("grc", "elpis"): "hope",
+    ("grc", "kleos"): "fame; glory",
+    ("grc", "techne"): "art; craft",
+    ("grc", "mousa"): "muse; song",
+    ("grc", "mythos"): "story; speech",
+    ("grc", "epos"): "word; epic utterance",
+    ("grc", "gramma"): "letter; writing",
+    ("grc", "biblos"): "book",
+    ("grc", "didaskalos"): "teacher",
+    ("grc", "mathetes"): "learner; disciple",
+    ("grc", "sophos"): "wise; skilled",
+    ("grc", "kalos"): "beautiful; noble",
+    ("grc", "kakos"): "bad; base",
+    ("grc", "megas"): "great; large",
+    ("grc", "mikros"): "small",
+    ("grc", "neos"): "new; young",
+    ("grc", "xenos"): "stranger; guest",
+    ("grc", "ploutos"): "wealth",
+    ("grc", "ponos"): "toil; labor",
+    ("grc", "potamos"): "river",
+}
+
+
+_GRC_BEGINNER_QUERIES = (
+    "logos",
+    "homo",
+    "polis",
+    "chronos",
+    "sophia",
+    "kratos",
+    "physis",
+    "theos",
+    "psyche",
+    "bios",
+    "dike",
+    "oikos",
+    "phos",
+    "aner",
+    "gyne",
+    "cheir",
+    "paideia",
+    "arete",
+    "arche",
+    "thalassa",
+    "ge",
+    "ouranos",
+    "selene",
+    "nyx",
+    "hemera",
+    "pyr",
+    "hydor",
+    "pneuma",
+    "soma",
+    "haima",
+    "kephale",
+    "ophthalmos",
+    "ous",
+    "glossa",
+    "kardia",
+    "nous",
+    "patēr",
+    "mētēr",
+    "huios",
+    "thugatēr",
+    "adelphos",
+    "pais",
+    "doulos",
+    "despotes",
+    "basileus",
+    "stratos",
+    "naus",
+    "hippos",
+    "kuon",
+    "leon",
+    "ornis",
+    "ichthys",
+    "dendron",
+    "anthos",
+    "karpos",
+    "sitos",
+    "oinos",
+    "artos",
+    "hodos",
+    "agora",
+    "nomos",
+    "boulē",
+    "phobos",
+    "chara",
+    "elpis",
+    "kleos",
+    "ergon",
+    "techne",
+    "mousa",
+    "mythos",
+    "epos",
+    "gramma",
+    "biblos",
+    "didaskalos",
+    "mathetes",
+    "sophos",
+    "kalos",
+    "kakos",
+    "megas",
+    "mikros",
+    "neos",
+)
+
+_GRC_INTERMEDIATE_QUERIES = (
+    "hen",
+    "mênis",
+    "anthropos",
+    "ananke",
+    "aitia",
+    "alētheia",
+    "aporia",
+    "askesis",
+    "atē",
+    "charis",
+    "daimon",
+    "demos",
+    "dialogos",
+    "dikaiosyne",
+    "doxa",
+    "dynamis",
+    "eirene",
+    "eleos",
+    "eleutheria",
+    "episteme",
+    "eros",
+    "ethos",
+    "eudaimonia",
+    "genos",
+    "gnome",
+    "hamartia",
+    "hexis",
+    "hēdonē",
+    "historia",
+    "hybris",
+    "hypothesis",
+    "idea",
+    "katharsis",
+    "kinesis",
+    "kosmos",
+    "krisis",
+    "ktema",
+    "kyrios",
+    "lepsis",
+    "machē",
+    "mania",
+    "martys",
+    "mimesis",
+    "moira",
+    "morphe",
+    "neikos",
+    "nikē",
+    "noesis",
+    "nomisma",
+    "nostos",
+    "oikonomia",
+    "olbos",
+    "oneiros",
+    "orgē",
+    "paideusis",
+    "paradeigma",
+    "pathos",
+    "peira",
+    "peitho",
+    "pharmakon",
+    "philia",
+    "phronesis",
+    "plethos",
+    "poiesis",
+    "politēs",
+    "praxis",
+    "presbys",
+    "prohairesis",
+    "psychē",
+    "rhētor",
+    "sēmeion",
+    "skēnē",
+    "sophistēs",
+    "sōphrosynē",
+    "stasis",
+    "stochos",
+    "syllogismos",
+    "symmachia",
+    "synodos",
+    "taxis",
+    "telos",
+    "timē",
+    "tragōidia",
+    "tropos",
+    "tychē",
+    "zētēsis",
+    "zōē",
+    "akropolis",
+    "amphora",
+    "archon",
+    "aspis",
+    "aulē",
+    "bomos",
+    "chiton",
+    "choros",
+    "chreia",
+    "deipnon",
+    "dikaios",
+    "dromos",
+    "eidolon",
+    "eikon",
+    "ekklēsia",
+    "emporion",
+    "enthymema",
+    "epainos",
+    "epigramma",
+    "epikouros",
+    "epistolē",
+    "erēmos",
+    "etymon",
+    "euchē",
+    "gamos",
+    "geōrgos",
+    "geras",
+    "gymnasion",
+    "hagnos",
+    "halieus",
+    "harmonia",
+    "hērōs",
+    "himation",
+    "hoplon",
+    "horkos",
+    "hormē",
+    "humnos",
+    "iatros",
+    "kallos",
+    "kanon",
+    "kapnos",
+    "kēpos",
+    "kēryx",
+    "kithara",
+    "kleis",
+    "klēsis",
+    "koinon",
+    "kolpos",
+    "komē",
+    "korē",
+    "koryphē",
+    "krater",
+    "kryptos",
+    "kyklos",
+    "limēn",
+    "lyra",
+    "magos",
+    "mantis",
+    "metron",
+    "mnēmē",
+    "molybdos",
+    "morphē",
+    "naos",
+    "nekros",
+    "nēsos",
+    "nōtos",
+    "odē",
+    "oinochoē",
+    "oligos",
+    "omma",
+    "oplon",
+    "oros",
+    "paidion",
+    "palaistra",
+    "panēgyris",
+    "parodos",
+    "pedion",
+    "pelekys",
+    "penthos",
+    "peras",
+    "petra",
+    "phialē",
+    "phōnē",
+    "phylē",
+    "pinax",
+    "ploutos",
+    "pnoē",
+    "polemios",
+    "ponos",
+    "potamos",
+    "pous",
+    "prōra",
+    "ptōma",
+    "pylai",
+    "rhiza",
+    "sarkos",
+    "skia",
+    "skopos",
+    "spondē",
+    "stadion",
+    "stathmos",
+    "stēlē",
+    "stratēgos",
+    "sukon",
+    "sumbolon",
+    "syrinx",
+    "taphos",
+    "teknon",
+    "temenos",
+    "therapōn",
+    "thronos",
+    "thymos",
+    "tithēnē",
+    "trapeza",
+    "tyrannos",
+    "xenos",
+    "xiphos",
+    "zōon",
+)
+
+_GRC_DEEP_QUERIES = (
+    "abaton",
+    "adikia",
+    "aergia",
+    "aisthesis",
+    "akrasia",
+    "alazoneia",
+    "amartia",
+    "amphibolia",
+    "anagnorisis",
+    "anamnēsis",
+    "aneleutheria",
+    "antilogia",
+    "antistrophē",
+    "apathēs",
+    "apodeixis",
+    "apokatastasis",
+    "apophasis",
+    "aretē",
+    "arktos",
+    "asphaleia",
+    "ataraxia",
+    "autarkeia",
+    "axioma",
+    "barbaros",
+    "bathos",
+    "biotē",
+    "bouleusis",
+    "chōra",
+    "chrēma",
+    "chrēsis",
+    "deixis",
+    "demiourgos",
+    "diakrisis",
+    "dialektikē",
+    "diathesis",
+    "diēgēsis",
+    "dikaiōma",
+    "diorismos",
+    "dysdaimonia",
+    "ekbasis",
+    "ekphrasis",
+    "elaiōn",
+    "elenchos",
+    "empeiria",
+    "enargeia",
+    "energeia",
+    "enthousiasmos",
+    "epagōgē",
+    "epanodos",
+    "epieikeia",
+    "epiphaneia",
+    "epitaphios",
+    "epithymia",
+    "eucharistia",
+    "eugeneia",
+    "eunoia",
+    "euphemia",
+    "eusebeia",
+    "exēgēsis",
+    "gnōsis",
+    "graphe",
+    "hairesis",
+    "hekousion",
+    "henotēs",
+    "hermēneia",
+    "hēsychia",
+    "homologia",
+    "homonoia",
+    "horismos",
+    "hupokrisis",
+    "hypomnēma",
+    "isonomia",
+    "kakia",
+    "kalokagathia",
+    "katabasis",
+    "katēgoria",
+    "koinōnia",
+    "krasis",
+    "kriterion",
+    "kyrieia",
+    "lēthē",
+    "lexis",
+    "makaria",
+    "martyria",
+    "mathēsis",
+    "megalopsychia",
+    "metabolē",
+    "metanoia",
+    "methodos",
+    "metochē",
+    "muthologia",
+    "oikeiōsis",
+    "onomia",
+    "ontōs",
+    "paideuma",
+    "palingenesia",
+    "parabasis",
+    "paradosis",
+    "parainesis",
+    "paraklēsis",
+    "parataxis",
+    "parousia",
+    "pathei",
+    "periegesis",
+    "peripeteia",
+    "phantasia",
+    "philautia",
+    "philologia",
+    "philosophia",
+    "phronimos",
+    "pistis",
+    "politeia",
+    "proairesis",
+    "prologos",
+    "prooimion",
+    "prosōpon",
+    "rhapsōidia",
+    "schēma",
+    "sēmantikos",
+    "skepsis",
+    "sophisma",
+    "soteria",
+    "spoudē",
+    "stochasmos",
+    "sugkatathesis",
+    "sumbebēkos",
+    "suneidēsis",
+    "sunesis",
+    "sunthesis",
+    "systasis",
+    "technē",
+    "theōria",
+    "thesis",
+    "tropē",
+    "zōion",
+)
+
+
 _CANDIDATE_POOLS: dict[str, tuple[WordCandidate, ...]] = {
     "san": (
         WordCandidate("san", "agni", "beginner", "Agni is a frequent doorway into Vedic diction."),
@@ -83,29 +623,9 @@ _CANDIDATE_POOLS: dict[str, tuple[WordCandidate, ...]] = {
         ),
     ),
     "grc": (
-        WordCandidate(
-            "grc", "hen", "beginner", "Think of a single mark in the margin: one thing counted."
-        ),
-        WordCandidate(
-            "grc",
-            "logos",
-            "beginner",
-            "Logos is a high-value word for speech, account, and reason.",
-        ),
-        WordCandidate("grc", "homo", "beginner", "Homo points to sameness and shared form."),
-        WordCandidate(
-            "grc", "mênis", "intermediate", "Menis opens the Iliad with wrath as a learner anchor."
-        ),
-        WordCandidate(
-            "grc", "agathos", "beginner", "Agathos is a common adjective for basic description."
-        ),
-        WordCandidate("grc", "polis", "beginner", "Polis is a clean bridge into civic vocabulary."),
-        WordCandidate(
-            "grc",
-            "psyche",
-            "intermediate",
-            "Psyche is useful for life, breath, and soul vocabulary.",
-        ),
+        _candidate_block("grc", "beginner", _GRC_BEGINNER_QUERIES)
+        + _candidate_block("grc", "intermediate", _GRC_INTERMEDIATE_QUERIES)
+        + _candidate_block("grc", "deep", _GRC_DEEP_QUERIES)
     ),
     "lat": (
         WordCandidate("lat", "nox", "beginner", "Nox is short, memorable, and rich in examples."),
@@ -158,8 +678,13 @@ def generate_word_of_day_payload(  # noqa: PLR0913
     warnings: list[dict[str, str]] = []
     items: list[dict[str, Any]] = []
     freshness_repeats = 0
+    diagnostics: dict[str, Any] = {
+        "candidate_source": options.candidate_source,
+        "languages": {},
+    }
 
     for language in languages:
+        language_diagnostics: dict[str, Any] = {}
         language_items = _generate_language_items(
             language=language,
             options=options,
@@ -171,7 +696,9 @@ def generate_word_of_day_payload(  # noqa: PLR0913
             bucket_learner_gloss=bucket_learner_gloss,
             candidate_pools=candidate_pools,
             warnings=warnings,
+            diagnostics=language_diagnostics,
         )
+        diagnostics["languages"][language] = language_diagnostics
         freshness_repeats += sum(
             1
             for item in language_items
@@ -215,6 +742,7 @@ def generate_word_of_day_payload(  # noqa: PLR0913
             if fresh_satisfied
             else "fresh alternatives were unavailable for one or more languages",
         },
+        "diagnostics": diagnostics,
     }
 
 
@@ -230,20 +758,30 @@ def _generate_language_items(  # noqa: C901, PLR0913
     bucket_learner_gloss: BucketLearnerGloss,
     candidate_pools: Mapping[str, Sequence[WordCandidate]] | None,
     warnings: list[dict[str, str]],
+    diagnostics: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    pool = list(_candidate_pool(language, candidate_pools))
+    level_candidates = [
+        candidate for candidate in pool if _candidate_matches_level(candidate, options.level)
+    ]
     candidates = [
         candidate
-        for candidate in _candidate_pool(language, candidate_pools)
-        if _candidate_matches_level(candidate, options.level)
-        and (options.fresh or _candidate_key(candidate) not in avoided)
+        for candidate in level_candidates
+        if (options.fresh or _candidate_key(candidate) not in avoided)
         and (options.fresh or candidate.query.lower() not in avoided)
     ]
     rng.shuffle(candidates)
-    if options.fresh:
-        candidates.sort(key=lambda candidate: _candidate_repeat_key(candidate, avoided))
+    candidates.sort(
+        key=lambda candidate: (
+            _candidate_repeat_key(candidate, avoided) if options.fresh else 0,
+            _candidate_paradigm_priority(candidate),
+        )
+    )
     accepted: list[dict[str, Any]] = []
     deferred_ambiguous: list[dict[str, Any]] = []
     deferred_repeats: list[dict[str, Any]] = []
+    rejections: list[dict[str, str]] = []
+    probed_count = 0
 
     for candidate in candidates:
         if options.timeout_ms > 0 and (time.monotonic() - started) * 1000 > options.timeout_ms:
@@ -256,8 +794,10 @@ def _generate_language_items(  # noqa: C901, PLR0913
                     ),
                 }
             )
+            rejections.append({"query": candidate.query, "reason": "timeout"})
             break
         try:
+            probed_count += 1
             reduction = probe_encounter(language, candidate.query)
         except Exception as exc:  # noqa: BLE001
             warnings.append(
@@ -267,6 +807,7 @@ def _generate_language_items(  # noqa: C901, PLR0913
                     "message": f"encounter probe failed: {exc}",
                 }
             )
+            rejections.append({"query": candidate.query, "reason": "probe_failed"})
             continue
 
         item = build_word_of_day_item(
@@ -284,6 +825,7 @@ def _generate_language_items(  # noqa: C901, PLR0913
                     "message": "encounter returned no usable source-backed buckets",
                 }
             )
+            rejections.append({"query": candidate.query, "reason": "no_usable_buckets"})
             continue
         _add_novelty_metadata(
             item,
@@ -297,6 +839,7 @@ def _generate_language_items(  # noqa: C901, PLR0913
             continue
         if item["ambiguity"]["has_multiple_lexemes"] and not options.include_ambiguous:
             if options.require_clean_primary:
+                rejections.append({"query": candidate.query, "reason": "ambiguous"})
                 continue
             deferred_ambiguous.append(item)
             continue
@@ -318,6 +861,20 @@ def _generate_language_items(  # noqa: C901, PLR0913
                 "message": f"only generated {len(accepted)} of {options.count} requested item(s)",
             }
         )
+    diagnostics.update(
+        {
+            "pool_size": len(pool),
+            "level_eligible_count": len(level_candidates),
+            "eligible_count": len(candidates),
+            "probed_count": probed_count,
+            "accepted_count": len(accepted),
+            "deferred_ambiguous_count": len(deferred_ambiguous),
+            "deferred_repeat_count": len(deferred_repeats),
+            "rejected_count": len(rejections),
+            "rejections": rejections[:20],
+            "accepted_keys": [str(item.get("key") or "") for item in accepted],
+        }
+    )
     return accepted
 
 
@@ -341,7 +898,12 @@ def build_word_of_day_item(
     buckets = list(getattr(reduction, "buckets", []) or [])
     if not buckets:
         return None
-    bucket = _best_bucket(buckets)
+    bucket = _best_bucket_for_candidate(
+        buckets,
+        candidate=candidate,
+        bucket_gloss=bucket_gloss,
+        max_source_chars=options.max_source_chars,
+    )
     witnesses = list(getattr(bucket, "witnesses", []) or [])
     if not witnesses:
         return None
@@ -445,6 +1007,12 @@ def _candidate_repeat_key(candidate: WordCandidate, avoided: set[str]) -> int:
     return 1 if _candidate_key(candidate) in avoided or candidate.query.lower() in avoided else 0
 
 
+def _candidate_paradigm_priority(candidate: WordCandidate) -> int:
+    if candidate.language == "grc":
+        return greek_learner_paradigm_priority(candidate.query)
+    return 0
+
+
 def _normalize_avoid_keys(values: Iterable[str]) -> set[str]:
     keys: set[str] = set()
     for value in values:
@@ -486,6 +1054,23 @@ def _candidate_matches_level(candidate: WordCandidate, level: str) -> bool:
 
 def _best_bucket(buckets: Sequence[Any]) -> Any:
     return min(buckets, key=_bucket_recommendation_sort_key)
+
+
+def _best_bucket_for_candidate(
+    buckets: Sequence[Any],
+    *,
+    candidate: WordCandidate,
+    bucket_gloss: BucketGloss,
+    max_source_chars: int,
+) -> Any:
+    sorted_buckets = sorted(buckets, key=_bucket_recommendation_sort_key)
+    if candidate.summary_hint:
+        for bucket in sorted_buckets:
+            witnesses = list(getattr(bucket, "witnesses", []) or [])
+            source_basis = _source_basis(witnesses, bucket_gloss, max_source_chars)
+            if _summary_hint_supported(candidate.summary_hint, source_basis):
+                return bucket
+    return sorted_buckets[0]
 
 
 def _bucket_recommendation_sort_key(bucket: Any) -> tuple[int, int, int, int, int, str]:
@@ -716,6 +1301,9 @@ def _greek_canonical_payload(
     primary_lexeme: str,
     witnesses: Sequence[Any],
 ) -> dict[str, str]:
+    paradigm_hint = greek_learner_paradigm_hint(query) or greek_learner_paradigm_hint(
+        primary_lexeme
+    )
     greek_value, greek_source = _first_matching_choice(
         witnesses,
         source_entry_keys=("term", "headword", "display_form", "headword_norm", "key"),
@@ -735,6 +1323,8 @@ def _greek_canonical_payload(
         source_entry_keys=("headword_norm", "key", "term"),
         evidence_keys=("display_form",),
     )
+    if paradigm_hint is not None:
+        source_key = paradigm_hint.source_key
     if contains_greek(source_key):
         source_key = primary_lexeme or query
     return {

@@ -26,12 +26,15 @@ from langnet.cli import (
     _encounter_lemma_compare_keys,
     _encounter_morphology_fallback_terms,
     _encounter_morphology_rows,
+    _encounter_paradigm_resolution_payload,
     _encounter_preferred_lemmas_for_sorting,
     _encounter_preferred_lemmas_from_morphology,
     _encounter_word_index_context,
     _get_query_value_for_plan,
     _normalization_cache_get,
     _normalize_with_short_cache_lock,
+    _pick_best_normalization_candidate,
+    _sanskrit_cdsl_query_from_heritage,
     main,
 )
 from langnet.execution.effects import ClaimEffect, ProvenanceLink
@@ -50,6 +53,7 @@ ENCOUNTER_SCHEMA_PATH = Path("docs/schemas/encounter.v1.schema.json")
 ENCOUNTER_ERROR_SCHEMA_PATH = Path("docs/schemas/encounter-error.v1.schema.json")
 GAFFIOT_LUPUS_SOURCE_ORDER = 38776
 WORD_INDEX_FIXTURE_WINDOW_SIZE = 3
+LATIN_PUELLAE_ANALYSIS_COUNT = 3
 
 
 def _claim_with_triples(
@@ -82,6 +86,20 @@ def _translation_language(source_lexicon: str) -> str:
 def _assert_matches_schema(payload: object, schema_path: Path) -> None:
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(schema).validate(payload)
+
+
+def _empty_word_index_context() -> dict[str, object]:
+    return {
+        "request": {},
+        "primary_result_contiguity": {
+            "scope": "encounter_sense_buckets",
+            "contiguous": False,
+            "reason": "test fixture",
+        },
+        "lookup_strategy": {"inline_window_entries": False},
+        "anchors": [],
+        "warnings": [],
+    }
 
 
 def test_encounter_morphology_rows_from_interpretation_triples() -> None:
@@ -136,6 +154,258 @@ def test_encounter_morphology_rows_from_interpretation_triples() -> None:
             "analysis": "noun; nominative; plural; neuter",
         }
     ]
+
+
+def test_encounter_paradigm_resolution_uses_sanskrit_morphology_features() -> None:
+    claim = _claim_with_triples(
+        tool="heritage",
+        subject="lex:putra",
+        triples=[
+            {
+                "subject": "form:putrāṇām",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "putra",
+                    "form": "putrāṇām",
+                    "analysis": "m. pl. g.",
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            }
+        ],
+    )
+
+    payload = _encounter_paradigm_resolution_payload(
+        "san",
+        "putraa.naam",
+        [asdict(claim)],
+    )
+
+    _assert_matches_schema(payload, Path("docs/schemas/paradigm_resolution.v1.schema.json"))
+    candidates = cast(list[dict[str, object]], payload["candidates"])
+    candidate = candidates[0]
+    assert payload["normalized_form"] == "putrāṇām"
+    assert candidate["lemma"] == "putra"
+    assert candidate["entry_type"] == "variant"
+    assert candidate["paradigm_request"] == {
+        "source": "heritage:sktdeclin",
+        "language": "san",
+        "lemma": "putra",
+        "kind": "declension",
+        "options": {"gender": "Mas"},
+    }
+    native_analyses = cast(list[dict[str, object]], candidate["native_analyses"])
+    native_features = cast(dict[str, object], native_analyses[0]["features"])
+    functional_analyses = cast(list[dict[str, object]], candidate["functional_analyses"])
+    assert native_features["case"] == "genitive"
+    assert functional_analyses[0]["relation"] == "possession_or_association"
+
+
+def test_encounter_paradigm_resolution_preserves_latin_ambiguity_from_triples() -> None:
+    claim = _claim_with_triples(
+        tool="whitakers",
+        subject="lex:puella#noun",
+        triples=[
+            {
+                "subject": "form:puellae",
+                "predicate": "has_interpretation",
+                "object": "interp:puellae-gen",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-gen",
+                "predicate": "realizes_lexeme",
+                "object": "lex:puella#noun",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-gen",
+                "predicate": "has_pos",
+                "object": "noun",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-gen",
+                "predicate": "has_case",
+                "object": "genitive",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-gen",
+                "predicate": "has_number",
+                "object": "singular",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "form:puellae",
+                "predicate": "has_interpretation",
+                "object": "interp:puellae-dat",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-dat",
+                "predicate": "realizes_lexeme",
+                "object": "lex:puella#noun",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-dat",
+                "predicate": "has_pos",
+                "object": "noun",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-dat",
+                "predicate": "has_case",
+                "object": "dative",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-dat",
+                "predicate": "has_number",
+                "object": "singular",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "form:puellae",
+                "predicate": "has_interpretation",
+                "object": "interp:puellae-nom",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-nom",
+                "predicate": "realizes_lexeme",
+                "object": "lex:puella#noun",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-nom",
+                "predicate": "has_pos",
+                "object": "noun",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-nom",
+                "predicate": "has_case",
+                "object": "nominative",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+            {
+                "subject": "interp:puellae-nom",
+                "predicate": "has_number",
+                "object": "plural",
+                "metadata": {"evidence": {"source_tool": "whitaker"}},
+            },
+        ],
+    )
+
+    payload = _encounter_paradigm_resolution_payload("lat", "puellae", [asdict(claim)])
+
+    _assert_matches_schema(payload, Path("docs/schemas/paradigm_resolution.v1.schema.json"))
+    candidates = cast(list[dict[str, object]], payload["candidates"])
+    candidate = candidates[0]
+    native_analyses = cast(list[dict[str, object]], candidate["native_analyses"])
+    assert candidate["lemma"] == "puella"
+    assert len(native_analyses) == LATIN_PUELLAE_ANALYSIS_COUNT
+    assert {
+        (
+            cast(dict[str, object], analysis["features"]).get("case"),
+            cast(dict[str, object], analysis["features"]).get("number"),
+        )
+        for analysis in native_analyses
+    } == {
+        ("genitive", "singular"),
+        ("dative", "singular"),
+        ("nominative", "plural"),
+    }
+    paradigm_request = cast(dict[str, object], candidate["paradigm_request"])
+    assert paradigm_request["source"] == "diogenes:inflect"
+
+
+def test_encounter_json_includes_paradigm_resolution_when_requested() -> None:
+    claim = _claim_with_triples(
+        tool="heritage",
+        subject="lex:putra",
+        triples=[
+            {
+                "subject": "form:putrāṇām",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "putra",
+                    "form": "putrāṇām",
+                    "analysis": "m. pl. g.",
+                    "features": {
+                        "pos": "noun",
+                        "case": "genitive",
+                        "gender": "masculine",
+                        "number": "plural",
+                    },
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            }
+        ],
+    )
+    result = SimpleNamespace(claims=[claim])
+
+    with (
+        patch("langnet.cli._execute_lookup_plan", return_value=result),
+        patch(
+            "langnet.cli._encounter_word_index_context", return_value=_empty_word_index_context()
+        ),
+    ):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "san",
+                "putraa.naam",
+                "heritage",
+                "--include-paradigm-resolution",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    _assert_matches_schema(payload, ENCOUNTER_SCHEMA_PATH)
+    assert payload["request"]["include_paradigm_resolution"] is True
+    assert payload["paradigm_resolution"]["schema_version"] == "langnet.paradigm_resolution.v1"
+    candidate = payload["paradigm_resolution"]["candidates"][0]
+    assert candidate["paradigm_request"]["source"] == "heritage:sktdeclin"
+
+
+def test_encounter_paradigm_resolution_failure_is_non_fatal() -> None:
+    result = SimpleNamespace(claims=[])
+
+    with (
+        patch("langnet.cli._execute_lookup_plan", return_value=result),
+        patch(
+            "langnet.cli._encounter_word_index_context", return_value=_empty_word_index_context()
+        ),
+        patch("langnet.cli.resolve_paradigm_request", side_effect=ValueError("bad record")),
+    ):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "san",
+                "agni",
+                "heritage",
+                "--include-paradigm-resolution",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    _assert_matches_schema(payload, ENCOUNTER_SCHEMA_PATH)
+    assert payload["paradigm_resolution"]["candidates"] == []
+    assert payload["paradigm_resolution"]["warnings"] == ["resolver_failed: ValueError"]
 
 
 def test_encounter_morphology_rows_from_form_feature_triples() -> None:
@@ -409,6 +679,45 @@ def test_normalization_read_only_cache_policy_never_creates_or_writes_cache() ->
 
         assert result.normalized.candidates[0].lemma == "lupus"
         assert not db_path.exists()
+
+
+def test_sanskrit_tool_query_keeps_surface_when_normalizer_only_has_heritage_guesses() -> None:
+    normalized = NormalizationResult(
+        query_hash=_hash_query("putrāṇām", LanguageHint.LANGUAGE_HINT_SAN),
+        normalized=NormalizedQuery(
+            original="putrāṇām",
+            language=LanguageHint.LANGUAGE_HINT_SAN,
+            candidates=[
+                CanonicalCandidate(
+                    lemma="putrāṇā",
+                    encodings={"velthuis": "putraa.naa", "iast": "putrāṇā"},
+                    sources=["heritage_sktuser_guess"],
+                ),
+                CanonicalCandidate(
+                    lemma="putra",
+                    encodings={"velthuis": "putra", "iast": "putra"},
+                    sources=["heritage_sktuser_guess"],
+                ),
+            ],
+        ),
+    )
+
+    assert _pick_best_normalization_candidate(normalized, "putrāṇām") == "putrāṇām"
+
+
+def test_sanskrit_cdsl_query_uses_dictionary_backed_heritage_lemma() -> None:
+    heritage = {
+        "lemma": "putra",
+        "analyses": [
+            {
+                "word": "putra",
+                "analysis": "m. pl. g.",
+                "dictionary_url": "/skt/DICO/41.html#putra",
+            }
+        ],
+    }
+
+    assert _sanskrit_cdsl_query_from_heritage(heritage, "putrāṇām") == "putra"
 
 
 def test_lemma_compare_keys_include_pos_anchor_base() -> None:
@@ -777,8 +1086,13 @@ def test_encounter_word_index_context_projects_anchor_handles_without_inline_win
         )
 
     nearby.assert_called_once_with("lat", "lupus", source="gaffiot", radius=1)
-    assert context["primary_result_contiguity"]["contiguous"] is False
-    assert context["lookup_strategy"]["inline_window_entries"] is False
+    primary_result_contiguity = cast(
+        dict[str, object],
+        context["primary_result_contiguity"],
+    )
+    lookup_strategy = cast(dict[str, object], context["lookup_strategy"])
+    assert primary_result_contiguity["contiguous"] is False
+    assert lookup_strategy["inline_window_entries"] is False
     anchors = cast(list[dict[str, object]], context["anchors"])
     assert len(anchors) == 1
     anchor = anchors[0]
@@ -970,6 +1284,7 @@ def test_encounter_json_includes_public_contract_display_views() -> None:
         "include_cltk": False,
         "translation_mode": "off",
         "translation_cache_writes": False,
+        "include_paradigm_resolution": False,
     }
     assert payload["display"]["header"] == {"forms": ["arma"], "source_keys": []}
     assert payload["display"]["analysis"] == [
@@ -1201,9 +1516,20 @@ def test_encounter_json_links_sanskrit_compound_components() -> None:
                     {
                         "subject": "sense:lex:a.nga#member",
                         "predicate": "gloss",
-                        "object": "member; limb; body division",
+                        "object": (
+                            "aṅga_1 [agt. aṅg ] n. membre ; partie du corps ; "
+                            "le corps en entier ; la personne, la forme | partie, "
+                            "portion, subdivision ; annexe | phil. l'une des 8 "
+                            "pratiques du rājayoga ; cf. aṣṭāṅgayoga"
+                        ),
                         "metadata": {
-                            "display_gloss": "member; limb; body division",
+                            "display_gloss": (
+                                "aṅga_1 [agt. aṅg ] n. membre ; partie du corps ; "
+                                "le corps en entier ; la personne, la forme | partie, "
+                                "portion, subdivision ; annexe | phil. l'une des 8 "
+                                "pratiques du rājayoga ; cf. aṣṭāṅgayoga"
+                            ),
+                            "learner_gloss": "member; limb; body division",
                             "source_lang": "fr",
                             "evidence": {
                                 "source_tool": "dico",
@@ -1258,6 +1584,11 @@ def test_encounter_json_links_sanskrit_compound_components() -> None:
     assert payload["components"][1]["evidence"]["meanings"][0]["display_gloss"] == (
         "member; limb; body division"
     )
+    assert (
+        "aṅga_1 [agt. aṅg ]"
+        in payload["components"][1]["evidence"]["meanings"][0]["evidence_gloss"]
+    )
+    assert "aṣṭāṅgayoga" in payload["components"][1]["evidence"]["meanings"][0]["evidence_gloss"]
 
 
 def test_encounter_translation_mode_auto_projects_component_lookup_claims() -> None:

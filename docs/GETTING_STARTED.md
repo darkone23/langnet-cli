@@ -12,13 +12,18 @@ devenv shell
 just cli lookup lat lupus --output pretty
 ```
 
-Most project recipes already enter `devenv shell`, so from the repo root this is usually enough:
+Most project recipes enter the environment through local wrappers, so from the repo root this is usually enough:
 
 ```bash
 just cli --help
 just lint-all
 just test-fast
 ```
+
+Routine recipes run through local wrapper scripts and should be audited
+sequentially. Keep Diogenes, Heritage, and other live services running in your
+process-compose session; LangNet recipes are clients/readiness probes rather
+than the service supervisor.
 
 ## External Services
 
@@ -41,8 +46,8 @@ just cli lookup lat lupus --output pretty
 just cli lookup grc λόγος --output pretty
 just cli lookup san agni --output pretty
 
-devenv shell -- bash -c 'langnet-cli encounter san dharma all --no-cache --max-buckets 3'
-devenv shell -- bash -c 'langnet-cli encounter san agni heritage --no-cache'
+just cli encounter san dharma all --no-cache --max-buckets 3
+just cli encounter san agni heritage --no-cache
 
 just cli parse whitakers lat amarem --format json
 just cli parse diogenes lat lupus --format pretty

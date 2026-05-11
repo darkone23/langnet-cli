@@ -31,6 +31,10 @@ The real-input fuzzing roadmap records the current research -> plan -> implement
 loop for classic-reader forms and keeps Sanskrit, Latin, and Greek improvement
 tracks balanced.
 
+Recently completed infra plans live in `docs/plans/completed/infra/`, including
+the codesketch retirement/deletion records and the devenv recipe runner
+stabilization record.
+
 ## Junior Work
 
 Keep small pickup tasks in `docs/EXECUTION_PLAN.md` unless they need a dedicated plan. Tasks should be explicit, service-free where possible, and independently testable.

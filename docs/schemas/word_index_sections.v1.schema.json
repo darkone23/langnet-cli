@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langnet.local/schemas/word_index_sections.v1.schema.json",
+  "title": "LangNet word index sections response",
+  "type": "object",
+  "required": ["schema_version", "request", "order", "sections", "warnings"],
+  "properties": {
+    "schema_version": { "const": "langnet.word_index_sections.v1" },
+    "request": {
+      "type": "object",
+      "required": ["language", "source"],
+      "properties": {
+        "language": { "enum": ["lat", "grc", "san"] },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "order": { "$ref": "#/$defs/order" },
+    "sections": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning" }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "order": {
+      "type": "object",
+      "required": ["policy", "label", "collation", "key", "display_key", "explanation"],
+      "properties": {
+        "policy": {
+          "enum": [
+            "source-native",
+            "language-native",
+            "canonical-key",
+            "source-window-merge",
+            "seeded-discovery",
+            "fallback"
+          ]
+        },
+        "label": { "type": "string" },
+        "collation": {
+          "enum": [
+            "sa-varga",
+            "sa-devanagari",
+            "grc-lexical",
+            "lat-lexical",
+            "source",
+            "canonical-key",
+            "seeded-discovery",
+            "merged-source-window",
+            "fallback"
+          ]
+        },
+        "key": { "type": "string" },
+        "display_key": { "type": "string" },
+        "explanation": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "section": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "transliteration",
+        "group_label",
+        "order_key",
+        "anchor",
+        "available",
+        "entry_count"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "transliteration": { "type": "string" },
+        "group_label": { "type": "string" },
+        "order_key": { "type": "string" },
+        "anchor": { "$ref": "#/$defs/anchor" },
+        "available": { "type": "boolean" },
+        "entry_count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "anchor": {
+      "type": "object",
+      "required": ["language", "source", "dictionary", "query", "canonical_key", "source_order_key"],
+      "properties": {
+        "language": { "enum": ["lat", "grc", "san"] },
+        "source": { "type": "string" },
+        "dictionary": { "type": "string" },
+        "query": { "type": "string" },
+        "canonical_key": { "type": "string" },
+        "source_order_key": { "type": "string" },
+        "lexeme_id": { "type": "string" },
+        "index_entry_id": { "type": "string" },
+        "source_order_id": { "type": "string" },
+        "display": { "type": "object" },
+        "order": { "$ref": "#/$defs/order" }
+      },
+      "additionalProperties": true
+    },
+    "warning": {
+      "type": "object",
+      "required": ["message"],
+      "properties": {
+        "source": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

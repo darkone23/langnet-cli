@@ -30,8 +30,8 @@ Run before handoff:
 ```bash
 just lint-all
 just test-fast
-devenv shell -- bash -c 'langnet-cli triples-dump lat lupi gaffiot --no-cache --predicate gloss --max-triples 1'
-devenv shell -- bash -c 'langnet-cli triples-dump san kṛṣṇa dico --no-cache --predicate gloss --max-triples 1'
+just cli triples-dump lat lupi gaffiot --no-cache --predicate gloss --max-triples 1
+just cli triples-dump san kṛṣṇa dico --no-cache --predicate gloss --max-triples 1
 just cli-databuild --help
 ```
 

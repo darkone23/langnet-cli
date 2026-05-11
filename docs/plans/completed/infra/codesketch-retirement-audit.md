@@ -51,9 +51,9 @@ advertised `langnet-dg-reaper = "langnet.diogenes.cli_util:cli"`, while the
 module still lived only in `codesketch/`. The reaper utility now lives in
 `src/langnet/diogenes/cli_util.py`.
 
-The active deletion sequence is tracked in:
+The completed deletion sequence is tracked in:
 
-- `docs/plans/active/infra/codesketch-deletion-roadmap.md`
+- `docs/plans/completed/infra/codesketch-deletion-roadmap.md`
 
 Additional capture completed after the first cleanup:
 

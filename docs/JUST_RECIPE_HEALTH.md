@@ -1,23 +1,36 @@
 # Just Recipe Health
 
-**Last checked:** 2026-04-28  
+**Last checked:** 2026-05-05  
 **Purpose:** distinguish recipe wiring problems from expected external-service/dependency failures.
 
 ## Summary
 
-The primary development recipes are wired. The latest audit found and fixed stale
-CLI wrapper plumbing in the justfile: recipes now preserve `langnet-cli` argv by
-running through a small `bash -c 'langnet-cli ... "$@"'` shim inside `devenv`.
+The primary development recipes are wired when run sequentially. CLI wrappers
+now preserve `langnet-cli` argv by routing through
+`.justscripts/run-langnet-cli`, which prefers the already-built devenv
+entrypoint and falls back to `devenv shell -- langnet-cli` only when needed.
+Non-CLI development recipes route through `.justscripts/run-dev-tool`, which
+sources the generated devenv exports and then runs the venv/profile executable
+directly when possible.
+
+Do not audit `devenv shell` or variadic Just recipes in parallel. Parallel
+recipe probes can cross-contaminate positional arguments and produce misleading
+failures. Run recipe health checks one at a time, especially recipes that pass
+`"$@"` through `devenv shell -- ...`.
 
 The main remaining gap is that some fuzz recipes still reflect an older
 unified-query/API worldview and should be treated as diagnostic, not as a release
 gate.
 
-All runtime probes should be invoked through the project environment, preferably:
+For CLI commands, prefer the maintained wrapper:
 
 ```bash
-devenv shell -- bash -c '<command>'
+just cli <command> ...
 ```
+
+Use `devenv shell -- <command>` directly only for non-CLI tools or explicit
+debugging. External services are owned by the user's process-compose session;
+routine LangNet recipes act as clients and readiness probes.
 
 ## Healthy Recipes
 
@@ -29,6 +42,16 @@ These were probed successfully:
 - `just cli-plan --help`
 - `just cli-plan-exec --help`
 - `just cli-databuild --help`
+- `just cli langs --output json`
+- `just cli tools san --output json`
+- `just cli doctor --output json`
+- `just cli doctor --require-openai-key --output json`
+- `just cli word-index --help`
+- `just cli word-index sources --output json`
+- `just cli translation-cache --help`
+- `just cli translation-cache status --output json`
+- `just cli entry-analyze --help`
+- `just cli lookup --help`
 - `just parse cdsl san agni mw`
 - `just triples-dump lat lupi gaffiot`
 - `just triples-dump san kṛṣṇa dico`
@@ -36,26 +59,27 @@ These were probed successfully:
 - `just cli index status`
 - `just diogenes-parse --help lupus`
 - `just triples-dump --help lupus`
-- `devenv shell -- bash -c 'langnet-cli triples-dump lat lupus gaffiot --no-cache --predicate gloss --max-triples 1'`
-- `devenv shell -- bash -c 'langnet-cli triples-dump san dharma dico --no-cache --predicate gloss --max-triples 1'`
+- `just cli triples-dump lat lupus gaffiot --no-cache --predicate gloss --max-triples 1`
+- `just cli triples-dump san dharma dico --no-cache --predicate gloss --max-triples 1`
 - `just parse --help lat lupus`
 - `just autobot --help`
 - `just autobot fuzz list`
 - `just autobot fuzz run --help`
 - `just autobot fuzz run --tool cdsl --action lookup --lang san --words agni --validate --mode tool --save examples/debug/fuzz_results_audit`
-- `devenv shell -- bash -c 'python3 .justscripts/autobot.py fuzz run --tool cltk --action dictionary --lang lat --words lupus --mode tool --validate --save examples/debug/fuzz_probe_recheck_json'`
-- `devenv shell -- bash -c 'python3 .justscripts/lex_translation_demo.py --help'`
-- `devenv shell -- bash -c 'python3 .justscripts/lex_translation_demo.py --dry-run --limit 1 --mode sanskrit'`
-- `devenv shell -- bash -c 'python3 .justscripts/lex_translation_demo.py --dry-run --limit 1 --mode latin'`
-- `devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --translation-mode cache --translation-cache-db data/cache/langnet.duckdb'`
-- `devenv shell -- bash -c 'langnet-cli encounter san dharma dico --translation-mode cache --translation-cache-db data/cache/langnet.duckdb'`
+- `just translate-lex --help`
+- `just translate-lex --dry-run --limit 1 --mode latin`
+- `just translate-lex --dry-run --limit 1 --mode sanskrit`
+- `just benchmark`
 - Legacy sketch-reading recipes were removed during the `codesketch/`
   retirement audit. Runtime and verification recipes now target `src/`
   implementations directly.
+- Routine CLI and dev-tool recipes now use wrapper scripts instead of variadic
+  `devenv shell` forwarding.
 - `just lint-all`
+- `just test-all`
 - `just test-fast`
 
-## Dry-Run Only
+## Not Routine Gates
 
 These are intentionally not run during routine stabilization because they are destructive, long-running, networked, or require external services:
 
@@ -76,8 +100,25 @@ The old CLI wrappers used `devenv shell langnet-cli -- ...`, which can misroute
 Click arguments and produce misleading command help. For example, a plan wrapper
 could show a different subcommand's help.
 
-The wrappers now use `devenv shell -- bash -c 'langnet-cli <subcommand> "$@"' _ ...`
-so `--help`, subcommands, and positional arguments are passed unchanged.
+The wrappers now use `.justscripts/run-langnet-cli`, which runs the devenv
+entrypoint directly when available. This keeps `--help`, subcommands, Unicode
+queries, and positional arguments unchanged.
+
+### Fixed: Routine Dev Recipe Argument Routing
+
+Routine test, lint, typecheck, benchmark, autobot, translation dry-run, parse,
+and triples-dump recipes no longer pass variadic arguments directly through
+`devenv shell -- ... "$@"`. Test and tooling recipes use
+`.justscripts/run-dev-tool`; CLI helper recipes use `.justscripts/run-langnet-cli`.
+This keeps process-compose service ownership separate from CLI/client checks.
+
+### Operational Caveat: Sequential Devenv Recipe Checks
+
+Recipes that invoke `devenv shell -- ... "$@"` work as isolated commands, but
+they should not be launched concurrently during audits. A parallel probe can
+make one recipe appear to receive another recipe's positional arguments, which
+turns recipe-health output into noise. This is a tooling/recipe-audit caveat,
+not evidence that the isolated recipe is broken.
 
 ### Fixed: Stale Helper Script Bypass
 

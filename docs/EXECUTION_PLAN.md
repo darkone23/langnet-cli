@@ -1,6 +1,6 @@
 # Project Execution Plan
 
-**Date:** 2026-04-28  
+**Date:** 2026-05-05  
 **Mode:** stabilization before feature expansion
 
 This is the compact operating queue. Use `docs/BASELINE_AND_ROADMAP.md` for the
@@ -19,22 +19,21 @@ inference until the active queue below is stable.
 
 | Rank | Task | Why Now | Validation |
 | --- | --- | --- | --- |
-| 1 | Reader eval fixtures | Measure whether the first screen answers real reading questions | focused encounter/eval tests |
-| 2 | Candidate/headword hygiene | Fix high-impact wrong-first hits before ranking senses | normalization + encounter tests |
-| 3 | Compact gloss layer | Put short learner glosses above full DICO/Gaffiot translated entries | translation projection + encounter snapshots |
+| 1 | Preserve reader-eval gates | Keep classic-opening and corpus-expansion fixtures green while adding real forms | `reader-eval` fixtures + encounter tests |
+| 2 | Source structuring | Split source blobs only where fixtures justify typed fields | source-specific parser/display tests |
+| 3 | Compact gloss coverage | Extend short learner glosses above full source entries without hiding provenance | translation projection + encounter snapshots |
 | 4 | Translation cache operations | Make cache warming practical and keep lookup network-free by default | no-network tests + docs examples |
-| 5 | Source structuring | Split source blobs only where fixtures justify typed fields | source-specific parser/display tests |
+| 5 | CLI/web readiness | Keep JSON contracts, `doctor`, `langs`, `tools`, and read-only cache profiles usable for subprocess callers | CLI contract tests + `doctor` |
 | 6 | Evidence walkthroughs | Make provenance traceable from display to triples/source refs | docs examples + existing CLI tests |
 
 ## Immediate Concrete Targets
 
 ### Reader Eval Fixtures
 
-Create tolerant assertions for:
+Maintain tolerant assertions for:
 
-- Aeneid 1.1-11
-- Iliad 1.1-7
-- Bhagavad Gita 1.1-10
+- classic-opening reader forms in `tests/fixtures/reader_eval_classics.json`
+- corpus-expansion forms in `tests/fixtures/reader_eval_corpus_expansion.json`
 
 Check:
 
@@ -44,9 +43,9 @@ Check:
 - morphology/analysis availability;
 - compound/enclitic split visibility.
 
-### Headword And Form Fixes
+### Headword And Form Gates
 
-Start with these known failures:
+Keep these reader-form cases covered:
 
 - `virumque` should resolve to `vir + -que`, not lead with `virus`;
 - `μῆνιν` should prefer `μῆνις` and keep surface morphology visible;
@@ -105,6 +104,9 @@ Before a larger checkpoint, run:
 just lint-all
 just test-fast
 ```
+
+Run these Just/devenv recipes sequentially. Parallel recipe probes can produce
+misleading positional-argument failures.
 
 ## Deferred Work
 

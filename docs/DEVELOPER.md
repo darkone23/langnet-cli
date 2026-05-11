@@ -24,6 +24,17 @@ just lint-all
 just test-fast
 ```
 
+Routine recipes avoid forwarding variadic arguments through `devenv shell`.
+`just cli ...` routes through `.justscripts/run-langnet-cli`; tests, linting,
+typechecking, benchmarks, and helper scripts route through
+`.justscripts/run-dev-tool`. Run Just/devenv recipes sequentially when auditing
+recipe health.
+
+External services are managed outside these recipes, typically in the user's
+process-compose session. Treat `just cli doctor --output json` and targeted
+integration checks as readiness probes; do not assume routine recipes own
+service lifecycle.
+
 ## Validation
 
 Use the narrowest relevant test first, then broaden.

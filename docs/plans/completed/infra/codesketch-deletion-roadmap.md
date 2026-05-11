@@ -12,8 +12,8 @@ simple: nothing canonical should remain in `codesketch/`; anything useful should
 be ported, converted into current fixtures, or captured in a concrete plan.
 
 This roadmap follows the audit in
-`docs/plans/active/infra/codesketch-retirement-audit.md` and turns it into an
-execution sequence.
+`docs/plans/completed/infra/codesketch-retirement-audit.md` and turns it into a
+completed execution record.
 
 ## Current State
 

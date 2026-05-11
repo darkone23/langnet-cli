@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+  echo "usage: run-dev-tool <tool> [args...]" >&2
+  exit 64
+fi
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd -- "${script_dir}/.." && pwd)"
+tool="$1"
+shift
+
+venv_bin="${repo_root}/.devenv/state/venv/bin"
+profile_bin="${repo_root}/.devenv/profile/bin"
+load_exports="${repo_root}/.devenv/load-exports"
+venv_tool="${venv_bin}/${tool}"
+profile_tool="${profile_bin}/${tool}"
+
+cd "${repo_root}"
+
+if [[ ! -x "${venv_tool}" && ! -x "${profile_tool}" ]]; then
+  devenv shell -- true >/dev/null
+fi
+
+if [[ -f "${load_exports}" ]]; then
+  # shellcheck source=/dev/null
+  source "${load_exports}"
+fi
+
+export VIRTUAL_ENV="${repo_root}/.devenv/state/venv"
+export PYTHONPATH="${repo_root}/src:${repo_root}/.justscripts:${repo_root}/vendor/langnet-spec/generated/python${PYTHONPATH:+:${PYTHONPATH}}"
+export PATH="${venv_bin}:${profile_bin}${PATH:+:${PATH}}"
+
+if [[ -x "${venv_tool}" ]]; then
+  exec "${venv_tool}" "$@"
+fi
+
+if [[ -x "${profile_tool}" ]]; then
+  exec "${profile_tool}" "$@"
+fi
+
+exec devenv shell -- "${tool}" "$@"

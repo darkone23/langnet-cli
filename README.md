@@ -17,7 +17,7 @@ just cli lookup lat lupus --output json
 # Inspect the staged plan, source evidence, and learner-facing MVP
 just cli plan lat lupus
 just triples-dump lat lupus whitakers
-devenv shell -- bash -c 'langnet-cli encounter san dharma all --no-cache'
+just cli encounter san dharma all --no-cache
 
 # Use cache-backed DICO/Gaffiot English evidence when available
 just cli encounter lat arma gaffiot --translation-mode cache
@@ -30,6 +30,12 @@ just cli encounter lat cano gaffiot --translation-mode auto
 # Ask for learner word recommendations backed by encounter probes
 just cli word-of-day san --output json
 just cli recommend-words lat --count 3
+
+# Inspect source-backed inflection tables
+just cli paradigm san putra --kind declension --gender Mas --output json
+just cli paradigm san gam --kind conjugation --class 1 --output json
+just cli paradigm lat amo --kind conjugation --output json
+just cli paradigm grc lo/gos --kind declension --output json
 ```
 
 ## Language Support
@@ -85,9 +91,10 @@ This project uses multi-model AI-assisted development via OpenRouter. See `AGENT
 
 - External services are required for live lookup; without them `langnet-cli lookup` returns per-tool errors for unavailable sources.
 - The current learner-facing MVP is `langnet-cli encounter`. It reduces claim triples into exact Witness Sense Unit buckets and shows source-backed meanings plus Heritage morphology analysis for Sanskrit.
+- `paradigm` and `paradigm-resolve` expose source-backed inflection table work. They currently wrap Heritage `sktdeclin`/`sktconjug` and Diogenes `do=inflect`; see `docs/technical/backend/paradigm-generation-limitations.md` for graceful-degradation behavior and known limits.
 - `word-of-day` and `recommend-words` provide on-demand learner word suggestions. JSON output uses `langnet.word_of_day.v1` and includes verified encounter summaries when lookup evidence is available.
 - `triples-dump --output json` is the current evidence-inspection surface for claims, triples, source refs, and display metadata.
 - DICO/Gaffiot French source entries are wired as source evidence. Cache-backed English translations can be projected into `encounter` with `--translation-mode cache`; missing rows can be populated only when explicitly requested with `--translation-mode auto`.
 - Several open issues remain: CTS URN enrichment is deferred, CDSL entries are still flat source-heavy strings, some long upstream entries need better source segmentation, and exact buckets are not yet broad semantic merging.
-- Use `just test-fast` and `just lint-all` for local validation; these recipes enter `devenv` automatically. Restart long-lived servers after code changes.
+- Use `just lint-all`, `just test-fast`, and `just validate-stabilization` for local validation. Routine recipes route through local wrappers and should be run sequentially when auditing recipe health. Restart long-lived servers after code changes.
 - Planning docs live under `docs/plans/`; the canonical roadmap is `docs/ROADMAP.md`, with the active implementation plan at `docs/plans/active/infra/design-to-runtime-roadmap.md`.

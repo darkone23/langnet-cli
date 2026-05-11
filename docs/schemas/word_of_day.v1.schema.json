@@ -27,7 +27,8 @@
       "type": "array",
       "items": { "$ref": "#/$defs/warning" }
     },
-    "exhaustion": { "$ref": "#/$defs/exhaustion" }
+    "exhaustion": { "$ref": "#/$defs/exhaustion" },
+    "diagnostics": { "$ref": "#/$defs/diagnostics" }
   },
   "additionalProperties": true,
   "$defs": {
@@ -227,6 +228,61 @@
         "fresh_requested": { "type": "boolean" },
         "fresh_satisfied": { "type": "boolean" },
         "reason": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": ["candidate_source", "languages"],
+      "properties": {
+        "candidate_source": { "enum": ["auto", "llm", "curated"] },
+        "languages": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/languageDiagnostics" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "languageDiagnostics": {
+      "type": "object",
+      "required": [
+        "pool_size",
+        "level_eligible_count",
+        "eligible_count",
+        "probed_count",
+        "accepted_count",
+        "deferred_ambiguous_count",
+        "deferred_repeat_count",
+        "rejected_count",
+        "rejections",
+        "accepted_keys"
+      ],
+      "properties": {
+        "pool_size": { "type": "integer", "minimum": 0 },
+        "level_eligible_count": { "type": "integer", "minimum": 0 },
+        "eligible_count": { "type": "integer", "minimum": 0 },
+        "probed_count": { "type": "integer", "minimum": 0 },
+        "accepted_count": { "type": "integer", "minimum": 0 },
+        "deferred_ambiguous_count": { "type": "integer", "minimum": 0 },
+        "deferred_repeat_count": { "type": "integer", "minimum": 0 },
+        "rejected_count": { "type": "integer", "minimum": 0 },
+        "rejections": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/rejection" }
+        },
+        "accepted_keys": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "rejection": {
+      "type": "object",
+      "required": ["query", "reason"],
+      "properties": {
+        "query": { "type": "string" },
+        "reason": { "type": "string" }
       },
       "additionalProperties": true
     }

@@ -30,6 +30,8 @@ def test_documented_command_help() -> None:
     commands = [
         "lookup",
         "parse",
+        "paradigm",
+        "paradigm-resolve",
         "plan",
         "plan-exec",
         "triples-dump",

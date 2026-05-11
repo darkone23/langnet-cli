@@ -25,10 +25,10 @@ WSUs, not a replacement for the evidence model.
 Sample commands reviewed:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli encounter san nirudha --max-buckets 8'
-devenv shell -- bash -c 'langnet-cli encounter san dharma --max-buckets 8'
-devenv shell -- bash -c 'langnet-cli encounter lat lupus --max-buckets 8'
-devenv shell -- bash -c 'langnet-cli encounter grc logos --max-buckets 8'
+just cli encounter san nirudha --max-buckets 8
+just cli encounter san dharma --max-buckets 8
+just cli encounter lat lupus --max-buckets 8
+just cli encounter grc logos --max-buckets 8
 ```
 
 ### Sanskrit

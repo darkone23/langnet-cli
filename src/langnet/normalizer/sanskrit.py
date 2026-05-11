@@ -300,6 +300,17 @@ class SanskritNormalizer(LanguageNormalizer):
             return [CanonicalCandidate(lemma=text, encodings={}, sources=["local"])]
 
         stripped = text.strip()
+        mixed_normalized = self._normalize_mixed_iast_ascii_digraphs(stripped)
+        if mixed_normalized != stripped:
+            steps.append(
+                NormalizationStep(
+                    operation="mixed_iast_ascii_digraph",
+                    input=stripped,
+                    output=mixed_normalized,
+                    tool="reader_input_normalizer",
+                )
+            )
+            stripped = mixed_normalized
         encoding = self._detect_encoding(stripped)
         steps.append(
             NormalizationStep(
@@ -319,8 +330,8 @@ class SanskritNormalizer(LanguageNormalizer):
             steps,
         )
 
-        # Ambiguity fallback: heuristically diacritize ASCII and retry Heritage when no matches.
-        if not candidates and encoding == ENC_ASCII:
+        # Ambiguity fallback: heuristically diacritize reader ASCII and retry Heritage.
+        if not candidates and self._should_retry_reader_ascii_variants(stripped, encoding):
             fallback_candidates = self._heritage_retry_with_variants(stripped, steps)
             if fallback_candidates:
                 candidates.extend(fallback_candidates)
@@ -508,6 +519,31 @@ class SanskritNormalizer(LanguageNormalizer):
             # Stop after first successful variant to limit search.
             if candidates:
                 break
+        if not candidates:
+            candidates.extend(self._local_reader_ascii_variant_candidates(text, variants, steps))
+        return candidates
+
+    def _local_reader_ascii_variant_candidates(
+        self,
+        original_text: str,
+        variants: Sequence[str],
+        steps: list[NormalizationStep],
+    ) -> list[CanonicalCandidate]:
+        original = original_text.lower()
+        candidates: list[CanonicalCandidate] = []
+        for variant in variants:
+            if variant == original or not self._contains_iast(variant):
+                continue
+            vel = to_heritage_velthuis(variant).lower()
+            encodings = self._build_encodings(vel, ENC_VELTHUIS, steps)
+            candidates.append(
+                CanonicalCandidate(
+                    lemma=encodings.get(ENC_IAST, variant),
+                    encodings=encodings,
+                    sources=["local_reader_ascii_variant"],
+                )
+            )
+            break
         return candidates
 
     def _final_vowel_completion_matches(
@@ -595,16 +631,68 @@ class SanskritNormalizer(LanguageNormalizer):
         Generate a small set of ASCII-with-diacritics variants to catch common Heritage misses.
         """
         base = text.lower()
-        variants: set[str] = {base}
-        # Long vowels
-        variants.add(base.replace("aa", "ā").replace("ii", "ī").replace("uu", "ū"))
-        # ś vs ṣ vs s/h
-        sh_variant = base.replace("sh", "ś")
-        variants.add(sh_variant)
-        variants.add(sh_variant.replace("z", "ṣ"))
-        # Retroflex-only swap for bare z → ṣ
-        variants.add(base.replace("z", "ṣ"))
-        return [v for v in variants if v]
+        bases = [base]
+        if (
+            len(base) >= ASCII_FINAL_VOWEL_COMPLETION_MIN_LENGTH
+            and base.isascii()
+            and base[-1].isalpha()
+            and base[-1] not in "aeiou"
+        ):
+            bases.insert(0, f"{base}a")
+
+        variants: list[str] = []
+
+        def add(value: str) -> None:
+            if value and value not in variants:
+                variants.append(value)
+
+        for candidate_base in bases:
+            add(candidate_base)
+            # Long vowels
+            add(candidate_base.replace("aa", "ā").replace("ii", "ī").replace("uu", "ū"))
+            # ś vs ṣ vs s/h
+            sh_variant = candidate_base.replace("sh", "ś")
+            add(sh_variant)
+            add(sh_variant.replace("z", "ṣ"))
+            # Retroflex-only swap for bare z → ṣ
+            add(candidate_base.replace("z", "ṣ"))
+            # Reader ASCII often types plain n for palatal ñ before c/j.
+            add(re.sub(r"n(?=(?:ch|jh|[cj]))", "ñ", candidate_base))
+            for long_vowel_variant in self._reader_ascii_long_vowel_variants(candidate_base):
+                add(long_vowel_variant)
+        return variants
+
+    def _should_retry_reader_ascii_variants(self, text: str, encoding: str) -> bool:
+        if encoding == ENC_ASCII:
+            return True
+        return encoding == ENC_HK and text.isascii() and text == text.lower()
+
+    def _reader_ascii_long_vowel_variants(self, text: str) -> list[str]:
+        if not text.isascii() or len(text) < MIN_SANSKRIT_LENGTH:
+            return []
+        variants: list[str] = []
+        bases = [text]
+        if text.endswith("a"):
+            final_long = f"{text[:-1]}ā"
+            bases.insert(0, final_long)
+        for base in bases:
+            for idx, char in enumerate(base):
+                replacement = {"a": "ā", "i": "ī", "u": "ū"}.get(char)
+                if replacement is None:
+                    continue
+                variant = f"{base[:idx]}{replacement}{base[idx + 1 :]}"
+                if variant != text and variant not in variants:
+                    variants.append(variant)
+        if text.endswith("a"):
+            final_long = f"{text[:-1]}ā"
+            if final_long not in variants:
+                variants.append(final_long)
+        return variants
+
+    def _normalize_mixed_iast_ascii_digraphs(self, text: str) -> str:
+        if not self._contains_iast(text):
+            return text
+        return re.sub(r"([śṣ])h", r"\1", text)
 
     def _detect_encoding(self, text: str) -> str:
         encoding = ENC_ASCII

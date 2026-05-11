@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langnet.local/schemas/paradigm.v1.schema.json",
+  "title": "LangNet paradigm response",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "language",
+    "lemma",
+    "kind",
+    "source",
+    "source_request",
+    "paradigms",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": { "const": "langnet.paradigm.v1" },
+    "language": { "enum": ["lat", "grc", "san"] },
+    "lemma": { "type": "string" },
+    "kind": { "enum": ["declension", "conjugation"] },
+    "source": { "enum": ["heritage:sktdeclin", "heritage:sktconjug", "diogenes:inflect"] },
+    "source_request": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "paradigms": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/paradigmBlock" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "paradigmBlock": {
+      "type": "object",
+      "required": ["label", "dimensions", "slots"],
+      "properties": {
+        "label": { "type": "string" },
+        "dimensions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "slots": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/paradigmSlot" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "paradigmSlot": {
+      "type": "object",
+      "required": ["features", "forms", "source_label", "is_ambiguous"],
+      "properties": {
+        "features": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "integer", "boolean", "null"]
+          }
+        },
+        "forms": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/paradigmForm" }
+        },
+        "source_label": { "type": "string" },
+        "is_ambiguous": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "paradigmForm": {
+      "type": "object",
+      "required": ["text", "normalized", "source_key"],
+      "properties": {
+        "text": { "type": "string" },
+        "normalized": { "type": "string" },
+        "source_key": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

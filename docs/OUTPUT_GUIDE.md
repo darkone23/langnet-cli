@@ -89,6 +89,7 @@ The self-description schemas live in:
 - `docs/schemas/languages.v1.schema.json`
 - `docs/schemas/tools.v1.schema.json`
 - `docs/schemas/word_index.v1.schema.json`
+- `docs/schemas/word_index_sections.v1.schema.json`
 
 `word-of-day --output json` and `recommend-words --output json` return learner
 recommendation cards using schema version `langnet.word_of_day.v1`. The schema
@@ -108,11 +109,120 @@ worth studying, and an optional encounter probe summary. The probe summary is
 cache-only for translation evidence; these commands should not hide live
 translation latency inside ordinary recommendation rendering.
 
+For Greek beginner recommendations, `canonical.source_key` is upgraded to a
+Diogenes inflection key when LangNet has a verified learner-key bridge. For
+example, a `logos` card can expose `canonical.source_key: "lo/gos"`, which is
+directly usable as `just cli paradigm grc lo/gos --kind declension --output
+json`.
+
+Candidate source modes:
+
+- `--candidate-source curated` uses built-in learner inventories only. The
+  Greek inventory is year-scale so MOTD refreshes are not dominated by a few
+  famous words.
+- `--candidate-source llm` requires OpenRouter credentials and fails if LLM
+  candidate synthesis is unavailable.
+- `--candidate-source auto` tries LLM synthesis when credentials and timeout
+  permit it, then falls back to curated inventories with a warning.
+
+Use `--fresh` with `--avoid` or `--exclude-recent` to keep recent cards out of
+the first-choice set. The response includes `diagnostics.languages.<lang>` with
+pool size, eligible/probed/accepted counts, deferred ambiguity/repeat counts,
+and the first validation rejections. This makes it clear whether a card came
+from LLM synthesis or curated fallback and how much candidate validation was
+discarded before the final card list was produced.
+
+## `paradigm` And `paradigm-resolve`
+
+`paradigm` fetches source-backed inflection tables. It is a table tool, not a
+full local morphology generator. The current implementation wraps:
+
+- Sanskrit Heritage `sktdeclin` for noun/adjective declension tables.
+- Sanskrit Heritage `sktconjug` for verb conjugation tables.
+- Diogenes `do=inflect` for Latin and Greek inflection tables.
+
+```bash
+just cli paradigm san putra --kind declension --gender Mas --output json
+just cli paradigm san gam --kind conjugation --class 1 --output json
+just cli paradigm lat amo --kind conjugation --output json
+just cli paradigm grc lo/gos --kind declension --output json
+```
+
+The JSON response uses schema version `langnet.paradigm.v1`. The schema lives at
+`docs/schemas/paradigm.v1.schema.json`.
+
+Important fields:
+
+- `language`, `lemma`, `kind`, and `source` identify the requested table.
+- `source_request` records the source-backed endpoint and request metadata.
+- `paradigms[]` contains one or more table blocks.
+- `paradigms[].dimensions` names the grammatical axes exposed by that block.
+- `slots[]` contains feature-labeled cells such as case/number or
+  tense/voice/person/number.
+- `forms[]` preserves source forms and source keys.
+- `warnings[]` reports partial or failed source-backed behavior.
+
+Sanskrit table requests need the metadata Heritage requires:
+
+- Declensions require `--gender Mas`, `--gender Fem`, or `--gender Neu`.
+- Conjugations require `--class <present-class>`.
+
+Latin and Greek table requests need a Diogenes-compatible lemma key. For Greek,
+that can be a beta-code key such as `lo/gos`.
+
+`paradigm-resolve` explains what LangNet believes before fetching a table. It is
+primarily a resolver/debugging surface for ambiguity, missing metadata, and
+future lookup integration.
+
+Greek learner keys used by the curated MOTD pool are also resolver inputs when
+LangNet has verified a Diogenes inflection key for them:
+
+```bash
+just cli paradigm-resolve grc logos --output json
+just cli paradigm-resolve grc sophos --output json
+```
+
+Those responses include a `paradigm_request` such as `diogenes:inflect
+lo/gos`. Unmapped romanized Greek keys degrade with
+`unresolved_reason: "greek_learner_key_not_resolved_to_source_key"` so consumers
+can distinguish a missing bridge from an indeclinable word.
+
+```bash
+just cli paradigm-resolve san putraa.naam \
+  --record-json '{"normalized_form":"putrāṇām","lemma":"putra","part_of_speech":"noun","gender":"masculine","source":"heritage:sktreader","analyses":[{"case":"genitive","number":"plural"}]}' \
+  --output json
+```
+
+The resolver JSON uses schema version `langnet.paradigm_resolution.v1`. The
+schema lives at `docs/schemas/paradigm_resolution.v1.schema.json`.
+
+Important resolver fields:
+
+- `searched_form` and `normalized_form` keep the reader input separate from the
+  normalized form.
+- `native_analyses[]` preserves language-specific grammar evidence.
+- `functional_analyses[]` maps native grammar into shared learner-facing
+  relations such as `subject`, `direct_object`, `recipient_or_goal`, or
+  `possession_or_association`.
+- `paradigm_request` is present only when LangNet has enough metadata to fetch a
+  table.
+- `unresolved_reason` explains why a table should not be fetched yet.
+
+Graceful degradation is part of the contract. If a source request fails, the
+payload should prefer structured warnings over pretending the table is complete.
+If Diogenes or Heritage returns source labels that cannot be fully normalized,
+LangNet preserves `source_label` and source forms for inspection. Current limits
+and warning values are documented in
+`docs/technical/backend/paradigm-generation-limitations.md`.
+
 `word-index --output json` commands return source-backed headword index rows
 using schema version `langnet.word_index.v1`.
 
 ```bash
 just cli word-index sources --output json
+just cli word-index sections san --source all --output json
+just cli word-index sections grc --source diogenes --output json
+just cli word-index sections lat --source all --output json
 just cli word-index list all --source all --limit 25 --output json
 just cli word-index neighborhood san dharma --source dico --radius 8 --output json
 just cli word-index nearby san satya --source all --radius 5 --output json
@@ -162,7 +272,45 @@ lexeme-centered: rows with the same `lexeme_id` are collapsed into one wheel
 card, and the exact source rows are listed under `source_entries`. Wheels with
 `--source all` balance available source/dictionary buckets while selecting
 lexeme cards, rather than returning duplicate cards for the same word from
-different sources.
+different sources. The top-level wheel payload has `order.policy =
+"seeded-discovery"` and `order.collation = "seeded-discovery"`; use that to
+label the wheel as a deterministic discovery sequence, not as dictionary order.
+Each returned wheel card has `order.policy = "canonical-key"` because duplicate
+source rows are collapsed to one lexeme card. Each `source_entries[]` row still
+has its own `source-native` order metadata for dictionary-neighborhood
+navigation.
+`word-index sections` returns native alphabet or varnamala section anchors using
+schema version `langnet.word_index_sections.v1`. Use it for a compact
+dictionary navigation rail. Section labels are display labels, transliteration
+is supporting text, and each section includes an `anchor` that can be passed to
+`word-index nearby` or future source-order cursor surfaces. For Greek, the rail
+keeps learner labels separate from Diogenes source keys: for example Θ displays
+`transliteration = "th"` but anchors with `query = "q"`, Ξ uses `query = "c"`,
+Ψ uses `query = "y"`, and Ω uses `query = "ō"`.
+
+Sanskrit sections follow a 52-item varnamala rail: 14 vowels, anusvara and
+visarga, the 33 consonants grouped by articulation, plus the common conjuncts
+क्ष, त्र, and ज्ञ. The displayed transliteration is learner-facing, while
+`anchor.query` is the source-native CDSL SLP1 prefix needed to open the correct
+dictionary neighborhood. Examples: ऋ uses `query = "f"`, ङ uses
+`query = "N"`, ट uses `query = "w"`, ण uses `query = "R"`, श uses
+`query = "S"`, ष uses `query = "z"`, क्ष uses `query = "kz"`, and ज्ञ uses
+`query = "jY"`. This distinction avoids collapsing Sanskrit phonemes that
+share rough ASCII spellings such as `t`, `n`, or `sh`.
+
+Sanskrit sections report `order.collation = "sa-varga"`. Source-local row order
+still comes from `word-index nearby`, so the payload includes a warning rather
+than implying a full standalone Sanskrit cursor.
+Ordering semantics are explicit in the `order` object. Durable fields like
+`wheel_order_key` and `source_order_key` are plumbing keys; callers should read
+`order.policy`, `order.collation`, `order.label`, and `order.explanation` before
+presenting order to learners. Current policies include `source-native` for
+source-local dictionary rows, `canonical-key` for collapsed lexeme cards,
+`source-window-merge` for merged neighborhoods, and `seeded-discovery` for
+wheel payloads. For Sanskrit source rows this currently preserves the indexed
+source sequence honestly as `collation = "source"`; it does not claim a complete
+standalone varga collation until that is implemented. The exact source-local
+ordering remains available on each collapsed card's `source_entries[].order`.
 Native-script queries are accepted where the source index can be projected to a
 stable canonical key: Sanskrit Devanagari is expanded through the existing
 Velthuis/CDSL path, and Greek Unicode is expanded to the same ASCII key used by
@@ -278,9 +426,9 @@ The JSON shape keeps claim metadata separate from triple metadata so tools can i
 `encounter` is the current learner-facing path. It runs staged evidence, projects exact cache-backed translations when the configured cache exists, reduces source glosses into exact buckets, and prints a compact word encounter.
 
 ```bash
-devenv shell langnet-cli -- encounter san dharma cdsl --max-buckets 5
-devenv shell langnet-cli -- encounter san agni heritage --no-cache
-devenv shell langnet-cli -- encounter lat lupus gaffiot
+just cli encounter san dharma cdsl --max-buckets 5
+just cli encounter san agni heritage --no-cache
+just cli encounter lat lupus gaffiot
 ```
 
 Pretty output should be treated as a prototype learner interface. It is the
@@ -331,6 +479,12 @@ New renderer-facing fields are additive:
   `source_order_id`, `source_order_key`, and min/max source-window bounds. Use
   those handles with `word-index nearby` now, and with the planned unified
   wheel-neighborhood surface later;
+- `paradigm_resolution`: present only when `--include-paradigm-resolution` is
+  passed. This embeds a `langnet.paradigm_resolution.v1` payload for the searched
+  form, built from encounter morphology triples and resolver logic. It can
+  include native analyses, functional analyses, a lazy `paradigm_request`, and
+  `unresolved_reason` values. It does not fetch full paradigm tables; clients
+  should call `paradigm` only after the learner opens a forms/paradigm panel.
 - `components` and `display.components`: optional structured component links
   when a morphology tool exposes a likely decomposition, such as Sanskrit
   compound members from Heritage `iic.` rows or Latin Whitaker tackons. These
@@ -339,6 +493,14 @@ New renderer-facing fields are additive:
   supporting evidence for rendering partial links; they do not replace or
   reorder the primary `display.meanings` buckets;
 - `display.options`: rendering controls used to build display strings.
+
+Example:
+
+```bash
+just cli encounter san putraa.naam heritage \
+  --include-paradigm-resolution \
+  --output json
+```
 
 Web/API consumers should render `display.*`, inspect `ranking` for ordering
 reasons, and keep `buckets[*].witnesses[*].evidence` available for provenance
@@ -418,7 +580,7 @@ For a combined Sanskrit lookup, `encounter` should show Heritage analysis alongs
 Use `encounter` first to see the learner-facing result:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli encounter san dharma all --no-cache --max-buckets 3'
+just cli encounter san dharma all --no-cache --max-buckets 3
 ```
 
 For CDSL-backed meanings, the displayed bucket text may use a display gloss. This must not omit source content by default. Today `metadata.display_gloss` only applies display-safe Sanskrit transliteration transforms; the raw CDSL gloss remains in the evidence triple object.
@@ -426,7 +588,7 @@ For CDSL-backed meanings, the displayed bucket text may use a display gloss. Thi
 To inspect where a displayed CDSL meaning came from, dump the source triples:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli triples-dump san dharma cdsl --no-cache --output json --predicate gloss --max-triples 3'
+just cli triples-dump san dharma cdsl --no-cache --output json --predicate gloss --max-triples 3
 ```
 
 In the JSON, inspect the matching `gloss` triple:
@@ -470,8 +632,8 @@ DICO and Gaffiot source entries are French source evidence. Cached English text 
 First inspect the source French gloss:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli triples-dump lat lupus gaffiot --no-cache --output json --predicate gloss --max-triples 3'
-devenv shell -- bash -c 'langnet-cli triples-dump san dharma dico --no-cache --output json --predicate gloss --max-triples 3'
+just cli triples-dump lat lupus gaffiot --no-cache --output json --predicate gloss --max-triples 3
+just cli triples-dump san dharma dico --no-cache --output json --predicate gloss --max-triples 3
 ```
 
 In those source triples:
@@ -484,16 +646,16 @@ In those source triples:
 After a matching cache row exists, inspect the derived English evidence through `encounter`:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --translation-cache-db data/cache/langnet.duckdb --output json'
-devenv shell -- bash -c 'langnet-cli encounter san dharma dico --translation-cache-db data/cache/langnet.duckdb --output json'
+just cli encounter lat lupus gaffiot --translation-cache-db data/cache/langnet.duckdb --output json
+just cli encounter san dharma dico --translation-cache-db data/cache/langnet.duckdb --output json
 ```
 
 To populate missing DICO/Gaffiot translations during an explicit lookup, use
 `--translation-mode auto`:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli encounter lat lupus gaffiot --translation-mode auto --translation-cache-db data/cache/langnet.duckdb'
-devenv shell -- bash -c 'langnet-cli encounter san dharma dico --translation-mode auto --translation-cache-db data/cache/langnet.duckdb'
+just cli encounter lat lupus gaffiot --translation-mode auto --translation-cache-db data/cache/langnet.duckdb
+just cli encounter san dharma dico --translation-mode auto --translation-cache-db data/cache/langnet.duckdb
 ```
 
 To warm translations ahead of reading, place one term per line in a text file
@@ -501,8 +663,8 @@ and run `translation-warm`. This is explicit cache population, so it may call
 the configured model for cache misses:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffiot --translation-cache-db data/cache/langnet.duckdb'
-devenv shell -- bash -c 'langnet-cli translation-warm san examples/debug/sanskrit_words.txt --tool-filter dico --translation-cache-db data/cache/langnet.duckdb'
+just cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffiot --translation-cache-db data/cache/langnet.duckdb
+just cli translation-warm san examples/debug/sanskrit_words.txt --tool-filter dico --translation-cache-db data/cache/langnet.duckdb
 ```
 
 Use `--dry-run --output json` to inspect how many translation projections are
@@ -554,13 +716,13 @@ The high-fidelity rule applies here too: the English gloss expands the source ev
 Use `encounter` for the learner-facing view:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli encounter lat lupus all --no-cache --max-buckets 3'
+just cli encounter lat lupus all --no-cache --max-buckets 3
 ```
 
 Then inspect the exact triples that the reducer can consume:
 
 ```bash
-devenv shell -- bash -c 'langnet-cli triples-dump lat lupus all --no-cache --output json --predicate gloss --max-triples 5'
+just cli triples-dump lat lupus all --no-cache --output json --predicate gloss --max-triples 5
 ```
 
 For each displayed meaning, match the bucket text to a `gloss` triple. The

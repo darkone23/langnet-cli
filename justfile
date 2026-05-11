@@ -46,7 +46,7 @@ reap:
 
 # Run the test suite
 test-all:
-    devenv shell -- nose2 -s tests --config tests/nose2.cfg
+    bash ./.justscripts/run-dev-tool nose2 -s tests --config tests/nose2.cfg
 
 # Stabilization loop for current learner/evidence work: focused tests, then full gates.
 validate-stabilization:
@@ -56,15 +56,15 @@ validate-stabilization:
 
 # nose2 -s tests --config tests/nose2.cfg <...>
 test *args:
-    devenv shell -- nose2 -s tests --config tests/nose2.cfg "$@"
+    bash ./.justscripts/run-dev-tool nose2 -s tests --config tests/nose2.cfg "$@"
 
-# Run all tests including benchmarks (use 'benchmark' for benchmarks only)
+# Run the fast nose2 suite. Use 'benchmark' for performance tests.
 test-fast:
-    devenv shell -- nose2 -s tests --config tests/nose2.cfg
+    bash ./.justscripts/run-dev-tool nose2 -s tests --config tests/nose2.cfg
 
 # Run performance benchmarks only
 benchmark:
-    devenv shell -- python -m unittest tests.benchmarks.test_performance -v
+    bash ./.justscripts/run-dev-tool python -m unittest tests.benchmarks.test_performance -v
 
 # ⚠ DESTRUCTIVE: Remove runtime caches (deletes all files in data/cache)
 clean-cache:
@@ -73,19 +73,19 @@ clean-cache:
 
 # Format code with ruff (supports --check, --diff, etc.)
 ruff-format *args:
-    devenv shell -- ruff format src/ tests/ ./.justscripts/ "$@"
+    bash ./.justscripts/run-dev-tool ruff format src/ tests/ ./.justscripts/ "$@"
 
 # Lint code with ruff
 ruff-check *args:
-    devenv shell -- ruff check src/ tests/ ./.justscripts "$@"
+    bash ./.justscripts/run-dev-tool ruff check src/ tests/ ./.justscripts "$@"
 
 # Type check with ty
 typecheck *args:
-    devenv shell -- ty check src/ tests/ ./.justscripts "$@"
+    bash ./.justscripts/run-dev-tool ty check src/ tests/ ./.justscripts "$@"
 
 # project level automation tool
 autobot *args:
-    devenv shell -- python3 .justscripts/autobot.py "$@"
+    bash ./.justscripts/run-dev-tool python3 .justscripts/autobot.py "$@"
 
 # Probe backend parser commands through the fuzz harness; requires local tool dependencies
 fuzz-tools:
@@ -105,16 +105,16 @@ fuzz-all:
 
 # Parse Diogenes HTML and dump the raw parsed JSON (pre-triples). Optional endpoint override.
 diogenes-parse lang word endpoint="":
-    devenv shell -- bash -c 'langnet-cli parse diogenes "$@"' _ "{{lang}}" "{{word}}" --opt "{{endpoint}}" --no-normalize --format json
+    bash ./.justscripts/run-langnet-cli parse diogenes "$1" "$2" --opt "$3" --no-normalize --format json
 
 # Generic parser helper: tool = diogenes|whitakers. Fourth arg = endpoint (dio) or binary (whitakers).
 parse tool lang word opt="":
-    devenv shell -- bash -c 'langnet-cli parse "$@"' _ "{{tool}}" "{{lang}}" "{{word}}" --opt "{{opt}}" --no-normalize --format json
+    bash ./.justscripts/run-langnet-cli parse "$1" "$2" "$3" --opt "$4" --no-normalize --format json
 
 # Dump tool claims/triples for a word (Latin) with no stubs/no cache. Optional tool filter (exact prefix), use "all" to run everything.
 triples-dump lang word tool="all":
-    devenv shell -- bash -c 'langnet-cli triples-dump "$@"' _ "{{lang}}" "{{word}}" "{{tool}}" --no-cache
+    bash ./.justscripts/run-langnet-cli triples-dump "$1" "$2" "$3" --no-cache
 
 # Translate sample lexicon rows (French -> English) using aisuite/OpenRouter.
 translate-lex *opts:
-    devenv shell -- python3 ./.justscripts/lex_translation_demo.py "$@"
+    bash ./.justscripts/run-dev-tool python3 ./.justscripts/lex_translation_demo.py "$@"

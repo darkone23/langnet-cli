@@ -19,9 +19,18 @@ LangNet has a working CLI-first word-level evidence engine:
   in helper modules with CLI compatibility wrappers.
 - `word-of-day` and `recommend-words` expose schema-backed learner
   recommendation cards with optional encounter probe summaries.
+- `doctor`, `langs`, `tools`, `word-index`, and `translation-cache` provide
+  machine-readable readiness, catalog, index, and cache-maintenance surfaces.
+- `word-index` JSON now exposes explicit `order` metadata so UI callers can
+  distinguish source-native dictionary order, collapsed canonical lexeme order,
+  merged source-window neighborhoods, and seeded discovery wheels.
 
 The project remains in stabilization. The next work is learner-quality
 refinement, not broad product expansion.
+
+As of 2026-05-05, the local stabilization gate is `just
+validate-stabilization`, run sequentially. It covers focused tests, formatting,
+Ruff, `ty`, and the full fast suite.
 
 ## Milestone 0: Stabilization Baseline
 
@@ -40,6 +49,8 @@ Remaining:
 - keep `just lint-all` and `just test-fast` passing before larger changes land;
 - keep active docs aligned with implemented commands and translation modes;
 - avoid new roadmap documents unless an older one is retired or linked clearly.
+- continue improving language-native ordering keys, especially Sanskrit varga
+  collation, without relabeling source order as something richer than it is.
 
 ## Milestone 1: Evidence Contracts
 

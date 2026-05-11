@@ -45,6 +45,7 @@ def test_doctor_json_reports_cli_assumptions_without_network() -> None:
     assert "translation:openai_key" in check_ids
     assert "schema:word_of_day.v1.schema.json" in check_ids
     assert "schema:word_index.v1.schema.json" in check_ids
+    assert "schema:word_index_sections.v1.schema.json" in check_ids
 
 
 def test_doctor_can_require_openai_key_for_translation_population() -> None:

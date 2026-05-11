@@ -38,9 +38,11 @@ from langnet.encounter_display import (
     build_display_payload,
     build_header_view,
     build_meaning_view,
+    entry_summary_payload,
     foster_display_for_analysis,
     foster_features_from_analysis,
     shorten_text,
+    source_detail_summary_payload,
 )
 from langnet.encounter_ranking import (
     bucket_learner_quality_order,
@@ -92,6 +94,9 @@ from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.normalizer.core import NormalizationResult, _hash_query
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
 from langnet.normalizer.utils import normalize_greek_compatibility, strip_accents
+from langnet.paradigm.grammar import LANGNET_PARADIGM_RESOLUTION_SCHEMA_VERSION, ParadigmRequest
+from langnet.paradigm.resolver import resolve_paradigm_request
+from langnet.paradigm.service import ParadigmService
 from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
 from langnet.planner.core import PlannerConfig, ToolPlanner
 from langnet.reader_eval import (
@@ -129,6 +134,7 @@ from langnet.translation import (
 from langnet.word_index import (
     word_index_list_payload,
     word_index_neighborhood_payload,
+    word_index_sections_payload,
     word_index_sources_payload,
     word_index_wheel_payload,
 )
@@ -613,6 +619,8 @@ def _pick_best_normalization_candidate(normalized, raw_text: str) -> str:
     try:
         candidates = getattr(normalized.normalized, "candidates", []) or []
         if candidates:
+            if _normalization_candidates_are_only_heritage_guesses(candidates):
+                return raw_text
             raw_norm = _norm_text_for_compare(raw_text)
 
             def _score(cand) -> tuple[int, int]:
@@ -642,6 +650,37 @@ def _pick_best_normalization_candidate(normalized, raw_text: str) -> str:
     except Exception:
         pass
     return raw_text
+
+
+def _normalization_candidates_are_only_heritage_guesses(candidates) -> bool:
+    saw_candidate = False
+    for cand in candidates:
+        saw_candidate = True
+        sources = getattr(cand, "sources", []) or []
+        if "heritage_sktuser_guess" not in sources:
+            return False
+    return saw_candidate
+
+
+def _sanskrit_cdsl_query_from_heritage(heritage_payload: object, fallback: str) -> str:
+    if not isinstance(heritage_payload, Mapping):
+        return fallback
+    heritage_payload = cast(Mapping[str, object], heritage_payload)
+    analyses = heritage_payload.get("analyses")
+    if isinstance(analyses, Sequence) and not isinstance(analyses, (str, bytes)):
+        for analysis in analyses:
+            if not isinstance(analysis, Mapping):
+                continue
+            analysis = cast(Mapping[str, object], analysis)
+            if not analysis.get("dictionary_url"):
+                continue
+            word = analysis.get("word")
+            if isinstance(word, str) and word.strip():
+                return word.strip()
+    lemma = heritage_payload.get("lemma")
+    if isinstance(lemma, str) and lemma.strip():
+        return lemma.strip()
+    return fallback
 
 
 def _normalize_word_for_tool(
@@ -881,6 +920,30 @@ def word_index_sources(language: str, output: str) -> None:
     _emit_word_index_payload(payload, output=output)
 
 
+@word_index_cli.command("sections")
+@click.argument("language")
+@click.option(
+    "--source",
+    default="all",
+    show_default=True,
+    help="Source filter: all, cdsl, dico, gaffiot, or diogenes.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def word_index_sections(language: str, source: str, output: str) -> None:
+    """List native alphabet/section anchors for word-index browsing."""
+    try:
+        payload = word_index_sections_payload(language, source=source)
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    _emit_word_index_sections_payload(payload, output=output)
+
+
 @word_index_cli.command("list")
 @click.argument("language", default="all")
 @click.option(
@@ -1082,6 +1145,34 @@ def _emit_word_index_payload(payload: Mapping[str, object], *, output: str) -> N
                 click.echo(f"Warning: {warning_map.get('message')}", err=True)
 
 
+def _emit_word_index_sections_payload(payload: Mapping[str, object], *, output: str) -> None:
+    if output == "json":
+        click.echo(orjson.dumps(dict(payload), option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    order = payload.get("order")
+    if isinstance(order, Mapping):
+        order_map = cast(Mapping[str, object], order)
+        click.echo(f"Word index sections: {order_map.get('label')}")
+    sections = payload.get("sections")
+    if isinstance(sections, Sequence) and not isinstance(sections, (str, bytes)):
+        for section in sections:
+            if not isinstance(section, Mapping):
+                continue
+            section_map = cast(Mapping[str, object], section)
+            marker = "*" if section_map.get("available") else "-"
+            click.echo(
+                f"{marker} {section_map.get('label')} "
+                f"({section_map.get('transliteration')}) "
+                f"{section_map.get('group_label')}"
+            )
+    warnings = payload.get("warnings")
+    if isinstance(warnings, Sequence) and not isinstance(warnings, (str, bytes)):
+        for warning in warnings:
+            if isinstance(warning, Mapping):
+                warning_map = cast(Mapping[str, object], warning)
+                click.echo(f"Warning: {warning_map.get('message')}", err=True)
+
+
 def _word_index_item_line(item: Mapping[str, object]) -> str:
     display = item.get("display")
     display_map = (
@@ -1110,6 +1201,7 @@ def _word_index_source_label(item: Mapping[str, object]) -> str:
     for source in sources:
         if not isinstance(source, Mapping):
             continue
+        source = cast(Mapping[str, object], source)
         source_id = str(source.get("source") or "")
         dictionary = str(source.get("dictionary") or "")
         if source_id and dictionary and source_id != dictionary:
@@ -2143,6 +2235,7 @@ def _doctor_schema_checks(checks: list[dict[str, object]]) -> None:
         Path("docs/schemas/translation-cache.v1.schema.json"),
         Path("docs/schemas/word_of_day.v1.schema.json"),
         Path("docs/schemas/word_index.v1.schema.json"),
+        Path("docs/schemas/word_index_sections.v1.schema.json"),
         Path("docs/schemas/doctor.v1.schema.json"),
     ]
     for schema_path in schema_paths:
@@ -3601,6 +3694,33 @@ _MORPHOLOGY_FEATURE_PREDICATES = {
 }
 
 
+_PARADIGM_ANALYSIS_FEATURES = {
+    "case",
+    "number",
+    "gender",
+    "person",
+    "tense",
+    "mood",
+    "voice",
+    "degree",
+}
+
+
+_PARADIGM_DIRECT_FEATURE_KEYS = {
+    "gender",
+    "genitive_singular",
+    "genitive",
+    "gen_sg",
+    "article",
+    "source_key",
+    "diogenes_key",
+    "betacode",
+    "present_class",
+    "class",
+    "conjugation",
+}
+
+
 @dataclass
 class _MorphologyGraph:
     interp_to_form: dict[str, str]
@@ -3610,6 +3730,366 @@ class _MorphologyGraph:
     form_to_lexeme: dict[str, str]
     form_features: dict[str, list[str]]
     form_source_tools: dict[str, str]
+
+
+def _encounter_paradigm_resolution_payload(
+    language: str,
+    text: str,
+    claims: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    language_code = canonical_language(language)
+    if language_code not in {"lat", "grc", "san"}:
+        return _empty_encounter_paradigm_resolution(
+            language=language,
+            text=text,
+            warning=f"unsupported_language: {language}",
+        )
+    try:
+        records = _encounter_paradigm_records(cast(Any, language_code), text, claims)
+        payload = resolve_paradigm_request(cast(Any, language_code), text, records)
+        return asdict(payload)
+    except Exception as exc:  # noqa: BLE001
+        return _empty_encounter_paradigm_resolution(
+            language=language_code,
+            text=text,
+            warning=f"resolver_failed: {type(exc).__name__}",
+        )
+
+
+def _empty_encounter_paradigm_resolution(
+    *,
+    language: str,
+    text: str,
+    warning: str,
+) -> dict[str, object]:
+    return {
+        "schema_version": LANGNET_PARADIGM_RESOLUTION_SCHEMA_VERSION,
+        "searched_form": text,
+        "normalized_form": text,
+        "language": language,
+        "candidates": [],
+        "warnings": [warning],
+    }
+
+
+def _encounter_paradigm_records(
+    language: str,
+    text: str,
+    claims: Sequence[Mapping[str, object]],
+) -> list[Mapping[str, object]]:
+    triples = _encounter_claim_triples_with_tools(claims)
+    records = _direct_paradigm_records(language, text, triples)
+    records.extend(_graph_paradigm_records(language, text, triples))
+    return _merge_paradigm_records(records)
+
+
+def _direct_paradigm_records(
+    language: str,
+    text: str,
+    triples: Sequence[tuple[str, Mapping[str, object]]],
+) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
+    for claim_tool, triple in triples:
+        if triple.get("predicate") != predicates.HAS_MORPHOLOGY:
+            continue
+        obj = triple.get("object")
+        if not isinstance(obj, Mapping):
+            continue
+        obj_map = cast(Mapping[str, object], obj)
+        features = _paradigm_features_from_morphology_object(obj_map)
+        lemma = str(obj_map.get("lemma") or "").removeprefix("lex:")
+        form = str(obj_map.get("form") or triple.get("subject") or text).removeprefix("form:")
+        record = _paradigm_record_from_features(
+            language=language,
+            normalized_form=form or text,
+            lemma=lemma or form or text,
+            features=features,
+            source=_paradigm_source_label(_encounter_triple_source_tool(triple, claim_tool)),
+        )
+        _copy_paradigm_string_fields(record, obj_map)
+        records.append(record)
+    return records
+
+
+def _graph_paradigm_records(  # noqa: C901
+    language: str,
+    text: str,
+    triples: Sequence[tuple[str, Mapping[str, object]]],
+) -> list[dict[str, object]]:
+    form_by_interp: dict[str, str] = {}
+    lemma_by_interp: dict[str, str] = {}
+    features_by_interp: dict[str, dict[str, object]] = {}
+    source_by_interp: dict[str, str] = {}
+    lemma_by_form: dict[str, str] = {}
+    features_by_form: dict[str, dict[str, object]] = {}
+    source_by_form: dict[str, str] = {}
+
+    for claim_tool, triple in triples:
+        subject = str(triple.get("subject") or "")
+        predicate = str(triple.get("predicate") or "")
+        obj = triple.get("object")
+        source = _paradigm_source_label(_encounter_triple_source_tool(triple, claim_tool))
+        if (
+            predicate == predicates.HAS_INTERPRETATION
+            and subject.startswith("form:")
+            and isinstance(obj, str)
+        ):
+            form_by_interp.setdefault(obj, subject.removeprefix("form:"))
+            source_by_interp.setdefault(obj, source)
+            continue
+        if (
+            predicate == predicates.REALIZES_LEXEME
+            and subject.startswith("interp:")
+            and isinstance(obj, str)
+        ):
+            lemma_by_interp.setdefault(subject, _display_lexeme_anchor(obj))
+            source_by_interp.setdefault(subject, source)
+            continue
+        if (
+            predicate == predicates.INFLECTION_OF
+            and subject.startswith("form:")
+            and isinstance(obj, str)
+        ):
+            form = subject.removeprefix("form:")
+            lemma_by_form.setdefault(form, _display_lexeme_anchor(obj))
+            source_by_form.setdefault(form, source)
+            continue
+        feature = _paradigm_feature_from_predicate(predicate, obj)
+        if feature is None:
+            continue
+        key, value = feature
+        if subject.startswith("interp:"):
+            features_by_interp.setdefault(subject, {})[key] = value
+            source_by_interp.setdefault(subject, source)
+        elif subject.startswith("form:"):
+            form = subject.removeprefix("form:")
+            features_by_form.setdefault(form, {})[key] = value
+            source_by_form.setdefault(form, source)
+
+    records: list[dict[str, object]] = []
+    for interp, features in features_by_interp.items():
+        form = form_by_interp.get(interp)
+        lemma = lemma_by_interp.get(interp)
+        if not form or not lemma:
+            continue
+        records.append(
+            _paradigm_record_from_features(
+                language=language,
+                normalized_form=form,
+                lemma=lemma,
+                features=features,
+                source=source_by_interp.get(interp, "encounter"),
+            )
+        )
+    for form, features in features_by_form.items():
+        records.append(
+            _paradigm_record_from_features(
+                language=language,
+                normalized_form=form or text,
+                lemma=lemma_by_form.get(form, form or text),
+                features=features,
+                source=source_by_form.get(form, "encounter"),
+            )
+        )
+    return records
+
+
+def _paradigm_features_from_morphology_object(obj: Mapping[str, object]) -> dict[str, object]:
+    features: dict[str, object] = {}
+    raw_features = obj.get("features")
+    if isinstance(raw_features, Mapping):
+        features.update(
+            {
+                str(key): value
+                for key, value in raw_features.items()
+                if isinstance(key, str) and _is_paradigm_feature_value(value)
+            }
+        )
+    for key in (*_PARADIGM_ANALYSIS_FEATURES, "pos", "part_of_speech", "present_class"):
+        value = obj.get(key)
+        if value is not None and _is_paradigm_feature_value(value):
+            features.setdefault(key, value)
+    analysis = obj.get("analysis")
+    if isinstance(analysis, str):
+        for key, value in _paradigm_features_from_analysis_text(analysis).items():
+            if features.get(key) is None:
+                features[key] = value
+    return features
+
+
+def _paradigm_features_from_analysis_text(analysis: str) -> dict[str, object]:  # noqa: C901, PLR0912
+    normalized = analysis.casefold().replace(",", " ")
+    tokens = [token.strip() for token in re.split(r"[\s;|]+", normalized) if token.strip()]
+    features: dict[str, object] = {}
+    for token in tokens:
+        key = token.rstrip(".")
+        if key in {"m", "mas", "masc"}:
+            features["gender"] = "masculine"
+        elif key in {"f", "fem"}:
+            features["gender"] = "feminine"
+        elif key in {"n", "neu", "neut"}:
+            features["gender"] = "neuter"
+        elif key in {"sg", "s"}:
+            features["number"] = "singular"
+        elif key in {"du", "d"}:
+            features["number"] = "dual"
+        elif key in {"pl", "p"}:
+            features["number"] = "plural"
+        elif key in {"nom"}:
+            features["case"] = "nominative"
+        elif key in {"voc", "v"}:
+            features["case"] = "vocative"
+        elif key in {"acc", "a"}:
+            features["case"] = "accusative"
+        elif key in {"instr", "ins", "i"}:
+            features["case"] = "instrumental"
+        elif key in {"dat"}:
+            features["case"] = "dative"
+        elif key in {"abl"}:
+            features["case"] = "ablative"
+        elif key in {"gen", "g"}:
+            features["case"] = "genitive"
+        elif key in {"loc", "l"}:
+            features["case"] = "locative"
+        elif key in {"ind", "inde"}:
+            features["pos"] = "indeclinable"
+        elif key == "iic":
+            features["pos"] = "compound_member"
+        elif key in {"noun", "verb", "adjective", "pronoun"}:
+            features["pos"] = key
+        elif class_match := re.fullmatch(r"\[(\d+)\]", key):
+            features["verb_class"] = class_match.group(1)
+    if "pos" not in features:
+        if any(key in features for key in ("case", "gender", "number")):
+            features["pos"] = "noun"
+        elif any(key in features for key in ("person", "tense", "mood", "voice", "verb_class")):
+            features["pos"] = "verb"
+    return features
+
+
+def _paradigm_record_from_features(
+    *,
+    language: str,
+    normalized_form: str,
+    lemma: str,
+    features: Mapping[str, object],
+    source: str,
+) -> dict[str, object]:
+    record: dict[str, object] = {
+        "language": language,
+        "normalized_form": normalized_form,
+        "lemma": lemma,
+        "source": source,
+        "part_of_speech": _paradigm_part_of_speech(features),
+    }
+    for key in _PARADIGM_DIRECT_FEATURE_KEYS:
+        value = features.get(key)
+        if _is_paradigm_feature_value(value):
+            record[key] = value
+    if "verb_class" in features and "present_class" not in record:
+        verb_class = features.get("verb_class")
+        if _is_paradigm_feature_value(verb_class):
+            record["present_class"] = verb_class
+    analysis = {
+        key: value
+        for key, value in features.items()
+        if key in _PARADIGM_ANALYSIS_FEATURES and _is_paradigm_feature_value(value)
+    }
+    if analysis:
+        record["analyses"] = [analysis]
+    return record
+
+
+def _paradigm_part_of_speech(features: Mapping[str, object]) -> str:
+    value = features.get("part_of_speech") or features.get("pos")
+    if isinstance(value, str) and value:
+        if value == "unknown" or value.startswith("unknown("):
+            pass
+        elif value == "compound_member":
+            return "unknown"
+        else:
+            return value
+    if any(key in features for key in ("case", "gender", "number")):
+        return "noun"
+    if any(key in features for key in ("person", "tense", "mood", "voice", "verb_class")):
+        return "verb"
+    return "unknown"
+
+
+def _paradigm_feature_from_predicate(
+    predicate: str,
+    obj: object,
+) -> tuple[str, object] | None:
+    if not _is_paradigm_feature_value(obj):
+        return None
+    mapping = {
+        predicates.HAS_POS: "part_of_speech",
+        predicates.HAS_CASE: "case",
+        predicates.HAS_NUMBER: "number",
+        predicates.HAS_GENDER: "gender",
+        predicates.HAS_PERSON: "person",
+        predicates.HAS_TENSE: "tense",
+        predicates.HAS_MOOD: "mood",
+        predicates.HAS_VOICE: "voice",
+        predicates.HAS_DEGREE: "degree",
+        predicates.HAS_DECLENSION: "declension",
+        predicates.HAS_CONJUGATION: "conjugation",
+    }
+    key = mapping.get(predicate)
+    return (key, obj) if key else None
+
+
+def _merge_paradigm_records(records: Sequence[dict[str, object]]) -> list[Mapping[str, object]]:
+    merged: dict[tuple[object, ...], dict[str, object]] = {}
+    for record in records:
+        key = _paradigm_record_key(record)
+        current = merged.setdefault(key, {**record, "analyses": []})
+        current_analyses = cast(list[object], current.setdefault("analyses", []))
+        analyses = record.get("analyses")
+        if isinstance(analyses, Sequence) and not isinstance(analyses, (str, bytes)):
+            for analysis in analyses:
+                if analysis not in current_analyses:
+                    current_analyses.append(analysis)
+    return list(merged.values())
+
+
+def _paradigm_record_key(record: Mapping[str, object]) -> tuple[object, ...]:
+    return (
+        record.get("language"),
+        record.get("lemma"),
+        record.get("part_of_speech"),
+        record.get("source"),
+        record.get("gender"),
+        record.get("genitive_singular") or record.get("genitive") or record.get("gen_sg"),
+        record.get("article"),
+        record.get("source_key") or record.get("diogenes_key") or record.get("betacode"),
+        record.get("present_class") or record.get("class") or record.get("conjugation"),
+    )
+
+
+def _copy_paradigm_string_fields(
+    record: dict[str, object],
+    source: Mapping[str, object],
+) -> None:
+    for key in _PARADIGM_DIRECT_FEATURE_KEYS:
+        value = source.get(key)
+        if value is not None and _is_paradigm_feature_value(value):
+            record.setdefault(key, value)
+
+
+def _is_paradigm_feature_value(value: object) -> bool:
+    return isinstance(value, str | int | float | bool) or value is None
+
+
+def _paradigm_source_label(source_tool: str) -> str:
+    normalized = source_tool.strip().lower()
+    if normalized == "heritage":
+        return "heritage:sktreader"
+    if normalized == "whitaker":
+        return "whitakers"
+    if normalized == "diogenes":
+        return "diogenes"
+    return source_tool or "encounter"
 
 
 def _encounter_morphology_rows(
@@ -4442,10 +4922,18 @@ def _encounter_component_meaning_payload(
     return {
         "bucket_id": str(getattr(bucket, "bucket_id", "")),
         "display_gloss": view.display_gloss,
+        "evidence_gloss": view.evidence_gloss,
+        "evidence_length_note": view.evidence_length_note,
+        "length_note": view.length_note,
         "sources": list(view.sources),
         "source_text": view.source_text,
+        "witness_count": view.witness_count,
+        "confidence_label": view.confidence_label,
         "source_refs": list(view.source_refs),
+        "source_detail_summary": source_detail_summary_payload(view.source_detail_summary),
+        "translation_sources": list(view.translation_sources),
         "source_langs": list(view.source_langs),
+        "entries": [entry_summary_payload(witness) for witness in bucket.witnesses],
     }
 
 
@@ -4491,6 +4979,7 @@ def _encounter_word_index_evidence_terms(evidence: Mapping[str, object]) -> list
             terms.append(value.strip())
     source_entry = evidence.get("source_entry")
     if isinstance(source_entry, Mapping):
+        source_entry = cast(Mapping[str, object], source_entry)
         for key in (
             "key_iast",
             "key_slp1",
@@ -4618,6 +5107,7 @@ def _encounter_word_index_anchors(
 ) -> list[dict[str, object]]:
     if not isinstance(neighborhood, Mapping):
         return []
+    neighborhood = cast(Mapping[str, object], neighborhood)
     groups = neighborhood.get("groups")
     if isinstance(groups, Sequence) and not isinstance(groups, (str, bytes)):
         anchors: list[dict[str, object]] = []
@@ -4628,6 +5118,7 @@ def _encounter_word_index_anchors(
     anchor = neighborhood.get("anchor")
     if not isinstance(anchor, Mapping):
         return []
+    anchor = cast(Mapping[str, object], anchor)
 
     window = neighborhood.get("window")
     before = _encounter_word_index_entry_sequence(neighborhood.get("before"))
@@ -5456,6 +5947,12 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     show_default=True,
     help="Show compact typed source notes from dictionary source segments.",
 )
+@click.option(
+    "--include-paradigm-resolution/--no-include-paradigm-resolution",
+    default=False,
+    show_default=True,
+    help="Include local paradigm-resolution metadata in JSON output without fetching tables.",
+)
 def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     language: str,
     text: str,
@@ -5477,6 +5974,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     translation_model: str,
     foster_labels: bool,
     source_details: bool,
+    include_paradigm_resolution: bool,
 ):
     """
     Show a compact, source-backed learner encounter for one word.
@@ -5685,6 +6183,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 "include_cltk": include_cltk,
                 "translation_mode": resolved_translation_mode,
                 "translation_cache_writes": populate_translations,
+                "include_paradigm_resolution": include_paradigm_resolution,
             }
             payload["display"] = build_display_payload(
                 reduction,
@@ -5723,6 +6222,12 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     preferred_lemmas,
                 ),
             )
+            if include_paradigm_resolution:
+                payload["paradigm_resolution"] = _encounter_paradigm_resolution_payload(
+                    language,
+                    text,
+                    morphology_claims,
+                )
             click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
             return
 
@@ -6261,6 +6766,175 @@ def _display_pretty(language: str, text: str, results: dict) -> None:  # noqa: C
 @click.argument("language", type=click.Choice(["lat", "grc", "san"], case_sensitive=False))
 @click.argument("text")
 @click.option(
+    "--kind",
+    type=click.Choice(["declension", "conjugation"], case_sensitive=False),
+    default="declension",
+    show_default=True,
+    help="Paradigm kind to fetch.",
+)
+@click.option("--gender", help="Sanskrit Heritage gender value for declension: Mas, Fem, or Neu.")
+@click.option(
+    "--class",
+    "present_class",
+    help="Sanskrit Heritage present class for conjugation.",
+)
+@click.option(
+    "--diogenes-endpoint",
+    default="http://localhost:8888/Perseus.cgi",
+    show_default=True,
+    help="Diogenes inflection endpoint.",
+)
+@click.option(
+    "--heritage-base",
+    default="http://localhost:48080",
+    show_default=True,
+    help="Base URL for Heritage Platform.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["json", "pretty"]),
+    default="json",
+    show_default=True,
+    help="Output format.",
+)
+def paradigm(  # noqa: PLR0913
+    language: str,
+    text: str,
+    kind: str,
+    gender: str | None,
+    present_class: str | None,
+    diogenes_endpoint: str,
+    heritage_base: str,
+    output: str,
+) -> None:
+    """Fetch a source-backed inflectional paradigm for a resolved lemma."""
+    request = _paradigm_request_from_cli(language.lower(), text, kind, gender, present_class)
+    service = ParadigmService(heritage_base=heritage_base, diogenes_endpoint=diogenes_endpoint)
+    payload = service.fetch(request)
+    data = asdict(payload)
+
+    if output == "json":
+        click.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+
+    click.echo(f"{payload.language} {payload.lemma} {payload.kind} via {payload.source}")
+    for block in payload.paradigms:
+        click.echo(block.label)
+        for slot in block.slots:
+            feature_text = ", ".join(f"{key}={value}" for key, value in slot.features.items())
+            forms = ", ".join(form.text for form in slot.forms)
+            click.echo(f"  {feature_text}: {forms}")
+
+
+def _paradigm_request_from_cli(
+    language: str,
+    lemma: str,
+    kind: str,
+    gender: str | None,
+    present_class: str | None,
+) -> ParadigmRequest:
+    if language == "san" and kind == "declension":
+        if not gender:
+            raise click.UsageError("Sanskrit declension paradigm requires --gender.")
+        return ParadigmRequest(
+            source="heritage:sktdeclin",
+            language="san",
+            lemma=lemma,
+            kind="declension",
+            options={"gender": gender},
+        )
+    if language == "san" and kind == "conjugation":
+        if not present_class:
+            raise click.UsageError("Sanskrit conjugation paradigm requires --class.")
+        return ParadigmRequest(
+            source="heritage:sktconjug",
+            language="san",
+            lemma=lemma,
+            kind="conjugation",
+            options={"class": present_class},
+        )
+    if language in {"lat", "grc"}:
+        return ParadigmRequest(
+            source="diogenes:inflect",
+            language=cast(Any, language),
+            lemma=lemma,
+            kind=cast(Any, kind),
+            options={},
+        )
+    raise click.UsageError(f"Unsupported language for paradigm: {language}")
+
+
+@main.command()
+@click.argument("language", type=click.Choice(["lat", "grc", "san"], case_sensitive=False))
+@click.argument("text")
+@click.option(
+    "--record-json",
+    "record_jsons",
+    multiple=True,
+    help="Lookup/analyzer record JSON to feed the resolver without calling external services.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["json", "pretty"]),
+    default="json",
+    show_default=True,
+    help="Output format.",
+)
+def paradigm_resolve(
+    language: str,
+    text: str,
+    record_jsons: tuple[str, ...],
+    output: str,
+) -> None:
+    """
+    Explain how a searched form resolves to possible paradigm requests.
+
+    This command is intentionally endpoint-free when --record-json is supplied:
+    it shows the resolver's native grammar, functional grammar, and request
+    metadata before any Heritage or Diogenes paradigm table is fetched.
+    """
+    records: list[Mapping[str, object]] = []
+    for raw_record in record_jsons:
+        try:
+            decoded = orjson.loads(raw_record)
+        except orjson.JSONDecodeError as exc:
+            raise click.UsageError(f"Invalid --record-json value: {exc}") from exc
+        if not isinstance(decoded, Mapping):
+            raise click.UsageError("--record-json must decode to a JSON object.")
+        records.append(cast(Mapping[str, object], decoded))
+
+    if not records:
+        records.append({"lemma": text, "part_of_speech": "unknown", "source": "cli"})
+
+    payload = resolve_paradigm_request(
+        cast(Any, language.lower()),
+        text,
+        records,
+    )
+    data = asdict(payload)
+
+    if output == "json":
+        click.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+
+    click.echo(f"{data['language']} {data['searched_form']} -> {data['normalized_form']}")
+    for candidate in data["candidates"]:
+        click.echo(
+            f"- {candidate['lemma']} "
+            f"({candidate['entry_type']}, {candidate['part_of_speech']}): "
+            f"{candidate['confidence']}"
+        )
+        if candidate["paradigm_request"] is None:
+            click.echo(f"  unresolved: {candidate['unresolved_reason']}")
+        else:
+            request = candidate["paradigm_request"]
+            click.echo(f"  request: {request['source']} {request['lemma']}")
+
+
+@main.command()
+@click.argument("language", type=click.Choice(["lat", "grc", "san"], case_sensitive=False))
+@click.argument("text")
+@click.option(
     "--output",
     type=click.Choice(["json", "pretty"]),
     default="json",
@@ -6486,7 +7160,12 @@ def lookup(  # noqa: PLR0912, PLR0913, PLR0915, C901
             elif tool == "cdsl":
                 # CDSL Sanskrit dictionaries
                 fetch_client = cdsl_handlers.CdslFetchClient()
-                lemma = cdsl_handlers._to_slp1(query_word)  # type: ignore[attr-defined]
+                cdsl_query_word = (
+                    _sanskrit_cdsl_query_from_heritage(results.get("heritage"), query_word)
+                    if language.lower() == "san"
+                    else query_word
+                )
+                lemma = cdsl_handlers._to_slp1(cdsl_query_word)  # type: ignore[attr-defined]
                 fetch = fetch_client.execute(
                     call_id="cdsl-1",
                     endpoint="duckdb",

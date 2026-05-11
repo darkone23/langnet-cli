@@ -41,7 +41,8 @@
       "additionalItems": true
     },
     "translation_cache": { "type": "object" },
-    "word_index": { "$ref": "#/$defs/wordIndexContext" }
+    "word_index": { "$ref": "#/$defs/wordIndexContext" },
+    "paradigm_resolution": { "$ref": "#/$defs/paradigmResolution" }
   },
   "additionalProperties": true,
   "$defs": {
@@ -57,7 +58,8 @@
         "normalization_cache_writes",
         "include_cltk",
         "translation_mode",
-        "translation_cache_writes"
+        "translation_cache_writes",
+        "include_paradigm_resolution"
       ],
       "properties": {
         "command": { "type": "string" },
@@ -70,7 +72,28 @@
         "normalization_cache_writes": { "type": "boolean" },
         "include_cltk": { "type": "boolean" },
         "translation_mode": { "type": "string" },
-        "translation_cache_writes": { "type": "boolean" }
+        "translation_cache_writes": { "type": "boolean" },
+        "include_paradigm_resolution": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "paradigmResolution": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "searched_form",
+        "normalized_form",
+        "language",
+        "candidates",
+        "warnings"
+      ],
+      "properties": {
+        "schema_version": { "const": "langnet.paradigm_resolution.v1" },
+        "searched_form": { "type": "string" },
+        "normalized_form": { "type": "string" },
+        "language": { "enum": ["lat", "grc", "san"] },
+        "candidates": { "type": "array", "items": { "type": "object" } },
+        "warnings": { "type": "array", "items": { "type": "string" } }
       },
       "additionalProperties": true
     },
@@ -207,18 +230,35 @@
       "required": [
         "bucket_id",
         "display_gloss",
+        "evidence_gloss",
         "sources",
         "source_text",
+        "witness_count",
+        "confidence_label",
         "source_refs",
-        "source_langs"
+        "source_detail_summary",
+        "translation_sources",
+        "source_langs",
+        "entries"
       ],
       "properties": {
         "bucket_id": { "type": "string" },
         "display_gloss": { "type": "string" },
+        "evidence_gloss": { "type": "string" },
+        "evidence_length_note": { "type": "string" },
+        "length_note": { "type": "string" },
         "sources": { "type": "array", "items": { "type": "string" } },
         "source_text": { "type": "string" },
+        "witness_count": { "type": "integer" },
+        "confidence_label": { "type": "string" },
         "source_refs": { "type": "array", "items": { "type": "string" } },
-        "source_langs": { "type": "array", "items": { "type": "string" } }
+        "source_detail_summary": { "$ref": "#/$defs/sourceDetailSummary" },
+        "translation_sources": { "type": "array", "items": { "type": "string" } },
+        "source_langs": { "type": "array", "items": { "type": "string" } },
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/entrySummary" }
+        }
       },
       "additionalProperties": true
     },

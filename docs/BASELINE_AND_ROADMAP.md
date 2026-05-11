@@ -1,11 +1,15 @@
 # Working Baseline And Roadmap
 
-**Date:** 2026-05-02
+**Date:** 2026-05-05
 **Mode:** stabilization before expansion
 
 This document is the current checkpoint for continuing LangNet development. It
 summarizes what exists, compares that feature set to the product vision, and
 names the concrete next steps.
+
+Current local gate: run `just validate-stabilization` sequentially. The gate
+covers focused encounter/evidence tests, format check, Ruff, `ty`, and the full
+fast suite.
 
 ## Vision Check
 
@@ -29,7 +33,8 @@ reader who asks, "what does this word mean here?"
 - CLI-first product surface.
 - Commands: `lookup`, `parse`, `normalize`, `plan`, `plan-exec`,
   `triples-dump`, `encounter`, `word-of-day`, `recommend-words`,
-  `reader-eval`, `translation-warm`, `databuild`, and `index`.
+  `reader-eval`, `translation-warm`, `translation-cache`, `word-index`,
+  `entry-analyze`, `doctor`, `langs`, `tools`, `databuild`, and `index`.
 - Deterministic planning over normalized queries.
 - Staged execution: fetch -> extract -> derive -> claim.
 - DuckDB-backed caches and indexes for normalization, staged effects, claims,

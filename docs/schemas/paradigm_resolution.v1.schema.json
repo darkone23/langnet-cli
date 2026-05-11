@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langnet.local/schemas/paradigm_resolution.v1.schema.json",
+  "title": "LangNet paradigm resolution response",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "searched_form",
+    "normalized_form",
+    "language",
+    "candidates",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": { "const": "langnet.paradigm_resolution.v1" },
+    "searched_form": { "type": "string" },
+    "normalized_form": { "type": "string" },
+    "language": { "enum": ["lat", "grc", "san"] },
+    "candidates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/candidate" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "required": [
+        "lemma",
+        "entry_type",
+        "part_of_speech",
+        "paradigm_kind",
+        "native_analyses",
+        "functional_analyses",
+        "paradigm_request",
+        "confidence",
+        "provenance",
+        "unresolved_reason"
+      ],
+      "properties": {
+        "lemma": { "type": "string" },
+        "entry_type": { "enum": ["root", "variant", "indeclinable", "compound_member", "unknown"] },
+        "part_of_speech": { "type": "string" },
+        "paradigm_kind": { "enum": ["declension", "conjugation", "none", "unknown"] },
+        "native_analyses": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nativeAnalysis" }
+        },
+        "functional_analyses": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/functionalAnalysis" }
+        },
+        "paradigm_request": {
+          "anyOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/paradigmRequest" }
+          ]
+        },
+        "confidence": { "enum": ["high", "medium", "low"] },
+        "provenance": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "unresolved_reason": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "nativeAnalysis": {
+      "type": "object",
+      "required": ["language", "features", "source"],
+      "properties": {
+        "language": { "enum": ["lat", "grc", "san"] },
+        "features": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "integer", "boolean", "null"]
+          }
+        },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "functionalAnalysis": {
+      "type": "object",
+      "required": ["relation", "native_feature", "confidence"],
+      "properties": {
+        "relation": {
+          "enum": [
+            "subject",
+            "direct_object",
+            "recipient_or_goal",
+            "source_or_separation",
+            "possession_or_association",
+            "location",
+            "instrument_or_means",
+            "address",
+            "predicate_relation",
+            "unknown"
+          ]
+        },
+        "native_feature": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "integer", "boolean", "null"]
+          }
+        },
+        "confidence": { "enum": ["high", "medium", "low"] }
+      },
+      "additionalProperties": false
+    },
+    "paradigmRequest": {
+      "type": "object",
+      "required": ["source", "language", "lemma", "kind", "options"],
+      "properties": {
+        "source": { "enum": ["heritage:sktdeclin", "heritage:sktconjug", "diogenes:inflect"] },
+        "language": { "enum": ["lat", "grc", "san"] },
+        "lemma": { "type": "string" },
+        "kind": { "enum": ["declension", "conjugation"] },
+        "options": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "integer", "boolean", "null"]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
