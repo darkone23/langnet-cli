@@ -63,5 +63,10 @@ def test_dico_builder_minimal_html() -> None:
             assert entry[2].lower().startswith("ā")
             assert entry[3] == 1
             assert entry[4] and "interj" in entry[4].lower()
+            indexes = {
+                row[0] for row in conn.execute("SELECT index_name FROM duckdb_indexes()").fetchall()
+            }
+            assert "entries_fr_headword_norm_idx" in indexes
+            assert "entries_fr_page_headword_idx" in indexes
         finally:
             conn.close()

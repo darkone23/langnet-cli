@@ -98,6 +98,16 @@ class BuildDiogenesConfig:
     force: bool
 
 
+@dataclass
+class BuildWhitakersConfig:
+    source_path: str | None
+    output: str | None
+    limit: int | None
+    batch_size: int
+    wipe: bool
+    force: bool
+
+
 def _build_cts_impl(config: BuildCtsConfig) -> None:
     _ensure_logging()
     from langnet.databuild.cts import CtsBuildConfig, CtsUrnBuilder  # noqa: PLC0415
@@ -205,6 +215,28 @@ def _build_diogenes_impl(config: BuildDiogenesConfig) -> None:
         force_rebuild=config.force,
     )
     builder = DiogenesBuilder(builder_config)
+    result = builder.build()
+    _print_build_result(result)
+
+
+def _build_whitakers_impl(config: BuildWhitakersConfig) -> None:
+    _ensure_logging()
+    from langnet.databuild.paths import default_whitakers_path  # noqa: PLC0415
+    from langnet.databuild.whitakers import (  # noqa: PLC0415
+        WhitakersBuildConfig,
+        WhitakersBuilder,
+    )
+
+    output_path = Path(config.output).expanduser() if config.output else default_whitakers_path()
+    builder_config = WhitakersBuildConfig(
+        source_path=Path(config.source_path).expanduser() if config.source_path else None,
+        output_path=output_path,
+        limit=config.limit,
+        batch_size=config.batch_size,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+    )
+    builder = WhitakersBuilder(builder_config)
     result = builder.build()
     _print_build_result(result)
 
@@ -510,3 +542,49 @@ def build_diogenes_index(  # noqa: PLR0913
         force=force,
     )
     _build_diogenes_impl(config)
+
+
+@databuild.command("whitakers-index")
+@click.option(
+    "--source",
+    "source_path",
+    type=click.Path(),
+    default=None,
+    help="Path to Whitaker's DICTLINE.GEN (defaults to ../whitakers-words/DICTLINE.GEN).",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output DuckDB path (defaults to data/build/lex_whitakers.duckdb)",
+)
+@click.option("--limit", type=int, help="Limit rows for testing.")
+@click.option(
+    "--batch-size",
+    type=int,
+    default=5000,
+    show_default=True,
+    help="Rows per insert batch.",
+)
+@click.option(
+    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_whitakers_index(  # noqa: PLR0913
+    source_path: str | None,
+    output: str | None,
+    limit: int | None,
+    batch_size: int,
+    wipe: bool,
+    force: bool,
+):
+    """Build a Whitaker's Words Latin dictionary index."""
+    config = BuildWhitakersConfig(
+        source_path=source_path,
+        output=output,
+        limit=limit,
+        batch_size=batch_size,
+        wipe=wipe,
+        force=force,
+    )
+    _build_whitakers_impl(config)

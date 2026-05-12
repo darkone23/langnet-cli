@@ -4,6 +4,14 @@
 **Feature Area:** pedagogy  
 **Owner Roles:** @architect for source contract and scope, @sleuth for endpoint/parser research, @coder for implementation, @auditor for morphology correctness and ambiguity review, @scribe for learner-facing docs
 
+## Current Checkpoint
+
+The source-backed V1 implementation is complete and archived at
+`docs/plans/completed/pedagogy/inflectional-paradigm-generation-implementation.md`.
+This roadmap now tracks the remaining broader feature-request scope: arbitrary
+reverse morphology, local template generation, UI highlighting, Sanskrit
+compound/component linking, and cross-language comparison.
+
 ## Summary
 
 Extend dictionary lookup and learner encounters so a user can move from a

@@ -42,7 +42,11 @@
     },
     "translation_cache": { "type": "object" },
     "word_index": { "$ref": "#/$defs/wordIndexContext" },
-    "paradigm_resolution": { "$ref": "#/$defs/paradigmResolution" }
+    "paradigm_resolution": { "$ref": "#/$defs/paradigmResolution" },
+    "actions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/encounterAction" }
+    }
   },
   "additionalProperties": true,
   "$defs": {
@@ -114,6 +118,10 @@
           "type": "array",
           "items": { "$ref": "#/$defs/component" }
         },
+        "actions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/encounterAction" }
+        },
         "options": {
           "type": "object",
           "required": ["max_gloss_chars", "foster_labels", "source_details"],
@@ -124,6 +132,25 @@
           },
           "additionalProperties": true
         }
+      },
+      "additionalProperties": true
+    },
+    "encounterAction": {
+      "type": "object",
+      "required": ["kind", "label", "status", "source", "request"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "view_paradigm",
+            "open_word_index_neighborhood",
+            "inspect_source_entry"
+          ]
+        },
+        "label": { "type": "string" },
+        "status": { "type": "string" },
+        "source": { "type": "string" },
+        "request": { "type": "object" },
+        "target": { "type": "object" }
       },
       "additionalProperties": true
     },

@@ -71,6 +71,13 @@ def default_gaffiot_path() -> Path:
     return build_dir() / "lex_gaffiot.duckdb"
 
 
+def default_whitakers_path() -> Path:
+    """
+    Default output path for the Whitaker's Words Latin index.
+    """
+    return build_dir() / "lex_whitakers.duckdb"
+
+
 def default_dico_path() -> Path:
     """
     Default output path for the DICO Sanskrit→French index.

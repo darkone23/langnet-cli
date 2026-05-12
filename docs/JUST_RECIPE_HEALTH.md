@@ -163,7 +163,8 @@ Source-language DICO/Gaffiot entries are now locally resolvable in
 
 `encounter --translation-mode auto` can explicitly populate missing
 DICO/Gaffiot translations through OpenRouter and then display them. This is
-networked and should stay opt-in; cache-only mode is the routine inspection path.
+networked and should stay opt-in; cache-only mode is the routine inspection
+path. The default translation model is `openai:deepseek/deepseek-v4-flash`.
 
 `triples-dump` now supports `--predicate`, `--subject-prefix`, and `--max-triples` so evidence inspection can focus on reducer-relevant triples.
 

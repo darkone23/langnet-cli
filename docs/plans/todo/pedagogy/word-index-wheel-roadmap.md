@@ -4,6 +4,18 @@
 **Feature Area:** pedagogy  
 **Owner Roles:** @architect for contract and source model, @sleuth for Diogenes navigation research, @coder for implementation, @auditor for schema/reliability review
 
+## Current Checkpoint
+
+The source-backed V1 ordering and native-section work is complete and archived
+at `docs/plans/completed/pedagogy/native-word-index-ordering.md`. This roadmap
+now tracks remaining exploratory work around richer wheel/neighborhood UX,
+standalone native collation keys, and future generated-form index layers. The
+CLI now also has `word-index browse`, a grouped source-native browse mode for
+frontends that need dictionary-order panels without collapsing rows into
+canonical lexeme cards. Browse groups adjacent homographs by default, exposes
+cross-dictionary learner cards in top-level `items[]`, preserves source windows
+in `groups[]`, and keeps `--homographs raw` as the source-audit escape hatch.
+
 ## Goal
 
 Expose a reliable index of known dictionary hits for every supported language,
@@ -37,6 +49,12 @@ The current codebase already has several enumerable sources:
   `src/langnet/databuild/gaffiot.py`. It has `entries_fr` with `entry_id`,
   `headword_raw`, `headword_norm`, `variant_num`, and `plain_text`. This is
   immediately enumerable.
+- **Latin / Whitaker's Words**: `data/build/lex_whitakers.duckdb` is built by
+  `src/langnet/databuild/whitakers.py` from a local
+  `../whitakers-words/DICTLINE.GEN`. Whitaker's generated dictionary file stores
+  stems plus grammatical codes, so LangNet derives best-effort learner citation
+  forms such as `lupus` from stem `lup` and noun code `2 1 M`, while preserving
+  the source stem in row metadata.
 - **Greek and Latin / Diogenes**: the current Diogenes client supports Greek
   `word_list` lookup and Greek/Latin parse lookup in
   `src/langnet/diogenes/client.py`. The staged Diogenes parser also notices
@@ -44,9 +62,8 @@ The current codebase already has several enumerable sources:
   on-demand neighborhoods from returned dictionary pages now, and a full
   Diogenes enumeration crawler after confirming the exact next/previous CGI
   contract.
-- **Whitaker's Words and CLTK**: these are useful supplemental sources but are
-  not yet represented as stable local all-headword DuckDB indexes. Treat them as
-  later candidates unless we add dedicated builders.
+- **CLTK**: useful supplemental source, but not represented as a stable local
+  all-headword DuckDB index.
 
 The project already has public self-description commands for languages and tools
 via `src/langnet/tool_catalog.py`. The word index should follow the same pattern:
@@ -140,6 +157,7 @@ Keep this as ordinary CLI JSON, not a service gateway.
 ```bash
 just cli word-index sources --output json
 just cli word-index list san --source all --limit 50 --output json
+just cli word-index browse san --source all --prefix d --limit 50 --output json
 just cli word-index list lat --source gaffiot --prefix lu --limit 25 --output json
 just cli word-index neighborhood grc logos --source diogenes --radius 10 --output json
 just cli word-index wheel all --count 12 --seed daily-2026-05-05 --output json
@@ -209,6 +227,18 @@ connections across requests.
 - Enumerate from `entries_fr`.
 - Use `headword_raw` for display and normalized `headword_norm` for lookup.
 - Cursor by `headword_norm, entry_id`.
+
+### Whitaker's Words
+
+- Build with
+  `just cli-databuild whitakers-index --source ../whitakers-words/DICTLINE.GEN`.
+- Enumerate from `entries`.
+- Use `headword_raw` for the derived learner citation form and
+  `source_stem` for the underlying Whitaker stem.
+- Cursor by `headword_norm, entry_id`.
+- Treat this as dictionary-headword coverage only; arbitrary inflected-form
+  analysis still belongs to Whitaker runtime parsing and future generated-form
+  index work.
 
 ### Diogenes
 
@@ -295,6 +325,9 @@ Full-source crawling belongs in `databuild`, not in interactive `word-index` or
   files in direct mode and crawls fixed windows around configurable seed words
   in crawl mode. Crawl defaults are `amo` for Latin and `apo` for Greek.
   Runtime `word-index list` only reads the materialized DB.
+- **Whitaker's Words**: `databuild whitakers-index` now parses local
+  `DICTLINE.GEN` into `lex_whitakers.duckdb`. Runtime `word-index` only reads
+  the materialized DB.
 - **Failure mode**: if a crawl/index is missing, return `available: false` and a
   warning. Do not silently start a crawl from an interactive command.
 
@@ -306,9 +339,14 @@ Full-source crawling belongs in `databuild`, not in interactive `word-index` or
   slice exists in `src/langnet/word_index/`.
 - Add `docs/schemas/word_index.v1.schema.json`. ✅
 - Implement source status plus list/neighborhood for Gaffiot, DICO, CDSL. ✅
+- Implement source status plus list/neighborhood/wheel for Whitaker's Words. ✅
 - Add `word-index sources`, `word-index list`, and `word-index neighborhood`. ✅
 - Keep all operations read-only against existing built DBs.
-- Next: add explicit Sanskrit/Greek collation keys and accepted-output fixtures.
+- Add explicit `native_order_key` ordering for integrated neighborhoods. ✅
+- Make `word-index nearby --source all` default to learner-facing integrated
+  language-native windows, with source groups retained as provenance. ✅
+- Next: materialize native collation keys in future build outputs if candidate
+  windows need to grow beyond the current indexed section windows.
 
 ### Phase 2: Wheel
 

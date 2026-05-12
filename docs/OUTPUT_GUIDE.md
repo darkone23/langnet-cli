@@ -223,11 +223,17 @@ just cli word-index sources --output json
 just cli word-index sections san --source all --output json
 just cli word-index sections grc --source diogenes --output json
 just cli word-index sections lat --source all --output json
+just cli word-index browse san --source all --prefix d --limit 12 --output json
+just cli word-index browse san --source all --prefix kha --homographs raw --limit 20 --output json
+just cli word-index browse grc --source all --prefix n --limit 12 --output json
+just cli word-index browse lat --source all --prefix r --limit 12 --output json
 just cli word-index list all --source all --limit 25 --output json
 just cli word-index neighborhood san dharma --source dico --radius 8 --output json
+just cli word-index neighborhood lat lupus --source whitakers --radius 8 --output json
 just cli word-index nearby san satya --source all --radius 5 --output json
 just cli word-index nearby san satya --source all --radius 5 --merge none --output json
 just cli word-index nearby san धर्म --source cdsl --radius 8 --output json
+just cli word-index nearby lat lupus --source all --radius 5 --output json
 just cli word-index nearby grc physis --source all --radius 8 --output json
 just cli word-index nearby grc λόγος --source diogenes --radius 8 --output json
 just cli word-index nearby grc logos --source diogenes --radius 8 --output json
@@ -240,34 +246,55 @@ contract. `source_name` is the exact source/index headword key, `canonical_name`
 is the learner-facing normalized lemma, `canonical_key` is the stable ASCII-ish
 index key, and `lookup` is the value passed to `encounter` for source inspection.
 Rows also carry durable domain identifiers: `lexeme_id` identifies the
-source-independent language/canonical-key word, `wheel_id` is the stable
-wheel-facing handle for that lexeme, `wheel_order_key` is the canonical total
-ordering key, `index_entry_id` identifies the exact source-backed row, and
-`source_order_id` is a squuid-like stable sortable ID derived from the source
-ordering key plus a short uniqueness hash. The structured `ids` object repeats
+source-independent word, `lexeme_key` is the lossless identity key used before
+building that ID, `wheel_id` is the stable wheel-facing handle for that lexeme,
+`wheel_order_key` is the canonical total ordering key, `native_order_key` is the
+language-native collation key used by integrated neighborhoods, `index_entry_id`
+identifies the exact source-backed row, and `source_order_id` is a squuid-like
+stable sortable ID derived from the source ordering key plus a short uniqueness
+hash. The structured `ids` object repeats
 those IDs with the source reference for web/front-end callers. Rows also include
 structured `display` metadata and an `encounter` request object that can be used
 to inspect the source entry in detail. `word-index list --source all` is
 lexeme-centered: rows with the same `lexeme_id` are collapsed into one card,
 ordered by `wheel_order_key`, and the exact source rows are listed under
 `source_entries`. With `--source all`, nearby/neighborhood output now defaults
-to `merge=lexeme`: the top-level neighborhood has `policy = "merged_lexeme"`,
-an `anchor`, and learner-facing `items[]` with one row per `lexeme_id`.
-Source-local provenance remains available under `neighborhood.groups[]`. Pass
-`--merge none` to return only the older source-local grouped shape. Specific
-source/dictionary neighborhoods remain source-order neighborhoods and declare
-that with `window.policy = "source_entry_contiguous"`, `window.contiguous =
-true`, and `window.collapsed = false`. Merged neighborhoods are collapsed from
-the selected source windows, with the anchor lexeme rehydrated from the exact
-matching source rows before the radius window is applied. Thus
+to `merge=lexeme`: the top-level neighborhood has
+`policy = "integrated_language_native"`, an `anchor`, and learner-facing
+`items[]` with one row per `lexeme_id`, ordered by the language-native
+`native_order_key`. Source-local provenance remains available under
+`neighborhood.groups[]`. Pass `--merge none` to return only the older
+source-local grouped shape. Specific source/dictionary neighborhoods remain
+source-order neighborhoods and declare that with
+`window.policy = "source_entry_contiguous"`, `window.contiguous = true`, and
+`window.collapsed = false`. Integrated neighborhoods collect bounded candidate
+windows from indexed native sections, collapse them into cross-source lexeme
+cards, then apply the radius after language-native sorting. Thus
 `anchor.source_entries` is stable across radius changes; `--radius` controls
-neighboring lexemes, not the current word's provenance. Merged neighborhoods are
-canonical lexeme cards, but not yet a materialized global cross-source
-lexeme-radius slice. Cross-language similarity is intentionally a later explicit
-mode. For mixed wheels within a language, keep
+neighboring lexemes, not the current word's provenance. Cross-language
+similarity is intentionally a later explicit mode. Use `word-index browse` when
+the UI needs a didactic source-native browse panel instead of collapsed lexeme
+cards. Browse payloads use `mode = "browse"`;
+with `--source all`, the top-level order is `policy = "grouped-source-native"`
+and learner-facing rows live under top-level `items[]`. The backing source
+windows remain under `groups[]`, one source/dictionary group at a time. Each
+group keeps its own `source-native` row order, `source_ref`, `source_order_key`,
+display metadata, transliteration, and encounter request. V1 intentionally does
+not claim a single globally interleaved native order across dictionaries; it is
+a grouped source-native browse surface. Browse defaults to
+`--homographs grouped`, which compacts adjacent identical headwords within each
+source/dictionary group and then groups matching learner rows across
+dictionaries into top-level cards with `homograph_count`, `source_count`,
+`source_counts[]`, `source_entry_count`, and `source_entries[]`. This keeps
+runs such as repeated Sanskrit `ख kha` or MW/AP90 `ह ha` entries
+learner-friendly while preserving every source ref and source-order key. Pass
+`--homographs raw` to audit the exact ungrouped source rows; in raw mode,
+top-level `items[]` is empty and callers should inspect `groups[]`.
+`word-index list --source all` remains
+the collapsed canonical lexeme-card view. For mixed wheels within a language, keep
 `--source all` and select the language with the positional argument or
 `--language grc`; `--source` remains reserved for backend/source families such
-as `cdsl`, `dico`, `gaffiot`, and `diogenes`. Wheel output is also
+as `cdsl`, `dico`, `gaffiot`, `whitakers`, and `diogenes`. Wheel output is also
 lexeme-centered: rows with the same `lexeme_id` are collapsed into one wheel
 card, and the exact source rows are listed under `source_entries`. Wheels with
 `--source all` balance available source/dictionary buckets while selecting
@@ -300,22 +327,49 @@ share rough ASCII spellings such as `t`, `n`, or `sh`.
 
 Sanskrit sections report `order.collation = "sa-varga"`. Source-local row order
 still comes from `word-index nearby`, so the payload includes a warning rather
-than implying a full standalone Sanskrit cursor.
+than implying a full standalone Sanskrit cursor. For CDSL source-native browse,
+SLP1 case is meaningful and preserved: `--prefix N` opens ङ/ṅa rows, while
+`--prefix na` opens dental न/na rows. CDSL neighborhoods choose exact anchors
+with that same source-sensitive distinction, then return before/after rows by
+the dictionary's source position rather than by lowercased ASCII spelling.
 Ordering semantics are explicit in the `order` object. Durable fields like
 `wheel_order_key` and `source_order_key` are plumbing keys; callers should read
 `order.policy`, `order.collation`, `order.label`, and `order.explanation` before
 presenting order to learners. Current policies include `source-native` for
 source-local dictionary rows, `canonical-key` for collapsed lexeme cards,
-`source-window-merge` for merged neighborhoods, and `seeded-discovery` for
-wheel payloads. For Sanskrit source rows this currently preserves the indexed
-source sequence honestly as `collation = "source"`; it does not claim a complete
-standalone varga collation until that is implemented. The exact source-local
-ordering remains available on each collapsed card's `source_entries[].order`.
+`grouped-source-native` for browse payloads that preserve source order in
+separate groups, `language-native` for integrated `--source all`
+neighborhoods, `source-window-merge` for legacy/source-window merge metadata,
+and `seeded-discovery` for wheel payloads. For Sanskrit source rows this
+currently preserves the indexed source sequence honestly as
+`collation = "source"`, while integrated Sanskrit neighborhoods declare
+`order.collation = "sa-varga"` and sort by `native_order_key`. The exact
+source-local ordering remains available on each collapsed card's
+`source_entries[].order`.
 Native-script queries are accepted where the source index can be projected to a
 stable canonical key: Sanskrit Devanagari is expanded through the existing
 Velthuis/CDSL path, and Greek Unicode is expanded to the same ASCII key used by
 Diogenes lookup rows. Common Greek Latinized forms are also normalized for the
 word index, so `physis` can resolve to the indexed Diogenes key `fusis`.
+
+Latin `--source all` includes Gaffiot, Whitaker's Words, and Diogenes when their
+local DuckDB indexes are built. Whitaker's generated `DICTLINE.GEN` stores
+stems plus grammatical codes rather than a frontend-ready browse table, so
+LangNet materializes a local `data/build/lex_whitakers.duckdb` and derives
+best-effort learner citation forms for word-index use. For example, Whitaker's
+stem `lup` with noun code `2 1 M` is indexed as `lupus`, and verb stem `am`
+with conjugation code `1` is indexed as `amo`. The original stem remains in
+`display.source_key` and `metadata.source_stem` for inspection. This is a
+dictionary-headword index, not a generated-form index or a complete local
+morphological analyzer.
+
+Build or refresh the Whitaker word index from a local checkout with:
+
+```bash
+just cli-databuild whitakers-index --source ../whitakers-words/DICTLINE.GEN
+just cli word-index sources lat --output json
+just cli word-index nearby lat lupus --source all --radius 5 --output json
+```
 
 Diogenes Greek/Latin neighborhoods require a local built index. Full indexes
 should use direct Diogenes XML import when the local Diogenes data files are
@@ -485,6 +539,12 @@ New renderer-facing fields are additive:
   include native analyses, functional analyses, a lazy `paradigm_request`, and
   `unresolved_reason` values. It does not fetch full paradigm tables; clients
   should call `paradigm` only after the learner opens a forms/paradigm panel.
+- `actions` and `display.actions`: UI-ready lazy follow-up targets derived from
+  the encounter context. Current action kinds are `view_paradigm`,
+  `open_word_index_neighborhood`, and `inspect_source_entry`. These actions
+  include structured request objects and CLI-style `argv` hints where a command
+  exists, but they do not fetch additional tables or inline dictionary windows
+  during the encounter call.
 - `components` and `display.components`: optional structured component links
   when a morphology tool exposes a likely decomposition, such as Sanskrit
   compound members from Heritage `iic.` rows or Latin Whitaker tackons. These
@@ -660,7 +720,9 @@ just cli encounter san dharma dico --translation-mode auto --translation-cache-d
 
 To warm translations ahead of reading, place one term per line in a text file
 and run `translation-warm`. This is explicit cache population, so it may call
-the configured model for cache misses:
+the configured model for cache misses. The default translation model is
+`openai:deepseek/deepseek-v4-flash`; pass `--translation-model` to test or pin a
+different OpenRouter model for cache keys and population:
 
 ```bash
 just cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffiot --translation-cache-db data/cache/langnet.duckdb

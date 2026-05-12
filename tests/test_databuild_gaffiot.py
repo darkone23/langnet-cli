@@ -52,6 +52,9 @@ def test_gaffiot_plain_text_preserves_line_breaks() -> None:
             rows = conn.execute(
                 "SELECT entry_id, headword_raw, plain_text FROM entries_fr ORDER BY entry_id"
             ).fetchall()
+            indexes = {
+                row[0] for row in conn.execute("SELECT index_name FROM duckdb_indexes()").fetchall()
+            }
         finally:
             conn.close()
 
@@ -61,3 +64,5 @@ def test_gaffiot_plain_text_preserves_line_breaks() -> None:
 
         assert rows[1][1] == "bellum"
         assert rows[1][2] == "proelium"
+        assert "entries_fr_headword_norm_idx" in indexes
+        assert "entries_fr_headword_entry_idx" in indexes

@@ -19,6 +19,7 @@ from langnet.cli import (
     DATABASE_BUSY_RETRY_AFTER_MS,
     LanguageHint,
     NormalizeConfig,
+    _encounter_actions,
     _encounter_bucket_sort_key,
     _encounter_compact_gloss,
     _encounter_component_candidates,
@@ -374,6 +375,31 @@ def test_encounter_json_includes_paradigm_resolution_when_requested() -> None:
     assert payload["paradigm_resolution"]["schema_version"] == "langnet.paradigm_resolution.v1"
     candidate = payload["paradigm_resolution"]["candidates"][0]
     assert candidate["paradigm_request"]["source"] == "heritage:sktdeclin"
+    actions = payload["actions"]
+    display_actions = payload["display"]["actions"]
+    assert actions == display_actions
+    paradigm_action = next(action for action in actions if action["kind"] == "view_paradigm")
+    assert paradigm_action["status"] == "available"
+    assert paradigm_action["source"] == "paradigm_resolution"
+    assert paradigm_action["request"] == {
+        "command": "paradigm",
+        "language": "san",
+        "lemma": "putra",
+        "kind": "declension",
+        "source": "heritage:sktdeclin",
+        "options": {"gender": "Mas"},
+        "argv": [
+            "paradigm",
+            "san",
+            "putra",
+            "--kind",
+            "declension",
+            "--gender",
+            "Mas",
+            "--output",
+            "json",
+        ],
+    }
 
 
 def test_encounter_paradigm_resolution_failure_is_non_fatal() -> None:
@@ -1110,6 +1136,103 @@ def test_encounter_word_index_context_projects_anchor_handles_without_inline_win
     assert window["max_source_order_id"] == "word-order:lat:gaffiot:gaffiot:000124"
     assert window["min_index_entry_id"] == "word-index:lat:gaffiot:gaffiot:before"
     assert window["max_index_entry_id"] == "word-index:lat:gaffiot:gaffiot:after"
+
+
+def test_encounter_actions_project_paradigm_and_word_index_followups() -> None:
+    paradigm_resolution = {
+        "schema_version": "langnet.paradigm_resolution.v1",
+        "searched_form": "putraa.naam",
+        "normalized_form": "putrāṇām",
+        "language": "san",
+        "candidates": [
+            {
+                "lemma": "putra",
+                "entry_type": "variant",
+                "part_of_speech": "noun",
+                "paradigm_kind": "declension",
+                "paradigm_request": {
+                    "source": "heritage:sktdeclin",
+                    "language": "san",
+                    "lemma": "putra",
+                    "kind": "declension",
+                    "options": {"gender": "Mas"},
+                },
+            }
+        ],
+        "warnings": [],
+    }
+    word_index = {
+        "anchors": [
+            {
+                "language": "san",
+                "query": "putra",
+                "source": "cdsl",
+                "dictionary": "mw",
+                "anchor_status": "exact",
+                "lexeme_id": "lexeme:san:putra",
+                "canonical_name": "पुत्र",
+                "canonical_key": "putra",
+                "source_name": "putra",
+                "source_ref": "cdsl:mw:123",
+                "index_entry_id": "word-index:san:cdsl:mw:putra",
+                "source_order_id": "word-order:san:cdsl:mw:putra",
+                "source_order_key": "putra:123:0",
+            }
+        ]
+    }
+
+    actions = _encounter_actions(
+        language="san",
+        text="putraa.naam",
+        word_index=word_index,
+        paradigm_resolution=paradigm_resolution,
+    )
+
+    assert [action["kind"] for action in actions] == [
+        "view_paradigm",
+        "open_word_index_neighborhood",
+        "inspect_source_entry",
+    ]
+    paradigm_action = actions[0]
+    assert paradigm_action["label"] == "View putra declension"
+    assert paradigm_action["status"] == "available"
+    paradigm_request = cast(dict[str, object], paradigm_action["request"])
+    assert paradigm_request["argv"] == [
+        "paradigm",
+        "san",
+        "putra",
+        "--kind",
+        "declension",
+        "--gender",
+        "Mas",
+        "--output",
+        "json",
+    ]
+    neighborhood_action = actions[1]
+    assert neighborhood_action["request"] == {
+        "command": "word-index nearby",
+        "language": "san",
+        "query": "putra",
+        "source": "cdsl",
+        "radius": 1,
+        "merge": "auto",
+        "argv": [
+            "word-index",
+            "nearby",
+            "san",
+            "putra",
+            "--source",
+            "cdsl",
+            "--radius",
+            "1",
+            "--output",
+            "json",
+        ],
+    }
+    source_action = actions[2]
+    source_request = cast(dict[str, object], source_action["request"])
+    assert source_request["source_ref"] == "cdsl:mw:123"
+    assert source_request["index_entry_id"] == "word-index:san:cdsl:mw:putra"
 
 
 def test_encounter_word_index_context_prefers_exact_anchor_over_raw_nearest() -> None:

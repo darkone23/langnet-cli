@@ -35,6 +35,12 @@ Recently completed infra plans live in `docs/plans/completed/infra/`, including
 the codesketch retirement/deletion records and the devenv recipe runner
 stabilization record.
 
+Recently completed pedagogy plans live in `docs/plans/completed/pedagogy/`,
+including the source-backed V1 inflectional paradigm implementation and native
+word-index ordering records, plus the encounter action contract that exposes
+lazy paradigm, word-index, and source-entry follow-up targets. Broader future
+morphology and UI work remains in `docs/plans/todo/pedagogy/`.
+
 ## Junior Work
 
 Keep small pickup tasks in `docs/EXECUTION_PLAN.md` unless they need a dedicated plan. Tasks should be explicit, service-free where possible, and independently testable.

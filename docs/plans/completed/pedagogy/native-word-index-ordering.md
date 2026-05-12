@@ -1,6 +1,6 @@
 # Pedagogically Native Word Index Ordering
 
-Status: Active
+Status: ✅ DONE - source-backed V1 completed 2026-05-11
 Source request: `/tmp/langnet-upstream-native-word-index-order-request.md`
 Feature area: pedagogy
 
@@ -119,7 +119,8 @@ Current slice:
   objects on payloads, rows, source entries, neighborhoods, and grouped
   neighborhoods.
 - Added `tests/test_word_index_ordering.py` coverage for source rows, collapsed
-  cards, merged neighborhoods, grouped source windows, and wheel payload order.
+  cards, integrated neighborhoods, grouped source windows, and wheel payload
+  order.
 
 ### Task 2: Order Metadata Model
 

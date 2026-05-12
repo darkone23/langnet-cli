@@ -1,6 +1,6 @@
 # Project Status
 
-**Date:** 2026-05-11
+**Date:** 2026-05-12
 **Overall grade:** B / 85%
 
 ## Summary
@@ -12,7 +12,12 @@ The current source-backed V1 paradigm and word-index ordering slices are stable:
 resolution metadata, while `word-index` exposes explicit order metadata plus
 native section rails. Sanskrit now has a 52-item varnamala section rail with
 CDSL SLP1 anchors that preserve phoneme distinctions such as ण/न, श/ष/स, and
-क्ष/ज्ञ.
+क्ष/ज्ञ. Integrated `word-index nearby --source all` neighborhoods now use
+language-native lexeme ordering by default while retaining source windows as
+provenance.
+Latin integrated word-index neighborhoods now include the local Whitaker's
+Words dictionary index alongside Gaffiot and Diogenes when
+`data/build/lex_whitakers.duckdb` has been built.
 
 The main project risk is no longer "can the system run?" It is "can we put the right evidence first for a reader without hiding or damaging the sources?"
 
@@ -92,28 +97,54 @@ The main project risk is no longer "can the system run?" It is "can we put the r
   enforce an LLM subprocess deadline, and verify recommendations against
   encounter probes when available.
 - `word-index` JSON exposes explicit `order` objects for source-local rows,
-  collapsed lexeme cards, merged neighborhoods, grouped source windows, and
-  seeded discovery wheels. This keeps durable keys such as `wheel_order_key`
-  and `source_order_key` from being mistaken for a universal native alphabet.
+  collapsed lexeme cards, integrated language-native neighborhoods, grouped
+  source windows, and seeded discovery wheels. This keeps durable keys such as
+  `lexeme_key`, `wheel_order_key`, `native_order_key`, and `source_order_key`
+  from being mistaken for one another.
 - `word-index sections` exposes native browsing rails. Sanskrit uses a 52-item
   varnamala rail with learner-facing labels and source-native CDSL SLP1 anchors
   for correct dictionary neighborhoods.
+- `word-index browse` exposes a grouped source-native browse mode for UI
+  clients. Top-level `items[]` now contains learner-facing homograph cards that
+  can group matching rows across dictionaries, while `groups[]` preserves each
+  source/dictionary browse window. Use `--homographs raw` to inspect exact
+  source rows. `word-index list --source all` remains the collapsed canonical
+  lexeme-card view.
+- Latin word-index sources include Gaffiot, Whitaker's Words, and Diogenes when
+  their local DuckDB indexes exist. The Whitaker index is built from
+  `DICTLINE.GEN`, derives learner citation forms from stems and grammatical
+  codes for browsing/merging, and keeps the original source stem in metadata.
+- `word-index nearby --source all` defaults to
+  `policy = "integrated_language_native"` and `order.policy =
+  "language-native"`. Sanskrit uses `order.collation = "sa-varga"` so vowels,
+  anusvara/visarga, consonants, and supported conjuncts no longer inherit odd
+  ASCII/source-window ordering. Sanskrit lexeme grouping now uses lossless
+  `lexeme_key` identity so forms such as `gaṃ` and `gam` do not collapse into
+  one learner card.
 - `paradigm` and `paradigm-resolve` expose source-backed inflectional table
   support. Sanskrit noun declensions and verb conjugations are fetched from
   Heritage; Latin and Greek tables are fetched from Diogenes. Resolution keeps
   native grammar features separate from shared functional relations and avoids
   guessing when required metadata is missing.
+- `encounter --output json` now includes lazy follow-up actions for UI clients:
+  view an available paradigm, open a word-index neighborhood, or inspect a
+  source entry without inlining those secondary payloads into the primary
+  encounter response.
 
 ## Current Gaps
 
 - `lookup` output is still backend-keyed; `encounter` is better but not yet a release-quality learner interface.
-- Sanskrit word-index source rows currently preserve source/index sequence and
-  label it as `collation = "source"`; the section rail is varnamala-aware, but a
-  standalone full varga-order key remains a future enhancement.
+- Sanskrit word-index source rows still preserve each source/index sequence and
+  label it as `collation = "source"`; integrated cross-source neighborhoods use
+  `native_order_key` for a learner-facing varnamala order.
 - Paradigm support is source-backed V1, not a complete local morphology engine.
   Arbitrary reverse analysis, local template generation, Sanskrit compound
   decomposition, cross-language aligned paradigm views, and highlight rendering
   remain future work.
+- The Whitaker word index is best-effort citation-form projection over
+  dictionary stems. It improves Latin index coverage and cross-dictionary
+  grouping, but it does not replace Whitaker runtime parsing or generated-form
+  analysis.
 - Current `encounter` samples expose concrete learner-experience failures:
   Sanskrit CDSL can still leak source notation, Latin/Gaffiot and Greek/LSJ
   still need broader typed source segmentation, and some long source entries

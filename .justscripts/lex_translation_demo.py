@@ -23,6 +23,8 @@ from langnet.translation.prompts import (
 
 dotenv.load_dotenv()
 
+DEFAULT_TRANSLATION_MODEL = "openai:deepseek/deepseek-v4-flash"
+
 # DEFAULT_HINTS = [
 #     "Translate into English. Keep abbreviations and any Sanskrit tokens unchanged. Preserve layout, punctuation, and style. Do not translate cross language examples (fr. gr. lat. an.) and do not expand abbreviations.",  # noqa: E501
 #     "Do not add markdown styling such as bold, italics, or numbering.",
@@ -209,7 +211,7 @@ def build_entry_translation_key(entry: dict, mode: str, model: str, hints: Itera
 )
 @click.option(
     "--model",
-    default="openai:google/gemini-3.1-pro-preview",
+    default=DEFAULT_TRANSLATION_MODEL,
     show_default=True,
     help="Model id to use via aisuite/OpenRouter.",
 )

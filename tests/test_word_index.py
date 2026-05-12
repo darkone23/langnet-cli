@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import cast
+from unittest.mock import patch
 
 import duckdb
 import jsonschema
@@ -15,13 +16,17 @@ from langnet.word_index import (
     word_index_sources_payload,
     word_index_wheel_payload,
 )
+from langnet.word_index import (
+    service as word_index_service,
+)
 from langnet.word_index.service import _best_anchor
 
 WORD_INDEX_SCHEMA_PATH = Path("docs/schemas/word_index.v1.schema.json")
 SANSKRIT_SOURCE_BUCKET_COUNT = 3
-LATIN_SOURCE_BUCKET_COUNT = 2
+LATIN_SOURCE_BUCKET_COUNT = 3
 FULL_RADIUS_ONE_WINDOW_COUNT = 3
 SATYA_HYDRATED_SOURCE_ENTRY_COUNT = 9
+ANUSVARA_AND_MA_CARD_COUNT = 2
 
 
 def _assert_matches_word_index_schema(payload: object) -> None:
@@ -34,12 +39,14 @@ def _fixture_paths(tmp_path: Path) -> WordIndexPaths:
     cdsl_ap90 = tmp_path / "cdsl_ap90.duckdb"
     dico = tmp_path / "lex_dico.duckdb"
     gaffiot = tmp_path / "lex_gaffiot.duckdb"
+    whitakers = tmp_path / "lex_whitakers.duckdb"
     diogenes_lat = tmp_path / "lex_diogenes_lat.duckdb"
     diogenes_grc = tmp_path / "lex_diogenes_grc.duckdb"
     _write_cdsl_fixture(cdsl_mw, "MW", [("agni", 1.0), ("Darma", 2.0), ("deva", 3.0)])
     _write_cdsl_fixture(cdsl_ap90, "AP90", [("agni", 1.0), ("DArma", 2.0), ("yoga", 3.0)])
     _write_dico_fixture(dico)
     _write_gaffiot_fixture(gaffiot)
+    _write_whitakers_fixture(whitakers)
     _write_diogenes_fixture(diogenes_lat, "lat")
     _write_diogenes_fixture(diogenes_grc, "grc")
     return WordIndexPaths(
@@ -47,6 +54,7 @@ def _fixture_paths(tmp_path: Path) -> WordIndexPaths:
         cdsl_ap90=cdsl_ap90,
         dico=dico,
         gaffiot=gaffiot,
+        whitakers=whitakers,
         diogenes_lat=diogenes_lat,
         diogenes_grc=diogenes_grc,
     )
@@ -133,6 +141,26 @@ def _write_gaffiot_fixture(path: Path) -> None:
         )
 
 
+def _write_whitakers_fixture(path: Path) -> None:
+    with duckdb.connect(str(path)) as conn:
+        conn.execute(
+            """
+            CREATE TABLE entries (
+              entry_id BIGINT, headword_raw VARCHAR, headword_norm VARCHAR,
+              source_stem VARCHAR, pos VARCHAR, codes VARCHAR, plain_text TEXT
+            )
+            """
+        )
+        conn.executemany(
+            "INSERT INTO entries VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                (1, "amo", "amo", "am", "V", "1 1 X", "love, like"),
+                (2, "lupus", "lupus", "lup", "N", "2 1 M T", "wolf"),
+                (3, "nox", "nox", "nox", "N", "3 1 F T", "night"),
+            ],
+        )
+
+
 def _write_diogenes_fixture(path: Path, language: str) -> None:
     dictionary = "lsj" if language == "grc" else "lewis_short"
     rows = (
@@ -187,6 +215,7 @@ def test_word_index_sources_report_local_statuses() -> None:
         ("san", "cdsl", "ap90"),
         ("san", "dico", "dico"),
         ("lat", "gaffiot", "gaffiot"),
+        ("lat", "whitakers", "whitakers"),
         ("lat", "diogenes", "lewis_short"),
         ("grc", "diogenes", "lsj"),
     }
@@ -298,6 +327,7 @@ def test_word_index_list_all_collapses_sources_by_total_ordered_lexeme() -> None
     assert lupus["source_count"] == LATIN_SOURCE_BUCKET_COUNT
     assert {(entry["source"], entry["dictionary"]) for entry in source_entries} == {
         ("gaffiot", "gaffiot"),
+        ("whitakers", "whitakers"),
         ("diogenes", "lewis_short"),
     }
     assert all(entry["wheel_id"] == lupus["wheel_id"] for entry in source_entries)
@@ -404,7 +434,7 @@ def test_word_index_neighborhood_bridges_ascii_canonical_to_cdsl_slp1_all_source
     assert anchors[("dico", "dico")]["canonical_key"] == "praana"
 
 
-def test_word_index_neighborhood_source_all_returns_merged_lexeme_layer() -> None:
+def test_word_index_neighborhood_source_all_returns_integrated_lexeme_layer() -> None:
     with TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         paths = WordIndexPaths(
@@ -437,9 +467,9 @@ def test_word_index_neighborhood_source_all_returns_merged_lexeme_layer() -> Non
     items = cast(list[dict[str, object]], neighborhood["items"])
     groups = cast(list[dict[str, object]], neighborhood["groups"])
     satya_items = [item for item in items if item["lexeme_id"] == "lexeme:san:satya"]
-    shatya_items = [item for item in items if item["lexeme_id"] == "lexeme:san:shatya"]
+    shatya_items = [item for item in items if item["canonical_key"] == "shatya"]
     assert request["merge"] == "lexeme"
-    assert neighborhood["policy"] == "merged_lexeme"
+    assert neighborhood["policy"] == "integrated_language_native"
     assert groups
     assert len(satya_items) == 1
     assert shatya_items
@@ -456,7 +486,184 @@ def test_word_index_neighborhood_source_all_returns_merged_lexeme_layer() -> Non
     assert all(entry["source_display"] for entry in source_entries)
 
 
-def test_word_index_merged_anchor_hydration_is_radius_independent() -> None:
+def test_word_index_neighborhood_source_all_uses_integrated_sanskrit_order() -> None:
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        paths = WordIndexPaths(
+            cdsl_mw=tmp_path / "cdsl_mw.duckdb",
+            cdsl_ap90=tmp_path / "cdsl_ap90.duckdb",
+            dico=tmp_path / "lex_dico.duckdb",
+            gaffiot=tmp_path / "lex_gaffiot.duckdb",
+            diogenes_lat=tmp_path / "lex_diogenes_lat.duckdb",
+            diogenes_grc=tmp_path / "lex_diogenes_grc.duckdb",
+        )
+        _write_cdsl_fixture(
+            paths.cdsl_mw, "MW", [("X", 1.0), ("e", 2.0), ("eka", 3.0), ("Ehika", 4.0)]
+        )
+        _write_cdsl_fixture(
+            paths.cdsl_ap90, "AP90", [("X", 1.0), ("e", 2.0), ("eka", 3.0), ("Ehika", 4.0)]
+        )
+        _write_dico_fixture(dico := paths.dico)
+        with duckdb.connect(str(dico)) as conn:
+            conn.executemany(
+                "INSERT INTO entries_fr VALUES (?, ?, ?, ?, ?, NULL, '', '', ?)",
+                [
+                    ("dyu", 0, "द्यु", "dyu", "dyu", "33"),
+                    ("e", 0, "ए", "e", "e", "17"),
+                    ("e.ka", 0, "एक", "eka", "e.ka", "17"),
+                    ("aihika", 0, "ऐहिक", "aihika", "aihika", "18"),
+                ],
+            )
+        _write_gaffiot_fixture(paths.gaffiot)
+        _write_diogenes_fixture(paths.diogenes_lat, "lat")
+        _write_diogenes_fixture(paths.diogenes_grc, "grc")
+
+        payload = word_index_neighborhood_payload(
+            "san",
+            "e",
+            source="all",
+            radius=2,
+            paths=paths,
+        )
+
+    _assert_matches_word_index_schema(payload)
+    neighborhood = cast(dict[str, object], payload["neighborhood"])
+    anchor = cast(dict[str, object], neighborhood["anchor"])
+    items = cast(list[dict[str, object]], neighborhood["items"])
+    before = [item for item in items if item["position"] == "before"]
+    after = [item for item in items if item["position"] == "after"]
+    order = cast(dict[str, object], neighborhood["order"])
+    assert neighborhood["policy"] == "integrated_language_native"
+    assert order["collation"] == "sa-varga"
+    assert anchor["canonical_key"] == "e"
+    assert [item["canonical_key"] for item in before] == ["ll"]
+    assert [item["canonical_key"] for item in after] == ["eka", "aihika"]
+    assert "dyu" not in [item["canonical_key"] for item in items]
+
+
+def test_word_index_neighborhood_source_all_keeps_double_l_after_anusvara() -> None:
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        paths = WordIndexPaths(
+            cdsl_mw=tmp_path / "cdsl_mw.duckdb",
+            cdsl_ap90=tmp_path / "cdsl_ap90.duckdb",
+            dico=tmp_path / "lex_dico.duckdb",
+            gaffiot=tmp_path / "lex_gaffiot.duckdb",
+            diogenes_lat=tmp_path / "lex_diogenes_lat.duckdb",
+            diogenes_grc=tmp_path / "lex_diogenes_grc.duckdb",
+        )
+        rows = [("ga", 1.0), ("gaM", 2.0), ("galla", 3.0)]
+        _write_cdsl_fixture(paths.cdsl_mw, "MW", rows)
+        _write_cdsl_fixture(paths.cdsl_ap90, "AP90", rows)
+        _write_dico_fixture(dico := paths.dico)
+        with duckdb.connect(str(dico)) as conn:
+            conn.executemany(
+                "INSERT INTO entries_fr VALUES (?, ?, ?, ?, ?, NULL, '', '', ?)",
+                [
+                    ("ga", 0, "ग", "ga", "ga", "19"),
+                    ("ga.m", 0, "गं", "gaṃ", "ga.m", "19"),
+                    ("galla", 0, "गल्ल", "galla", "galla", "19"),
+                ],
+            )
+        _write_gaffiot_fixture(paths.gaffiot)
+        _write_diogenes_fixture(paths.diogenes_lat, "lat")
+        _write_diogenes_fixture(paths.diogenes_grc, "grc")
+
+        payload = word_index_neighborhood_payload(
+            "san",
+            "ga",
+            source="all",
+            radius=2,
+            paths=paths,
+        )
+
+    _assert_matches_word_index_schema(payload)
+    neighborhood = cast(dict[str, object], payload["neighborhood"])
+    after = [
+        item["canonical_key"]
+        for item in cast(list[dict[str, object]], neighborhood["items"])
+        if item["position"] == "after"
+    ]
+    assert after == ["gam", "galla"]
+
+
+def test_word_index_neighborhood_source_all_keeps_anusvara_and_ma_separate() -> None:
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        paths = WordIndexPaths(
+            cdsl_mw=tmp_path / "cdsl_mw.duckdb",
+            cdsl_ap90=tmp_path / "cdsl_ap90.duckdb",
+            dico=tmp_path / "lex_dico.duckdb",
+            gaffiot=tmp_path / "lex_gaffiot.duckdb",
+            diogenes_lat=tmp_path / "lex_diogenes_lat.duckdb",
+            diogenes_grc=tmp_path / "lex_diogenes_grc.duckdb",
+        )
+        rows = [("ga", 1.0), ("gaM", 2.0), ("gam", 3.0), ("galla", 4.0)]
+        _write_cdsl_fixture(paths.cdsl_mw, "MW", rows)
+        _write_cdsl_fixture(paths.cdsl_ap90, "AP90", rows)
+        _write_dico_fixture(dico := paths.dico)
+        with duckdb.connect(str(dico)) as conn:
+            conn.executemany(
+                "INSERT INTO entries_fr VALUES (?, ?, ?, ?, ?, NULL, '', '', ?)",
+                [
+                    ("ga", 0, "ग", "ga", "ga", "19"),
+                    ("ga.m", 0, "गं", "gaṃ", "ga.m", "19"),
+                    ("gam", 0, "गम्", "gam", "gam", "19"),
+                    ("galla", 0, "गल्ल", "galla", "galla", "19"),
+                ],
+            )
+        _write_gaffiot_fixture(paths.gaffiot)
+        _write_diogenes_fixture(paths.diogenes_lat, "lat")
+        _write_diogenes_fixture(paths.diogenes_grc, "grc")
+
+        payload = word_index_neighborhood_payload(
+            "san",
+            "ga",
+            source="all",
+            radius=3,
+            paths=paths,
+        )
+
+    _assert_matches_word_index_schema(payload)
+    neighborhood = cast(dict[str, object], payload["neighborhood"])
+    gam_cards = [
+        item
+        for item in cast(list[dict[str, object]], neighborhood["items"])
+        if item["canonical_key"] == "gam"
+    ]
+    displays = {cast(dict[str, object], item["display"])["transliteration"] for item in gam_cards}
+    assert displays == {"gaṃ", "gam"}
+    assert len({item["lexeme_id"] for item in gam_cards}) == ANUSVARA_AND_MA_CARD_COUNT
+    assert [item["native_order_key"] for item in gam_cards] == ["019.001.015", "019.001.041"]
+
+
+def test_word_index_neighborhood_source_all_uses_bounded_integrated_prefixes() -> None:
+    prefixes: list[str] = []
+
+    with TemporaryDirectory() as tmpdir:
+        paths = _fixture_paths(Path(tmpdir))
+
+        real_collect_items = word_index_service._collect_items
+
+        def recording_collect_items(*args, **kwargs):
+            prefixes.append(str(kwargs.get("prefix") or ""))
+            return real_collect_items(*args, **kwargs)
+
+        with patch("langnet.word_index.service._collect_items", recording_collect_items):
+            payload = word_index_neighborhood_payload(
+                "san",
+                "satya",
+                source="all",
+                radius=1,
+                paths=paths,
+            )
+
+    _assert_matches_word_index_schema(payload)
+    assert prefixes
+    assert "" not in prefixes
+
+
+def test_word_index_integrated_anchor_hydration_is_radius_independent() -> None:
     with TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         paths = WordIndexPaths(
@@ -537,7 +744,7 @@ def test_word_index_neighborhood_resolves_greek_physis_to_diogenes_key() -> None
     neighborhood = cast(dict[str, object], payload["neighborhood"])
     anchor = cast(dict[str, object], neighborhood["anchor"])
     items = cast(list[dict[str, object]], neighborhood["items"])
-    assert neighborhood["policy"] == "merged_lexeme"
+    assert neighborhood["policy"] == "integrated_language_native"
     assert neighborhood["anchor_status"] == "exact"
     assert anchor["lookup"] == "fusis"
     assert anchor["canonical_name"] == "φύσις"

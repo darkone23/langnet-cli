@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS entries_fr (
     PRIMARY KEY (entry_id, occurrence)
 );
 
+CREATE INDEX IF NOT EXISTS entries_fr_headword_norm_idx ON entries_fr(headword_norm);
+CREATE INDEX IF NOT EXISTS entries_fr_page_headword_idx ON entries_fr(source_page, headword_norm);
+
 """
 
 

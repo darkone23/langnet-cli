@@ -1,6 +1,6 @@
 # Inflectional Paradigm Generation Implementation Plan
 
-Status: Active
+Status: ✅ DONE - source-backed V1 completed 2026-05-11
 Owner: LangNet maintainers
 Primary consumers: students and scholars using lookup/encounter workflows for Latin, Greek, and Sanskrit
 Roadmap: docs/plans/todo/pedagogy/inflectional-paradigm-generation.md

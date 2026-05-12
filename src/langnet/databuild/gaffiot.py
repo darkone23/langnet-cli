@@ -47,6 +47,9 @@ CREATE TABLE IF NOT EXISTS entries_fr (
     entry_hash VARCHAR,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS entries_fr_headword_norm_idx ON entries_fr(headword_norm);
+CREATE INDEX IF NOT EXISTS entries_fr_headword_entry_idx ON entries_fr(headword_norm, entry_id);
 """
 
 

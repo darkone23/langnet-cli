@@ -24,6 +24,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/item" }
     },
+    "groups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/browseGroup" }
+    },
     "neighborhood": {
       "anyOf": [
         { "type": "null" },
@@ -57,10 +61,11 @@
       "properties": {
         "language": { "type": "string" },
         "source": { "type": "string" },
-        "mode": { "enum": ["sources", "list", "neighborhood", "wheel"] },
+        "mode": { "enum": ["sources", "list", "browse", "neighborhood", "wheel"] },
         "query": { "type": "string" },
         "prefix": { "type": "string" },
         "limit": { "type": "integer", "minimum": 1 },
+        "homographs": { "enum": ["grouped", "raw"] },
         "count": { "type": "integer", "minimum": 1 },
         "radius": { "type": "integer", "minimum": 1 },
         "merge": { "enum": ["auto", "none", "lexeme"] },
@@ -117,16 +122,26 @@
         "source_order_id": { "type": "string", "minLength": 1 },
         "canonical_name": { "type": "string", "minLength": 1 },
         "canonical_key": { "type": "string", "minLength": 1 },
+        "lexeme_key": { "type": "string", "minLength": 1 },
         "source_name": { "type": "string", "minLength": 1 },
         "lookup": { "type": "string", "minLength": 1 },
         "display": { "$ref": "#/$defs/display" },
         "sort_key": { "type": "string" },
+        "native_order_key": { "type": "string" },
         "source_order_key": { "type": "string" },
         "source_ref": { "type": "string" },
         "order": { "$ref": "#/$defs/order" },
         "ids": { "$ref": "#/$defs/itemIds" },
         "source_count": { "type": "integer", "minimum": 1 },
         "source_entry_count": { "type": "integer", "minimum": 1 },
+        "homograph_count": { "type": "integer", "minimum": 2 },
+        "homograph_policy": {
+          "enum": ["adjacent-source-homographs", "cross-dictionary-homographs"]
+        },
+        "source_counts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceCount" }
+        },
         "sources": {
           "type": "array",
           "items": { "$ref": "#/$defs/sourceBrief" }
@@ -149,6 +164,16 @@
       },
       "additionalProperties": true
     },
+    "sourceCount": {
+      "type": "object",
+      "required": ["source", "dictionary", "count"],
+      "properties": {
+        "source": { "type": "string" },
+        "dictionary": { "type": "string" },
+        "count": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true
+    },
     "sourceEntry": {
       "type": "object",
       "required": ["index_entry_id", "source_order_id", "source", "dictionary", "source_ref"],
@@ -157,12 +182,14 @@
         "source_order_id": { "type": "string", "minLength": 1 },
         "wheel_id": { "type": "string", "minLength": 1 },
         "wheel_order_key": { "type": "string", "minLength": 1 },
+        "lexeme_key": { "type": "string" },
         "source": { "type": "string" },
         "dictionary": { "type": "string" },
         "source_name": { "type": "string" },
         "source_display": { "type": "string" },
         "source_ref": { "type": "string" },
         "source_order_key": { "type": "string" },
+        "native_order_key": { "type": "string" },
         "order": { "$ref": "#/$defs/order" },
         "display": { "$ref": "#/$defs/display" },
         "encounter": { "$ref": "#/$defs/encounterRequest" },
@@ -175,6 +202,7 @@
       "required": ["lexeme", "wheel", "index_entry", "source_order", "source_ref"],
       "properties": {
         "lexeme": { "type": "string", "minLength": 1 },
+        "lexeme_key": { "type": "string" },
         "wheel": { "type": "string", "minLength": 1 },
         "index_entry": { "type": "string", "minLength": 1 },
         "source_order": { "type": "string", "minLength": 1 },
@@ -253,10 +281,10 @@
         "window"
       ],
       "properties": {
-        "policy": { "const": "merged_lexeme" },
+        "policy": { "enum": ["merged_lexeme", "integrated_language_native"] },
         "language": { "enum": ["lat", "grc", "san", ""] },
         "source": { "const": "all" },
-        "dictionary": { "const": "merged" },
+        "dictionary": { "enum": ["merged", "integrated"] },
         "anchor": {
           "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/item" }]
         },
@@ -269,7 +297,7 @@
           "items": { "$ref": "#/$defs/neighborhood" }
         },
         "radius": { "type": "integer", "minimum": 1 },
-        "neighborhood_kind": { "const": "merged_lexeme" },
+        "neighborhood_kind": { "enum": ["merged_lexeme", "integrated_language_native"] },
         "anchor_status": { "enum": ["exact", "nearest", "not_found"] },
         "order": { "$ref": "#/$defs/order" },
         "window": { "$ref": "#/$defs/mergedWindow" }
@@ -290,11 +318,44 @@
         }
       ]
     },
+    "browseGroup": {
+      "type": "object",
+      "required": [
+        "language",
+        "source",
+        "dictionary",
+        "prefix",
+        "order",
+        "items",
+        "entry_count",
+        "source_entry_count",
+        "homograph_policy",
+        "limit_policy"
+      ],
+      "properties": {
+        "language": { "enum": ["lat", "grc", "san"] },
+        "source": { "type": "string" },
+        "dictionary": { "type": "string" },
+        "prefix": { "type": "string" },
+        "order": { "$ref": "#/$defs/order" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/item" }
+        },
+        "entry_count": { "type": "integer", "minimum": 0 },
+        "source_entry_count": { "type": "integer", "minimum": 0 },
+        "homograph_policy": { "enum": ["adjacent-source-homographs", "raw"] },
+        "limit_policy": { "enum": ["per_source_group"] }
+      },
+      "additionalProperties": true
+    },
     "mergedWindow": {
       "type": "object",
       "required": ["policy", "contiguous", "collapsed"],
       "properties": {
-        "policy": { "const": "merged_lexeme_from_source_windows" },
+        "policy": {
+          "enum": ["merged_lexeme_from_source_windows", "integrated_language_native"]
+        },
         "contiguous": { "const": false },
         "collapsed": { "const": true },
         "before_count": { "type": "integer", "minimum": 0 },
@@ -342,6 +403,7 @@
         "policy": {
           "enum": [
             "source-native",
+            "grouped-source-native",
             "language-native",
             "canonical-key",
             "source-window-merge",

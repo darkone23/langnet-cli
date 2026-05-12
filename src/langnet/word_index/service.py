@@ -16,6 +16,7 @@ from langnet.databuild.paths import (
     default_dico_path,
     default_diogenes_path,
     default_gaffiot_path,
+    default_whitakers_path,
 )
 from langnet.execution.handlers.cdsl import _slp1_to_iast, _to_slp1
 from langnet.execution.handlers.dico import normalize_dico_headword
@@ -27,9 +28,10 @@ from langnet.tool_catalog import LANGUAGE_LABELS, LanguageCode, canonical_langua
 WORD_INDEX_SCHEMA_VERSION = "langnet.word_index.v1"
 WORD_INDEX_SECTIONS_SCHEMA_VERSION = "langnet.word_index_sections.v1"
 WordIndexLanguage = Literal["lat", "grc", "san", "all"]
-WordIndexSource = Literal["all", "cdsl", "dico", "gaffiot", "diogenes"]
+WordIndexSource = Literal["all", "cdsl", "dico", "gaffiot", "whitakers", "diogenes"]
 WordIndexMerge = Literal["auto", "none", "lexeme"]
-_SOURCE_ORDER = {"cdsl": 0, "dico": 1, "gaffiot": 2, "diogenes": 3}
+WordIndexHomographs = Literal["grouped", "raw"]
+_SOURCE_ORDER = {"cdsl": 0, "dico": 1, "gaffiot": 2, "whitakers": 3, "diogenes": 4}
 _LANGUAGE_ORDER = {"san": 0, "grc": 1, "lat": 2}
 NON_ASCII_CODEPOINT_MIN = 128
 ANCHOR_HYDRATION_LIMIT = 2000
@@ -99,6 +101,7 @@ class WordIndexPaths:
     gaffiot: Path
     diogenes_lat: Path
     diogenes_grc: Path
+    whitakers: Path = Path("__missing_word_index_whitakers.duckdb__")
 
     @classmethod
     def defaults(cls) -> WordIndexPaths:
@@ -109,6 +112,7 @@ class WordIndexPaths:
             gaffiot=default_gaffiot_path(),
             diogenes_lat=default_diogenes_path("lat"),
             diogenes_grc=default_diogenes_path("grc"),
+            whitakers=default_whitakers_path(),
         )
 
 
@@ -123,6 +127,7 @@ def word_index_sources_payload(
         *_cdsl_statuses(paths, languages),
         _dico_status(paths, languages),
         _gaffiot_status(paths, languages),
+        _whitakers_status(paths, languages),
         *_diogenes_statuses(paths, languages),
     ]
     sources = [source for source in sources if source is not None]
@@ -226,6 +231,53 @@ def word_index_list_payload(  # noqa: PLR0913
     }
 
 
+def word_index_browse_payload(  # noqa: PLR0913
+    language: str,
+    *,
+    source: str = "all",
+    prefix: str = "",
+    limit: int = 50,
+    homographs: WordIndexHomographs = "grouped",
+    paths: WordIndexPaths | None = None,
+) -> dict[str, object]:
+    paths = paths or WordIndexPaths.defaults()
+    homograph_policy = _homograph_policy(homographs)
+    languages = _languages_for_request(language)
+    if len(languages) != 1:
+        raise ValueError("word-index browse requires one language: lat, grc, or san.")
+    language_code = languages[0]
+    warnings: list[dict[str, str]] = []
+    groups = _browse_groups(
+        language=language_code,
+        source=source,
+        prefix=prefix,
+        limit=limit,
+        homographs=homograph_policy,
+        paths=paths,
+        warnings=warnings,
+    )
+    items = _cross_dictionary_browse_items(groups) if homograph_policy == "grouped" else []
+    return {
+        "schema_version": WORD_INDEX_SCHEMA_VERSION,
+        "request": {
+            "language": language_code,
+            "source": source,
+            "mode": "browse",
+            "prefix": prefix,
+            "limit": limit,
+            "group_limit_policy": "per_source_group",
+            "homographs": homograph_policy,
+        },
+        "sources": word_index_sources_payload(language_code, paths=paths)["sources"],
+        "order": _browse_payload_order(language=language_code, source=source, prefix=prefix),
+        "items": items,
+        "groups": groups,
+        "neighborhood": None,
+        "pagination": {"next_cursor": None, "prev_cursor": None},
+        "warnings": warnings,
+    }
+
+
 def word_index_neighborhood_payload(  # noqa: PLR0913
     language: str,
     query: str,
@@ -261,15 +313,26 @@ def word_index_neighborhood_payload(  # noqa: PLR0913
         )
         neighborhood = None
     elif merge_policy == "lexeme":
-        neighborhood = _merged_lexeme_neighborhood(
-            neighborhoods,
-            query=query,
-            radius=radius,
-            languages=languages,
-            source=source,
-            paths=paths,
-            warnings=warnings,
-        )
+        if source.strip().lower() == "all":
+            neighborhood = _integrated_language_native_neighborhood(
+                neighborhoods,
+                query=query,
+                radius=radius,
+                languages=languages,
+                source=source,
+                paths=paths,
+                warnings=warnings,
+            )
+        else:
+            neighborhood = _merged_lexeme_neighborhood(
+                neighborhoods,
+                query=query,
+                radius=radius,
+                languages=languages,
+                source=source,
+                paths=paths,
+                warnings=warnings,
+            )
     else:
         neighborhood = (
             neighborhoods[0]
@@ -323,6 +386,15 @@ def _source_neighborhoods(  # noqa: PLR0913
     elif source_id == "gaffiot" and "lat" in languages:
         neighborhoods.extend(
             _neighborhood_gaffiot(paths.gaffiot, query=query, radius=radius, warnings=warnings)
+        )
+    elif source_id == "whitakers" and "lat" in languages:
+        neighborhoods.extend(
+            _neighborhood_whitakers(
+                paths.whitakers,
+                query=query,
+                radius=radius,
+                warnings=warnings,
+            )
         )
     elif source_id == "diogenes":
         if "lat" in languages:
@@ -411,6 +483,10 @@ def _collect_wheel_items(  # noqa: PLR0913
             items.extend(_wheel_dico(paths.dico, seed=seed, limit=limit, warnings=warnings))
         elif source_id == "gaffiot" and "lat" in languages:
             items.extend(_wheel_gaffiot(paths.gaffiot, seed=seed, limit=limit, warnings=warnings))
+        elif source_id == "whitakers" and "lat" in languages:
+            items.extend(
+                _wheel_whitakers(paths.whitakers, seed=seed, limit=limit, warnings=warnings)
+            )
         elif source_id == "diogenes":
             if "lat" in languages:
                 items.extend(
@@ -731,6 +807,7 @@ def _sources_for_request(source: str, languages: Sequence[LanguageCode]) -> list
             sources.extend(["cdsl", "dico"])
         if "lat" in languages:
             sources.append("gaffiot")
+            sources.append("whitakers")
         if "grc" in languages or "lat" in languages:
             sources.append("diogenes")
         return list(dict.fromkeys(sources))
@@ -774,6 +851,10 @@ def _collect_items(  # noqa: PLR0913
             items.extend(
                 _list_gaffiot(paths.gaffiot, prefix=prefix, limit=limit, warnings=warnings)
             )
+        elif source_id == "whitakers" and "lat" in languages:
+            items.extend(
+                _list_whitakers(paths.whitakers, prefix=prefix, limit=limit, warnings=warnings)
+            )
         elif source_id == "diogenes":
             if "lat" in languages:
                 items.extend(
@@ -797,6 +878,267 @@ def _collect_items(  # noqa: PLR0913
                 )
     items.sort(key=_item_order_key)
     return items
+
+
+def _browse_groups(  # noqa: PLR0913
+    *,
+    language: LanguageCode,
+    source: str,
+    prefix: str,
+    limit: int,
+    homographs: WordIndexHomographs,
+    paths: WordIndexPaths,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    groups: list[dict[str, object]] = []
+    for source_id in _sources_for_request(source, (language,)):
+        if source_id == "cdsl" and language == "san":
+            groups.append(
+                _browse_group(
+                    language=language,
+                    source="cdsl",
+                    dictionary="mw",
+                    prefix=prefix,
+                    items=_list_cdsl(
+                        "mw", paths.cdsl_mw, prefix=prefix, limit=limit, warnings=warnings
+                    ),
+                    homographs=homographs,
+                )
+            )
+            groups.append(
+                _browse_group(
+                    language=language,
+                    source="cdsl",
+                    dictionary="ap90",
+                    prefix=prefix,
+                    items=_list_cdsl(
+                        "ap90", paths.cdsl_ap90, prefix=prefix, limit=limit, warnings=warnings
+                    ),
+                    homographs=homographs,
+                )
+            )
+        elif source_id == "dico" and language == "san":
+            groups.append(
+                _browse_group(
+                    language=language,
+                    source="dico",
+                    dictionary="dico",
+                    prefix=prefix,
+                    items=_list_dico(paths.dico, prefix=prefix, limit=limit, warnings=warnings),
+                    homographs=homographs,
+                )
+            )
+        elif source_id == "gaffiot" and language == "lat":
+            groups.append(
+                _browse_group(
+                    language=language,
+                    source="gaffiot",
+                    dictionary="gaffiot",
+                    prefix=prefix,
+                    items=_list_gaffiot(
+                        paths.gaffiot, prefix=prefix, limit=limit, warnings=warnings
+                    ),
+                    homographs=homographs,
+                )
+            )
+        elif source_id == "whitakers" and language == "lat":
+            groups.append(
+                _browse_group(
+                    language=language,
+                    source="whitakers",
+                    dictionary="whitakers",
+                    prefix=prefix,
+                    items=_list_whitakers(
+                        paths.whitakers, prefix=prefix, limit=limit, warnings=warnings
+                    ),
+                    homographs=homographs,
+                )
+            )
+        elif source_id == "diogenes":
+            if language == "lat":
+                groups.append(
+                    _browse_group(
+                        language=language,
+                        source="diogenes",
+                        dictionary="lewis_short",
+                        prefix=prefix,
+                        items=_list_diogenes(
+                            paths.diogenes_lat,
+                            language="lat",
+                            prefix=prefix,
+                            limit=limit,
+                            warnings=warnings,
+                        ),
+                        homographs=homographs,
+                    )
+                )
+            if language == "grc":
+                groups.append(
+                    _browse_group(
+                        language=language,
+                        source="diogenes",
+                        dictionary="lsj",
+                        prefix=prefix,
+                        items=_list_diogenes(
+                            paths.diogenes_grc,
+                            language="grc",
+                            prefix=prefix,
+                            limit=limit,
+                            warnings=warnings,
+                        ),
+                        homographs=homographs,
+                    )
+                )
+    return [group for group in groups if cast(list[object], group["items"])]
+
+
+def _browse_group(  # noqa: PLR0913
+    *,
+    language: LanguageCode,
+    source: str,
+    dictionary: str,
+    prefix: str,
+    items: list[dict[str, object]],
+    homographs: WordIndexHomographs,
+) -> dict[str, object]:
+    grouped_items = _group_adjacent_homographs(items) if homographs == "grouped" else items
+    return {
+        "language": language,
+        "source": source,
+        "dictionary": dictionary,
+        "prefix": prefix,
+        "order": _browse_group_order_metadata(
+            language=language,
+            source=source,
+            dictionary=dictionary,
+            prefix=prefix,
+        ),
+        "items": grouped_items,
+        "entry_count": len(grouped_items),
+        "source_entry_count": len(items),
+        "homograph_policy": ("adjacent-source-homographs" if homographs == "grouped" else "raw"),
+        "limit_policy": "per_source_group",
+    }
+
+
+def _homograph_policy(value: str) -> WordIndexHomographs:
+    normalized = value.strip().lower()
+    if normalized in {"grouped", "raw"}:
+        return cast(WordIndexHomographs, normalized)
+    raise ValueError("homographs must be one of: grouped, raw.")
+
+
+def _group_adjacent_homographs(items: Sequence[dict[str, object]]) -> list[dict[str, object]]:
+    groups: list[list[dict[str, object]]] = []
+    current: list[dict[str, object]] = []
+    current_key: tuple[str, str, str] | None = None
+    for item in items:
+        key = _homograph_key(item)
+        if current and key != current_key:
+            groups.append(current)
+            current = []
+        current.append(item)
+        current_key = key
+    if current:
+        groups.append(current)
+    return [_homograph_card(group) for group in groups]
+
+
+def _homograph_key(item: Mapping[str, object]) -> tuple[str, str, str]:
+    display = item.get("display")
+    display_map = (
+        cast(Mapping[str, object], display)
+        if isinstance(display, Mapping)
+        else cast(Mapping[str, object], {})
+    )
+    return (
+        str(item.get("canonical_key") or ""),
+        str(display_map.get("primary") or item.get("canonical_name") or ""),
+        str(display_map.get("transliteration") or item.get("lookup") or ""),
+    )
+
+
+def _homograph_card(rows: Sequence[dict[str, object]]) -> dict[str, object]:
+    if len(rows) == 1:
+        return rows[0]
+    primary = dict(rows[0])
+    source_entries = [_source_entry_summary(row) for row in rows]
+    ids = dict(cast(Mapping[str, object], primary.get("ids") or {}))
+    ids["source_entries"] = [entry["index_entry_id"] for entry in source_entries]
+    primary["ids"] = ids
+    primary["source_entries"] = source_entries
+    primary["source_entry_count"] = len(source_entries)
+    primary["homograph_count"] = len(source_entries)
+    primary["homograph_policy"] = "adjacent-source-homographs"
+    return primary
+
+
+def _cross_dictionary_browse_items(
+    browse_groups: Sequence[Mapping[str, object]],
+) -> list[dict[str, object]]:
+    grouped: dict[tuple[str, str, str], list[dict[str, object]]] = {}
+    order: list[tuple[str, str, str]] = []
+    for browse_group in browse_groups:
+        items = browse_group.get("items")
+        if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
+            continue
+        for item in items:
+            if not isinstance(item, Mapping):
+                continue
+            item_dict = dict(cast(Mapping[str, object], item))
+            key = _homograph_key(item_dict)
+            if key not in grouped:
+                grouped[key] = []
+                order.append(key)
+            grouped[key].append(item_dict)
+    return [_cross_dictionary_browse_card(grouped[key]) for key in order]
+
+
+def _cross_dictionary_browse_card(rows: Sequence[dict[str, object]]) -> dict[str, object]:
+    primary = dict(rows[0])
+    source_entries = [entry for row in rows for entry in _browse_card_source_entries(row)]
+    source_counts = _source_counts(source_entries)
+    sources = [
+        {"source": count["source"], "dictionary": count["dictionary"]} for count in source_counts
+    ]
+    ids = dict(cast(Mapping[str, object], primary.get("ids") or {}))
+    ids["source_entries"] = [entry["index_entry_id"] for entry in source_entries]
+    primary["ids"] = ids
+    primary["source_entries"] = source_entries
+    primary["source_counts"] = source_counts
+    primary["sources"] = sources
+    primary["source_count"] = len(sources)
+    primary["source_entry_count"] = len(source_entries)
+    primary["homograph_count"] = len(source_entries)
+    primary["homograph_policy"] = "cross-dictionary-homographs"
+    primary["order"] = _cross_dictionary_browse_order_metadata(primary)
+    return primary
+
+
+def _browse_card_source_entries(row: Mapping[str, object]) -> list[dict[str, object]]:
+    entries = row.get("source_entries")
+    if isinstance(entries, Sequence) and not isinstance(entries, (str, bytes)):
+        return [
+            dict(cast(Mapping[str, object], entry))
+            for entry in entries
+            if isinstance(entry, Mapping)
+        ]
+    return [_source_entry_summary(row)]
+
+
+def _source_counts(source_entries: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+    counts: dict[tuple[str, str], int] = {}
+    order: list[tuple[str, str]] = []
+    for entry in source_entries:
+        key = (str(entry.get("source") or ""), str(entry.get("dictionary") or ""))
+        if key not in counts:
+            counts[key] = 0
+            order.append(key)
+        counts[key] += 1
+    return [
+        {"source": source, "dictionary": dictionary, "count": counts[(source, dictionary)]}
+        for source, dictionary in order
+    ]
 
 
 def _list_cdsl(
@@ -895,7 +1237,6 @@ def _neighborhood_cdsl(
                 anchor = _best_anchor(anchor_items, query)
             if anchor is None:
                 return []
-            anchor_sort = str(anchor["sort_key"])
             metadata = cast(Mapping[str, object], anchor.get("metadata") or {})
             anchor_lnum = _as_float(metadata.get("lnum"))
             before_rows = conn.execute(
@@ -904,11 +1245,11 @@ def _neighborhood_cdsl(
                 FROM headwords h
                 JOIN entries e ON e.dict_id = h.dict_id AND e.lnum = h.lnum
                 WHERE h.dict_id = ? AND h.is_primary = true
-                  AND (h.key_normalized < ? OR (h.key_normalized = ? AND h.lnum < ?))
-                ORDER BY h.key_normalized DESC, h.lnum DESC, h.hom DESC NULLS LAST
+                  AND h.lnum < ?
+                ORDER BY h.lnum DESC, h.hom DESC NULLS LAST
                 LIMIT ?
                 """,
-                [dict_id.upper(), anchor_sort, anchor_sort, anchor_lnum, radius],
+                [dict_id.upper(), anchor_lnum, radius],
             ).fetchall()
             after_rows = conn.execute(
                 """
@@ -916,11 +1257,11 @@ def _neighborhood_cdsl(
                 FROM headwords h
                 JOIN entries e ON e.dict_id = h.dict_id AND e.lnum = h.lnum
                 WHERE h.dict_id = ? AND h.is_primary = true
-                  AND (h.key_normalized > ? OR (h.key_normalized = ? AND h.lnum > ?))
-                ORDER BY h.key_normalized, h.lnum, h.hom NULLS FIRST
+                  AND h.lnum > ?
+                ORDER BY h.lnum, h.hom NULLS FIRST
                 LIMIT ?
                 """,
-                [dict_id.upper(), anchor_sort, anchor_sort, anchor_lnum, radius],
+                [dict_id.upper(), anchor_lnum, radius],
             ).fetchall()
     except Exception as exc:  # noqa: BLE001
         _warn_error(warnings, "cdsl", path, exc)
@@ -1247,6 +1588,130 @@ def _wheel_gaffiot(
     return [_gaffiot_item(row) for row in rows]
 
 
+def _list_whitakers(
+    path: Path,
+    *,
+    prefix: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "whitakers", path)
+        return []
+    params: list[object] = []
+    where = ""
+    if prefix:
+        norm = normalize_gaffiot_headword(prefix)
+        where = (
+            "WHERE headword_norm LIKE ? OR lower(source_stem) LIKE ? OR lower(headword_raw) LIKE ?"
+        )
+        params.extend([f"{norm}%", f"{norm}%", f"{norm}%"])
+    sql = f"""
+        SELECT entry_id, headword_raw, headword_norm, source_stem, pos, codes
+        FROM entries
+        {where}
+        ORDER BY headword_norm, entry_id
+    """
+    if limit > 0:
+        sql += " LIMIT ?"
+        params.append(limit)
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(sql, params).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "whitakers", path, exc)
+        return []
+    return [_whitakers_item(row) for row in rows]
+
+
+def _neighborhood_whitakers(
+    path: Path,
+    *,
+    query: str,
+    radius: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "whitakers", path)
+        return []
+    keys = _query_keys(query)
+    if not keys:
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            anchor_rows = conn.execute(
+                f"""
+                SELECT entry_id, headword_raw, headword_norm, source_stem, pos, codes
+                FROM entries
+                WHERE lower(headword_norm) IN ({_placeholders(keys)})
+                   OR lower(headword_raw) IN ({_placeholders(keys)})
+                   OR lower(source_stem) IN ({_placeholders(keys)})
+                ORDER BY headword_norm, entry_id
+                LIMIT 50
+                """,
+                [*keys, *keys, *keys],
+            ).fetchall()
+            anchor = _best_anchor([_whitakers_item(row) for row in anchor_rows], query)
+            if anchor is None:
+                return []
+            metadata = cast(Mapping[str, object], anchor.get("metadata") or {})
+            anchor_sort = str(anchor["sort_key"])
+            entry_id = _as_int(metadata.get("entry_id"))
+            before_rows = conn.execute(
+                """
+                SELECT entry_id, headword_raw, headword_norm, source_stem, pos, codes
+                FROM entries
+                WHERE headword_norm < ? OR (headword_norm = ? AND entry_id < ?)
+                ORDER BY headword_norm DESC, entry_id DESC
+                LIMIT ?
+                """,
+                [anchor_sort, anchor_sort, entry_id, radius],
+            ).fetchall()
+            after_rows = conn.execute(
+                """
+                SELECT entry_id, headword_raw, headword_norm, source_stem, pos, codes
+                FROM entries
+                WHERE headword_norm > ? OR (headword_norm = ? AND entry_id > ?)
+                ORDER BY headword_norm, entry_id
+                LIMIT ?
+                """,
+                [anchor_sort, anchor_sort, entry_id, radius],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "whitakers", path, exc)
+        return []
+    before = [_whitakers_item(row) for row in reversed(before_rows)]
+    after = [_whitakers_item(row) for row in after_rows]
+    return [_neighborhood(anchor, before=before, after=after, radius=radius, query=query)]
+
+
+def _wheel_whitakers(
+    path: Path,
+    *,
+    seed: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "whitakers", path)
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(
+                """
+                SELECT entry_id, headword_raw, headword_norm, source_stem, pos, codes
+                FROM entries
+                ORDER BY hash(headword_norm || ?), headword_norm, entry_id
+                LIMIT ?
+                """,
+                [seed, limit],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "whitakers", path, exc)
+        return []
+    return [_whitakers_item(row) for row in rows]
+
+
 def _list_diogenes(
     path: Path,
     *,
@@ -1520,6 +1985,38 @@ def _gaffiot_item(row: Sequence[object]) -> dict[str, object]:
     )
 
 
+def _whitakers_item(row: Sequence[object]) -> dict[str, object]:
+    entry_id_raw = row[0]
+    entry_id = int(entry_id_raw) if isinstance(entry_id_raw, int | float | str) else 0
+    headword_raw = str(row[1] or "")
+    headword_norm = str(row[2] or normalize_gaffiot_headword(headword_raw))
+    source_stem = str(row[3] or "")
+    pos = str(row[4] or "")
+    codes = str(row[5] or "")
+    return _item(
+        language="lat",
+        source="whitakers",
+        dictionary="whitakers",
+        canonical_name=headword_raw or headword_norm,
+        canonical_key=_plain_index_key(headword_norm),
+        source_name=headword_raw or headword_norm,
+        lookup=headword_norm,
+        display_primary=headword_raw or headword_norm,
+        transliteration=headword_norm,
+        source_key=source_stem or headword_norm,
+        sort_key=headword_norm,
+        source_order_key=_order_key(headword_norm, entry_id),
+        source_ref=f"whitakers:{entry_id}",
+        extra={
+            "entry_id": entry_id,
+            "headword_norm": headword_norm,
+            "source_stem": source_stem,
+            "pos": pos,
+            "codes": codes,
+        },
+    )
+
+
 def _diogenes_item(row: Sequence[object]) -> dict[str, object]:
     language = cast(LanguageCode, str(row[0] or "lat"))
     dictionary = str(row[1] or ("lsj" if language == "grc" else "lewis_short"))
@@ -1571,9 +2068,29 @@ def _item(  # noqa: PLR0913
     source_ref: str,
     extra: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    lexeme_id = _lexeme_id(language, canonical_key)
-    wheel_id = _wheel_id(language, canonical_key)
-    wheel_order_key = _wheel_order_key(language, canonical_key)
+    native_order_key = _native_order_key(
+        language=language,
+        source=source,
+        source_name=source_name,
+        lookup=lookup,
+        transliteration=transliteration,
+        source_key=source_key,
+        sort_key=sort_key,
+        canonical_key=canonical_key,
+    )
+    lexeme_key = _lexeme_key(
+        language=language,
+        source=source,
+        source_name=source_name,
+        lookup=lookup,
+        transliteration=transliteration,
+        source_key=source_key,
+        sort_key=sort_key,
+        canonical_key=canonical_key,
+    )
+    lexeme_id = _lexeme_id(language, canonical_key, lexeme_key)
+    wheel_id = _wheel_id(language, canonical_key, lexeme_key)
+    wheel_order_key = _wheel_order_key(language, canonical_key, lexeme_key)
     source_order_id = _source_order_id(
         language=language,
         source=source,
@@ -1599,6 +2116,7 @@ def _item(  # noqa: PLR0913
         "kind": "headword",
         "canonical_name": canonical_name,
         "canonical_key": canonical_key,
+        "lexeme_key": lexeme_key,
         "source_name": source_name,
         "lookup": lookup,
         "display": {
@@ -1607,6 +2125,7 @@ def _item(  # noqa: PLR0913
             "source_key": source_key,
         },
         "sort_key": sort_key,
+        "native_order_key": native_order_key,
         "source_order_key": source_order_key,
         "source_ref": source_ref,
         "order": _source_native_order_metadata(
@@ -1618,6 +2137,7 @@ def _item(  # noqa: PLR0913
         ),
         "ids": {
             "lexeme": lexeme_id,
+            "lexeme_key": lexeme_key,
             "wheel": wheel_id,
             "index_entry": index_entry_id,
             "source_order": source_order_id,
@@ -1634,19 +2154,87 @@ def _item(  # noqa: PLR0913
     return payload
 
 
-def _lexeme_id(language: LanguageCode, canonical_key: str) -> str:
+def _lexeme_id(language: LanguageCode, canonical_key: str, lexeme_key: str) -> str:
     key = _id_component(canonical_key)
+    if _lexeme_id_needs_digest(language, lexeme_key):
+        digest = hashlib.sha256(f"{language}\x1f{lexeme_key}".encode()).hexdigest()[:8]
+        return f"lexeme:{language}:{key}:{digest}"
     return f"lexeme:{language}:{key}"
 
 
-def _wheel_id(language: LanguageCode, canonical_key: str) -> str:
+def _wheel_id(language: LanguageCode, canonical_key: str, lexeme_key: str) -> str:
     key = _id_component(canonical_key)
-    digest = hashlib.sha256(f"{language}\x1f{canonical_key}".encode()).hexdigest()[:10]
+    digest = hashlib.sha256(f"{language}\x1f{lexeme_key}".encode()).hexdigest()[:10]
     return f"wheel:{language}:{key}:{digest}"
 
 
-def _wheel_order_key(language: LanguageCode, canonical_key: str) -> str:
+def _wheel_order_key(language: LanguageCode, canonical_key: str, lexeme_key: str) -> str:
+    if _lexeme_id_needs_digest(language, lexeme_key):
+        digest = hashlib.sha256(f"{language}\x1f{lexeme_key}".encode()).hexdigest()[:8]
+        return _order_key(_LANGUAGE_ORDER.get(language, 9), language, canonical_key, digest)
     return _order_key(_LANGUAGE_ORDER.get(language, 9), language, canonical_key)
+
+
+def _lexeme_key(  # noqa: PLR0913
+    *,
+    language: LanguageCode,
+    source: str,
+    source_name: str,
+    lookup: str,
+    transliteration: str,
+    source_key: str,
+    sort_key: str,
+    canonical_key: str,
+) -> str:
+    if language != "san":
+        return canonical_key
+    candidates = (
+        source_name if source == "cdsl" else "",
+        transliteration,
+        source_key,
+        lookup,
+        sort_key,
+        canonical_key,
+    )
+    for candidate in candidates:
+        slp1 = _sanskrit_order_slp1(candidate)
+        if slp1:
+            return slp1
+    return canonical_key
+
+
+def _lexeme_id_needs_digest(language: LanguageCode, lexeme_key: str) -> bool:
+    return language == "san" and any(char in lexeme_key for char in "MHRNYwWqQSzfxFX")
+
+
+def _native_order_key(  # noqa: PLR0913
+    *,
+    language: LanguageCode,
+    source: str,
+    source_name: str,
+    lookup: str,
+    transliteration: str,
+    source_key: str,
+    sort_key: str,
+    canonical_key: str,
+) -> str:
+    if language == "san":
+        candidates = (
+            source_name if source == "cdsl" else "",
+            transliteration,
+            source_key,
+            lookup,
+            sort_key,
+            canonical_key,
+        )
+        for candidate in candidates:
+            slp1 = _sanskrit_order_slp1(candidate)
+            if slp1:
+                return _sanskrit_native_order_key(slp1)
+        return _sanskrit_native_order_key(canonical_key)
+    if language == "grc":
+        return _plain_index_key(sort_key or lookup or canonical_key)
+    return _plain_index_key(sort_key or canonical_key or lookup)
 
 
 def _index_entry_id(
@@ -1777,6 +2365,30 @@ def _merged_neighborhood_order_metadata(
     }
 
 
+def _integrated_language_native_order_metadata(
+    *,
+    language: str,
+    query: str,
+    anchor_status: str,
+) -> dict[str, str]:
+    collation = {
+        "san": "sa-varga",
+        "grc": "grc-lexical",
+        "lat": "lat-lexical",
+    }.get(language, "canonical-key")
+    return {
+        "policy": "language-native",
+        "label": f"{_language_order_label(language)} integrated native order",
+        "collation": collation,
+        "key": query,
+        "display_key": query,
+        "explanation": (
+            f"Integrated neighborhoods collapse source entries into lexeme cards and order "
+            f"them by the language-native key. The selected anchor is {anchor_status}."
+        ),
+    }
+
+
 def _grouped_neighborhood_order_metadata(
     neighborhoods: Sequence[Mapping[str, object]],
 ) -> dict[str, str]:
@@ -1847,6 +2459,71 @@ def _list_payload_order(
         "explanation": (
             "`word-index list` preserves each source's indexed order within the requested "
             "source and prefix window."
+        ),
+    }
+
+
+def _browse_payload_order(*, language: str, source: str, prefix: str) -> dict[str, str]:
+    normalized_source = source.strip().lower()
+    if normalized_source == "all":
+        return {
+            "policy": "grouped-source-native",
+            "label": f"{_language_order_label(language)} grouped source-native browse",
+            "collation": "source",
+            "key": prefix,
+            "display_key": prefix,
+            "explanation": (
+                "`word-index browse --source all` returns source/dictionary groups. "
+                "Each group preserves its own source-native order; groups are not "
+                "globally interleaved into a single native collation."
+            ),
+        }
+    return {
+        "policy": "source-native",
+        "label": f"{_language_order_label(language)} source-native browse",
+        "collation": _source_order_collation(language, normalized_source),
+        "key": prefix,
+        "display_key": prefix,
+        "explanation": (
+            "`word-index browse` preserves the requested source's indexed order "
+            "within the prefix window."
+        ),
+    }
+
+
+def _browse_group_order_metadata(
+    *,
+    language: LanguageCode,
+    source: str,
+    dictionary: str,
+    prefix: str,
+) -> dict[str, str]:
+    return {
+        "policy": "source-native",
+        "label": f"{_language_order_label(language)} {source}:{dictionary} browse order",
+        "collation": _source_order_collation(language, source),
+        "key": prefix,
+        "display_key": prefix,
+        "explanation": (
+            f"Rows in this group preserve {source}:{dictionary} source order for "
+            "the requested prefix. Compare groups separately unless a later "
+            "language-native interleaving policy is requested."
+        ),
+    }
+
+
+def _cross_dictionary_browse_order_metadata(card: Mapping[str, object]) -> dict[str, str]:
+    language = str(card.get("language") or "")
+    display = _display_key(card)
+    return {
+        "policy": "grouped-source-native",
+        "label": f"{_language_order_label(language)} cross-dictionary browse group",
+        "collation": "source",
+        "key": str(card.get("canonical_key") or ""),
+        "display_key": display,
+        "explanation": (
+            "This learner browse row groups matching source-native browse rows across "
+            "dictionaries. Inspect source_entries for each dictionary's exact source order."
         ),
     }
 
@@ -1922,6 +2599,15 @@ def _gaffiot_status(
     if "lat" not in languages:
         return None
     return _duckdb_status("gaffiot", "lat", "gaffiot", paths.gaffiot, "entries_fr")
+
+
+def _whitakers_status(
+    paths: WordIndexPaths,
+    languages: Sequence[LanguageCode],
+) -> dict[str, object] | None:
+    if "lat" not in languages:
+        return None
+    return _duckdb_status("whitakers", "lat", "whitakers", paths.whitakers, "entries")
 
 
 def _diogenes_statuses(
@@ -2108,6 +2794,9 @@ def _wheel_lexeme_cards(items: Sequence[dict[str, object]]) -> list[dict[str, ob
 def _wheel_lexeme_card(rows: Sequence[Mapping[str, object]]) -> dict[str, object]:
     primary = dict(rows[0])
     source_entries = [_source_entry_summary(row) for row in sorted(rows, key=_source_entry_key)]
+    native_order_keys = [
+        str(row.get("native_order_key") or "") for row in rows if row.get("native_order_key")
+    ]
     sources = [
         {"source": source, "dictionary": dictionary}
         for source, dictionary in dict.fromkeys(
@@ -2121,6 +2810,7 @@ def _wheel_lexeme_card(rows: Sequence[Mapping[str, object]]) -> dict[str, object
     primary["source_count"] = len(sources)
     primary["source_entry_count"] = len(source_entries)
     primary["sources"] = sources
+    primary["native_order_key"] = min(native_order_keys) if native_order_keys else ""
     primary["order"] = _lexeme_card_order_metadata(primary)
     return primary
 
@@ -2131,12 +2821,14 @@ def _source_entry_summary(row: Mapping[str, object]) -> dict[str, object]:
         "source_order_id": row.get("source_order_id") or "",
         "wheel_id": row.get("wheel_id") or "",
         "wheel_order_key": row.get("wheel_order_key") or "",
+        "lexeme_key": row.get("lexeme_key") or "",
         "source": row.get("source") or "",
         "dictionary": row.get("dictionary") or "",
         "source_name": row.get("source_name") or "",
         "source_display": row.get("source_name") or row.get("canonical_name") or "",
         "source_ref": row.get("source_ref") or "",
         "source_order_key": row.get("source_order_key") or "",
+        "native_order_key": row.get("native_order_key") or "",
         "order": row.get("order") or {},
         "display": row.get("display") or {},
         "encounter": row.get("encounter") or {},
@@ -2168,6 +2860,176 @@ def _canonical_item_order_key(item: Mapping[str, object]) -> tuple[str, int, str
         str(item.get("dictionary") or ""),
         str(item.get("source_ref") or ""),
     )
+
+
+def _language_native_card_order_key(item: Mapping[str, object]) -> tuple[int, str, str]:
+    language = str(item.get("language") or "")
+    canonical_key = str(item.get("canonical_key") or "")
+    language_rank = _LANGUAGE_ORDER.get(cast(LanguageCode, language), 9)
+    native_order_key = str(item.get("native_order_key") or "")
+    if native_order_key:
+        return (language_rank, native_order_key, canonical_key)
+    if language == "san":
+        return (language_rank, _sanskrit_native_card_order_key(item), canonical_key)
+    return (language_rank, canonical_key, str(item.get("lexeme_id") or ""))
+
+
+def _sanskrit_native_card_order_key(item: Mapping[str, object]) -> str:
+    for value in _sanskrit_native_order_candidates(item):
+        slp1 = _sanskrit_order_slp1(value)
+        if slp1:
+            return _sanskrit_native_order_key(slp1)
+    return _sanskrit_native_order_key(str(item.get("canonical_key") or ""))
+
+
+def _sanskrit_native_order_candidates(  # noqa: C901, PLR0912
+    item: Mapping[str, object],
+) -> list[str]:
+    candidates: list[str] = []
+    source_entries = item.get("source_entries")
+    if isinstance(source_entries, Sequence) and not isinstance(source_entries, (str, bytes)):
+        entries = [
+            cast(Mapping[str, object], entry)
+            for entry in source_entries
+            if isinstance(entry, Mapping)
+        ]
+        for entry in entries:
+            if entry.get("source") == "cdsl":
+                source_name = str(entry.get("source_name") or "").strip()
+                if source_name:
+                    candidates.append(source_name)
+        for entry in entries:
+            display = entry.get("display")
+            if isinstance(display, Mapping):
+                display_map = cast(Mapping[str, object], display)
+                transliteration = str(display_map.get("transliteration") or "").strip()
+                if transliteration:
+                    candidates.append(transliteration)
+                source_key = str(display_map.get("source_key") or "").strip()
+                if source_key:
+                    candidates.append(source_key)
+            source_name = str(entry.get("source_name") or "").strip()
+            if source_name:
+                candidates.append(source_name)
+    display = item.get("display")
+    if isinstance(display, Mapping):
+        display_map = cast(Mapping[str, object], display)
+        transliteration = str(display_map.get("transliteration") or "").strip()
+        if transliteration:
+            candidates.append(transliteration)
+        source_key = str(display_map.get("source_key") or "").strip()
+        if source_key:
+            candidates.append(source_key)
+    for field in ("source_name", "lookup", "canonical_name", "canonical_key"):
+        value = str(item.get(field) or "").strip()
+        if value:
+            candidates.append(value)
+    return list(dict.fromkeys(candidates))
+
+
+def _sanskrit_order_slp1(value: str) -> str:
+    text = (value or "").strip()
+    if not text:
+        return ""
+    plain = _plain_index_key(text)
+    plain_single = _sanskrit_plain_single_slp1(text)
+    if (
+        text.isascii()
+        and not any(marker in text for marker in (".", '"', "~"))
+        and plain_single
+        and any(marker in plain for marker in ("aa", "ii", "uu", "ai", "au", "rr", "ll", "sh"))
+    ):
+        return plain_single
+    with suppress(Exception):
+        converted = _to_slp1(text)
+        if converted:
+            return re.sub(r"[^A-Za-z]+", "", converted)
+    return plain_single or re.sub(r"[^A-Za-z]+", "", text)
+
+
+def _sanskrit_plain_single_slp1(value: str) -> str:
+    slots = _sanskrit_plain_slp1_slots(_plain_index_key(value))
+    if not slots:
+        return ""
+    return "".join(slot[0] for slot in slots)
+
+
+def _sanskrit_native_order_key(slp1: str) -> str:
+    clean = re.sub(r"[^A-Za-z]+", "", slp1)
+    slots = _sanskrit_native_order_slots()
+    out: list[str] = []
+    index = 0
+    while index < len(clean):
+        matched = False
+        for token, rank in slots:
+            if clean.startswith(token, index):
+                out.append(f"{rank:03d}")
+                index += len(token)
+                matched = True
+                break
+        if not matched:
+            out.append(f"999{ord(clean[index]):04d}")
+            index += 1
+    return ".".join(out)
+
+
+def _sanskrit_native_order_slots() -> list[tuple[str, int]]:
+    tokens = [
+        "a",
+        "A",
+        "i",
+        "I",
+        "u",
+        "U",
+        "f",
+        "F",
+        "x",
+        "X",
+        "e",
+        "E",
+        "o",
+        "O",
+        "M",
+        "H",
+        "k",
+        "K",
+        "g",
+        "G",
+        "N",
+        "c",
+        "C",
+        "j",
+        "J",
+        "Y",
+        "w",
+        "W",
+        "q",
+        "Q",
+        "R",
+        "t",
+        "T",
+        "d",
+        "D",
+        "n",
+        "p",
+        "P",
+        "b",
+        "B",
+        "m",
+        "y",
+        "r",
+        "l",
+        "v",
+        "S",
+        "z",
+        "s",
+        "h",
+        "kz",
+        "tr",
+        "jY",
+    ]
+    ranks = {token: rank for rank, token in enumerate(tokens, start=1)}
+    return sorted(ranks.items(), key=lambda item: (-len(item[0]), item[1]))
 
 
 def _item_order_key(item: Mapping[str, object]) -> tuple[int, int, str, str]:
@@ -2307,6 +3169,225 @@ def _merged_lexeme_neighborhood(  # noqa: C901, PLR0913
     }
 
 
+def _integrated_language_native_neighborhood(  # noqa: PLR0913
+    neighborhoods: Sequence[dict[str, object]],
+    *,
+    query: str,
+    radius: int,
+    languages: Sequence[LanguageCode],
+    source: str,
+    paths: WordIndexPaths,
+    warnings: list[dict[str, str]],
+) -> dict[str, object]:
+    rows = _integrated_candidate_rows(
+        neighborhoods,
+        query=query,
+        radius=radius,
+        languages=languages,
+        source=source,
+        paths=paths,
+        warnings=warnings,
+    )
+    cards = _wheel_lexeme_cards(rows)
+    cards.sort(key=_language_native_card_order_key)
+    anchor_card = _best_anchor(cards, query)
+    anchor_lexeme_id = str(anchor_card.get("lexeme_id") or "") if anchor_card else ""
+    anchor_status = "exact" if anchor_card and _is_exact_anchor(anchor_card, query) else "nearest"
+    if anchor_card is None:
+        anchor_status = "not_found"
+    selected = _select_merged_radius(cards, anchor_lexeme_id=anchor_lexeme_id, radius=radius)
+    for card in selected:
+        position = _integrated_position(
+            str(card.get("lexeme_id") or ""),
+            anchor_lexeme_id=anchor_lexeme_id,
+            cards=cards,
+        )
+        card["position"] = position
+        card["match"] = position == "anchor"
+    selected_anchor = next(
+        (card for card in selected if str(card.get("lexeme_id") or "") == anchor_lexeme_id),
+        anchor_card,
+    )
+    language_code = str(selected_anchor.get("language", "") if selected_anchor else "")
+    return {
+        "policy": "integrated_language_native",
+        "language": language_code,
+        "source": "all",
+        "dictionary": "integrated",
+        "anchor": selected_anchor,
+        "items": selected,
+        "groups": list(neighborhoods),
+        "radius": radius,
+        "neighborhood_kind": "integrated_language_native",
+        "anchor_status": anchor_status,
+        "order": _integrated_language_native_order_metadata(
+            language=language_code,
+            query=query,
+            anchor_status=anchor_status,
+        ),
+        "window": {
+            "policy": "integrated_language_native",
+            "contiguous": False,
+            "collapsed": True,
+            "before_count": sum(1 for item in selected if item.get("position") == "before"),
+            "after_count": sum(1 for item in selected if item.get("position") == "after"),
+            "source_group_count": len(neighborhoods),
+            "lexeme_count": len(selected),
+        },
+    }
+
+
+def _integrated_candidate_rows(  # noqa: PLR0913
+    neighborhoods: Sequence[dict[str, object]],
+    *,
+    query: str,
+    radius: int,
+    languages: Sequence[LanguageCode],
+    source: str,
+    paths: WordIndexPaths,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    rows = _neighborhood_source_rows(neighborhoods)
+    limit = _integrated_candidate_prefix_limit(radius)
+    for prefix in _integrated_candidate_prefixes(
+        query=query,
+        languages=languages,
+        neighborhoods=neighborhoods,
+    ):
+        rows.extend(
+            _collect_items(
+                languages=languages,
+                source=source,
+                prefix=prefix,
+                limit=limit,
+                paths=paths,
+                warnings=warnings,
+            )
+        )
+    return _unique_source_rows(rows)
+
+
+def _neighborhood_source_rows(
+    neighborhoods: Sequence[dict[str, object]],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for neighborhood in neighborhoods:
+        for key in ("anchor",):
+            value = neighborhood.get(key)
+            if isinstance(value, Mapping):
+                rows.append(dict(cast(Mapping[str, object], value)))
+        for key in ("before", "after"):
+            values = neighborhood.get(key)
+            if not isinstance(values, Sequence) or isinstance(values, (str, bytes)):
+                continue
+            for value in values:
+                if isinstance(value, Mapping):
+                    rows.append(dict(cast(Mapping[str, object], value)))
+    return rows
+
+
+def _integrated_candidate_prefix_limit(radius: int) -> int:
+    return max(50, min(500, (radius + 1) * 50))
+
+
+def _integrated_candidate_prefixes(
+    *,
+    query: str,
+    languages: Sequence[LanguageCode],
+    neighborhoods: Sequence[dict[str, object]],
+) -> list[str]:
+    language = languages[0] if len(languages) == 1 else "all"
+    anchor = _best_anchor(
+        [
+            cast(dict[str, object], neighborhood["anchor"])
+            for neighborhood in neighborhoods
+            if isinstance(neighborhood.get("anchor"), Mapping)
+        ],
+        query,
+    )
+    seed = _integrated_prefix_seed(query=query, language=language, anchor=anchor)
+    if language == "san":
+        return _sanskrit_integrated_prefixes(seed)
+    if language == "grc":
+        return _alphabetic_integrated_prefixes(seed, alphabet="abcdefghijklmnopqrstuvwxyz")
+    if language == "lat":
+        return _alphabetic_integrated_prefixes(seed, alphabet="abcdefghijklmnopqrstuvwxyz")
+    return [seed] if seed else []
+
+
+def _integrated_prefix_seed(
+    *,
+    query: str,
+    language: LanguageCode | str,
+    anchor: Mapping[str, object] | None,
+) -> str:
+    if anchor is not None:
+        if language == "san":
+            return _sanskrit_order_slp1(
+                str(anchor.get("source_name") or "")
+                if anchor.get("source") == "cdsl"
+                else str(anchor.get("lookup") or anchor.get("canonical_key") or "")
+            )
+        return str(
+            anchor.get("sort_key") or anchor.get("lookup") or anchor.get("canonical_key") or ""
+        )
+    if language == "san":
+        return _sanskrit_order_slp1(query)
+    if language == "grc":
+        keys = sorted(_query_keys(query))
+        return keys[0] if keys else _plain_index_key(query)
+    return _plain_index_key(query)
+
+
+def _alphabetic_integrated_prefixes(seed: str, *, alphabet: str) -> list[str]:
+    if not seed:
+        return []
+    first = seed[:1].lower()
+    if first not in alphabet:
+        return [first]
+    index = alphabet.index(first)
+    prefixes = [alphabet[pos] for pos in (index - 1, index, index + 1) if 0 <= pos < len(alphabet)]
+    return list(dict.fromkeys(prefixes))
+
+
+def _sanskrit_integrated_prefixes(seed: str) -> list[str]:
+    token = _sanskrit_initial_order_token(seed)
+    if not token:
+        return []
+    order = _sanskrit_integrated_section_order()
+    if token not in order:
+        return _sanskrit_source_prefix_variants(token)
+    index = order.index(token)
+    prefixes: list[str] = []
+    for pos in (index - 1, index, index + 1):
+        if 0 <= pos < len(order):
+            prefixes.extend(_sanskrit_source_prefix_variants(order[pos]))
+    return list(dict.fromkeys(prefixes))
+
+
+def _sanskrit_initial_order_token(seed: str) -> str:
+    slp1 = _sanskrit_order_slp1(seed)
+    for token, _rank in _sanskrit_native_order_slots():
+        if slp1.startswith(token):
+            return token
+    return slp1[:1]
+
+
+def _sanskrit_source_prefix_variants(token: str) -> list[str]:
+    variants = [token]
+    iast = _slp1_to_iast(token)
+    if iast and iast != token:
+        variants.append(iast)
+        variants.append(_plain_index_key(iast))
+    return [variant for variant in dict.fromkeys(variants) if variant]
+
+
+def _sanskrit_integrated_section_order() -> list[str]:
+    return [
+        token for token, _rank in sorted(_sanskrit_native_order_slots(), key=lambda item: item[1])
+    ]
+
+
 def _hydrate_merged_anchor_card(
     card: dict[str, object],
     *,
@@ -2397,6 +3478,22 @@ def _select_merged_radius(
     return list(cards[start:end])
 
 
+def _integrated_position(
+    lexeme_id: str,
+    *,
+    anchor_lexeme_id: str,
+    cards: Sequence[Mapping[str, object]],
+) -> str:
+    if lexeme_id == anchor_lexeme_id:
+        return "anchor"
+    positions = {str(card.get("lexeme_id") or ""): index for index, card in enumerate(cards)}
+    current = positions.get(lexeme_id, -1)
+    anchor = positions.get(anchor_lexeme_id, -1)
+    if current < 0 or anchor < 0:
+        return "nearby"
+    return "before" if current < anchor else "after"
+
+
 def _neighborhood(
     anchor: dict[str, object],
     *,
@@ -2447,15 +3544,19 @@ def _is_exact_anchor(item: Mapping[str, object], query: str) -> bool:
 
 
 def _anchor_score(item: Mapping[str, object], query: str) -> int:
-    query_norm = query.strip().lower()
-    if not query_norm:
+    query_raw = query.strip()
+    query_norm = query_raw.lower()
+    if not query_raw:
         return 0
     query_dico = normalize_dico_headword(query_norm)
     query_plain = _plain_index_key(query_norm)
     query_keys = _match_keys(query_norm)
     expanded_query_keys = _expanded_query_keys(query_norm)
     canonical_key = str(item.get("canonical_key") or "").strip().lower()
-    source_name = str(item.get("source_name") or "").strip().lower()
+    source_name_raw = str(item.get("source_name") or "").strip()
+    if source_name_raw == query_raw:
+        return 130
+    source_name = source_name_raw.lower()
     initial_score = _direct_anchor_score(
         canonical_key=canonical_key,
         source_name=source_name,
@@ -2604,18 +3705,7 @@ def _sanskrit_section_source_prefix(query: str) -> str | None:
 
 
 def _cdsl_prefix_predicate(prefix: str) -> tuple[str, list[object]]:
-    exact_sql, exact_params = _cdsl_exact_prefix_predicate(prefix)
-    lower_values = sorted(
-        {value.lower() for value in [prefix.strip(), *_cdsl_prefix_values(prefix)] if value}
-    )
-    lower_parts: list[str] = []
-    lower_params: list[object] = []
-    for column in ("h.key_normalized", "h.search_key", "h.key"):
-        for value in lower_values:
-            lower_parts.append(f"lower({column}) LIKE ?")
-            lower_params.append(f"{value}%")
-    parts = [part for part in [exact_sql, " OR ".join(lower_parts)] if part]
-    return " OR ".join(parts) or "false", [*exact_params, *lower_params]
+    return _cdsl_exact_prefix_predicate(prefix)
 
 
 def _cdsl_exact_prefix_predicate(prefix: str) -> tuple[str, list[object]]:
@@ -2628,10 +3718,9 @@ def _cdsl_exact_prefix_predicate(prefix: str) -> tuple[str, list[object]]:
             params.extend([len(value), value])
         return " OR ".join(parts), params
 
-    for column in ("h.key", "h.key_normalized", "h.search_key"):
-        for value in values:
-            parts.append(f"{column} LIKE ?")
-            params.append(f"{value}%")
+    for value in values:
+        parts.append("h.key LIKE ?")
+        params.append(f"{value}%")
     return " OR ".join(parts), params
 
 
@@ -2677,7 +3766,12 @@ def _sanskrit_plain_slp1_keys(query: str, *, max_variants: int = 64) -> set[str]
     return {variant.lower() for variant in variants if variant}
 
 
-def _sanskrit_plain_slp1_slots(plain: str) -> list[tuple[str, ...]]:
+def _sanskrit_plain_slp1_slots(plain: str) -> list[tuple[str, ...]]:  # noqa: C901, PLR0912
+    if plain == "rr":
+        return [("F",)]
+    if plain == "ll":
+        return [("X",)]
+
     slots: list[tuple[str, ...]] = []
     index = 0
     while index < len(plain):
@@ -2692,6 +3786,14 @@ def _sanskrit_plain_slp1_slots(plain: str) -> list[tuple[str, ...]]:
             continue
         if pair == "uu":
             slots.append(("U",))
+            index += 2
+            continue
+        if pair == "ai":
+            slots.append(("E",))
+            index += 2
+            continue
+        if pair == "au":
+            slots.append(("O",))
             index += 2
             continue
         if pair == "sh":

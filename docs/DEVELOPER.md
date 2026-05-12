@@ -81,7 +81,9 @@ just cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffi
 
 Use `--translation-mode auto` only when you intentionally want to populate
 missing DICO/Gaffiot translations through OpenRouter. It may be slow on long
-entries and requires `OPENAI_API_KEY` on cache misses.
+entries and requires `OPENAI_API_KEY` on cache misses. The default translation
+model is `openai:deepseek/deepseek-v4-flash`; override with
+`--translation-model` when comparing model quality or cost.
 
 ## Runtime Pipeline
 

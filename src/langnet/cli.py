@@ -132,6 +132,8 @@ from langnet.translation import (
     translation_cache_status_counts,
 )
 from langnet.word_index import (
+    WordIndexHomographs,
+    word_index_browse_payload,
     word_index_list_payload,
     word_index_neighborhood_payload,
     word_index_sections_payload,
@@ -157,6 +159,8 @@ ENCOUNTER_JSON_ERROR_SCHEMA_VERSION = "langnet.encounter.error.v1"
 DATABASE_BUSY_RETRY_AFTER_MS = 1500
 TRANSLATION_CACHE_SCHEMA_VERSION = "langnet.translation_cache.v1"
 DOCTOR_SCHEMA_VERSION = "langnet.doctor.v1"
+DEFAULT_TRANSLATION_MODEL = "openai:deepseek/deepseek-v4-flash"
+DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-3.1-pro-preview"
 WORD_INDEX_CONTEXT_RADIUS = 1
 WORD_INDEX_SOURCES = {"all", "cdsl", "dico", "gaffiot", "diogenes"}
 
@@ -984,6 +988,52 @@ def word_index_list(  # noqa: PLR0913
     _emit_word_index_payload(payload, output=output)
 
 
+@word_index_cli.command("browse")
+@click.argument("language")
+@click.option(
+    "--source",
+    default="all",
+    show_default=True,
+    help="Source filter: all, cdsl, dico, gaffiot, or diogenes.",
+)
+@click.option("--prefix", default="", help="Optional source-native browse prefix.")
+@click.option("--limit", default=50, show_default=True, type=click.IntRange(1, 500))
+@click.option(
+    "--homographs",
+    type=click.Choice(["grouped", "raw"]),
+    default="grouped",
+    show_default=True,
+    help="Group adjacent homographs or preserve raw source rows.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def word_index_browse(  # noqa: PLR0913
+    language: str,
+    source: str,
+    prefix: str,
+    limit: int,
+    homographs: str,
+    output: str,
+) -> None:
+    """Browse indexed headwords in grouped source-native order."""
+    try:
+        payload = word_index_browse_payload(
+            language,
+            source=source,
+            prefix=prefix,
+            limit=limit,
+            homographs=cast(WordIndexHomographs, homographs),
+        )
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    _emit_word_index_payload(payload, output=output)
+
+
 @word_index_cli.command("neighborhood")
 @click.argument("language")
 @click.argument("query")
@@ -1107,7 +1157,7 @@ def word_index_wheel(  # noqa: PLR0913
     _emit_word_index_payload(payload, output=output)
 
 
-def _emit_word_index_payload(payload: Mapping[str, object], *, output: str) -> None:  # noqa: C901
+def _emit_word_index_payload(payload: Mapping[str, object], *, output: str) -> None:
     if output == "json":
         click.echo(orjson.dumps(dict(payload), option=orjson.OPT_INDENT_2).decode("utf-8"))
         return
@@ -1115,34 +1165,83 @@ def _emit_word_index_payload(payload: Mapping[str, object], *, output: str) -> N
     mode = request.get("mode")
     click.echo(f"Word index: {mode}")
     sources = payload.get("sources")
-    if mode == "sources" and isinstance(sources, Sequence):
-        for source in sources:
-            if not isinstance(source, Mapping):
-                continue
-            source_map = cast(Mapping[str, object], source)
-            status = "available" if source_map.get("available") else "missing"
-            count = source_map.get("entry_count")
-            click.echo(
-                f"- {source_map.get('language')}:"
-                f"{source_map.get('source')}:"
-                f"{source_map.get('dictionary')} "
-                f"{status} entries={count}"
-            )
+    if mode == "sources":
+        _echo_word_index_sources(sources)
         return
+    groups = payload.get("groups")
     items = payload.get("items")
-    if isinstance(items, Sequence):
-        for item in items:
-            if isinstance(item, Mapping):
-                click.echo(_word_index_item_line(cast(Mapping[str, object], item)))
+    if mode == "browse":
+        if _has_sequence_items(items):
+            click.echo("Learner browse:")
+            _echo_word_index_items(items, indent="  ")
+            click.echo("Source groups:")
+        _echo_word_index_browse_groups(groups)
+    else:
+        _echo_word_index_items(items)
     neighborhood = payload.get("neighborhood")
     if isinstance(neighborhood, Mapping):
         _echo_word_index_neighborhood(cast(Mapping[str, object], neighborhood))
-    warnings = payload.get("warnings")
-    if isinstance(warnings, Sequence):
-        for warning in warnings:
-            if isinstance(warning, Mapping):
-                warning_map = cast(Mapping[str, object], warning)
-                click.echo(f"Warning: {warning_map.get('message')}", err=True)
+    _echo_word_index_warnings(payload.get("warnings"))
+
+
+def _echo_word_index_sources(sources: object) -> None:
+    if not isinstance(sources, Sequence) or isinstance(sources, (str, bytes)):
+        return
+    for source in sources:
+        if not isinstance(source, Mapping):
+            continue
+        source_map = cast(Mapping[str, object], source)
+        status = "available" if source_map.get("available") else "missing"
+        count = source_map.get("entry_count")
+        click.echo(
+            f"- {source_map.get('language')}:"
+            f"{source_map.get('source')}:"
+            f"{source_map.get('dictionary')} "
+            f"{status} entries={count}"
+        )
+
+
+def _has_sequence_items(value: object) -> bool:
+    return isinstance(value, Sequence) and not isinstance(value, (str, bytes)) and bool(value)
+
+
+def _echo_word_index_items(items: object, *, indent: str = "") -> None:
+    if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
+        return
+    for item in items:
+        if isinstance(item, Mapping):
+            click.echo(
+                f"{indent}{_word_index_item_line_with_count(cast(Mapping[str, object], item))}"
+            )
+
+
+def _echo_word_index_warnings(warnings: object) -> None:
+    if not isinstance(warnings, Sequence) or isinstance(warnings, (str, bytes)):
+        return
+    for warning in warnings:
+        if isinstance(warning, Mapping):
+            warning_map = cast(Mapping[str, object], warning)
+            click.echo(f"Warning: {warning_map.get('message')}", err=True)
+
+
+def _echo_word_index_browse_groups(groups: object) -> None:
+    if not isinstance(groups, Sequence) or isinstance(groups, (str, bytes)):
+        return
+    for group in groups:
+        if not isinstance(group, Mapping):
+            continue
+        group_map = cast(Mapping[str, object], group)
+        click.echo(
+            f"{group_map.get('language')}:{group_map.get('source')}:"
+            f"{group_map.get('dictionary')} prefix={group_map.get('prefix')}"
+        )
+        group_items = group_map.get("items")
+        if isinstance(group_items, Sequence) and not isinstance(group_items, (str, bytes)):
+            for item in group_items:
+                if not isinstance(item, Mapping):
+                    continue
+                item_map = cast(Mapping[str, object], item)
+                click.echo(f"  {_word_index_item_line_with_count(item_map)}")
 
 
 def _emit_word_index_sections_payload(payload: Mapping[str, object], *, output: str) -> None:
@@ -1189,6 +1288,13 @@ def _word_index_item_line(item: Mapping[str, object]) -> str:
     return f"- {item.get('language')}:{source_label} {romanized}{suffix}"
 
 
+def _word_index_item_line_with_count(item: Mapping[str, object]) -> str:
+    line = _word_index_item_line(item)
+    count = item.get("homograph_count")
+    suffix = f" [{count} entries]" if isinstance(count, int) and count > 1 else ""
+    return f"{line}{suffix}"
+
+
 def _word_index_source_label(item: Mapping[str, object]) -> str:
     source_count = item.get("source_count")
     if not isinstance(source_count, int) or source_count <= 1:
@@ -1212,10 +1318,10 @@ def _word_index_source_label(item: Mapping[str, object]) -> str:
 
 
 def _echo_word_index_neighborhood(neighborhood: Mapping[str, object]) -> None:  # noqa: C901
-    if neighborhood.get("policy") == "merged_lexeme":
+    if neighborhood.get("policy") in {"merged_lexeme", "integrated_language_native"}:
+        policy = neighborhood.get("policy")
         click.echo(
-            f"Neighborhood: {neighborhood.get('language')}:"
-            f"{neighborhood.get('source')} merged_lexeme"
+            f"Neighborhood: {neighborhood.get('language')}:{neighborhood.get('source')} {policy}"
         )
         items = neighborhood.get("items")
         if isinstance(items, Sequence) and not isinstance(items, (str, bytes)):
@@ -2101,7 +2207,7 @@ def _print_word_recommendations(payload: Mapping[str, object]) -> None:
 )
 @click.option(
     "--recommendation-model",
-    default="openai:google/gemini-3.1-pro-preview",
+    default=DEFAULT_RECOMMENDATION_MODEL,
     show_default=True,
     help="Model id used for LLM candidate synthesis.",
 )
@@ -2131,7 +2237,7 @@ def _print_word_recommendations(payload: Mapping[str, object]) -> None:
 )
 @click.option(
     "--translation-model",
-    default="openai:google/gemini-3.1-pro-preview",
+    default=DEFAULT_TRANSLATION_MODEL,
     show_default=True,
 )
 @click.option(
@@ -5001,6 +5107,202 @@ def _encounter_word_index_candidate_is_useful(value: str) -> bool:
     return not re.fullmatch(r"\d+(?::\d+)+", candidate)
 
 
+def _encounter_actions(
+    *,
+    language: str,
+    text: str,
+    word_index: Mapping[str, object] | None,
+    paradigm_resolution: Mapping[str, object] | None,
+) -> list[dict[str, object]]:
+    actions: list[dict[str, object]] = []
+    actions.extend(_encounter_paradigm_actions(paradigm_resolution))
+    actions.extend(_encounter_word_index_actions(language=language, word_index=word_index))
+    return actions
+
+
+def _encounter_paradigm_actions(
+    paradigm_resolution: Mapping[str, object] | None,
+) -> list[dict[str, object]]:
+    if not isinstance(paradigm_resolution, Mapping):
+        return []
+    candidates = paradigm_resolution.get("candidates")
+    if not isinstance(candidates, Sequence) or isinstance(candidates, (str, bytes)):
+        return []
+    actions: list[dict[str, object]] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for index, candidate_raw in enumerate(candidates):
+        if not isinstance(candidate_raw, Mapping):
+            continue
+        candidate = cast(Mapping[str, object], candidate_raw)
+        request_raw = candidate.get("paradigm_request")
+        if not isinstance(request_raw, Mapping):
+            continue
+        request = cast(Mapping[str, object], request_raw)
+        source = str(request.get("source") or "")
+        language = str(request.get("language") or "")
+        lemma = str(request.get("lemma") or "")
+        kind = str(request.get("kind") or "")
+        if not language or not lemma or not kind:
+            continue
+        key = (source, language, lemma, kind)
+        if key in seen:
+            continue
+        seen.add(key)
+        action_request = _encounter_paradigm_action_request(request)
+        actions.append(
+            {
+                "kind": "view_paradigm",
+                "label": f"View {lemma} {kind}",
+                "status": "available",
+                "source": "paradigm_resolution",
+                "request": action_request,
+                "target": {
+                    "candidate_index": index,
+                    "lemma": lemma,
+                    "entry_type": candidate.get("entry_type") or "",
+                    "part_of_speech": candidate.get("part_of_speech") or "",
+                },
+            }
+        )
+    return actions
+
+
+def _encounter_paradigm_action_request(request: Mapping[str, object]) -> dict[str, object]:
+    language = str(request.get("language") or "")
+    lemma = str(request.get("lemma") or "")
+    kind = str(request.get("kind") or "")
+    source = str(request.get("source") or "")
+    options = dict(cast(Mapping[str, object], request.get("options") or {}))
+    argv = ["paradigm", language, lemma, "--kind", kind]
+    for key, value in options.items():
+        if value is None or value == "":
+            continue
+        argv.extend([f"--{key}", str(value)])
+    argv.extend(["--output", "json"])
+    return {
+        "command": "paradigm",
+        "language": language,
+        "lemma": lemma,
+        "kind": kind,
+        "source": source,
+        "options": options,
+        "argv": argv,
+    }
+
+
+def _encounter_word_index_actions(
+    *,
+    language: str,
+    word_index: Mapping[str, object] | None,
+) -> list[dict[str, object]]:
+    if not isinstance(word_index, Mapping):
+        return []
+    anchors = word_index.get("anchors")
+    if not isinstance(anchors, Sequence) or isinstance(anchors, (str, bytes)):
+        return []
+    actions: list[dict[str, object]] = []
+    seen_neighborhoods: set[tuple[str, str, str, str]] = set()
+    seen_sources: set[tuple[str, str, str, str]] = set()
+    for anchor_raw in anchors:
+        if not isinstance(anchor_raw, Mapping):
+            continue
+        anchor = cast(Mapping[str, object], anchor_raw)
+        query = str(anchor.get("query") or anchor.get("canonical_key") or "")
+        source = str(anchor.get("source") or "all")
+        dictionary = str(anchor.get("dictionary") or "")
+        anchor_language = str(anchor.get("language") or language)
+        if query:
+            key = (anchor_language, query, source, dictionary)
+            if key not in seen_neighborhoods:
+                seen_neighborhoods.add(key)
+                actions.append(_encounter_word_index_neighborhood_action(anchor, language=language))
+        index_entry_id = str(anchor.get("index_entry_id") or "")
+        source_ref = str(anchor.get("source_ref") or "")
+        if index_entry_id or source_ref:
+            key = (anchor_language, source, dictionary, index_entry_id or source_ref)
+            if key not in seen_sources:
+                seen_sources.add(key)
+                actions.append(_encounter_source_entry_action(anchor, language=language))
+    return actions
+
+
+def _encounter_word_index_neighborhood_action(
+    anchor: Mapping[str, object],
+    *,
+    language: str,
+) -> dict[str, object]:
+    action_language = str(anchor.get("language") or language)
+    query = str(anchor.get("query") or anchor.get("canonical_key") or "")
+    source = str(anchor.get("source") or "all")
+    argv = [
+        "word-index",
+        "nearby",
+        action_language,
+        query,
+        "--source",
+        source,
+        "--radius",
+        str(WORD_INDEX_CONTEXT_RADIUS),
+        "--output",
+        "json",
+    ]
+    return {
+        "kind": "open_word_index_neighborhood",
+        "label": f"Open {query} neighborhood",
+        "status": "available",
+        "source": "word_index",
+        "request": {
+            "command": "word-index nearby",
+            "language": action_language,
+            "query": query,
+            "source": source,
+            "radius": WORD_INDEX_CONTEXT_RADIUS,
+            "merge": "auto",
+            "argv": argv,
+        },
+        "target": _encounter_word_index_action_target(anchor),
+    }
+
+
+def _encounter_source_entry_action(
+    anchor: Mapping[str, object],
+    *,
+    language: str,
+) -> dict[str, object]:
+    action_language = str(anchor.get("language") or language)
+    source = str(anchor.get("source") or "")
+    dictionary = str(anchor.get("dictionary") or "")
+    source_ref = str(anchor.get("source_ref") or "")
+    index_entry_id = str(anchor.get("index_entry_id") or "")
+    label_key = str(anchor.get("canonical_key") or anchor.get("query") or source_ref)
+    return {
+        "kind": "inspect_source_entry",
+        "label": f"Inspect {label_key} source entry",
+        "status": "available",
+        "source": "word_index",
+        "request": {
+            "command": "inspect_source_entry",
+            "language": action_language,
+            "source": source,
+            "dictionary": dictionary,
+            "source_ref": source_ref,
+            "index_entry_id": index_entry_id,
+        },
+        "target": _encounter_word_index_action_target(anchor),
+    }
+
+
+def _encounter_word_index_action_target(anchor: Mapping[str, object]) -> dict[str, object]:
+    return {
+        "lexeme_id": anchor.get("lexeme_id") or "",
+        "index_entry_id": anchor.get("index_entry_id") or "",
+        "source_order_id": anchor.get("source_order_id") or "",
+        "source_order_key": anchor.get("source_order_key") or "",
+        "source_ref": anchor.get("source_ref") or "",
+        "anchor_status": anchor.get("anchor_status") or "",
+    }
+
+
 def _encounter_word_index_context(
     *,
     language: str,
@@ -5707,7 +6009,7 @@ main.add_command(translation_cache_cli)
 )
 @click.option(
     "--translation-model",
-    default="openai:google/gemini-3.1-pro-preview",
+    default=DEFAULT_TRANSLATION_MODEL,
     show_default=True,
     help="Model id used when computing translation cache keys.",
 )
@@ -5931,7 +6233,7 @@ def translation_warm(  # noqa: PLR0913, PLR0915
 )
 @click.option(
     "--translation-model",
-    default="openai:google/gemini-3.1-pro-preview",
+    default=DEFAULT_TRANSLATION_MODEL,
     show_default=True,
     help="Model id used when computing translation cache keys.",
 )
@@ -6222,12 +6524,23 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     preferred_lemmas,
                 ),
             )
+            paradigm_resolution_payload = None
             if include_paradigm_resolution:
-                payload["paradigm_resolution"] = _encounter_paradigm_resolution_payload(
+                paradigm_resolution_payload = _encounter_paradigm_resolution_payload(
                     language,
                     text,
                     morphology_claims,
                 )
+                payload["paradigm_resolution"] = paradigm_resolution_payload
+            actions = _encounter_actions(
+                language=language,
+                text=text,
+                word_index=cast(Mapping[str, object], payload.get("word_index") or {}),
+                paradigm_resolution=paradigm_resolution_payload,
+            )
+            payload["actions"] = actions
+            if isinstance(payload["display"], dict):
+                payload["display"]["actions"] = actions
             click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
             return
 
@@ -6503,7 +6816,7 @@ def _reader_eval_display(report: Mapping[str, object]) -> None:
 )
 @click.option(
     "--translation-model",
-    default="openai:google/gemini-3.1-pro-preview",
+    default=DEFAULT_TRANSLATION_MODEL,
     show_default=True,
     help="Model id used when computing translation cache keys.",
 )
