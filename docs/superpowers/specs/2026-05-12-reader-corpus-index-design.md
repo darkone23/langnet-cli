@@ -13,7 +13,7 @@ This supports the educational reader workflow: when a dictionary entry cites a p
 
 ## Scope
 
-The MVP builds a new offline reader artifact at `data/build/reader.duckdb`. It imports local corpora into a language-neutral schema, with CTS URNs treated as the preferred address format where available rather than as the only possible identity model.
+The MVP builds a reader catalog plus one local DuckDB artifact per imported book/work, rather than one database for an entire corpus. CTS URNs are treated as the preferred address format where available rather than as the only possible identity model.
 
 In scope:
 
@@ -23,7 +23,7 @@ In scope:
 - Sanskrit vault sources under `~/Classics-Data/sanskrit`, especially structured JSON and DCS/CONLLU material.
 - Curated, composed alias data for exact abbreviation and title matching.
 - CLI exploration by collection, work, segment, address, and exact alias.
-- Validation reports for missing targets, duplicate aliases, skipped files, and parser errors.
+- Validation reports for missing targets, duplicate aliases, skipped files, parser errors, and per-book database problems.
 
 Out of scope for the MVP:
 
@@ -72,20 +72,48 @@ Segments should preserve:
 - original text
 - normalized text for lookup/display support
 
-## Schema
+## Storage Layout
 
-The reader DuckDB artifact should contain these core tables:
+The storage layout should keep the global index small and make individual text artifacts easy to inspect, rebuild, move, or delete:
+
+```text
+data/build/reader/
+  catalog.duckdb
+  books/
+    perseus/greekLit/tlg0012/tlg002/perseus-grc2.duckdb
+    perseus/latinLit/phi0959/phi006/perseus-lat2.duckdb
+    digiliblt/dlt000001.duckdb
+    gretil/sa_kAlidAsa-raghuvaMza.duckdb
+```
+
+In this design, "book" means the smallest durable reader artifact LangNet imports as a standalone text database. For Perseus this is usually an edition/work file, even when the ancient work contains internal books such as `Odyssey` books 1-24. If a source already supplies a better standalone unit, an adapter may choose that source unit, but it must record the choice in catalog metadata.
+
+## Catalog Schema
+
+The catalog database at `data/build/reader/catalog.duckdb` should contain global discovery and routing tables:
 
 - `collections`: corpus families such as `perseus`, `digiliblt`, `gretil`, `vpc`, `dcs`, `phi`, and `tlg`.
 - `works`: language-neutral work metadata, including language, author, title, source collection, source ID, optional CTS work URN, and display labels.
 - `editions`: source edition/version metadata, optional CTS edition URN, source file path, and language.
-- `segments`: retrievable text units with segment ID, work ID, edition ID, segment kind, citation path, text, normalized text, and ordering fields.
-- `segment_addresses`: one-to-many addresses for each segment, including CTS URNs, LangNet URNs, source IDs, and citation strings.
+- `book_artifacts`: one row per per-book DuckDB file, including work ID, edition ID, source path, artifact path, segment count, token count, adapter name/version, source hash, and build status.
 - `aliases`: built alias rows loaded from curated files and discovered source metadata.
-- `tokens`: optional source-provided token rows, especially for Sanskrit JSON, GRETIL, and DCS/CONLLU inputs.
-- `build_sources`: source file, adapter name, adapter version, file hash, import status, row counts, and error details.
+- `build_sources`: source file, adapter name, adapter version, file hash, import status, row counts, artifact path, and error details.
 
 The schema should support a work index or metadata page without requiring AI-generated prose. A summary can be computed from structured metadata: collection, title, author, language, edition count, segment count, available address schemes, source paths, and known aliases.
+
+## Book Database Schema
+
+Each per-book DuckDB file should contain the text-bearing tables for one imported reader artifact:
+
+- `book_metadata`: title, author, language, collection, work ID, edition ID, source path, source hash, adapter name/version, and optional CTS work/edition URNs.
+- `segments`: retrievable text units with segment ID, segment kind, citation path, text, normalized text, and ordering fields.
+- `segment_addresses`: one-to-many addresses for each segment, including CTS URNs, LangNet URNs, source IDs, and citation strings.
+- `tokens`: optional source-provided token rows, especially for Sanskrit JSON, GRETIL, and DCS/CONLLU inputs.
+- `local_aliases`: optional aliases that are specific to this book artifact and are copied into the catalog during build.
+
+The catalog routes a lookup to the correct book database. The book database serves the actual text, segment addresses, and token rows.
+
+For direct segment retrieval, the catalog should only identify the relevant artifact. After that, a request such as "line 800 of this book" should be a lookup against that book's DuckDB file, not a scan of a corpus-wide segment table.
 
 ## Curated Aliases
 
@@ -118,7 +146,7 @@ aliases:
     sources: ["manual"]
 ```
 
-The builder composes all YAML files into the `aliases` table. Manual curated aliases supplement source-discovered aliases. Conflicts should be reported rather than silently hidden.
+The builder composes all YAML files into the catalog `aliases` table. Manual curated aliases supplement source-discovered aliases. Conflicts should be reported rather than silently hidden.
 
 The initial resolver should handle exact matches only:
 
@@ -135,6 +163,7 @@ The first CLI surface should be small and inspectable:
 
 ```bash
 just cli reader build
+just cli reader build-book Od.
 just cli reader collections
 just cli reader works --lang grc
 just cli reader summary Od.
@@ -148,10 +177,12 @@ For Sanskrit, the first version should support direct metadata and alias hits ra
 
 ```bash
 just cli reader summary "Śivasūtra"
-just cli reader segments <exact-work-id-or-alias>
+just cli reader segments "Śivasūtra"
 ```
 
 The CLI should make failure modes explicit. If an alias is ambiguous, missing, or points to a work without imported segments, the command should say so directly.
+
+`reader show` and `reader segments` should resolve through `catalog.duckdb`, open only the relevant per-book database, and then read the text-bearing rows from that book database.
 
 ## Example Reference Flow
 
@@ -181,7 +212,7 @@ Adapters should be independent and testable:
 - `dcs_conllu`: parse DCS metadata, chapter files, line IDs, tokens, lemma IDs, occurrence IDs, and unsandhied forms where available.
 - `phi_tlg_legacy`: later adapter for PHI/TLG text dumps after a clear decoder boundary is designed.
 
-Each adapter should return normalized intermediate records rather than write arbitrary SQL directly. The builder owns database writes, validation, and stats.
+Each adapter should return normalized intermediate records rather than write arbitrary SQL directly. The builder owns database writes, validation, stats, and catalog registration. Rebuilding one book should not require rebuilding the whole corpus.
 
 ## Validation
 
@@ -191,6 +222,8 @@ The build should report:
 - aliases that point to missing works
 - works without segments
 - segments without addresses
+- catalog book artifact rows that point to missing DuckDB files
+- per-book DuckDB files that are missing required tables
 - duplicate addresses
 - edition/work mismatches
 - skipped files
@@ -207,7 +240,7 @@ Tests should use small fixtures, not the full local corpora:
 - minimal digilibLT-style TEI with paragraphs and page milestones
 - minimal Sanskrit JSON token-line fixture
 - minimal alias YAML files with both valid and conflicting aliases
-- a DuckDB integration test that verifies address lookup and exact alias resolution
+- a DuckDB integration test that verifies catalog lookup, per-book database opening, address lookup, and exact alias resolution
 
 The local full corpus can be used for manual verification through `just cli reader build`, but unit tests must remain fast and reproducible.
 
@@ -215,6 +248,7 @@ The local full corpus can be used for manual verification through `just cli read
 
 - Final LangNet reader URN syntax for non-CTS sources.
 - Whether the alias YAML parser uses an existing dependency or a small constrained YAML subset.
-- Whether `reader.duckdb` should embed copied CTS metadata or attach/read `cts_urn.duckdb` during build only.
+- Exact artifact boundary for sources where "book", "work", "edition", and file do not line up cleanly.
+- Whether `catalog.duckdb` should embed copied CTS metadata or attach/read `cts_urn.duckdb` during build only.
 - How much nearby context `reader show` should return by default.
 - Whether token rows are built in the first implementation pass or added after segment retrieval works.
