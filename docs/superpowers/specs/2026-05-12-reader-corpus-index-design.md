@@ -20,9 +20,10 @@ In scope:
 - Perseus canonical Greek and Latin TEI.
 - Existing `data/build/cts_urn.duckdb` metadata as an input for Greek/Latin work and edition metadata.
 - digilibLT TEI as a Latin supplement.
-- Sanskrit vault sources under `~/Classics-Data/sanskrit`, especially structured JSON and DCS/CONLLU material.
+- PHI/TLG legacy text dumps under `~/Classics-Data/phi-latin` and `~/Classics-Data/tlg_e`.
+- Sanskrit vault sources under `~/Classics-Data/sanskrit`, including GRETIL, VPC, DCS/CONLLU, local `texts/`, and translations.
 - Curated, composed alias data for exact abbreviation and title matching.
-- CLI exploration by collection, work, segment, address, and exact alias.
+- CLI exploration by collection, language, author, work, edition/book artifact, segment, address, and exact alias.
 - Validation reports for missing targets, duplicate aliases, skipped files, parser errors, and per-book database problems.
 
 Out of scope for the MVP:
@@ -38,9 +39,9 @@ Out of scope for the MVP:
 The local machine currently has several useful corpora:
 
 - `~/perseus`: Perseus `canonical-greekLit` and `canonical-latinLit` TEI. These files often include `refsDecl`, `cRefPattern`, `refState`, edition URNs, and line/book citation nodes.
-- `~/Classics-Data/phi-latin` and `~/Classics-Data/tlg_e`: PHI/TLG legacy text dumps with `.txt` and `.idt` files. These need a source-specific decoder and should follow after the TEI and Sanskrit adapters.
+- `~/Classics-Data/phi-latin` and `~/Classics-Data/tlg_e`: PHI/TLG legacy text dumps with `.txt` and `.idt` files. These need a source-specific decoder. The first adapter can preserve coarse sections and source markers before attempting perfect PHI/TLG citation recovery.
 - `~/Classics-Data/digiliblt`: Latin TEI files with rich text and page milestones.
-- `~/Classics-Data/sanskrit`: GRETIL, VPC, DCS, translations, JSON token-line corpora, and CONLLU-derived data.
+- `~/Classics-Data/sanskrit`: GRETIL, VPC, DCS, translations, local OCR/split text folders, JSON token-line corpora, and CONLLU-derived data.
 
 The existing `data/build/cts_urn.duckdb` remains valuable. The reader index should use it as metadata input, not replace it immediately.
 
@@ -93,6 +94,7 @@ In this design, "book" means the smallest durable reader artifact LangNet import
 The catalog database at `data/build/reader/catalog.duckdb` should contain global discovery and routing tables:
 
 - `collections`: corpus families such as `perseus`, `digiliblt`, `gretil`, `vpc`, `dcs`, `phi`, and `tlg`.
+- `authors`: language-neutral author/person/group rows derived from source metadata where available.
 - `works`: language-neutral work metadata, including language, author, title, source collection, source ID, optional CTS work URN, and display labels.
 - `editions`: source edition/version metadata, optional CTS edition URN, source file path, and language.
 - `book_artifacts`: one row per per-book DuckDB file, including work ID, edition ID, source path, artifact path, segment count, token count, adapter name/version, source hash, and build status.
@@ -165,9 +167,13 @@ The first CLI surface should be small and inspectable:
 just cli reader build
 just cli reader build-book Od.
 just cli reader collections
+just cli reader authors --lang grc
 just cli reader works --lang grc
+just cli reader works --author Homer
 just cli reader summary Od.
+just cli reader contents Od.
 just cli reader show urn:cts:greekLit:tlg0012.tlg002:3.74
+just cli reader show Od. --segment 3.74
 just cli reader resolve-address "Od. 3.74"
 just cli reader aliases --query Od
 just cli reader alias-check
@@ -182,7 +188,7 @@ just cli reader segments "Śivasūtra"
 
 The CLI should make failure modes explicit. If an alias is ambiguous, missing, or points to a work without imported segments, the command should say so directly.
 
-`reader show` and `reader segments` should resolve through `catalog.duckdb`, open only the relevant per-book database, and then read the text-bearing rows from that book database.
+Enumeration commands such as `collections`, `authors`, `works`, `summary`, and `contents` should read from `catalog.duckdb`. Retrieval commands such as `show` and `segments` should resolve through `catalog.duckdb`, open only the relevant per-book database, and then read the text-bearing rows from that book database.
 
 ## Example Reference Flow
 
@@ -209,8 +215,9 @@ Adapters should be independent and testable:
 - `perseus_tei`: parse CTS-capable TEI, editions, `refsDecl`, `div type="textpart"`, lines, paragraphs, and citation paths.
 - `digiliblt_tei`: parse TEI header metadata, paragraphs, page milestones, and source IDs.
 - `sanskrit_json`: parse GRETIL/VPC-style JSON line/token corpora.
+- `sanskrit_text`: parse plain text, split text, OCR text, and translation files into coarse line/paragraph segments with source-backed addresses.
 - `dcs_conllu`: parse DCS metadata, chapter files, line IDs, tokens, lemma IDs, occurrence IDs, and unsandhied forms where available.
-- `phi_tlg_legacy`: later adapter for PHI/TLG text dumps after a clear decoder boundary is designed.
+- `phi_tlg_legacy`: parse PHI/TLG `.txt`/`.idt` dumps into source-backed sections and segments. Fine-grained citation recovery can improve over time, but the files should still be enumerable and retrievable in the first complete corpus pass.
 
 Each adapter should return normalized intermediate records rather than write arbitrary SQL directly. The builder owns database writes, validation, stats, and catalog registration. Rebuilding one book should not require rebuilding the whole corpus.
 
