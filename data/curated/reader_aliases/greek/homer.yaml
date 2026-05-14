@@ -1,0 +1,28 @@
+aliases:
+  - alias: "Il."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0012.tlg001"
+    display: "Homer, Iliad"
+    sources: ["lsj", "diogenes", "manual"]
+
+  - alias: "Od."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0012.tlg002"
+    display: "Homer, Odyssey"
+    sources: ["lsj", "diogenes", "manual"]
+
+  - alias: "Odyssey"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0012.tlg002"
+    display: "Homer, Odyssey"
+    sources: ["manual"]
+
+  - alias: "Homer Odyssey"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0012.tlg002"
+    display: "Homer, Odyssey"
+    sources: ["manual"]

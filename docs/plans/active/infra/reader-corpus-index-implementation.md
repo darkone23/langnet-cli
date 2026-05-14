@@ -8,6 +8,14 @@
 
 **Tech Stack:** Python dataclasses, Click, DuckDB, `xml.etree.ElementTree`, stdlib JSON/pathlib/hashlib, existing `just` test/lint commands. Alias files use a strict YAML subset parsed locally to avoid adding a new dependency.
 
+## Current Verification Snapshot
+
+- Perseus full generated catalog: `examples/debug/reader_perseus_full_current/catalog.duckdb`
+- Latest verified stats: 1,223 works, 2,298 artifacts, 943,806 segments, 2,298 source files, 0 source errors.
+- `reader validate --output json` returns no findings for the current Perseus catalog.
+- Representative verified reads include Odyssey `urn:cts:greekLit:tlg0012.tlg002:3.74`, Livy `urn:cts:latinLit:phi0914.phi0011:1.pr.1`, Lucretius `urn:cts:latinLit:phi0550.phi001:1.1`, and Ammianus/Stoa contents enumeration.
+- Remaining corpus-suite QA is focused on Sanskrit/DCS author authority, digilibLT metadata normalization, legacy PHI/TLG CTS bridging, and combined-suite inventory.
+
 ---
 
 ## File Structure

@@ -92,3 +92,10 @@ def default_diogenes_path(language: str) -> Path:
     """
     normalized = "grc" if language.lower() in {"grc", "grk", "greek"} else "lat"
     return build_dir() / f"lex_diogenes_{normalized}.duckdb"
+
+
+def default_reader_catalog_path() -> Path:
+    """
+    Default output path for the reader catalog index.
+    """
+    return build_dir() / "reader" / "catalog.duckdb"

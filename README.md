@@ -74,6 +74,8 @@ After code changes, restart any long-running local process manager so Python mod
 - **[docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md)** - Learner-facing grammar and evidence principles
 - **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** - Current health card and next priorities
 - **[docs/OUTPUT_GUIDE.md](docs/OUTPUT_GUIDE.md)** - How to read CLI/API JSON (pedagogy-first)
+- **[docs/READER_CORPUS_STATUS.md](docs/READER_CORPUS_STATUS.md)** - Current reader corpus status, metadata policy, and validation checkpoints
+- **[docs/READER_CLI_BEGINNER_GUIDE.md](docs/READER_CLI_BEGINNER_GUIDE.md)** - How to discover, enumerate, and read locally indexed texts
 - **[docs/technical/](docs/technical/)** - Technical reference docs
 - **[AGENTS.md](AGENTS.md)** - Multi-model AI personas and workflows
 

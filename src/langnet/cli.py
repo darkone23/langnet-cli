@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+import csv
 import importlib.util
 import logging
 import multiprocessing
@@ -841,6 +840,878 @@ def main() -> None:
 # Register subcommands
 main.add_command(index)
 main.add_command(databuild)
+
+
+def _reader_service_from_context(ctx: click.Context):
+    from langnet.databuild.paths import default_reader_catalog_path  # noqa: PLC0415
+    from langnet.reader.service import ReaderService  # noqa: PLC0415
+
+    obj = ctx.obj if isinstance(ctx.obj, dict) else {}
+    catalog = obj.get("reader_catalog")
+    env_catalog = os.environ.get("LANGNET_READER_CATALOG")
+    catalog_path = (
+        Path(str(catalog)).expanduser()
+        if catalog
+        else Path(env_catalog).expanduser()
+        if env_catalog
+        else default_reader_catalog_path()
+    )
+    return ReaderService(catalog_path)
+
+
+def _emit_reader_payload(payload: Mapping[str, object], output: str) -> None:
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    mode = str(payload.get("mode", "reader"))
+    if _emit_reader_single_payload(mode, payload):
+        return
+
+    items = payload.get("items")
+    if not isinstance(items, Sequence):
+        return
+    for item in items:
+        if not isinstance(item, Mapping):
+            continue
+        _emit_reader_item(mode, cast(Mapping[str, object], item))
+
+
+def _emit_reader_single_payload(mode: str, payload: Mapping[str, object]) -> bool:  # noqa: PLR0911
+    if mode == "show":
+        segment_value = payload.get("segment")
+        if not isinstance(segment_value, Mapping):
+            click.echo("No segment found.")
+            return True
+        segment = cast(Mapping[str, object], segment_value)
+        click.echo(f"{segment.get('address')}  {segment.get('citation_path')}")
+        click.echo(str(segment.get("text", "")))
+        return True
+    if mode == "resolve-address":
+        click.echo(f"{payload.get('address')} -> {payload.get('resolved_address')}")
+        segment_value = payload.get("segment")
+        if isinstance(segment_value, Mapping):
+            segment = cast(Mapping[str, object], segment_value)
+            click.echo(str(segment.get("text", "")))
+        return True
+    if mode == "summary":
+        summary_value = payload.get("summary")
+        if isinstance(summary_value, Mapping):
+            summary = cast(Mapping[str, object], summary_value)
+            for key, value in sorted(summary.items()):
+                click.echo(f"{key}: {value}")
+        return True
+    if mode == "work":
+        item_value = payload.get("item")
+        if not isinstance(item_value, Mapping):
+            click.echo("No work found.")
+            return True
+        item = cast(Mapping[str, object], item_value)
+        click.echo(
+            f"{item.get('language')}  {item.get('author')} — {item.get('title')}  "
+            f"[{item.get('work_id')}]"
+        )
+        return True
+    return False
+
+
+def _emit_reader_item(mode: str, item: Mapping[str, object]) -> None:  # noqa: C901, PLR0912
+    if mode == "collections":
+        click.echo(f"{item.get('collection_id')}  works={item.get('work_count')}")
+    elif mode == "authors":
+        lang = item.get("language")
+        author = item.get("display_name") or item.get("author")
+        work_count = item.get("work_count")
+        section = item.get("section_key")
+        click.echo(f"{lang}  {section}  {author}  works={work_count}")
+    elif mode == "author-sections":
+        click.echo(
+            f"{item.get('key')}  authors={item.get('author_count')}  works={item.get('work_count')}"
+        )
+    elif mode == "duplicate-audit":
+        click.echo(
+            f"{item.get('language')}  {item.get('kind')}  {item.get('display')}  "
+            f"works={item.get('work_count')}"
+        )
+    elif mode == "works":
+        click.echo(
+            f"{item.get('language')}  {item.get('author')} — {item.get('title')}  "
+            f"[{item.get('work_id')}]"
+        )
+    elif mode == "contents":
+        click.echo(f"{item.get('citation_path')}  {item.get('text')}")
+    elif mode == "aliases":
+        click.echo(f"{item.get('language')}  {item.get('alias')} -> {item.get('target')}")
+    elif mode == "alias-check":
+        click.echo(f"{item.get('language')}  {item.get('alias')}  {item.get('targets')}")
+    elif mode == "overlays":
+        click.echo(
+            f"{item.get('collection_id')}  {item.get('status')}  "
+            f"{item.get('match_field')}={item.get('match_value')}  "
+            f"{item.get('field')}={item.get('value')}"
+        )
+    elif mode == "attributions":
+        click.echo(
+            f"{item.get('collection_id')}  {item.get('status')}  "
+            f"{item.get('match_field')}={item.get('match_value')}  "
+            f"{item.get('relation_type')}={item.get('agent')}  "
+            f"confidence={item.get('confidence')}"
+        )
+    elif mode == "sources":
+        click.echo(
+            f"{item.get('collection_id')}  {item.get('file_status')}  "
+            f"{item.get('file_role')}  {item.get('source_path')}"
+        )
+    elif mode == "metadata":
+        click.echo(
+            f"{item.get('collection_id')}  {item.get('subject_kind')}  "
+            f"{item.get('subject_id')}  {item.get('key')}={item.get('value')}"
+        )
+    elif mode == "validate":
+        click.echo(f"{item.get('code')}  {item.get('message')}")
+    elif mode == "catalogs":
+        click.echo(
+            f"{item.get('id')}  {item.get('readiness')}  "
+            f"works={item.get('work_count')}  {item.get('path')}"
+        )
+
+
+@click.group("reader")
+@click.option(
+    "--catalog",
+    "--catalog-path",
+    type=click.Path(),
+    default=None,
+    help=(
+        "Reader catalog DuckDB path "
+        "(defaults to LANGNET_READER_CATALOG, then data/build/reader/catalog.duckdb)."
+    ),
+)
+@click.pass_context
+def reader_cli(ctx: click.Context, catalog: str | None) -> None:
+    """Explore locally indexed reader corpora."""
+    ctx.obj = {"reader_catalog": catalog}
+
+
+@reader_cli.command("collections")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_collections(ctx: click.Context, output: str) -> None:
+    """List reader corpus collections."""
+    _emit_reader_payload(_reader_service_from_context(ctx).collections_payload(), output)
+
+
+@reader_cli.command("catalogs")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_catalogs(output: str) -> None:
+    """List known reader catalog candidates for downstream UIs."""
+    from langnet.reader.service import READER_SCHEMA_VERSION, ReaderService  # noqa: PLC0415
+
+    candidates = [
+        (
+            "env",
+            "Environment reader catalog",
+            os.environ.get("LANGNET_READER_CATALOG"),
+            "configured" if os.environ.get("LANGNET_READER_CATALOG") else "not_configured",
+        ),
+        (
+            "default",
+            "Default reader catalog",
+            "data/build/reader/catalog.duckdb",
+            "default",
+        ),
+        (
+            "classics",
+            "Greek and Latin Classics",
+            "examples/debug/reader_classics_legacy_full_curated_current/catalog.duckdb",
+            "development_verified",
+        ),
+        (
+            "sanskrit",
+            "Sanskrit",
+            "examples/debug/reader_sanskrit_full_curated_current/catalog.duckdb",
+            "development_verified",
+        ),
+        (
+            "perseus",
+            "Perseus Classics",
+            "examples/debug/reader_perseus_full_curated_current/catalog.duckdb",
+            "development_verified",
+        ),
+        (
+            "digiliblt",
+            "digilibLT",
+            "examples/debug/reader_digiliblt_anonymous_overlay_verify/catalog.duckdb",
+            "development_verified",
+        ),
+    ]
+    items = []
+    for catalog_id, label, path_value, readiness in candidates:
+        if not path_value:
+            continue
+        path = Path(path_value).expanduser()
+        exists = path.exists()
+        summary = ReaderService(path).summary()["summary"] if exists else {}
+        items.append(
+            {
+                "id": catalog_id,
+                "label": label,
+                "path": str(path),
+                "exists": exists,
+                "languages": _reader_catalog_languages(path),
+                "work_count": summary.get("work_count", 0),
+                "segment_count": summary.get("segment_count", 0),
+                "readiness": readiness if exists else "missing",
+            }
+        )
+    _emit_reader_payload(
+        {
+            "schema_version": READER_SCHEMA_VERSION,
+            "mode": "catalogs",
+            "items": items,
+        },
+        output,
+    )
+
+
+def _reader_catalog_languages(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+    with duckdb.connect(str(path), read_only=True) as conn:
+        return [
+            str(row[0])
+            for row in conn.execute(
+                "SELECT DISTINCT language FROM works ORDER BY language"
+            ).fetchall()
+        ]
+
+
+@reader_cli.command("authors")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--section", default=None, help="Optional native author-index section key.")
+@click.option("--query", default=None, help="Optional author/authority substring filter.")
+@click.option("--limit", default=None, type=click.IntRange(1, 5000), help="Maximum rows.")
+@click.option("--cursor", default=None, help="Offset cursor returned by prior JSON response.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_authors(  # noqa: PLR0913
+    ctx: click.Context,
+    language: str | None,
+    section: str | None,
+    query: str | None,
+    limit: int | None,
+    cursor: str | None,
+    output: str,
+) -> None:
+    """List reader corpus authors."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).authors_payload(
+            language=language,
+            section=section,
+            query=query,
+            limit=limit,
+            cursor=cursor,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("author-sections")
+@click.option("--language", required=True, help="Reader language, e.g. grc, lat, san.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_author_sections(ctx: click.Context, language: str, output: str) -> None:
+    """List native author-index sections for one reader language."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).author_sections_payload(language=language),
+        output,
+    )
+
+
+@reader_cli.command("duplicate-audit")
+@click.option(
+    "--kind",
+    type=click.Choice(["authors", "titles"]),
+    default="authors",
+    show_default=True,
+    help="Duplicate grouping to inspect.",
+)
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--limit", default=100, show_default=True, type=click.IntRange(1, 5000))
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_duplicate_audit(
+    ctx: click.Context,
+    kind: str,
+    language: str | None,
+    limit: int,
+    output: str,
+) -> None:
+    """List duplicate-looking author or title groups for corpus QA."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).duplicate_audit_payload(
+            kind=kind,
+            language=language,
+            limit=limit,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("classification-export")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--limit", default=None, type=click.IntRange(1, 100000), help="Maximum rows.")
+@click.option(
+    "--path",
+    "output_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="CSV output path. Defaults to stdout.",
+)
+@click.pass_context
+def reader_classification_export(
+    ctx: click.Context,
+    language: str | None,
+    limit: int | None,
+    output_path: Path | None,
+) -> None:
+    """Export work rows for bulk chronology/status/popularity classification."""
+    payload = _reader_service_from_context(ctx).works_payload(language=language, limit=limit)
+    items = payload.get("items")
+    if not isinstance(items, Sequence):
+        items = []
+    fieldnames = [
+        "work_id",
+        "language",
+        "title",
+        "author",
+        "author_id",
+        "source_id",
+        "cts_work_urn",
+        "work_kind",
+        "parent_work_id",
+        "start_citation",
+        "end_citation",
+        "classification_category",
+        "classification_period",
+        "classification_date_range",
+        "classification_authorship_status",
+        "classification_popularity_score",
+        "classification_notes",
+    ]
+
+    def write_rows(handle) -> None:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for raw_item in items:
+            if not isinstance(raw_item, Mapping):
+                continue
+            item = cast(Mapping[str, object], raw_item)
+            writer.writerow({name: item.get(name, "") or "" for name in fieldnames})
+
+    if output_path is None:
+        write_rows(sys.stdout)
+        return
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8", newline="") as handle:
+        write_rows(handle)
+    click.echo(str(output_path))
+
+
+@reader_cli.command("works")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
+@click.option("--author", default=None, help="Optional display-author substring filter.")
+@click.option("--author-id", default=None, help="Optional author index selector or authority id.")
+@click.option(
+    "--attributed-to",
+    default=None,
+    help="Optional catalog-only display author or accepted authorship-claim filter.",
+)
+@click.option("--query", default=None, help="Optional title/author/id/alias substring filter.")
+@click.option("--limit", default=None, type=click.IntRange(1, 5000), help="Maximum rows.")
+@click.option("--cursor", default=None, help="Offset cursor returned by prior JSON response.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_works(  # noqa: PLR0913
+    ctx: click.Context,
+    language: str | None,
+    collection_id: str | None,
+    author: str | None,
+    author_id: str | None,
+    attributed_to: str | None,
+    query: str | None,
+    limit: int | None,
+    cursor: str | None,
+    output: str,
+) -> None:
+    """List reader corpus works."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).works_payload(
+            language=language,
+            collection_id=collection_id,
+            author=author,
+            author_id=author_id,
+            attributed_to=attributed_to,
+            query=query,
+            limit=limit,
+            cursor=cursor,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("work")
+@click.argument("work_ref")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_work(ctx: click.Context, work_ref: str, output: str) -> None:
+    """Show exact metadata for one work id, CTS work URN, or alias."""
+    _emit_reader_payload(_reader_service_from_context(ctx).work_payload(work_ref), output)
+
+
+@reader_cli.command("contents")
+@click.argument("work_id")
+@click.option("--limit", default=50, show_default=True, type=click.IntRange(1, 500))
+@click.option("--cursor", default=None, help="Offset cursor returned by prior JSON response.")
+@click.option("--from", "from_citation", default=None, help="Start at a citation path.")
+@click.option("--around", default=None, help="Center contents around a citation path.")
+@click.option("--radius", default=20, show_default=True, type=click.IntRange(1, 250))
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_contents(  # noqa: PLR0913
+    ctx: click.Context,
+    work_id: str,
+    limit: int,
+    cursor: str | None,
+    from_citation: str | None,
+    around: str | None,
+    radius: int,
+    output: str,
+) -> None:
+    """List segments for one reader work."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).contents_payload(
+            work_id,
+            limit=limit,
+            cursor=cursor,
+            from_citation=from_citation,
+            around=around,
+            radius=radius,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("show")
+@click.argument("address")
+@click.option("--segment", default=None, help="Citation path when ADDRESS is a work id or alias.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_show(ctx: click.Context, address: str, segment: str | None, output: str) -> None:
+    """Retrieve one segment by address, or by work plus --segment."""
+    service = _reader_service_from_context(ctx)
+    payload = service.show_work_segment(address, segment) if segment else service.show(address)
+    _emit_reader_payload(payload, output)
+
+
+@reader_cli.command("resolve-address")
+@click.argument("address")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_resolve_address(ctx: click.Context, address: str, output: str) -> None:
+    """Resolve a reader address such as 'Od. 3.74'."""
+    _emit_reader_payload(_reader_service_from_context(ctx).resolve_address(address), output)
+
+
+@reader_cli.command("summary")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_summary(ctx: click.Context, output: str) -> None:
+    """Summarize the reader catalog."""
+    _emit_reader_payload(_reader_service_from_context(ctx).summary(), output)
+
+
+@reader_cli.command("aliases")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_aliases(ctx: click.Context, output: str) -> None:
+    """List reader aliases."""
+    _emit_reader_payload(_reader_service_from_context(ctx).aliases(), output)
+
+
+@reader_cli.command("alias-check")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_alias_check(ctx: click.Context, output: str) -> None:
+    """Report reader alias conflicts."""
+    _emit_reader_payload(_reader_service_from_context(ctx).alias_conflicts(), output)
+
+
+@reader_cli.command("overlays")
+@click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
+@click.option("--status", default=None, help="Optional overlay status filter.")
+@click.option("--field", default=None, help="Optional metadata field filter.")
+@click.option("--match-value", default=None, help="Optional match value filter.")
+@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 5000))
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_overlays(  # noqa: PLR0913
+    ctx: click.Context,
+    collection_id: str | None,
+    status: str | None,
+    field: str | None,
+    match_value: str | None,
+    limit: int,
+    output: str,
+) -> None:
+    """List curated metadata overlay assertions and evidence."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).overlays(
+            collection_id=collection_id,
+            status=status,
+            field=field,
+            match_value=match_value,
+            limit=limit,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("attributions")
+@click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
+@click.option("--status", default=None, help="Optional attribution status filter.")
+@click.option("--relation-type", default=None, help="Optional attribution relation type filter.")
+@click.option("--agent", default=None, help="Optional person/group filter.")
+@click.option("--match-value", default=None, help="Optional matched work/source value filter.")
+@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 5000))
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_attributions(  # noqa: PLR0913
+    ctx: click.Context,
+    collection_id: str | None,
+    status: str | None,
+    relation_type: str | None,
+    agent: str | None,
+    match_value: str | None,
+    limit: int,
+    output: str,
+) -> None:
+    """List curated attribution claims that do not necessarily alter display metadata."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).attributions(
+            collection_id=collection_id,
+            status=status,
+            relation_type=relation_type,
+            agent=agent,
+            match_value=match_value,
+            limit=limit,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("overlay-review")
+@click.option(
+    "--metadata-overlay-dir",
+    type=click.Path(path_type=Path),
+    default=Path("data/curated/reader_metadata"),
+    show_default=True,
+    help="Curated reader metadata overlay YAML root.",
+)
+@click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
+@click.option("--field", default=None, help="Optional metadata field filter.")
+@click.option("--match-value", default=None, help="Optional match value filter.")
+@click.option("--limit", default=50, show_default=True, type=click.IntRange(1, 500))
+@click.option(
+    "--reviewer",
+    type=click.Choice(["rule", "llm"]),
+    default="rule",
+    show_default=True,
+    help="Use local rule recommendations or an OpenRouter LLM reviewer.",
+)
+@click.option(
+    "--model",
+    default=DEFAULT_RECOMMENDATION_MODEL,
+    show_default=True,
+    help="OpenRouter model id used when --reviewer llm.",
+)
+@click.option(
+    "--apply",
+    "apply_changes",
+    is_flag=True,
+    help="Prompt to promote reviewed candidates in their YAML files.",
+)
+@click.option(
+    "--yes",
+    is_flag=True,
+    help="With --apply, approve every accept recommendation without prompting.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_overlay_review(  # noqa: PLR0913
+    metadata_overlay_dir: Path,
+    collection_id: str | None,
+    field: str | None,
+    match_value: str | None,
+    limit: int,
+    reviewer: str,
+    model: str,
+    apply_changes: bool,
+    yes: bool,
+    output: str,
+) -> None:
+    """Review candidate metadata overlays and optionally promote them."""
+    from langnet.reader.metadata_overlay_review import (  # noqa: PLC0415
+        llm_overlay_reviewer,
+        review_metadata_overlay_candidates,
+        review_to_payload,
+        rule_overlay_reviewer,
+    )
+
+    review_callback = (
+        (lambda overlay: llm_overlay_reviewer(overlay, model=model))
+        if reviewer == "llm"
+        else rule_overlay_reviewer
+    )
+
+    def approve(review) -> bool:
+        if yes:
+            return review.decision.recommendation == "accept"
+        _emit_reader_overlay_review_item(review_to_payload(review))
+        return click.confirm("Promote to accepted?", default=False)
+
+    reviews = review_metadata_overlay_candidates(
+        metadata_overlay_dir,
+        reviewer=review_callback,
+        collection_id=collection_id,
+        field=field,
+        match_value=match_value,
+        limit=limit,
+        apply=apply_changes,
+        approve=approve,
+    )
+    payload = {
+        "schema_version": "langnet.reader.overlay_review.v1",
+        "mode": "overlay-review",
+        "metadata_overlay_dir": str(metadata_overlay_dir),
+        "request": {
+            "collection_id": collection_id,
+            "field": field,
+            "match_value": match_value,
+            "limit": limit,
+            "reviewer": reviewer,
+            "model": model if reviewer == "llm" else "local-rule",
+            "apply": apply_changes,
+            "yes": yes,
+        },
+        "items": [review_to_payload(review) for review in reviews],
+    }
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    if not reviews:
+        click.echo("No candidate overlays found.")
+        return
+    if not apply_changes:
+        for item in payload["items"]:
+            _emit_reader_overlay_review_item(cast(Mapping[str, object], item))
+    applied = sum(1 for review in reviews if review.applied)
+    click.echo(f"reviewed={len(reviews)} applied={applied}")
+
+
+def _emit_reader_overlay_review_item(item: Mapping[str, object]) -> None:
+    click.echo(
+        f"{item.get('collection_id')}  {item.get('match_value')}  "
+        f"{item.get('field')}={item.get('value')}"
+    )
+    click.echo(
+        f"  recommendation={item.get('recommendation')}  "
+        f"confidence={item.get('review_confidence')}  reviewer={item.get('reviewer')}"
+    )
+    flags = item.get("flags")
+    if isinstance(flags, Sequence) and not isinstance(flags, (str, bytes)):
+        click.echo(f"  flags={', '.join(str(flag) for flag in flags) or 'none'}")
+    click.echo(f"  rationale={item.get('rationale')}")
+
+
+@reader_cli.command("sources")
+@click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
+@click.option(
+    "--status",
+    "file_status",
+    default=None,
+    help="Optional status filter: text, metadata, or support.",
+)
+@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 5000))
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_sources(
+    ctx: click.Context,
+    collection_id: str | None,
+    file_status: str | None,
+    limit: int,
+    output: str,
+) -> None:
+    """List source files classified during reader import."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).sources(
+            collection_id=collection_id,
+            file_status=file_status,
+            limit=limit,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("metadata")
+@click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
+@click.option("--subject-kind", default=None, help="Optional subject kind filter.")
+@click.option("--subject-id", default=None, help="Optional subject id filter.")
+@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 5000))
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_metadata(  # noqa: PLR0913
+    ctx: click.Context,
+    collection_id: str | None,
+    subject_kind: str | None,
+    subject_id: str | None,
+    limit: int,
+    output: str,
+) -> None:
+    """List source metadata imported from corpus support files."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).metadata(
+            collection_id=collection_id,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+            limit=limit,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("validate")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_validate(ctx: click.Context, output: str) -> None:
+    """Validate reader catalog and per-book artifacts."""
+    _emit_reader_payload(_reader_service_from_context(ctx).validate(), output)
+
+
+main.add_command(reader_cli)
 
 
 @main.command("tools")

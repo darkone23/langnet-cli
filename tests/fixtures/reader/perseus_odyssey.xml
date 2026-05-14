@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Odyssey</title>
+        <author>Homer</author>
+      </titleStmt>
+      <publicationStmt>
+        <p>Fixture</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>Test source</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div type="edition" n="urn:cts:greekLit:tlg0012.tlg002.perseus-grc2" xml:lang="grc">
+        <div type="textpart" subtype="book" n="1">
+          <l n="8">νήπιοι, οἳ κατὰ βοῦς Ὑπερίονος Ἠελίοιο</l>
+        </div>
+        <div type="textpart" subtype="book" n="3">
+          <l n="74">ψυχὰς παρθέμενοι</l>
+          <l n="75">οὔτε τι μέγα</l>
+        </div>
+      </div>
+    </body>
+  </text>
+</TEI>

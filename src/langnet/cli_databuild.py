@@ -108,6 +108,24 @@ class BuildWhitakersConfig:
     force: bool
 
 
+@dataclass
+class BuildReaderConfig:
+    perseus_dir: str | None
+    digiliblt_dir: str | None
+    phi_latin_dir: str | None
+    tlg_e_dir: str | None
+    sanskrit_dir: str | None
+    alias_dir: str | None
+    metadata_overlay_dir: str | None
+    metadata_attribution_dir: str | None
+    contained_work_dir: str | None
+    output_root: str | None
+    limit: int | None
+    wipe: bool
+    force: bool
+    progress_every: int | None
+
+
 def _build_cts_impl(config: BuildCtsConfig) -> None:
     _ensure_logging()
     from langnet.databuild.cts import CtsBuildConfig, CtsUrnBuilder  # noqa: PLC0415
@@ -238,6 +256,52 @@ def _build_whitakers_impl(config: BuildWhitakersConfig) -> None:
     )
     builder = WhitakersBuilder(builder_config)
     result = builder.build()
+    _print_build_result(result)
+
+
+def _build_reader_impl(config: BuildReaderConfig) -> None:
+    _ensure_logging()
+    from langnet.reader.builder import (  # noqa: PLC0415
+        ReaderBuildConfig,
+        ReaderBuilder,
+        ReaderBuildProgress,
+    )
+
+    def progress_callback(progress: ReaderBuildProgress) -> None:
+        click.echo(
+            "progress: "
+            f"parsed_sources={progress.parsed_sources} "
+            f"artifact_count={progress.artifact_count} "
+            f"segment_count={progress.segment_count} "
+            f"latest_source={progress.latest_source}"
+        )
+
+    builder_config = ReaderBuildConfig(
+        perseus_dir=Path(config.perseus_dir).expanduser() if config.perseus_dir else None,
+        digiliblt_dir=Path(config.digiliblt_dir).expanduser() if config.digiliblt_dir else None,
+        phi_latin_dir=Path(config.phi_latin_dir).expanduser() if config.phi_latin_dir else None,
+        tlg_e_dir=Path(config.tlg_e_dir).expanduser() if config.tlg_e_dir else None,
+        sanskrit_dir=Path(config.sanskrit_dir).expanduser() if config.sanskrit_dir else None,
+        alias_dir=Path(config.alias_dir).expanduser() if config.alias_dir else None,
+        metadata_overlay_dir=(
+            Path(config.metadata_overlay_dir).expanduser() if config.metadata_overlay_dir else None
+        ),
+        metadata_attribution_dir=(
+            Path(config.metadata_attribution_dir).expanduser()
+            if config.metadata_attribution_dir
+            else None
+        ),
+        contained_work_dir=(
+            Path(config.contained_work_dir).expanduser() if config.contained_work_dir else None
+        ),
+        output_root=Path(config.output_root).expanduser() if config.output_root else None,
+        limit=config.limit,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+        progress_every=config.progress_every,
+        progress_callback=progress_callback if config.progress_every else None,
+    )
+    result = ReaderBuilder(builder_config).build()
     _print_build_result(result)
 
 
@@ -588,3 +652,115 @@ def build_whitakers_index(  # noqa: PLR0913
         force=force,
     )
     _build_whitakers_impl(config)
+
+
+@databuild.command("reader")
+@click.option(
+    "--perseus-dir",
+    type=click.Path(),
+    default=None,
+    help="Perseus corpus root or fixture directory.",
+)
+@click.option(
+    "--digiliblt-dir",
+    type=click.Path(),
+    default=None,
+    help="digilibLT TEI corpus root.",
+)
+@click.option(
+    "--phi-latin-dir",
+    type=click.Path(),
+    default=None,
+    help="PHI Latin text dump directory.",
+)
+@click.option(
+    "--tlg-e-dir",
+    type=click.Path(),
+    default=None,
+    help="TLG Greek text dump directory.",
+)
+@click.option(
+    "--sanskrit-dir",
+    type=click.Path(),
+    default=None,
+    help="Sanskrit JSON/plain text corpus root.",
+)
+@click.option(
+    "--alias-dir",
+    type=click.Path(),
+    default="data/curated/reader_aliases",
+    show_default=True,
+    help="Composed reader alias directory.",
+)
+@click.option(
+    "--metadata-overlay-dir",
+    type=click.Path(),
+    default="data/curated/reader_metadata",
+    show_default=True,
+    help="Curated reader metadata overlay directory.",
+)
+@click.option(
+    "--metadata-attribution-dir",
+    type=click.Path(),
+    default="data/curated/reader_attributions",
+    show_default=True,
+    help="Curated reader metadata attribution directory.",
+)
+@click.option(
+    "--contained-work-dir",
+    type=click.Path(),
+    default="data/curated/reader_contained_works",
+    show_default=True,
+    help="Curated contained/virtual reader work directory.",
+)
+@click.option(
+    "--output-root",
+    type=click.Path(),
+    help="Output reader root (defaults to data/build/reader).",
+)
+@click.option("--limit", type=int, help="Limit number of parsed books for testing.")
+@click.option(
+    "--progress-every",
+    type=int,
+    default=None,
+    help="Print reader build progress every N parsed books.",
+)
+@click.option(
+    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_reader(  # noqa: PLR0913
+    perseus_dir: str | None,
+    digiliblt_dir: str | None,
+    phi_latin_dir: str | None,
+    tlg_e_dir: str | None,
+    sanskrit_dir: str | None,
+    alias_dir: str | None,
+    metadata_overlay_dir: str | None,
+    metadata_attribution_dir: str | None,
+    contained_work_dir: str | None,
+    output_root: str | None,
+    limit: int | None,
+    progress_every: int | None,
+    wipe: bool,
+    force: bool,
+) -> None:
+    """Build the reader corpus catalog."""
+    _build_reader_impl(
+        BuildReaderConfig(
+            perseus_dir=perseus_dir,
+            digiliblt_dir=digiliblt_dir,
+            phi_latin_dir=phi_latin_dir,
+            tlg_e_dir=tlg_e_dir,
+            sanskrit_dir=sanskrit_dir,
+            alias_dir=alias_dir,
+            metadata_overlay_dir=metadata_overlay_dir,
+            metadata_attribution_dir=metadata_attribution_dir,
+            contained_work_dir=contained_work_dir,
+            output_root=output_root,
+            limit=limit,
+            progress_every=progress_every,
+            wipe=wipe,
+            force=force,
+        )
+    )

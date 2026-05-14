@@ -1,0 +1,7 @@
+aliases:
+  - alias: "Śivasūtra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit:panini:sivasutra"
+    display: "Pāṇini, Śivasūtra"
+    sources: ["manual"]

@@ -25,10 +25,9 @@ def _clean_author_name(raw_name: str) -> str:
     """Clean raw author name by removing &1 prefix and & Topic suffix."""
     if not raw_name:
         return raw_name
-    if raw_name.startswith("&1"):
-        raw_name = raw_name[2:]
-    if "&" in raw_name:
-        raw_name = raw_name.split("&")[0]
+    raw_name = raw_name.replace("&1", "")
+    raw_name = raw_name.split("\x83", 1)[0]
+    raw_name = re.sub(r"\s+&[^&]*$", "", raw_name)
     return raw_name.strip()
 
 
@@ -322,12 +321,12 @@ class CtsUrnBuilder:
             with open(auth_file, "rb") as f:
                 data = f.read()
             if b"*TLG" in data:
-                pattern = rb"TLG(\d{4}) &1([^&]+?) &([^\xff]+)\xff"
+                pattern = rb"TLG(\d{4})\s+([^\xff]+)\xff"
                 language = "grc"
                 namespace = "greekLit"
                 prefix = "tlg"
             elif b"*LAT" in data:
-                pattern = rb"LAT(\d{4}) &1([^&]+?)&([^\xff]+)\xff"
+                pattern = rb"LAT(\d{4})\s+([^\xff]+)\xff"
                 language = "lat"
                 namespace = "latinLit"
                 prefix = "phi"
@@ -335,10 +334,13 @@ class CtsUrnBuilder:
                 logger.error("Unknown data format in %s", auth_file)
                 return authors
             matches = re.findall(pattern, data)
-            for num, raw_name, raw_topic in matches:
+            for num, raw_record in matches:
                 author_id = f"{prefix}{num.decode('ascii')}"
-                name = raw_name.decode("latin-1").strip()
-                topic = raw_topic.decode("latin-1").strip()
+                name = raw_record.decode("latin-1").strip()
+                topic = ""
+                topic_match = re.search(r"\s+&([^&]+)$", name)
+                if topic_match:
+                    topic = topic_match.group(1).strip()
                 clean_name = _clean_author_name(name)
                 authors[author_id] = {
                     "name": clean_name,
@@ -376,7 +378,7 @@ class CtsUrnBuilder:
             num = num_match.group(1)
 
             prefix = "tlg" if is_greek else "phi"
-            author_id = f"{prefix}{num.zfill(4)}"
+            author_id = self._packard_author_id_from_stem(stem, prefix, num)
             author = self._resolve_author_metadata(authors, author_id, is_greek, stem)
             author_id = author.get("resolved_id", author_id)
 
@@ -406,11 +408,20 @@ class CtsUrnBuilder:
             logger.warning("Failed to parse %s: %s", idt_path, exc)
             return []
 
+    def _packard_author_id_from_stem(self, stem: str, prefix: str, num: str) -> str:
+        if prefix == "tlg":
+            return f"tlg{num.zfill(4)}"
+        if stem.startswith("lat"):
+            return f"phi{num.zfill(4)}"
+        if re.match(r"^[a-z]{3}\d+", stem):
+            return stem
+        return f"phi{num.zfill(4)}"
+
     def _resolve_author_metadata(
         self, authors: dict[str, dict[str, str]], author_id: str, is_greek: bool, stem: str
     ) -> dict[str, str]:
         alt_ids = [author_id]
-        if not is_greek:
+        if not is_greek and author_id.startswith("phi"):
             alt_ids.append(f"lat{author_id[3:]}")
         for aid in alt_ids:
             if aid in authors:

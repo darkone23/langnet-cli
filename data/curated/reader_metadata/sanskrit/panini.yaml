@@ -1,0 +1,14 @@
+overlays:
+  - collection_id: "sanskrit_json"
+    match_field: "source_id"
+    match_value: "sanskrit_shiva"
+    field: "author"
+    value: "Pāṇini"
+    status: "candidate"
+    confidence: "medium"
+    note: "Candidate only: Śivasūtra is ambiguous. Accept this only for the grammatical Māheśvara/Śiva Sūtra list associated with Pāṇini, not the Kashmir Śaiva Śiva Sūtras."
+    evidence:
+      - source_type: "web"
+        citation: "https://learnsanskrit.org/panini/shivasutras/"
+        label: "Learn Sanskrit Online, The Shiva Sutras - Panini"
+        retrieved_at: "2026-05-13"

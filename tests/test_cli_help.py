@@ -46,6 +46,7 @@ def test_documented_command_help() -> None:
         "word-index",
         "word-of-day",
         "recommend-words",
+        "reader",
     ]
     for command in commands:
         _assert_help([command])
@@ -149,5 +150,13 @@ def _word_index_item(position: str, transliteration: str, native: str) -> dict[s
 
 
 def test_databuild_subcommand_help() -> None:
-    for command in ["cts", "cdsl", "gaffiot", "dico", "diogenes-index", "whitakers-index"]:
+    for command in [
+        "cts",
+        "cdsl",
+        "gaffiot",
+        "dico",
+        "diogenes-index",
+        "whitakers-index",
+        "reader",
+    ]:
         _assert_help(["databuild", command])

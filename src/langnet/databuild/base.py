@@ -46,7 +46,17 @@ class LexiconStats:
     size_mb: float | None = None
 
 
-BuildStats = CTSStats | CdslStats | LexiconStats | BuildErrorStats
+@dataclass(frozen=True)
+class ReaderCorpusStats:
+    catalog_path: str
+    artifact_count: int
+    work_count: int
+    segment_count: int
+    alias_count: int
+    source_error_count: int = 0
+
+
+BuildStats = CTSStats | CdslStats | LexiconStats | ReaderCorpusStats | BuildErrorStats
 StatsType = TypeVar("StatsType", bound=BuildStats)
 
 logger = logging.getLogger(__name__)

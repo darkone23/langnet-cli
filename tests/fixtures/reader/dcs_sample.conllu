@@ -1,0 +1,14 @@
+## text: Abhidharmakośa
+## text_id: 378
+## chapter: AbhidhKo, 1
+## chapter_id: 7024
+# text = om namo buddhāya
+# sent_id = 478852
+1	om	om	INTJ	_	_	0	root	_	_
+2	namo	namo	NOUN	_	_	1	flat	_	_
+3	buddhāya	buddha	NOUN	_	_	2	nmod	_	_
+
+# text = dharmāḥ pravakṣyante
+# sent_id = 478853
+1	dharmāḥ	dharma	NOUN	_	_	0	root	_	_
+2	pravakṣyante	pravac	VERB	_	_	1	acl	_	_

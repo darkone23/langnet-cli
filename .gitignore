@@ -4,7 +4,11 @@
 devenv.local.nix
 .dev-envfile
 
-data/
+data/*
+!data/README.md
+!data/curated/
+!data/curated/reader_aliases/
+!data/curated/reader_aliases/**
 *.db
 *.sqlite
 *.sqlite3
@@ -18,6 +22,7 @@ webroot/assets
 webroot/
 
 examples/debug
+.firecrawl/
 
 # Test fixtures
 tests/fixtures/raw_tool_outputs/*.json
