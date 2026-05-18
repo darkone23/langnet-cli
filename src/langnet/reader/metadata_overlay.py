@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
-from typing import cast
+from typing import NoReturn, cast
 
 from langnet.reader.models import ReaderMetadataOverlay, ReaderMetadataOverlayEvidence
 
@@ -227,6 +227,6 @@ def _record_str(path: Path, record: dict[str, object], key: str) -> str:
     return value
 
 
-def _raise_unsupported(path: Path, line_number: int) -> None:
+def _raise_unsupported(path: Path, line_number: int) -> NoReturn:
     msg = f"{path}:{line_number}: unsupported metadata overlay YAML line"
     raise ValueError(msg)

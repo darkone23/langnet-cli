@@ -631,22 +631,25 @@ class CtsUrnBuilder:
 
         author_count = work_count = edition_count = perseus_count = legacy_count = None
         if self.output_path.exists():
-            if not self._connection:
-                self._connection = duckdb.connect(str(self.output_path))
-            result = self._connection.execute("SELECT COUNT(*) FROM author_index").fetchone()
-            author_count = result[0] if result else 0
-            result = self._connection.execute("SELECT COUNT(*) FROM works").fetchone()
-            work_count = result[0] if result else 0
-            result = self._connection.execute("SELECT COUNT(*) FROM editions").fetchone()
-            edition_count = result[0] if result else 0
-            perseus_result = self._connection.execute(
-                "SELECT COUNT(*) FROM works WHERE source_path LIKE '%perseus%'"
-            ).fetchone()
-            perseus_count = perseus_result[0] if perseus_result else 0
-            legacy_result = self._connection.execute(
-                "SELECT COUNT(*) FROM works WHERE source_path LIKE '%Classics-Data%'"
-            ).fetchone()
-            legacy_count = legacy_result[0] if legacy_result else 0
+            conn = self._connection or duckdb.connect(str(self.output_path), read_only=True)
+            try:
+                result = conn.execute("SELECT COUNT(*) FROM author_index").fetchone()
+                author_count = result[0] if result else 0
+                result = conn.execute("SELECT COUNT(*) FROM works").fetchone()
+                work_count = result[0] if result else 0
+                result = conn.execute("SELECT COUNT(*) FROM editions").fetchone()
+                edition_count = result[0] if result else 0
+                perseus_result = conn.execute(
+                    "SELECT COUNT(*) FROM works WHERE source_path LIKE '%perseus%'"
+                ).fetchone()
+                perseus_count = perseus_result[0] if perseus_result else 0
+                legacy_result = conn.execute(
+                    "SELECT COUNT(*) FROM works WHERE source_path LIKE '%Classics-Data%'"
+                ).fetchone()
+                legacy_count = legacy_result[0] if legacy_result else 0
+            finally:
+                if conn is not self._connection:
+                    conn.close()
 
         return CTSStats(
             path=str(self.output_path),

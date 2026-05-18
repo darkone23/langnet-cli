@@ -83,6 +83,26 @@ class BuildDicoConfig:
 
 
 @dataclass
+class BuildBaillyConfig:
+    source_path: str
+    output: str | None
+    limit: int | None
+    batch_size: int
+    wipe: bool
+    force: bool
+
+
+@dataclass
+class BuildLewis1890Config:
+    source_path: str | None
+    output: str | None
+    limit: int | None
+    batch_size: int
+    wipe: bool
+    force: bool
+
+
+@dataclass
 class BuildDiogenesConfig:
     language: str
     mode: str
@@ -119,6 +139,7 @@ class BuildReaderConfig:
     metadata_overlay_dir: str | None
     metadata_attribution_dir: str | None
     contained_work_dir: str | None
+    work_map_dir: str | None
     output_root: str | None
     limit: int | None
     wipe: bool
@@ -202,6 +223,47 @@ def _build_dico_impl(config: BuildDicoConfig) -> None:
         force_rebuild=config.force,
     )
     builder = DicoBuilder(builder_config)
+    result = builder.build()
+    _print_build_result(result)
+
+
+def _build_bailly_impl(config: BuildBaillyConfig) -> None:
+    _ensure_logging()
+    from langnet.databuild.bailly import BaillyBuildConfig, BaillyBuilder  # noqa: PLC0415
+    from langnet.databuild.paths import default_bailly_path  # noqa: PLC0415
+
+    output_path = Path(config.output).expanduser() if config.output else default_bailly_path()
+    builder_config = BaillyBuildConfig(
+        source_path=Path(config.source_path).expanduser(),
+        output_path=output_path,
+        limit=config.limit,
+        batch_size=config.batch_size,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+    )
+    builder = BaillyBuilder(builder_config)
+    result = builder.build()
+    _print_build_result(result)
+
+
+def _build_lewis_1890_impl(config: BuildLewis1890Config) -> None:
+    _ensure_logging()
+    from langnet.databuild.lewis_1890 import (  # noqa: PLC0415
+        Lewis1890BuildConfig,
+        Lewis1890Builder,
+    )
+    from langnet.databuild.paths import default_lewis_1890_path  # noqa: PLC0415
+
+    output_path = Path(config.output).expanduser() if config.output else default_lewis_1890_path()
+    builder_config = Lewis1890BuildConfig(
+        source_path=Path(config.source_path).expanduser() if config.source_path else None,
+        output_path=output_path,
+        limit=config.limit,
+        batch_size=config.batch_size,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+    )
+    builder = Lewis1890Builder(builder_config)
     result = builder.build()
     _print_build_result(result)
 
@@ -294,6 +356,7 @@ def _build_reader_impl(config: BuildReaderConfig) -> None:
         contained_work_dir=(
             Path(config.contained_work_dir).expanduser() if config.contained_work_dir else None
         ),
+        work_map_dir=Path(config.work_map_dir).expanduser() if config.work_map_dir else None,
         output_root=Path(config.output_root).expanduser() if config.output_root else None,
         limit=config.limit,
         wipe_existing=config.wipe,
@@ -509,6 +572,101 @@ def build_dico(  # noqa: PLR0913
     _build_dico_impl(config)
 
 
+@databuild.command("bailly")
+@click.option(
+    "--source",
+    "source_path",
+    type=click.Path(exists=True),
+    required=True,
+    help="Path to PDF-derived Bailly structural JSONL.",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output DuckDB path (defaults to data/build/lex_bailly.duckdb)",
+)
+@click.option("--limit", type=int, help="Limit rows for testing.")
+@click.option(
+    "--batch-size",
+    type=int,
+    default=500,
+    show_default=True,
+    help="Rows per batch while inserting.",
+)
+@click.option(
+    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_bailly(  # noqa: PLR0913
+    source_path: str,
+    output: str | None,
+    limit: int | None,
+    batch_size: int,
+    wipe: bool,
+    force: bool,
+):
+    """Build Bailly Greek→French index from PDF-derived structural JSONL."""
+    config = BuildBaillyConfig(
+        source_path=source_path,
+        output=output,
+        limit=limit,
+        batch_size=batch_size,
+        wipe=wipe,
+        force=force,
+    )
+    _build_bailly_impl(config)
+
+
+@databuild.command("lewis-1890")
+@click.option(
+    "--source",
+    "source_path",
+    type=click.Path(),
+    default=None,
+    help=(
+        "Path to CLTK lewis.yaml "
+        "(defaults to ~/cltk_data/lat/lexicon/cltk_lat_lewis_elementary_lexicon/lewis.yaml)."
+    ),
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output DuckDB path (defaults to data/build/lex_lewis_1890.duckdb)",
+)
+@click.option("--limit", type=int, help="Limit rows for testing.")
+@click.option(
+    "--batch-size",
+    type=int,
+    default=500,
+    show_default=True,
+    help="Rows per batch while inserting.",
+)
+@click.option(
+    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_lewis_1890(  # noqa: PLR0913
+    source_path: str | None,
+    output: str | None,
+    limit: int | None,
+    batch_size: int,
+    wipe: bool,
+    force: bool,
+):
+    """Build Lewis 1890 Latin→English index from CLTK source."""
+    config = BuildLewis1890Config(
+        source_path=source_path,
+        output=output,
+        limit=limit,
+        batch_size=batch_size,
+        wipe=wipe,
+        force=force,
+    )
+    _build_lewis_1890_impl(config)
+
+
 @databuild.command("diogenes-index")
 @click.argument("language", type=click.Choice(["lat", "grc", "grk", "latin", "greek"]))
 @click.option(
@@ -714,6 +872,13 @@ def build_whitakers_index(  # noqa: PLR0913
     help="Curated contained/virtual reader work directory.",
 )
 @click.option(
+    "--work-map-dir",
+    type=click.Path(),
+    default="data/curated/reader_work_maps",
+    show_default=True,
+    help="Curated reader work-map/table-of-contents directory.",
+)
+@click.option(
     "--output-root",
     type=click.Path(),
     help="Output reader root (defaults to data/build/reader).",
@@ -739,6 +904,7 @@ def build_reader(  # noqa: PLR0913
     metadata_overlay_dir: str | None,
     metadata_attribution_dir: str | None,
     contained_work_dir: str | None,
+    work_map_dir: str | None,
     output_root: str | None,
     limit: int | None,
     progress_every: int | None,
@@ -757,6 +923,7 @@ def build_reader(  # noqa: PLR0913
             metadata_overlay_dir=metadata_overlay_dir,
             metadata_attribution_dir=metadata_attribution_dir,
             contained_work_dir=contained_work_dir,
+            work_map_dir=work_map_dir,
             output_root=output_root,
             limit=limit,
             progress_every=progress_every,

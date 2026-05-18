@@ -410,7 +410,11 @@ def _legacy_file_status(path: Path) -> str:
 def _diogenes_language(marker: str) -> str:
     if marker == "g":
         return "grc"
-    if marker in {"l", "e", "h"}:
+    if marker == "h":
+        return "heb"
+    if marker == "c":
+        return "cop"
+    if marker in {"l", "e"}:
         return "lat"
     return marker
 

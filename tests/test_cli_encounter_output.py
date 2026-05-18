@@ -30,6 +30,7 @@ from langnet.cli import (
     _encounter_paradigm_resolution_payload,
     _encounter_preferred_lemmas_for_sorting,
     _encounter_preferred_lemmas_from_morphology,
+    _encounter_reader_search_context,
     _encounter_word_index_context,
     _get_query_value_for_plan,
     _normalization_cache_get,
@@ -40,6 +41,7 @@ from langnet.cli import (
 )
 from langnet.execution.effects import ClaimEffect, ProvenanceLink
 from langnet.normalizer.core import NormalizationResult, _hash_query
+from langnet.reduction import reduce_claims
 from langnet.storage.normalization_index import ensure_schema as ensure_normalization_schema
 from langnet.translation import (
     BASE_SYSTEM,
@@ -55,6 +57,8 @@ ENCOUNTER_ERROR_SCHEMA_PATH = Path("docs/schemas/encounter-error.v1.schema.json"
 GAFFIOT_LUPUS_SOURCE_ORDER = 38776
 WORD_INDEX_FIXTURE_WINDOW_SIZE = 3
 LATIN_PUELLAE_ANALYSIS_COUNT = 3
+READER_SEARCH_INLINE_LIMIT = 3
+READER_SEARCH_CANDIDATE_COUNT = 2
 
 
 def _claim_with_triples(
@@ -87,6 +91,35 @@ def _translation_language(source_lexicon: str) -> str:
 def _assert_matches_schema(payload: object, schema_path: Path) -> None:
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(schema).validate(payload)
+
+
+def _reduction_with_bucket(*, query: str, language: str, form: str):
+    return reduce_claims(
+        query=query,
+        language=language,
+        claims=[
+            asdict(
+                _claim_with_triples(
+                    tool="reader-search",
+                    subject=f"lex:{form}",
+                    triples=[
+                        {
+                            "subject": f"lex:{form}",
+                            "predicate": "has_sense",
+                            "object": f"sense:{form}#1",
+                            "metadata": {"evidence": {"source_tool": "fixture"}},
+                        },
+                        {
+                            "subject": f"sense:{form}#1",
+                            "predicate": "gloss",
+                            "object": "word",
+                            "metadata": {"evidence": {"source_tool": "fixture"}},
+                        },
+                    ],
+                )
+            )
+        ],
+    )
 
 
 def _empty_word_index_context() -> dict[str, object]:
@@ -400,6 +433,203 @@ def test_encounter_json_includes_paradigm_resolution_when_requested() -> None:
             "json",
         ],
     }
+
+
+def test_encounter_json_includes_reader_search_actions_when_requested() -> None:
+    claim = _claim_with_triples(
+        tool="diogenes",
+        subject="lex:λόγος",
+        triples=[
+            {
+                "subject": "lex:λόγος",
+                "predicate": "has_sense",
+                "object": "sense:λόγος#1",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "sense:λόγος#1",
+                "predicate": "gloss",
+                "object": "word, speech",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+        ],
+    )
+    result = SimpleNamespace(claims=[claim])
+
+    with (
+        patch("langnet.cli._execute_lookup_plan", return_value=result),
+        patch(
+            "langnet.cli._encounter_word_index_context", return_value=_empty_word_index_context()
+        ),
+    ):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "grc",
+                "logos",
+                "diogenes",
+                "--include-reader-search",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    _assert_matches_schema(payload, ENCOUNTER_SCHEMA_PATH)
+    assert payload["request"]["include_reader_search"] is True
+    assert payload["reader_search"]["query_candidates"][:2] == ["logos", "λόγος"]
+    assert payload["reader_search"]["items"] == []
+    action = next(
+        action for action in payload["actions"] if action["kind"] == "search_reader_corpus"
+    )
+    assert action == payload["display"]["actions"][-1]
+    assert action["request"]["command"] == "reader search"
+    assert action["request"]["language"] == "grc"
+
+
+def test_encounter_json_includes_inline_reader_search_hits_when_index_supplied() -> None:
+    claim = _claim_with_triples(
+        tool="diogenes",
+        subject="lex:λόγος",
+        triples=[
+            {
+                "subject": "lex:λόγος",
+                "predicate": "has_sense",
+                "object": "sense:λόγος#1",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "sense:λόγος#1",
+                "predicate": "gloss",
+                "object": "word, speech",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+        ],
+    )
+    result = SimpleNamespace(claims=[claim])
+
+    with (
+        patch("langnet.cli._execute_lookup_plan", return_value=result),
+        patch(
+            "langnet.cli._encounter_word_index_context", return_value=_empty_word_index_context()
+        ),
+        patch("langnet.cli.search_reader_segments") as search,
+    ):
+        search.return_value = {
+            "items": [
+                {
+                    "work_id": "grc.work",
+                    "language": "grc",
+                    "title": "Greek Work",
+                    "citation_path": "1",
+                    "text": "Λόγος τις ἐστίν.",
+                }
+            ]
+        }
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "grc",
+                "logos",
+                "diogenes",
+                "--reader-search-index",
+                "reader-search.lance",
+                "--reader-search-limit",
+                str(READER_SEARCH_INLINE_LIMIT),
+                "--reader-search-context",
+                "1",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    assert payload["reader_search"]["index_path"] == "reader-search.lance"
+    assert payload["reader_search"]["items"][0]["title"] == "Greek Work"
+    assert payload["actions"][-1]["kind"] == "search_reader_corpus"
+    search.assert_called_once()
+    assert search.call_args.kwargs["limit"] == READER_SEARCH_INLINE_LIMIT
+    assert search.call_args.kwargs["context"] == 1
+
+
+def test_encounter_json_can_search_all_reader_candidates() -> None:
+    claim = _claim_with_triples(
+        tool="diogenes",
+        subject="lex:λόγος",
+        triples=[
+            {
+                "subject": "lex:λόγος",
+                "predicate": "has_sense",
+                "object": "sense:λόγος#1",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "sense:λόγος#1",
+                "predicate": "gloss",
+                "object": "word, speech",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+        ],
+    )
+    result = SimpleNamespace(claims=[claim])
+
+    with (
+        patch("langnet.cli._execute_lookup_plan", return_value=result),
+        patch(
+            "langnet.cli._encounter_word_index_context", return_value=_empty_word_index_context()
+        ),
+        patch("langnet.cli.search_reader_segments") as search,
+    ):
+        search.side_effect = [
+            {"items": []},
+            {
+                "items": [
+                    {
+                        "segment_id": "seg-logos",
+                        "work_id": "grc.work",
+                        "language": "grc",
+                        "title": "Greek Work",
+                        "citation_path": "1",
+                        "text": "Λόγος τις ἐστίν.",
+                    }
+                ]
+            },
+        ]
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "grc",
+                "logos",
+                "diogenes",
+                "--reader-search-index",
+                "reader-search.lance",
+                "--reader-search-all-candidates",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    assert payload["request"]["reader_search_all_candidates"] is True
+    assert payload["reader_search"]["search_all_candidates"] is True
+    assert search.call_count == READER_SEARCH_CANDIDATE_COUNT
+    assert [call.args[2] for call in search.call_args_list][:2] == ["logos", "λόγος"]
+    assert payload["reader_search"]["items"][0]["matched_query"] == "λόγος"
+    assert payload["reader_search"]["items"][0]["input_query"] == "logos"
+    assert payload["reader_search"]["items"][0]["match_type"] == "candidate_expansion"
+    assert payload["reader_search"]["items"][0]["candidate_rank"] == 1
 
 
 def test_encounter_paradigm_resolution_failure_is_non_fatal() -> None:
@@ -1233,6 +1463,153 @@ def test_encounter_actions_project_paradigm_and_word_index_followups() -> None:
     source_request = cast(dict[str, object], source_action["request"])
     assert source_request["source_ref"] == "cdsl:mw:123"
     assert source_request["index_entry_id"] == "word-index:san:cdsl:mw:putra"
+
+
+def test_encounter_reader_search_context_projects_actions_without_index() -> None:
+    reduction = _reduction_with_bucket(query="logos", language="grc", form="λόγος")
+
+    context = _encounter_reader_search_context(
+        language="grc",
+        text="logos",
+        reduction=reduction,
+        preferred_lemmas=["λόγος"],
+        index_path=None,
+        limit=5,
+        context=0,
+        field="auto",
+    )
+
+    assert context["query_candidates"] == ["logos", "λόγος"]
+    assert context["items"] == []
+    assert context["actions"] == [
+        {
+            "kind": "search_reader_corpus",
+            "label": "Search corpus for logos",
+            "status": "available",
+            "source": "reader_search",
+            "request": {
+                "command": "reader search",
+                "query": "logos",
+                "language": "grc",
+                "field": "auto",
+                "context": 0,
+                "limit": 5,
+                "argv": [
+                    "reader",
+                    "search",
+                    "logos",
+                    "--language",
+                    "grc",
+                    "--field",
+                    "auto",
+                    "--context",
+                    "0",
+                    "--limit",
+                    "5",
+                    "--output",
+                    "json",
+                ],
+            },
+        }
+    ]
+
+
+def test_encounter_reader_search_context_uses_index_for_inline_hits() -> None:
+    reduction = _reduction_with_bucket(query="logos", language="grc", form="λόγος")
+
+    with patch("langnet.cli.search_reader_segments") as search:
+        search.return_value = {
+            "items": [
+                {
+                    "work_id": "grc.work",
+                    "language": "grc",
+                    "title": "Greek Work",
+                    "citation_path": "1",
+                    "text": "Λόγος τις ἐστίν.",
+                }
+            ]
+        }
+        context = _encounter_reader_search_context(
+            language="grc",
+            text="logos",
+            reduction=reduction,
+            preferred_lemmas=["λόγος"],
+            index_path=Path("reader-search.lance"),
+            limit=3,
+            context=1,
+            field="auto",
+        )
+
+    assert context["index_path"] == "reader-search.lance"
+    items = cast(list[dict[str, object]], context["items"])
+    assert items[0]["title"] == "Greek Work"
+    search.assert_called_once()
+    assert search.call_args.kwargs["language"] == "grc"
+    assert search.call_args.kwargs["context"] == 1
+    assert search.call_args.args[2] == "logos"
+
+
+def test_encounter_reader_search_context_can_search_all_candidates_and_dedupe() -> None:
+    reduction = _reduction_with_bucket(query="logos", language="grc", form="λόγος")
+
+    with patch("langnet.cli.search_reader_segments") as search:
+        search.side_effect = [
+            {
+                "items": [
+                    {
+                        "segment_id": "seg-1",
+                        "work_id": "grc.work",
+                        "language": "grc",
+                        "title": "Greek Work",
+                        "citation_path": "1",
+                        "text": "logos in notes",
+                    }
+                ]
+            },
+            {
+                "items": [
+                    {
+                        "segment_id": "seg-1",
+                        "work_id": "grc.work",
+                        "language": "grc",
+                        "title": "Greek Work",
+                        "citation_path": "1",
+                        "text": "λόγος duplicate",
+                    },
+                    {
+                        "segment_id": "seg-2",
+                        "work_id": "grc.work",
+                        "language": "grc",
+                        "title": "Greek Work",
+                        "citation_path": "2",
+                        "text": "λόγος τις ἐστίν.",
+                    },
+                ]
+            },
+        ]
+        context = _encounter_reader_search_context(
+            language="grc",
+            text="logos",
+            reduction=reduction,
+            preferred_lemmas=["λόγος"],
+            index_path=Path("reader-search.lance"),
+            limit=5,
+            context=1,
+            field="auto",
+            all_candidates=True,
+        )
+
+    assert search.call_count == READER_SEARCH_CANDIDATE_COUNT
+    assert [call.args[2] for call in search.call_args_list] == ["logos", "λόγος"]
+    items = cast(list[dict[str, object]], context["items"])
+    assert [item["segment_id"] for item in items] == ["seg-1", "seg-2"]
+    assert items[0]["matched_query"] == "logos"
+    assert items[0]["input_query"] == "logos"
+    assert items[0]["match_type"] == "exact_surface"
+    assert items[0]["candidate_rank"] == 0
+    assert items[1]["matched_query"] == "λόγος"
+    assert items[1]["match_type"] == "candidate_expansion"
+    assert items[1]["candidate_rank"] == 1
 
 
 def test_encounter_word_index_context_prefers_exact_anchor_over_raw_nearest() -> None:
@@ -2954,6 +3331,75 @@ def test_encounter_follows_sanskrit_morphology_lemma_when_surface_has_no_meaning
     ), cli_result.output
 
 
+def test_encounter_follows_sanskrit_normalization_candidate_when_surface_has_no_meanings() -> None:
+    surface_result = SimpleNamespace(claims=[])
+    lemma_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="cdsl",
+                subject="lex:svarupa",
+                triples=[
+                    {
+                        "subject": "lex:svarupa",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:svarupa#1",
+                        "metadata": {
+                            "evidence": {"source_tool": "cdsl", "source_ref": "mw:svarUpa"},
+                            "display_iast": "svarūpa",
+                            "display_slp1": "svarUpa",
+                        },
+                    },
+                    {
+                        "subject": "sense:lex:svarupa#1",
+                        "predicate": "gloss",
+                        "object": "own form, nature, character",
+                        "metadata": {
+                            "evidence": {"source_tool": "cdsl", "source_ref": "mw:svarUpa"},
+                            "display_iast": "svarūpa",
+                            "display_slp1": "svarUpa",
+                        },
+                    },
+                ],
+            )
+        ]
+    )
+
+    with (
+        patch("langnet.cli._execute_lookup_plan", side_effect=[surface_result, lemma_result]),
+        patch(
+            "langnet.cli._encounter_sanskrit_normalization_fallback_terms",
+            return_value=(
+                ["svarūpa"],
+                "No sense buckets for surface form; followed Sanskrit normalization candidate "
+                "for meaning evidence.",
+            ),
+        ),
+    ):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "san",
+                "स्वरूपे",
+                "all",
+                "--no-cache",
+                "--translation-mode",
+                "off",
+                "--output",
+                "json",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    assert payload["warnings"] == [
+        "No sense buckets for surface form; followed Sanskrit normalization candidate "
+        "for meaning evidence."
+    ]
+    assert payload["lexeme_anchors"] == ["lex:svarupa"]
+    assert payload["buckets"][0]["display_gloss"] == "own form, nature, character"
+
+
 def test_encounter_enriches_sanskrit_surface_with_clear_morphology_lemma() -> None:
     surface_result = SimpleNamespace(
         claims=[
@@ -3459,6 +3905,59 @@ def test_translation_warm_populates_wordlist_cache() -> None:
         assert record.translated_text == "wolf"
 
 
+def test_translation_cache_clear_can_delete_only_bailly_rows() -> None:
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "translation.duckdb"
+        conn = duckdb.connect(str(cache_path))
+        try:
+            cache = TranslationCache(conn)
+            for source_lexicon, entry_id, translated_text in (
+                ("bailly", "bailly-p001-c1-0001", "stone"),
+                ("gaffiot", "gaffiot_38776", "wolf"),
+            ):
+                key = build_translation_key(
+                    source_lexicon=source_lexicon,
+                    entry_id=entry_id,
+                    occurrence=0,
+                    headword_norm="petros" if source_lexicon == "bailly" else "lupus",
+                    source_text="pierre" if source_lexicon == "bailly" else "loup",
+                    model="test:model",
+                    prompt=BASE_SYSTEM,
+                    hint="\n".join(default_hints_for_language("grc")),
+                )
+                cache.upsert(
+                    TranslationRecord(
+                        key=key,
+                        translated_text=translated_text,
+                        status="ok",
+                        duration_ms=7,
+                    )
+                )
+        finally:
+            conn.close()
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "translation-cache",
+                "clear",
+                "--translation-cache-db",
+                str(cache_path),
+                "--source-lexicon",
+                "bailly",
+                "--yes",
+                "--output",
+                "json",
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert payload["deleted"] == 1
+        assert payload["after"]["row_count"] == 1
+        assert payload["after"]["source_lexicon_counts"] == {"gaffiot": 1}
+
+
 def test_encounter_translation_mode_auto_populates_missing_cache() -> None:
     model = "test:model"
     with TemporaryDirectory() as tmpdir:
@@ -3752,6 +4251,113 @@ def test_encounter_json_reports_translation_cache_miss() -> None:
         "empty": 0,
     }
     assert payload["translation_cache"]["written"] == 0
+
+
+def test_encounter_json_reports_bailly_translation_cache_error_on_entry() -> None:
+    model = "test:model"
+    source_text = "parole, discours"
+    key = build_translation_key(
+        source_lexicon="bailly",
+        entry_id="bailly-p1450-c1-0024",
+        occurrence=0,
+        headword_norm="logos",
+        source_text=source_text,
+        model=model,
+        prompt=BASE_SYSTEM,
+        hint="\n".join(default_hints_for_language("grc")),
+    )
+    result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="bailly",
+                subject="lex:logos",
+                triples=[
+                    {
+                        "subject": "lex:logos",
+                        "predicate": "has_sense",
+                        "object": "sense:lex:logos#bailly",
+                        "metadata": {
+                            "evidence": {
+                                "source_tool": "bailly",
+                                "source_ref": "bailly:bailly-p1450-c1-0024",
+                            }
+                        },
+                    },
+                    {
+                        "subject": "sense:lex:logos#bailly",
+                        "predicate": "gloss",
+                        "object": source_text,
+                        "metadata": {
+                            "source_lang": "fr",
+                            "source_ref": "bailly:bailly-p1450-c1-0024",
+                            "evidence": {
+                                "source_tool": "bailly",
+                                "source_ref": "bailly:bailly-p1450-c1-0024",
+                                "source_lang": "fr",
+                            },
+                        },
+                    },
+                ],
+            )
+        ]
+    )
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "translation.duckdb"
+        conn = duckdb.connect(str(cache_path))
+        try:
+            TranslationCache(conn).upsert(
+                TranslationRecord(
+                    key=key,
+                    translated_text=None,
+                    status="error",
+                    error="Bailly translation response is not JSON",
+                    duration_ms=17,
+                )
+            )
+        finally:
+            conn.close()
+
+        with patch("langnet.cli._execute_lookup_plan", return_value=result):
+            cli_result = CliRunner().invoke(
+                main,
+                [
+                    "encounter",
+                    "grc",
+                    "logos",
+                    "bailly",
+                    "--translation-cache-db",
+                    str(cache_path),
+                    "--translation-model",
+                    model,
+                    "--output",
+                    "json",
+                ],
+            )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    assert payload["translation_cache"]["before"] == {
+        "total": 1,
+        "hits": 0,
+        "missing": 0,
+        "errors": 1,
+        "empty": 0,
+    }
+    entry_translation = payload["display"]["meanings"][0]["entries"][0]["translation"]
+    assert entry_translation == {
+        "available": False,
+        "translation_id": key.translation_id,
+        "source_lexicon": "bailly",
+        "source_text_lang": "fr",
+        "target_lang": "en",
+        "model": model,
+        "source_text_hash": key.source_text_hash,
+        "derived_from_tool": "bailly",
+        "derived_from_sense": "sense:lex:logos#bailly",
+        "status": "error",
+        "error": "Bailly translation response is not JSON",
+        "raw_blob_ref": "entry_translations",
+    }
 
 
 def test_encounter_prefers_multi_witness_bucket_snapshot() -> None:

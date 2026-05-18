@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from collections.abc import Mapping
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
+from unittest.mock import patch
 
 import duckdb
 
+from langnet.cli import _openrouter_translation_callback
 from langnet.reduction import reduce_claims
 from langnet.translation import (
     BASE_SYSTEM,
@@ -14,11 +19,15 @@ from langnet.translation import (
     TranslationRecord,
     build_translation_key,
     default_hints_for_language,
+    populate_missing_translations,
     project_cached_translations,
+    translation_cache_status_counts,
 )
+from langnet.translation.structured import structured_translation_user_content
 
 TRANSLATION_DURATION_MS = 7
 ORIGINAL_TRIPLE_COUNT = 2
+EXPECTED_RETRY_CALL_COUNT = 2
 FIXTURE_PATH = Path("tests/fixtures/translation_cache_golden_rows.json")
 
 
@@ -92,6 +101,205 @@ def _dico_claim() -> Mapping[str, Any]:
             ]
         },
     }
+
+
+def _bailly_claim() -> Mapping[str, Any]:
+    return {
+        "claim_id": "claim-bailly-agelaios",
+        "tool": "claim.bailly.entries",
+        "value": {
+            "triples": [
+                {
+                    "subject": "lex:agelaios",
+                    "predicate": "has_sense",
+                    "object": "sense:lex:agelaios#bailly-troupeau",
+                    "metadata": {
+                        "evidence": {
+                            "source_tool": "bailly",
+                            "source_ref": "bailly:bailly-p090-c1-0004",
+                        }
+                    },
+                },
+                {
+                    "subject": "sense:lex:agelaios#bailly-troupeau",
+                    "predicate": "gloss",
+                    "object": "qui forme un troupeau",
+                    "metadata": {
+                        "source_lang": "fr",
+                        "source_ref": "bailly:bailly-p090-c1-0004",
+                        "evidence": {
+                            "source_tool": "bailly",
+                            "source_ref": "bailly:bailly-p090-c1-0004",
+                        },
+                    },
+                },
+            ]
+        },
+    }
+
+
+def _bailly_structured_claim() -> Mapping[str, Any]:
+    source_blocks = [
+        {
+            "path": "00",
+            "parent_path": None,
+            "level": 0,
+            "marker": "head",
+            "kind": "head",
+            "text": "ἀγελαῖος",
+            "source_ref": "bailly:bailly-p090-c1-0004:00",
+        },
+        {
+            "path": "01",
+            "parent_path": None,
+            "level": 1,
+            "marker": "I",
+            "kind": "sense",
+            "text": "qui forme un troupeau",
+            "source_ref": "bailly:bailly-p090-c1-0004:01",
+            "layout": {"column": 1, "top": 200},
+        },
+        {
+            "path": "01:00",
+            "parent_path": "01",
+            "level": 2,
+            "marker": "fig.",
+            "kind": "sense",
+            "text": "fig. ἀγέλη réuni, Eschl. Pers. 460; Xén. An.; NT. Matth. 4",
+            "source_ref": "bailly:bailly-p090-c1-0004:01:00",
+            "layout": {"column": 1, "top": 220},
+        },
+    ]
+    source_segments = [
+        {
+            "index": 0,
+            "raw_text": "qui forme un troupeau",
+            "display_text": "qui forme un troupeau",
+            "segment_type": "definition_segment",
+            "labels": ["definition"],
+            "source_ref": "bailly:bailly-p090-c1-0004:01",
+            "source_path": "01",
+            "source_marker": "I",
+            "source_level": 1,
+        },
+        {
+            "index": 1,
+            "raw_text": "fig. ἀγέλη réuni, Eschl. Pers. 460; Xén. An.; NT. Matth. 4",
+            "display_text": "fig. ἀγέλη réuni, Eschl. Pers. 460; Xén. An.; NT. Matth. 4",
+            "segment_type": "definition_segment",
+            "labels": ["definition"],
+            "source_ref": "bailly:bailly-p090-c1-0004:01:00",
+            "source_path": "01:00",
+            "source_marker": "fig.",
+            "source_level": 2,
+            "parent_path": "01",
+        },
+    ]
+    return {
+        "claim_id": "claim-bailly-agelaios",
+        "tool": "claim.bailly.entries",
+        "value": {
+            "triples": [
+                {
+                    "subject": "lex:agelaios",
+                    "predicate": "has_sense",
+                    "object": "sense:lex:agelaios#bailly-troupeau",
+                    "metadata": {
+                        "evidence": {
+                            "source_tool": "bailly",
+                            "source_ref": "bailly:bailly-p090-c1-0004",
+                        }
+                    },
+                },
+                {
+                    "subject": "sense:lex:agelaios#bailly-troupeau",
+                    "predicate": "gloss",
+                    "object": (
+                        "qui forme un troupeau fig. ἀγέλη réuni, Eschl. Pers. 460; "
+                        "Xén. An.; NT. Matth. 4"
+                    ),
+                    "metadata": {
+                        "source_lang": "fr",
+                        "source_ref": "bailly:bailly-p090-c1-0004",
+                        "source_blocks": source_blocks,
+                        "source_segments": source_segments,
+                        "evidence": {
+                            "source_tool": "bailly",
+                            "source_ref": "bailly:bailly-p090-c1-0004",
+                            "source_lang": "fr",
+                        },
+                    },
+                },
+            ]
+        },
+    }
+
+
+def _large_bailly_structured_claim(block_count: int = 6) -> Mapping[str, Any]:
+    claim = cast(dict[str, Any], _bailly_structured_claim())
+    gloss = cast(dict[str, Any], claim["value"])["triples"][1]
+    source_blocks = [
+        {
+            "path": "00",
+            "level": 0,
+            "marker": "head",
+            "kind": "head",
+            "text": "λόγος",
+            "source_ref": "bailly:bailly-p1450-c1-0024:00",
+        }
+    ]
+    source_segments = []
+    source_text_parts = []
+    for index in range(block_count):
+        path = f"01:{index:02d}"
+        text = f"bloc français {index}, λόγος, Hdt. {index}, 1 ||"
+        source_blocks.append(
+            {
+                "path": path,
+                "parent_path": "01",
+                "level": 2,
+                "marker": str(index + 1),
+                "kind": "sense",
+                "text": text,
+                "source_ref": f"bailly:bailly-p1450-c1-0024:{path}",
+            }
+        )
+        source_segments.append(
+            {
+                "index": index,
+                "raw_text": text,
+                "display_text": text,
+                "segment_type": "definition_segment",
+                "labels": ["definition"],
+                "source_ref": f"bailly:bailly-p1450-c1-0024:{path}",
+                "source_path": path,
+                "source_marker": str(index + 1),
+                "source_level": 2,
+                "parent_path": "01",
+            }
+        )
+        source_text_parts.append(text)
+
+    gloss["object"] = " ".join(source_text_parts)
+    gloss["metadata"]["source_ref"] = "bailly:bailly-p1450-c1-0024"
+    gloss["metadata"]["source_blocks"] = source_blocks
+    gloss["metadata"]["source_segments"] = source_segments
+    gloss["metadata"]["evidence"]["source_ref"] = "bailly:bailly-p1450-c1-0024"
+    return claim
+
+
+def _bailly_large_translation_key(claim: Mapping[str, Any]):
+    gloss = cast(Mapping[str, Any], cast(Mapping[str, Any], claim["value"])["triples"][1])
+    return build_translation_key(
+        source_lexicon="bailly",
+        entry_id="bailly-p1450-c1-0024",
+        occurrence=0,
+        headword_norm="agelaios",
+        source_text=str(gloss["object"]),
+        model="test:model",
+        prompt=BASE_SYSTEM,
+        hint="\n".join(default_hints_for_language("grc")),
+    )
 
 
 def _load_golden_fixture() -> dict[str, Any]:
@@ -209,6 +417,918 @@ def test_cached_gaffiot_translation_projects_as_english_gloss() -> None:
 
     reduction = reduce_claims(query="lupus", language="lat", claims=projected)
     assert "wolf" in {bucket.display_gloss for bucket in reduction.buckets}
+
+
+def test_cached_bailly_translation_projects_as_english_gloss() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    key = build_translation_key(
+        source_lexicon="bailly",
+        entry_id="bailly-p090-c1-0004",
+        occurrence=0,
+        headword_norm="agelaios",
+        source_text="qui forme un troupeau",
+        model="test:model",
+        prompt=BASE_SYSTEM,
+        hint="\n".join(default_hints_for_language("grc")),
+    )
+    cache.upsert(
+        TranslationRecord(
+            key=key,
+            translated_text="forming a herd",
+            status="ok",
+            duration_ms=TRANSLATION_DURATION_MS,
+        )
+    )
+
+    projected = project_cached_translations(
+        claims=[_bailly_claim()],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+
+    english_glosses = [
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss" and triple.get("object") == "forming a herd"
+    ]
+    assert len(english_glosses) == 1
+    metadata = english_glosses[0]["metadata"]
+    assert metadata["source_lang"] == "en"
+    assert metadata["evidence"]["source_tool"] == "translation"
+    assert metadata["evidence"]["derived_from_tool"] == "bailly"
+    assert metadata["evidence"]["source_text_lang"] == "fr"
+    assert metadata["evidence"]["gloss_lang"] == "en"
+    assert metadata["evidence"]["target_lang"] == "en"
+
+
+def test_bailly_translation_projection_carries_source_block_hierarchy() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    source_blocks = [
+        {
+            "path": "01",
+            "parent_path": None,
+            "level": 1,
+            "marker": "I",
+            "kind": "sense",
+            "text": "qui forme un troupeau",
+            "source_ref": "bailly:bailly-p090-c1-0004:01",
+        }
+    ]
+    source_segments = [
+        {
+            "index": 0,
+            "raw_text": "qui forme un troupeau",
+            "display_text": "qui forme un troupeau",
+            "segment_type": "definition_segment",
+            "labels": ["definition"],
+            "source_ref": "bailly:bailly-p090-c1-0004:01",
+            "source_path": "01",
+        }
+    ]
+    claim = {
+        "claim_id": "claim-bailly-agelaios",
+        "tool": "claim.bailly.entries",
+        "value": {
+            "triples": [
+                {
+                    "subject": "lex:agelaios",
+                    "predicate": "has_sense",
+                    "object": "sense:lex:agelaios#bailly-troupeau",
+                    "metadata": {"evidence": {"source_tool": "bailly"}},
+                },
+                {
+                    "subject": "sense:lex:agelaios#bailly-troupeau",
+                    "predicate": "gloss",
+                    "object": "qui forme un troupeau",
+                    "metadata": {
+                        "source_lang": "fr",
+                        "source_ref": "bailly:bailly-p090-c1-0004",
+                        "source_blocks": source_blocks,
+                        "source_segments": source_segments,
+                        "evidence": {
+                            "source_tool": "bailly",
+                            "source_ref": "bailly:bailly-p090-c1-0004",
+                            "source_lang": "fr",
+                        },
+                    },
+                },
+            ]
+        },
+    }
+    key = build_translation_key(
+        source_lexicon="bailly",
+        entry_id="bailly-p090-c1-0004",
+        occurrence=0,
+        headword_norm="agelaios",
+        source_text="qui forme un troupeau",
+        model="test:model",
+        prompt=BASE_SYSTEM,
+        hint="\n".join(default_hints_for_language("grc")),
+    )
+    cache.upsert(
+        TranslationRecord(
+            key=key,
+            translated_text="which forms a herd",
+            status="ok",
+            duration_ms=TRANSLATION_DURATION_MS,
+        )
+    )
+
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss" and triple.get("object") == "which forms a herd"
+    )
+
+    evidence = translated["metadata"]["evidence"]
+    assert evidence["source_blocks"] == source_blocks
+    assert evidence["source_segments"] == source_segments
+
+
+def test_bailly_translation_population_requires_matching_block_paths() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+
+    try:
+        populate_missing_translations(
+            claims=[claim],
+            language="grc",
+            model="test:model",
+            cache=cache,
+            translate=lambda _projection: (
+                '{"schema_version":"langnet.translation.blocks.v1",'
+                '"blocks":[{"path":"99","text":"which forms a herd"}]}'
+            ),
+        )
+    except ValueError as exc:
+        assert "Bailly translation block paths changed" in str(exc)
+    else:
+        raise AssertionError("expected Bailly structured translation validation to fail")
+    assert translation_cache_status_counts(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    ) == {"total": 1, "hits": 0, "missing": 0, "errors": 1, "empty": 0}
+
+
+def test_bailly_structured_translation_repairs_single_echoed_path_typo_by_position() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _large_bailly_structured_claim(block_count=3)
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: (
+            '{"schema_version":"langnet.translation.blocks.v1",'
+            '"blocks":['
+            '{"path":"01:00","text":"translated 00"},'
+            '{"path":"01: ","text":"translated 01"},'
+            '{"path":"01:02","text":"translated 02"}'
+            "]}"
+        ),
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert [block["path"] for block in translated["metadata"]["evidence"]["translated_blocks"]] == [
+        f"01:{index:02d}" for index in range(3)
+    ]
+
+
+def test_bailly_structured_translation_request_contains_source_block_paths() -> None:
+    seen_payload: dict[str, Any] = {}
+
+    def translate(projection: object) -> str:
+        seen_payload.update(json.loads(structured_translation_user_content(projection)))
+        return (
+            '{"schema_version":"langnet.translation.blocks.v1",'
+            '"blocks":['
+            '{"path":"01","text":"which forms a herd"},'
+            '{"path":"01:00","text":"figuratively, gathered together"}'
+            "]}"
+        )
+
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    populate_missing_translations(
+        claims=[_bailly_structured_claim()],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=translate,
+    )
+
+    assert seen_payload["schema_version"] == "langnet.translation.blocks.request.v1"
+    assert seen_payload["source_lexicon"] == "bailly"
+    assert [block["path"] for block in seen_payload["blocks"]] == ["01", "01:00"]
+    assert seen_payload["blocks"][0]["text"] == "qui forme un troupeau"
+
+
+def test_bailly_translation_population_batches_large_structured_entries() -> None:
+    request_paths: list[list[str]] = []
+
+    def translate(projection: object) -> str:
+        request = json.loads(structured_translation_user_content(projection))
+        paths = [str(block["path"]) for block in request["blocks"]]
+        request_paths.append(paths)
+        blocks = [{"path": path, "text": f"translated {path}, λόγος, Hdt. 1 ||"} for path in paths]
+        return json.dumps(
+            {
+                "schema_version": "langnet.translation.blocks.v1",
+                "blocks": blocks,
+            }
+        )
+
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _large_bailly_structured_claim(block_count=25)
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=translate,
+    )
+
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+    evidence = translated["metadata"]["evidence"]
+
+    assert written == 1
+    assert len(request_paths) > 1
+    assert [path for batch in request_paths for path in batch] == [
+        f"01:{index:02d}" for index in range(25)
+    ]
+    assert [block["path"] for block in evidence["translated_blocks"]] == [
+        f"01:{index:02d}" for index in range(25)
+    ]
+    assert translated["object"].startswith("translated 01:00")
+    assert "translated 01:24" in translated["object"]
+
+
+def test_bailly_structured_translation_accepts_fenced_json_response() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: (
+            "```json\n"
+            '{"schema_version":"langnet.translation.blocks.v1",'
+            '"blocks":['
+            '{"path":"01","text":"which forms a herd"},'
+            '{"path":"01:00","text":"figuratively, gathered together"}'
+            "]}\n"
+            "```"
+        ),
+    )
+
+    assert written == 1
+
+
+def test_bailly_structured_translation_accepts_plain_text_for_single_block() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+    gloss = cast(dict[str, Any], cast(dict[str, Any], claim["value"])["triples"][1])
+    source_blocks = cast(list[dict[str, Any]], gloss["metadata"]["source_blocks"])
+    source_blocks[:] = [source_blocks[0], source_blocks[1]]
+    source_blocks[1]["text"] = "défini- tion, Plat. Phædr. 245 e ||"
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: "definition, Plat. Phædr. 245 e ||",
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"] == "definition, Plat. Phædr. 245 e ||"
+
+
+def test_bailly_structured_translation_accepts_block_json_without_schema_version() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: (
+            '{"blocks":['
+            '{"path":"01","text":"which forms a herd"},'
+            '{"path":"01:00","text":"figuratively, gathered together"}'
+            "]}"
+        ),
+    )
+
+    assert written == 1
+
+
+def test_bailly_structured_translation_retries_invalid_batch_response() -> None:
+    responses = iter(
+        [
+            "translated prose instead of json",
+            (
+                '{"blocks":['
+                '{"path":"01","text":"which forms a herd"},'
+                '{"path":"01:00","text":"figuratively, gathered together"}'
+                "]}"
+            ),
+        ]
+    )
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: next(responses),
+    )
+
+    assert written == 1
+
+
+def test_bailly_structured_translation_retries_provider_exception() -> None:
+    calls = 0
+
+    def translate(_projection: object) -> str:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise ValueError("Expecting value: line 603 column 1")
+        return (
+            '{"blocks":['
+            '{"path":"01","text":"which forms a herd"},'
+            '{"path":"01:00","text":"figuratively, gathered together"}'
+            "]}"
+        )
+
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=translate,
+    )
+
+    assert written == 1
+    assert calls == EXPECTED_RETRY_CALL_COUNT
+
+
+def test_bailly_cached_translation_error_annotates_source_evidence() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _large_bailly_structured_claim(block_count=3)
+    key = _bailly_large_translation_key(claim)
+    cache.upsert(
+        TranslationRecord(
+            key=key,
+            translated_text=None,
+            status="error",
+            error="Bailly translation response is not JSON",
+            duration_ms=17,
+        )
+    )
+
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    source_gloss = next(triple for triple in triples if triple.get("predicate") == "gloss")
+    source_evidence = source_gloss["metadata"]["evidence"]
+    translated_glosses = [
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    ]
+
+    assert translated_glosses == []
+    assert source_evidence["translation_state"] == {
+        "available": False,
+        "status": "error",
+        "translation_id": key.translation_id,
+        "source_lexicon": "bailly",
+        "source_text_lang": "fr",
+        "target_lang": "en",
+        "model": "test:model",
+        "source_text_hash": key.source_text_hash,
+        "derived_from_tool": "bailly",
+        "derived_from_sense": "sense:lex:agelaios#bailly-troupeau",
+        "error": "Bailly translation response is not JSON",
+        "raw_blob_ref": "entry_translations",
+    }
+
+
+def test_bailly_populate_retries_cached_translation_error() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+    key = build_translation_key(
+        source_lexicon="bailly",
+        entry_id="bailly-p090-c1-0004",
+        occurrence=0,
+        headword_norm="agelaios",
+        source_text=(
+            "qui forme un troupeau fig. ἀγέλη réuni, Eschl. Pers. 460; Xén. An.; NT. Matth. 4"
+        ),
+        model="test:model",
+        prompt=BASE_SYSTEM,
+        hint="\n".join(default_hints_for_language("grc")),
+    )
+    cache.upsert(
+        TranslationRecord(
+            key=key,
+            translated_text=None,
+            status="error",
+            error="Bailly translation response is not JSON",
+            duration_ms=17,
+        )
+    )
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: (
+            '{"blocks":['
+            '{"path":"01","text":"which forms a herd"},'
+            '{"path":"01:00","text":"figuratively, gathered together"}'
+            "]}"
+        ),
+    )
+    record = cache.get(key)
+
+    assert written == 1
+    assert record is not None
+    assert record.status == "ok"
+    assert record.error is None
+    assert record.translated_text is not None
+
+
+def test_bailly_structured_translation_retries_untranslated_french_residue() -> None:
+    responses = iter(
+        [
+            (
+                '{"blocks":['
+                '{"path":"01","text":"raison, d’où :"},'
+                '{"path":"01:00","text":"faculté de raisonner, raison"}'
+                "]}"
+            ),
+            (
+                '{"blocks":['
+                '{"path":"01","text":"reason, whence:"},'
+                '{"path":"01:00","text":"faculty of reasoning, reason"}'
+                "]}"
+            ),
+        ]
+    )
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+    gloss = cast(dict[str, Any], cast(dict[str, Any], claim["value"])["triples"][1])
+    source_blocks = cast(list[dict[str, Any]], gloss["metadata"]["source_blocks"])
+    source_blocks[1]["text"] = "raison, d’où :"
+    source_blocks[2]["text"] = "faculté de raisonner, raison"
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: next(responses),
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"] == "reason, whence:\nfaculty of reasoning, reason"
+
+
+def test_bailly_structured_translation_retries_mixed_french_residue() -> None:
+    responses = iter(
+        [
+            (
+                '{"blocks":['
+                '{"path":"01","text":"whence in plur. tra- ditions historiques"},'
+                '{"path":"01:00","text":"figuratively, gathered together"}'
+                "]}"
+            ),
+            (
+                '{"blocks":['
+                '{"path":"01","text":"whence in plur. historical traditions"},'
+                '{"path":"01:00","text":"figuratively, gathered together"}'
+                "]}"
+            ),
+        ]
+    )
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+    gloss = cast(dict[str, Any], cast(dict[str, Any], claim["value"])["triples"][1])
+    source_blocks = cast(list[dict[str, Any]], gloss["metadata"]["source_blocks"])
+    source_blocks[1]["text"] = "d’où au plur. tra- ditions historiques"
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: next(responses),
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"].startswith("whence in plur. historical traditions")
+
+
+def test_bailly_structured_translation_repairs_known_untranslated_header() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+    gloss = cast(dict[str, Any], cast(dict[str, Any], claim["value"])["triples"][1])
+    source_blocks = cast(list[dict[str, Any]], gloss["metadata"]["source_blocks"])
+    source_blocks[1]["text"] = "parole :"
+    source_blocks[2]["text"] = "fig. ἀγέλη réuni"
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: (
+            '{"blocks":['
+            '{"path":"01","text":"parole :"},'
+            '{"path":"01:00","text":"figuratively, ἀγέλη gathered"}'
+            "]}"
+        ),
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"].startswith("speech :")
+
+
+def test_bailly_structured_translation_accepts_valid_cognate_block() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+    gloss = cast(dict[str, Any], cast(dict[str, Any], claim["value"])["triples"][1])
+    source_blocks = cast(list[dict[str, Any]], gloss["metadata"]["source_blocks"])
+    source_blocks[1]["text"] = "argument, Xén. Cyr. 1, 5, 3, etc. ||"
+    source_blocks[2]["text"] = "fig. ἀγέλη réuni"
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: (
+            '{"blocks":['
+            '{"path":"01","text":"argument, Xén. Cyr. 1, 5, 3, etc. ||"},'
+            '{"path":"01:00","text":"figuratively, ἀγέλη gathered"}'
+            "]}"
+        ),
+    )
+
+    assert written == 1
+
+
+def test_openrouter_callback_sends_bailly_blocks_as_structured_json() -> None:
+    captured: dict[str, Any] = {}
+
+    class FakeCompletions:
+        def create(
+            self,
+            *,
+            model: str,
+            messages: list[dict[str, str]],
+            response_format: Mapping[str, str] | None = None,
+            temperature: int | None = None,
+        ) -> object:
+            captured["model"] = model
+            captured["messages"] = messages
+            captured["response_format"] = response_format
+            captured["temperature"] = temperature
+            return SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        message=SimpleNamespace(
+                            content=(
+                                '{"schema_version":"langnet.translation.blocks.v1",'
+                                '"blocks":[{"path":"01","text":"which forms a herd"}]}'
+                            )
+                        )
+                    )
+                ]
+            )
+
+    class FakeClient:
+        def __init__(self, _config: Mapping[str, str]) -> None:
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    fake_aisuite = SimpleNamespace(Client=FakeClient)
+    projection = SimpleNamespace(
+        source=SimpleNamespace(
+            source_lexicon="bailly",
+            entry_id="bailly-p090-c1-0004",
+            source_ref="bailly:bailly-p090-c1-0004",
+        ),
+        hint="Bailly hint",
+        source_text="qui forme un troupeau",
+        source_blocks=[
+            {
+                "path": "01",
+                "kind": "sense",
+                "text": "qui forme un troupeau",
+                "source_ref": "bailly:bailly-p090-c1-0004:01",
+            }
+        ],
+    )
+
+    with (
+        patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False),
+        patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+    ):
+        translated = _openrouter_translation_callback("test:model")(projection)
+
+    user_payload = json.loads(captured["messages"][-1]["content"])
+    assert translated.startswith('{"schema_version":"langnet.translation.blocks.v1"')
+    assert captured["model"] == "test:model"
+    assert captured["response_format"] == {"type": "json_object"}
+    assert captured["temperature"] == 0
+    assert user_payload["schema_version"] == "langnet.translation.blocks.request.v1"
+    assert user_payload["blocks"] == [{"path": "01", "text": "qui forme un troupeau"}]
+
+
+def test_bailly_structured_translation_projects_parallel_english_hierarchy() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: (
+            '{"schema_version":"langnet.translation.blocks.v1",'
+            '"blocks":['
+            '{"path":"01","text":"which forms a herd"},'
+            '{"path":"01:00","text":"figuratively, gathered together"}'
+            "]}"
+        ),
+    )
+
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+    evidence = translated["metadata"]["evidence"]
+
+    assert written == 1
+    assert translated["object"] == "which forms a herd\nfiguratively, gathered together"
+    assert [block["path"] for block in evidence["translated_blocks"]] == ["01", "01:00"]
+    assert [block.get("parent_path") for block in evidence["translated_blocks"]] == [None, "01"]
+    assert [block["level"] for block in evidence["translated_blocks"]] == [1, 2]
+    assert [block["marker"] for block in evidence["translated_blocks"]] == ["I", "fig."]
+    assert evidence["translated_blocks"][0]["source_ref"] == "bailly:bailly-p090-c1-0004:01"
+    assert evidence["translated_blocks"][0]["text"] == "which forms a herd"
+    assert evidence["translated_segments"][0]["source_path"] == "01"
+    assert evidence["translated_segments"][1]["parent_path"] == "01"
+    assert evidence["translated_segments"][1]["display_text"] == "figuratively, gathered together"
+
+    reduction = reduce_claims(query="agelaios", language="grc", claims=projected)
+    reduced_witness = next(
+        witness
+        for bucket in reduction.buckets
+        for witness in bucket.witnesses
+        if witness.evidence.get("translation_id")
+    )
+    assert [block["path"] for block in reduced_witness.evidence["translated_blocks"]] == [
+        "01",
+        "01:00",
+    ]
+
+
+def test_bailly_structured_translation_restores_source_greek_tokens() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _bailly_structured_claim()
+
+    populate_missing_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: (
+            '{"schema_version":"langnet.translation.blocks.v1",'
+            '"blocks":['
+            '{"path":"01","text":"which forms a herd"},'
+            '{"path":"01:00","text":"figuratively, ἀγέλη gathered, '
+            'Aeschl. Pers. 460; Xen. An.; NT. Matt. 4"}'
+            "]}"
+        ),
+    )
+
+    projected = project_cached_translations(
+        claims=[claim],
+        language="grc",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    blocks = translated["metadata"]["evidence"]["translated_blocks"]
+    assert blocks[1]["text"] == (
+        "figuratively, ἀγέλη gathered, Eschl. Pers. 460; Xén. An.; NT. Matth. 4"
+    )
+
+
+def test_greek_translation_hints_are_bailly_specific_and_citation_averse() -> None:
+    hint = "\n".join(default_hints_for_language("grc")).lower()
+
+    assert "bailly" in hint
+    assert "general english glosses" in hint
+    assert "translate every french explanation" in hint
+    assert "bibliographic citations" in hint
+    assert "preserve original casing" in hint
+    assert "preserve original punctuation" in hint
+    assert "french common nouns" in hint
+    assert "preserve layout" in hint
+    assert "meticulous" in hint
+    assert "source-faithful" in hint
+    assert "particul. => in particular" in hint
+    assert "p. suite => by extension" in hint
+    assert "en gén. => in general" in hint
+    assert "citation" in hint
+    assert "french" in hint
+    assert "sanskrit" not in hint
+    assert "pierre" not in hint
+    assert "stone" not in hint
+
+
+def test_latin_translation_hints_are_gaffiot_specific_and_source_faithful() -> None:
+    hint = "\n".join(default_hints_for_language("lat")).lower()
+
+    assert "gaffiot" in hint
+    assert "preserve layout" in hint
+    assert "translate every french explanation" in hint
+    assert "bibliographic citations" in hint
+    assert "preserve original casing" in hint
+    assert "preserve original punctuation" in hint
+    assert "french common nouns" in hint
+    assert "use only meanings present in the source entry" in hint
+    assert "meticulous" in hint
+    assert "source-faithful" in hint
+
+
+def test_sanskrit_translation_hints_are_dico_specific_and_source_faithful() -> None:
+    hint = "\n".join(default_hints_for_language("san")).lower()
+
+    assert "dico" in hint
+    assert "preserve layout" in hint
+    assert "translate every french explanation" in hint
+    assert "use only meanings present in the source entry" in hint
+    assert "preserve original casing" in hint
+    assert "preserve original punctuation" in hint
+    assert "french common nouns" in hint
+    assert "meticulous" in hint
+    assert "source-faithful" in hint
+    assert "sanskrit tokens" in hint
 
 
 def test_projection_leaves_claims_unchanged_without_cache_hit() -> None:

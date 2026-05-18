@@ -9,6 +9,7 @@ _LATIN_SECTION_ORDER = tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 _GREEK_SECTION_ORDER = tuple("ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ")
 _SANSKRIT_SECTION_ORDER = tuple("अआइईउऊऋॠऌॡएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह")
 _UNKNOWN_SECTION = "#"
+_NON_RESPONSIBLE_AUTHOR_KINDS = frozenset({"work_title", "anonymous_label", "ambiguous"})
 _ROMAN_PRAENOMINA = {
     "A",
     "APP",
@@ -79,6 +80,9 @@ def author_index_entry(row: dict[str, Any]) -> dict[str, Any]:
         "section_key": section_key,
         "language": language,
         "work_count": int(row.get("work_count") or 0),
+        "word_count": int(row.get("word_count") or 0),
+        "word_count_method": str(row.get("word_count_method") or "whitespace_tokens"),
+        "representative_titles": str(row.get("representative_titles") or ""),
         "alternate_names": alternate_names,
         "sort_key": (
             _author_sort_key(language, index_name, native_name)
@@ -126,8 +130,42 @@ def author_selector_matches(
     return normalized == _author_selector(language, source, index_name)
 
 
+def author_search_key(value: object) -> str:
+    return _ascii_fold(str(value or "")).casefold()
+
+
 def is_synthetic_author_selector(selector: str | None) -> bool:
     return bool(selector and selector.startswith("langnet:reader:author:"))
+
+
+def canonical_unknown_author_id(language: str) -> str:
+    code = re.sub(r"[^A-Za-z0-9_-]+", "-", language.strip()).strip("-") or "und"
+    return f"urn:cts:langnet:author.{code}.unknown"
+
+
+def canonical_author_id_for_source(
+    language: str,
+    source_author_id: str | None,
+    fallback_selector: str,
+    fallback_name: str,
+) -> str:
+    source = (source_author_id or "").strip()
+    if source.startswith("urn:cts:"):
+        return source
+    compact = compact_author_id(source)
+    if language == "grc" and re.fullmatch(r"tlg\d+[A-Za-z]?", compact):
+        return f"urn:cts:greekLit:{compact}"
+    if language == "lat" and re.fullmatch(r"phi\d+[A-Za-z]?", compact):
+        return f"urn:cts:latinLit:{compact}"
+    if fallback_selector.startswith("urn:cts:"):
+        return fallback_selector
+    if is_synthetic_author_selector(fallback_selector):
+        return f"urn:cts:langnet:author.{language}.{_slug(fallback_name)}"
+    return fallback_selector
+
+
+def author_kind_uses_unknown_authority(agent_kind: str | None) -> bool:
+    return (agent_kind or "").strip() in _NON_RESPONSIBLE_AUTHOR_KINDS
 
 
 def compact_author_id(source_author_id: str) -> str:

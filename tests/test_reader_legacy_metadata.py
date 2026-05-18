@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 
-from langnet.reader.legacy_metadata import tlg_canon_metadata_from_segments
+from langnet.reader.legacy_metadata import parse_legacy_authtab, tlg_canon_metadata_from_segments
 from langnet.reader.models import ReaderSegment
 
 
@@ -31,6 +32,28 @@ def test_tlg_canon_metadata_extracts_author_category_and_work_title() -> None:
     ) in triples
     assert ("author", "tlg0086", "tlg_canon_author_name", "Plutarchus") in triples
     assert ("author", "tlg0086", "tlg_canon_category", "Biogr. et Phil.") in triples
+
+
+def test_legacy_authtab_maps_hebrew_marker_to_hebrew_language() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        authtab = Path(tmpdir) / "AUTHTAB.DIR"
+        authtab.write_bytes(b"PHI0001 Hebrew Bible (MT or BHS) \x83h\xff")
+
+        rows = parse_legacy_authtab(authtab, collection_id="phi")
+    triples = {(row.subject_id, row.key, row.value) for row in rows}
+
+    assert ("phi0001", "authtab_language", "heb") in triples
+
+
+def test_legacy_authtab_maps_coptic_marker_to_coptic_language() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        authtab = Path(tmpdir) / "AUTHTAB.DIR"
+        authtab.write_bytes(b"COP0001 Sahidic Coptic Bible \x83c\xff")
+
+        rows = parse_legacy_authtab(authtab, collection_id="phi")
+    triples = {(row.subject_id, row.key, row.value) for row in rows}
+
+    assert ("cop0001", "authtab_language", "cop") in triples
 
 
 def _segment(citation_path: str, text: str) -> ReaderSegment:

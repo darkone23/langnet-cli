@@ -358,14 +358,15 @@ class CdslBuilder:
         entry_count = headword_count = None
         if self.output_path.exists():
             size_mb = round(self.output_path.stat().st_size / (1024 * 1024), 3)
-        conn = duckdb.connect(str(self.output_path))
-        try:
-            result = conn.execute("SELECT COUNT(*) FROM entries").fetchone()
-            entry_count = result[0] if result else 0
-            result = conn.execute("SELECT COUNT(*) FROM headwords").fetchone()
-            headword_count = result[0] if result else 0
-        finally:
-            conn.close()
+            conn = self._conn or duckdb.connect(str(self.output_path), read_only=True)
+            try:
+                result = conn.execute("SELECT COUNT(*) FROM entries").fetchone()
+                entry_count = result[0] if result else 0
+                result = conn.execute("SELECT COUNT(*) FROM headwords").fetchone()
+                headword_count = result[0] if result else 0
+            finally:
+                if conn is not self._conn:
+                    conn.close()
         return CdslStats(
             dict_id=self.dict_id,
             path=str(self.output_path),

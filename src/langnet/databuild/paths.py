@@ -94,8 +94,29 @@ def default_diogenes_path(language: str) -> Path:
     return build_dir() / f"lex_diogenes_{normalized}.duckdb"
 
 
+def default_bailly_path() -> Path:
+    """
+    Default output path for the Bailly Greek→French structured index.
+    """
+    return build_dir() / "lex_bailly.duckdb"
+
+
+def default_lewis_1890_path() -> Path:
+    """
+    Default output path for the Lewis 1890 Latin→English index.
+    """
+    return build_dir() / "lex_lewis_1890.duckdb"
+
+
 def default_reader_catalog_path() -> Path:
     """
     Default output path for the reader catalog index.
     """
     return build_dir() / "reader" / "catalog.duckdb"
+
+
+def default_reader_search_index_path() -> Path:
+    """
+    Default output path for the derived reader text search index.
+    """
+    return build_dir() / "reader" / "search.lance"

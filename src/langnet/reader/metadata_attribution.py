@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
-from typing import cast
+from typing import NoReturn, cast
 
 from langnet.reader.models import (
     ReaderMetadataAttribution,
@@ -24,7 +24,7 @@ _SUPPORTED_ATTRIBUTION_KEYS = _REQUIRED_ATTRIBUTION_KEYS
 _REQUIRED_EVIDENCE_KEYS = {"source_type", "citation", "label"}
 _OPTIONAL_EVIDENCE_KEYS = {"retrieved_at"}
 _SUPPORTED_EVIDENCE_KEYS = _REQUIRED_EVIDENCE_KEYS | _OPTIONAL_EVIDENCE_KEYS
-_SUPPORTED_MATCH_FIELDS = {"source_id", "work_id", "cts_work_urn"}
+_SUPPORTED_MATCH_FIELDS = {"source_id", "work_id", "cts_work_urn", "author_id"}
 _SUPPORTED_RELATION_TYPES = {
     "attributed_author",
     "possible_author",
@@ -247,6 +247,6 @@ def _record_str(path: Path, record: dict[str, object], key: str) -> str:
     return value
 
 
-def _raise_unsupported(path: Path, line_number: int) -> None:
+def _raise_unsupported(path: Path, line_number: int) -> NoReturn:
     msg = f"{path}:{line_number}: unsupported metadata attribution YAML line"
     raise ValueError(msg)

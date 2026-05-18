@@ -119,6 +119,10 @@ def test_latin_plan_includes_parse_and_whitakers() -> None:
     assert any(c.tool == "extract.gaffiot.json" for c in plan.tool_calls)
     assert any(c.tool == "derive.gaffiot.entries" for c in plan.tool_calls)
     assert any(c.tool == "claim.gaffiot.entries" for c in plan.tool_calls)
+    assert "fetch.lewis_1890" in tools
+    assert any(c.tool == "extract.lewis_1890.json" for c in plan.tool_calls)
+    assert any(c.tool == "derive.lewis_1890.entries" for c in plan.tool_calls)
+    assert any(c.tool == "claim.lewis_1890.entries" for c in plan.tool_calls)
 
 
 def test_latin_plan_passes_all_normalized_candidates_to_gaffiot() -> None:
@@ -138,6 +142,11 @@ def test_latin_plan_passes_all_normalized_candidates_to_gaffiot() -> None:
     assert gaffiot_call.params.get("headword") == "virumque"
     assert gaffiot_call.params.get("lemma") == "virus"
     assert gaffiot_call.params.get("lemma_candidates") == "virus;vir"
+
+    lewis_call = next(call for call in plan.tool_calls if call.tool == "fetch.lewis_1890")
+    assert lewis_call.params.get("headword") == "virumque"
+    assert lewis_call.params.get("lemma") == "virus"
+    assert lewis_call.params.get("lemma_candidates") == "virus;vir"
 
 
 def test_latin_plan_passes_local_form_rule_candidate_to_gaffiot() -> None:
@@ -185,6 +194,20 @@ def test_greek_plan_uses_parse_only() -> None:
     # CTS hydration + claims planned
     assert any(c.tool.startswith("fetch.cts_index") for c in plan.tool_calls)
     assert any(c.tool.startswith("claim.cts_index") for c in plan.tool_calls)
+
+
+def test_greek_plan_includes_bailly_dictionary_provider() -> None:
+    plan = ToolPlanner(PlannerConfig(max_candidates=2)).build(_grc_normalized())
+
+    tools = {call.tool for call in plan.tool_calls}
+    assert "fetch.bailly" in tools
+    assert "extract.bailly.json" in tools
+    assert "derive.bailly.entries" in tools
+    assert "claim.bailly.entries" in tools
+    bailly_call = next(call for call in plan.tool_calls if call.tool == "fetch.bailly")
+    assert bailly_call.params.get("headword") == "logos"
+    assert bailly_call.params.get("lemma") == "λόγος"
+    assert bailly_call.params.get("lemma_candidates") == "λόγος"
 
 
 def test_greek_plan_adds_surface_morphology_parse_when_normalized() -> None:

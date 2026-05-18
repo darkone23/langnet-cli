@@ -98,6 +98,21 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
         notes="French source entries can be projected through the translation cache.",
     ),
     ToolCatalogEntry(
+        language="lat",
+        tool_filter="lewis_1890",
+        label="Lewis 1890",
+        role="Latin-English dictionary entries",
+        source_tools=("lewis_1890",),
+        plan_tools=(
+            "fetch.lewis_1890",
+            "extract.lewis_1890.json",
+            "derive.lewis_1890.entries",
+            "claim.lewis_1890.entries",
+        ),
+        translation_capable=False,
+        notes="CLTK source for Charlton T. Lewis, An Elementary Latin Dictionary (1890).",
+    ),
+    ToolCatalogEntry(
         language="grc",
         tool_filter="diogenes",
         label="Diogenes / LSJ",
@@ -112,6 +127,21 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
             "claim.diogenes.citation",
         ),
         notes="Local Diogenes service; may require a running Diogenes endpoint.",
+    ),
+    ToolCatalogEntry(
+        language="grc",
+        tool_filter="bailly",
+        label="Bailly",
+        role="Greek-French dictionary entries",
+        source_tools=("bailly",),
+        plan_tools=(
+            "fetch.bailly",
+            "extract.bailly.json",
+            "derive.bailly.entries",
+            "claim.bailly.entries",
+        ),
+        translation_capable=True,
+        notes="French source entries can be projected through the translation cache.",
     ),
     ToolCatalogEntry(
         language="grc",

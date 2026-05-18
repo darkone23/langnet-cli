@@ -619,12 +619,13 @@ def _source_entry_payload(source_entry: Mapping[str, object]) -> dict[str, objec
 
 
 def _translation_payload(witness: object, evidence: Mapping[str, object]) -> dict[str, object]:
+    state = _mapping_value(evidence.get("translation_state"))
     is_translation = (
         _witness_source_tool(witness) == "translation"
         or evidence.get("source_tool") == "translation"
         or bool(evidence.get("translation_id"))
     )
-    return {
+    payload = {
         "available": is_translation,
         "translation_id": _string_value(evidence.get("translation_id")),
         "source_lexicon": _string_value(evidence.get("source_lexicon")),
@@ -635,6 +636,25 @@ def _translation_payload(witness: object, evidence: Mapping[str, object]) -> dic
         "derived_from_tool": _string_value(evidence.get("derived_from_tool")),
         "derived_from_sense": _string_value(evidence.get("derived_from_sense")),
     }
+    if state and not is_translation:
+        for key in (
+            "available",
+            "translation_id",
+            "source_lexicon",
+            "source_text_lang",
+            "target_lang",
+            "model",
+            "source_text_hash",
+            "derived_from_tool",
+            "derived_from_sense",
+            "status",
+            "error",
+            "raw_blob_ref",
+        ):
+            value = state.get(key)
+            if isinstance(value, bool | str):
+                payload[key] = value
+    return payload
 
 
 def _translation_sources(witnesses: Sequence[object]) -> list[str]:

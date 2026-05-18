@@ -49,6 +49,8 @@ in
     pkgs.duckdb
     pkgs.sqlite
 
+    pkgs.nodejs
+
     pkgs.just
     pkgs.hl-log-viewer
 

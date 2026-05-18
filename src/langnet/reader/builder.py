@@ -52,6 +52,10 @@ from langnet.reader.models import (
     ReaderSourceFile,
     ReaderSourceMetadata,
 )
+from langnet.reader.source_enrichment import (
+    parse_dcs_chapter_info_metadata,
+    sync_dcs_corpus_metadata,
+)
 from langnet.reader.storage import (
     ReaderBookRegistration,
     create_catalog_db,
@@ -63,7 +67,9 @@ from langnet.reader.storage import (
     register_segment_rows,
     register_source_files,
     register_source_metadata,
+    register_work_map_nodes,
 )
+from langnet.reader.work_map import accepted_work_map_nodes, load_work_map_nodes
 
 CTS_URN_MIN_PARTS = 4
 NUMBERED_SANSKRIT_CODE_LENGTH = 8
@@ -82,6 +88,7 @@ class ReaderBuildConfig:
     metadata_overlay_dir: Path | None = Path("data/curated/reader_metadata")
     metadata_attribution_dir: Path | None = Path("data/curated/reader_attributions")
     contained_work_dir: Path | None = Path("data/curated/reader_contained_works")
+    work_map_dir: Path | None = Path("data/curated/reader_work_maps")
     output_root: Path | None = None
     cts_index_path: Path | None = Path("data/build/cts_urn.duckdb")
     limit: int | None = None
@@ -156,6 +163,9 @@ class ReaderBuilder:
             if config.contained_work_dir is not None
             else []
         )
+        self._work_map_nodes = (
+            load_work_map_nodes(config.work_map_dir) if config.work_map_dir is not None else []
+        )
         self._accepted_metadata_overlays = accepted_metadata_overlays(self._metadata_overlays)
 
     def build(self) -> BuildResult[ReaderCorpusStats | BuildErrorStats]:
@@ -168,6 +178,10 @@ class ReaderBuilder:
             register_metadata_overlays(self.catalog_path, self._metadata_overlays)
             register_metadata_attributions(self.catalog_path, self._metadata_attributions)
             register_contained_works(self.catalog_path, self._contained_works)
+            register_work_map_nodes(
+                self.catalog_path,
+                accepted_work_map_nodes(self._work_map_nodes),
+            )
             self._register_legacy_source_metadata()
             self._register_digiliblt_source_metadata()
             self._register_sanskrit_source_metadata()
@@ -211,6 +225,7 @@ class ReaderBuilder:
                     segment_count=segment_count,
                 )
             register_books(self.catalog_path, book_registrations)
+            self._register_sanskrit_source_enrichment_metadata()
             registered_aliases = _aliases_for_registrations(aliases, book_registrations)
             register_aliases(self.catalog_path, registered_aliases)
             self._register_source_errors()
@@ -352,7 +367,45 @@ class ReaderBuilder:
             files.append(_source_file("sanskrit_texts", path, role))
         for path in self._sanskrit_conllu_paths():
             files.append(_source_file("sanskrit_dcs", path, "sanskrit_dcs_conllu"))
+        chapter_info_path = self._dcs_chapter_info_path()
+        if chapter_info_path is not None:
+            files.append(
+                _metadata_source_file(
+                    "sanskrit_dcs",
+                    chapter_info_path,
+                    "sanskrit_dcs_chapter_info",
+                )
+            )
+        corpus_table_path = self._dcs_corpus_table_path()
+        if corpus_table_path is not None:
+            files.append(
+                _metadata_source_file(
+                    "sanskrit_dcs",
+                    corpus_table_path,
+                    "sanskrit_dcs_corpus_table",
+                )
+            )
         register_source_files(self.catalog_path, files)
+
+    def _register_sanskrit_source_enrichment_metadata(self) -> None:
+        if self.config.sanskrit_dir is None or not self.config.sanskrit_dir.exists():
+            return
+        chapter_info_path = self._dcs_chapter_info_path()
+        if chapter_info_path is not None:
+            register_source_metadata(
+                self.catalog_path,
+                parse_dcs_chapter_info_metadata(
+                    chapter_info_path.read_text(encoding="utf-8"),
+                    source_path=chapter_info_path,
+                ),
+            )
+        corpus_table_path = self._dcs_corpus_table_path()
+        if corpus_table_path is not None:
+            sync_dcs_corpus_metadata(
+                self.catalog_path,
+                corpus_table_path.read_text(encoding="utf-8"),
+                source_path=corpus_table_path,
+            )
 
     def _register_perseus_source_metadata(self) -> None:
         if self.config.perseus_dir is None or not self.config.perseus_dir.exists():
@@ -512,6 +565,30 @@ class ReaderBuilder:
         for path in self._sanskrit_conllu_paths():
             groups[_dcs_group_key(path)].append(path)
         return [sorted(paths) for _key, paths in sorted(groups.items())]
+
+    def _dcs_chapter_info_path(self) -> Path | None:
+        if self.config.sanskrit_dir is None:
+            return None
+        for path in _dcs_lookup_candidates(self.config.sanskrit_dir, ("chapter-info.xml",)):
+            if path.exists():
+                return path
+        return None
+
+    def _dcs_corpus_table_path(self) -> Path | None:
+        if self.config.sanskrit_dir is None:
+            return None
+        filenames = (
+            "dcs-corpus.tsv",
+            "dcs-corpus.txt",
+            "dcs-corpus.md",
+            "corpus.tsv",
+            "corpus.txt",
+            "corpus.md",
+        )
+        for path in _dcs_lookup_candidates(self.config.sanskrit_dir, filenames):
+            if path.exists():
+                return path
+        return None
 
     def _artifact(self, source: _ParsedSource, book_path: Path) -> ReaderBookArtifact:
         parsed = source.parsed
@@ -925,6 +1002,29 @@ def _source_file(collection_id: str, path: Path, role: str) -> ReaderSourceFile:
         source_hash=_file_hash(path),
         size_bytes=path.stat().st_size,
     )
+
+
+def _metadata_source_file(collection_id: str, path: Path, role: str) -> ReaderSourceFile:
+    return ReaderSourceFile(
+        collection_id=collection_id,
+        source_path=path,
+        file_role=role,
+        file_status="metadata",
+        source_id=_path_source_id(path),
+        source_hash=_file_hash(path),
+        size_bytes=path.stat().st_size,
+    )
+
+
+def _dcs_lookup_candidates(root: Path, filenames: tuple[str, ...]) -> list[Path]:
+    lookup_roots = (
+        root / "dcs" / "data" / "conllu" / "lookup",
+        root / "data" / "conllu" / "lookup",
+        root / "dcs" / "lookup",
+        root / "lookup",
+        root,
+    )
+    return [lookup_root / filename for lookup_root in lookup_roots for filename in filenames]
 
 
 def _looks_numbered_sanskrit_safe(path: Path) -> bool:

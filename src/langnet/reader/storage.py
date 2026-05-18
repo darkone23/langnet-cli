@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,14 +11,25 @@ import polars as pl
 
 from langnet.reader.author_index import (
     author_index_entry,
+    author_kind_uses_unknown_authority,
+    author_search_key,
     author_section_sort_key,
     author_selector_matches,
+    canonical_author_id_for_source,
+    canonical_unknown_author_id,
     compact_author_id,
     is_synthetic_author_selector,
     normalize_section_key,
 )
+from langnet.reader.author_normalization import normalize_reader_author
+from langnet.reader.discovery_taxonomy import (
+    DISCOVERY_GROUPS,
+    DISCOVERY_TAGS,
+    normalize_discovery_tags,
+)
 from langnet.reader.models import (
     ReaderAlias,
+    ReaderAuthorClassification,
     ReaderBookArtifact,
     ReaderContainedWork,
     ReaderEdition,
@@ -28,7 +40,68 @@ from langnet.reader.models import (
     ReaderSourceFile,
     ReaderSourceMetadata,
     ReaderWork,
+    ReaderWorkClassification,
+    ReaderWorkMapNode,
 )
+
+ASCII_MAX_CODEPOINT = 127
+CATALOG_ENGLISH_WORDS = frozenset(
+    {
+        "and",
+        "are",
+        "both",
+        "but",
+        "for",
+        "from",
+        "have",
+        "his",
+        "is",
+        "lord",
+        "not",
+        "of",
+        "shall",
+        "that",
+        "the",
+        "their",
+        "them",
+        "unto",
+        "was",
+        "were",
+        "which",
+        "with",
+    }
+)
+CATALOG_ENGLISH_ANCHOR_WORDS = frozenset({"and", "of", "shall", "that", "the", "unto", "which"})
+CATALOG_LATIN_WORDS = frozenset(
+    {
+        "ad",
+        "cum",
+        "de",
+        "est",
+        "et",
+        "in",
+        "non",
+        "per",
+        "pro",
+        "quae",
+        "quam",
+        "qui",
+        "quod",
+        "sed",
+        "sunt",
+        "ut",
+    }
+)
+CATALOG_ENGLISH_MIN_WORDS = 6
+CATALOG_ENGLISH_MIN_ANCHOR_WORDS = 2
+CATALOG_LANGUAGE_MIN_RATIO = 2
+CLASSIFICATION_SOURCE_LANGUAGE_TOKENS = {
+    "lat": {"lat", "latin"},
+    "grc": {"grc", "greek"},
+    "san": {"san", "sanskrit"},
+    "eng": {"eng", "english"},
+}
+SUPPORTED_READER_LANGUAGES = frozenset({"san", "grc", "lat"})
 
 CATALOG_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS works (
@@ -145,6 +218,79 @@ CREATE TABLE IF NOT EXISTS contained_works (
     evidence_retrieved_at VARCHAR
 );
 
+CREATE TABLE IF NOT EXISTS work_map_nodes (
+    work_id VARCHAR NOT NULL,
+    node_id VARCHAR NOT NULL,
+    parent_node_id VARCHAR,
+    level INTEGER NOT NULL,
+    kind VARCHAR NOT NULL,
+    label TEXT NOT NULL,
+    native_label TEXT,
+    ordinal INTEGER NOT NULL,
+    start_citation VARCHAR NOT NULL,
+    end_citation VARCHAR NOT NULL,
+    provenance VARCHAR NOT NULL,
+    confidence VARCHAR NOT NULL,
+    status VARCHAR NOT NULL,
+    note TEXT NOT NULL,
+    source_file VARCHAR NOT NULL,
+    evidence_source_type VARCHAR NOT NULL,
+    evidence_citation TEXT NOT NULL,
+    evidence_label TEXT NOT NULL,
+    evidence_retrieved_at VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS work_classifications (
+    work_id VARCHAR PRIMARY KEY,
+    category VARCHAR NOT NULL,
+    period VARCHAR NOT NULL,
+    date_range VARCHAR NOT NULL,
+    authorship_status VARCHAR NOT NULL,
+    popularity_score INTEGER,
+    popularity_tier VARCHAR NOT NULL,
+    scope VARCHAR NOT NULL,
+    scope_popularity_score INTEGER,
+    scope_popularity_tier VARCHAR NOT NULL,
+    confidence VARCHAR NOT NULL,
+    note TEXT NOT NULL,
+    generator_models TEXT NOT NULL,
+    generator_run_id VARCHAR NOT NULL,
+    source_file VARCHAR NOT NULL,
+    discovery_group_id VARCHAR NOT NULL DEFAULT '',
+    discovery_tags TEXT NOT NULL DEFAULT '',
+    global_popularity_score INTEGER,
+    global_popularity_tier VARCHAR NOT NULL DEFAULT '',
+    group_popularity_score INTEGER,
+    group_popularity_tier VARCHAR NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS work_classification_tags (
+    work_id VARCHAR NOT NULL,
+    tag_id VARCHAR NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS author_classifications (
+    author_id VARCHAR NOT NULL,
+    language VARCHAR NOT NULL,
+    source_author_id VARCHAR NOT NULL DEFAULT '',
+    canonical_name VARCHAR NOT NULL,
+    agent_kind VARCHAR NOT NULL,
+    historicity_status VARCHAR NOT NULL,
+    period VARCHAR NOT NULL DEFAULT '',
+    date_range VARCHAR NOT NULL DEFAULT '',
+    region VARCHAR NOT NULL DEFAULT '',
+    cultural_context VARCHAR NOT NULL DEFAULT '',
+    bio TEXT NOT NULL DEFAULT '',
+    prominence_score INTEGER,
+    prominence_tier VARCHAR NOT NULL,
+    confidence VARCHAR NOT NULL,
+    note TEXT NOT NULL,
+    generator_models TEXT NOT NULL,
+    generator_run_id VARCHAR NOT NULL,
+    source_file VARCHAR NOT NULL,
+    PRIMARY KEY (author_id, language)
+);
+
 CREATE INDEX IF NOT EXISTS works_language_idx ON works(language);
 CREATE INDEX IF NOT EXISTS works_collection_idx ON works(collection_id);
 CREATE INDEX IF NOT EXISTS artifacts_work_idx ON artifacts(work_id);
@@ -161,6 +307,12 @@ CREATE INDEX IF NOT EXISTS metadata_attributions_agent_idx
     ON metadata_attributions(agent);
 CREATE INDEX IF NOT EXISTS contained_works_parent_idx ON contained_works(parent_work_id);
 CREATE INDEX IF NOT EXISTS contained_works_language_idx ON contained_works(language);
+CREATE INDEX IF NOT EXISTS work_map_nodes_work_idx ON work_map_nodes(work_id);
+CREATE INDEX IF NOT EXISTS work_classifications_work_idx ON work_classifications(work_id);
+CREATE INDEX IF NOT EXISTS work_classification_tags_tag_idx
+    ON work_classification_tags(tag_id, work_id);
+CREATE INDEX IF NOT EXISTS author_classifications_kind_idx
+    ON author_classifications(language, agent_kind, historicity_status);
 """
 
 BOOK_TABLE_SCHEMA_SQL = """
@@ -188,20 +340,26 @@ BOOK_INDEX_SQL = """
 CREATE INDEX IF NOT EXISTS segments_sort_idx ON segments(sort_key);
 CREATE INDEX IF NOT EXISTS addresses_segment_idx ON addresses(segment_id);
 """
+CTS_WORK_TAIL_PARTS = 2
 
 
-def _connect(path: Path) -> duckdb.DuckDBPyConnection:
+def _connect_write(path: Path) -> duckdb.DuckDBPyConnection:
     path.parent.mkdir(parents=True, exist_ok=True)
-    return duckdb.connect(str(path))
+    return duckdb.connect(str(path), read_only=False)
+
+
+def _connect_read(path: Path) -> duckdb.DuckDBPyConnection:
+    return duckdb.connect(str(path), read_only=True)
 
 
 def create_catalog_db(path: Path) -> None:
-    with _connect(path) as conn:
+    with _connect_write(path) as conn:
         conn.execute(CATALOG_SCHEMA_SQL)
+        _ensure_catalog_schema(conn)
 
 
 def create_book_db(path: Path) -> None:
-    with _connect(path) as conn:
+    with _connect_write(path) as conn:
         conn.execute(BOOK_TABLE_SCHEMA_SQL)
         conn.execute(BOOK_INDEX_SQL)
         _ensure_book_schema(conn)
@@ -211,6 +369,55 @@ def _ensure_book_schema(conn: duckdb.DuckDBPyConnection) -> None:
     columns = {row[1] for row in conn.execute("PRAGMA table_info('segments')").fetchall()}
     if "source_text" not in columns:
         conn.execute("ALTER TABLE segments ADD COLUMN source_text TEXT")
+
+
+def _ensure_catalog_schema(conn: duckdb.DuckDBPyConnection) -> None:  # noqa: C901
+    if _table_exists(conn, "work_classifications"):
+        _ensure_work_classification_schema(conn)
+    if _table_exists(conn, "author_classifications"):
+        _ensure_author_classification_schema(conn)
+
+
+def _ensure_work_classification_schema(conn: duckdb.DuckDBPyConnection) -> None:
+    columns = _table_columns(conn, "work_classifications")
+    if "scope" not in columns:
+        conn.execute("ALTER TABLE work_classifications ADD COLUMN scope VARCHAR DEFAULT ''")
+    if "scope_popularity_score" not in columns:
+        conn.execute("ALTER TABLE work_classifications ADD COLUMN scope_popularity_score INTEGER")
+    if "scope_popularity_tier" not in columns:
+        conn.execute(
+            "ALTER TABLE work_classifications ADD COLUMN scope_popularity_tier VARCHAR DEFAULT ''"
+        )
+    if "discovery_group_id" not in columns:
+        conn.execute(
+            "ALTER TABLE work_classifications ADD COLUMN discovery_group_id VARCHAR DEFAULT ''"
+        )
+    if "discovery_tags" not in columns:
+        conn.execute("ALTER TABLE work_classifications ADD COLUMN discovery_tags TEXT DEFAULT ''")
+    if "global_popularity_score" not in columns:
+        conn.execute("ALTER TABLE work_classifications ADD COLUMN global_popularity_score INTEGER")
+    if "global_popularity_tier" not in columns:
+        conn.execute(
+            "ALTER TABLE work_classifications ADD COLUMN global_popularity_tier VARCHAR DEFAULT ''"
+        )
+    if "group_popularity_score" not in columns:
+        conn.execute("ALTER TABLE work_classifications ADD COLUMN group_popularity_score INTEGER")
+    if "group_popularity_tier" not in columns:
+        conn.execute(
+            "ALTER TABLE work_classifications ADD COLUMN group_popularity_tier VARCHAR DEFAULT ''"
+        )
+
+
+def _ensure_author_classification_schema(conn: duckdb.DuckDBPyConnection) -> None:
+    columns = _table_columns(conn, "author_classifications")
+    if "source_author_id" not in columns:
+        conn.execute(
+            "ALTER TABLE author_classifications ADD COLUMN source_author_id VARCHAR DEFAULT ''"
+        )
+
+
+def _table_columns(conn: duckdb.DuckDBPyConnection, table_name: str) -> set[str]:
+    return {row[1] for row in conn.execute(f"PRAGMA table_info('{table_name}')").fetchall()}
 
 
 @dataclass(frozen=True)
@@ -287,7 +494,7 @@ def register_books(
         )
         for _work, _edition, artifact in normalized_entries
     ]
-    with _connect(catalog_path) as conn:
+    with _connect_write(catalog_path) as conn:
         conn.execute("BEGIN TRANSACTION")
         try:
             work_frame = pl.DataFrame(
@@ -433,7 +640,7 @@ def register_segment_rows(
         )
         for address in addresses
     ]
-    with _connect(book_path) as conn:
+    with _connect_write(book_path) as conn:
         conn.execute(BOOK_TABLE_SCHEMA_SQL)
         _ensure_book_schema(conn)
         conn.execute("BEGIN TRANSACTION")
@@ -523,7 +730,7 @@ def register_aliases(catalog_path: Path, aliases: Iterable[ReaderAlias]) -> None
         )
         for alias in aliases
     ]
-    with _connect(catalog_path) as conn:
+    with _connect_write(catalog_path) as conn:
         conn.execute("DELETE FROM aliases")
         if rows:
             frame = pl.DataFrame(
@@ -576,7 +783,7 @@ def register_metadata_overlays(
         for overlay in overlays
         for evidence in overlay.evidence
     ]
-    with _connect(catalog_path) as conn:
+    with _connect_write(catalog_path) as conn:
         conn.execute("DELETE FROM metadata_overlays")
         if rows:
             frame = pl.DataFrame(
@@ -640,7 +847,7 @@ def register_metadata_attributions(
         for attribution in attributions
         for evidence in attribution.evidence
     ]
-    with _connect(catalog_path) as conn:
+    with _connect_write(catalog_path) as conn:
         conn.execute("DELETE FROM metadata_attributions")
         if rows:
             frame = pl.DataFrame(
@@ -680,6 +887,96 @@ def register_metadata_attributions(
             conn.unregister("metadata_attribution_rows")
 
 
+def apply_metadata_overlays_to_catalog(  # noqa: C901
+    catalog_path: Path,
+    overlays: Iterable[ReaderMetadataOverlay],
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    if not dry_run:
+        create_catalog_db(catalog_path)
+    accepted = [overlay for overlay in overlays if overlay.status == "accepted"]
+    if not accepted or not catalog_path.exists():
+        return {"applied_count": 0, "candidate_count": 0, "dry_run": dry_run, "updates": []}
+    with _connect_read(catalog_path) as conn:
+        work_rows = _dict_rows(
+            conn,
+            """
+            SELECT work_id, collection_id, language, title, author, author_id, source_id,
+                   cts_work_urn
+            FROM works
+            ORDER BY work_id
+            """,
+        )
+    updates: list[dict[str, str]] = []
+    for overlay in accepted:
+        for row in work_rows:
+            if not _metadata_overlay_matches_row(overlay, row):
+                continue
+            current = str(row.get(overlay.field) or "")
+            value = _metadata_overlay_value(overlay)
+            if current == value:
+                continue
+            updates.append(
+                {
+                    "work_id": str(row["work_id"]),
+                    "field": overlay.field,
+                    "from_value": current,
+                    "to_value": value,
+                    "match_field": overlay.match_field,
+                    "match_value": overlay.match_value,
+                }
+            )
+    if updates and not dry_run:
+        with _connect_write(catalog_path) as conn:
+            conn.execute("BEGIN TRANSACTION")
+            try:
+                for update in updates:
+                    field = update["field"]
+                    conn.execute(
+                        f"UPDATE works SET {field} = ? WHERE work_id = ?",
+                        [update["to_value"], update["work_id"]],
+                    )
+                    if field == "language":
+                        conn.execute(
+                            "UPDATE editions SET language = ? WHERE work_id = ?",
+                            [update["to_value"], update["work_id"]],
+                        )
+                        conn.execute(
+                            "UPDATE aliases SET language = ? WHERE target = ?",
+                            [update["to_value"], update["work_id"]],
+                        )
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+    return {
+        "applied_count": 0 if dry_run else len(updates),
+        "candidate_count": len(updates),
+        "dry_run": dry_run,
+        "updates": updates,
+    }
+
+
+def _metadata_overlay_matches_row(
+    overlay: ReaderMetadataOverlay,
+    row: Mapping[str, Any],
+) -> bool:
+    if overlay.collection_id != str(row.get("collection_id") or ""):
+        return False
+    if overlay.match_field == "author_id":
+        return compact_author_id(overlay.match_value) == compact_author_id(
+            str(row.get("author_id") or "")
+        )
+    return overlay.match_value == str(row.get(overlay.match_field) or "")
+
+
+def _metadata_overlay_value(overlay: ReaderMetadataOverlay) -> str:
+    if overlay.field == "author":
+        return normalize_reader_author(overlay.value)
+    return overlay.value
+
+
 def register_contained_works(
     catalog_path: Path,
     contained_works: Iterable[ReaderContainedWork],
@@ -709,7 +1006,7 @@ def register_contained_works(
         for work in contained_works
         for evidence in work.evidence
     ]
-    with _connect(catalog_path) as conn:
+    with _connect_write(catalog_path) as conn:
         conn.execute("DROP TABLE IF EXISTS contained_works")
         conn.execute(
             """
@@ -781,6 +1078,405 @@ def register_contained_works(
             conn.unregister("contained_work_rows")
 
 
+def register_work_map_nodes(
+    catalog_path: Path,
+    nodes: Iterable[ReaderWorkMapNode],
+) -> None:
+    create_catalog_db(catalog_path)
+    rows = [
+        (
+            node.work_id,
+            node.node_id,
+            node.parent_node_id,
+            node.level,
+            node.kind,
+            node.label,
+            node.native_label,
+            node.ordinal,
+            node.start_citation,
+            node.end_citation,
+            node.provenance,
+            node.confidence,
+            node.status,
+            node.note,
+            node.source_file,
+            evidence.source_type,
+            evidence.citation,
+            evidence.label,
+            evidence.retrieved_at,
+        )
+        for node in nodes
+        for evidence in node.evidence
+    ]
+    with _connect_write(catalog_path) as conn:
+        conn.execute("DELETE FROM work_map_nodes")
+        if rows:
+            frame = pl.DataFrame(
+                rows,
+                schema={
+                    "work_id": pl.Utf8,
+                    "node_id": pl.Utf8,
+                    "parent_node_id": pl.Utf8,
+                    "level": pl.Int64,
+                    "kind": pl.Utf8,
+                    "label": pl.Utf8,
+                    "native_label": pl.Utf8,
+                    "ordinal": pl.Int64,
+                    "start_citation": pl.Utf8,
+                    "end_citation": pl.Utf8,
+                    "provenance": pl.Utf8,
+                    "confidence": pl.Utf8,
+                    "status": pl.Utf8,
+                    "note": pl.Utf8,
+                    "source_file": pl.Utf8,
+                    "evidence_source_type": pl.Utf8,
+                    "evidence_citation": pl.Utf8,
+                    "evidence_label": pl.Utf8,
+                    "evidence_retrieved_at": pl.Utf8,
+                },
+                orient="row",
+            )
+            conn.register("work_map_node_rows", frame)
+            conn.execute(
+                """
+                INSERT INTO work_map_nodes (
+                    work_id, node_id, parent_node_id, level, kind, label, native_label,
+                    ordinal, start_citation, end_citation, provenance, confidence,
+                    status, note, source_file, evidence_source_type, evidence_citation,
+                    evidence_label, evidence_retrieved_at
+                )
+                SELECT
+                    work_id, node_id, parent_node_id, level, kind, label, native_label,
+                    ordinal, start_citation, end_citation, provenance, confidence,
+                    status, note, source_file, evidence_source_type, evidence_citation,
+                    evidence_label, evidence_retrieved_at
+                FROM work_map_node_rows
+                """
+            )
+            conn.unregister("work_map_node_rows")
+
+
+def register_work_classifications(
+    catalog_path: Path,
+    classifications: Iterable[ReaderWorkClassification],
+    *,
+    merge: bool = False,
+) -> None:
+    create_catalog_db(catalog_path)
+    classification_list = list(classifications)
+    rows = [
+        (
+            classification.work_id,
+            classification.category,
+            classification.period,
+            classification.date_range,
+            classification.authorship_status,
+            classification.popularity_score,
+            classification.popularity_tier,
+            classification.scope,
+            classification.scope_popularity_score,
+            classification.scope_popularity_tier,
+            classification.confidence,
+            classification.note,
+            classification.generator_models,
+            classification.generator_run_id,
+            classification.source_file,
+            classification.discovery_group_id,
+            classification.discovery_tags,
+            classification.global_popularity_score,
+            classification.global_popularity_tier,
+            classification.group_popularity_score,
+            classification.group_popularity_tier,
+        )
+        for classification in classification_list
+    ]
+    tag_rows = [
+        (classification.work_id, tag)
+        for classification in classification_list
+        for tag in normalize_discovery_tags(classification.discovery_tags)
+    ]
+    with _connect_write(catalog_path) as conn:
+        if merge:
+            if not classification_list:
+                return
+            work_id_frame = pl.DataFrame(
+                [(classification.work_id,) for classification in classification_list],
+                schema={"work_id": pl.Utf8},
+                orient="row",
+            )
+            conn.register("work_classification_work_ids", work_id_frame)
+            conn.execute(
+                """
+                DELETE FROM work_classification_tags
+                WHERE work_id IN (SELECT work_id FROM work_classification_work_ids)
+                """
+            )
+            conn.execute(
+                """
+                DELETE FROM work_classifications
+                WHERE work_id IN (SELECT work_id FROM work_classification_work_ids)
+                """
+            )
+            conn.unregister("work_classification_work_ids")
+        else:
+            conn.execute("DELETE FROM work_classifications")
+            conn.execute("DELETE FROM work_classification_tags")
+        if rows:
+            frame = pl.DataFrame(
+                rows,
+                schema={
+                    "work_id": pl.Utf8,
+                    "category": pl.Utf8,
+                    "period": pl.Utf8,
+                    "date_range": pl.Utf8,
+                    "authorship_status": pl.Utf8,
+                    "popularity_score": pl.Int64,
+                    "popularity_tier": pl.Utf8,
+                    "scope": pl.Utf8,
+                    "scope_popularity_score": pl.Int64,
+                    "scope_popularity_tier": pl.Utf8,
+                    "confidence": pl.Utf8,
+                    "note": pl.Utf8,
+                    "generator_models": pl.Utf8,
+                    "generator_run_id": pl.Utf8,
+                    "source_file": pl.Utf8,
+                    "discovery_group_id": pl.Utf8,
+                    "discovery_tags": pl.Utf8,
+                    "global_popularity_score": pl.Int64,
+                    "global_popularity_tier": pl.Utf8,
+                    "group_popularity_score": pl.Int64,
+                    "group_popularity_tier": pl.Utf8,
+                },
+                orient="row",
+            )
+            conn.register("work_classification_rows", frame)
+            conn.execute(
+                """
+                INSERT INTO work_classifications (
+                    work_id, category, period, date_range, authorship_status,
+                    popularity_score, popularity_tier, scope, scope_popularity_score,
+                    scope_popularity_tier, confidence, note,
+                    generator_models, generator_run_id, source_file,
+                    discovery_group_id, discovery_tags, global_popularity_score,
+                    global_popularity_tier, group_popularity_score, group_popularity_tier
+                )
+                SELECT
+                    work_id, category, period, date_range, authorship_status,
+                    popularity_score, popularity_tier, scope, scope_popularity_score,
+                    scope_popularity_tier, confidence, note,
+                    generator_models, generator_run_id, source_file,
+                    discovery_group_id, discovery_tags, global_popularity_score,
+                    global_popularity_tier, group_popularity_score, group_popularity_tier
+                FROM work_classification_rows
+                """
+            )
+            conn.unregister("work_classification_rows")
+        if tag_rows:
+            tag_frame = pl.DataFrame(
+                tag_rows,
+                schema={"work_id": pl.Utf8, "tag_id": pl.Utf8},
+                orient="row",
+            )
+            conn.register("work_classification_tag_rows", tag_frame)
+            conn.execute(
+                """
+                INSERT INTO work_classification_tags (work_id, tag_id)
+                SELECT work_id, tag_id FROM work_classification_tag_rows
+                """
+            )
+            conn.unregister("work_classification_tag_rows")
+
+
+def prune_stale_work_classifications(
+    catalog_path: Path,
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    stale_rows = _stale_work_classification_rows(catalog_path)
+    if stale_rows and not dry_run:
+        with _connect_write(catalog_path) as conn:
+            conn.execute("BEGIN TRANSACTION")
+            try:
+                work_id_frame = pl.DataFrame(
+                    [(row["work_id"],) for row in stale_rows],
+                    schema={"work_id": pl.Utf8},
+                    orient="row",
+                )
+                conn.register("stale_work_classification_ids", work_id_frame)
+                conn.execute(
+                    """
+                    DELETE FROM work_classification_tags
+                    WHERE work_id IN (SELECT work_id FROM stale_work_classification_ids)
+                    """
+                )
+                conn.execute(
+                    """
+                    DELETE FROM work_classifications
+                    WHERE work_id IN (SELECT work_id FROM stale_work_classification_ids)
+                    """
+                )
+                conn.unregister("stale_work_classification_ids")
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+    return {
+        "candidate_count": len(stale_rows),
+        "removed_count": 0 if dry_run else len(stale_rows),
+        "dry_run": dry_run,
+        "items": stale_rows,
+    }
+
+
+def _stale_work_classification_rows(catalog_path: Path) -> list[dict[str, str]]:
+    with _connect_read(catalog_path) as conn:
+        if not _table_exists(conn, "work_classifications"):
+            return []
+        rows = _dict_rows(
+            conn,
+            """
+            SELECT
+                w.work_id,
+                w.language,
+                w.title,
+                c.source_file,
+                c.generator_run_id
+            FROM works w
+            JOIN work_classifications c ON c.work_id = w.work_id
+            ORDER BY w.work_id
+            """,
+        )
+    stale_rows: list[dict[str, str]] = []
+    for row in rows:
+        source_language = _classification_source_language(row)
+        work_language = str(row.get("language") or "")
+        if source_language and work_language and source_language != work_language:
+            stale_rows.append(
+                {
+                    "work_id": str(row.get("work_id") or ""),
+                    "language": work_language,
+                    "classification_source_language": source_language,
+                    "title": str(row.get("title") or ""),
+                    "source_file": str(row.get("source_file") or ""),
+                    "generator_run_id": str(row.get("generator_run_id") or ""),
+                }
+            )
+    return stale_rows
+
+
+def _classification_source_language(row: Mapping[str, Any]) -> str | None:
+    tokens = set(
+        token
+        for field in ("source_file", "generator_run_id")
+        for token in re.split(r"[^a-z0-9]+", str(row.get(field) or "").casefold())
+        if token
+    )
+    for language, language_tokens in CLASSIFICATION_SOURCE_LANGUAGE_TOKENS.items():
+        if tokens & language_tokens:
+            return language
+    return None
+
+
+def register_author_classifications(
+    catalog_path: Path,
+    classifications: Iterable[ReaderAuthorClassification],
+    *,
+    merge: bool = False,
+) -> None:
+    create_catalog_db(catalog_path)
+    classification_list = list(classifications)
+    rows = [
+        (
+            classification.author_id,
+            classification.language,
+            classification.source_author_id,
+            classification.canonical_name,
+            classification.agent_kind,
+            classification.historicity_status,
+            classification.period,
+            classification.date_range,
+            classification.region,
+            classification.cultural_context,
+            classification.bio,
+            classification.prominence_score,
+            classification.prominence_tier,
+            classification.confidence,
+            classification.note,
+            classification.generator_models,
+            classification.generator_run_id,
+            classification.source_file,
+        )
+        for classification in classification_list
+    ]
+    with _connect_write(catalog_path) as conn:
+        if merge:
+            if not classification_list:
+                return
+            key_frame = pl.DataFrame(
+                [
+                    (classification.author_id, classification.language)
+                    for classification in classification_list
+                ],
+                schema={"author_id": pl.Utf8, "language": pl.Utf8},
+                orient="row",
+            )
+            conn.register("author_classification_keys", key_frame)
+            conn.execute(
+                """
+                DELETE FROM author_classifications
+                WHERE (author_id, language) IN (
+                    SELECT author_id, language FROM author_classification_keys
+                )
+                """
+            )
+            conn.unregister("author_classification_keys")
+        else:
+            conn.execute("DELETE FROM author_classifications")
+        if rows:
+            frame = pl.DataFrame(
+                rows,
+                schema={
+                    "author_id": pl.Utf8,
+                    "language": pl.Utf8,
+                    "source_author_id": pl.Utf8,
+                    "canonical_name": pl.Utf8,
+                    "agent_kind": pl.Utf8,
+                    "historicity_status": pl.Utf8,
+                    "period": pl.Utf8,
+                    "date_range": pl.Utf8,
+                    "region": pl.Utf8,
+                    "cultural_context": pl.Utf8,
+                    "bio": pl.Utf8,
+                    "prominence_score": pl.Int64,
+                    "prominence_tier": pl.Utf8,
+                    "confidence": pl.Utf8,
+                    "note": pl.Utf8,
+                    "generator_models": pl.Utf8,
+                    "generator_run_id": pl.Utf8,
+                    "source_file": pl.Utf8,
+                },
+                orient="row",
+            )
+            conn.register("author_classification_rows", frame)
+            conn.execute(
+                """
+                INSERT INTO author_classifications (
+                    author_id, language, source_author_id, canonical_name, agent_kind,
+                    historicity_status, period, date_range, region, cultural_context, bio,
+                    prominence_score, prominence_tier,
+                    confidence, note, generator_models, generator_run_id, source_file
+                )
+                SELECT
+                    author_id, language, source_author_id, canonical_name, agent_kind,
+                    historicity_status, period, date_range, region, cultural_context, bio,
+                    prominence_score, prominence_tier,
+                    confidence, note, generator_models, generator_run_id, source_file
+                FROM author_classification_rows
+                """
+            )
+            conn.unregister("author_classification_rows")
+
+
 def register_source_files(catalog_path: Path, source_files: Iterable[ReaderSourceFile]) -> None:
     create_catalog_db(catalog_path)
     rows = [
@@ -797,7 +1493,7 @@ def register_source_files(catalog_path: Path, source_files: Iterable[ReaderSourc
     ]
     if not rows:
         return
-    with _connect(catalog_path) as conn:
+    with _connect_write(catalog_path) as conn:
         frame = pl.DataFrame(
             rows,
             schema={
@@ -851,7 +1547,7 @@ def register_source_metadata(
     ]
     if not rows:
         return
-    with _connect(catalog_path) as conn:
+    with _connect_write(catalog_path) as conn:
         frame = pl.DataFrame(
             rows,
             schema={
@@ -883,6 +1579,237 @@ def register_source_metadata(
         conn.unregister("source_metadata_rows")
 
 
+def repair_work_languages(catalog_path: Path, *, dry_run: bool = False) -> dict[str, Any]:
+    if not dry_run:
+        create_catalog_db(catalog_path)
+    repairs = _catalog_work_language_repairs(catalog_path)
+    if repairs and not dry_run:
+        with _connect_write(catalog_path) as conn:
+            conn.execute("BEGIN TRANSACTION")
+            try:
+                for repair in repairs:
+                    conn.execute(
+                        "UPDATE works SET language = ? WHERE work_id = ?",
+                        [repair["to_language"], repair["work_id"]],
+                    )
+                    conn.execute(
+                        "UPDATE editions SET language = ? WHERE work_id = ?",
+                        [repair["to_language"], repair["work_id"]],
+                    )
+                    conn.execute(
+                        "UPDATE aliases SET language = ? WHERE target = ?",
+                        [repair["to_language"], repair["work_id"]],
+                    )
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+    return {
+        "updated_count": 0 if dry_run else len(repairs),
+        "candidate_count": len(repairs),
+        "dry_run": dry_run,
+        "repairs": repairs,
+    }
+
+
+def _catalog_work_language_repairs(catalog_path: Path) -> list[dict[str, str]]:
+    with _connect_read(catalog_path) as conn:
+        work_rows = _dict_rows(
+            conn,
+            """
+            SELECT
+                w.work_id, w.collection_id, w.language, w.title, w.author, w.source_id,
+                a.artifact_path, a.adapter,
+                (
+                    SELECT sm.value
+                    FROM source_metadata sm
+                    WHERE sm.collection_id = w.collection_id
+                      AND sm.subject_kind = 'author'
+                      AND sm.key = 'authtab_language'
+                      AND sm.subject_id IN (
+                          coalesce(w.author_id, ''),
+                          regexp_extract(w.source_id, '^[^.]+')
+                      )
+                    ORDER BY sm.source_path, sm.value
+                    LIMIT 1
+                ) AS metadata_language
+            FROM works w
+            LEFT JOIN artifacts a ON a.work_id = w.work_id
+            ORDER BY w.work_id, a.artifact_id
+            """,
+        )
+    seen: set[str] = set()
+    repairs: list[dict[str, str]] = []
+    for row in work_rows:
+        work_id = str(row.get("work_id") or "")
+        if not work_id or work_id in seen:
+            continue
+        seen.add(work_id)
+        current_language = str(row.get("language") or "")
+        repaired_language = _catalog_work_metadata_language(row)
+        sample_text = ""
+        if not repaired_language and _catalog_language_repair_needs_sample(row):
+            sample_text = _catalog_work_sample_text(
+                Path(str(row.get("artifact_path") or "")),
+                work_id=work_id,
+            )
+            repaired_language = _catalog_primary_work_language(row, sample_text=sample_text)
+        if repaired_language and repaired_language != current_language:
+            repairs.append(
+                {
+                    "work_id": work_id,
+                    "from_language": current_language,
+                    "to_language": repaired_language,
+                    "title": str(row.get("title") or ""),
+                    "author": str(row.get("author") or ""),
+                }
+            )
+    return repairs
+
+
+def _catalog_language_repair_needs_sample(row: Mapping[str, Any]) -> bool:
+    if str(row.get("collection_id") or "") != "phi":
+        return False
+    source_id = str(row.get("source_id") or "").casefold()
+    source_family = source_id.split(".", 1)[0]
+    return source_family.startswith(("civ", "cop"))
+
+
+def _catalog_work_sample_text(artifact_path: Path, *, work_id: str) -> str:
+    if not artifact_path or not artifact_path.exists():
+        return ""
+    try:
+        with duckdb.connect(str(artifact_path), read_only=True) as conn:
+            rows = conn.execute(
+                """
+                SELECT text
+                FROM segments
+                WHERE work_id = ?
+                ORDER BY sort_key
+                LIMIT 200
+                """,
+                [work_id],
+            ).fetchall()
+    except Exception:
+        return ""
+    return " ".join(str(row[0] or "") for row in rows)
+
+
+def _catalog_primary_work_language(row: Mapping[str, Any], *, sample_text: str) -> str:
+    current_language = str(row.get("language") or "")
+    collection_id = str(row.get("collection_id") or "")
+    repaired_language = current_language
+    metadata_language = _catalog_work_metadata_language(row)
+    if collection_id == "phi":
+        if metadata_language:
+            repaired_language = metadata_language
+        elif _catalog_text_looks_english(sample_text):
+            repaired_language = "eng"
+        elif current_language == "eng" and _catalog_text_looks_latin(sample_text):
+            repaired_language = "lat"
+    return repaired_language
+
+
+def _catalog_work_metadata_language(row: Mapping[str, Any]) -> str | None:
+    if str(row.get("collection_id") or "") != "phi":
+        return None
+    source_family_language = _catalog_phi_source_family_language(row)
+    if source_family_language:
+        return source_family_language
+    metadata_language = str(row.get("metadata_language") or "").strip()
+    if metadata_language:
+        return _catalog_normalize_metadata_language(metadata_language)
+    title = str(row.get("title") or "").casefold()
+    author = str(row.get("author") or "").casefold()
+    if "(latin" in title or "latin works" in title:
+        return "lat"
+    if "(english" in title or "english bible" in author:
+        return "eng"
+    return None
+
+
+def _catalog_phi_source_family_language(row: Mapping[str, Any]) -> str | None:
+    title = str(row.get("title") or "").casefold()
+    source_family = str(row.get("source_id") or "").casefold().split(".", 1)[0]
+    language = _PHI_EXACT_SOURCE_FAMILY_LANGUAGES.get(source_family)
+    text = " ".join(
+        str(row.get(key) or "") for key in ("source_id", "author", "author_id", "title")
+    ).casefold()
+    if language is None:
+        for family, family_language in _PHI_EXACT_SOURCE_FAMILY_LANGUAGES.items():
+            if family in text:
+                language = family_language
+                break
+    if language is None and ("english bible" in text or "(english" in title):
+        language = "eng"
+    if language is None and ("hebrew bible" in text or "mt or bhs" in text):
+        language = "heb"
+    if language is None and ("coptic" in text or "sahidic" in text or "sahiddic" in text):
+        language = "cop"
+    if language is None and (
+        "septuagint" in text or "old greek bible" in text or "greek new testament" in text
+    ):
+        language = "grc"
+    return language
+
+
+_PHI_EXACT_SOURCE_FAMILY_LANGUAGES = {
+    "civ0001": "heb",
+    "civ0002": "grc",
+    "civ0003": "grc",
+    "civ0004": "lat",
+    "civ0005": "eng",
+    "civ0006": "eng",
+    "cop0001": "cop",
+}
+
+
+def _catalog_normalize_metadata_language(value: str) -> str:
+    normalized = value.strip().casefold()
+    return {
+        "g": "grc",
+        "greek": "grc",
+        "grc": "grc",
+        "h": "heb",
+        "hebrew": "heb",
+        "heb": "heb",
+        "c": "cop",
+        "coptic": "cop",
+        "cop": "cop",
+        "l": "lat",
+        "latin": "lat",
+        "lat": "lat",
+        "e": "lat",
+        "english": "eng",
+        "eng": "eng",
+    }.get(normalized, normalized)
+
+
+def _catalog_text_looks_english(text: str) -> bool:
+    english_hits, latin_hits, english_anchor_count = _catalog_language_hits(text)
+    return (
+        english_hits >= CATALOG_ENGLISH_MIN_WORDS
+        and english_anchor_count >= CATALOG_ENGLISH_MIN_ANCHOR_WORDS
+        and english_hits >= max(1, latin_hits) * CATALOG_LANGUAGE_MIN_RATIO
+    )
+
+
+def _catalog_text_looks_latin(text: str) -> bool:
+    english_hits, latin_hits, _english_anchor_count = _catalog_language_hits(text)
+    return (
+        latin_hits >= CATALOG_ENGLISH_MIN_WORDS
+        and latin_hits >= max(1, english_hits) * CATALOG_LANGUAGE_MIN_RATIO
+    )
+
+
+def _catalog_language_hits(text: str) -> tuple[int, int, int]:
+    words = re.findall(r"[A-Za-z]+", text.casefold())
+    english_hits = sum(1 for word in words if word in CATALOG_ENGLISH_WORDS)
+    english_anchor_count = len({word for word in words if word in CATALOG_ENGLISH_ANCHOR_WORDS})
+    latin_hits = sum(1 for word in words if word in CATALOG_LATIN_WORDS)
+    return english_hits, latin_hits, english_anchor_count
+
+
 def _dict_rows(
     conn: duckdb.DuckDBPyConnection, query: str, params: list[object] | None = None
 ) -> list[dict[str, Any]]:
@@ -902,6 +1829,97 @@ def _table_exists(conn: duckdb.DuckDBPyConnection, table_name: str) -> bool:
         [table_name],
     ).fetchone()
     return row is not None
+
+
+def _table_columns(conn: duckdb.DuckDBPyConnection, table_name: str) -> set[str]:
+    if not _table_exists(conn, table_name):
+        return set()
+    return {row[1] for row in conn.execute(f"PRAGMA table_info('{table_name}')").fetchall()}
+
+
+def _work_classification_select_columns(columns: set[str]) -> str:
+    scope = "wc.scope" if "scope" in columns else "NULL::VARCHAR"
+    scope_score = (
+        "wc.scope_popularity_score" if "scope_popularity_score" in columns else "NULL::INTEGER"
+    )
+    scope_tier = (
+        "wc.scope_popularity_tier" if "scope_popularity_tier" in columns else "NULL::VARCHAR"
+    )
+    discovery_group = (
+        "wc.discovery_group_id" if "discovery_group_id" in columns else "NULL::VARCHAR"
+    )
+    discovery_tags = "wc.discovery_tags" if "discovery_tags" in columns else "NULL::VARCHAR"
+    global_score = (
+        "COALESCE(wc.global_popularity_score, wc.popularity_score)"
+        if "global_popularity_score" in columns
+        else "wc.popularity_score"
+    )
+    global_tier = (
+        "COALESCE(NULLIF(wc.global_popularity_tier, ''), wc.popularity_tier)"
+        if "global_popularity_tier" in columns
+        else "wc.popularity_tier"
+    )
+    group_score = (
+        "COALESCE(wc.group_popularity_score, wc.scope_popularity_score)"
+        if "group_popularity_score" in columns and "scope_popularity_score" in columns
+        else "wc.group_popularity_score"
+        if "group_popularity_score" in columns
+        else scope_score
+    )
+    group_tier = (
+        "COALESCE(NULLIF(wc.group_popularity_tier, ''), wc.scope_popularity_tier)"
+        if "group_popularity_tier" in columns and "scope_popularity_tier" in columns
+        else "wc.group_popularity_tier"
+        if "group_popularity_tier" in columns
+        else scope_tier
+    )
+    return f"""
+        wc.category AS classification_category,
+        wc.period AS classification_period,
+        wc.date_range AS classification_date_range,
+        wc.authorship_status AS classification_authorship_status,
+        wc.popularity_score AS classification_popularity_score,
+        wc.popularity_tier AS classification_popularity_tier,
+        {scope} AS classification_scope,
+        {scope_score} AS classification_scope_popularity_score,
+        {scope_tier} AS classification_scope_popularity_tier,
+        {discovery_group} AS classification_discovery_group_id,
+        {discovery_tags} AS classification_discovery_tags,
+        {global_score} AS classification_global_popularity_score,
+        {global_tier} AS classification_global_popularity_tier,
+        {group_score} AS classification_group_popularity_score,
+        {group_tier} AS classification_group_popularity_tier,
+        wc.confidence AS classification_confidence,
+        wc.note AS classification_notes,
+        wc.generator_models AS classification_generator_models,
+        wc.generator_run_id AS classification_generator_run_id,
+        wc.source_file AS classification_source_file
+    """
+
+
+def _null_work_classification_select_columns() -> str:
+    return """
+        NULL::VARCHAR AS classification_category,
+        NULL::VARCHAR AS classification_period,
+        NULL::VARCHAR AS classification_date_range,
+        NULL::VARCHAR AS classification_authorship_status,
+        NULL::INTEGER AS classification_popularity_score,
+        NULL::VARCHAR AS classification_popularity_tier,
+        NULL::VARCHAR AS classification_scope,
+        NULL::INTEGER AS classification_scope_popularity_score,
+        NULL::VARCHAR AS classification_scope_popularity_tier,
+        NULL::VARCHAR AS classification_discovery_group_id,
+        NULL::VARCHAR AS classification_discovery_tags,
+        NULL::INTEGER AS classification_global_popularity_score,
+        NULL::VARCHAR AS classification_global_popularity_tier,
+        NULL::INTEGER AS classification_group_popularity_score,
+        NULL::VARCHAR AS classification_group_popularity_tier,
+        NULL::VARCHAR AS classification_confidence,
+        NULL::VARCHAR AS classification_notes,
+        NULL::VARCHAR AS classification_generator_models,
+        NULL::VARCHAR AS classification_generator_run_id,
+        NULL::VARCHAR AS classification_source_file
+    """
 
 
 def _catalog_artifacts(catalog_path: Path) -> list[dict[str, Any]]:
@@ -996,7 +2014,7 @@ def _address_work_id_from_artifacts(address: str, artifacts: list[dict[str, Any]
     }
     if not matches:
         return _cts_work_id(address)
-    return max(matches, key=len)
+    return max(matches, key=lambda match: len(match))
 
 
 def _book_has_address(book_path: Path, address: str) -> bool:
@@ -1148,7 +2166,7 @@ def resolve_text_work_ref(catalog_path: Path, work_ref: str) -> str | None:
 def get_work(catalog_path: Path, work_ref: str) -> dict[str, Any] | None:
     contained = _contained_work(catalog_path, work_ref)
     if contained is not None:
-        return {
+        item = {
             "work_id": contained["contained_work_id"],
             "collection_id": contained["collection_id"],
             "language": contained["language"],
@@ -1164,6 +2182,8 @@ def get_work(catalog_path: Path, work_ref: str) -> dict[str, Any] | None:
             "confidence": contained["confidence"],
             "note": contained["note"],
         }
+        _attach_work_display_labels([item])
+        return item
     work_id = resolve_work_ref(catalog_path, work_ref)
     if not work_id:
         return None
@@ -1182,7 +2202,9 @@ def get_work(catalog_path: Path, work_ref: str) -> dict[str, Any] | None:
         )
     if not rows:
         return None
-    return {**rows[0], "work_kind": "work"}
+    item = {**rows[0], "work_kind": "work"}
+    _attach_work_display_labels([item])
+    return item
 
 
 def lookup_segment_by_work_and_citation(
@@ -1282,9 +2304,23 @@ def list_collections(catalog_path: Path) -> list[dict[str, Any]]:
         return _dict_rows(
             conn,
             """
-            SELECT collection_id, COUNT(*) AS work_count
-            FROM works
-            GROUP BY collection_id
+            WITH work_metrics AS (
+                SELECT
+                    work_id,
+                    COALESCE(SUM(segment_count), 0) AS segment_count,
+                    COALESCE(SUM(token_count), 0) AS word_count
+                FROM artifacts
+                GROUP BY work_id
+            )
+            SELECT
+                w.collection_id,
+                COUNT(*) AS work_count,
+                COALESCE(SUM(m.segment_count), 0) AS segment_count,
+                COALESCE(SUM(m.word_count), 0) AS word_count,
+                'whitespace_tokens' AS word_count_method
+            FROM works w
+            LEFT JOIN work_metrics m ON m.work_id = w.work_id
+            GROUP BY w.collection_id
             ORDER BY collection_id
             """,
         )
@@ -1313,7 +2349,7 @@ def list_authors(
     if limit is not None:
         params.extend([limit, offset])
     with duckdb.connect(str(catalog_path), read_only=True) as conn:
-        return _dict_rows(
+        rows = _dict_rows(
             conn,
             f"""
             SELECT author_id, author, language, collection_id, COUNT(*) AS work_count
@@ -1325,6 +2361,40 @@ def list_authors(
             """,
             params,
         )
+    _add_contained_word_counts_to_author_rows(catalog_path, rows)
+    return rows
+
+
+def _add_contained_word_counts_to_author_rows(
+    catalog_path: Path,
+    rows: list[dict[str, Any]],
+) -> None:
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "contained_works"):
+            return
+        contained_rows = _dict_rows(
+            conn,
+            """
+            SELECT DISTINCT author, language, parent_work_id, start_citation, end_citation
+            FROM contained_works
+            WHERE status = 'accepted'
+            """,
+        )
+    for contained in contained_rows:
+        word_count = _word_count_for_citation_range(
+            catalog_path,
+            str(contained["parent_work_id"]),
+            str(contained["start_citation"]),
+            str(contained["end_citation"]),
+        )
+        for row in rows:
+            if (
+                str(row.get("source_author_id") or "") == ""
+                and str(row.get("author") or "") == str(contained["author"])
+                and str(row.get("language") or "") == str(contained["language"])
+            ):
+                row["word_count"] = int(row.get("word_count") or 0) + word_count
+                row["word_count_method"] = "whitespace_tokens"
 
 
 def list_author_index(  # noqa: PLR0913
@@ -1335,27 +2405,280 @@ def list_author_index(  # noqa: PLR0913
     query: str | None = None,
     limit: int | None = None,
     offset: int = 0,
+    agent_kind: str | None = None,
+    historicity: str | None = None,
+    sort: str = "catalog",
 ) -> list[dict[str, Any]]:
     rows = _raw_author_rows(catalog_path, language=language)
     items = [author_index_entry(row) for row in rows]
+    items = _merge_duplicate_author_selectors(items)
     _disambiguate_duplicate_author_displays(catalog_path, items)
+    _attach_author_classifications(catalog_path, items)
+    _attach_canonical_author_authorities(items)
     if section:
         section_key = normalize_section_key(language, section)
         items = [item for item in items if item["section_key"] == section_key]
+    if agent_kind:
+        items = [item for item in items if item.get("author_agent_kind") == agent_kind]
+    if historicity:
+        items = [item for item in items if item.get("author_historicity_status") == historicity]
     if query:
-        query_key = query.casefold()
         items = [
             item
             for item in items
-            if query_key in str(item["index_name"]).casefold()
-            or query_key in str(item["author_id"]).casefold()
-            or query_key in str(item.get("source_author_id") or "").casefold()
-            or any(query_key in str(name).casefold() for name in item["alternate_names"])
+            if _author_query_matches(
+                query,
+                item["index_name"],
+                item["display_name"],
+                item["author"],
+                item["author_id"],
+                item.get("source_author_id"),
+                item.get("source_author_name"),
+                item.get("canonical_author_id"),
+                item.get("canonical_author_name"),
+                item.get("author_canonical_name"),
+                *item["alternate_names"],
+            )
         ]
-    items.sort(key=lambda item: (item["language"], item["sort_key"], item["display_name"]))
+    if sort == "prominence":
+        items.sort(key=_author_prominence_sort_key)
+    else:
+        items.sort(key=lambda item: (item["language"], item["sort_key"], item["display_name"]))
     if limit is None:
         return items[offset:]
     return items[offset : offset + limit]
+
+
+def _author_prominence_sort_key(item: Mapping[str, Any]) -> tuple[object, ...]:
+    score = item.get("author_prominence_score")
+    return (
+        score is None,
+        -(int(score) if score is not None else 0),
+        item["language"],
+        item["sort_key"],
+        item["display_name"],
+    )
+
+
+def _merge_duplicate_author_selectors(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    for item in items:
+        identity = str(item.get("source_author_id") or item["author_id"])
+        key = (str(item["language"]), identity)
+        existing = merged_by_key.get(key)
+        if existing is None:
+            merged_by_key[key] = dict(item)
+            continue
+        chosen = _preferred_author_display_item(existing, item)
+        existing.update(
+            {
+                "display_name": chosen["display_name"],
+                "author": chosen["author"],
+                "index_name": chosen["index_name"],
+                "native_name": chosen["native_name"],
+                "section_key": chosen["section_key"],
+                "sort_key": chosen["sort_key"],
+            }
+        )
+        existing["work_count"] = int(existing.get("work_count") or 0) + int(
+            item.get("work_count") or 0
+        )
+        existing["word_count"] = int(existing.get("word_count") or 0) + int(
+            item.get("word_count") or 0
+        )
+        existing["representative_titles"] = _merge_representative_titles(
+            str(existing.get("representative_titles") or ""),
+            str(item.get("representative_titles") or ""),
+        )
+        existing["alternate_names"] = sorted(
+            {
+                *[str(name) for name in existing.get("alternate_names", [])],
+                *[str(name) for name in item.get("alternate_names", [])],
+                str(item.get("display_name") or ""),
+            }
+            - {""}
+        )
+    return list(merged_by_key.values())
+
+
+def _preferred_author_display_item(
+    left: dict[str, Any],
+    right: dict[str, Any],
+) -> dict[str, Any]:
+    left_name = str(left.get("display_name") or "")
+    right_name = str(right.get("display_name") or "")
+    left_score = (
+        sum(ord(char) > ASCII_MAX_CODEPOINT for char in left_name),
+        len(left_name),
+    )
+    right_score = (
+        sum(ord(char) > ASCII_MAX_CODEPOINT for char in right_name),
+        len(right_name),
+    )
+    return right if right_score > left_score else left
+
+
+def _merge_representative_titles(*values: str) -> str:
+    titles: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        for title in value.split(" | "):
+            normalized = title.strip()
+            if not normalized or normalized.casefold() in seen:
+                continue
+            seen.add(normalized.casefold())
+            titles.append(normalized)
+    return " | ".join(titles[:8])
+
+
+def _author_query_matches(query: str, *values: object) -> bool:
+    raw_query = query.casefold()
+    folded_queries = _author_search_variants(query)
+    if not raw_query and not folded_queries:
+        return False
+    for value in values:
+        raw_value = str(value or "").casefold()
+        if raw_query and raw_query in raw_value:
+            return True
+        folded_values = _author_search_variants(value)
+        if any(
+            query_value and query_value in candidate
+            for query_value in folded_queries
+            for candidate in folded_values
+        ):
+            return True
+    return False
+
+
+def _author_search_variants(value: object) -> set[str]:
+    key = author_search_key(value)
+    if not key:
+        return set()
+    variants = {key}
+    variants.add(key.replace("mk", "nk").replace("mg", "ng"))
+    variants.add(key.replace("nk", "mk").replace("ng", "mg"))
+    return variants
+
+
+def _attach_author_classifications(
+    catalog_path: Path,
+    items: list[dict[str, Any]],
+) -> None:
+    for item in items:
+        item.setdefault("author_canonical_name", "")
+        item.setdefault("author_agent_kind", "")
+        item.setdefault("author_historicity_status", "")
+        item.setdefault("author_period", "")
+        item.setdefault("author_date_range", "")
+        item.setdefault("author_region", "")
+        item.setdefault("author_cultural_context", "")
+        item.setdefault("author_bio", "")
+        item.setdefault("author_prominence_score", None)
+        item.setdefault("author_prominence_tier", "")
+        item.setdefault("author_classification_confidence", "")
+        item.setdefault("author_classification_notes", "")
+        item.setdefault("author_classification_source_author_id", "")
+        item.setdefault("author_generator_models", "")
+        item.setdefault("author_generator_run_id", "")
+        item.setdefault("author_classification_source_file", "")
+    if not items or not catalog_path.exists():
+        return
+    languages = sorted({str(item["language"]) for item in items})
+    if not languages:
+        return
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "author_classifications"):
+            return
+        rows = _dict_rows(
+            conn,
+            f"""
+            SELECT
+                author_id, language, source_author_id,
+                canonical_name, agent_kind, historicity_status,
+                period, date_range, region, cultural_context, bio,
+                prominence_score, prominence_tier,
+                confidence, note, generator_models, generator_run_id, source_file
+            FROM author_classifications
+            WHERE language IN ({", ".join("?" for _ in languages)})
+            """,
+            languages,
+        )
+    by_key = {(str(row["author_id"]), str(row["language"])): row for row in rows}
+    for item in items:
+        row = by_key.get((str(item["author_id"]), str(item["language"])))
+        if row is None:
+            continue
+        item["author_canonical_name"] = row["canonical_name"]
+        item["author_classification_source_author_id"] = row["source_author_id"]
+        item["author_agent_kind"] = row["agent_kind"]
+        item["author_historicity_status"] = row["historicity_status"]
+        item["author_period"] = row["period"]
+        item["author_date_range"] = row["date_range"]
+        item["author_region"] = row["region"]
+        item["author_cultural_context"] = row["cultural_context"]
+        item["author_bio"] = row["bio"]
+        item["author_prominence_score"] = row["prominence_score"]
+        item["author_prominence_tier"] = row["prominence_tier"]
+        item["author_classification_confidence"] = row["confidence"]
+        item["author_classification_notes"] = row["note"]
+        item["author_generator_models"] = row["generator_models"]
+        item["author_generator_run_id"] = row["generator_run_id"]
+        item["author_classification_source_file"] = row["source_file"]
+
+
+def _attach_canonical_author_authorities(items: list[dict[str, Any]]) -> None:
+    for item in items:
+        source_author_name = str(item.get("display_name") or item.get("author") or "Unknown")
+        source_author_id = str(item.get("source_author_id") or "")
+        agent_kind = str(item.get("author_agent_kind") or "")
+        item["source_author_name"] = source_author_name
+        item["source_author_kind"] = agent_kind
+        item["source_author_canonical_name"] = item.get("author_canonical_name", "")
+        item["source_author_period"] = item.get("author_period", "")
+        item["source_author_date_range"] = item.get("author_date_range", "")
+        item["source_author_region"] = item.get("author_region", "")
+        item["source_author_cultural_context"] = item.get("author_cultural_context", "")
+        item["source_author_bio"] = item.get("author_bio", "")
+        item["source_author_prominence_score"] = item.get("author_prominence_score")
+        item["source_author_prominence_tier"] = item.get("author_prominence_tier", "")
+        item["source_author_classification_notes"] = item.get("author_classification_notes", "")
+        if author_kind_uses_unknown_authority(agent_kind):
+            item["canonical_author_id"] = canonical_unknown_author_id(
+                str(item.get("language") or "")
+            )
+            item["canonical_author_name"] = "Unknown"
+            item["canonical_author_kind"] = "anonymous_label"
+            item["author_canonical_name"] = "Unknown"
+            if not _is_plain_unknown_author_heading(source_author_name, source_author_id):
+                item["author_period"] = ""
+                item["author_date_range"] = ""
+                item["author_region"] = ""
+                item["author_cultural_context"] = ""
+                item["author_bio"] = ""
+                item["author_prominence_score"] = None
+                item["author_prominence_tier"] = ""
+        else:
+            canonical_name = str(
+                item.get("author_canonical_name") or source_author_name or "Unknown"
+            )
+            item["canonical_author_id"] = canonical_author_id_for_source(
+                str(item.get("language") or ""),
+                source_author_id,
+                str(item.get("author_id") or ""),
+                canonical_name,
+            )
+            item["canonical_author_name"] = canonical_name
+            item["canonical_author_kind"] = agent_kind
+        item["author"] = item["canonical_author_name"]
+
+
+def _is_plain_unknown_author_heading(
+    source_author_name: str,
+    source_author_id: str,
+) -> bool:
+    if source_author_id.strip():
+        return False
+    return source_author_name.strip().casefold() in {"unknown", "anonymous"}
 
 
 def _disambiguate_duplicate_author_displays(
@@ -1468,10 +2791,13 @@ def list_author_sections(
                 "sort_key": author_section_sort_key(language, key),
                 "author_count": 0,
                 "work_count": 0,
+                "word_count": 0,
+                "word_count_method": "whitespace_tokens",
             },
         )
         section["author_count"] = int(section["author_count"]) + 1
         section["work_count"] = int(section["work_count"]) + int(item["work_count"])
+        section["word_count"] = int(section["word_count"]) + int(item.get("word_count") or 0)
     return sorted(sections.values(), key=lambda section: str(section["sort_key"]))
 
 
@@ -1576,7 +2902,7 @@ def _raw_author_rows(
     conditions = []
     params: list[object] = []
     if language:
-        conditions.append("language = ?")
+        conditions.append("s.language = ?")
         params.append(language)
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     with duckdb.connect(str(catalog_path), read_only=True) as conn:
@@ -1586,36 +2912,125 @@ def _raw_author_rows(
                 UNION ALL
                 SELECT
                     contained_work_id AS work_id,
-                    '' AS source_author_id,
+                    title,
                     author,
-                    language
+                    '' AS source_author_id,
+                    language,
+                    0 AS word_count,
+                    0 AS popularity_score
                 FROM contained_works
                 WHERE status = 'accepted'
             """
-        return _dict_rows(
+        classification_join = ""
+        popularity_score_sql = "0 AS popularity_score"
+        if _table_exists(conn, "work_classifications"):
+            classification_join = "LEFT JOIN work_classifications c ON c.work_id = w.work_id"
+            classification_columns = _table_columns(conn, "work_classifications")
+            popularity_expressions = [
+                f"c.{column}"
+                for column in (
+                    "global_popularity_score",
+                    "popularity_score",
+                    "group_popularity_score",
+                )
+                if column in classification_columns
+            ]
+            popularity_score_sql = (
+                f"COALESCE({', '.join(popularity_expressions)}, 0) AS popularity_score"
+                if popularity_expressions
+                else "0 AS popularity_score"
+            )
+        rows = _dict_rows(
             conn,
             f"""
-            WITH author_work_rows AS (
+            WITH work_metrics AS (
                 SELECT
                     work_id,
-                    coalesce(author_id, '') AS source_author_id,
+                    COALESCE(SUM(token_count), 0) AS word_count
+                FROM artifacts
+                GROUP BY work_id
+            ),
+            base_author_work_rows AS (
+                SELECT
+                    w.work_id,
+                    w.title,
+                    coalesce(w.author_id, '') AS source_author_id,
+                    w.author,
+                    w.language,
+                    COALESCE(m.word_count, 0) AS word_count,
+                    {popularity_score_sql}
+                FROM works w
+                LEFT JOIN work_metrics m ON m.work_id = w.work_id
+                {classification_join}
+            ),
+            author_work_rows AS (
+                SELECT
+                    work_id,
+                    title,
                     author,
-                    language
-                FROM works
+                    source_author_id,
+                    language,
+                    word_count,
+                    popularity_score
+                FROM base_author_work_rows
                 {contained_union}
+            ),
+            author_summary_rows AS (
+                SELECT
+                    source_author_id,
+                    author,
+                    language,
+                    COUNT(DISTINCT work_id) AS work_count,
+                    COALESCE(SUM(word_count), 0) AS word_count
+                FROM author_work_rows
+                GROUP BY source_author_id, author, language
+            ),
+            representative_title_rows AS (
+                SELECT
+                    source_author_id,
+                    author,
+                    language,
+                    title,
+                    MAX(popularity_score) AS popularity_score,
+                    MAX(word_count) AS word_count
+                FROM author_work_rows
+                WHERE title IS NOT NULL AND trim(title) != ''
+                GROUP BY source_author_id, author, language, title
+            ),
+            ranked_title_rows AS (
+                SELECT
+                    *,
+                    row_number() OVER (
+                        PARTITION BY source_author_id, author, language
+                        ORDER BY popularity_score DESC, word_count DESC, title
+                    ) AS representative_rank
+                FROM representative_title_rows
             )
             SELECT
-                source_author_id,
-                author,
-                language,
-                COUNT(DISTINCT work_id) AS work_count
-            FROM author_work_rows
+                s.source_author_id,
+                s.author,
+                s.language,
+                s.work_count,
+                s.word_count,
+                'whitespace_tokens' AS word_count_method,
+                COALESCE(
+                    string_agg(t.title, ' | ' ORDER BY t.representative_rank),
+                    ''
+                ) AS representative_titles
+            FROM author_summary_rows s
+            LEFT JOIN ranked_title_rows t
+                ON t.source_author_id = s.source_author_id
+                AND t.author = s.author
+                AND t.language = s.language
+                AND t.representative_rank <= 8
             {where}
-            GROUP BY source_author_id, author, language
-            ORDER BY language, author
+            GROUP BY s.source_author_id, s.author, s.language, s.work_count, s.word_count
+            ORDER BY s.language, s.author
             """,
             params,
         )
+    _add_contained_word_counts_to_author_rows(catalog_path, rows)
+    return rows
 
 
 AUTHORSHIP_RELATION_TYPES = (
@@ -1623,6 +3038,20 @@ AUTHORSHIP_RELATION_TYPES = (
     "possible_author",
     "traditional_author",
     "misattributed_author",
+    "translator",
+)
+SOURCE_METADATA_SUMMARY_KEYS = (
+    "dcs_scope_hint",
+    "dcs_subject",
+    "dcs_time_slot",
+    "dcs_author",
+    "dcs_completed",
+    "perseus_subject",
+    "perseus_author",
+    "perseus_editor",
+    "perseus_translator",
+    "perseus_year_published",
+    "perseus_language",
 )
 
 
@@ -1634,9 +3063,13 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
     author: str | None = None,
     attributed_to: str | None = None,
     author_id: str | None = None,
+    classification_scope: str | None = None,
+    classification_group: str | None = None,
+    classification_tag: str | None = None,
     query: str | None = None,
     limit: int | None = None,
     offset: int = 0,
+    sort: str = "catalog",
 ) -> list[dict[str, Any]]:
     if not catalog_path.exists():
         return []
@@ -1655,8 +3088,8 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
         where_params.append(f"%{author.lower()}%")
         if not author.lower().startswith("pseudo"):
             conditions.append("lower(author) NOT LIKE 'pseudo-%'")
-    filter_author_selector = is_synthetic_author_selector(author_id)
-    if author_id and not filter_author_selector:
+    post_author_filter = _uses_post_author_filter(author_id)
+    if author_id and not post_author_filter:
         author_id_key = author_id.casefold()
         conditions.append(
             """
@@ -1675,7 +3108,7 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
             (
                 lower(title) LIKE ?
                 OR lower(author) LIKE ?
-                OR lower(work_id) LIKE ?
+                OR lower(works.work_id) LIKE ?
                 OR lower(source_id) LIKE ?
                 OR lower(coalesce(cts_work_urn, '')) LIKE ?
                 OR EXISTS (
@@ -1702,9 +3135,17 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
                         AND w.cts_work_urn IS NOT NULL
                         AND a.match_value = w.cts_work_urn
                     )
+                    OR (
+                        a.match_field = 'author_id'
+                        AND (
+                            lower(a.match_value) = lower(coalesce(w.author_id, ''))
+                            OR lower(a.match_value) = lower(regexp_extract(w.source_id, '^[^.]+'))
+                            OR lower(coalesce(w.author_id, '')) LIKE '%:' || lower(a.match_value)
+                        )
+                    )
                 )
                 WHERE a.status = 'accepted'
-                  AND a.relation_type IN (?, ?, ?, ?)
+                  AND a.relation_type IN (?, ?, ?, ?, ?)
                   AND lower(a.agent) LIKE ?
             )
         """
@@ -1717,13 +3158,10 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 if attributed_to.lower().startswith("pseudo")
                 else " AND lower(author) NOT LIKE 'pseudo-%'"
             )
-            + ") OR work_id IN (SELECT work_id FROM attribution_work_ids))"
+            + ") OR works.work_id IN (SELECT work_id FROM attribution_work_ids))"
         )
         where_params.append(f"%{attributed_to.lower()}%")
-    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-    should_limit_base_query = (
-        limit is not None and not filter_author_selector and not include_contained
-    )
+    should_limit_base_query = limit is not None and not post_author_filter and not include_contained
     limit_sql = "LIMIT ? OFFSET ?" if should_limit_base_query else ""
     if should_limit_base_query:
         where_params.extend([limit, offset])
@@ -1735,68 +3173,948 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 )
             """
             cte_params = []
+        if _table_exists(conn, "work_classifications"):
+            classification_table_columns = _table_columns(conn, "work_classifications")
+            if classification_group:
+                group_key = classification_group.lower()
+                if "discovery_group_id" in classification_table_columns:
+                    conditions.append("lower(coalesce(wc.discovery_group_id, '')) = ?")
+                    where_params.append(group_key)
+                elif "scope" in classification_table_columns:
+                    conditions.append(
+                        """
+                        (
+                            lower(coalesce(wc.scope, '')) LIKE ?
+                            OR lower(coalesce(wc.category, '')) LIKE ?
+                        )
+                        """
+                    )
+                    group_like = f"%{group_key}%"
+                    where_params.extend([group_like, group_like])
+                else:
+                    return []
+            if classification_tag:
+                if not _table_exists(conn, "work_classification_tags"):
+                    return []
+                conditions.append(
+                    """
+                    EXISTS (
+                        SELECT 1
+                        FROM work_classification_tags wct
+                        WHERE wct.work_id = works.work_id
+                          AND lower(wct.tag_id) = ?
+                    )
+                    """
+                )
+                where_params.append(classification_tag.lower())
+            if classification_scope:
+                if "scope" not in classification_table_columns:
+                    return []
+                scope_like = f"%{classification_scope.lower()}%"
+                conditions.append(
+                    """
+                    (
+                        lower(coalesce(wc.scope, '')) LIKE ?
+                        OR lower(coalesce(wc.category, '')) LIKE ?
+                    )
+                    """
+                )
+                where_params.extend([scope_like, scope_like])
+            classification_columns = _work_classification_select_columns(
+                classification_table_columns
+            )
+            classification_join = """
+                LEFT JOIN work_classifications wc ON wc.work_id = works.work_id
+            """
+        else:
+            if classification_scope or classification_group or classification_tag:
+                return []
+            classification_columns = _null_work_classification_select_columns()
+            classification_join = ""
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        order_sql = (
+            """
+            ORDER BY
+                {popularity_score_column} IS NULL,
+                {popularity_score_column} DESC,
+                language, author, title, works.work_id
+            """.format(
+                popularity_score_column=(
+                    "classification_group_popularity_score"
+                    if sort == "group-popularity" or classification_group or classification_tag
+                    else "classification_global_popularity_score"
+                    if sort == "global-popularity"
+                    else "classification_scope_popularity_score"
+                    if classification_scope
+                    else "classification_popularity_score"
+                )
+            )
+            if sort in {"popularity", "global-popularity", "group-popularity"}
+            else "ORDER BY language, author, title, works.work_id"
+        )
         rows = _dict_rows(
             conn,
             f"""
             {attribution_cte}
             SELECT
-                work_id, collection_id, language, title, author, author_id, source_id,
+                works.work_id, collection_id, language, title, author, author_id, source_id,
                 cts_work_urn, 'work' AS work_kind, NULL::VARCHAR AS parent_work_id,
-                NULL::VARCHAR AS start_citation, NULL::VARCHAR AS end_citation
+                NULL::VARCHAR AS start_citation, NULL::VARCHAR AS end_citation,
+                COALESCE(metrics.word_count, 0) AS word_count,
+                'whitespace_tokens' AS word_count_method,
+                {classification_columns}
             FROM works
+            LEFT JOIN (
+                SELECT work_id, COALESCE(SUM(token_count), 0) AS word_count
+                FROM artifacts
+                GROUP BY work_id
+            ) metrics ON metrics.work_id = works.work_id
+            {classification_join}
             {where}
-            ORDER BY language, author, title, work_id
+            {order_sql}
             {limit_sql}
             """,
             [*cte_params, *where_params],
         )
-    if filter_author_selector and author_id:
-        rows = [
-            row
-            for row in rows
-            if author_selector_matches(
-                selector=author_id,
-                language=str(row.get("language") or ""),
-                source_author_id=(
-                    str(row["author_id"]) if row.get("author_id") is not None else None
-                ),
-                author=str(row.get("author") or ""),
-            )
-        ]
-        if not include_contained:
-            rows = rows[offset:]
-        if limit is not None and not include_contained:
-            rows = rows[:limit]
     if include_contained:
         rows.extend(
             _list_contained_work_rows(
                 catalog_path,
                 language=language,
                 author=author,
-                author_id=author_id,
+                author_id=None if post_author_filter else author_id,
                 query=query,
+                classification_scope=classification_scope,
+                classification_group=classification_group,
+                classification_tag=classification_tag,
             )
         )
         rows.sort(
-            key=lambda row: (
-                str(row.get("language") or ""),
-                str(row.get("author") or ""),
-                str(row.get("title") or ""),
-                str(row.get("work_id") or ""),
+            key=(
+                _work_sort_key_group_popularity
+                if sort == "group-popularity" or classification_group or classification_tag
+                else _work_sort_key_global_popularity
+                if sort == "global-popularity"
+                else _work_sort_key_scope_popularity
+                if sort == "popularity" and classification_scope
+                else _work_sort_key_popularity
+                if sort in {"popularity", "global-popularity", "group-popularity"}
+                else _work_sort_key_catalog
             )
         )
+    _attach_work_author_authorities(catalog_path, rows)
+    if post_author_filter and author_id:
+        rows = [row for row in rows if _work_author_matches_requested_id(row, author_id)]
+    if include_contained or post_author_filter:
         rows = rows[offset:]
         if limit is not None:
             rows = rows[:limit]
+    _attach_source_metadata_summaries(catalog_path, rows)
+    _attach_work_metadata_attributions(catalog_path, rows)
+    _attach_work_display_labels(rows)
     return rows
 
 
-def _list_contained_work_rows(
+def list_discovery_group_summaries(
+    catalog_path: Path,
+    *,
+    language: str | None = None,
+) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "work_classifications"):
+            return []
+        columns = _table_columns(conn, "work_classifications")
+        if "discovery_group_id" not in columns:
+            return []
+        conditions = ["coalesce(wc.discovery_group_id, '') <> ''"]
+        params: list[object] = []
+        if language:
+            conditions.append("w.language = ?")
+            params.append(language)
+        rows = _dict_rows(
+            conn,
+            f"""
+            SELECT
+                wc.discovery_group_id AS id,
+                COUNT(DISTINCT w.work_id) AS work_count,
+                COUNT(DISTINCT w.work_id) AS classified_work_count,
+                COUNT(
+                    DISTINCT CASE
+                        WHEN coalesce(w.author_id, '') <> '' THEN w.author_id
+                        WHEN trim(coalesce(w.author, '')) <> ''
+                         AND lower(trim(w.author)) <> 'unknown' THEN w.author
+                        ELSE NULL
+                    END
+                ) AS author_count,
+                MAX(wc.group_popularity_score) AS max_group_popularity_score
+            FROM works w
+            JOIN work_classifications wc ON wc.work_id = w.work_id
+            WHERE {" AND ".join(conditions)}
+            GROUP BY wc.discovery_group_id
+            """,
+            params,
+        )
+    return _merge_discovery_counts(rows, DISCOVERY_GROUPS)
+
+
+def list_discovery_tag_summaries(
+    catalog_path: Path,
+    *,
+    language: str | None = None,
+) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "work_classifications"):
+            return []
+        columns = _table_columns(conn, "work_classifications")
+        if "discovery_tags" not in columns:
+            return []
+        conditions = ["coalesce(wc.discovery_tags, '') <> ''"]
+        params: list[object] = []
+        if language:
+            conditions.append("w.language = ?")
+            params.append(language)
+        rows = _dict_rows(
+            conn,
+            f"""
+            SELECT
+                w.work_id,
+                w.author_id,
+                w.author,
+                wc.discovery_tags,
+                wc.group_popularity_score
+            FROM works w
+            JOIN work_classifications wc ON wc.work_id = w.work_id
+            WHERE {" AND ".join(conditions)}
+            """,
+            params,
+        )
+    counts: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        work_id = str(row["work_id"])
+        author_identity = _reader_author_count_identity(
+            row.get("author_id"),
+            row.get("author"),
+        )
+        group_score = row.get("group_popularity_score")
+        for tag_id in normalize_discovery_tags(row.get("discovery_tags")):
+            if tag_id not in DISCOVERY_TAGS:
+                continue
+            summary = counts.setdefault(
+                tag_id,
+                {
+                    "id": tag_id,
+                    "work_ids": set(),
+                    "author_ids": set(),
+                    "max_group_popularity_score": None,
+                },
+            )
+            summary["work_ids"].add(work_id)
+            if author_identity:
+                summary["author_ids"].add(author_identity)
+            if group_score is not None and (
+                summary["max_group_popularity_score"] is None
+                or int(group_score) > int(summary["max_group_popularity_score"])
+            ):
+                summary["max_group_popularity_score"] = int(group_score)
+    rows_for_merge = [
+        {
+            "id": tag_id,
+            "work_count": len(summary["work_ids"]),
+            "classified_work_count": len(summary["work_ids"]),
+            "author_count": len(summary["author_ids"]),
+            "max_group_popularity_score": summary["max_group_popularity_score"],
+        }
+        for tag_id, summary in counts.items()
+    ]
+    return _merge_discovery_counts(rows_for_merge, DISCOVERY_TAGS)
+
+
+def _reader_author_count_identity(author_id: object, author: object) -> str:
+    clean_author_id = str(author_id or "").strip()
+    if clean_author_id:
+        return clean_author_id
+    clean_author = str(author or "").strip()
+    if clean_author and clean_author.casefold() != "unknown":
+        return clean_author
+    return ""
+
+
+def list_discovery_shelves(
+    catalog_path: Path,
+    *,
+    language: str | None = None,
+    limit: int | None = None,
+    sample_limit: int = 3,
+) -> list[dict[str, Any]]:
+    groups = list_discovery_group_summaries(catalog_path, language=language)
+    if limit is not None:
+        groups = groups[:limit]
+    shelves: list[dict[str, Any]] = []
+    for group in groups:
+        group_id = str(group["id"])
+        sample_rows = list_works(
+            catalog_path,
+            language=language,
+            classification_group=group_id,
+            limit=sample_limit,
+            sort="group-popularity",
+        )
+        sample_works = [
+            {
+                "work_id": str(row["work_id"]),
+                "title": str(row["title"]),
+                "author": str(row.get("author") or ""),
+                "language": str(row.get("language") or ""),
+                "source_id": str(row.get("source_id") or ""),
+                "source_label": str(row.get("source_label") or ""),
+                "edition_label": str(row.get("edition_label") or ""),
+                "short_disambiguation_label": str(row.get("short_disambiguation_label") or ""),
+                "classification_group_popularity_score": row.get(
+                    "classification_group_popularity_score"
+                ),
+            }
+            for row in sample_rows
+        ]
+        shelves.append(
+            {
+                "id": group_id,
+                "label": group["label"],
+                "description": group["description"],
+                "query": {"group": group_id, "sort": "group-popularity"},
+                "work_count": group["work_count"],
+                "classified_work_count": group["classified_work_count"],
+                "author_count": group["author_count"],
+                "max_group_popularity_score": group["max_group_popularity_score"],
+                "sample_works": sample_works,
+            }
+        )
+    return shelves
+
+
+def reader_discovery_coverage(catalog_path: Path) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        base_rows = _dict_rows(
+            conn,
+            """
+            SELECT
+                w.language,
+                COUNT(DISTINCT w.work_id) AS work_count,
+                COUNT(
+                    DISTINCT CASE
+                        WHEN coalesce(w.author_id, '') <> '' THEN w.author_id
+                        WHEN trim(coalesce(w.author, '')) <> ''
+                         AND lower(trim(w.author)) <> 'unknown' THEN w.author
+                        ELSE NULL
+                    END
+                ) AS author_count,
+                COALESCE(SUM(metrics.segment_count), 0) AS segment_count,
+                COALESCE(SUM(metrics.token_count), 0) AS token_count
+            FROM works w
+            LEFT JOIN (
+                SELECT
+                    work_id,
+                    SUM(segment_count) AS segment_count,
+                    SUM(token_count) AS token_count
+                FROM artifacts
+                GROUP BY work_id
+            ) metrics ON metrics.work_id = w.work_id
+            GROUP BY w.language
+            ORDER BY w.language
+            """,
+        )
+        classification_rows: list[dict[str, Any]] = []
+        if _table_exists(conn, "work_classifications"):
+            columns = _table_columns(conn, "work_classifications")
+            discovery_group = "wc.discovery_group_id" if "discovery_group_id" in columns else "''"
+            discovery_tags = "wc.discovery_tags" if "discovery_tags" in columns else "''"
+            classification_rows = _dict_rows(
+                conn,
+                f"""
+                SELECT
+                    w.language,
+                    w.work_id,
+                    {discovery_group} AS discovery_group_id,
+                    {discovery_tags} AS discovery_tags
+                FROM works w
+                JOIN work_classifications wc ON wc.work_id = w.work_id
+                """,
+            )
+        author_classification_rows: list[dict[str, Any]] = []
+        if _table_exists(conn, "author_classifications"):
+            author_classification_rows = _dict_rows(
+                conn,
+                """
+                SELECT language, COUNT(DISTINCT author_id) AS classified_author_count
+                FROM author_classifications
+                GROUP BY language
+                """,
+            )
+    classification_by_language: dict[str, dict[str, Any]] = {}
+    for row in classification_rows:
+        language = str(row["language"])
+        stats = classification_by_language.setdefault(
+            language,
+            {
+                "classified_work_ids": set(),
+                "discoverable_work_ids": set(),
+                "groups": set(),
+                "tags": set(),
+            },
+        )
+        work_id = str(row["work_id"])
+        stats["classified_work_ids"].add(work_id)
+        group_id = str(row.get("discovery_group_id") or "")
+        tag_ids = normalize_discovery_tags(row.get("discovery_tags"))
+        if group_id:
+            stats["groups"].add(group_id)
+        for tag_id in tag_ids:
+            stats["tags"].add(tag_id)
+        if group_id or tag_ids:
+            stats["discoverable_work_ids"].add(work_id)
+    classified_authors = {
+        str(row["language"]): int(row["classified_author_count"] or 0)
+        for row in author_classification_rows
+    }
+    items: list[dict[str, Any]] = []
+    for row in base_rows:
+        language = str(row["language"])
+        classification = classification_by_language.get(
+            language,
+            {
+                "classified_work_ids": set(),
+                "discoverable_work_ids": set(),
+                "groups": set(),
+                "tags": set(),
+            },
+        )
+        group_count = len(classification["groups"])
+        tag_count = len(classification["tags"])
+        classified_author_count = classified_authors.get(language, 0)
+        items.append(
+            {
+                "language": language,
+                "work_count": int(row["work_count"] or 0),
+                "author_count": int(row["author_count"] or 0),
+                "segment_count": int(row["segment_count"] or 0),
+                "token_count": int(row["token_count"] or 0),
+                "classified_work_count": len(classification["classified_work_ids"]),
+                "discoverable_work_count": len(classification["discoverable_work_ids"]),
+                "classified_author_count": classified_author_count,
+                "group_count": group_count,
+                "tag_count": tag_count,
+                "has_discovery_facets": bool(group_count or tag_count),
+                "has_author_classifications": classified_author_count > 0,
+                "supported_reader_language": language in SUPPORTED_READER_LANGUAGES,
+            }
+        )
+    return items
+
+
+def _merge_discovery_counts(
+    rows: list[dict[str, Any]],
+    taxonomy: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    taxonomy_order = {taxonomy_id: index for index, taxonomy_id in enumerate(taxonomy)}
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        taxonomy_id = str(row.get("id") or "")
+        entry = taxonomy.get(taxonomy_id)
+        if entry is None:
+            continue
+        items.append(
+            {
+                "id": taxonomy_id,
+                "label": entry.label,
+                "description": entry.description,
+                "work_count": int(row.get("work_count") or 0),
+                "classified_work_count": int(row.get("classified_work_count") or 0),
+                "author_count": int(row.get("author_count") or 0),
+                "max_group_popularity_score": (
+                    int(row["max_group_popularity_score"])
+                    if row.get("max_group_popularity_score") is not None
+                    else None
+                ),
+            }
+        )
+    return sorted(
+        items,
+        key=lambda item: (
+            -int(item["work_count"]),
+            -int(item["max_group_popularity_score"] or 0),
+            taxonomy_order.get(str(item["id"]), len(taxonomy_order)),
+        ),
+    )
+
+
+def _uses_post_author_filter(author_id: str | None) -> bool:
+    return bool(
+        author_id and (is_synthetic_author_selector(author_id) or author_id.startswith("urn:cts:"))
+    )
+
+
+def _work_author_matches_requested_id(
+    row: Mapping[str, Any],
+    requested_author_id: str,
+) -> bool:
+    requested = requested_author_id.strip()
+    if not requested:
+        return False
+    requested_key = requested.casefold()
+    row_values = (
+        row.get("author_id"),
+        row.get("source_author_id"),
+        row.get("canonical_author_id"),
+    )
+    if any(requested_key == str(value or "").casefold() for value in row_values):
+        return True
+    requested_compact = compact_author_id(requested)
+    if requested_compact and any(
+        requested_compact == compact_author_id(str(value or "")) for value in row_values
+    ):
+        return True
+    return author_selector_matches(
+        selector=requested,
+        language=str(row.get("language") or ""),
+        source_author_id=(
+            str(row.get("source_author_id")) if row.get("source_author_id") is not None else None
+        ),
+        author=str(row.get("source_author") or row.get("author") or ""),
+    )
+
+
+def _attach_work_author_authorities(
+    catalog_path: Path,
+    rows: list[dict[str, Any]],
+) -> None:
+    if not rows:
+        return
+    languages = sorted({str(row.get("language") or "") for row in rows if row.get("language")})
+    author_items: list[dict[str, Any]] = []
+    for language in languages:
+        author_items.extend(list_author_index(catalog_path, language=language))
+    by_source_id = {
+        (str(item.get("language") or ""), str(item.get("source_author_id") or "")): item
+        for item in author_items
+        if item.get("source_author_id")
+    }
+    by_source_name = {
+        (
+            str(item.get("language") or ""),
+            str(item.get("source_author_name") or item.get("display_name") or "").casefold(),
+        ): item
+        for item in author_items
+    }
+    source_metadata_names = _source_author_metadata_names(catalog_path, rows)
+    for row in rows:
+        language = str(row.get("language") or "")
+        display_author_id = str(row.get("author_id") or "")
+        display_author_name = str(row.get("author") or "Unknown")
+        source_author_id, source_author_name = _source_author_identity(
+            row,
+            source_metadata_names,
+            fallback_author_id=display_author_id,
+            fallback_author_name=display_author_name,
+        )
+        item = by_source_id.get((language, display_author_id)) if display_author_id else None
+        if item is None:
+            item = by_source_name.get((language, display_author_name.casefold()))
+        row["source_author"] = source_author_name
+        row["source_author_id"] = source_author_id or None
+        if item is None:
+            row["canonical_author_id"] = canonical_author_id_for_source(
+                language,
+                display_author_id,
+                display_author_id,
+                display_author_name,
+            )
+            row["canonical_author_name"] = display_author_name
+            row["canonical_author_kind"] = ""
+            continue
+        row["canonical_author_id"] = item["canonical_author_id"]
+        row["canonical_author_name"] = item["canonical_author_name"]
+        row["canonical_author_kind"] = item["canonical_author_kind"]
+        row["author"] = item["canonical_author_name"]
+
+
+def _source_author_metadata_names(
+    catalog_path: Path,
+    rows: list[dict[str, Any]],
+) -> dict[tuple[str, str], str]:
+    collection_ids = sorted(
+        {str(row.get("collection_id") or "") for row in rows if row.get("collection_id")}
+    )
+    subject_ids = sorted(
+        {
+            candidate
+            for row in rows
+            for candidate in _source_author_subject_candidates(row)
+            if candidate
+        }
+    )
+    if not collection_ids or not subject_ids:
+        return {}
+    collection_placeholders = ", ".join("?" for _ in collection_ids)
+    subject_placeholders = ", ".join("?" for _ in subject_ids)
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "source_metadata"):
+            return {}
+        metadata_rows = _dict_rows(
+            conn,
+            f"""
+            SELECT collection_id, subject_id, key, value
+            FROM source_metadata
+            WHERE subject_kind = 'author'
+              AND collection_id IN ({collection_placeholders})
+              AND subject_id IN ({subject_placeholders})
+              AND key IN ('idt_author_name', 'authtab_author_name')
+            ORDER BY
+                collection_id,
+                subject_id,
+                CASE key WHEN 'idt_author_name' THEN 0 ELSE 1 END,
+                source_path
+            """,
+            [*collection_ids, *subject_ids],
+        )
+    names: dict[tuple[str, str], str] = {}
+    for metadata_row in metadata_rows:
+        key = (
+            str(metadata_row.get("collection_id") or ""),
+            str(metadata_row.get("subject_id") or ""),
+        )
+        names.setdefault(key, str(metadata_row.get("value") or ""))
+    return names
+
+
+def _source_author_identity(
+    row: Mapping[str, Any],
+    source_metadata_names: Mapping[tuple[str, str], str],
+    *,
+    fallback_author_id: str,
+    fallback_author_name: str,
+) -> tuple[str, str]:
+    collection_id = str(row.get("collection_id") or "")
+    for subject_id in _source_author_subject_candidates(row):
+        source_name = source_metadata_names.get((collection_id, subject_id))
+        if source_name:
+            return subject_id, source_name
+    return fallback_author_id, fallback_author_name
+
+
+def _attach_work_display_labels(rows: list[dict[str, Any]]) -> None:
+    for row in rows:
+        collection_id = str(row.get("collection_id") or "").strip()
+        source_id = str(row.get("source_id") or "").strip()
+        collection_label = collection_id.upper()
+        row["source_label"] = (
+            f"{collection_label} {source_id}".strip() if source_id else collection_label
+        )
+        row["edition_label"] = (
+            f"{collection_label} reader text" if collection_label else "Reader text"
+        )
+        row["short_disambiguation_label"] = source_id or str(row.get("work_id") or "")
+
+
+def _source_author_subject_candidates(row: Mapping[str, Any]) -> tuple[str, ...]:
+    source_id = str(row.get("source_id") or "").casefold()
+    source_family = source_id.split(".", 1)[0]
+    author_id = str(row.get("author_id") or "").casefold()
+    candidates = []
+    if source_family:
+        candidates.append(source_family)
+    if author_id and author_id not in candidates:
+        candidates.append(author_id)
+    return tuple(candidates)
+
+
+def _attach_source_metadata_summaries(  # noqa: C901, PLR0912
+    catalog_path: Path,
+    rows: list[dict[str, Any]],
+) -> None:
+    if not rows or not catalog_path.exists():
+        return
+    for row in rows:
+        row["source_metadata_summary"] = ""
+    candidates_by_collection: dict[str, set[str]] = {}
+    for row in rows:
+        for collection_id in _source_metadata_candidate_collections(row):
+            candidates = candidates_by_collection.setdefault(collection_id, set())
+            candidates.update(_source_metadata_candidate_subjects(row))
+    if not candidates_by_collection:
+        return
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "source_metadata"):
+            return
+        clauses: list[str] = []
+        params: list[object] = []
+        for collection_id, subject_ids in candidates_by_collection.items():
+            if not subject_ids:
+                continue
+            placeholders = ", ".join("?" for _ in subject_ids)
+            clauses.append(f"(collection_id = ? AND subject_id IN ({placeholders}))")
+            params.extend([collection_id, *sorted(subject_ids)])
+        if not clauses:
+            return
+        metadata_rows = _dict_rows(
+            conn,
+            f"""
+            SELECT collection_id, subject_id, key, value
+            FROM source_metadata
+            WHERE subject_kind = 'work'
+              AND key IN ({", ".join("?" for _ in SOURCE_METADATA_SUMMARY_KEYS)})
+              AND ({" OR ".join(clauses)})
+            ORDER BY collection_id, subject_id, key, value
+            """,
+            [*SOURCE_METADATA_SUMMARY_KEYS, *params],
+        )
+    values_by_subject: dict[tuple[str, str], dict[str, list[str]]] = {}
+    for metadata_row in metadata_rows:
+        key = str(metadata_row.get("key") or "").strip()
+        value = str(metadata_row.get("value") or "").strip()
+        collection_id = str(metadata_row.get("collection_id") or "").strip()
+        subject_id = str(metadata_row.get("subject_id") or "").strip()
+        if not key or not value or not collection_id or not subject_id:
+            continue
+        subject_values = values_by_subject.setdefault((collection_id, subject_id), {})
+        _append_source_metadata_summary_value(subject_values, key, value)
+    for row in rows:
+        merged: dict[str, list[str]] = {}
+        for collection_id in _source_metadata_candidate_collections(row):
+            for subject_id in _source_metadata_candidate_subjects(row):
+                for key, values in values_by_subject.get((collection_id, subject_id), {}).items():
+                    for value in values:
+                        _append_source_metadata_summary_value(merged, key, value)
+        row["source_metadata_summary"] = "; ".join(
+            f"{key}={' | '.join(merged[key])}"
+            for key in SOURCE_METADATA_SUMMARY_KEYS
+            if key in merged and merged[key]
+        )
+
+
+def _source_metadata_candidate_collections(row: Mapping[str, Any]) -> list[str]:
+    collection_id = str(row.get("collection_id") or "").strip()
+    collections = [collection_id] if collection_id else []
+    if _cts_work_tail(str(row.get("cts_work_urn") or "")) and "perseus" not in collections:
+        collections.append("perseus")
+    return collections
+
+
+def _source_metadata_candidate_subjects(row: Mapping[str, Any]) -> set[str]:
+    candidates = {
+        str(row.get(field) or "").strip()
+        for field in ("source_id", "work_id", "cts_work_urn")
+        if str(row.get(field) or "").strip()
+    }
+    cts_tail = _cts_work_tail(str(row.get("cts_work_urn") or ""))
+    if cts_tail:
+        candidates.add(cts_tail)
+    return candidates
+
+
+def _attach_work_metadata_attributions(
+    catalog_path: Path,
+    rows: list[dict[str, Any]],
+) -> None:
+    for row in rows:
+        row["metadata_attributions"] = []
+        row["translator_names"] = []
+        row["traditional_author_names"] = []
+        row["attributed_author_names"] = []
+    if not rows or not catalog_path.exists():
+        return
+    row_match_keys = [_work_attribution_match_keys(row) for row in rows]
+    collection_ids = sorted(
+        {str(row.get("collection_id") or "") for row in rows if row.get("collection_id")}
+    )
+    if not collection_ids:
+        return
+    collection_placeholders = ", ".join("?" for _ in collection_ids)
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "metadata_attributions"):
+            return
+        attribution_rows = _dict_rows(
+            conn,
+            f"""
+            SELECT collection_id, match_field, match_value, relation_type, agent,
+                   status, confidence, note,
+                   min(evidence_citation) AS evidence_citation,
+                   arg_min(evidence_label, evidence_citation) AS evidence_label
+            FROM metadata_attributions
+            WHERE status = 'accepted'
+              AND collection_id IN ({collection_placeholders})
+            GROUP BY collection_id, match_field, match_value, relation_type, agent,
+                     status, confidence, note
+            ORDER BY relation_type, agent, evidence_citation
+            """,
+            collection_ids,
+        )
+    for row, match_keys in zip(rows, row_match_keys, strict=True):
+        collection_id = str(row.get("collection_id") or "")
+        for attribution in attribution_rows:
+            if collection_id != str(attribution.get("collection_id") or ""):
+                continue
+            match_key = (
+                str(attribution.get("match_field") or ""),
+                str(attribution.get("match_value") or "").casefold(),
+            )
+            if match_key not in match_keys:
+                continue
+            relation_type = str(attribution.get("relation_type") or "")
+            agent = str(attribution.get("agent") or "")
+            row["metadata_attributions"].append(
+                {
+                    "relation_type": relation_type,
+                    "agent": agent,
+                    "status": str(attribution.get("status") or ""),
+                    "confidence": str(attribution.get("confidence") or ""),
+                    "note": str(attribution.get("note") or ""),
+                    "evidence_citation": str(attribution.get("evidence_citation") or ""),
+                    "evidence_label": str(attribution.get("evidence_label") or ""),
+                }
+            )
+            _append_work_attribution_name(row, relation_type, agent)
+
+
+def _work_attribution_match_keys(row: Mapping[str, Any]) -> set[tuple[str, str]]:
+    source_id = str(row.get("source_id") or "")
+    source_family = source_id.casefold().split(".", 1)[0]
+    cts_work_urn = str(row.get("cts_work_urn") or "")
+    author_id = str(row.get("author_id") or "")
+    source_author_id = str(row.get("source_author_id") or "")
+    candidates = {
+        ("source_id", source_id),
+        ("work_id", str(row.get("work_id") or "")),
+        ("cts_work_urn", cts_work_urn),
+        ("author_id", author_id),
+        ("author_id", compact_author_id(author_id)),
+        ("author_id", source_author_id),
+        ("author_id", compact_author_id(source_author_id)),
+        ("author_id", source_family),
+    }
+    return {(field, value.casefold()) for field, value in candidates if field and value}
+
+
+def _append_work_attribution_name(
+    row: dict[str, Any],
+    relation_type: str,
+    agent: str,
+) -> None:
+    if not agent:
+        return
+    if relation_type == "translator":
+        _append_unique(row["translator_names"], agent)
+    elif relation_type == "traditional_author":
+        _append_unique(row["traditional_author_names"], agent)
+        _append_unique(row["attributed_author_names"], agent)
+    elif relation_type in {"attributed_author", "possible_author"}:
+        _append_unique(row["attributed_author_names"], agent)
+
+
+def _append_unique(values: list[str], value: str) -> None:
+    if value not in values:
+        values.append(value)
+
+
+def _cts_work_tail(value: str) -> str:
+    if not value.startswith("urn:cts:"):
+        return ""
+    tail = value.rsplit(":", 1)[-1]
+    parts = tail.split(".")
+    if len(parts) < CTS_WORK_TAIL_PARTS:
+        return ""
+    return ".".join(parts[:CTS_WORK_TAIL_PARTS])
+
+
+def _append_source_metadata_summary_value(
+    values_by_key: dict[str, list[str]],
+    key: str,
+    value: str,
+) -> None:
+    values = values_by_key.setdefault(key, [])
+    if key == "dcs_time_slot":
+        if value.isdigit() and any(not current.isdigit() for current in values):
+            return
+        if not value.isdigit() and any(current.isdigit() for current in values):
+            values.clear()
+    if value not in values:
+        values.append(value)
+
+
+def _work_sort_key_catalog(row: dict[str, Any]) -> tuple[str, str, str, str]:
+    return (
+        str(row.get("language") or ""),
+        str(row.get("author") or ""),
+        str(row.get("title") or ""),
+        str(row.get("work_id") or ""),
+    )
+
+
+def _work_sort_key_popularity(row: dict[str, Any]) -> tuple[bool, int, str, str, str, str]:
+    score = row.get("classification_popularity_score")
+    return (
+        score is None,
+        -int(score) if score is not None else 0,
+        str(row.get("language") or ""),
+        str(row.get("author") or ""),
+        str(row.get("title") or ""),
+        str(row.get("work_id") or ""),
+    )
+
+
+def _work_sort_key_global_popularity(
+    row: dict[str, Any],
+) -> tuple[bool, int, str, str, str, str]:
+    score = row.get("classification_global_popularity_score")
+    return (
+        score is None,
+        -int(score) if score is not None else 0,
+        str(row.get("language") or ""),
+        str(row.get("author") or ""),
+        str(row.get("title") or ""),
+        str(row.get("work_id") or ""),
+    )
+
+
+def _work_sort_key_group_popularity(
+    row: dict[str, Any],
+) -> tuple[bool, int, str, str, str, str]:
+    score = row.get("classification_group_popularity_score")
+    return (
+        score is None,
+        -int(score) if score is not None else 0,
+        str(row.get("language") or ""),
+        str(row.get("author") or ""),
+        str(row.get("title") or ""),
+        str(row.get("work_id") or ""),
+    )
+
+
+def _work_sort_key_scope_popularity(row: dict[str, Any]) -> tuple[bool, int, str, str, str, str]:
+    score = row.get("classification_scope_popularity_score")
+    return (
+        score is None,
+        -int(score) if score is not None else 0,
+        str(row.get("language") or ""),
+        str(row.get("author") or ""),
+        str(row.get("title") or ""),
+        str(row.get("work_id") or ""),
+    )
+
+
+def _list_contained_work_rows(  # noqa: C901, PLR0911, PLR0912, PLR0913
     catalog_path: Path,
     *,
     language: str | None = None,
     author: str | None = None,
     author_id: str | None = None,
+    classification_scope: str | None = None,
+    classification_group: str | None = None,
+    classification_tag: str | None = None,
     query: str | None = None,
 ) -> list[dict[str, Any]]:
     if author_id and not is_synthetic_author_selector(author_id):
@@ -1828,6 +4146,65 @@ def _list_contained_work_rows(
                 """
             )
             params.extend([query_like] * 5)
+        if _table_exists(conn, "work_classifications"):
+            classification_table_columns = _table_columns(conn, "work_classifications")
+            if classification_group:
+                group_key = classification_group.lower()
+                if "discovery_group_id" in classification_table_columns:
+                    conditions.append("lower(coalesce(wc.discovery_group_id, '')) = ?")
+                    params.append(group_key)
+                elif "scope" in classification_table_columns:
+                    conditions.append(
+                        """
+                        (
+                            lower(coalesce(wc.scope, '')) LIKE ?
+                            OR lower(coalesce(wc.category, '')) LIKE ?
+                        )
+                        """
+                    )
+                    group_like = f"%{group_key}%"
+                    params.extend([group_like, group_like])
+                else:
+                    return []
+            if classification_tag:
+                if not _table_exists(conn, "work_classification_tags"):
+                    return []
+                conditions.append(
+                    """
+                    EXISTS (
+                        SELECT 1
+                        FROM work_classification_tags wct
+                        WHERE wct.work_id = contained_works.contained_work_id
+                          AND lower(wct.tag_id) = ?
+                    )
+                    """
+                )
+                params.append(classification_tag.lower())
+            if classification_scope:
+                if "scope" not in classification_table_columns:
+                    return []
+                scope_like = f"%{classification_scope.lower()}%"
+                conditions.append(
+                    """
+                    (
+                        lower(coalesce(wc.scope, '')) LIKE ?
+                        OR lower(coalesce(wc.category, '')) LIKE ?
+                    )
+                    """
+                )
+                params.extend([scope_like, scope_like])
+            classification_columns = _work_classification_select_columns(
+                classification_table_columns
+            )
+            classification_join = """
+                LEFT JOIN work_classifications wc
+                  ON wc.work_id = contained_works.contained_work_id
+            """
+        else:
+            if classification_scope or classification_group or classification_tag:
+                return []
+            classification_columns = _null_work_classification_select_columns()
+            classification_join = ""
         where = " AND ".join(conditions)
         rows = _dict_rows(
             conn,
@@ -1844,8 +4221,10 @@ def _list_contained_work_rows(
                 'contained' AS work_kind,
                 parent_work_id,
                 start_citation,
-                end_citation
+                end_citation,
+                {classification_columns}
             FROM contained_works
+            {classification_join}
             WHERE {where}
             ORDER BY language, author, title, contained_work_id
             """,
@@ -1862,6 +4241,14 @@ def _list_contained_work_rows(
                 author=str(row.get("author") or ""),
             )
         ]
+    for row in rows:
+        row["word_count"] = _word_count_for_citation_range(
+            catalog_path,
+            str(row["parent_work_id"]),
+            str(row["start_citation"]),
+            str(row["end_citation"]),
+        )
+        row["word_count_method"] = "whitespace_tokens"
     return rows
 
 
@@ -1971,6 +4358,92 @@ def list_segments_for_work(  # noqa: PLR0913
         if len(rows) >= limit:
             return rows[:limit]
     return rows
+
+
+def work_map_for_work(catalog_path: Path, work_ref: str) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    work = get_work(catalog_path, work_ref)
+    candidates = [work_ref]
+    if work:
+        for value in (
+            work.get("work_id"),
+            work.get("cts_work_urn"),
+            work.get("parent_work_id"),
+        ):
+            if value:
+                candidates.append(str(value))
+    resolved = resolve_work_ref(catalog_path, work_ref)
+    if resolved:
+        candidates.append(resolved)
+    candidates = list(dict.fromkeys(candidates))
+    placeholders = ", ".join("?" for _ in candidates)
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "work_map_nodes"):
+            return []
+        rows = _dict_rows(
+            conn,
+            f"""
+            SELECT DISTINCT
+                work_id, node_id, parent_node_id, level, kind, label, native_label,
+                ordinal, start_citation, end_citation, provenance, confidence,
+                status, note, source_file
+            FROM work_map_nodes
+            WHERE status = 'accepted'
+              AND work_id IN ({placeholders})
+            ORDER BY level, ordinal, node_id
+            """,
+            candidates,
+        )
+    return [_decorate_work_map_node(catalog_path, row) for row in rows]
+
+
+def _decorate_work_map_node(catalog_path: Path, row: dict[str, Any]) -> dict[str, Any]:
+    work_id = str(row["work_id"])
+    word_count = _word_count_for_citation_range(
+        catalog_path,
+        work_id,
+        str(row["start_citation"]),
+        str(row["end_citation"]),
+    )
+    return {
+        **row,
+        "word_count": word_count,
+        "word_count_method": "whitespace_tokens",
+    }
+
+
+def _word_count_for_citation_range(
+    catalog_path: Path,
+    work_ref: str,
+    start_citation: str,
+    end_citation: str,
+) -> int:
+    resolved_work_id = resolve_text_work_ref(catalog_path, work_ref) or work_ref
+    total = 0
+    for artifact in _catalog_artifacts(catalog_path):
+        if artifact["work_id"] != resolved_work_id:
+            continue
+        book_path = Path(str(artifact["artifact_path"]))
+        if not book_path.exists():
+            continue
+        with duckdb.connect(str(book_path), read_only=True) as conn:
+            start_sort_key = _segment_sort_key(conn, resolved_work_id, start_citation)
+            end_sort_key = _segment_sort_key(conn, resolved_work_id, end_citation)
+            if start_sort_key is None or end_sort_key is None:
+                continue
+            low = min(start_sort_key, end_sort_key)
+            high = max(start_sort_key, end_sort_key)
+            texts = conn.execute(
+                """
+                SELECT text
+                FROM segments
+                WHERE work_id = ? AND sort_key BETWEEN ? AND ?
+                """,
+                [resolved_work_id, low, high],
+            ).fetchall()
+        total += sum(len(str(row[0]).split()) for row in texts)
+    return total
 
 
 def list_aliases(catalog_path: Path) -> list[dict[str, Any]]:
@@ -2174,13 +4647,15 @@ def list_source_metadata(
         )
 
 
-def reader_summary(catalog_path: Path) -> dict[str, int]:
+def reader_summary(catalog_path: Path) -> dict[str, object]:
     if not catalog_path.exists():
         return {
             "collection_count": 0,
             "work_count": 0,
             "artifact_count": 0,
             "segment_count": 0,
+            "word_count": 0,
+            "word_count_method": "whitespace_tokens",
             "alias_count": 0,
             "source_file_count": 0,
             "metadata_count": 0,
@@ -2190,6 +4665,7 @@ def reader_summary(catalog_path: Path) -> dict[str, int]:
         work_count = _scalar_int(conn, "SELECT COUNT(*) FROM works")
         artifact_count = _scalar_int(conn, "SELECT COUNT(*) FROM artifacts")
         segment_count = _scalar_int(conn, "SELECT COALESCE(SUM(segment_count), 0) FROM artifacts")
+        word_count = _scalar_int(conn, "SELECT COALESCE(SUM(token_count), 0) FROM artifacts")
         alias_count = _scalar_int(conn, "SELECT COUNT(*) FROM aliases")
         source_file_count = _scalar_int(conn, "SELECT COUNT(*) FROM source_files")
         metadata_count = _scalar_int(conn, "SELECT COUNT(*) FROM source_metadata")
@@ -2198,6 +4674,8 @@ def reader_summary(catalog_path: Path) -> dict[str, int]:
         "work_count": int(work_count),
         "artifact_count": int(artifact_count),
         "segment_count": int(segment_count),
+        "word_count": int(word_count),
+        "word_count_method": "whitespace_tokens",
         "alias_count": int(alias_count),
         "source_file_count": int(source_file_count),
         "metadata_count": int(metadata_count),

@@ -5,7 +5,7 @@ import re
 import time
 from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, cast
 
 from langnet.execution.source_text import display_text, source_segments_from_text
@@ -17,8 +17,19 @@ from langnet.translation.cache import (
     build_translation_key,
 )
 from langnet.translation.prompts import BASE_SYSTEM, default_hints_for_language
+from langnet.translation.structured import (
+    StructuredTranslationError,
+    decode_cached_translation_text,
+    merge_cached_translation_texts,
+    normalize_translation_response,
+    requires_structured_translation,
+    source_text_from_blocks,
+    structured_translation_source_batches,
+    translated_segments_from_blocks,
+)
 
 _DICO_SOURCE_RE = re.compile(r"#(?P<entry>[^:]+):(?P<occurrence>\d+)$")
+STRUCTURED_TRANSLATION_MAX_ATTEMPTS = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +49,8 @@ class TranslationProjection:
     sense_anchor: str
     source_text: str
     hint: str
+    source_blocks: list[Mapping[str, Any]]
+    source_segments: list[Mapping[str, Any]]
 
 
 def _int_value(value: object, default: int = 0) -> int:
@@ -51,37 +64,47 @@ def _int_value(value: object, default: int = 0) -> int:
 def translation_source_from_evidence(
     evidence: Mapping[str, Any],
 ) -> TranslationSource | None:
-    """Recover the translation-cache source identity from DICO/Gaffiot evidence."""
+    """Recover the translation-cache source identity from French lexicon evidence."""
     source_tool = evidence.get("source_tool")
     source_ref = evidence.get("source_ref")
     if not isinstance(source_tool, str) or not isinstance(source_ref, str):
         return None
 
+    source: TranslationSource | None = None
     if source_tool == "gaffiot":
         _, _, entry_id = source_ref.partition(":")
-        if not entry_id:
-            return None
-        return TranslationSource(
-            source_lexicon="gaffiot",
-            entry_id=entry_id,
-            occurrence=_int_value(evidence.get("variant_num")),
-            source_ref=source_ref,
-            source_tool=source_tool,
-        )
+        if entry_id:
+            source = TranslationSource(
+                source_lexicon="gaffiot",
+                entry_id=entry_id,
+                occurrence=_int_value(evidence.get("variant_num")),
+                source_ref=source_ref,
+                source_tool=source_tool,
+            )
 
-    if source_tool == "dico":
+    elif source_tool == "dico":
         match = _DICO_SOURCE_RE.search(source_ref)
-        if not match:
-            return None
-        return TranslationSource(
-            source_lexicon="dico",
-            entry_id=match.group("entry"),
-            occurrence=int(match.group("occurrence")),
-            source_ref=source_ref,
-            source_tool=source_tool,
-        )
+        if match:
+            source = TranslationSource(
+                source_lexicon="dico",
+                entry_id=match.group("entry"),
+                occurrence=int(match.group("occurrence")),
+                source_ref=source_ref,
+                source_tool=source_tool,
+            )
 
-    return None
+    elif source_tool == "bailly":
+        _, _, entry_id = source_ref.partition(":")
+        if entry_id:
+            source = TranslationSource(
+                source_lexicon="bailly",
+                entry_id=entry_id,
+                occurrence=_int_value(evidence.get("occurrence")),
+                source_ref=source_ref,
+                source_tool=source_tool,
+            )
+
+    return source
 
 
 def _evidence_from(triple: Mapping[str, Any]) -> dict[str, Any]:
@@ -166,6 +189,10 @@ def _projection_for_gloss(
     source = translation_source_from_evidence(evidence)
     if source is None:
         return None
+    metadata = triple.get("metadata")
+    metadata_map = metadata if isinstance(metadata, Mapping) else {}
+    source_blocks_value = metadata_map.get("source_blocks")
+    source_segments_value = metadata_map.get("source_segments")
 
     key = build_translation_key(
         source_lexicon=source.source_lexicon,
@@ -184,6 +211,22 @@ def _projection_for_gloss(
         sense_anchor=sense_anchor,
         source_text=source_text,
         hint=hint,
+        source_blocks=[
+            cast(Mapping[str, Any], item)
+            for item in source_blocks_value
+            if isinstance(item, Mapping)
+        ]
+        if isinstance(source_blocks_value, Sequence)
+        and not isinstance(source_blocks_value, (str, bytes))
+        else [],
+        source_segments=[
+            cast(Mapping[str, Any], item)
+            for item in source_segments_value
+            if isinstance(item, Mapping)
+        ]
+        if isinstance(source_segments_value, Sequence)
+        and not isinstance(source_segments_value, (str, bytes))
+        else [],
     )
 
 
@@ -228,7 +271,7 @@ def populate_missing_translations(
     cache: TranslationCache,
     translate: Callable[[TranslationProjection], str],
 ) -> int:
-    """Translate DICO/Gaffiot French glosses that are missing from the cache."""
+    """Translate French glosses that are missing from the cache."""
     written = 0
     for projection in _translation_projections(claims=claims, language=language, model=model):
         existing = cache.get(projection.key)
@@ -237,7 +280,7 @@ def populate_missing_translations(
 
         start = time.perf_counter()
         try:
-            translated_text = translate(projection).strip()
+            translated_text = _translate_projection(projection, translate)
         except Exception as exc:  # noqa: BLE001
             duration_ms = int((time.perf_counter() - start) * 1000)
             cache.upsert(
@@ -275,6 +318,44 @@ def populate_missing_translations(
     return written
 
 
+def _translate_projection(
+    projection: TranslationProjection,
+    translate: Callable[[TranslationProjection], str],
+) -> str:
+    if not requires_structured_translation(projection):
+        return normalize_translation_response(projection, translate(projection))
+
+    batches = structured_translation_source_batches(projection.source_blocks)
+    if len(batches) <= 1:
+        return _translate_structured_projection_with_retries(projection, translate)
+
+    translated_batches = []
+    for batch in batches:
+        batch_projection = replace(
+            projection,
+            source_blocks=list(batch),
+            source_text=source_text_from_blocks(batch),
+        )
+        translated_batches.append(
+            _translate_structured_projection_with_retries(batch_projection, translate)
+        )
+    return merge_cached_translation_texts(translated_batches)
+
+
+def _translate_structured_projection_with_retries(
+    projection: TranslationProjection,
+    translate: Callable[[TranslationProjection], str],
+) -> str:
+    last_error: Exception | None = None
+    for _attempt in range(STRUCTURED_TRANSLATION_MAX_ATTEMPTS):
+        try:
+            return normalize_translation_response(projection, translate(projection))
+        except (StructuredTranslationError, ValueError) as exc:
+            last_error = exc
+    assert last_error is not None
+    raise last_error
+
+
 def translation_cache_status_counts(
     *,
     claims: Sequence[Mapping[str, Any]],
@@ -282,7 +363,7 @@ def translation_cache_status_counts(
     model: str,
     cache: TranslationCache,
 ) -> dict[str, int]:
-    """Count cache status for translatable DICO/Gaffiot French gloss projections."""
+    """Count cache status for translatable French gloss projections."""
     counts = {"total": 0, "hits": 0, "missing": 0, "errors": 0, "empty": 0}
     for projection in _translation_projections(claims=claims, language=language, model=model):
         counts["total"] += 1
@@ -306,17 +387,21 @@ def _translated_triples(
 ) -> list[dict[str, Any]]:
     key = projection.key
     source = projection.source
+    cached_translation = decode_cached_translation_text(translated_text)
+    display_translation = cached_translation.text
     translated_sense_anchor = _translation_sense_anchor(
         projection.lexeme_anchor,
         key.translation_id,
-        translated_text,
+        display_translation,
     )
-    parsed_glosses = parse_english_glosses(translated_text)
-    translated_segments = source_segments_from_text(
-        translated_text,
-        segment_type="translated_gloss_segment",
-        labels=["translation", "parsed_gloss"],
-    )
+    parsed_glosses = parse_english_glosses(display_translation)
+    translated_segments = translated_segments_from_blocks(cached_translation.translated_blocks)
+    if not translated_segments:
+        translated_segments = source_segments_from_text(
+            display_translation,
+            segment_type="translated_gloss_segment",
+            labels=["translation", "parsed_gloss"],
+        )
     translated_evidence = {
         "source_tool": "translation",
         "source_lexicon": source.source_lexicon,
@@ -334,6 +419,9 @@ def _translated_triples(
         "derived_from_sense": projection.sense_anchor,
         "parsed_glosses": parsed_glosses,
         "translated_segments": translated_segments,
+        "translated_blocks": cached_translation.translated_blocks,
+        "source_blocks": projection.source_blocks,
+        "source_segments": projection.source_segments,
         "raw_blob_ref": "entry_translations",
     }
     return [
@@ -349,19 +437,84 @@ def _translated_triples(
         {
             "subject": translated_sense_anchor,
             "predicate": "gloss",
-            "object": translated_text,
+            "object": display_translation,
             "metadata": {
                 "evidence": translated_evidence,
                 "source_lang": "en",
                 "source_ref": source.source_ref,
-                "display_gloss": display_text(translated_text),
+                "display_gloss": display_text(display_translation),
                 "parsed_glosses": parsed_glosses,
                 "translated_segments": translated_segments,
+                "translated_blocks": cached_translation.translated_blocks,
                 "translation_id": key.translation_id,
                 "translated_from": projection.sense_anchor,
             },
         },
     ]
+
+
+def _translation_state(
+    *,
+    projection: TranslationProjection,
+    record: TranslationRecord | None,
+    model: str,
+) -> dict[str, Any]:
+    key = projection.key
+    if record is None:
+        status = "missing"
+        error = ""
+    elif record.status == "empty":
+        status = "empty"
+        error = record.error or ""
+    else:
+        status = "error"
+        error = record.error or ""
+    state: dict[str, Any] = {
+        "available": False,
+        "status": status,
+        "translation_id": key.translation_id,
+        "source_lexicon": projection.source.source_lexicon,
+        "source_text_lang": key.source_lang,
+        "target_lang": key.target_lang,
+        "model": model,
+        "source_text_hash": key.source_text_hash,
+        "derived_from_tool": projection.source.source_tool,
+        "derived_from_sense": projection.sense_anchor,
+        "raw_blob_ref": "entry_translations",
+    }
+    if error:
+        state["error"] = error
+    return state
+
+
+def _annotate_source_translation_state(
+    *,
+    triples: list[Any],
+    projection: TranslationProjection,
+    record: TranslationRecord | None,
+    model: str,
+) -> None:
+    for triple in triples:
+        if not isinstance(triple, dict):
+            continue
+        if triple.get("predicate") != "gloss":
+            continue
+        if triple.get("subject") != projection.sense_anchor:
+            continue
+        if triple.get("object") != projection.source_text:
+            continue
+        metadata = triple.setdefault("metadata", {})
+        if not isinstance(metadata, dict):
+            continue
+        evidence = metadata.setdefault("evidence", {})
+        if not isinstance(evidence, dict):
+            continue
+        evidence["translation_state"] = _translation_state(
+            projection=projection,
+            record=record,
+            model=model,
+        )
+        return
 
 
 def project_cached_translations(
@@ -371,7 +524,7 @@ def project_cached_translations(
     model: str,
     cache: TranslationCache,
 ) -> list[Mapping[str, Any]]:
-    """Add cached English translation triples for DICO/Gaffiot French gloss triples."""
+    """Add cached English translation triples for French gloss triples."""
     projected = cast(list[dict[str, Any]], deepcopy([dict(claim) for claim in claims]))
     for claim in projected:
         mutable_triples = _mutable_triples_from_claim(claim)
@@ -390,6 +543,12 @@ def project_cached_translations(
                 continue
             record = cache.get(projection.key)
             if record is None or record.status != "ok" or not record.translated_text:
+                _annotate_source_translation_state(
+                    triples=mutable_triples,
+                    projection=projection,
+                    record=record,
+                    model=model,
+                )
                 continue
 
             mutable_triples.extend(

@@ -3,6 +3,14 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
+SOURCE_SCRIPT_BY_LANGUAGE = {
+    "grc": "Greek",
+    "lat": "Latin",
+    "eng": "English",
+    "heb": "Hebrew",
+    "cop": "Coptic",
+}
+
 
 def decorate_segment_display(
     segment: dict[str, Any],
@@ -44,16 +52,11 @@ def _segment_display(language: str | None, text: str) -> dict[str, Any] | None:
             display["native_script"] = devanagari
             layers.append("devanagari")
         return display
-    if language == "grc":
+    source_script = SOURCE_SCRIPT_BY_LANGUAGE.get(str(language or ""))
+    if source_script:
         return {
             "primary": text,
-            "script": "Greek",
-            "available_layers": ["source"],
-        }
-    if language == "lat":
-        return {
-            "primary": text,
-            "script": "Latin",
+            "script": source_script,
             "available_layers": ["source"],
         }
     return {

@@ -47,6 +47,38 @@ attributions:
     assert attribution.evidence[0].citation == "https://example.org/source"
 
 
+def test_loads_reader_metadata_attribution_with_author_id_match() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir) / "attributions"
+        source = root / "phi" / "vulgate.yaml"
+        source.parent.mkdir(parents=True)
+        source.write_text(
+            """\
+attributions:
+  - collection_id: "phi"
+    match_field: "author_id"
+    match_value: "civ0004"
+    relation_type: "translator"
+    agent: "Saint Jerome"
+    status: "accepted"
+    confidence: "high"
+    note: "Vulgate translation attribution."
+    evidence:
+      - source_type: "web_source"
+        citation: "https://catalog.perseus.org/catalog/urn:cite:perseus:author.785"
+        label: "Perseus records Jerome as translator."
+        retrieved_at: "2026-05-17"
+""",
+            encoding="utf-8",
+        )
+
+        attributions = load_metadata_attributions(root)
+
+    assert len(attributions) == 1
+    assert attributions[0].match_field == "author_id"
+    assert attributions[0].match_value == "civ0004"
+
+
 def test_metadata_attribution_loader_rejects_unsupported_relation_type() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir) / "attributions"
@@ -114,4 +146,52 @@ def test_curated_reader_metadata_attributions_load() -> None:
         "dcs_58",
         "redactor",
         "Dṛḍhabala",
+    ) in seeded
+    assert (
+        "phi",
+        "civ0004",
+        "translator",
+        "Saint Jerome",
+    ) in seeded
+    assert (
+        "phi",
+        "civ0002",
+        "translator",
+        "Seventy-two translators",
+    ) in seeded
+    assert (
+        "tlg",
+        "tlg0527",
+        "translator",
+        "Seventy-two translators",
+    ) in seeded
+    assert (
+        "phi",
+        "civ0004.001",
+        "traditional_author",
+        "Moses",
+    ) in seeded
+    assert (
+        "phi",
+        "civ0002.001",
+        "traditional_author",
+        "Moses",
+    ) in seeded
+    assert (
+        "tlg",
+        "tlg0527.001",
+        "traditional_author",
+        "Moses",
+    ) in seeded
+    assert (
+        "phi",
+        "civ0003.027",
+        "traditional_author",
+        "John of Patmos",
+    ) in seeded
+    assert (
+        "phi",
+        "civ0004.074",
+        "traditional_author",
+        "John of Patmos",
     ) in seeded

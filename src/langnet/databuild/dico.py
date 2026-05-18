@@ -342,15 +342,17 @@ class DicoBuilder:
         entry_count = None
         if self.output_path.exists():
             size_mb = round(self.output_path.stat().st_size / (1024 * 1024), 3)
-        try:
-            conn = duckdb.connect(str(self.output_path))
-            result = conn.execute("SELECT COUNT(*) FROM entries_fr").fetchone()
-            entry_count = result[0] if result else 0
-        except Exception:
-            entry_count = None
-        finally:
-            with contextlib.suppress(Exception):
-                conn.close()
+            conn = None
+            try:
+                conn = self._conn or duckdb.connect(str(self.output_path), read_only=True)
+                result = conn.execute("SELECT COUNT(*) FROM entries_fr").fetchone()
+                entry_count = result[0] if result else 0
+            except Exception:
+                entry_count = None
+            finally:
+                with contextlib.suppress(Exception):
+                    if conn is not None and conn is not self._conn:
+                        conn.close()
         return LexiconStats(
             lex_id=LEX_ID,
             path=str(self.output_path),

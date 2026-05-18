@@ -10,13 +10,36 @@ digilibLT are provenance/debug details, not the main reading interface.
 
 Use `just cli reader ...` from the project root.
 
+## Required Data
+
+The reader does not download corpus data. A full build needs local source roots
+for the corpora you want included:
+
+- PHI Latin: `--phi-latin-dir /path/to/phi-latin`
+- TLG Greek: `--tlg-e-dir /path/to/tlg_e`
+- Perseus: `--perseus-dir /path/to/perseus`
+- digilibLT: `--digiliblt-dir /path/to/digiliblt`
+- Sanskrit/DCS: `--sanskrit-dir /path/to/sanskrit`
+
+Normal builds should also include the curated repo layers:
+`data/curated/reader_aliases`, `data/curated/reader_metadata`,
+`data/curated/reader_attributions`, `data/curated/reader_contained_works`, and
+`data/curated/reader_work_maps`.
+
 ## Pick A Catalog
 
 A production-style reader build should combine all available corpora into one
 catalog. During development we also keep smaller debug catalogs so each import
 family can be audited independently.
 
-Unified curated catalog, when present:
+Default unified catalog:
+
+```bash
+export CATALOG=data/build/reader/catalog.duckdb
+just cli reader --catalog $CATALOG summary
+```
+
+Unified curated development catalog, when present:
 
 ```bash
 export CATALOG=examples/debug/reader_full_curated_current/catalog.duckdb
@@ -54,12 +77,22 @@ For long operator rebuilds, use progress output:
 just cli-databuild reader \
   --phi-latin-dir /path/to/phi-latin \
   --tlg-e-dir /path/to/tlg_e \
+  --perseus-dir /path/to/perseus \
+  --digiliblt-dir /path/to/digiliblt \
+  --sanskrit-dir /path/to/sanskrit \
   --metadata-overlay-dir data/curated/reader_metadata \
   --metadata-attribution-dir data/curated/reader_attributions \
   --alias-dir data/curated/reader_aliases \
+  --contained-work-dir data/curated/reader_contained_works \
+  --work-map-dir data/curated/reader_work_maps \
   --progress-every 100 \
-  --output-root examples/debug/reader_classics_legacy_full_curated_current
+  --output-root examples/debug/reader_full_curated_current
 ```
+
+Omit unavailable source-root flags for partial local builds, and document the
+omission. Rebuild the catalog after parser/importer changes. Rebuild the
+derived search index after every catalog rebuild; see
+`docs/READER_DATA_BUILD.md` for the search-index command.
 
 ## Ask What Is In The Library
 
@@ -309,13 +342,22 @@ just cli reader --catalog $CATALOG validate
 JSON validation is useful for checks:
 
 ```bash
+mkdir -p examples/debug/reader-guide-verify
+
+just cli reader --catalog $CATALOG summary
 just cli reader --catalog $CATALOG validate --output json \
   > examples/debug/reader-guide-verify/validate.json
+just cli reader --catalog $CATALOG coverage --output json
+just cli reader --catalog $CATALOG contents urn:cts:greekLit:tlg0012.tlg002 --limit 5
+just cli reader --catalog $CATALOG search-index validate \
+  --index data/build/reader/search.lance \
+  --output json
 nu -c 'open examples/debug/reader-guide-verify/validate.json | get items | length'
 ```
 
 An empty validation item list means the reader catalog passed the current QA
-checks.
+checks. The search-index check is required after the derived index has been
+rebuilt for the catalog.
 
 ## First-Session Walkthrough
 
@@ -323,18 +365,18 @@ For someone encountering the library for the first time, the fastest useful
 path is:
 
 ```bash
-export CATALOG=examples/debug/reader_classics_legacy_full_curated_current/catalog.duckdb
+export CATALOG=examples/debug/reader_full_curated_current/catalog.duckdb
 just cli reader --catalog $CATALOG summary
 just cli reader --catalog $CATALOG works --author Homer
 just cli reader --catalog $CATALOG contents urn:cts:greekLit:tlg0012.tlg002 --limit 10
 just cli reader --catalog $CATALOG show urn:cts:greekLit:tlg0012.tlg002 --segment 1.1
 ```
 
-If that catalog is not present yet, use the Perseus curated catalog for the
-same walkthrough:
+If that catalog is not present yet, use a source-split audit catalog for the
+same walkthrough while the unified build is being prepared:
 
 ```bash
-export CATALOG=examples/debug/reader_perseus_full_curated_current/catalog.duckdb
+export CATALOG=examples/debug/reader_classics_legacy_full_curated_current/catalog.duckdb
 ```
 
 The same pattern works for any catalog:

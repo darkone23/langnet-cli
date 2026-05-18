@@ -11,13 +11,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
+from langnet.databuild.lewis_1890 import normalize_lewis_1890_headword
 from langnet.databuild.paths import (
+    default_bailly_path,
     default_cdsl_path,
     default_dico_path,
     default_diogenes_path,
     default_gaffiot_path,
+    default_lewis_1890_path,
     default_whitakers_path,
 )
+from langnet.execution.handlers.bailly import normalize_bailly_headword
 from langnet.execution.handlers.cdsl import _slp1_to_iast, _to_slp1
 from langnet.execution.handlers.dico import normalize_dico_headword
 from langnet.execution.handlers.gaffiot import normalize_gaffiot_headword
@@ -28,10 +32,20 @@ from langnet.tool_catalog import LANGUAGE_LABELS, LanguageCode, canonical_langua
 WORD_INDEX_SCHEMA_VERSION = "langnet.word_index.v1"
 WORD_INDEX_SECTIONS_SCHEMA_VERSION = "langnet.word_index_sections.v1"
 WordIndexLanguage = Literal["lat", "grc", "san", "all"]
-WordIndexSource = Literal["all", "cdsl", "dico", "gaffiot", "whitakers", "diogenes"]
+WordIndexSource = Literal[
+    "all", "cdsl", "dico", "gaffiot", "lewis_1890", "whitakers", "diogenes", "bailly"
+]
 WordIndexMerge = Literal["auto", "none", "lexeme"]
 WordIndexHomographs = Literal["grouped", "raw"]
-_SOURCE_ORDER = {"cdsl": 0, "dico": 1, "gaffiot": 2, "whitakers": 3, "diogenes": 4}
+_SOURCE_ORDER = {
+    "cdsl": 0,
+    "dico": 1,
+    "gaffiot": 2,
+    "lewis_1890": 3,
+    "whitakers": 4,
+    "diogenes": 5,
+    "bailly": 6,
+}
 _LANGUAGE_ORDER = {"san": 0, "grc": 1, "lat": 2}
 NON_ASCII_CODEPOINT_MIN = 128
 ANCHOR_HYDRATION_LIMIT = 2000
@@ -101,6 +115,8 @@ class WordIndexPaths:
     gaffiot: Path
     diogenes_lat: Path
     diogenes_grc: Path
+    lewis_1890: Path = Path("__missing_word_index_lewis_1890.duckdb__")
+    bailly: Path = Path("__missing_word_index_bailly.duckdb__")
     whitakers: Path = Path("__missing_word_index_whitakers.duckdb__")
 
     @classmethod
@@ -110,8 +126,10 @@ class WordIndexPaths:
             cdsl_ap90=default_cdsl_path("ap90"),
             dico=default_dico_path(),
             gaffiot=default_gaffiot_path(),
+            lewis_1890=default_lewis_1890_path(),
             diogenes_lat=default_diogenes_path("lat"),
             diogenes_grc=default_diogenes_path("grc"),
+            bailly=default_bailly_path(),
             whitakers=default_whitakers_path(),
         )
 
@@ -127,8 +145,10 @@ def word_index_sources_payload(
         *_cdsl_statuses(paths, languages),
         _dico_status(paths, languages),
         _gaffiot_status(paths, languages),
+        _lewis_1890_status(paths, languages),
         _whitakers_status(paths, languages),
         *_diogenes_statuses(paths, languages),
+        _bailly_status(paths, languages),
     ]
     sources = [source for source in sources if source is not None]
     return {
@@ -387,6 +407,15 @@ def _source_neighborhoods(  # noqa: PLR0913
         neighborhoods.extend(
             _neighborhood_gaffiot(paths.gaffiot, query=query, radius=radius, warnings=warnings)
         )
+    elif source_id == "lewis_1890" and "lat" in languages:
+        neighborhoods.extend(
+            _neighborhood_lewis_1890(
+                paths.lewis_1890,
+                query=query,
+                radius=radius,
+                warnings=warnings,
+            )
+        )
     elif source_id == "whitakers" and "lat" in languages:
         neighborhoods.extend(
             _neighborhood_whitakers(
@@ -417,6 +446,10 @@ def _source_neighborhoods(  # noqa: PLR0913
                     warnings=warnings,
                 )
             )
+    elif source_id == "bailly" and "grc" in languages:
+        neighborhoods.extend(
+            _neighborhood_bailly(paths.bailly, query=query, radius=radius, warnings=warnings)
+        )
     return neighborhoods
 
 
@@ -460,7 +493,7 @@ def word_index_wheel_payload(
     }
 
 
-def _collect_wheel_items(  # noqa: PLR0913
+def _collect_wheel_items(  # noqa: C901, PLR0913
     *,
     languages: Sequence[LanguageCode],
     source: str,
@@ -483,6 +516,10 @@ def _collect_wheel_items(  # noqa: PLR0913
             items.extend(_wheel_dico(paths.dico, seed=seed, limit=limit, warnings=warnings))
         elif source_id == "gaffiot" and "lat" in languages:
             items.extend(_wheel_gaffiot(paths.gaffiot, seed=seed, limit=limit, warnings=warnings))
+        elif source_id == "lewis_1890" and "lat" in languages:
+            items.extend(
+                _wheel_lewis_1890(paths.lewis_1890, seed=seed, limit=limit, warnings=warnings)
+            )
         elif source_id == "whitakers" and "lat" in languages:
             items.extend(
                 _wheel_whitakers(paths.whitakers, seed=seed, limit=limit, warnings=warnings)
@@ -508,6 +545,8 @@ def _collect_wheel_items(  # noqa: PLR0913
                         warnings=warnings,
                     )
                 )
+        elif source_id == "bailly" and "grc" in languages:
+            items.extend(_wheel_bailly(paths.bailly, seed=seed, limit=limit, warnings=warnings))
     return items
 
 
@@ -807,9 +846,12 @@ def _sources_for_request(source: str, languages: Sequence[LanguageCode]) -> list
             sources.extend(["cdsl", "dico"])
         if "lat" in languages:
             sources.append("gaffiot")
+            sources.append("lewis_1890")
             sources.append("whitakers")
         if "grc" in languages or "lat" in languages:
             sources.append("diogenes")
+        if "grc" in languages:
+            sources.append("bailly")
         return list(dict.fromkeys(sources))
     if normalized not in _SOURCE_ORDER:
         supported = "|".join(["all", *_SOURCE_ORDER])
@@ -827,7 +869,7 @@ def _merge_policy(merge: str, source: str) -> WordIndexMerge:
     return cast(WordIndexMerge, normalized)
 
 
-def _collect_items(  # noqa: PLR0913
+def _collect_items(  # noqa: C901, PLR0913
     *,
     languages: Sequence[LanguageCode],
     source: str,
@@ -850,6 +892,10 @@ def _collect_items(  # noqa: PLR0913
         elif source_id == "gaffiot" and "lat" in languages:
             items.extend(
                 _list_gaffiot(paths.gaffiot, prefix=prefix, limit=limit, warnings=warnings)
+            )
+        elif source_id == "lewis_1890" and "lat" in languages:
+            items.extend(
+                _list_lewis_1890(paths.lewis_1890, prefix=prefix, limit=limit, warnings=warnings)
             )
         elif source_id == "whitakers" and "lat" in languages:
             items.extend(
@@ -876,11 +922,13 @@ def _collect_items(  # noqa: PLR0913
                         warnings=warnings,
                     )
                 )
+        elif source_id == "bailly" and "grc" in languages:
+            items.extend(_list_bailly(paths.bailly, prefix=prefix, limit=limit, warnings=warnings))
     items.sort(key=_item_order_key)
     return items
 
 
-def _browse_groups(  # noqa: PLR0913
+def _browse_groups(  # noqa: C901, PLR0913
     *,
     language: LanguageCode,
     source: str,
@@ -941,6 +989,19 @@ def _browse_groups(  # noqa: PLR0913
                     homographs=homographs,
                 )
             )
+        elif source_id == "lewis_1890" and language == "lat":
+            groups.append(
+                _browse_group(
+                    language=language,
+                    source="lewis_1890",
+                    dictionary="lewis_1890",
+                    prefix=prefix,
+                    items=_list_lewis_1890(
+                        paths.lewis_1890, prefix=prefix, limit=limit, warnings=warnings
+                    ),
+                    homographs=homographs,
+                )
+            )
         elif source_id == "whitakers" and language == "lat":
             groups.append(
                 _browse_group(
@@ -989,6 +1050,17 @@ def _browse_groups(  # noqa: PLR0913
                         homographs=homographs,
                     )
                 )
+        elif source_id == "bailly" and language == "grc":
+            groups.append(
+                _browse_group(
+                    language=language,
+                    source="bailly",
+                    dictionary="bailly",
+                    prefix=prefix,
+                    items=_list_bailly(paths.bailly, prefix=prefix, limit=limit, warnings=warnings),
+                    homographs=homographs,
+                )
+            )
     return [group for group in groups if cast(list[object], group["items"])]
 
 
@@ -1588,6 +1660,128 @@ def _wheel_gaffiot(
     return [_gaffiot_item(row) for row in rows]
 
 
+def _list_lewis_1890(
+    path: Path,
+    *,
+    prefix: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "lewis_1890", path)
+        return []
+    params: list[object] = []
+    where = ""
+    if prefix:
+        norm = normalize_lewis_1890_headword(prefix)
+        where = "WHERE headword_norm LIKE ? OR lower(headword_raw) LIKE ?"
+        params.extend([f"{norm}%", f"{norm}%"])
+    sql = f"""
+        SELECT entry_id, headword_raw, headword_norm, source_key, entry_hash
+        FROM entries
+        {where}
+        ORDER BY headword_norm, entry_id
+    """
+    if limit > 0:
+        sql += " LIMIT ?"
+        params.append(limit)
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(sql, params).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "lewis_1890", path, exc)
+        return []
+    return [_lewis_1890_item(row) for row in rows]
+
+
+def _neighborhood_lewis_1890(
+    path: Path,
+    *,
+    query: str,
+    radius: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "lewis_1890", path)
+        return []
+    keys = _query_keys(query)
+    if not keys:
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            anchor_rows = conn.execute(
+                f"""
+                SELECT entry_id, headword_raw, headword_norm, source_key, entry_hash
+                FROM entries
+                WHERE lower(headword_norm) IN ({_placeholders(keys)})
+                   OR lower(headword_raw) IN ({_placeholders(keys)})
+                   OR lower(source_key) IN ({_placeholders(keys)})
+                ORDER BY headword_norm, entry_id
+                LIMIT 50
+                """,
+                [*keys, *keys, *keys],
+            ).fetchall()
+            anchor = _best_anchor([_lewis_1890_item(row) for row in anchor_rows], query)
+            if anchor is None:
+                return []
+            metadata = cast(Mapping[str, object], anchor.get("metadata") or {})
+            anchor_sort = str(anchor["sort_key"])
+            entry_id = str(metadata.get("entry_id") or "")
+            before_rows = conn.execute(
+                """
+                SELECT entry_id, headword_raw, headword_norm, source_key, entry_hash
+                FROM entries
+                WHERE headword_norm < ? OR (headword_norm = ? AND entry_id < ?)
+                ORDER BY headword_norm DESC, entry_id DESC
+                LIMIT ?
+                """,
+                [anchor_sort, anchor_sort, entry_id, radius],
+            ).fetchall()
+            after_rows = conn.execute(
+                """
+                SELECT entry_id, headword_raw, headword_norm, source_key, entry_hash
+                FROM entries
+                WHERE headword_norm > ? OR (headword_norm = ? AND entry_id > ?)
+                ORDER BY headword_norm, entry_id
+                LIMIT ?
+                """,
+                [anchor_sort, anchor_sort, entry_id, radius],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "lewis_1890", path, exc)
+        return []
+    before = [_lewis_1890_item(row) for row in reversed(before_rows)]
+    after = [_lewis_1890_item(row) for row in after_rows]
+    return [_neighborhood(anchor, before=before, after=after, radius=radius, query=query)]
+
+
+def _wheel_lewis_1890(
+    path: Path,
+    *,
+    seed: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "lewis_1890", path)
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(
+                """
+                SELECT entry_id, headword_raw, headword_norm, source_key, entry_hash
+                FROM entries
+                ORDER BY hash(headword_norm || ?), headword_norm, entry_id
+                LIMIT ?
+                """,
+                [seed, limit],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "lewis_1890", path, exc)
+        return []
+    return [_lewis_1890_item(row) for row in rows]
+
+
 def _list_whitakers(
     path: Path,
     *,
@@ -1902,6 +2096,127 @@ def _wheel_diogenes(
     return [_diogenes_item(row) for row in rows]
 
 
+def _list_bailly(
+    path: Path,
+    *,
+    prefix: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "bailly", path)
+        return []
+    params: list[object] = []
+    where = ""
+    if prefix:
+        norm = normalize_bailly_headword(prefix)
+        where = "WHERE lemma_norm LIKE ? OR lower(lemma) LIKE ?"
+        params.extend([f"{norm}%", f"{prefix.strip().lower()}%"])
+    sql = f"""
+        SELECT entry_id, lemma, lemma_norm, page_start, page_end
+        FROM entries
+        {where}
+        ORDER BY lemma_norm, entry_id
+    """
+    if limit > 0:
+        sql += " LIMIT ?"
+        params.append(limit)
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(sql, params).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "bailly", path, exc)
+        return []
+    return [_bailly_item(row) for row in rows]
+
+
+def _neighborhood_bailly(
+    path: Path,
+    *,
+    query: str,
+    radius: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "bailly", path)
+        return []
+    keys = _query_keys(query)
+    if not keys:
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            anchor_rows = conn.execute(
+                f"""
+                SELECT entry_id, lemma, lemma_norm, page_start, page_end
+                FROM entries
+                WHERE lower(lemma_norm) IN ({_placeholders(keys)})
+                   OR lower(lemma) IN ({_placeholders(keys)})
+                ORDER BY lemma_norm, entry_id
+                LIMIT 50
+                """,
+                [*keys, *keys],
+            ).fetchall()
+            anchor = _best_anchor([_bailly_item(row) for row in anchor_rows], query)
+            if anchor is None:
+                return []
+            metadata = cast(Mapping[str, object], anchor.get("metadata") or {})
+            anchor_sort = str(anchor["sort_key"])
+            entry_id = str(metadata.get("entry_id") or "")
+            before_rows = conn.execute(
+                """
+                SELECT entry_id, lemma, lemma_norm, page_start, page_end
+                FROM entries
+                WHERE lemma_norm < ? OR (lemma_norm = ? AND entry_id < ?)
+                ORDER BY lemma_norm DESC, entry_id DESC
+                LIMIT ?
+                """,
+                [anchor_sort, anchor_sort, entry_id, radius],
+            ).fetchall()
+            after_rows = conn.execute(
+                """
+                SELECT entry_id, lemma, lemma_norm, page_start, page_end
+                FROM entries
+                WHERE lemma_norm > ? OR (lemma_norm = ? AND entry_id > ?)
+                ORDER BY lemma_norm, entry_id
+                LIMIT ?
+                """,
+                [anchor_sort, anchor_sort, entry_id, radius],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "bailly", path, exc)
+        return []
+    before = [_bailly_item(row) for row in reversed(before_rows)]
+    after = [_bailly_item(row) for row in after_rows]
+    return [_neighborhood(anchor, before=before, after=after, radius=radius, query=query)]
+
+
+def _wheel_bailly(
+    path: Path,
+    *,
+    seed: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "bailly", path)
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(
+                """
+                SELECT entry_id, lemma, lemma_norm, page_start, page_end
+                FROM entries
+                ORDER BY hash(lemma_norm || ?), lemma_norm, entry_id
+                LIMIT ?
+                """,
+                [seed, limit],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "bailly", path, exc)
+        return []
+    return [_bailly_item(row) for row in rows]
+
+
 def _cdsl_item(dictionary: str, row: Sequence[object]) -> dict[str, object]:
     key = str(row[0] or "")
     key_normalized = str(row[1] or key)
@@ -1985,6 +2300,36 @@ def _gaffiot_item(row: Sequence[object]) -> dict[str, object]:
     )
 
 
+def _lewis_1890_item(row: Sequence[object]) -> dict[str, object]:
+    entry_id = str(row[0] or "")
+    headword_raw = str(row[1] or "")
+    headword_norm = str(row[2] or normalize_lewis_1890_headword(headword_raw))
+    source_key = str(row[3] or headword_norm)
+    entry_hash = str(row[4] or "")
+    display = headword_raw or headword_norm
+    return _item(
+        language="lat",
+        source="lewis_1890",
+        dictionary="lewis_1890",
+        canonical_name=display,
+        canonical_key=_plain_index_key(headword_norm),
+        source_name=display,
+        lookup=headword_norm,
+        display_primary=display,
+        transliteration=headword_norm,
+        source_key=source_key,
+        sort_key=headword_norm,
+        source_order_key=_order_key(headword_norm, entry_id),
+        source_ref=f"lewis_1890:{source_key}",
+        extra={
+            "entry_id": entry_id,
+            "headword_norm": headword_norm,
+            "source_key": source_key,
+            "entry_hash": entry_hash,
+        },
+    )
+
+
 def _whitakers_item(row: Sequence[object]) -> dict[str, object]:
     entry_id_raw = row[0]
     entry_id = int(entry_id_raw) if isinstance(entry_id_raw, int | float | str) else 0
@@ -2047,6 +2392,35 @@ def _diogenes_item(row: Sequence[object]) -> dict[str, object]:
             "headword_norm": headword_norm,
             "previous_offset": previous_offset,
             "next_offset": next_offset,
+        },
+    )
+
+
+def _bailly_item(row: Sequence[object]) -> dict[str, object]:
+    entry_id = str(row[0] or "")
+    lemma = str(row[1] or "")
+    lemma_norm = str(row[2] or normalize_bailly_headword(lemma))
+    page_start = row[3]
+    page_end = row[4]
+    return _item(
+        language="grc",
+        source="bailly",
+        dictionary="bailly",
+        canonical_name=lemma or lemma_norm,
+        canonical_key=_plain_index_key(lemma_norm),
+        source_name=lemma or lemma_norm,
+        lookup=lemma_norm,
+        display_primary=lemma or lemma_norm,
+        transliteration=lemma_norm,
+        source_key=lemma,
+        sort_key=lemma_norm,
+        source_order_key=_order_key(lemma_norm, entry_id),
+        source_ref=f"bailly:{entry_id}",
+        extra={
+            "entry_id": entry_id,
+            "lemma_norm": lemma_norm,
+            "page_start": page_start,
+            "page_end": page_end,
         },
     )
 
@@ -2601,6 +2975,15 @@ def _gaffiot_status(
     return _duckdb_status("gaffiot", "lat", "gaffiot", paths.gaffiot, "entries_fr")
 
 
+def _lewis_1890_status(
+    paths: WordIndexPaths,
+    languages: Sequence[LanguageCode],
+) -> dict[str, object] | None:
+    if "lat" not in languages:
+        return None
+    return _duckdb_status("lewis_1890", "lat", "lewis_1890", paths.lewis_1890, "entries")
+
+
 def _whitakers_status(
     paths: WordIndexPaths,
     languages: Sequence[LanguageCode],
@@ -2608,6 +2991,15 @@ def _whitakers_status(
     if "lat" not in languages:
         return None
     return _duckdb_status("whitakers", "lat", "whitakers", paths.whitakers, "entries")
+
+
+def _bailly_status(
+    paths: WordIndexPaths,
+    languages: Sequence[LanguageCode],
+) -> dict[str, object] | None:
+    if "grc" not in languages:
+        return None
+    return _duckdb_status("bailly", "grc", "bailly", paths.bailly, "entries")
 
 
 def _diogenes_statuses(

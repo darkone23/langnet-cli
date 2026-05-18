@@ -30,6 +30,28 @@ class ReaderAuthor:
 
 
 @dataclass(frozen=True)
+class ReaderAuthorClassification:
+    author_id: str
+    language: str
+    source_author_id: str
+    canonical_name: str
+    agent_kind: str
+    historicity_status: str
+    prominence_score: int | None
+    prominence_tier: str
+    confidence: str
+    note: str
+    generator_models: str
+    generator_run_id: str
+    source_file: str = ""
+    period: str = ""
+    date_range: str = ""
+    region: str = ""
+    cultural_context: str = ""
+    bio: str = ""
+
+
+@dataclass(frozen=True)
 class ReaderWork:
     work_id: str
     collection_id: str
@@ -138,6 +160,51 @@ class ReaderContainedWork:
     cts_work_urn: str | None = None
     source_file: str = ""
     evidence: tuple[ReaderMetadataOverlayEvidence, ...] = ()
+
+
+@dataclass(frozen=True)
+class ReaderWorkMapNode:
+    work_id: str
+    node_id: str
+    level: int
+    kind: str
+    label: str
+    ordinal: int
+    start_citation: str
+    end_citation: str
+    provenance: str
+    confidence: str
+    status: str
+    note: str
+    parent_node_id: str | None = None
+    native_label: str | None = None
+    source_file: str = ""
+    evidence: tuple[ReaderMetadataOverlayEvidence, ...] = ()
+
+
+@dataclass(frozen=True)
+class ReaderWorkClassification:
+    work_id: str
+    category: str
+    period: str
+    date_range: str
+    authorship_status: str
+    popularity_score: int | None
+    popularity_tier: str
+    confidence: str
+    note: str
+    generator_models: str
+    generator_run_id: str
+    source_file: str = ""
+    scope: str = ""
+    scope_popularity_score: int | None = None
+    scope_popularity_tier: str = ""
+    discovery_group_id: str = ""
+    discovery_tags: str = ""
+    global_popularity_score: int | None = None
+    global_popularity_tier: str = ""
+    group_popularity_score: int | None = None
+    group_popularity_tier: str = ""
 
 
 @dataclass(frozen=True)

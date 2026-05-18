@@ -21,7 +21,12 @@ from langnet.heritage.config import heritage_config
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.planner.calls import make_call as _make_call
 from langnet.planner.calls import opts as _opts
-from langnet.planner.local_lexicons import append_dico_calls, append_gaffiot_calls
+from langnet.planner.local_lexicons import (
+    append_bailly_calls,
+    append_dico_calls,
+    append_gaffiot_calls,
+    append_lewis_1890_calls,
+)
 
 
 @dataclass(slots=True)
@@ -37,6 +42,8 @@ class PlannerConfig:
     include_cdsl: bool = True
     include_dico: bool = True
     include_gaffiot: bool = True
+    include_lewis_1890: bool = True
+    include_bailly: bool = True
     cdsl_dicts: tuple[str, ...] = ("mw", "ap90")
     max_candidates: int = 3
 
@@ -621,6 +628,18 @@ class ToolPlanner:
                     if cand.lemma and cand.lemma.lower()
                 ],
             )
+        if self.config.include_lewis_1890:
+            append_lewis_1890_calls(
+                calls,
+                deps,
+                headword=query_value,
+                lemma=candidate.lemma.lower(),
+                lemma_candidates=[
+                    cand.lemma.lower()
+                    for cand in normalized.candidates
+                    if cand.lemma and cand.lemma.lower()
+                ],
+            )
         return calls, deps
 
     def _build_greek_calls(  # noqa: PLR0915
@@ -922,6 +941,15 @@ class ToolPlanner:
                 rationale="Produce claims from CTS derivation",
             )
         )
+
+        if self.config.include_bailly:
+            append_bailly_calls(
+                calls,
+                deps,
+                headword=normalized.original,
+                lemma=candidate.lemma or query_value,
+                lemma_candidates=[cand.lemma for cand in normalized.candidates if cand.lemma],
+            )
 
         # Include CLTK as before
         if self.config.include_spacy:

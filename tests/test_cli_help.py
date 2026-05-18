@@ -47,6 +47,10 @@ def test_documented_command_help() -> None:
         "word-of-day",
         "recommend-words",
         "reader",
+        "bailly-xml-audit",
+        "bailly-xml-extract",
+        "bailly-db-lookup",
+        "lewis-1890-db-lookup",
     ]
     for command in commands:
         _assert_help([command])
@@ -155,6 +159,8 @@ def test_databuild_subcommand_help() -> None:
         "cdsl",
         "gaffiot",
         "dico",
+        "bailly",
+        "lewis-1890",
         "diogenes-index",
         "whitakers-index",
         "reader",

@@ -138,7 +138,9 @@ def test_validate_reader_catalog_scans_shared_artifact_path_once() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         catalog_path = _build_fixture_catalog(Path(tmpdir))
         with duckdb.connect(str(catalog_path)) as conn:
-            first_path = conn.execute("SELECT artifact_path FROM artifacts LIMIT 1").fetchone()[0]
+            row = conn.execute("SELECT artifact_path FROM artifacts LIMIT 1").fetchone()
+            assert row is not None
+            first_path = row[0]
             conn.execute(
                 """
                 INSERT INTO artifacts (

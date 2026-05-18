@@ -4,12 +4,14 @@ from collections import defaultdict
 
 from langnet.execution import handlers_stub
 from langnet.execution.executor import ToolRegistry
+from langnet.execution.handlers import bailly as bailly_handlers
 from langnet.execution.handlers import cdsl as cdsl_handlers
 from langnet.execution.handlers import cltk as cltk_handlers
 from langnet.execution.handlers import dico as dico_handlers
 from langnet.execution.handlers import diogenes as diogenes_handlers
 from langnet.execution.handlers import gaffiot as gaffiot_handlers
 from langnet.execution.handlers import heritage as heritage_handlers
+from langnet.execution.handlers import lewis_1890 as lewis_1890_handlers
 from langnet.execution.handlers import spacy as spacy_handlers
 from langnet.execution.handlers import whitakers as whitakers_handlers
 
@@ -57,6 +59,14 @@ def default_registry(use_stubs: bool = False) -> ToolRegistry:
     extract["extract.gaffiot.json"] = gaffiot_handlers.extract_gaffiot_json
     derive["derive.gaffiot.entries"] = gaffiot_handlers.derive_gaffiot_entries
     claim["claim.gaffiot.entries"] = gaffiot_handlers.claim_gaffiot_entries
+    # Local Bailly handlers
+    extract["extract.bailly.json"] = bailly_handlers.extract_bailly_json
+    derive["derive.bailly.entries"] = bailly_handlers.derive_bailly_entries
+    claim["claim.bailly.entries"] = bailly_handlers.claim_bailly_entries
+    # Local Lewis 1890 handlers
+    extract["extract.lewis_1890.json"] = lewis_1890_handlers.extract_lewis_1890_json
+    derive["derive.lewis_1890.entries"] = lewis_1890_handlers.derive_lewis_1890_entries
+    claim["claim.lewis_1890.entries"] = lewis_1890_handlers.claim_lewis_1890_entries
 
     if use_stubs:
         # Fallback to stub handlers for any tool not registered above.

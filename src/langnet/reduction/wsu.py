@@ -52,6 +52,7 @@ def _evidence_from(triple: Mapping[str, Any]) -> dict[str, Any]:
         "learner_segments",
         "source_entry",
         "source_segments",
+        "translated_blocks",
         "source_notes",
         "parsed_glosses",
         "translated_segments",

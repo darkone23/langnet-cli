@@ -18,6 +18,34 @@ knowledge of import sources:
 Import sources remain available for audit and debugging, but the normal reader
 interface is source-agnostic.
 
+## Data Build Target
+
+The product target is one unified reader catalog:
+
+```bash
+data/build/reader/catalog.duckdb
+```
+
+For development, use:
+
+```bash
+examples/debug/reader_full_curated_current/catalog.duckdb
+```
+
+Build the unified catalog from the local source roots that are available:
+PHI Latin, TLG Greek, Perseus, digilibLT, and Sanskrit/DCS. Include the curated
+repo layers for aliases, display metadata, attribution claims, contained works,
+and work maps. Concrete build and smoke-test commands are in
+`docs/READER_DATA_BUILD.md`.
+
+The source-split `reader_classics`, `reader_sanskrit`, `reader_perseus`, and
+`reader_digiliblt` catalogs are generated audit artifacts. They are useful for
+importer debugging and source-family validation, but they are not the catalog
+shape the product should expose.
+
+After parser/importer changes, rebuild the catalog. After any catalog rebuild,
+rebuild the derived Lance search index before validating search behavior.
+
 ## Current CLI
 
 Use commands from the project root:
@@ -47,7 +75,8 @@ The web-facing JSON contract is documented in `docs/READER_WEB_CONTRACT.md`.
 ## Current Catalogs
 
 Current verified development catalogs live under `examples/debug/`.
-These are generated artifacts, not durable public data.
+These are generated audit artifacts, not durable public data or the product
+catalog target.
 
 - `reader_perseus_full_curated_current/catalog.duckdb`
   - 1,223 works, 2,298 artifacts, 950,141 segments.
@@ -169,7 +198,8 @@ Catalog-level questions are answered from the catalog DuckDB.
 
 - `reader works --author <name>` searches display authors.
 - `reader works --attributed-to <name>` searches display authors plus accepted
-  authorship attribution claims.
+  attribution claims, including translator claims such as Jerome for the
+  Vulgate and the traditional seventy-two translators for Septuagint rows.
 - Non-pseudo author searches exclude `Pseudo-*` display authors unless the
   query itself asks for a pseudo-author.
 - Verified example: `--author Plutarch` excludes `Pseudo-Plutarch`, while
@@ -247,8 +277,13 @@ just cli reader --catalog $CATALOG summary
 just cli reader --catalog $CATALOG validate --output json \
   > examples/debug/reader-audit/current_validate.json
 nu -c 'open examples/debug/reader-audit/current_validate.json | get items | length'
+just cli reader --catalog $CATALOG coverage --output json
 just cli reader --catalog $CATALOG works --output json \
   > examples/debug/reader-audit/current_works.json
+just cli reader --catalog $CATALOG contents urn:cts:greekLit:tlg0012.tlg002 --limit 5
+just cli reader --catalog $CATALOG search-index validate \
+  --index data/build/reader/search.lance \
+  --output json
 ```
 
 For long corpus imports, pass `--progress-every <N>` to `databuild reader` to

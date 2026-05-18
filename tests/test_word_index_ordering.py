@@ -83,6 +83,7 @@ def test_word_index_browse_groups_source_native_rows_for_all_sources() -> None:
     groups = cast(list[dict[str, object]], payload["groups"])
     assert [(group["source"], group["dictionary"]) for group in groups] == [
         ("gaffiot", "gaffiot"),
+        ("lewis_1890", "lewis_1890"),
         ("whitakers", "whitakers"),
         ("diogenes", "lewis_short"),
     ]

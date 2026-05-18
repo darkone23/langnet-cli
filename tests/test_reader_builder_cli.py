@@ -249,6 +249,86 @@ def test_reader_builder_keeps_digiliblt_files_with_duplicate_tei_idno() -> None:
     ]
 
 
+def test_reader_builder_registers_dcs_corpus_and_chapter_metadata() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        sanskrit_dir = root / "sanskrit"
+        dcs_files_dir = sanskrit_dir / "dcs" / "data" / "conllu" / "files"
+        dcs_lookup_dir = sanskrit_dir / "dcs" / "data" / "conllu" / "lookup"
+        _copy_fixture("dcs_sample.conllu", dcs_files_dir)
+        dcs_lookup_dir.mkdir(parents=True)
+        (dcs_lookup_dir / "chapter-info.xml").write_text(
+            """
+<info>
+  <chapter>
+    <path>Abhidharmakośa/Abhidharmakośa-0000-AbhidhKo, 1-7024.conllu</path>
+    <textName>Abhidharmakośa</textName>
+    <textId>378</textId>
+    <chapterName>AbhidhKo, 1</chapterName>
+    <chapterId>7024</chapterId>
+    <chapterPosition>1</chapterPosition>
+    <dcsTimeSlot>4</dcsTimeSlot>
+  </chapter>
+</info>
+""",
+            encoding="utf-8",
+        )
+        (dcs_lookup_dir / "dcs-corpus.tsv").write_text(
+            "\n".join(
+                [
+                    "Text\tAuthor\tTime slot\tSubject\tCompleted\tShow\tBib.\tDict.\tFreq.",
+                    "Abhidharmakośa\tVasubandhu\tclassical\tBuddhist\t\tS\tB\tD\tF",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        output_root = root / "reader"
+        result = ReaderBuilder(
+            ReaderBuildConfig(
+                sanskrit_dir=sanskrit_dir,
+                output_root=output_root,
+            )
+        ).build()
+
+        with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
+            metadata_rows = conn.execute(
+                """
+                SELECT key, value
+                FROM source_metadata
+                WHERE collection_id = 'sanskrit_dcs'
+                  AND subject_kind = 'work'
+                  AND subject_id = 'dcs_378'
+                ORDER BY key, value
+                """
+            ).fetchall()
+            source_rows = conn.execute(
+                """
+                SELECT file_role, file_status, source_path
+                FROM source_files
+                WHERE collection_id = 'sanskrit_dcs'
+                ORDER BY file_role, source_path
+                """
+            ).fetchall()
+
+    assert result.status.value == "success", result.message
+    assert ("dcs_author", "Vasubandhu") in metadata_rows
+    assert ("dcs_subject", "Buddhist") in metadata_rows
+    assert ("dcs_scope_hint", "Buddhist Scripture") in metadata_rows
+    assert ("dcs_chapter_name", "AbhidhKo, 1") in metadata_rows
+    assert ("dcs_chapter_position", "1") in metadata_rows
+    assert (
+        "sanskrit_dcs_chapter_info",
+        "metadata",
+        str(dcs_lookup_dir / "chapter-info.xml"),
+    ) in source_rows
+    assert (
+        "sanskrit_dcs_corpus_table",
+        "metadata",
+        str(dcs_lookup_dir / "dcs-corpus.tsv"),
+    ) in source_rows
+
+
 def test_reader_builder_marks_blank_digiliblt_authors_as_unattributed() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
@@ -439,7 +519,9 @@ def test_reader_builder_ignores_malformed_cts_authority_for_legacy_idt() -> None
         ).build()
 
         with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
-            author = conn.execute("SELECT author FROM works").fetchone()[0]
+            row = conn.execute("SELECT author FROM works").fetchone()
+            assert row is not None
+            author = row[0]
 
     assert result.status.value == "success", result.message
     assert author == "Lucas Apostolus Med."
@@ -523,13 +605,15 @@ def test_reader_builder_cleans_legacy_markup_from_cts_authority() -> None:
         ).build()
 
         with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
-            author = conn.execute(
+            row = conn.execute(
                 """
                 SELECT author
                 FROM works
                 WHERE collection_id = 'tlg'
                 """
-            ).fetchone()[0]
+            ).fetchone()
+            assert row is not None
+            author = row[0]
 
     assert result.status.value == "success", result.message
     assert author == "Dialexeis (*DISSOÌ LÓGOI)"
@@ -696,8 +780,12 @@ def test_reader_builder_skips_zero_segment_sources() -> None:
         ).build()
 
         with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
-            artifact_count = conn.execute("SELECT count(*) FROM artifacts").fetchone()[0]
-            work_count = conn.execute("SELECT count(*) FROM works").fetchone()[0]
+            artifact_count_row = conn.execute("SELECT count(*) FROM artifacts").fetchone()
+            work_count_row = conn.execute("SELECT count(*) FROM works").fetchone()
+            assert artifact_count_row is not None
+            assert work_count_row is not None
+            artifact_count = artifact_count_row[0]
+            work_count = work_count_row[0]
             source_rows = conn.execute(
                 """
                 SELECT file_role, file_status, source_path
@@ -883,6 +971,52 @@ overlays:
     assert work_author == ("Philoxenus Cytherius",)
 
 
+def test_curated_vulgate_overlay_maps_civ0004_to_jerome() -> None:
+    overlay_path = Path("data/curated/reader_metadata/phi/vulgate_jerome.yaml")
+
+    overlays = load_metadata_overlays(overlay_path.parent)
+    vulgate_overlays = [
+        overlay
+        for overlay in overlays
+        if overlay.collection_id == "phi"
+        and overlay.match_field == "author_id"
+        and overlay.match_value == "civ0004"
+    ]
+    values_by_field = {overlay.field: overlay.value for overlay in vulgate_overlays}
+
+    assert values_by_field == {
+        "author": "Saint Jerome",
+        "author_id": "urn:cts:latinLit:stoa0162",
+    }
+
+
+def test_curated_gospel_overlays_map_individual_works_to_traditional_authors() -> None:
+    overlay_path = Path("data/curated/reader_metadata/phi/greek_new_testament_gospels.yaml")
+
+    overlays = load_metadata_overlays(overlay_path.parent)
+    gospel_overlays = [
+        overlay
+        for overlay in overlays
+        if overlay.collection_id == "phi"
+        and overlay.match_field == "source_id"
+        and overlay.match_value.startswith("civ0003.")
+    ]
+    values_by_work = {
+        (overlay.match_value, overlay.field): overlay.value for overlay in gospel_overlays
+    }
+
+    assert values_by_work == {
+        ("civ0003.001", "author"): "Matthew the Evangelist",
+        ("civ0003.001", "author_id"): "urn:cts:langnet:author.grc.matthew-the-evangelist",
+        ("civ0003.002", "author"): "Mark the Evangelist",
+        ("civ0003.002", "author_id"): "urn:cts:langnet:author.grc.mark-the-evangelist",
+        ("civ0003.003", "author"): "Luke the Evangelist",
+        ("civ0003.003", "author_id"): "urn:cts:langnet:author.grc.luke-the-evangelist",
+        ("civ0003.004", "author"): "John the Evangelist",
+        ("civ0003.004", "author_id"): "urn:cts:langnet:author.grc.john-the-evangelist",
+    }
+
+
 def test_reader_builder_normalizes_accepted_author_overlay_for_display() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
@@ -990,8 +1124,12 @@ overlays:
         ).build()
 
         with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
-            author = conn.execute("SELECT author FROM works").fetchone()[0]
-            overlay_status = conn.execute("SELECT status FROM metadata_overlays").fetchone()[0]
+            author_row = conn.execute("SELECT author FROM works").fetchone()
+            overlay_status_row = conn.execute("SELECT status FROM metadata_overlays").fetchone()
+            assert author_row is not None
+            assert overlay_status_row is not None
+            author = author_row[0]
+            overlay_status = overlay_status_row[0]
 
     assert result.status.value == "success", result.message
     assert author == "Unknown"
@@ -1053,7 +1191,9 @@ attributions:
         ).build()
 
         with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
-            author = conn.execute("SELECT author FROM works").fetchone()[0]
+            row = conn.execute("SELECT author FROM works").fetchone()
+            assert row is not None
+            author = row[0]
             attributions = conn.execute(
                 """
                 SELECT relation_type, agent, status, confidence, evidence_citation
@@ -1090,7 +1230,9 @@ def test_reader_builder_normalizes_pseudo_author_variants_at_import() -> None:
         ).build()
 
         with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
-            author = conn.execute("SELECT author FROM works").fetchone()[0]
+            row = conn.execute("SELECT author FROM works").fetchone()
+            assert row is not None
+            author = row[0]
 
     assert result.status.value == "success", result.message
     assert author == "Pseudo-Plato"
@@ -1139,7 +1281,9 @@ def test_reader_builder_enriches_legacy_tlg_pseudo_author_from_html_canon() -> N
         ).build()
 
         with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
-            author = conn.execute("SELECT author FROM works").fetchone()[0]
+            row = conn.execute("SELECT author FROM works").fetchone()
+            assert row is not None
+            author = row[0]
 
     assert result.status.value == "success", result.message
     assert author == "Pseudo-Galenus"

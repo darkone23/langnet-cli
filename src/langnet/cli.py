@@ -9,7 +9,7 @@ import subprocess
 import sys
 import time
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -98,6 +98,21 @@ from langnet.paradigm.resolver import resolve_paradigm_request
 from langnet.paradigm.service import ParadigmService
 from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
 from langnet.planner.core import PlannerConfig, ToolPlanner
+from langnet.reader.author_bulk_classification import (
+    AuthorClassificationRunConfig,
+    classify_author_csv,
+)
+from langnet.reader.author_classification import (
+    AUTHOR_AGENT_KIND_VALUES,
+    AUTHOR_CLASSIFICATION_OUTPUT_FIELDS,
+    AUTHOR_HISTORICITY_STATUS_VALUES,
+)
+from langnet.reader.bulk_classification import (
+    CLASSIFICATION_OUTPUT_FIELDS,
+    ClassificationRunConfig,
+    classify_work_csv,
+)
+from langnet.reader.search_index import search_reader_segments
 from langnet.reader_eval import (
     evaluate_reader_token,
     iter_reader_eval_tokens,
@@ -130,6 +145,11 @@ from langnet.translation import (
     project_cached_translations,
     translation_cache_status_counts,
 )
+from langnet.translation.structured import (
+    requires_structured_translation,
+    structured_translation_system_hint,
+    structured_translation_user_content,
+)
 from langnet.word_index import (
     WordIndexHomographs,
     word_index_browse_payload,
@@ -159,9 +179,22 @@ DATABASE_BUSY_RETRY_AFTER_MS = 1500
 TRANSLATION_CACHE_SCHEMA_VERSION = "langnet.translation_cache.v1"
 DOCTOR_SCHEMA_VERSION = "langnet.doctor.v1"
 DEFAULT_TRANSLATION_MODEL = "openai:deepseek/deepseek-v4-flash"
+DEFAULT_CLASSIFICATION_MODEL = "openai:deepseek/deepseek-v4-flash"
+DEFAULT_CLASSIFICATION_BATCH_SIZE = 25
+DEFAULT_CLASSIFICATION_TIMEOUT_SECONDS = 120.0
+DEFAULT_CLASSIFICATION_MAX_ATTEMPTS = 3
 DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-3.1-pro-preview"
 WORD_INDEX_CONTEXT_RADIUS = 1
-WORD_INDEX_SOURCES = {"all", "cdsl", "dico", "gaffiot", "diogenes"}
+WORD_INDEX_SOURCES = {
+    "all",
+    "cdsl",
+    "dico",
+    "gaffiot",
+    "lewis_1890",
+    "whitakers",
+    "diogenes",
+    "bailly",
+}
 
 
 def _ensure_logging(level: int = logging.INFO) -> None:
@@ -843,20 +876,30 @@ main.add_command(databuild)
 
 
 def _reader_service_from_context(ctx: click.Context):
-    from langnet.databuild.paths import default_reader_catalog_path  # noqa: PLC0415
     from langnet.reader.service import ReaderService  # noqa: PLC0415
 
     obj = ctx.obj if isinstance(ctx.obj, dict) else {}
     catalog = obj.get("reader_catalog")
+    return ReaderService(_reader_catalog_path(str(catalog) if catalog else None))
+
+
+def _reader_catalog_path(catalog: str | None) -> Path:
+    from langnet.databuild.paths import default_reader_catalog_path  # noqa: PLC0415
+
     env_catalog = os.environ.get("LANGNET_READER_CATALOG")
-    catalog_path = (
+    return (
         Path(str(catalog)).expanduser()
         if catalog
         else Path(env_catalog).expanduser()
         if env_catalog
         else default_reader_catalog_path()
     )
-    return ReaderService(catalog_path)
+
+
+def _reader_search_index_path(index: str | None) -> Path:
+    from langnet.databuild.paths import default_reader_search_index_path  # noqa: PLC0415
+
+    return Path(index).expanduser() if index else default_reader_search_index_path()
 
 
 def _emit_reader_payload(payload: Mapping[str, object], output: str) -> None:
@@ -876,7 +919,9 @@ def _emit_reader_payload(payload: Mapping[str, object], output: str) -> None:
         _emit_reader_item(mode, cast(Mapping[str, object], item))
 
 
-def _emit_reader_single_payload(mode: str, payload: Mapping[str, object]) -> bool:  # noqa: PLR0911
+def _emit_reader_single_payload(  # noqa: C901, PLR0911
+    mode: str, payload: Mapping[str, object]
+) -> bool:
     if mode == "show":
         segment_value = payload.get("segment")
         if not isinstance(segment_value, Mapping):
@@ -900,6 +945,13 @@ def _emit_reader_single_payload(mode: str, payload: Mapping[str, object]) -> boo
             for key, value in sorted(summary.items()):
                 click.echo(f"{key}: {value}")
         return True
+    if mode.startswith("search-index-"):
+        summary_value = payload.get("summary")
+        if isinstance(summary_value, Mapping):
+            summary = cast(Mapping[str, object], summary_value)
+            for key, value in sorted(summary.items()):
+                click.echo(f"{key}: {value}")
+        return True
     if mode == "work":
         item_value = payload.get("item")
         if not isinstance(item_value, Mapping):
@@ -916,29 +968,61 @@ def _emit_reader_single_payload(mode: str, payload: Mapping[str, object]) -> boo
 
 def _emit_reader_item(mode: str, item: Mapping[str, object]) -> None:  # noqa: C901, PLR0912
     if mode == "collections":
-        click.echo(f"{item.get('collection_id')}  works={item.get('work_count')}")
+        click.echo(
+            f"{item.get('collection_id')}  works={item.get('work_count')}  "
+            f"words={item.get('word_count')}"
+        )
     elif mode == "authors":
         lang = item.get("language")
-        author = item.get("display_name") or item.get("author")
+        source_author = (
+            item.get("source_author_name") or item.get("display_name") or item.get("author")
+        )
+        canonical_author = item.get("canonical_author_name") or item.get("author_canonical_name")
+        author = (
+            f"{canonical_author} <= {source_author}"
+            if canonical_author and canonical_author != source_author
+            else source_author
+        )
         work_count = item.get("work_count")
         section = item.get("section_key")
-        click.echo(f"{lang}  {section}  {author}  works={work_count}")
+        classifier = ""
+        if item.get("author_agent_kind"):
+            classifier = (
+                f"  kind={item.get('author_agent_kind')}"
+                f"  status={item.get('author_historicity_status')}"
+            )
+        click.echo(
+            f"{lang}  {section}  {author}  works={work_count}  words={item.get('word_count')}"
+            f"{classifier}"
+        )
     elif mode == "author-sections":
         click.echo(
-            f"{item.get('key')}  authors={item.get('author_count')}  works={item.get('work_count')}"
+            f"{item.get('key')}  authors={item.get('author_count')}  "
+            f"works={item.get('work_count')}  words={item.get('word_count')}"
         )
     elif mode == "duplicate-audit":
         click.echo(
             f"{item.get('language')}  {item.get('kind')}  {item.get('display')}  "
             f"works={item.get('work_count')}"
         )
-    elif mode == "works":
+    elif mode in {"popular", "works"}:
         click.echo(
             f"{item.get('language')}  {item.get('author')} — {item.get('title')}  "
-            f"[{item.get('work_id')}]"
+            f"[{item.get('work_id')}]  words={item.get('word_count')}"
+        )
+    elif mode == "search":
+        click.echo(
+            f"{item.get('score')}  {item.get('language')}  {item.get('author')} — "
+            f"{item.get('title')} {item.get('citation_path')}: {item.get('snippet')}"
         )
     elif mode == "contents":
         click.echo(f"{item.get('citation_path')}  {item.get('text')}")
+    elif mode == "map":
+        click.echo(
+            f"{item.get('ordinal')}  {item.get('kind')}  {item.get('label')}  "
+            f"{item.get('start_citation')}..{item.get('end_citation')}  "
+            f"words={item.get('word_count')}"
+        )
     elif mode == "aliases":
         click.echo(f"{item.get('language')}  {item.get('alias')} -> {item.get('target')}")
     elif mode == "alias-check":
@@ -973,6 +1057,11 @@ def _emit_reader_item(mode: str, item: Mapping[str, object]) -> None:  # noqa: C
             f"{item.get('id')}  {item.get('readiness')}  "
             f"works={item.get('work_count')}  {item.get('path')}"
         )
+    elif mode == "facets":
+        detail = item.get("filter") or item.get("command") or ""
+        click.echo(f"{item.get('id')}  {item.get('label')}  {detail}")
+    elif mode == "author-facets":
+        click.echo(f"{item.get('id')}  {item.get('label')}  {item.get('filter')}")
 
 
 @click.group("reader")
@@ -1032,28 +1121,34 @@ def reader_catalogs(output: str) -> None:
             "default",
         ),
         (
+            "development",
+            "Development unified reader catalog",
+            "examples/debug/reader_full_curated_current/catalog.duckdb",
+            "development",
+        ),
+        (
             "classics",
-            "Greek and Latin Classics",
+            "Audit: Greek and Latin Classics",
             "examples/debug/reader_classics_legacy_full_curated_current/catalog.duckdb",
-            "development_verified",
+            "audit_artifact",
         ),
         (
             "sanskrit",
-            "Sanskrit",
+            "Audit: Sanskrit",
             "examples/debug/reader_sanskrit_full_curated_current/catalog.duckdb",
-            "development_verified",
+            "audit_artifact",
         ),
         (
             "perseus",
-            "Perseus Classics",
+            "Audit: Perseus Classics",
             "examples/debug/reader_perseus_full_curated_current/catalog.duckdb",
-            "development_verified",
+            "audit_artifact",
         ),
         (
             "digiliblt",
-            "digilibLT",
+            "Audit: digilibLT",
             "examples/debug/reader_digiliblt_anonymous_overlay_verify/catalog.duckdb",
-            "development_verified",
+            "audit_artifact",
         ),
     ]
     items = []
@@ -1101,6 +1196,26 @@ def _reader_catalog_languages(path: Path) -> list[str]:
 @click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
 @click.option("--section", default=None, help="Optional native author-index section key.")
 @click.option("--query", default=None, help="Optional author/authority substring filter.")
+@click.option(
+    "--agent-kind",
+    type=click.Choice(AUTHOR_AGENT_KIND_VALUES),
+    default=None,
+    help="Generated author kind filter.",
+)
+@click.option(
+    "--historicity",
+    type=click.Choice(AUTHOR_HISTORICITY_STATUS_VALUES),
+    default=None,
+    help="Generated author historicity filter.",
+)
+@click.option(
+    "--sort",
+    "sort_order",
+    type=click.Choice(["catalog", "prominence"]),
+    default="catalog",
+    show_default=True,
+    help="Author ordering.",
+)
 @click.option("--limit", default=None, type=click.IntRange(1, 5000), help="Maximum rows.")
 @click.option("--cursor", default=None, help="Offset cursor returned by prior JSON response.")
 @click.option(
@@ -1116,6 +1231,9 @@ def reader_authors(  # noqa: PLR0913
     language: str | None,
     section: str | None,
     query: str | None,
+    agent_kind: str | None,
+    historicity: str | None,
+    sort_order: str,
     limit: int | None,
     cursor: str | None,
     output: str,
@@ -1126,6 +1244,9 @@ def reader_authors(  # noqa: PLR0913
             language=language,
             section=section,
             query=query,
+            agent_kind=agent_kind,
+            historicity=historicity,
+            sort=sort_order,
             limit=limit,
             cursor=cursor,
         ),
@@ -1149,6 +1270,56 @@ def reader_author_sections(ctx: click.Context, language: str, output: str) -> No
         _reader_service_from_context(ctx).author_sections_payload(language=language),
         output,
     )
+
+
+@reader_cli.command("author")
+@click.argument("author_ref")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option(
+    "--representative-limit",
+    default=8,
+    show_default=True,
+    type=click.IntRange(1, 50),
+    help="Representative works to include.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_author(
+    ctx: click.Context,
+    author_ref: str,
+    language: str | None,
+    representative_limit: int,
+    output: str,
+) -> None:
+    """Show detail metadata for one reader author selector or name."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).author_payload(
+            author_ref,
+            language=language,
+            representative_limit=representative_limit,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("author-facets")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_author_facets(ctx: click.Context, output: str) -> None:
+    """List generated author classification filters."""
+    _emit_reader_payload(_reader_service_from_context(ctx).author_facets_payload(), output)
 
 
 @reader_cli.command("duplicate-audit")
@@ -1209,25 +1380,7 @@ def reader_classification_export(
     items = payload.get("items")
     if not isinstance(items, Sequence):
         items = []
-    fieldnames = [
-        "work_id",
-        "language",
-        "title",
-        "author",
-        "author_id",
-        "source_id",
-        "cts_work_urn",
-        "work_kind",
-        "parent_work_id",
-        "start_citation",
-        "end_citation",
-        "classification_category",
-        "classification_period",
-        "classification_date_range",
-        "classification_authorship_status",
-        "classification_popularity_score",
-        "classification_notes",
-    ]
+    fieldnames = CLASSIFICATION_OUTPUT_FIELDS
 
     def write_rows(handle) -> None:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -1247,6 +1400,304 @@ def reader_classification_export(
     click.echo(str(output_path))
 
 
+@reader_cli.command("author-classification-export")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--limit", default=None, type=click.IntRange(1, 100000), help="Maximum rows.")
+@click.option(
+    "--path",
+    "output_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="CSV output path. Defaults to stdout.",
+)
+@click.pass_context
+def reader_author_classification_export(
+    ctx: click.Context,
+    language: str | None,
+    limit: int | None,
+    output_path: Path | None,
+) -> None:
+    """Export author rows for generated agent classification."""
+    payload = _reader_service_from_context(ctx).authors_payload(
+        language=language,
+        limit=limit,
+    )
+    items = payload.get("items")
+    if not isinstance(items, Sequence):
+        items = []
+    fieldnames = AUTHOR_CLASSIFICATION_OUTPUT_FIELDS
+
+    def write_rows(handle) -> None:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for raw_item in items:
+            if not isinstance(raw_item, Mapping):
+                continue
+            item = cast(Mapping[str, object], raw_item)
+            writer.writerow(
+                {
+                    "author_id": item.get("author_id", "") or "",
+                    "author_language": item.get("language", "") or "",
+                    "author_source_id": item.get("source_author_id", "") or "",
+                    "author_display_name": item.get("display_name", "") or "",
+                    "author_canonical_name": item.get("author_canonical_name", "") or "",
+                    "author_agent_kind": item.get("author_agent_kind", "") or "",
+                    "author_historicity_status": item.get(
+                        "author_historicity_status",
+                        "",
+                    )
+                    or "",
+                    "author_period": item.get("author_period", "") or "",
+                    "author_date_range": item.get("author_date_range", "") or "",
+                    "author_region": item.get("author_region", "") or "",
+                    "author_cultural_context": item.get("author_cultural_context", "") or "",
+                    "author_bio": item.get("author_bio", "") or "",
+                    "author_prominence_score": item.get("author_prominence_score", "") or "",
+                    "author_prominence_tier": item.get("author_prominence_tier", "") or "",
+                    "author_confidence": item.get("author_classification_confidence", "") or "",
+                    "author_notes": item.get("author_classification_notes", "") or "",
+                    "author_generator_models": item.get("author_generator_models", "") or "",
+                    "author_generator_run_id": item.get("author_generator_run_id", "") or "",
+                    "work_count": item.get("work_count", "") or "",
+                    "word_count": item.get("word_count", "") or "",
+                    "representative_titles": item.get("representative_titles", "") or "",
+                }
+            )
+
+    if output_path is None:
+        write_rows(sys.stdout)
+        return
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8", newline="") as handle:
+        write_rows(handle)
+    click.echo(str(output_path))
+
+
+@reader_cli.command("classify-works")
+@click.option(
+    "--input-csv",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="CSV produced by reader classification-export.",
+)
+@click.option(
+    "--output-csv",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Generated classification CSV to write.",
+)
+@click.option(
+    "--model",
+    default=DEFAULT_CLASSIFICATION_MODEL,
+    show_default=True,
+    help="OpenRouter/aisuite model identifier.",
+)
+@click.option("--run-id", default=None, help="Classifier run id. Defaults to timestamp.")
+@click.option(
+    "--batch-size",
+    default=DEFAULT_CLASSIFICATION_BATCH_SIZE,
+    show_default=True,
+    type=click.IntRange(1, 200),
+)
+@click.option(
+    "--timeout-seconds",
+    default=DEFAULT_CLASSIFICATION_TIMEOUT_SECONDS,
+    show_default=True,
+    type=click.FloatRange(1.0, 600.0),
+    help="Per-provider-call timeout.",
+)
+@click.option(
+    "--max-attempts",
+    default=DEFAULT_CLASSIFICATION_MAX_ATTEMPTS,
+    show_default=True,
+    type=click.IntRange(1, 10),
+    help="Attempts per model batch before failing.",
+)
+@click.option(
+    "--concurrency",
+    default=1,
+    show_default=True,
+    type=click.IntRange(1, 8),
+    help="Number of model batches to request concurrently.",
+)
+@click.option(
+    "--raw-response-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="Optional directory for raw model JSON responses.",
+)
+@click.option(
+    "--shuffle-seed",
+    default=None,
+    help=(
+        "Optional deterministic seed for shuffling rows before batching. "
+        "The output CSV keeps input order."
+    ),
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_classify_works(  # noqa: PLR0913
+    input_csv: Path,
+    output_csv: Path,
+    model: str,
+    run_id: str | None,
+    batch_size: int,
+    timeout_seconds: float,
+    max_attempts: int,
+    concurrency: int,
+    raw_response_dir: Path | None,
+    shuffle_seed: str | None,
+    output: str,
+) -> None:
+    """Generate classifier-filled reader work metadata CSV with a model."""
+    resolved_run_id = run_id or time.strftime("reader-classifier-%Y%m%d-%H%M%S")
+    summary = classify_work_csv(
+        config=ClassificationRunConfig(
+            input_csv=input_csv.expanduser(),
+            output_csv=output_csv.expanduser(),
+            model=model,
+            run_id=resolved_run_id,
+            batch_size=batch_size,
+            raw_response_dir=raw_response_dir.expanduser() if raw_response_dir else None,
+            shuffle_seed=shuffle_seed,
+            concurrency=concurrency,
+        ),
+        classify=_openrouter_work_classifier_callback(
+            model,
+            timeout_seconds=timeout_seconds,
+            max_attempts=max_attempts,
+        ),
+    )
+    payload = {
+        "schema_version": "langnet.reader.v1",
+        "mode": "classify-works",
+        "summary": summary,
+    }
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    click.echo(
+        f"Generated {summary['generated_count']} classification row(s) "
+        f"from {summary['input_count']} input row(s): {summary['output_csv']}"
+    )
+
+
+@reader_cli.command("classify-authors")
+@click.option(
+    "--input-csv",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="CSV produced by author-classification-export.",
+)
+@click.option(
+    "--output-csv",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Generated author classification CSV to write.",
+)
+@click.option(
+    "--model",
+    default=DEFAULT_CLASSIFICATION_MODEL,
+    show_default=True,
+    help="OpenRouter/aisuite model identifier.",
+)
+@click.option("--run-id", default=None, help="Classifier run id. Defaults to timestamp.")
+@click.option(
+    "--batch-size",
+    default=DEFAULT_CLASSIFICATION_BATCH_SIZE,
+    show_default=True,
+    type=click.IntRange(1, 200),
+)
+@click.option(
+    "--timeout-seconds",
+    default=DEFAULT_CLASSIFICATION_TIMEOUT_SECONDS,
+    show_default=True,
+    type=click.FloatRange(1.0, 600.0),
+    help="Per-provider-call timeout.",
+)
+@click.option(
+    "--max-attempts",
+    default=DEFAULT_CLASSIFICATION_MAX_ATTEMPTS,
+    show_default=True,
+    type=click.IntRange(1, 10),
+    help="Attempts per model batch before failing.",
+)
+@click.option(
+    "--concurrency",
+    default=1,
+    show_default=True,
+    type=click.IntRange(1, 8),
+    help="Number of model batches to request concurrently.",
+)
+@click.option(
+    "--raw-response-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="Optional directory for raw model JSON responses.",
+)
+@click.option(
+    "--shuffle-seed",
+    default=None,
+    help="Optional deterministic seed for shuffling rows before batching.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_classify_authors(  # noqa: PLR0913
+    input_csv: Path,
+    output_csv: Path,
+    model: str,
+    run_id: str | None,
+    batch_size: int,
+    timeout_seconds: float,
+    max_attempts: int,
+    concurrency: int,
+    raw_response_dir: Path | None,
+    shuffle_seed: str | None,
+    output: str,
+) -> None:
+    """Generate author/agent classification CSV with a model."""
+    resolved_run_id = run_id or time.strftime("reader-author-classifier-%Y%m%d-%H%M%S")
+    summary = classify_author_csv(
+        config=AuthorClassificationRunConfig(
+            input_csv=input_csv.expanduser(),
+            output_csv=output_csv.expanduser(),
+            model=model,
+            run_id=resolved_run_id,
+            batch_size=batch_size,
+            raw_response_dir=raw_response_dir.expanduser() if raw_response_dir else None,
+            shuffle_seed=shuffle_seed,
+            concurrency=concurrency,
+        ),
+        classify=_openrouter_author_classifier_callback(
+            model,
+            timeout_seconds=timeout_seconds,
+            max_attempts=max_attempts,
+        ),
+    )
+    payload = {
+        "schema_version": "langnet.reader.v1",
+        "mode": "classify-authors",
+        "summary": summary,
+    }
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    click.echo(
+        f"Generated {summary['generated_count']} author row(s) "
+        f"from {summary['input_count']} input row(s): {summary['output_csv']}"
+    )
+
+
 @reader_cli.command("works")
 @click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
 @click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
@@ -1257,9 +1708,35 @@ def reader_classification_export(
     default=None,
     help="Optional catalog-only display author or accepted authorship-claim filter.",
 )
+@click.option(
+    "--scope",
+    "classification_scope",
+    default=None,
+    help="Optional generated classification scope/category filter, e.g. grammar or medicine.",
+)
+@click.option(
+    "--group",
+    "classification_group",
+    default=None,
+    help="Optional strict discovery group filter, e.g. grammar, medicine, or epic.",
+)
+@click.option(
+    "--tag",
+    "classification_tag",
+    default=None,
+    help="Optional strict discovery tag filter, e.g. ayurveda, tragedy, or patristics.",
+)
 @click.option("--query", default=None, help="Optional title/author/id/alias substring filter.")
 @click.option("--limit", default=None, type=click.IntRange(1, 5000), help="Maximum rows.")
 @click.option("--cursor", default=None, help="Offset cursor returned by prior JSON response.")
+@click.option(
+    "--sort",
+    "sort_order",
+    type=click.Choice(["catalog", "popularity", "global-popularity", "group-popularity"]),
+    default="catalog",
+    show_default=True,
+    help="Work ordering.",
+)
 @click.option(
     "--output",
     type=click.Choice(["pretty", "json"]),
@@ -1275,9 +1752,13 @@ def reader_works(  # noqa: PLR0913
     author: str | None,
     author_id: str | None,
     attributed_to: str | None,
+    classification_scope: str | None,
+    classification_group: str | None,
+    classification_tag: str | None,
     query: str | None,
     limit: int | None,
     cursor: str | None,
+    sort_order: str,
     output: str,
 ) -> None:
     """List reader corpus works."""
@@ -1288,7 +1769,397 @@ def reader_works(  # noqa: PLR0913
             author=author,
             author_id=author_id,
             attributed_to=attributed_to,
+            classification_scope=classification_scope,
+            classification_group=classification_group,
+            classification_tag=classification_tag,
             query=query,
+            limit=limit,
+            cursor=cursor,
+            sort=sort_order,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("popular")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
+@click.option(
+    "--scope",
+    "classification_scope",
+    default=None,
+    help="Optional generated classification scope/category filter, e.g. grammar or medicine.",
+)
+@click.option(
+    "--group",
+    "classification_group",
+    default=None,
+    help="Optional strict discovery group filter, e.g. grammar, medicine, or epic.",
+)
+@click.option(
+    "--tag",
+    "classification_tag",
+    default=None,
+    help="Optional strict discovery tag filter, e.g. ayurveda, tragedy, or patristics.",
+)
+@click.option("--limit", default=50, show_default=True, type=click.IntRange(1, 5000))
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_popular(  # noqa: PLR0913
+    ctx: click.Context,
+    language: str | None,
+    collection_id: str | None,
+    classification_scope: str | None,
+    classification_group: str | None,
+    classification_tag: str | None,
+    limit: int,
+    output: str,
+) -> None:
+    """List works ordered by generated popularity metadata."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).works_payload(
+            language=language,
+            collection_id=collection_id,
+            classification_scope=classification_scope,
+            classification_group=classification_group,
+            classification_tag=classification_tag,
+            limit=limit,
+            sort="group-popularity" if classification_group or classification_tag else "popularity",
+        )
+        | {"mode": "popular"},
+        output,
+    )
+
+
+@reader_cli.command("groups")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_groups(ctx: click.Context, language: str | None, output: str) -> None:
+    """List strict reader discovery groups."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).discovery_groups_payload(language=language),
+        output,
+    )
+
+
+@reader_cli.command("tags")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_tags(ctx: click.Context, language: str | None, output: str) -> None:
+    """List strict reader discovery tags."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).discovery_tags_payload(language=language),
+        output,
+    )
+
+
+@reader_cli.command("facets")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_facets(ctx: click.Context, language: str | None, output: str) -> None:
+    """List reader discovery filters, sort modes, and example queries."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).discovery_facets_payload(language=language),
+        output,
+    )
+
+
+@reader_cli.command("shelves")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--limit", default=None, type=click.IntRange(1, None), help="Shelf count cap.")
+@click.option(
+    "--sample-limit",
+    default=3,
+    show_default=True,
+    type=click.IntRange(0, 20),
+    help="Representative works per shelf.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_shelves(
+    ctx: click.Context,
+    language: str | None,
+    limit: int | None,
+    sample_limit: int,
+    output: str,
+) -> None:
+    """List reader discovery shelves for a catalog or language."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).discovery_shelves_payload(
+            language=language,
+            limit=limit,
+            sample_limit=sample_limit,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("coverage")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_coverage(ctx: click.Context, output: str) -> None:
+    """List per-language reader discovery coverage."""
+    _emit_reader_payload(_reader_service_from_context(ctx).coverage_payload(), output)
+
+
+@reader_cli.group("search-index")
+def reader_search_index() -> None:
+    """Build and inspect the derived reader full-text search index."""
+
+
+@reader_search_index.command("build")
+@click.option("--index", "index_path", type=click.Path(), default=None, help="Search index path.")
+@click.option("--language", default=None, help="Optional language slice, e.g. grc, lat, san.")
+@click.option("--collection", "collection_id", default=None, help="Optional collection slice.")
+@click.option("--replace", is_flag=True, help="Replace existing derived search index tables.")
+@click.option("--batch-size", default=50000, show_default=True, type=click.IntRange(1, None))
+@click.option("--limit", default=None, type=click.IntRange(1, None), help="Debug segment cap.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_search_index_build(  # noqa: PLR0913
+    ctx: click.Context,
+    index_path: str | None,
+    language: str | None,
+    collection_id: str | None,
+    replace: bool,
+    batch_size: int,
+    limit: int | None,
+    output: str,
+) -> None:
+    """Build a derived segment-level reader text index."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).search_index_build_payload(
+            index_path=_reader_search_index_path(index_path),
+            language=language,
+            collection_id=collection_id,
+            replace=replace,
+            batch_size=batch_size,
+            limit=limit,
+        ),
+        output,
+    )
+
+
+@reader_search_index.command("status")
+@click.option("--index", "index_path", type=click.Path(), default=None, help="Search index path.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_search_index_status(ctx: click.Context, index_path: str | None, output: str) -> None:
+    """Show derived reader text index status."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).search_index_status_payload(
+            index_path=_reader_search_index_path(index_path)
+        ),
+        output,
+    )
+
+
+@reader_search_index.command("validate")
+@click.option("--index", "index_path", type=click.Path(), default=None, help="Search index path.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_search_index_validate(ctx: click.Context, index_path: str | None, output: str) -> None:
+    """Validate the derived reader text index against the catalog."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).search_index_validate_payload(
+            index_path=_reader_search_index_path(index_path)
+        ),
+        output,
+    )
+
+
+@reader_search_index.command("inspect-normalize")
+@click.option("--language", required=True, help="Language code, e.g. grc, lat, san.")
+@click.argument("text")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_search_index_inspect_normalize(
+    ctx: click.Context,
+    language: str,
+    text: str,
+    output: str,
+) -> None:
+    """Inspect language-aware search normalization for text."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).search_index_inspect_normalize_payload(
+            language=language,
+            text=text,
+        ),
+        output,
+    )
+
+
+@reader_search_index.command("inspect-query")
+@click.option("--language", required=True, help="Language code, e.g. grc, lat, san.")
+@click.option(
+    "--mode",
+    "search_mode",
+    type=click.Choice(["keyword", "phrase", "exact", "fuzzy"]),
+    default="keyword",
+    show_default=True,
+)
+@click.option(
+    "--field",
+    type=click.Choice(["auto", "display", "search", "folded"]),
+    default="auto",
+    show_default=True,
+)
+@click.argument("text")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_search_index_inspect_query(  # noqa: PLR0913
+    ctx: click.Context,
+    language: str,
+    search_mode: str,
+    field: str,
+    text: str,
+    output: str,
+) -> None:
+    """Inspect language-aware reader search query candidates."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).search_index_inspect_query_payload(
+            language=language,
+            text=text,
+            mode=search_mode,
+            field=field,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("search")
+@click.argument("query")
+@click.option("--index", "index_path", type=click.Path(), default=None, help="Search index path.")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
+@click.option("--work-id", default=None, help="Optional work id filter.")
+@click.option("--author-id", default=None, help="Optional canonical author id filter.")
+@click.option("--group", default=None, help="Optional discovery group filter.")
+@click.option("--tag", default=None, help="Optional discovery tag filter.")
+@click.option(
+    "--mode",
+    "search_mode",
+    type=click.Choice(["keyword", "phrase", "exact", "fuzzy"]),
+    default="keyword",
+    show_default=True,
+)
+@click.option(
+    "--field",
+    type=click.Choice(["auto", "display", "search", "folded"]),
+    default="auto",
+    show_default=True,
+)
+@click.option("--context", default=0, type=click.IntRange(0, 20), show_default=True)
+@click.option("--limit", default=20, type=click.IntRange(1, 500), show_default=True)
+@click.option("--cursor", default=None, help="Offset cursor returned by prior JSON response.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_search(  # noqa: PLR0913
+    ctx: click.Context,
+    query: str,
+    index_path: str | None,
+    language: str | None,
+    collection_id: str | None,
+    work_id: str | None,
+    author_id: str | None,
+    group: str | None,
+    tag: str | None,
+    search_mode: str,
+    field: str,
+    context: int,
+    limit: int,
+    cursor: str | None,
+    output: str,
+) -> None:
+    """Search indexed reader corpus text."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).search_payload(
+            index_path=_reader_search_index_path(index_path),
+            query=query,
+            language=language,
+            collection_id=collection_id,
+            work_id=work_id,
+            author_id=author_id,
+            group=group,
+            tag=tag,
+            mode=search_mode,
+            field=field,
+            context=context,
             limit=limit,
             cursor=cursor,
         ),
@@ -1309,6 +2180,303 @@ def reader_works(  # noqa: PLR0913
 def reader_work(ctx: click.Context, work_ref: str, output: str) -> None:
     """Show exact metadata for one work id, CTS work URN, or alias."""
     _emit_reader_payload(_reader_service_from_context(ctx).work_payload(work_ref), output)
+
+
+@reader_cli.command("map")
+@click.argument("work_ref")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_map(ctx: click.Context, work_ref: str, output: str) -> None:
+    """Show a table-of-contents style map for one reader work."""
+    _emit_reader_payload(_reader_service_from_context(ctx).map_payload(work_ref), output)
+
+
+@reader_cli.command("sync-work-maps")
+@click.option(
+    "--work-map-dir",
+    type=click.Path(),
+    default="data/curated/reader_work_maps",
+    show_default=True,
+    help="Curated reader work-map/table-of-contents directory.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_sync_work_maps(ctx: click.Context, work_map_dir: str, output: str) -> None:
+    """Sync curated work-map/table-of-contents metadata into the reader catalog."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).sync_work_maps_payload(Path(work_map_dir).expanduser()),
+        output,
+    )
+
+
+@reader_cli.command("sync-classifications")
+@click.option(
+    "--classification-csv",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Generated reader classification CSV file or directory of CSV files.",
+)
+@click.option(
+    "--merge",
+    is_flag=True,
+    help="Replace only rows present in the CSV, preserving other classifications.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_sync_classifications(
+    ctx: click.Context,
+    classification_csv: Path,
+    merge: bool,
+    output: str,
+) -> None:
+    """Sync generated work classification/popularity metadata into the reader catalog."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).sync_classifications_payload(
+            classification_csv.expanduser(),
+            merge=merge,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("sync-author-classifications")
+@click.option(
+    "--classification-csv",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Generated author classification CSV file or directory.",
+)
+@click.option(
+    "--merge",
+    is_flag=True,
+    help="Replace only author rows present in the CSV.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_sync_author_classifications(
+    ctx: click.Context,
+    classification_csv: Path,
+    merge: bool,
+    output: str,
+) -> None:
+    """Sync generated author classification metadata."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).sync_author_classifications_payload(
+            classification_csv.expanduser(),
+            merge=merge,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("sync-metadata-overlays")
+@click.option(
+    "--metadata-overlay-dir",
+    type=click.Path(path_type=Path),
+    default=Path("data/curated/reader_metadata"),
+    show_default=True,
+    help="Curated reader metadata overlay YAML root.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Report accepted overlay updates without modifying works.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_sync_metadata_overlays(
+    ctx: click.Context,
+    metadata_overlay_dir: Path,
+    dry_run: bool,
+    output: str,
+) -> None:
+    """Sync curated metadata overlays and apply accepted display updates."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).sync_metadata_overlays_payload(
+            metadata_overlay_dir.expanduser(),
+            dry_run=dry_run,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("sync-metadata-attributions")
+@click.option(
+    "--metadata-attribution-dir",
+    type=click.Path(path_type=Path),
+    default=Path("data/curated/reader_attributions"),
+    show_default=True,
+    help="Curated reader metadata attribution YAML root.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_sync_metadata_attributions(
+    ctx: click.Context,
+    metadata_attribution_dir: Path,
+    output: str,
+) -> None:
+    """Sync curated attribution claims that support didactic display."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).sync_metadata_attributions_payload(
+            metadata_attribution_dir.expanduser(),
+        ),
+        output,
+    )
+
+
+@reader_cli.command("repair-languages")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Report work-language repairs without modifying the catalog.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_repair_languages(ctx: click.Context, dry_run: bool, output: str) -> None:
+    """Repair primary work languages in an existing reader catalog."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).repair_languages_payload(dry_run=dry_run),
+        output,
+    )
+
+
+@reader_cli.command("prune-stale-classifications")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Report stale generated classification rows without modifying the catalog.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_prune_stale_classifications(
+    ctx: click.Context,
+    dry_run: bool,
+    output: str,
+) -> None:
+    """Remove generated work classifications from the wrong language batch."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).prune_stale_classifications_payload(
+            dry_run=dry_run,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("sync-source-enrichment")
+@click.option(
+    "--dcs-corpus-table",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="DCS corpus table capture with Text, Author, Time slot, and Subject columns.",
+)
+@click.option(
+    "--dcs-chapter-info",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="DCS chapter-info.xml lookup file.",
+)
+@click.option(
+    "--perseus-catalog-results",
+    type=click.Path(path_type=Path),
+    multiple=True,
+    help="Scraped Perseus catalog search result markdown for one subject URL.",
+)
+@click.option(
+    "--perseus-collection-id",
+    default="perseus",
+    show_default=True,
+    help="Collection id for Perseus result metadata.",
+)
+@click.option(
+    "--perseus-subject",
+    default="",
+    help="Perseus subject label represented by the result page.",
+)
+@click.option(
+    "--perseus-source-url",
+    default="",
+    help="Source URL for the scraped Perseus result page.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_sync_source_enrichment(  # noqa: PLR0913
+    ctx: click.Context,
+    dcs_corpus_table: Path | None,
+    dcs_chapter_info: Path | None,
+    perseus_catalog_results: tuple[Path, ...],
+    perseus_collection_id: str,
+    perseus_subject: str,
+    perseus_source_url: str,
+    output: str,
+) -> None:
+    """Sync source-backed DCS/Perseus enrichment metadata into the reader catalog."""
+    if perseus_catalog_results and not perseus_subject:
+        raise click.ClickException("--perseus-subject is required with Perseus result files")
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).sync_source_enrichment_payload(
+            dcs_corpus_table=dcs_corpus_table.expanduser() if dcs_corpus_table else None,
+            dcs_chapter_info=dcs_chapter_info.expanduser() if dcs_chapter_info else None,
+            perseus_catalog_results=tuple(path.expanduser() for path in perseus_catalog_results),
+            perseus_collection_id=perseus_collection_id,
+            perseus_subject=perseus_subject,
+            perseus_source_url=perseus_source_url,
+        ),
+        output,
+    )
 
 
 @reader_cli.command("contents")
@@ -1712,6 +2880,177 @@ def reader_validate(ctx: click.Context, output: str) -> None:
 
 
 main.add_command(reader_cli)
+
+
+@main.command("bailly-xml-audit")
+@click.argument(
+    "xml_dir",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Optional TSV output path.",
+)
+def bailly_xml_audit(xml_dir: Path, output: Path | None) -> None:
+    """Audit generated Bailly per-page Poppler XML files."""
+    from langnet.parsing.bailly_pdf_xml import audit_bailly_xml_pages  # noqa: PLC0415
+
+    report = audit_bailly_xml_pages(xml_dir)
+    rows = [
+        [
+            "page",
+            "path",
+            "section",
+            "text_node_count",
+            "entry_count",
+            "first_lemma",
+            "last_lemma",
+            "warning",
+        ],
+        *[page.as_tsv_row() for page in report.pages],
+    ]
+    text = "\n".join("\t".join(row) for row in rows) + "\n"
+    if output is not None:
+        output.expanduser().parent.mkdir(parents=True, exist_ok=True)
+        output.expanduser().write_text(text, encoding="utf-8")
+        click.echo(f"wrote: {output.expanduser()}")
+    else:
+        click.echo(text, nl=False)
+    if report.missing_pages:
+        click.echo(f"missing_pages: {len(report.missing_pages)}", err=True)
+
+
+@main.command("bailly-xml-extract")
+@click.argument(
+    "xml_dir",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Optional JSONL output path. Defaults to stdout.",
+)
+@click.option("--from-page", type=int, help="First physical PDF page to include.")
+@click.option("--to-page", type=int, help="Last physical PDF page to include.")
+@click.option("--limit", type=int, help="Maximum number of entries to write.")
+def bailly_xml_extract(
+    xml_dir: Path,
+    output: Path | None,
+    from_page: int | None,
+    to_page: int | None,
+    limit: int | None,
+) -> None:
+    """Extract Bailly Poppler XML pages to structural JSONL entries."""
+    from langnet.parsing.bailly_pdf_xml import (  # noqa: PLC0415
+        extract_book_entries_from_pages,
+        iter_poppler_pages,
+    )
+
+    pages = []
+    for path in sorted(xml_dir.expanduser().glob("bailly-2020-p*.xml")):
+        page_number = _bailly_page_number_from_path(path)
+        if from_page is not None and page_number < from_page:
+            continue
+        if to_page is not None and page_number > to_page:
+            continue
+        pages.extend(iter_poppler_pages(path))
+    entries = extract_book_entries_from_pages(pages)
+    if limit is not None:
+        entries = entries[:limit]
+    text = "".join(orjson.dumps(entry).decode("utf-8") + "\n" for entry in entries)
+    if output is not None:
+        output.expanduser().parent.mkdir(parents=True, exist_ok=True)
+        output.expanduser().write_text(text, encoding="utf-8")
+        click.echo(f"wrote: {output.expanduser()} entries={len(entries)}")
+    else:
+        click.echo(text, nl=False)
+
+
+def _bailly_page_number_from_path(path: Path) -> int:
+    try:
+        return int(path.stem.rsplit("p", 1)[1])
+    except (IndexError, ValueError):
+        return 0
+
+
+@main.command("bailly-db-lookup")
+@click.argument("headword")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Bailly DuckDB path. Defaults to data/build/lex_bailly.duckdb.",
+)
+@click.option("--limit", type=int, default=10, show_default=True, help="Maximum entries.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def bailly_db_lookup(
+    headword: str,
+    db_path: Path | None,
+    limit: int,
+    output: str,
+) -> None:
+    """Inspect PDF-derived Bailly entries from the local DuckDB index."""
+    from langnet.databuild.bailly import lookup_bailly_entries  # noqa: PLC0415
+
+    entries = lookup_bailly_entries(headword, db_path, limit=limit)
+    if output == "json":
+        click.echo(orjson.dumps({"entries": entries}, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    if not entries:
+        click.echo(f"No Bailly entries found for {headword!r}.")
+        return
+    for entry in entries:
+        page_start = entry.get("page_start") or "?"
+        page_end = entry.get("page_end") or "?"
+        click.echo(f"{entry['lemma']} [{entry['entry_id']}] pages {page_start}-{page_end}")
+        for block in entry["blocks"]:
+            click.echo(f"  {block['path']} {block['marker']} {block['text']}")
+
+
+@main.command("lewis-1890-db-lookup")
+@click.argument("headword")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Lewis 1890 DuckDB path. Defaults to data/build/lex_lewis_1890.duckdb.",
+)
+@click.option("--limit", type=int, default=10, show_default=True, help="Maximum entries.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def lewis_1890_db_lookup(
+    headword: str,
+    db_path: Path | None,
+    limit: int,
+    output: str,
+) -> None:
+    """Inspect Lewis 1890 entries from the local DuckDB index."""
+    from langnet.databuild.lewis_1890 import lookup_lewis_1890_entries  # noqa: PLC0415
+
+    entries = lookup_lewis_1890_entries(headword, db_path)[:limit]
+    if output == "json":
+        click.echo(orjson.dumps({"entries": entries}, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    if not entries:
+        click.echo(f"No Lewis 1890 entries found for {headword!r}.")
+        return
+    for entry in entries:
+        click.echo(f"{entry['headword_raw']} [{entry['entry_id']}]")
+        click.echo(f"  {entry['plain_text']}")
 
 
 @main.command("tools")
@@ -3898,6 +5237,30 @@ def _create_gaffiot_client(tool: str, use_stubs: bool) -> ToolClient | None:
     return None
 
 
+def _create_bailly_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a local Bailly client, with stub fallback."""
+    try:
+        from langnet.execution.handlers.bailly import BaillyFetchClient  # noqa: PLC0415
+
+        return BaillyFetchClient()
+    except Exception:
+        if use_stubs:
+            return StubToolClient(tool)
+    return None
+
+
+def _create_lewis_1890_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a local Lewis 1890 client, with stub fallback."""
+    try:
+        from langnet.execution.handlers.lewis_1890 import Lewis1890FetchClient  # noqa: PLC0415
+
+        return Lewis1890FetchClient()
+    except Exception:
+        if use_stubs:
+            return StubToolClient(tool)
+    return None
+
+
 def _get_client_factory(tool: str, use_stubs: bool):
     """Get the factory function for creating a client for the given tool."""
     http_tools = {"fetch.diogenes", "fetch.heritage"}
@@ -3910,6 +5273,8 @@ def _get_client_factory(tool: str, use_stubs: bool):
         "fetch.cdsl": lambda: _create_cdsl_client(tool, use_stubs),
         "fetch.dico": lambda: _create_dico_client(tool, use_stubs),
         "fetch.gaffiot": lambda: _create_gaffiot_client(tool, use_stubs),
+        "fetch.bailly": lambda: _create_bailly_client(tool, use_stubs),
+        "fetch.lewis_1890": lambda: _create_lewis_1890_client(tool, use_stubs),
     }
 
     if tool in http_tools:
@@ -5556,6 +6921,76 @@ def _encounter_sanskrit_morphology_lookup_terms(
     )
 
 
+def _encounter_sanskrit_normalization_fallback_terms(  # noqa: PLR0913
+    *,
+    language: str,
+    text: str,
+    tool_filter: str,
+    normalize: bool,
+    norm_config: NormalizeConfig,
+    no_cache: bool,
+    reduction,
+    max_terms: int = 2,
+) -> tuple[list[str], str | None]:
+    if (
+        language != "san"
+        or not normalize
+        or reduction.buckets
+        or tool_filter.lower() in {"heritage", "claim.heritage.morph"}
+    ):
+        return [], None
+    normalized = _normalize_with_short_cache_lock(
+        norm_config,
+        text,
+        LanguageHint.LANGUAGE_HINT_SAN,
+        use_cache=not no_cache,
+    )
+    candidates = list(getattr(normalized.normalized, "candidates", []) or [])
+    if len(candidates) <= 1:
+        return [], None
+    original_terms = {_encounter_normalization_fallback_key(text)}
+    terms: list[str] = []
+    for candidate in candidates[1:]:
+        for term in _encounter_normalization_candidate_terms(candidate):
+            key = _encounter_normalization_fallback_key(term)
+            if not term or not key or key in original_terms:
+                continue
+            if key in {_encounter_normalization_fallback_key(existing) for existing in terms}:
+                continue
+            terms.append(term)
+            if len(terms) >= max_terms:
+                return (
+                    terms,
+                    "No sense buckets for surface form; followed Sanskrit normalization "
+                    "candidate for meaning evidence.",
+                )
+    if not terms:
+        return [], None
+    return (
+        terms,
+        "No sense buckets for surface form; followed Sanskrit normalization candidate "
+        "for meaning evidence.",
+    )
+
+
+def _encounter_normalization_candidate_terms(candidate: object) -> list[str]:
+    terms: list[str] = []
+    lemma = getattr(candidate, "lemma", "")
+    if isinstance(lemma, str) and lemma.strip():
+        terms.append(lemma.strip())
+    encodings = getattr(candidate, "encodings", {}) or {}
+    if isinstance(encodings, Mapping):
+        for key in ("iast", "hk"):
+            value = encodings.get(key)
+            if isinstance(value, str) and value.strip():
+                terms.append(value.strip())
+    return _dedupe_preserve_order([term for term in terms if "_" not in term])
+
+
+def _encounter_normalization_fallback_key(value: str) -> str:
+    return re.sub(r"\s+", "", strip_accents(value).casefold())
+
+
 def _encounter_component_links(  # noqa: PLR0913
     *,
     language: str,
@@ -5989,6 +7424,214 @@ def _encounter_actions(
     actions.extend(_encounter_paradigm_actions(paradigm_resolution))
     actions.extend(_encounter_word_index_actions(language=language, word_index=word_index))
     return actions
+
+
+def _encounter_reader_search_context(  # noqa: PLR0913
+    *,
+    language: str,
+    text: str,
+    reduction,
+    preferred_lemmas: Sequence[str],
+    index_path: Path | None,
+    limit: int,
+    context: int,
+    field: str,
+    catalog_path: Path | None = None,
+    all_candidates: bool = False,
+) -> dict[str, object]:
+    candidates = _encounter_word_index_query_candidates(text, reduction, preferred_lemmas)
+    if not candidates:
+        candidates = [text]
+    search_candidates = candidates if all_candidates else candidates[:1]
+    actions = [
+        _encounter_reader_search_action(
+            query=query,
+            language=language,
+            index_path=index_path,
+            limit=limit,
+            context=context,
+            field=field,
+        )
+        for query in search_candidates
+    ]
+    items: list[dict[str, object]] = []
+    warnings: list[dict[str, object]] = []
+    if index_path is not None:
+        items, warnings = _encounter_reader_search_items(
+            language=language,
+            text=text,
+            catalog_path=catalog_path,
+            index_path=index_path,
+            candidates=search_candidates,
+            limit=limit,
+            context=context,
+            field=field,
+        )
+    return {
+        "schema_version": "langnet.encounter.reader_search.v1",
+        "query_candidates": candidates,
+        "search_all_candidates": all_candidates,
+        "index_path": str(index_path) if index_path is not None else None,
+        "actions": actions,
+        "items": items,
+        "warnings": warnings,
+    }
+
+
+def _encounter_reader_search_items(  # noqa: PLR0913
+    *,
+    language: str,
+    text: str,
+    catalog_path: Path | None,
+    index_path: Path,
+    candidates: Sequence[str],
+    limit: int,
+    context: int,
+    field: str,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    items: list[dict[str, object]] = []
+    warnings: list[dict[str, object]] = []
+    seen_hits: set[tuple[str, str]] = set()
+    for candidate_rank, query in enumerate(candidates):
+        try:
+            payload = search_reader_segments(
+                catalog_path or _reader_catalog_path(None),
+                index_path,
+                query,
+                language=language,
+                field=field,
+                context=context,
+                limit=limit,
+            )
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(
+                {
+                    "code": "reader_search_failed",
+                    "message": str(exc),
+                    "index_path": str(index_path),
+                    "query": query,
+                    "candidate_rank": candidate_rank,
+                }
+            )
+            continue
+        _append_reader_search_hits(
+            items,
+            seen_hits,
+            payload.get("items", []),
+            input_query=text,
+            matched_query=query,
+            candidate_rank=candidate_rank,
+            limit=limit,
+        )
+        if len(items) >= limit:
+            break
+    return items, warnings
+
+
+def _append_reader_search_hits(  # noqa: PLR0913
+    items: list[dict[str, object]],
+    seen_hits: set[tuple[str, str]],
+    raw_items: object,
+    *,
+    input_query: str,
+    matched_query: str,
+    candidate_rank: int,
+    limit: int,
+) -> None:
+    if not isinstance(raw_items, list):
+        return
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        typed_item = cast(Mapping[str, object], item)
+        dedupe_key = _reader_search_hit_dedupe_key(typed_item)
+        if dedupe_key in seen_hits:
+            continue
+        seen_hits.add(dedupe_key)
+        items.append(
+            _reader_search_hit_with_match_metadata(
+                typed_item,
+                input_query=input_query,
+                matched_query=matched_query,
+                candidate_rank=candidate_rank,
+            )
+        )
+        if len(items) >= limit:
+            break
+
+
+def _reader_search_hit_dedupe_key(item: Mapping[str, object]) -> tuple[str, str]:
+    segment_id = str(item.get("segment_id") or "")
+    if segment_id:
+        return ("segment_id", segment_id)
+    work_id = str(item.get("work_id") or "")
+    citation_path = str(item.get("citation_path") or "")
+    return ("work_citation", f"{work_id}:{citation_path}")
+
+
+def _reader_search_hit_with_match_metadata(
+    item: Mapping[str, object],
+    *,
+    input_query: str,
+    matched_query: str,
+    candidate_rank: int,
+) -> dict[str, object]:
+    match_type = (
+        "exact_surface"
+        if candidate_rank == 0 and matched_query == input_query
+        else "candidate_expansion"
+    )
+    return dict(item) | {
+        "matched_query": matched_query,
+        "input_query": input_query,
+        "match_type": match_type,
+        "candidate_rank": candidate_rank,
+    }
+
+
+def _encounter_reader_search_action(  # noqa: PLR0913
+    *,
+    query: str,
+    language: str,
+    index_path: Path | None,
+    limit: int,
+    context: int,
+    field: str,
+) -> dict[str, object]:
+    argv = [
+        "reader",
+        "search",
+        query,
+        "--language",
+        language,
+        "--field",
+        field,
+        "--context",
+        str(context),
+        "--limit",
+        str(limit),
+        "--output",
+        "json",
+    ]
+    request: dict[str, object] = {
+        "command": "reader search",
+        "query": query,
+        "language": language,
+        "field": field,
+        "context": context,
+        "limit": limit,
+        "argv": argv,
+    }
+    if index_path is not None:
+        request["index_path"] = str(index_path)
+        argv[3:3] = ["--index", str(index_path)]
+    return {
+        "kind": "search_reader_corpus",
+        "label": f"Search corpus for {query}",
+        "status": "available",
+        "source": "reader_search",
+        "request": request,
+    }
 
 
 def _encounter_paradigm_actions(
@@ -6487,18 +8130,178 @@ def _openrouter_translation_callback(model: str):
                 raise click.ClickException("aisuite is required to populate translations.") from exc
             client = ai.Client({"api_key": api_key})
 
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": BASE_SYSTEM},
-                {"role": "system", "content": projection.hint},
-                {"role": "user", "content": projection.source_text},
-            ],
-        )
+        messages = [
+            {"role": "system", "content": BASE_SYSTEM},
+            {"role": "system", "content": projection.hint},
+        ]
+        if requires_structured_translation(projection):
+            messages.append({"role": "system", "content": structured_translation_system_hint()})
+            messages.append(
+                {"role": "user", "content": structured_translation_user_content(projection)}
+            )
+        else:
+            messages.append({"role": "user", "content": projection.source_text})
+
+        kwargs = {"model": model, "messages": messages}
+        if requires_structured_translation(projection):
+            kwargs["response_format"] = {"type": "json_object"}
+            kwargs["temperature"] = 0
+        response = client.chat.completions.create(**kwargs)
         content = response.choices[0].message.content or ""
+        if requires_structured_translation(projection):
+            return content.strip()
         return content.replace("*", "").strip()
 
     return translate
+
+
+def _call_work_classifier_with_retries(
+    request: Callable[[], Any],
+    *,
+    max_attempts: int,
+    sleep_seconds: float = 1.0,
+) -> Any:
+    last_exception: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return request()
+        except Exception as exc:  # noqa: PERF203
+            last_exception = exc
+            if attempt >= max_attempts:
+                break
+            if sleep_seconds > 0:
+                time.sleep(sleep_seconds)
+    raise click.ClickException(
+        f"Reader work classifier failed after {max_attempts} attempt(s): {last_exception}"
+    ) from last_exception
+
+
+def _openrouter_work_classifier_callback(
+    model: str,
+    *,
+    timeout_seconds: float | None = DEFAULT_CLASSIFICATION_TIMEOUT_SECONDS,
+    max_attempts: int = DEFAULT_CLASSIFICATION_MAX_ATTEMPTS,
+):
+    client = None
+
+    def classify(payload: Mapping[str, Any]) -> str:
+        nonlocal client
+        if client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise click.ClickException("Set OPENAI_API_KEY before classifying reader works.")
+            api_base = os.getenv(
+                "OPENAI_API_BASE",
+                os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1"),
+            )
+            os.environ["OPENAI_BASE_URL"] = api_base
+            try:
+                import aisuite as ai  # noqa: PLC0415
+            except ImportError as exc:
+                raise click.ClickException("aisuite is required to classify reader works.") from exc
+            client_config: dict[str, Any] = {
+                "api_key": api_key,
+                "max_retries": 0,
+            }
+            if timeout_seconds is not None:
+                client_config["timeout"] = timeout_seconds
+            client = ai.Client({"openai": client_config})
+
+        request_kwargs = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You generate scholarly metadata for classical literature reader "
+                        "catalog rows. Return JSON only. The output is generated data "
+                        "for direct catalog import."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": orjson.dumps(payload, option=orjson.OPT_SORT_KEYS).decode("utf-8"),
+                },
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0,
+        }
+        if timeout_seconds is not None:
+            request_kwargs["timeout"] = timeout_seconds
+        active_client = client
+        assert active_client is not None
+        response = _call_work_classifier_with_retries(
+            lambda: active_client.chat.completions.create(**request_kwargs),
+            max_attempts=max_attempts,
+        )
+        return (response.choices[0].message.content or "").strip()
+
+    return classify
+
+
+def _openrouter_author_classifier_callback(
+    model: str,
+    *,
+    timeout_seconds: float | None = DEFAULT_CLASSIFICATION_TIMEOUT_SECONDS,
+    max_attempts: int = DEFAULT_CLASSIFICATION_MAX_ATTEMPTS,
+):
+    client = None
+
+    def classify(payload: Mapping[str, Any]) -> str:
+        nonlocal client
+        if client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise click.ClickException("Set OPENAI_API_KEY before classifying reader authors.")
+            api_base = os.getenv(
+                "OPENAI_API_BASE",
+                os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1"),
+            )
+            os.environ["OPENAI_BASE_URL"] = api_base
+            try:
+                import aisuite as ai  # noqa: PLC0415
+            except ImportError as exc:
+                raise click.ClickException(
+                    "aisuite is required to classify reader authors."
+                ) from exc
+            client_config: dict[str, Any] = {
+                "api_key": api_key,
+                "max_retries": 0,
+            }
+            if timeout_seconds is not None:
+                client_config["timeout"] = timeout_seconds
+            client = ai.Client({"openai": client_config})
+
+        request_kwargs = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You generate scholarly metadata for classical literature "
+                        "author and agent index rows. Return JSON only. The output "
+                        "is generated data for direct catalog import."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": orjson.dumps(payload, option=orjson.OPT_SORT_KEYS).decode("utf-8"),
+                },
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0,
+        }
+        if timeout_seconds is not None:
+            request_kwargs["timeout"] = timeout_seconds
+        active_client = client
+        assert active_client is not None
+        response = _call_work_classifier_with_retries(
+            lambda: active_client.chat.completions.create(**request_kwargs),
+            max_attempts=max_attempts,
+        )
+        return (response.choices[0].message.content or "").strip()
+
+    return classify
 
 
 def _encounter_translation_callback(model: str):
@@ -6719,27 +8522,46 @@ def _translation_cache_status_payload(cache_path: Path) -> dict[str, object]:
     return payload
 
 
-def _translation_cache_clear_payload(cache_path: Path) -> dict[str, object]:
+def _translation_cache_clear_payload(
+    cache_path: Path,
+    *,
+    source_lexicon: str | None = None,
+) -> dict[str, object]:
     before = _translation_cache_status_payload(cache_path)
     if before.get("error"):
         return {
             "schema_version": TRANSLATION_CACHE_SCHEMA_VERSION,
             "cache_db": str(cache_path),
+            "source_lexicon": source_lexicon,
             "deleted": 0,
             "before": before,
             "after": before,
             "error": before["error"],
         }
-    row_count = before["row_count"]
-    deleted = row_count if isinstance(row_count, int) else 0
     if cache_path.exists():
         with connect_duckdb(cache_path, read_only=False, lock=True) as conn:
             apply_translation_schema(conn)
-            conn.execute("DELETE FROM entry_translations")
+            if source_lexicon:
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM entry_translations WHERE source_lexicon = ?",
+                    [source_lexicon],
+                ).fetchone()
+                deleted = int(row[0]) if row is not None else 0
+                conn.execute(
+                    "DELETE FROM entry_translations WHERE source_lexicon = ?",
+                    [source_lexicon],
+                )
+            else:
+                row_count = before["row_count"]
+                deleted = row_count if isinstance(row_count, int) else 0
+                conn.execute("DELETE FROM entry_translations")
+    else:
+        deleted = 0
     after = _translation_cache_status_payload(cache_path)
     return {
         "schema_version": TRANSLATION_CACHE_SCHEMA_VERSION,
         "cache_db": str(cache_path),
+        "source_lexicon": source_lexicon,
         "deleted": deleted,
         "before": before,
         "after": after,
@@ -6748,7 +8570,7 @@ def _translation_cache_clear_payload(cache_path: Path) -> dict[str, object]:
 
 @click.group("translation-cache")
 def translation_cache_cli() -> None:
-    """Inspect and clear cached DICO/Gaffiot translation rows."""
+    """Inspect and clear cached DICO/Gaffiot/Bailly translation rows."""
 
 
 @translation_cache_cli.command("status")
@@ -6797,25 +8619,41 @@ def translation_cache_status(translation_cache_db: str, output: str) -> None:
     show_default=True,
     help="Output format.",
 )
+@click.option(
+    "--source-lexicon",
+    type=click.Choice(["bailly", "dico", "gaffiot"]),
+    default=None,
+    help="Delete only rows for one generated translation source.",
+)
 @click.confirmation_option(
     "--yes",
-    prompt="Delete all cached DICO/Gaffiot translation rows?",
+    prompt="Delete matching cached translation rows?",
 )
-def translation_cache_clear(translation_cache_db: str, output: str) -> None:
-    """Delete cached DICO/Gaffiot translation rows only."""
-    payload = _translation_cache_clear_payload(Path(translation_cache_db))
+def translation_cache_clear(
+    translation_cache_db: str,
+    output: str,
+    source_lexicon: str | None,
+) -> None:
+    """Delete cached DICO/Gaffiot/Bailly translation rows."""
+    payload = _translation_cache_clear_payload(
+        Path(translation_cache_db),
+        source_lexicon=source_lexicon,
+    )
     if output == "json":
         click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
         return
 
-    click.echo(f"Cleared {payload['deleted']} translation row(s) from {payload['cache_db']}.")
+    label = f" for {source_lexicon}" if source_lexicon is not None else ""
+    click.echo(
+        f"Cleared {payload['deleted']} translation row(s){label} from {payload['cache_db']}."
+    )
 
 
 main.add_command(translation_cache_cli)
 
 
 @main.command("translation-warm")
-@click.argument("language", type=click.Choice(["lat", "san"], case_sensitive=False))
+@click.argument("language", type=click.Choice(["grc", "lat", "san"], case_sensitive=False))
 @click.argument(
     "wordlist",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
@@ -6824,7 +8662,7 @@ main.add_command(translation_cache_cli)
     "--tool-filter",
     default="all",
     show_default=True,
-    help="Restrict lookup tools before collecting DICO/Gaffiot translation candidates.",
+    help="Restrict lookup tools before collecting French translation candidates.",
 )
 @click.option(
     "--limit",
@@ -6913,7 +8751,7 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     dry_run: bool,
     output: str,
 ) -> None:
-    """Warm DICO/Gaffiot translation cache rows for a word list."""
+    """Warm French lexicon translation cache rows for a word list."""
     terms = _translation_warm_terms(wordlist, limit=limit)
     cache_path = Path(translation_cache_db)
     if not dry_run:
@@ -7084,7 +8922,7 @@ def translation_warm(  # noqa: PLR0913, PLR0915
 @click.option(
     "--use-translation-cache",
     is_flag=True,
-    help="Display cached DICO/Gaffiot French-to-English translations when available.",
+    help="Display cached French-to-English lexicon translations when available.",
 )
 @click.option(
     "--translation-mode",
@@ -7093,7 +8931,7 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     show_default=True,
     help=(
         "French source translation mode: cache-only, off, or populate missing "
-        "DICO/Gaffiot rows via OpenRouter before display. do-it-all is an alias for auto."
+        "lexicon rows via OpenRouter before display. do-it-all is an alias for auto."
     ),
 )
 @click.option(
@@ -7126,6 +8964,51 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     show_default=True,
     help="Include local paradigm-resolution metadata in JSON output without fetching tables.",
 )
+@click.option(
+    "--include-reader-search/--no-include-reader-search",
+    default=False,
+    show_default=True,
+    help="Include reader corpus search actions in JSON output.",
+)
+@click.option(
+    "--reader-search-index",
+    type=click.Path(),
+    default=None,
+    help="Optional Lance reader search index for inline corpus hits.",
+)
+@click.option(
+    "--reader-catalog",
+    type=click.Path(),
+    default=None,
+    help="Reader catalog path used for reader search metadata.",
+)
+@click.option(
+    "--reader-search-limit",
+    default=5,
+    show_default=True,
+    type=click.IntRange(1, 50),
+    help="Maximum inline reader corpus hits when --reader-search-index is supplied.",
+)
+@click.option(
+    "--reader-search-context",
+    default=0,
+    show_default=True,
+    type=click.IntRange(0, 10),
+    help="Context radius for inline reader corpus hits.",
+)
+@click.option(
+    "--reader-search-field",
+    type=click.Choice(["auto", "display", "search", "folded"]),
+    default="auto",
+    show_default=True,
+    help="Reader search field passed to the corpus search index.",
+)
+@click.option(
+    "--reader-search-all-candidates/--no-reader-search-all-candidates",
+    default=False,
+    show_default=True,
+    help="Search every encounter reader-search candidate and deduplicate inline hits.",
+)
 def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     language: str,
     text: str,
@@ -7148,6 +9031,13 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     foster_labels: bool,
     source_details: bool,
     include_paradigm_resolution: bool,
+    include_reader_search: bool,
+    reader_search_index: str | None,
+    reader_catalog: str | None,
+    reader_search_limit: int,
+    reader_search_context: int,
+    reader_search_field: str,
+    reader_search_all_candidates: bool,
 ):
     """
     Show a compact, source-backed learner encounter for one word.
@@ -7252,6 +9142,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 )
 
         morphology_claims = claims
+        normalization_fallback_terms: list[str] = []
         fallback_terms, fallback_warning = _encounter_sanskrit_morphology_lookup_terms(
             claims=claims,
             language=language,
@@ -7305,6 +9196,71 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     if fallback_warning:
                         reduction.warnings.append(fallback_warning)
 
+        norm_cfg = NormalizeConfig(
+            diogenes_endpoint=diogenes_endpoint,
+            heritage_base=heritage_base,
+            db_path=db_path,
+            no_cache=no_cache,
+            output="pretty",
+            cache_policy=cache_policy,
+        )
+        normalization_fallback_terms, normalization_fallback_warning = (
+            _encounter_sanskrit_normalization_fallback_terms(
+                language=language,
+                text=text,
+                tool_filter=tool_filter,
+                normalize=normalize,
+                norm_config=norm_cfg,
+                no_cache=no_cache,
+                reduction=reduction,
+            )
+        )
+        if normalization_fallback_terms:
+            original_bucket_count = len(reduction.buckets)
+            fallback_claims = list(claims)
+            for fallback_term in normalization_fallback_terms:
+                fallback_result = _execute_lookup_plan(
+                    language=language,
+                    text=fallback_term,
+                    tool_filter=tool_filter,
+                    normalize=normalize,
+                    diogenes_endpoint=diogenes_endpoint,
+                    diogenes_parse_endpoint=diogenes_parse_endpoint,
+                    heritage_base=heritage_base,
+                    db_path=db_path,
+                    no_cache=True,
+                    include_cltk=include_cltk,
+                )
+                term_claims = _claims_as_mappings(fallback_result)
+                if translation_cache is not None:
+                    try:
+                        term_claims = _encounter_apply_translation_cache(
+                            claims=term_claims,
+                            language=language,
+                            model=translation_model,
+                            cache=translation_cache,  # type: ignore[arg-type]
+                            populate=populate_translations,
+                            translate=translation_callback,
+                            diagnostics=translation_diagnostics,
+                            context=f"normalization-fallback:{fallback_term}",
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        raise click.ClickException(
+                            f"Unable to read translation cache {translation_cache_db}: {exc}"
+                        ) from exc
+                fallback_claims.extend(term_claims)
+            if len(fallback_claims) > len(claims):
+                fallback_reduction = reduce_claims(
+                    query=text,
+                    language=language,
+                    claims=fallback_claims,
+                )
+                if len(fallback_reduction.buckets) > original_bucket_count:
+                    claims = fallback_claims
+                    reduction = fallback_reduction
+                    if normalization_fallback_warning:
+                        reduction.warnings.append(normalization_fallback_warning)
+
         morphology_rows = _encounter_morphology_rows(
             morphology_claims,
             language=language,
@@ -7314,7 +9270,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
         preferred_lemmas = _encounter_preferred_lemmas_for_sorting(
             reduction,
             morphology_rows,
-            fallback_terms,
+            [*normalization_fallback_terms, *fallback_terms],
             [text],
         )
         reduction.buckets = sorted(
@@ -7343,8 +9299,8 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
         if output == "json":
             payload = asdict(reduction)
-            payload["schema_version"] = ENCOUNTER_JSON_SCHEMA_VERSION
-            payload["request"] = {
+            include_reader_search_payload = include_reader_search or bool(reader_search_index)
+            request_payload = {
                 "command": "encounter",
                 "language": language,
                 "text": text,
@@ -7358,6 +9314,19 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 "translation_cache_writes": populate_translations,
                 "include_paradigm_resolution": include_paradigm_resolution,
             }
+            if include_reader_search_payload:
+                request_payload.update(
+                    {
+                        "include_reader_search": include_reader_search,
+                        "reader_search_index": reader_search_index,
+                        "reader_search_limit": reader_search_limit,
+                        "reader_search_context": reader_search_context,
+                        "reader_search_field": reader_search_field,
+                        "reader_search_all_candidates": reader_search_all_candidates,
+                    }
+                )
+            payload["schema_version"] = ENCOUNTER_JSON_SCHEMA_VERSION
+            payload["request"] = request_payload
             payload["display"] = build_display_payload(
                 reduction,
                 morphology_rows,
@@ -7403,12 +9372,38 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     morphology_claims,
                 )
                 payload["paradigm_resolution"] = paradigm_resolution_payload
+            reader_search_payload = None
+            reader_search_index_path = (
+                Path(reader_search_index).expanduser() if reader_search_index else None
+            )
+            if include_reader_search_payload:
+                reader_search_payload = _encounter_reader_search_context(
+                    language=language,
+                    text=text,
+                    reduction=reduction,
+                    preferred_lemmas=preferred_lemmas,
+                    index_path=reader_search_index_path,
+                    limit=reader_search_limit,
+                    context=reader_search_context,
+                    field=reader_search_field,
+                    catalog_path=_reader_catalog_path(reader_catalog),
+                    all_candidates=reader_search_all_candidates,
+                )
+                payload["reader_search"] = reader_search_payload
             actions = _encounter_actions(
                 language=language,
                 text=text,
                 word_index=cast(Mapping[str, object], payload.get("word_index") or {}),
                 paradigm_resolution=paradigm_resolution_payload,
             )
+            if isinstance(reader_search_payload, Mapping):
+                reader_actions = reader_search_payload.get("actions")
+                if isinstance(reader_actions, list):
+                    actions.extend(
+                        cast(dict[str, object], action)
+                        for action in reader_actions
+                        if isinstance(action, dict)
+                    )
             payload["actions"] = actions
             if isinstance(payload["display"], dict):
                 payload["display"]["actions"] = actions

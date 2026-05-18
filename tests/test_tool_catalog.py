@@ -26,6 +26,18 @@ def test_catalog_lists_sanskrit_encounter_filters() -> None:
     assert {"heritage", "cdsl", "dico"} <= filters
 
 
+def test_catalog_lists_greek_bailly_filter() -> None:
+    filters = {entry.tool_filter for entry in catalog_entries("grc")}
+
+    assert "bailly" in filters
+
+
+def test_catalog_lists_latin_lewis_1890_filter() -> None:
+    filters = {entry.tool_filter for entry in catalog_entries("lat")}
+
+    assert "lewis_1890" in filters
+
+
 def test_tools_json_output_lists_translation_capable_sources() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["tools", "san", "--output", "json"])
@@ -43,6 +55,32 @@ def test_tools_json_output_lists_translation_capable_sources() -> None:
     assert "claim.dico.entries" in dico["plan_tools"]
 
 
+def test_tools_json_output_lists_greek_bailly() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["tools", "grc", "--output", "json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    _assert_matches_schema(payload, TOOL_SCHEMA_PATH)
+    bailly = next(tool for tool in payload["tools"] if tool["tool_filter"] == "bailly")
+    assert bailly["accepted_filter"] == "bailly"
+    assert bailly["translation_capable"] is True
+    assert "claim.bailly.entries" in bailly["plan_tools"]
+
+
+def test_tools_json_output_lists_latin_lewis_1890() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["tools", "lat", "--output", "json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    _assert_matches_schema(payload, TOOL_SCHEMA_PATH)
+    lewis = next(tool for tool in payload["tools"] if tool["tool_filter"] == "lewis_1890")
+    assert lewis["accepted_filter"] == "lewis_1890"
+    assert lewis["translation_capable"] is False
+    assert "claim.lewis_1890.entries" in lewis["plan_tools"]
+
+
 def test_tools_json_output_can_list_all_languages() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["tools", "--output", "json"])
@@ -51,7 +89,13 @@ def test_tools_json_output_can_list_all_languages() -> None:
     payload = json.loads(result.output)
     _assert_matches_schema(payload, TOOL_SCHEMA_PATH)
     assert {language["code"] for language in payload["languages"]} == {"lat", "grc", "san"}
-    assert {tool["tool_filter"] for tool in payload["tools"]} >= {"dico", "gaffiot", "cdsl"}
+    assert {tool["tool_filter"] for tool in payload["tools"]} >= {
+        "bailly",
+        "dico",
+        "gaffiot",
+        "lewis_1890",
+        "cdsl",
+    }
 
 
 def test_catalog_payload_includes_all_pseudo_filter() -> None:

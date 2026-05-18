@@ -48,6 +48,56 @@ SANSKRIT_NUMBERED_MIN_SAMPLE_MATCHES = 3
 SANSKRIT_NUMBERED_LINE_RE = re.compile(r"^(?P<code>\d{8})\s+(?P<text>.+)$")
 GRETIL_AUTHOR_RE = re.compile(r"(?:^|_)sa_(?P<author>[^-_.]+)-")
 GRETIL_WORK_RE = re.compile(r"(?:^|_)sa_(?P<body>[^.]+)$")
+LEGACY_ENGLISH_WORDS = frozenset(
+    {
+        "and",
+        "are",
+        "both",
+        "but",
+        "for",
+        "from",
+        "have",
+        "his",
+        "is",
+        "lord",
+        "not",
+        "of",
+        "shall",
+        "that",
+        "the",
+        "their",
+        "them",
+        "unto",
+        "was",
+        "were",
+        "which",
+        "with",
+    }
+)
+LEGACY_ENGLISH_ANCHOR_WORDS = frozenset({"and", "of", "shall", "that", "the", "unto", "which"})
+LEGACY_LATIN_WORDS = frozenset(
+    {
+        "ad",
+        "cum",
+        "de",
+        "est",
+        "et",
+        "in",
+        "non",
+        "per",
+        "pro",
+        "quae",
+        "quam",
+        "qui",
+        "quod",
+        "sed",
+        "sunt",
+        "ut",
+    }
+)
+LEGACY_ENGLISH_MIN_WORDS = 6
+LEGACY_ENGLISH_MIN_ANCHOR_WORDS = 2
+LEGACY_ENGLISH_MIN_RATIO = 2
 GRETIL_TITLE_PREFIX_EXACT = {
     "aSTasAhasrikA",
     "advayazatikA",
@@ -605,9 +655,37 @@ def parse_legacy_text_dump_with_idt(
     raw = path.read_bytes()
     parsed_rows = _legacy_rows_from_raw(raw, language=language)
     rows_by_work = _legacy_rows_by_inline_work(parsed_rows, works)
+    rows_by_language: dict[str, list[_LegacyParsedRow]] = {language: parsed_rows}
+    rows_by_work_language: dict[str, dict[str, list[_ReaderSegmentRow]]] = {}
     books: list[ParsedBook] = []
     for index, work in enumerate(works):
         source_id = f"{path.stem}.{work.work_number}"
+        rows: list[_ReaderSegmentRow] = (
+            rows_by_work.get(work.work_number, []) if rows_by_work else []
+        )
+        next_start = works[index + 1].start_block if index + 1 < len(works) else None
+        start = work.start_block * LEGACY_BLOCK_SIZE
+        end = next_start * LEGACY_BLOCK_SIZE if next_start is not None else len(raw)
+        sample_text = _legacy_work_sample_text(rows=rows, raw=raw[start:end])
+        work_language = _legacy_work_language(
+            collection_id=collection_id,
+            source_stem=path.stem,
+            default_language=language,
+            work=work,
+            sample_text=sample_text,
+        )
+        if rows_by_work and work_language != language:
+            if work_language not in rows_by_language:
+                rows_by_language[work_language] = _legacy_rows_from_raw(
+                    raw,
+                    language=work_language,
+                )
+            if work_language not in rows_by_work_language:
+                rows_by_work_language[work_language] = _legacy_rows_by_inline_work(
+                    rows_by_language[work_language],
+                    works,
+                )
+            rows = rows_by_work_language[work_language].get(work.work_number, rows)
         author_id = _legacy_author_id(
             collection_id=collection_id,
             path_stem=path.stem,
@@ -615,7 +693,7 @@ def parse_legacy_text_dump_with_idt(
         )
         seed = _ReaderBookSeed(
             collection_id=collection_id,
-            language=language,
+            language=work_language,
             title=work.work_name,
             author=work.author_name,
             source_id=source_id,
@@ -629,13 +707,9 @@ def parse_legacy_text_dump_with_idt(
             ),
         )
         if rows_by_work:
-            rows = rows_by_work.get(work.work_number, [])
             books.append(_parsed_reader_book_with_citations(seed, rows))
             continue
-        next_start = works[index + 1].start_block if index + 1 < len(works) else None
-        start = work.start_block * LEGACY_BLOCK_SIZE
-        end = next_start * LEGACY_BLOCK_SIZE if next_start is not None else len(raw)
-        books.append(_legacy_book_from_raw(seed, raw[start:end], language=language))
+        books.append(_legacy_book_from_raw(seed, raw[start:end], language=work_language))
     return books
 
 
@@ -754,6 +828,68 @@ def _legacy_book_from_raw(
         return _legacy_book_from_text(seed, raw.decode("latin-1", errors="ignore"))
     rows = [parsed.row for parsed in _legacy_rows_from_raw(raw, language=language)]
     return _parsed_reader_book_with_citations(seed, rows)
+
+
+def _legacy_work_sample_text(
+    *,
+    rows: list[_ReaderSegmentRow],
+    raw: bytes,
+) -> str:
+    if rows:
+        return " ".join(row.text for row in rows[:50])
+    return _decode_legacy_text(raw[: LEGACY_BLOCK_SIZE // 2])
+
+
+def _legacy_work_language(
+    *,
+    collection_id: str,
+    source_stem: str,
+    default_language: str,
+    work: LegacyIdtWork,
+    sample_text: str,
+) -> str:
+    if collection_id != "phi":
+        return default_language
+
+    work_title = work.work_name.casefold()
+    author_name = work.author_name.casefold()
+    source_metadata = f"{source_stem} {author_name}".casefold()
+    language = default_language
+    if "hebrew bible" in source_metadata or "mt or bhs" in source_metadata:
+        language = "heb"
+    elif (
+        "coptic" in source_metadata or "sahidic" in source_metadata or "sahiddic" in source_metadata
+    ):
+        language = "cop"
+    elif (
+        "septuagint" in source_metadata
+        or "old greek bible" in source_metadata
+        or "greek new testament" in source_metadata
+    ):
+        language = "grc"
+    elif "(latin" in work_title or "latin works" in work_title:
+        language = "lat"
+    elif (
+        "(english" in work_title
+        or "english bible" in source_metadata
+        or (default_language == "lat" and _legacy_text_looks_english(sample_text))
+    ):
+        language = "eng"
+    return language
+
+
+def _legacy_text_looks_english(text: str) -> bool:
+    words = re.findall(r"[A-Za-z]+", text.casefold())
+    if not words:
+        return False
+    english_hits = sum(1 for word in words if word in LEGACY_ENGLISH_WORDS)
+    english_anchors = {word for word in words if word in LEGACY_ENGLISH_ANCHOR_WORDS}
+    latin_hits = sum(1 for word in words if word in LEGACY_LATIN_WORDS)
+    return (
+        english_hits >= LEGACY_ENGLISH_MIN_WORDS
+        and len(english_anchors) >= LEGACY_ENGLISH_MIN_ANCHOR_WORDS
+        and english_hits >= max(1, latin_hits) * LEGACY_ENGLISH_MIN_RATIO
+    )
 
 
 def _legacy_author_id(*, collection_id: str, path_stem: str, author_id: str) -> str:
@@ -1439,9 +1575,12 @@ def _legacy_citation_path(state: _LegacyBookmarkState) -> str:
 
 
 def _legacy_reader_text(text: str, *, language: str) -> str:
-    text = _strip_legacy_formatting(text, convert_latin_accents=language != "grc")
+    text = _strip_legacy_formatting(text, convert_latin_accents=False)
     if language == "grc":
         text = _legacy_greek_beta_to_unicode(text)
+    else:
+        text = _legacy_inline_greek_beta_to_unicode(text)
+        text = _legacy_latin_accents(text)
     return _normalize_text(text)
 
 
@@ -1458,19 +1597,23 @@ def _strip_legacy_formatting(text: str, *, convert_latin_accents: bool) -> str:
     text = re.sub(r"([<>{}])\d+", r"\1", text)
     text = re.sub(r"#\d+", "#", text)
     if convert_latin_accents:
-        text = re.sub(r"([aeiouAEIOU])/", lambda match: _legacy_latin_accent(match, "acute"), text)
-        text = re.sub(r"([aeiouAEIOU])\\", lambda match: _legacy_latin_accent(match, "grave"), text)
-        text = re.sub(
-            r"([aeiouAEIOU])=",
-            lambda match: _legacy_latin_accent(match, "circumflex"),
-            text,
-        )
-        text = re.sub(
-            r"([aeiouAEIOU])\+",
-            lambda match: _legacy_latin_accent(match, "diaeresis"),
-            text,
-        )
+        text = _legacy_latin_accents(text)
     return text
+
+
+def _legacy_latin_accents(text: str) -> str:
+    text = re.sub(r"([aeiouAEIOU])/", lambda match: _legacy_latin_accent(match, "acute"), text)
+    text = re.sub(r"([aeiouAEIOU])\\", lambda match: _legacy_latin_accent(match, "grave"), text)
+    text = re.sub(
+        r"([aeiouAEIOU])=",
+        lambda match: _legacy_latin_accent(match, "circumflex"),
+        text,
+    )
+    return re.sub(
+        r"([aeiouAEIOU])\+",
+        lambda match: _legacy_latin_accent(match, "diaeresis"),
+        text,
+    )
 
 
 def _legacy_punctuation_replacement(match: re.Match[str]) -> str:
@@ -1516,6 +1659,29 @@ def _legacy_greek_beta_to_unicode(text: str) -> str:
             continue
         if part == " $ ":
             greek = True
+            continue
+        if greek and part.strip():
+            normalized_part = _normalize_legacy_beta_diacritic_order(part)
+            output.append(str(betacode_conv.beta_to_uni(normalized_part)))
+        else:
+            output.append(part)
+    return "".join(output)
+
+
+def _legacy_inline_greek_beta_to_unicode(text: str) -> str:
+    try:
+        from betacode import conv as betacode_conv  # type: ignore[import-untyped]  # noqa: PLC0415
+    except ImportError:
+        return text
+    parts = re.split(r"(\s[&$]\s)", text)
+    greek = False
+    output: list[str] = []
+    for part in parts:
+        if part == " $ ":
+            greek = True
+            continue
+        if part == " & ":
+            greek = False
             continue
         if greek and part.strip():
             normalized_part = _normalize_legacy_beta_diacritic_order(part)

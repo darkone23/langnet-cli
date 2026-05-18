@@ -731,6 +731,156 @@ def test_parse_legacy_text_dump_with_idt_splits_author_file_into_works() -> None
     assert books[1].segments[0].text == "<work-two>"
 
 
+def test_parse_legacy_text_dump_with_idt_marks_english_bible_as_eng() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "civ0005.txt"
+        idt_path = root / "civ0005.idt"
+        txt_path.write_bytes(b"And both Jesus was called, and his disciples, to the marriage.\n")
+        idt_path.write_bytes(
+            _idt_author_record("0005", "English Bible (KJV or AV)")
+            + _idt_work_record("058", "John", 0, ["chapter", "verse"])
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="phi",
+            language="lat",
+        )
+
+    assert books[0].work.language == "eng"
+    assert books[0].edition.language == "eng"
+
+
+def test_parse_legacy_text_dump_with_idt_handles_milton_mixed_english_latin_source() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "civ0007.txt"
+        idt_path = root / "civ0007.idt"
+        txt_path.write_bytes(
+            b"Of man's first disobedience, and the fruit\n".ljust(8192, b"\x00")
+            + b"Pro populo Anglicano defensio\n"
+        )
+        idt_path.write_bytes(
+            _idt_author_record("0007", "John Milton (English and Latin)")
+            + _idt_work_record("001", "Paradise Lost (English)", 0, ["book", "line"])
+            + _idt_work_record(
+                "002",
+                "Defensionem Regiam (Latin Works, vol. 7, pp. 1-300)",
+                1,
+                ["book", "line"],
+            )
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="phi",
+            language="lat",
+        )
+
+    by_source = {book.work.source_id: book for book in books}
+    assert by_source["civ0007.001"].work.language == "eng"
+    assert by_source["civ0007.001"].edition.language == "eng"
+    assert by_source["civ0007.002"].work.language == "lat"
+    assert by_source["civ0007.002"].edition.language == "lat"
+
+
+def test_parse_legacy_text_dump_with_idt_keeps_transliterated_bible_from_english_guess() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "civ0001.txt"
+        idt_path = root / "civ0001.idt"
+        txt_path.write_bytes(b'B.:/R") $ I73YT B.FRF74) ):ELOHI92YM )"T HA $ .FMA73YIM W:/)"T\n')
+        idt_path.write_bytes(
+            _idt_author_record("0001", "Hebrew Bible (MT or BHS)")
+            + _idt_work_record("001", "Genesis", 0, ["chapter", "verse"])
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="phi",
+            language="lat",
+        )
+
+    assert books[0].work.language == "heb"
+    assert books[0].edition.language == "heb"
+
+
+def test_parse_legacy_text_dump_with_idt_marks_septuagint_as_greek() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "civ0002.txt"
+        idt_path = root / "civ0002.idt"
+        txt_path.write_bytes(b"*)EN A)RXH=| E)POIHSEN O( QEOS TON OURANON\n")
+        idt_path.write_bytes(
+            _idt_author_record("0002", "Septuagint (Old Greek Bible)")
+            + _idt_work_record("001", "Genesis", 0, ["chapter", "verse"])
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="phi",
+            language="lat",
+        )
+
+    assert books[0].work.language == "grc"
+    assert books[0].edition.language == "grc"
+
+
+def test_parse_legacy_text_dump_with_idt_marks_greek_new_testament_as_greek() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "civ0003.txt"
+        idt_path = root / "civ0003.idt"
+        txt_path.write_bytes(b"*BIBLOS GENESEWS *)IHSOU *XRISTOU\n")
+        idt_path.write_bytes(
+            _idt_author_record("0003", "Greek New Testament (NT UBS3 edition)")
+            + _idt_work_record("001", "Matthew", 0, ["chapter", "verse"])
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="phi",
+            language="lat",
+        )
+
+    assert books[0].work.language == "grc"
+    assert books[0].edition.language == "grc"
+
+
+def test_parse_legacy_text_dump_with_idt_marks_sahidic_coptic_as_coptic() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "cop0001.txt"
+        idt_path = root / "cop0001.idt"
+        txt_path.write_bytes(b"IAKWBOS Ph\\MhAL \\MPNOUTE AUW PjOEIS\n")
+        idt_path.write_bytes(
+            _idt_author_record("0001", "Sahidic Coptic Bible")
+            + _idt_work_record("020", "James", 0, ["chapter", "verse"])
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="phi",
+            language="lat",
+        )
+
+    assert books[0].work.language == "cop"
+    assert books[0].edition.language == "cop"
+
+
 def test_parse_legacy_text_dump_with_idt_skips_section_index_records() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
@@ -858,6 +1008,28 @@ def test_parse_legacy_text_dump_with_idt_sets_cts_work_urn_for_phi() -> None:
         )
 
     assert books[0].work.cts_work_urn == "urn:cts:latinLit:phi0914.phi001"
+
+
+def test_parse_legacy_text_dump_decodes_inline_greek_in_latin_phi_text() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "lat0684.txt"
+        idt_path = root / "lat0684.idt"
+        txt_path.write_bytes(b"quam vocant $ E)TUMOLOGIKH/N & : quae\x80")
+        idt_path.write_bytes(
+            _idt_author_record("0684", "M. Terentius Varro")
+            + _idt_work_record("001", "De Lingua Latina", 0, ["book", "section", "line"])
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="phi",
+            language="lat",
+        )
+
+    assert books[0].segments[0].text == "quam vocant ἐτυμολογικήν : quae"
 
 
 def test_legacy_greek_beta_converter_handles_legacy_diacritic_order() -> None:
