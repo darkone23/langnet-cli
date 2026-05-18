@@ -172,6 +172,7 @@ LATIN_AE_SUFFIX_LEN = 2
 ENCOUNTER_LEARNER_GLOSS_MAX_CHARS = 120
 ENCOUNTER_LEARNER_GLOSS_ITEM_LIMIT = 4
 ENCOUNTER_MAX_COMPONENTS = 4
+ENCOUNTER_SANSKRIT_MORPHOLOGY_SCAN_ROWS = 24
 SANSKRIT_AN_STEM_MIN_CHARS = 3
 ENCOUNTER_JSON_SCHEMA_VERSION = "langnet.encounter.v1"
 ENCOUNTER_JSON_ERROR_SCHEMA_VERSION = "langnet.encounter.error.v1"
@@ -6443,13 +6444,16 @@ def _encounter_morphology_rows(
     max_rows: int = 4,
 ) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
-    seen: set[tuple[str, str, str, str]] = set()
+    seen: set[tuple[str, str, str, str, str]] = set()
     claim_triples = _encounter_claim_triples_with_tools(claims)
-    if _append_direct_morphology_rows(claim_triples, rows, seen, max_rows):
-        return rows
+    scan_rows = (
+        max(max_rows, ENCOUNTER_SANSKRIT_MORPHOLOGY_SCAN_ROWS) if language == "san" else max_rows
+    )
+    if _append_direct_morphology_rows(claim_triples, rows, seen, scan_rows):
+        return _encounter_prioritize_morphology_rows(rows, language=language)[:max_rows]
 
     graph = _build_morphology_graph(claim_triples)
-    _append_graph_morphology_rows(graph, rows, seen, max_rows)
+    _append_graph_morphology_rows(graph, rows, seen, scan_rows)
     if not rows and reduction is not None:
         rows.extend(
             _encounter_local_morphology_rows(
@@ -6459,7 +6463,7 @@ def _encounter_morphology_rows(
                 max_rows=max_rows,
             )
         )
-    return rows
+    return _encounter_prioritize_morphology_rows(rows, language=language)[:max_rows]
 
 
 def _encounter_claim_triples_with_tools(
@@ -6472,9 +6476,38 @@ def _encounter_claim_triples_with_tools(
     return triples
 
 
+def _encounter_prioritize_morphology_rows(
+    rows: Sequence[Mapping[str, str]],
+    *,
+    language: str,
+) -> list[dict[str, str]]:
+    row_list = [dict(row) for row in rows]
+    if language != "san":
+        return row_list
+    selected = _encounter_sanskrit_component_solution_rows(row_list)
+    if not selected or list(selected) == row_list:
+        return row_list
+
+    ordered: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str, str, str]] = set()
+    for row in [*selected, *row_list]:
+        key = (
+            row.get("source_tool", ""),
+            row.get("form", ""),
+            row.get("lemma", ""),
+            row.get("analysis", ""),
+            row.get("solution_number", ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(dict(row))
+    return ordered
+
+
 def _append_morphology_row(
     rows: list[dict[str, str]],
-    seen: set[tuple[str, str, str, str]],
+    seen: set[tuple[str, str, str, str, str]],
     max_rows: int,
     row: dict[str, str],
 ) -> bool:
@@ -6482,7 +6515,13 @@ def _append_morphology_row(
     if not analysis or analysis == "?":
         return False
     row = {**row, "analysis": analysis}
-    key = (row["source_tool"], row["form"], row["lemma"], row["analysis"])
+    key = (
+        row["source_tool"],
+        row["form"],
+        row["lemma"],
+        row["analysis"],
+        row.get("solution_number", ""),
+    )
     if key in seen:
         return False
     seen.add(key)
@@ -6493,7 +6532,7 @@ def _append_morphology_row(
 def _append_direct_morphology_rows(
     claim_triples: Sequence[tuple[str, Mapping[str, object]]],
     rows: list[dict[str, str]],
-    seen: set[tuple[str, str, str, str]],
+    seen: set[tuple[str, str, str, str, str]],
     max_rows: int,
 ) -> bool:
     for claim_tool, triple in claim_triples:
@@ -6612,7 +6651,7 @@ def _record_morphology_feature(
 def _append_graph_morphology_rows(
     graph: _MorphologyGraph,
     rows: list[dict[str, str]],
-    seen: set[tuple[str, str, str, str]],
+    seen: set[tuple[str, str, str, str, str]],
     max_rows: int,
 ) -> bool:
     for interp, features in graph.interp_features.items():
@@ -7085,12 +7124,15 @@ def _encounter_sanskrit_component_candidates(
     seen: set[tuple[str, str]] = set()
     for row in selected_rows:
         analysis = row.get("analysis", "").strip()
-        if _encounter_analysis_is_particle_only(analysis):
-            continue
         lemma = row.get("lemma", "").strip()
         if not lemma:
             continue
-        role = "initial" if _is_sanskrit_compound_component(analysis) else "final"
+        if _encounter_analysis_is_particle_only(analysis):
+            role = "particle"
+        elif _is_sanskrit_compound_component(analysis):
+            role = "initial"
+        else:
+            role = "final"
         lookup_terms = _encounter_sanskrit_component_lookup_terms(lemma)
         if not lookup_terms:
             continue
@@ -7125,11 +7167,39 @@ def _encounter_sanskrit_component_solution_rows(
             groups[key] = []
             group_order.append(key)
         groups[key].append(row)
-    for key in group_order:
-        rows = groups[key]
-        if any(_is_sanskrit_compound_component(row.get("analysis", "")) for row in rows):
-            return rows
+    compound_groups = [
+        (index, groups[key])
+        for index, key in enumerate(group_order)
+        if any(_is_sanskrit_compound_component(row.get("analysis", "")) for row in groups[key])
+    ]
+    if compound_groups:
+        return min(
+            compound_groups,
+            key=lambda item: _encounter_sanskrit_component_solution_key(item[1], item[0]),
+        )[1]
     return list(morphology_rows)
+
+
+def _encounter_sanskrit_component_solution_key(
+    rows: Sequence[Mapping[str, str]],
+    index: int,
+) -> tuple[int, int, int, int]:
+    has_final = any(_encounter_sanskrit_row_is_final_component(row) for row in rows)
+    has_particle = any(
+        _encounter_analysis_is_particle_only(row.get("analysis", "")) for row in rows
+    )
+    # Prefer complete compound parses; for tied complete parses, keep compact didactic
+    # splits before more fragmented alternatives, then preserve source order.
+    return (0 if has_final else 1, 0 if has_particle else 1, len(rows), index)
+
+
+def _encounter_sanskrit_row_is_final_component(row: Mapping[str, str]) -> bool:
+    analysis = row.get("analysis", "").strip()
+    return (
+        bool(row.get("lemma", "").strip())
+        and not _is_sanskrit_compound_component(analysis)
+        and not _encounter_analysis_is_particle_only(analysis)
+    )
 
 
 def _encounter_latin_component_candidates(
@@ -7223,7 +7293,7 @@ def _encounter_component_buckets_from_reduction(
 
 
 def _encounter_should_lookup_component(language: str, component: Mapping[str, object]) -> bool:
-    return language == "san" and component.get("role") in {"initial", "final"}
+    return language == "san" and component.get("role") in {"initial", "final", "particle"}
 
 
 def _encounter_component_lookup_tool_filter(language: str, tool_filter: str) -> str:

@@ -74,10 +74,10 @@ in
   # languages.python.poetry.package = (pkgs.poetry.override { python3 = pkgs.python311; });
   # languages.python.poetry.activate.enable = true;
 
-  # languages.javascript.enable = true;
+  languages.javascript.enable = true;
   # languages.javascript.npm.enable = true;
-  # languages.javascript.bun.enable = true;
-  # languages.typescript.enable = true;
+  languages.javascript.bun.enable = true;
+  languages.typescript.enable = true;
 
   # https://devenv.sh/processes/
   # processes.cargo-watch.exec = "cargo-watch";

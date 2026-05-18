@@ -467,6 +467,38 @@ def test_parse_sanskrit_plain_text_prefers_header_author() -> None:
     assert result.work.title == "Ghaṭakarparakāvyavivṛti"
 
 
+def test_parse_sanskrit_plain_text_omits_gretil_header_preamble_from_segments() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / "sa_nAgArjuna-dharmasaMgraha.txt"
+        path.write_text(
+            "\n".join(
+                [
+                    "#Author:Nāgārjuna",
+                    "#Text:Dharmasaṃgraha",
+                    "#Data entry:Members of the Digital Sanskrit Buddhist Canon Input Project",
+                    "#P.L. Vaidya: Dharmasangraha. Darbhanga 1961.",
+                    "",
+                    "dharmasaṃgrahaḥ /",
+                    "// namo ratnatrayāya //",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        result = parse_sanskrit_plain_text(
+            path,
+            collection_id="sanskrit_texts",
+            language="san",
+        )
+
+    assert result.work.author == "Nāgārjuna"
+    assert result.work.title == "Dharmasaṃgraha"
+    assert [segment.text for segment in result.segments] == [
+        "dharmasaṃgrahaḥ /",
+        "// namo ratnatrayāya //",
+    ]
+
+
 def test_parse_sanskrit_plain_text_group_prefers_header_metadata() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         split_dir = Path(tmpdir) / "texts" / "Brahmana texts" / "AB"
@@ -959,6 +991,28 @@ def test_parse_legacy_text_dump_with_idt_strips_metadata_formatting() -> None:
 
     assert books[0].work.author == "Homerus Epic."
     assert books[0].work.title == "Ilias"
+
+
+def test_parse_legacy_text_dump_with_idt_decodes_greek_beta_work_title() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "tlg0086.txt"
+        idt_path = root / "tlg0086.idt"
+        txt_path.write_bytes(b"POLITEI/A\n")
+        idt_path.write_bytes(
+            _idt_author_record("0086", "Aristoteles")
+            + _idt_work_record("003", "*)AQHNAI/WN POLITEI/A", 0, [])
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="tlg",
+            language="grc",
+        )
+
+    assert books[0].work.title == "Ἀθηναίων πολιτεία"
 
 
 def test_parse_legacy_text_dump_with_idt_sets_cts_work_urn_for_tlg() -> None:

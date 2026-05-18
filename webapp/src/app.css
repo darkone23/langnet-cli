@@ -1,0 +1,3952 @@
+@import 'tailwindcss';
+@plugin '../node_modules/daisyui/index.js';
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 400;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-greek-ext-400-normal.woff2')
+		format('woff2');
+	unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 400;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-greek-400-normal.woff2')
+		format('woff2');
+	unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 400;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-latin-ext-400-normal.woff2')
+		format('woff2');
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+		U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+		U+A720-A7FF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 400;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-latin-400-normal.woff2')
+		format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: italic;
+	font-display: block;
+	font-weight: 400;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-greek-ext-400-italic.woff2')
+		format('woff2');
+	unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: italic;
+	font-display: block;
+	font-weight: 400;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-greek-400-italic.woff2')
+		format('woff2');
+	unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: italic;
+	font-display: block;
+	font-weight: 400;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-latin-ext-400-italic.woff2')
+		format('woff2');
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+		U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+		U+A720-A7FF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: italic;
+	font-display: block;
+	font-weight: 400;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-latin-400-italic.woff2')
+		format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 600;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-greek-ext-600-normal.woff2')
+		format('woff2');
+	unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 600;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-greek-600-normal.woff2')
+		format('woff2');
+	unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 600;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-latin-ext-600-normal.woff2')
+		format('woff2');
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+		U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+		U+A720-A7FF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 600;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-latin-600-normal.woff2')
+		format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 700;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-greek-ext-700-normal.woff2')
+		format('woff2');
+	unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 700;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-greek-700-normal.woff2')
+		format('woff2');
+	unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 700;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-latin-ext-700-normal.woff2')
+		format('woff2');
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+		U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+		U+A720-A7FF;
+}
+
+@font-face {
+	font-family: 'Noto Serif';
+	font-style: normal;
+	font-display: block;
+	font-weight: 700;
+	src: url('../node_modules/@fontsource/noto-serif/files/noto-serif-latin-700-normal.woff2')
+		format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'Noto Serif Devanagari';
+	font-style: normal;
+	font-display: block;
+	font-weight: 400;
+	src: url('../node_modules/@fontsource/noto-serif-devanagari/files/noto-serif-devanagari-devanagari-400-normal.woff2')
+		format('woff2');
+	unicode-range:
+		U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF,
+		U+11B00-11B09;
+}
+
+@font-face {
+	font-family: 'Noto Serif Devanagari';
+	font-style: normal;
+	font-display: block;
+	font-weight: 600;
+	src: url('../node_modules/@fontsource/noto-serif-devanagari/files/noto-serif-devanagari-devanagari-600-normal.woff2')
+		format('woff2');
+	unicode-range:
+		U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF,
+		U+11B00-11B09;
+}
+
+@font-face {
+	font-family: 'Noto Serif Devanagari';
+	font-style: normal;
+	font-display: block;
+	font-weight: 700;
+	src: url('../node_modules/@fontsource/noto-serif-devanagari/files/noto-serif-devanagari-devanagari-700-normal.woff2')
+		format('woff2');
+	unicode-range:
+		U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF,
+		U+11B00-11B09;
+}
+
+@layer base {
+	[data-theme='manuscript'] {
+		color-scheme: light;
+		--font-serif:
+			'Noto Serif', 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+		--font-reader:
+			'Noto Serif Devanagari', 'Noto Serif', 'Iowan Old Style', 'Palatino Linotype', Palatino,
+			'Book Antiqua', Georgia, serif;
+		--font-sans: 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+		--color-base-100: #fffaf0;
+		--color-base-200: #f4ecd8;
+		--color-base-300: #dfcfaa;
+		--color-base-content: #271b12;
+		--color-primary: #8f1d1d;
+		--color-primary-content: #fff8ec;
+		--color-secondary: #214f77;
+		--color-secondary-content: #f7fbff;
+		--color-accent: #a66b18;
+		--color-accent-content: #fff7e5;
+		--color-neutral: #31261c;
+		--color-neutral-content: #fff8ed;
+		--color-info: #315f7d;
+		--color-info-content: #f4fbff;
+		--color-success: #526f3a;
+		--color-success-content: #fbfff5;
+		--color-warning: #b7791f;
+		--color-warning-content: #fff8e8;
+		--color-error: #a23a2a;
+		--color-error-content: #fff8f1;
+		--radius-selector: 0.25rem;
+		--radius-field: 0.2rem;
+		--radius-box: 0.35rem;
+		--border: 1px;
+	}
+
+	[data-theme='vespers'] {
+		color-scheme: dark;
+		--font-serif:
+			'Noto Serif', 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+		--font-reader:
+			'Noto Serif Devanagari', 'Noto Serif', 'Iowan Old Style', 'Palatino Linotype', Palatino,
+			'Book Antiqua', Georgia, serif;
+		--font-sans: 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+		--color-base-100: #18120d;
+		--color-base-200: #21180f;
+		--color-base-300: #3a2a18;
+		--color-base-content: #f5ead6;
+		--color-primary: #c65044;
+		--color-primary-content: #fff7ef;
+		--color-secondary: #87a9c4;
+		--color-secondary-content: #111820;
+		--color-accent: #d4a548;
+		--color-accent-content: #1f1608;
+		--color-neutral: #f1e4c8;
+		--color-neutral-content: #21180f;
+		--color-info: #8fb5d1;
+		--color-info-content: #101820;
+		--color-success: #a8bd76;
+		--color-success-content: #151b0d;
+		--color-warning: #d8a846;
+		--color-warning-content: #211607;
+		--color-error: #d46d60;
+		--color-error-content: #210d0a;
+		--radius-selector: 0.25rem;
+		--radius-field: 0.2rem;
+		--radius-box: 0.35rem;
+		--border: 1px;
+	}
+
+	html {
+		scrollbar-gutter: stable;
+	}
+
+	body {
+		min-width: 320px;
+		background: var(--color-base-100);
+		font-kerning: normal;
+		text-rendering: optimizeLegibility;
+	}
+}
+
+@layer components {
+	.orion-app-hidden {
+		visibility: hidden;
+		pointer-events: none;
+	}
+
+	.orion-global-loader {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		display: grid;
+		place-items: center;
+		gap: 1rem;
+		align-content: center;
+		background: color-mix(in oklab, var(--color-base-100) 94%, var(--color-base-200));
+		color: var(--color-base-content);
+		padding: 2rem;
+		text-align: center;
+	}
+
+	.orion-global-loader-mark {
+		position: relative;
+		display: grid;
+		width: 5.25rem;
+		height: 5.25rem;
+		place-items: center;
+		border: 3px double color-mix(in oklab, var(--color-accent) 48%, var(--color-base-content));
+		border-radius: 0.35rem;
+		background: color-mix(in oklab, var(--color-base-100) 82%, var(--color-accent) 8%);
+		box-shadow:
+			inset 0 0 0 0.16rem color-mix(in oklab, var(--color-base-100) 82%, transparent),
+			0 1rem 2.5rem color-mix(in oklab, var(--color-neutral) 12%, transparent);
+		animation: orion-loader-breathe 1600ms ease-in-out infinite;
+	}
+
+	.orion-global-loader-mark span {
+		position: absolute;
+		display: block;
+		border: 1px solid color-mix(in oklab, var(--color-primary) 54%, var(--color-accent));
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-primary) 62%, var(--color-accent));
+		animation: orion-loader-pulse 1350ms ease-in-out infinite;
+	}
+
+	.orion-global-loader-mark span:nth-child(1) {
+		width: 0.72rem;
+		height: 0.72rem;
+		translate: -1.05rem -0.75rem;
+	}
+
+	.orion-global-loader-mark span:nth-child(2) {
+		width: 0.92rem;
+		height: 0.92rem;
+		animation-delay: 160ms;
+	}
+
+	.orion-global-loader-mark span:nth-child(3) {
+		width: 0.58rem;
+		height: 0.58rem;
+		animation-delay: 320ms;
+		translate: 1.05rem 0.85rem;
+	}
+
+	.orion-global-loader-copy {
+		max-width: 22rem;
+		font-family: Georgia, serif;
+	}
+
+	.orion-global-loader-copy div {
+		font-size: 1.15rem;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.orion-global-loader-copy p {
+		margin: 0.35rem 0 0;
+		color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+		font-size: 0.92rem;
+		line-height: 1.5;
+	}
+
+	.orion-font-probe {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		pointer-events: none;
+		opacity: 0;
+		font-family: var(--font-reader);
+		font-size: 1rem;
+		font-kerning: normal;
+	}
+
+	.orion-font-probe strong {
+		font-weight: 700;
+	}
+
+	.orion-font-probe em {
+		font-style: italic;
+	}
+
+	.orion-page {
+		background:
+			linear-gradient(
+				90deg,
+				color-mix(in oklab, var(--color-base-300) 18%, transparent) 0,
+				transparent 0.08rem,
+				transparent calc(100% - 0.08rem),
+				color-mix(in oklab, var(--color-base-300) 18%, transparent) 100%
+			),
+			var(--color-base-100);
+		font-family: var(--font-sans);
+	}
+
+	.orion-page > .navbar {
+		background: color-mix(in oklab, var(--color-base-100) 95%, var(--color-base-200));
+		box-shadow: 0 1px 0 color-mix(in oklab, var(--color-base-content) 6%, transparent);
+	}
+
+	.orion-home-seal {
+		border: 1px solid color-mix(in oklab, var(--color-accent) 54%, var(--color-base-content));
+		background: color-mix(in oklab, var(--color-primary) 82%, var(--color-accent));
+		color: var(--color-primary-content);
+		box-shadow:
+			inset 0 0 0 1px color-mix(in oklab, var(--color-base-100) 18%, transparent),
+			0 0.2rem 0 color-mix(in oklab, var(--color-secondary) 18%, transparent);
+	}
+
+	.orion-home-seal svg {
+		filter: drop-shadow(0 1px 0 color-mix(in oklab, var(--color-base-content) 20%, transparent));
+	}
+
+	.orion-page input[type='search'] {
+		font-family: var(--font-reader);
+		font-kerning: normal;
+	}
+
+	.orion-page-shell {
+		position: relative;
+	}
+
+	.orion-sidebar {
+		width: 100%;
+		min-width: 0;
+	}
+
+	.orion-topbar-control {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		border: 1px solid var(--color-base-300);
+		border-radius: var(--radius-field);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-base-200));
+		padding: 0.32rem 0.45rem 0.32rem 0.55rem;
+		color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.78rem;
+		font-variant-caps: small-caps;
+		letter-spacing: 0;
+	}
+
+	.orion-topbar-control select {
+		min-height: 1.55rem;
+		height: 1.55rem;
+		padding-inline: 0.45rem 1.45rem;
+		font-family: var(--font-sans);
+		font-size: 0.76rem;
+		font-variant-caps: normal;
+	}
+
+	.orion-manuscript-panel {
+		border: 1px solid var(--color-base-300);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 94%, var(--color-base-200));
+		box-shadow:
+			inset 0 0 0 1px color-mix(in oklab, var(--color-base-100) 68%, transparent),
+			0 0.55rem 1.4rem color-mix(in oklab, var(--color-neutral) 6%, transparent);
+	}
+
+	.orion-entry-card {
+		border: 1px solid var(--color-base-300);
+		border-left-width: 4px;
+		border-radius: var(--radius-box);
+		background: var(--color-base-100);
+		box-shadow: 0 0.5rem 1.5rem color-mix(in oklab, var(--color-neutral) 7%, transparent);
+	}
+
+	.orion-result-group {
+		position: relative;
+		display: grid;
+		gap: 1rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 96%, var(--color-base-200));
+		padding: 1rem;
+		box-shadow: 0 0.35rem 1rem color-mix(in oklab, var(--color-neutral) 5%, transparent);
+	}
+
+	.orion-result-group::before {
+		position: absolute;
+		inset: 0.5rem 0.7rem auto;
+		height: 1px;
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-accent) 46%, var(--color-base-content));
+		content: '';
+		opacity: 0.26;
+	}
+
+	.orion-result-group-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		border-block-end: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		padding: 0.65rem 0.25rem 0.85rem;
+	}
+
+	.orion-entry-bookplate {
+		--orion-illuminated-fill: color-mix(in oklab, var(--color-primary) 64%, var(--color-accent));
+		--orion-illuminated-fill-left: 0.88rem;
+		--orion-illuminated-fill-width: 4.25rem;
+		--orion-illuminated-rise-height: 1.02rem;
+
+		position: relative;
+		max-width: min(100%, 68ch);
+		overflow: visible;
+		border: 2px double color-mix(in oklab, var(--color-accent) 34%, var(--color-base-content));
+		border-inline-start: 0.24rem solid
+			color-mix(in oklab, var(--color-secondary) 42%, var(--color-base-content));
+		border-radius: 0.28rem 0.18rem 0.18rem 0.28rem;
+		background: color-mix(in oklab, var(--color-base-100) 98%, var(--color-accent) 2%);
+		padding: 0.78rem 0.98rem 0.82rem;
+		box-shadow:
+			inset 0 0 0 1px color-mix(in oklab, var(--color-base-content) 4%, transparent),
+			0 0.32rem 0.8rem color-mix(in oklab, var(--color-neutral) 4%, transparent);
+	}
+
+	.orion-entry-bookplate::before {
+		display: none;
+	}
+
+	.orion-entry-bookplate::after {
+		display: none;
+	}
+
+	.orion-illuminated-title {
+		position: relative;
+		z-index: 2;
+		display: flow-root;
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 86%, var(--color-primary));
+		font-family: var(--font-reader);
+		font-feature-settings:
+			'kern' 1,
+			'liga' 1;
+		font-kerning: normal;
+		overflow-wrap: anywhere;
+		text-shadow: 0 1px 0 color-mix(in oklab, var(--color-base-100) 88%, transparent);
+	}
+
+	.orion-illuminated-title::first-letter {
+		float: left;
+		margin: 0.04rem 0.5rem 0 0;
+		border: 0;
+		border-radius: 0.2rem;
+		background: var(--orion-illuminated-fill);
+		padding: 0 0.28rem 0.42rem;
+		color: var(--color-primary-content);
+		font-size: 1.75em;
+		line-height: 1;
+		box-shadow:
+			0.07rem 0.08rem 0 color-mix(in oklab, var(--color-secondary) 18%, transparent),
+			0 0.18rem 0.45rem color-mix(in oklab, var(--color-neutral) 6%, transparent);
+	}
+
+	.orion-illuminated-title-explicit,
+	.orion-illuminated-title-devanagari {
+		display: block;
+		overflow: visible;
+		overflow-wrap: normal;
+	}
+
+	.orion-illuminated-title-explicit::first-letter,
+	.orion-illuminated-title-devanagari::first-letter {
+		float: none;
+		margin: 0;
+		border: 0;
+		background: transparent;
+		padding: 0;
+		color: inherit;
+		font-size: inherit;
+		line-height: inherit;
+		box-shadow: none;
+	}
+
+	.orion-plain-title {
+		position: relative;
+		z-index: 2;
+		display: flow-root;
+		max-width: 100%;
+		color: color-mix(in oklab, var(--color-base-content) 88%, var(--color-primary));
+		overflow-wrap: anywhere;
+	}
+
+	.orion-plain-initial {
+		float: left;
+		margin: 0.04rem 0.5rem 0 0;
+		border: 0;
+		border-radius: 0.2rem;
+		background: var(--orion-illuminated-fill);
+		padding: 0 0.28rem 0.42rem;
+		color: var(--color-primary-content);
+		font-size: 1.75em;
+		line-height: 1;
+		box-shadow:
+			0.07rem 0.08rem 0 color-mix(in oklab, var(--color-secondary) 18%, transparent),
+			0 0.18rem 0.45rem color-mix(in oklab, var(--color-neutral) 6%, transparent);
+	}
+
+	.orion-plain-initial-glyph {
+		display: inline-block;
+		line-height: 1;
+	}
+
+	.orion-plain-rest {
+		overflow-wrap: anywhere;
+	}
+
+	.orion-devanagari-title {
+		--orion-deva-title-y: -0.1em;
+		--orion-deva-initial-glyph-y: -0.13em;
+		--orion-deva-initial-fill-bleed-block: 0.18em;
+		--orion-deva-connector-width: 0.38em;
+		--orion-deva-connector-x: -0.07em;
+		--orion-deva-connector-y: 0.22em;
+		--orion-deva-rest-x: -0.29em;
+		--orion-deva-rest-y: -0.02em;
+
+		position: relative;
+		z-index: 2;
+		display: inline-flex;
+		isolation: isolate;
+		max-width: 100%;
+		align-items: flex-start;
+		color: color-mix(in oklab, var(--color-base-content) 86%, var(--color-primary));
+		transform: translateY(var(--orion-deva-title-y));
+		white-space: nowrap;
+	}
+
+	.orion-devanagari-initial {
+		position: relative;
+		z-index: 2;
+		display: inline-grid;
+		isolation: isolate;
+		overflow: visible;
+		place-items: center;
+		margin: 0;
+		border: 0;
+		border-radius: 0.2rem;
+		background: var(--orion-illuminated-fill);
+		padding: 0 0.28rem 0.42rem;
+		color: var(--color-primary-content);
+		font-size: 1.75em;
+		line-height: 1;
+		box-shadow:
+			0.07rem 0.08rem 0 color-mix(in oklab, var(--color-secondary) 18%, transparent),
+			0 0.18rem 0.45rem color-mix(in oklab, var(--color-neutral) 6%, transparent);
+	}
+
+	.orion-devanagari-initial::before {
+		position: absolute;
+		z-index: -1;
+		top: calc(-1 * var(--orion-deva-initial-fill-bleed-block));
+		bottom: 0;
+		inset-inline: -1px;
+		border-radius: inherit;
+		background: inherit;
+		content: '';
+	}
+
+	.orion-devanagari-initial-glyph {
+		display: inline-block;
+		line-height: 1;
+		transform: translateY(var(--orion-deva-initial-glyph-y));
+	}
+
+	.orion-devanagari-connector {
+		position: relative;
+		z-index: 5;
+		display: inline-block;
+		flex: 0 0 var(--orion-deva-connector-width);
+		height: 1em;
+		margin-left: -0.04em;
+		pointer-events: none;
+		transform: translate(var(--orion-deva-connector-x), var(--orion-deva-connector-y));
+	}
+
+	.orion-devanagari-connector::before {
+		position: absolute;
+		z-index: 5;
+		top: 0;
+		right: -0.18em;
+		left: -0.08em;
+		height: 0.085em;
+		border-radius: 999px;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			currentColor 28%,
+			currentColor 74%,
+			transparent 100%
+		);
+		content: '';
+		opacity: 0.76;
+		filter: drop-shadow(0 0.035em 0 color-mix(in oklab, var(--color-base-100) 72%, transparent));
+	}
+
+	.orion-devanagari-rest {
+		position: relative;
+		z-index: 2;
+		display: inline-block;
+		min-width: 0;
+		margin-left: var(--orion-deva-rest-x);
+		line-height: 1.05;
+		overflow-wrap: anywhere;
+		transform: translateY(var(--orion-deva-rest-y));
+	}
+
+	.orion-headword-forms {
+		position: relative;
+		z-index: 1;
+		clear: both;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem 0.55rem;
+		margin-top: 0.42rem;
+		color: color-mix(in oklab, var(--color-base-content) 56%, transparent);
+		font-family: var(--font-serif);
+		font-kerning: normal;
+		font-size: 0.78rem;
+		line-height: 1.4;
+	}
+
+	.orion-headword-form {
+		display: inline-flex;
+		min-width: 0;
+		align-items: baseline;
+		gap: 0.28rem;
+	}
+
+	.orion-headword-form-label {
+		color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+		font-size: 0.68rem;
+		font-variant-caps: small-caps;
+		font-weight: 600;
+		letter-spacing: 0;
+	}
+
+	.orion-headword-form code {
+		min-width: 0;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 9%, transparent);
+		border-radius: 0.24rem;
+		background: color-mix(in oklab, var(--color-base-200) 62%, transparent);
+		padding: 0.02rem 0.28rem;
+		color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+		font-size: 0.72rem;
+		overflow-wrap: anywhere;
+	}
+
+	.orion-entry-lead {
+		position: relative;
+		z-index: 1;
+		clear: both;
+		margin: 0.45rem 0 0;
+		max-width: 62ch;
+		border-top: 1px solid color-mix(in oklab, var(--color-accent) 18%, transparent);
+		border-radius: 0 0 0.16rem 0.16rem;
+		background: color-mix(in oklab, var(--color-base-100) 99%, var(--color-accent) 1%);
+		padding: 0.5rem 0.7rem 0.05rem;
+		color: color-mix(in oklab, var(--color-base-content) 64%, transparent);
+		font-family: var(--font-reader);
+		font-kerning: normal;
+		font-size: 0.98rem;
+		line-height: 1.65;
+		text-indent: 0;
+		text-wrap: pretty;
+	}
+
+	.orion-entry-lead::before {
+		display: none;
+	}
+
+	.orion-entry-source-line {
+		margin: 0.5rem 0 0 0.3rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.85rem;
+		line-height: 1.4;
+	}
+
+	.orion-entry-source-line::before {
+		display: inline-block;
+		width: 1.5rem;
+		margin-right: 0.45rem;
+		border-top: 1px solid color-mix(in oklab, var(--color-accent) 28%, transparent);
+		content: '';
+		vertical-align: middle;
+	}
+
+	.orion-sense-list {
+		display: grid;
+		gap: 0;
+	}
+
+	.orion-sense-block {
+		border-left-width: 4px;
+		border-left-style: solid;
+		border-left-color: transparent;
+		padding: 1.25rem 0.25rem 1.25rem 1rem;
+	}
+
+	.orion-sense-block + .orion-sense-block {
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+	}
+
+	.orion-entry-reader {
+		position: relative;
+		display: grid;
+		gap: 0.85rem;
+		border-left-width: 4px;
+		border-left-style: solid;
+		border-left-color: transparent;
+		padding: 0.25rem 0.25rem 0.25rem 0.7rem;
+	}
+
+	.orion-dictionary-witnesses {
+		scroll-margin-top: 5.75rem;
+	}
+
+	.orion-translation-arrived .orion-entry-reader {
+		animation: orion-translation-leaf 1.6s ease-out;
+	}
+
+	.orion-translation-arrived .orion-reader-sections {
+		animation: orion-translation-ink 1.6s ease-out;
+	}
+
+	.orion-translation-arrived .orion-entry-reader::after {
+		position: absolute;
+		inset: 0.1rem 0 0.1rem 0.35rem;
+		border-left: 2px double color-mix(in oklab, var(--color-primary) 52%, var(--color-accent));
+		border-radius: 0.28rem;
+		content: '';
+		opacity: 0;
+		pointer-events: none;
+		animation: orion-translation-gild 1.6s ease-out;
+	}
+
+	.orion-reader-sections {
+		display: grid;
+		gap: 0;
+		border-block: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		background: color-mix(in oklab, var(--color-base-100) 92%, var(--color-base-200));
+	}
+
+	.orion-reader-section {
+		display: grid;
+		grid-template-columns: 0.85rem minmax(0, 1fr);
+		gap: 0.65rem;
+		padding: 0.8rem 0.75rem 0.8rem 0.85rem;
+	}
+
+	.orion-reader-section + .orion-reader-section {
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+	}
+
+	.orion-reader-section-outline,
+	.orion-reader-section-diogenes {
+		margin-left: var(--orion-indent, 0);
+		padding-top: 0.65rem;
+		padding-bottom: 0.65rem;
+	}
+
+	.orion-reader-section-root {
+		margin-left: 0;
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-accent) 4%);
+	}
+
+	.orion-reader-section-heading {
+		background: color-mix(in oklab, var(--color-base-100) 92%, var(--color-secondary) 4%);
+	}
+
+	.orion-reader-marker {
+		position: relative;
+		display: grid;
+		align-content: start;
+		justify-items: center;
+		min-width: 0;
+		padding-top: 0.42rem;
+	}
+
+	.orion-reader-marker::before {
+		display: block;
+		width: 0.42rem;
+		height: 0.42rem;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 68%, var(--color-base-content));
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 70%, var(--color-accent));
+		content: '';
+	}
+
+	.orion-branch-toggle {
+		position: relative;
+		z-index: 1;
+		display: inline-grid;
+		width: 1.15rem;
+		height: 1.15rem;
+		place-items: center;
+		margin-top: -0.58rem;
+		border: 0;
+		border-radius: 999px;
+		background: transparent;
+		color: color-mix(in oklab, var(--color-base-content) 62%, var(--color-primary));
+		cursor: pointer;
+		padding: 0;
+		transition:
+			color 140ms ease,
+			background-color 140ms ease,
+			transform 140ms ease;
+	}
+
+	.orion-branch-toggle::before {
+		position: absolute;
+		inset: 0.18rem;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 24%, transparent);
+		border-radius: 999px;
+		content: '';
+		opacity: 0;
+		transition: opacity 140ms ease;
+	}
+
+	.orion-branch-toggle:hover {
+		background: color-mix(in oklab, var(--color-base-100) 62%, var(--color-accent) 10%);
+		color: color-mix(in oklab, var(--color-base-content) 78%, var(--color-primary));
+		transform: scale(1.08);
+	}
+
+	.orion-branch-toggle:hover::before {
+		opacity: 1;
+	}
+
+	.orion-branch-toggle svg {
+		position: relative;
+		z-index: 1;
+		transition: transform 140ms ease;
+	}
+
+	.orion-reader-section-root .orion-reader-marker::before {
+		width: 0.55rem;
+		height: 0.55rem;
+		border-color: var(--color-accent);
+		background: var(--color-accent);
+	}
+
+	.orion-reader-section-heading .orion-reader-marker::before {
+		border-radius: 0.12rem;
+		background: color-mix(in oklab, var(--color-secondary) 56%, var(--color-base-100));
+	}
+
+	.orion-reader-section-cdsl .orion-reader-marker::before {
+		border-radius: 0.08rem;
+		background: color-mix(in oklab, var(--color-secondary) 48%, var(--color-base-100));
+		transform: rotate(45deg);
+	}
+
+	.orion-reader-section-dico .orion-reader-marker::before,
+	.orion-reader-section-gaffiot .orion-reader-marker::before,
+	.orion-reader-section-bailly .orion-reader-marker::before {
+		border-color: color-mix(in oklab, var(--color-success) 70%, var(--color-base-content));
+		background: color-mix(in oklab, var(--color-success) 42%, var(--color-base-100));
+	}
+
+	.orion-reader-section-dico,
+	.orion-reader-section-gaffiot,
+	.orion-reader-section-bailly {
+		background: color-mix(in oklab, var(--color-base-100) 84%, var(--color-success) 5%);
+	}
+
+	.orion-reader-section-outline .orion-reader-marker::after,
+	.orion-reader-section-diogenes .orion-reader-marker::after {
+		position: absolute;
+		top: 1.08rem;
+		right: calc(100% + 0.4rem);
+		display: block;
+		width: var(--orion-rule-width, 0);
+		max-width: 4rem;
+		border-top: 1px solid color-mix(in oklab, var(--color-accent) 34%, transparent);
+		content: '';
+	}
+
+	.orion-reader-copy {
+		display: grid;
+		gap: 0.45rem;
+		min-width: 0;
+		font-family: var(--font-reader);
+		font-feature-settings:
+			'kern' 1,
+			'liga' 1;
+		font-kerning: normal;
+		font-size: var(--orion-section-font, 1.08rem);
+		line-height: 1.75;
+	}
+
+	.orion-reader-copy p {
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.orion-reader-section-root .orion-reader-copy {
+		font-size: 1.08rem;
+	}
+
+	.orion-reader-section-root-compact .orion-reader-copy {
+		font-size: 1.14rem;
+		font-weight: 600;
+	}
+
+	.orion-search-reading {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.45rem;
+		margin-top: 0.55rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.84rem;
+		line-height: 1.35;
+	}
+
+	.orion-search-reading span {
+		color: color-mix(in oklab, var(--color-base-content) 44%, transparent);
+		font-size: 0.68rem;
+		font-variant-caps: small-caps;
+		font-weight: 750;
+		letter-spacing: 0;
+	}
+
+	.orion-search-reading code {
+		overflow-wrap: anywhere;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		border-radius: 0.22rem;
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-base-200));
+		padding: 0.12rem 0.38rem;
+		color: color-mix(in oklab, var(--color-base-content) 78%, var(--color-primary));
+		font-family: var(--font-reader);
+		font-size: 0.84rem;
+	}
+
+	.orion-reader-section-heading .orion-reader-copy {
+		font-size: 1rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		letter-spacing: 0;
+	}
+
+	.orion-paradigm-panel {
+		display: grid;
+		gap: 0.9rem;
+		padding: 1rem;
+	}
+
+	.orion-paradigm-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: start;
+		justify-content: space-between;
+		gap: 0.75rem;
+		border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		padding-bottom: 0.75rem;
+	}
+
+	.orion-paradigm-head h3 {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 84%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-size: 1.4rem;
+		font-weight: 700;
+		line-height: 1.15;
+	}
+
+	.orion-paradigm-head p,
+	.orion-paradigm-head > span {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.82rem;
+		font-variant-caps: small-caps;
+		font-weight: 650;
+		line-height: 1.35;
+	}
+
+	.orion-paradigm-candidates {
+		display: grid;
+		gap: 0.72rem;
+	}
+
+	.orion-paradigm-card {
+		display: grid;
+		gap: 0.62rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-left: 0.2rem solid color-mix(in oklab, var(--color-primary) 48%, var(--color-accent));
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-base-200));
+		padding: 0.75rem;
+	}
+
+	.orion-paradigm-card-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.55rem;
+	}
+
+	.orion-paradigm-card h4 {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 82%, var(--color-secondary));
+		font-family: var(--font-serif);
+		font-size: 1.08rem;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.orion-paradigm-card p {
+		margin: 0.18rem 0 0;
+		color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+		font-size: 0.76rem;
+		line-height: 1.35;
+	}
+
+	.orion-paradigm-load,
+	.orion-paradigm-unresolved {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		border: 1px solid color-mix(in oklab, var(--color-secondary) 28%, var(--color-base-300));
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-secondary) 6%);
+		padding: 0.28rem 0.58rem;
+		color: color-mix(in oklab, var(--color-base-content) 72%, var(--color-secondary));
+		font-size: 0.72rem;
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	.orion-paradigm-load {
+		cursor: pointer;
+	}
+
+	.orion-paradigm-load:disabled {
+		cursor: default;
+		opacity: 0.72;
+	}
+
+	.orion-paradigm-unresolved {
+		border-color: color-mix(in oklab, var(--color-warning) 28%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-warning) 7%);
+		color: color-mix(in oklab, var(--color-base-content) 68%, var(--color-warning));
+	}
+
+	.orion-paradigm-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+	}
+
+	.orion-paradigm-tags span {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 9%, transparent);
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		padding: 0.18rem 0.48rem;
+		color: color-mix(in oklab, var(--color-base-content) 66%, transparent);
+		font-size: 0.72rem;
+		line-height: 1.2;
+	}
+
+	.orion-paradigm-tags b {
+		color: color-mix(in oklab, var(--color-base-content) 46%, transparent);
+		font-family: var(--font-serif);
+		font-variant-caps: small-caps;
+	}
+
+	.orion-paradigm-tags .orion-paradigm-relation {
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-primary) 6%);
+		color: color-mix(in oklab, var(--color-base-content) 68%, var(--color-primary));
+	}
+
+	.orion-paradigm-source,
+	.orion-paradigm-warning,
+	.orion-paradigm-hidden-note {
+		color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+		font-size: 0.72rem;
+		line-height: 1.35;
+	}
+
+	.orion-paradigm-hidden-note {
+		margin: 0;
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		padding-top: 0.35rem;
+		font-family: var(--font-serif);
+		font-variant-caps: small-caps;
+	}
+
+	.orion-paradigm-warning {
+		border: 1px solid color-mix(in oklab, var(--color-warning) 24%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-warning) 7%);
+		padding: 0.45rem 0.55rem;
+	}
+
+	.orion-paradigm-tables {
+		display: grid;
+		gap: 0.7rem;
+		margin-top: 0.15rem;
+	}
+
+	.orion-paradigm-table {
+		display: grid;
+		gap: 0.45rem;
+	}
+
+	.orion-paradigm-table-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.5rem;
+		color: color-mix(in oklab, var(--color-base-content) 66%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.8rem;
+		font-weight: 700;
+	}
+
+	.orion-paradigm-table-head small {
+		color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+		font-size: 0.68rem;
+		font-variant-caps: small-caps;
+	}
+
+	.orion-paradigm-slot-groups {
+		display: grid;
+		gap: 0.58rem;
+	}
+
+	.orion-paradigm-slot-group {
+		display: grid;
+		gap: 0.32rem;
+	}
+
+	.orion-paradigm-slot-group h5 {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 56%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-size: 0.72rem;
+		font-variant-caps: small-caps;
+		font-weight: 750;
+		line-height: 1.2;
+	}
+
+	.orion-paradigm-slots {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+		gap: 0.32rem;
+	}
+
+	.orion-paradigm-slot {
+		display: grid;
+		gap: 0.16rem;
+		min-width: 0;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		border-radius: 0.22rem;
+		background: color-mix(in oklab, var(--color-base-100) 96%, var(--color-base-200));
+		padding: 0.38rem 0.42rem;
+	}
+
+	.orion-paradigm-slot-match {
+		border-color: color-mix(in oklab, var(--color-primary) 36%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 82%, var(--color-primary) 9%);
+	}
+
+	.orion-paradigm-slot-feature {
+		color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+		font-size: 0.64rem;
+		line-height: 1.25;
+	}
+
+	.orion-paradigm-slot-forms {
+		overflow-wrap: anywhere;
+		color: color-mix(in oklab, var(--color-base-content) 82%, var(--color-primary));
+		font-family: var(--font-reader);
+		font-size: 0.86rem;
+		font-weight: 650;
+		line-height: 1.3;
+	}
+
+	.orion-entry-card .card-title {
+		letter-spacing: 0;
+	}
+
+	.orion-gloss-list {
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 9%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 76%, var(--color-base-200));
+	}
+
+	.orion-running-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		border-block: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+		padding-block: 0.45rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.82rem;
+		font-variant-caps: small-caps;
+		letter-spacing: 0;
+	}
+
+	.orion-entry-outline {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 75%, var(--color-base-200));
+		padding: 0.55rem;
+	}
+
+	.orion-entry-outline a {
+		max-width: min(100%, 18rem);
+		overflow: hidden;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 13%, transparent);
+		border-radius: 0.2rem;
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-accent) 6%);
+		padding: 0.25rem 0.5rem;
+		color: color-mix(in oklab, var(--color-base-content) 76%, transparent);
+		font-family: var(--font-reader);
+		font-kerning: normal;
+		font-size: 0.86rem;
+		line-height: 1.35;
+		text-decoration: none;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.orion-entry-outline a:hover {
+		border-color: color-mix(in oklab, var(--color-secondary) 45%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 76%, var(--color-secondary) 10%);
+	}
+
+	.orion-memory-routine {
+		display: grid;
+		gap: 0.6rem;
+		grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: linear-gradient(
+			180deg,
+			color-mix(in oklab, var(--color-base-100) 86%, var(--color-accent) 8%),
+			color-mix(in oklab, var(--color-base-100) 82%, var(--color-secondary) 5%)
+		);
+		padding: 0.7rem;
+	}
+
+	.orion-memory-step {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 0.5rem;
+		align-items: start;
+		min-width: 0;
+		border-left: 2px solid color-mix(in oklab, var(--color-accent) 38%, transparent);
+		padding-left: 0.55rem;
+	}
+
+	.orion-memory-step span {
+		border: 1px solid color-mix(in oklab, var(--color-accent) 48%, var(--color-base-300));
+		border-radius: 0.18rem;
+		background: color-mix(in oklab, var(--color-base-100) 78%, var(--color-accent) 10%);
+		padding: 0.16rem 0.38rem;
+		color: color-mix(in oklab, var(--color-base-content) 76%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-size: 0.76rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		letter-spacing: 0;
+	}
+
+	.orion-memory-step p {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 66%, transparent);
+		font-family: var(--font-reader);
+		font-kerning: normal;
+		font-size: 0.94rem;
+		line-height: 1.45;
+	}
+
+	.orion-component-ledger {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.orion-component-ledger-head {
+		display: flex;
+		align-items: start;
+		justify-content: space-between;
+		gap: 1rem;
+		padding-inline: 0.15rem;
+	}
+
+	.orion-component-ledger-head > div {
+		min-width: 0;
+	}
+
+	.orion-component-ledger-head h2 {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 82%, var(--color-secondary));
+		line-height: 1.1;
+	}
+
+	.orion-component-ledger-head p {
+		margin: 0.25rem 0 0;
+		color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+		font-size: 0.9rem;
+		line-height: 1.45;
+	}
+
+	.orion-component-count {
+		display: inline-flex;
+		flex: 0 0 auto;
+		align-items: baseline;
+		gap: 0.32rem;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 32%, var(--color-base-300));
+		border-radius: 0.28rem;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-accent) 5%);
+		padding: 0.28rem 0.46rem 0.3rem;
+		color: color-mix(in oklab, var(--color-base-content) 64%, var(--color-secondary));
+		font-family: var(--font-serif);
+		font-variant-caps: small-caps;
+		line-height: 1;
+		box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-base-100) 54%, transparent);
+	}
+
+	.orion-component-count span:first-child {
+		color: color-mix(in oklab, var(--color-base-content) 78%, var(--color-primary));
+		font-size: 1.05rem;
+		font-weight: 700;
+	}
+
+	.orion-component-count span:last-child {
+		font-size: 0.7rem;
+		font-weight: 700;
+		white-space: nowrap;
+	}
+
+	.orion-component-list {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.orion-component-source,
+	.orion-component-empty {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.78rem;
+		line-height: 1.35;
+	}
+
+	.orion-component-meanings {
+		display: grid;
+		gap: 0.65rem;
+	}
+
+	.orion-component-meaning {
+		gap: 0.3rem;
+	}
+
+	.orion-section-detail-toggle {
+		display: inline-grid;
+		width: 1.2rem;
+		height: 1.2rem;
+		place-items: center;
+		margin-left: 0.32rem;
+		vertical-align: -0.18rem;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 34%, transparent);
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 76%, var(--color-accent) 6%);
+		padding: 0;
+		color: color-mix(in oklab, var(--color-base-content) 60%, var(--color-accent));
+		cursor: pointer;
+		transition:
+			border-color 140ms ease,
+			background-color 140ms ease,
+			color 140ms ease;
+	}
+
+	.orion-section-detail-toggle:hover {
+		border-color: color-mix(in oklab, var(--color-accent) 58%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 68%, var(--color-accent) 12%);
+		color: color-mix(in oklab, var(--color-base-content) 78%, var(--color-accent));
+	}
+
+	.orion-section-detail-note {
+		margin-left: 0.45rem;
+		color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+		font-family: var(--font-sans);
+		font-size: 0.76rem;
+		line-height: 1.35;
+	}
+
+	.orion-chevron-open {
+		transform: rotate(180deg);
+	}
+
+	.orion-chevron-collapsed {
+		transform: rotate(-90deg);
+	}
+
+	.orion-section-detail-toggle svg {
+		transition: transform 140ms ease;
+	}
+
+	.orion-branch-toggle .orion-branch-mark-collapsed {
+		transform: rotate(45deg) scale(0.86);
+	}
+
+	.orion-entry-more-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.55rem;
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		padding-top: 0.7rem;
+	}
+
+	.orion-entry-more-row p {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+		font-size: 0.78rem;
+	}
+
+	.orion-entry-more {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		border: 1px solid color-mix(in oklab, var(--color-secondary) 30%, var(--color-base-300));
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 84%, var(--color-secondary) 7%);
+		padding: 0.25rem 0.55rem;
+		color: color-mix(in oklab, var(--color-base-content) 70%, var(--color-secondary));
+		font-size: 0.78rem;
+		font-weight: 650;
+		line-height: 1;
+	}
+
+	.orion-entry-controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.65rem;
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		padding-top: 0.75rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+	}
+
+	.orion-entry-source-strip {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.35rem;
+		font-family: var(--font-serif);
+		font-size: 0.82rem;
+		font-variant-caps: small-caps;
+		letter-spacing: 0;
+	}
+
+	.orion-entry-chrome {
+		position: relative;
+		display: grid;
+		flex: 0 0 auto;
+		gap: 0.45rem;
+		justify-items: end;
+		max-width: min(100%, 24rem);
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.78rem;
+	}
+
+	.orion-entry-chrome .orion-entry-source-strip {
+		justify-content: flex-end;
+	}
+
+	.orion-entry-chrome .badge {
+		font-family: var(--font-serif);
+		font-variant-caps: small-caps;
+		letter-spacing: 0;
+	}
+
+	.orion-translator-sigil {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-self: end;
+		gap: 0.16rem;
+		overflow: hidden;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 30%, var(--color-base-300));
+		border-radius: 999px;
+		background:
+			linear-gradient(
+				90deg,
+				color-mix(in oklab, var(--color-base-100) 93%, var(--color-accent) 5%),
+				color-mix(in oklab, var(--color-base-100) 96%, var(--color-secondary) 3%)
+			),
+			var(--color-base-100);
+		padding: 0.18rem 0.48rem 0.19rem 0.36rem;
+		color: color-mix(in oklab, var(--color-base-content) 64%, var(--color-accent));
+		font-family: var(--font-serif);
+		font-size: 0.66rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		letter-spacing: 0;
+		line-height: 1;
+		box-shadow:
+			inset 0 0 0 1px color-mix(in oklab, var(--color-base-100) 55%, transparent),
+			0 0.12rem 0.32rem color-mix(in oklab, var(--color-neutral) 4%, transparent);
+	}
+
+	.orion-translator-sigil::before {
+		display: block;
+		width: 0.38rem;
+		height: 0.38rem;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 54%, var(--color-base-300));
+		border-radius: 0.08rem;
+		background: color-mix(in oklab, var(--color-primary) 54%, var(--color-accent));
+		content: '';
+		opacity: 0.78;
+		transform: rotate(45deg);
+	}
+
+	.orion-translator-sigil span {
+		position: relative;
+		z-index: 1;
+		margin-inline: 0.06rem 0.08rem;
+	}
+
+	.orion-translator-sigil i {
+		position: relative;
+		z-index: 1;
+		display: block;
+		width: 0.22rem;
+		height: 0.22rem;
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-secondary) 62%, var(--color-accent));
+		opacity: 0.34;
+		animation: orion-translator-dot 1250ms ease-in-out infinite;
+	}
+
+	.orion-translator-sigil i:nth-of-type(2) {
+		animation-delay: 140ms;
+	}
+
+	.orion-translator-sigil i:nth-of-type(3) {
+		animation-delay: 280ms;
+	}
+
+	.orion-layer-switch {
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 11%, transparent);
+		border-radius: var(--radius-field);
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		padding: 0.16rem;
+		box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-base-100) 50%, transparent);
+	}
+
+	.orion-layer-switch .btn {
+		min-height: 1.55rem;
+		height: 1.55rem;
+		border-color: transparent;
+		font-family: var(--font-serif);
+		font-size: 0.72rem;
+		font-variant-caps: small-caps;
+		letter-spacing: 0;
+	}
+
+	.orion-layer-switch .btn-secondary {
+		border-color: color-mix(in oklab, var(--color-secondary) 30%, var(--color-base-content));
+		background: color-mix(in oklab, var(--color-secondary) 84%, var(--color-base-100));
+		color: var(--color-secondary-content);
+	}
+
+	.orion-study-panel {
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 76%, var(--color-base-200));
+	}
+
+	.orion-study-panel summary {
+		display: flex;
+		cursor: pointer;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		padding: 0.55rem 0.7rem;
+		color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.9rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		letter-spacing: 0;
+	}
+
+	.orion-study-panel summary::marker,
+	.orion-study-panel summary::-webkit-details-marker {
+		display: none;
+		content: '';
+	}
+
+	.orion-study-panel[open] summary svg {
+		transform: rotate(180deg);
+	}
+
+	.orion-study-panel > :not(summary) {
+		margin: 0.65rem;
+	}
+
+	.orion-page .card-title,
+	.orion-page .fieldset-legend {
+		color: color-mix(in oklab, var(--color-base-content) 78%, var(--color-secondary));
+		font-family: var(--font-serif);
+		font-variant-caps: small-caps;
+		letter-spacing: 0;
+	}
+
+	.orion-marginalia {
+		border-left: 3px solid var(--color-accent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 72%, var(--color-base-200));
+		padding: 1rem;
+	}
+
+	.orion-source-beast {
+		display: inline-grid;
+		width: 1.85rem;
+		height: 1.85rem;
+		place-items: center;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 42%, var(--color-base-300));
+		border-radius: 0.28rem;
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-accent) 7%);
+		color: color-mix(in oklab, var(--color-base-content) 68%, var(--color-secondary));
+		box-shadow: 0 1px 0 color-mix(in oklab, white 40%, transparent) inset;
+	}
+
+	.orion-source-beast-sm {
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 0.22rem;
+	}
+
+	.orion-source-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.45rem;
+	}
+
+	.orion-motd-list {
+		display: grid;
+		gap: 0.45rem;
+	}
+
+	.orion-motd-folio {
+		overflow: hidden;
+	}
+
+	.orion-motd-folio-head {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+		align-items: flex-start;
+		justify-content: space-between;
+	}
+
+	.orion-motd-folio-title {
+		display: flex;
+		min-width: 0;
+		max-width: 38rem;
+		gap: 0.8rem;
+		align-items: flex-start;
+	}
+
+	.orion-motd-emblem {
+		position: relative;
+		display: grid;
+		width: 2.45rem;
+		height: 2.45rem;
+		flex: 0 0 auto;
+		place-items: center;
+		border: 1px double color-mix(in oklab, var(--color-accent) 48%, var(--color-base-300));
+		border-radius: 0.35rem;
+		background:
+			linear-gradient(
+				135deg,
+				color-mix(in oklab, var(--color-base-100) 88%, var(--color-primary) 5%),
+				color-mix(in oklab, var(--color-base-100) 78%, var(--color-accent) 8%)
+			),
+			var(--color-base-100);
+		color: color-mix(in oklab, var(--color-base-content) 70%, var(--color-secondary));
+		box-shadow:
+			inset 0 0 0 0.18rem color-mix(in oklab, var(--color-base-100) 62%, transparent),
+			0 0.2rem 0.8rem color-mix(in oklab, var(--color-base-content) 8%, transparent);
+	}
+
+	.orion-motd-emblem svg:last-child {
+		position: absolute;
+		right: 0.18rem;
+		bottom: 0.18rem;
+		color: color-mix(in oklab, var(--color-primary) 64%, var(--color-accent));
+	}
+
+	.orion-motd-folio .orion-motd-list {
+		grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
+		gap: 0.7rem;
+	}
+
+	.orion-motd-folio .orion-motd-link {
+		min-height: 8.15rem;
+		grid-template-columns: minmax(0, 1fr);
+		align-content: start;
+		gap: 0.2rem;
+		padding: 0.75rem 0.82rem;
+	}
+
+	.orion-motd-folio .orion-motd-gloss {
+		justify-self: start;
+		max-width: none;
+		font-size: 0.86rem;
+		text-align: left;
+	}
+
+	.orion-motd-folio .orion-motd-note {
+		margin-top: 0.12rem;
+	}
+
+	.orion-motd-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		align-items: center;
+	}
+
+	.orion-motd-actions .btn {
+		font-family: var(--font-serif);
+		font-size: 0.72rem;
+		font-variant-caps: small-caps;
+		letter-spacing: 0;
+	}
+
+	.orion-motd-control-skeleton {
+		position: relative;
+		display: block;
+		overflow: hidden;
+		height: 1.5rem;
+		border-radius: var(--radius-selector);
+		background: color-mix(in oklab, var(--color-base-content) 10%, var(--color-base-200));
+		animation: orion-motd-line 1.65s ease-in-out infinite;
+	}
+
+	.orion-motd-control-skeleton::after {
+		position: absolute;
+		inset: -60%;
+		background: radial-gradient(
+			circle at 50% 50%,
+			color-mix(in oklab, var(--color-secondary) 16%, transparent),
+			transparent 58%
+		);
+		content: '';
+		animation: orion-motd-blob 1.7s ease-in-out infinite;
+	}
+
+	.orion-motd-control-skeleton-load {
+		width: 4.7rem;
+	}
+
+	.orion-motd-control-skeleton-refresh {
+		width: 4.25rem;
+		animation-delay: 0.16s;
+	}
+
+	.orion-motd-link {
+		position: relative;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.12rem 0.7rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-left: 0.18rem solid
+			color-mix(in oklab, var(--color-accent) 30%, var(--color-base-content));
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 96%, var(--color-base-200));
+		padding: 0.55rem 0.65rem;
+		color: var(--color-base-content);
+		text-decoration: none;
+		overflow: hidden;
+		transition:
+			border-color 140ms ease,
+			background-color 140ms ease,
+			transform 140ms ease;
+	}
+
+	.orion-motd-link:hover {
+		border-color: color-mix(in oklab, var(--color-secondary) 34%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-accent) 4%);
+		transform: translateY(-1px);
+	}
+
+	.orion-motd-link-active {
+		border-color: color-mix(in oklab, var(--color-secondary) 38%, var(--color-base-content));
+		border-left-color: color-mix(in oklab, var(--color-primary) 54%, var(--color-accent));
+		background: color-mix(in oklab, var(--color-base-100) 89%, var(--color-secondary) 6%);
+		box-shadow: inset 0.14rem 0 0 color-mix(in oklab, var(--color-primary) 52%, var(--color-accent));
+	}
+
+	.orion-motd-list-refreshing .orion-motd-link {
+		animation: orion-motd-refresh-card 1.8s ease-in-out infinite;
+	}
+
+	.orion-motd-list-refreshing .orion-motd-link::after {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			105deg,
+			transparent 0%,
+			color-mix(in oklab, var(--color-accent) 12%, transparent) 38%,
+			color-mix(in oklab, var(--color-secondary) 10%, transparent) 50%,
+			transparent 64%
+		);
+		content: '';
+		pointer-events: none;
+		transform: translateX(-115%);
+		animation: orion-motd-refresh-gloss 1.8s ease-in-out infinite;
+	}
+
+	.orion-motd-lang {
+		color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+		font-size: 0.68rem;
+		font-weight: 700;
+		line-height: 1.1;
+		text-transform: uppercase;
+	}
+
+	.orion-motd-word {
+		grid-column: 1;
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.28rem;
+		min-width: 0;
+		overflow-wrap: anywhere;
+		font-family: var(--font-reader);
+		font-kerning: normal;
+		font-size: 1.08rem;
+		font-weight: 700;
+		line-height: 1.15;
+	}
+
+	.orion-motd-word-grc {
+		color: color-mix(in oklab, var(--color-base-content) 84%, var(--color-secondary));
+		font-size: 1.2rem;
+		font-weight: 600;
+		line-height: 1.05;
+		text-wrap: balance;
+	}
+
+	.orion-motd-word-san {
+		color: color-mix(in oklab, var(--color-base-content) 84%, var(--color-primary));
+		font-size: 1.22rem;
+		font-weight: 600;
+		line-height: 1.28;
+		padding-top: 0.06rem;
+		text-wrap: balance;
+	}
+
+	.orion-motd-word-grc > span:first-child {
+		padding-bottom: 0.05rem;
+		border-bottom: 1px solid color-mix(in oklab, var(--color-accent) 28%, transparent);
+	}
+
+	.orion-motd-word-san > span:first-child {
+		transform: translateY(0.03rem);
+		padding-bottom: 0.05rem;
+		border-bottom: 1px solid color-mix(in oklab, var(--color-primary) 24%, transparent);
+	}
+
+	.orion-motd-lookup {
+		color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.66rem;
+		font-style: italic;
+		font-weight: 600;
+		line-height: 1;
+	}
+
+	.orion-motd-gloss {
+		align-self: start;
+		justify-self: end;
+		max-width: 8.25rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-family: var(--font-reader);
+		font-kerning: normal;
+		font-size: 0.78rem;
+		line-height: 1.25;
+		text-align: right;
+	}
+
+	.orion-motd-note {
+		grid-column: 1 / -1;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.72rem;
+		line-height: 1.35;
+	}
+
+	.orion-motd-action {
+		grid-column: 1 / -1;
+		margin-top: 0.08rem;
+		color: color-mix(in oklab, var(--color-base-content) 64%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-size: 0.68rem;
+		font-style: italic;
+		font-weight: 700;
+		line-height: 1.25;
+	}
+
+	.orion-motd-caveat,
+	.orion-motd-active-label {
+		justify-self: start;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		padding: 0.08rem 0.42rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.64rem;
+		font-weight: 700;
+		line-height: 1.2;
+		text-transform: uppercase;
+	}
+
+	.orion-motd-active-label {
+		color: color-mix(in oklab, var(--color-base-content) 62%, var(--color-primary));
+	}
+
+	.orion-motd-warning {
+		border-left: 0.18rem solid
+			color-mix(in oklab, var(--color-warning) 52%, var(--color-base-content));
+		padding-left: 0.55rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.72rem;
+		line-height: 1.35;
+	}
+
+	.orion-index-skeleton {
+		display: grid;
+		gap: 0.45rem;
+	}
+
+	.orion-index-skeleton span:not(.sr-only) {
+		position: relative;
+		display: block;
+		overflow: hidden;
+		height: 2.35rem;
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-content) 9%, var(--color-base-200));
+		animation: orion-motd-line 1.65s ease-in-out infinite;
+	}
+
+	.orion-index-skeleton span:nth-child(2) {
+		animation-delay: 0.12s;
+	}
+
+	.orion-index-skeleton span:nth-child(3) {
+		animation-delay: 0.24s;
+	}
+
+	.orion-index-skeleton span:not(.sr-only)::after {
+		position: absolute;
+		inset: -55%;
+		background: radial-gradient(
+			circle at 45% 50%,
+			color-mix(in oklab, var(--color-accent) 18%, transparent),
+			transparent 58%
+		);
+		content: '';
+		animation: orion-motd-blob 1.7s ease-in-out infinite;
+	}
+
+	.orion-index-busy {
+		display: inline-grid;
+		width: 1.15rem;
+		height: 1.15rem;
+		place-items: center;
+		margin-left: auto;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 28%, var(--color-base-300));
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 82%, var(--color-accent) 6%);
+		color: color-mix(in oklab, var(--color-base-content) 56%, var(--color-accent));
+	}
+
+	.orion-index-section-rail {
+		display: grid;
+		gap: 0.42rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 9%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-base-200));
+		padding: 0.48rem;
+	}
+
+	.orion-index-section-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.45rem;
+		color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.72rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.orion-index-section-actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.orion-index-section-browse {
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: 0.22rem;
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-accent) 5%);
+		padding: 0.08rem 0.38rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, var(--color-accent));
+		font-size: 0.62rem;
+		font-variant-caps: small-caps;
+		font-weight: 750;
+		line-height: 1.2;
+	}
+
+	.orion-index-section-browse:hover {
+		border-color: color-mix(in oklab, var(--color-accent) 34%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 80%, var(--color-accent) 10%);
+		color: color-mix(in oklab, var(--color-base-content) 82%, var(--color-accent));
+	}
+
+	.orion-index-section-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		max-height: 8.5rem;
+		overflow: auto;
+		padding-right: 0.1rem;
+	}
+
+	.orion-index-section-button {
+		display: inline-grid;
+		min-width: 2.2rem;
+		min-height: 2.25rem;
+		place-items: center;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: 0.24rem;
+		background: color-mix(in oklab, var(--color-base-100) 94%, var(--color-base-200));
+		padding: 0.18rem 0.34rem 0.16rem;
+		color: color-mix(in oklab, var(--color-base-content) 78%, var(--color-primary));
+		cursor: pointer;
+		line-height: 1.05;
+	}
+
+	.orion-index-section-button:hover {
+		border-color: color-mix(in oklab, var(--color-secondary) 34%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-secondary) 7%);
+		color: color-mix(in oklab, var(--color-base-content) 88%, var(--color-secondary));
+	}
+
+	.orion-index-section-button-active {
+		border-color: color-mix(in oklab, var(--color-primary) 48%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 78%, var(--color-primary) 12%);
+		box-shadow:
+			inset 0 0 0 1px color-mix(in oklab, var(--color-primary) 18%, transparent),
+			0 0.14rem 0.32rem color-mix(in oklab, var(--color-primary) 8%, transparent);
+		color: color-mix(in oklab, var(--color-base-content) 90%, var(--color-primary));
+	}
+
+	.orion-index-section-button-unavailable,
+	.orion-index-section-button:disabled {
+		border-color: color-mix(in oklab, var(--color-base-content) 7%, transparent);
+		background: color-mix(in oklab, var(--color-base-100) 76%, var(--color-base-200));
+		color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
+		cursor: default;
+		opacity: 0.62;
+	}
+
+	.orion-index-section-button span {
+		font-family: var(--font-reader);
+		font-size: 1rem;
+		font-weight: 700;
+	}
+
+	.orion-index-section-button small {
+		max-width: 3rem;
+		overflow: hidden;
+		color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+		font-size: 0.54rem;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.orion-index-groups {
+		display: grid;
+		gap: 0.65rem;
+	}
+
+	.orion-index-group {
+		display: grid;
+		gap: 0.42rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		padding: 0.48rem;
+	}
+
+	.orion-index-group-head {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		gap: 0.45rem;
+		align-items: center;
+		color: color-mix(in oklab, var(--color-base-content) 64%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.74rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.orion-index-rows {
+		display: grid;
+		gap: 0.26rem;
+	}
+
+	.orion-index-row {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.28rem;
+		align-items: stretch;
+	}
+
+	.orion-index-link {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.04rem 0.45rem;
+		min-width: 0;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 9%, transparent);
+		border-left: 0.18rem solid
+			color-mix(in oklab, var(--color-accent) 26%, var(--color-base-content));
+		border-radius: 0.24rem;
+		background: color-mix(in oklab, var(--color-base-100) 96%, var(--color-base-200));
+		padding: 0.38rem 0.48rem;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.orion-index-link:hover {
+		border-color: color-mix(in oklab, var(--color-secondary) 36%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-secondary) 6%);
+	}
+
+	.orion-index-row-anchor .orion-index-link {
+		border-left-color: color-mix(in oklab, var(--color-primary) 58%, var(--color-accent));
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-accent) 8%);
+	}
+
+	.orion-index-row-matched .orion-index-link {
+		border-color: color-mix(in oklab, var(--color-primary) 24%, var(--color-base-300));
+		border-left-color: color-mix(in oklab, var(--color-primary) 62%, var(--color-accent));
+		background: color-mix(in oklab, var(--color-base-100) 84%, var(--color-primary) 7%);
+	}
+
+	.orion-index-word {
+		min-width: 0;
+		overflow: hidden;
+		color: color-mix(in oklab, var(--color-base-content) 84%, var(--color-primary));
+		font-family: var(--font-reader);
+		font-size: 0.93rem;
+		font-weight: 650;
+		line-height: 1.25;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.orion-index-source-list {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: end;
+		gap: 0.18rem;
+	}
+
+	.orion-index-source-list span {
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-base-200));
+		padding: 0.04rem 0.28rem;
+		color: color-mix(in oklab, var(--color-base-content) 54%, var(--color-secondary));
+		font-family: var(--font-serif);
+		font-size: 0.58rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.orion-index-lookup,
+	.orion-index-entry-count,
+	.orion-index-position {
+		color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+		font-size: 0.68rem;
+		line-height: 1.25;
+	}
+
+	.orion-index-lookup,
+	.orion-index-entry-count {
+		grid-column: 1;
+		min-width: 0;
+		overflow: hidden;
+		font-family: var(--font-reader);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.orion-index-entry-count {
+		color: color-mix(in oklab, var(--color-base-content) 54%, var(--color-accent));
+		font-family: var(--font-serif);
+		font-variant-caps: small-caps;
+		font-weight: 700;
+	}
+
+	.orion-index-position {
+		grid-column: 2;
+		grid-row: 1 / span 2;
+		align-self: center;
+		font-family: var(--font-serif);
+		font-variant-caps: small-caps;
+	}
+
+	.orion-index-earmark {
+		display: inline-grid;
+		width: 2rem;
+		min-width: 2rem;
+		place-items: center;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: 0.24rem;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		color: color-mix(in oklab, var(--color-base-content) 58%, var(--color-accent));
+		cursor: pointer;
+	}
+
+	.orion-index-earmark:hover {
+		border-color: color-mix(in oklab, var(--color-accent) 40%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 82%, var(--color-accent) 8%);
+		color: color-mix(in oklab, var(--color-base-content) 76%, var(--color-primary));
+	}
+
+	.orion-earmarks {
+		display: grid;
+		gap: 0.42rem;
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 9%, transparent);
+		padding-top: 0.62rem;
+	}
+
+	.orion-earmarks-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+
+	.orion-earmarks-title {
+		color: color-mix(in oklab, var(--color-base-content) 56%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.76rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+	}
+
+	.orion-earmarks-clear {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.22rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		padding: 0.14rem 0.42rem;
+		color: color-mix(in oklab, var(--color-base-content) 56%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-size: 0.64rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		line-height: 1;
+		cursor: pointer;
+	}
+
+	.orion-earmarks-clear:hover {
+		border-color: color-mix(in oklab, var(--color-primary) 32%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 82%, var(--color-primary) 7%);
+	}
+
+	.orion-earmark-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+	}
+
+	.orion-earmark-link {
+		display: inline-flex;
+		max-width: 100%;
+		align-items: center;
+		gap: 0.32rem;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 28%, var(--color-base-300));
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 82%, var(--color-accent) 7%);
+		padding: 0.22rem 0.48rem;
+		color: color-mix(in oklab, var(--color-base-content) 72%, var(--color-secondary));
+		font-family: var(--font-reader);
+		font-size: 0.78rem;
+		line-height: 1.2;
+		text-decoration: none;
+	}
+
+	.orion-earmark-link span {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.orion-earmark-link small {
+		color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.62rem;
+		font-variant-caps: small-caps;
+	}
+
+	.orion-motd-skeleton-card {
+		pointer-events: none;
+	}
+
+	.orion-motd-skeleton-card:nth-child(2) {
+		border-left-color: color-mix(in oklab, var(--color-secondary) 28%, var(--color-base-content));
+	}
+
+	.orion-motd-skeleton-card:nth-child(3) {
+		border-left-color: color-mix(in oklab, var(--color-primary) 28%, var(--color-base-content));
+	}
+
+	.orion-motd-skeleton-card:nth-child(2) .orion-motd-skeleton-block::after {
+		animation-delay: 0.18s;
+	}
+
+	.orion-motd-skeleton-card:nth-child(3) .orion-motd-skeleton-block::after {
+		animation-delay: 0.36s;
+	}
+
+	.orion-motd-skeleton-block {
+		position: relative;
+		display: block;
+		overflow: hidden;
+		border-radius: 0.38rem;
+		background: color-mix(in oklab, var(--color-base-content) 11%, var(--color-base-200));
+		animation: orion-motd-line 1.65s ease-in-out infinite;
+	}
+
+	.orion-motd-skeleton-block::after {
+		position: absolute;
+		inset: -40%;
+		background: radial-gradient(
+			circle at 50% 50%,
+			color-mix(in oklab, var(--color-accent) 20%, transparent),
+			transparent 58%
+		);
+		content: '';
+		animation: orion-motd-blob 1.7s ease-in-out infinite;
+	}
+
+	.orion-motd-skeleton-heading {
+		grid-column: 1 / -1;
+		width: 78%;
+		height: 1.15rem;
+		animation-delay: 0.08s;
+	}
+
+	.orion-motd-skeleton-card:nth-child(2) .orion-motd-skeleton-heading {
+		width: 66%;
+	}
+
+	.orion-motd-skeleton-card:nth-child(3) .orion-motd-skeleton-heading {
+		width: 72%;
+	}
+
+	.orion-motd-skeleton-gloss {
+		grid-column: 1 / -1;
+		width: 100%;
+		height: 2.75rem;
+		animation-delay: 0.2s;
+	}
+
+	.orion-motd-skeleton-card:nth-child(2) .orion-motd-skeleton-gloss {
+		height: 2.35rem;
+	}
+
+	.orion-motd-skeleton-card:nth-child(3) .orion-motd-skeleton-gloss {
+		height: 2.55rem;
+	}
+
+	.orion-motd-skeleton-foot {
+		grid-column: 1 / -1;
+		width: 42%;
+		height: 0.9rem;
+		border-radius: 999px;
+		animation-delay: 0.32s;
+	}
+
+	.orion-motd-skeleton-card:nth-child(2) .orion-motd-skeleton-foot {
+		width: 36%;
+	}
+
+	.orion-motd-skeleton-card:nth-child(3) .orion-motd-skeleton-foot {
+		width: 48%;
+	}
+
+	.orion-tool-chip {
+		position: relative;
+		display: grid;
+		min-width: 0;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 0.45rem;
+		align-items: center;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 11%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 94%, var(--color-base-200));
+		padding: 0.42rem 0.5rem;
+		color: var(--color-base-content);
+		text-align: left;
+		transition:
+			border-color 140ms ease,
+			background-color 140ms ease,
+			box-shadow 140ms ease;
+	}
+
+	.orion-tool-chip:hover {
+		border-color: color-mix(in oklab, var(--color-secondary) 45%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-accent) 5%);
+	}
+
+	.orion-tool-chip-active {
+		border-color: color-mix(in oklab, var(--color-secondary) 62%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-secondary) 6%);
+		box-shadow: inset 0.16rem 0 0
+			color-mix(in oklab, var(--color-accent) 78%, var(--color-secondary));
+	}
+
+	.orion-tool-icon {
+		display: grid;
+		width: 1.8rem;
+		height: 1.8rem;
+		place-items: center;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 34%, var(--color-base-300));
+		border-radius: 0.26rem;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-accent) 6%);
+		color: color-mix(in oklab, var(--color-base-content) 66%, var(--color-secondary));
+	}
+
+	.orion-tool-chip-label {
+		min-width: 0;
+		overflow: hidden;
+		font-size: 0.8rem;
+		font-weight: 650;
+		line-height: 1.15;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.orion-tool-check {
+		position: absolute;
+		top: 0.24rem;
+		right: 0.24rem;
+		color: var(--color-success);
+	}
+
+	.orion-source-row {
+		display: flex;
+		width: 100%;
+		min-width: 0;
+		align-items: flex-start;
+		gap: 0.75rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 14%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 92%, var(--color-base-200));
+		padding: 0.75rem;
+		color: var(--color-base-content);
+		text-align: start;
+		transition:
+			border-color 160ms ease,
+			background-color 160ms ease,
+			box-shadow 160ms ease,
+			transform 160ms ease;
+	}
+
+	.orion-source-row:hover {
+		border-color: color-mix(in oklab, var(--color-secondary) 45%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-accent) 14%);
+	}
+
+	.orion-source-row-active {
+		border-color: color-mix(in oklab, var(--color-secondary) 70%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 78%, var(--color-secondary) 12%);
+		box-shadow: inset 0.25rem 0 0 var(--color-accent);
+	}
+
+	.orion-source-mark {
+		display: grid;
+		min-width: 2.25rem;
+		height: 2.25rem;
+		place-items: center;
+		border-radius: 0.25rem;
+		background: color-mix(in oklab, var(--color-secondary) 14%, var(--color-base-100));
+		color: var(--color-secondary);
+		font-size: 0.72rem;
+		font-weight: 700;
+		line-height: 1;
+		text-align: center;
+	}
+
+	.orion-source-row-active .orion-source-mark {
+		background: var(--color-secondary);
+		color: var(--color-secondary-content);
+	}
+
+	.orion-pulse-widget {
+		position: relative;
+		display: grid;
+		width: 8rem;
+		height: 8rem;
+		place-items: center;
+	}
+
+	.orion-pulse-widget::before,
+	.orion-pulse-widget::after {
+		position: absolute;
+		inset: 1rem;
+		border: 1px solid color-mix(in oklab, var(--color-primary) 45%, transparent);
+		border-radius: 999px;
+		content: '';
+		animation: orion-pulse-ring 1.8s ease-out infinite;
+	}
+
+	.orion-pulse-widget::after {
+		animation-delay: 0.55s;
+	}
+
+	.orion-pulse-core {
+		z-index: 1;
+		display: grid;
+		width: 4.5rem;
+		height: 4.5rem;
+		place-items: center;
+		border-radius: 1rem;
+		background: var(--color-secondary);
+		color: var(--color-secondary-content);
+		box-shadow: 0 1rem 2rem color-mix(in oklab, var(--color-secondary) 25%, transparent);
+		animation: orion-pulse-core 1.3s ease-in-out infinite;
+	}
+
+	.orion-pulse-dot {
+		position: absolute;
+		width: 0.75rem;
+		height: 0.75rem;
+		border-radius: 999px;
+		background: var(--color-secondary);
+		animation: orion-pulse-dot 1.4s ease-in-out infinite;
+	}
+
+	.orion-pulse-dot-a {
+		top: 1rem;
+		right: 1.5rem;
+	}
+
+	.orion-pulse-dot-b {
+		bottom: 1.5rem;
+		right: 1rem;
+		animation-delay: 0.2s;
+	}
+
+	.orion-pulse-dot-c {
+		bottom: 2rem;
+		left: 1rem;
+		animation-delay: 0.4s;
+	}
+
+	.orion-endpoint-code {
+		min-width: 0;
+	}
+
+	.orion-endpoint-code::before {
+		display: none;
+	}
+
+	.orion-endpoint-code pre {
+		min-width: 0;
+		padding-inline-start: 1rem;
+	}
+
+	.orion-reader-shell {
+		position: relative;
+	}
+
+	.orion-reader-sidebar {
+		min-width: 0;
+	}
+
+	.orion-reader-desk-passage {
+		max-width: 72rem;
+		margin-inline: auto;
+		overflow: hidden;
+	}
+
+	.orion-reader-desk-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		padding: 1rem 1.15rem;
+	}
+
+	.orion-reader-desk-kicker {
+		color: color-mix(in oklab, var(--color-base-content) 56%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.72rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		letter-spacing: 0;
+	}
+
+	.orion-reader-desk-head h2 {
+		margin-top: 0.18rem;
+		font-family: var(--font-serif);
+		font-size: clamp(1.15rem, 2.3vw, 1.7rem);
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.orion-reader-work-heading {
+		display: flex;
+		min-width: 0;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.35rem;
+	}
+
+	.orion-reader-work-heading small,
+	.orion-reader-page-work-label small,
+	.orion-reader-work-row strong small {
+		color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.68em;
+		font-weight: 600;
+		line-height: 1;
+	}
+
+	.orion-reader-page-work-label {
+		display: inline-flex;
+		min-width: 0;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.3rem;
+	}
+
+	.orion-reader-desk-author {
+		border: 0;
+		background: transparent;
+		color: color-mix(in oklab, var(--color-base-content) 76%, var(--color-primary));
+		cursor: pointer;
+		font: inherit;
+		font-weight: 750;
+		padding: 0;
+		text-align: left;
+	}
+
+	.orion-reader-desk-author::after {
+		content: ',';
+		color: color-mix(in oklab, var(--color-base-content) 64%, transparent);
+	}
+
+	.orion-reader-desk-author:hover:not(:disabled) {
+		text-decoration: underline;
+		text-underline-offset: 0.16em;
+	}
+
+	.orion-reader-desk-author:disabled {
+		color: inherit;
+		cursor: default;
+	}
+
+	.orion-reader-desk-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+
+	.orion-reader-desk-citation {
+		display: grid;
+		justify-items: end;
+		gap: 0.1rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-accent) 5%);
+		padding: 0.42rem 0.55rem;
+		white-space: nowrap;
+	}
+
+	.orion-reader-desk-citation span {
+		color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+		font-size: 0.62rem;
+		font-weight: 700;
+		text-transform: uppercase;
+	}
+
+	.orion-reader-desk-citation strong {
+		font-family: var(--font-serif);
+		font-size: 1rem;
+		line-height: 1;
+	}
+
+	.orion-reader-page-nav {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+		align-items: center;
+		gap: 0.75rem;
+		border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-base-200));
+		padding: 0.7rem 1rem;
+	}
+
+	.orion-reader-page-nav-bottom {
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		border-bottom: 0;
+	}
+
+	.orion-reader-page-nav > div {
+		display: grid;
+		justify-items: center;
+		gap: 0.1rem;
+		max-width: 22rem;
+		color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.72rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		line-height: 1.1;
+		overflow: hidden;
+		white-space: nowrap;
+	}
+
+	.orion-reader-page-nav > div span {
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.orion-reader-page-nav > div strong {
+		color: color-mix(in oklab, var(--color-base-content) 82%, var(--color-primary));
+		font-size: 1rem;
+		font-variant-caps: normal;
+	}
+
+	.orion-reader-page-nav button:first-child {
+		justify-self: start;
+	}
+
+	.orion-reader-page-nav button:last-child {
+		justify-self: end;
+	}
+
+	.orion-reader-page-nav button span {
+		margin-left: 0.25rem;
+		color: color-mix(in oklab, currentColor 72%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.72rem;
+	}
+
+	.orion-reader-leaf {
+		display: grid;
+		gap: 0.2rem;
+		min-height: 28rem;
+		padding: clamp(1.35rem, 3.4vw, 3rem) clamp(1rem, 3vw, 2.4rem);
+		background:
+			linear-gradient(
+				90deg,
+				color-mix(in oklab, var(--color-accent) 8%, transparent),
+				transparent 12%,
+				transparent 88%,
+				color-mix(in oklab, var(--color-accent) 8%, transparent)
+			),
+			color-mix(in oklab, var(--color-base-100) 98%, var(--color-accent) 2%);
+		box-shadow:
+			inset 0.9rem 0 1.2rem -1.2rem color-mix(in oklab, var(--color-neutral) 24%, transparent),
+			inset -0.9rem 0 1.2rem -1.2rem color-mix(in oklab, var(--color-neutral) 16%, transparent);
+	}
+
+	.orion-reader-leaf-line {
+		display: grid;
+		grid-template-columns: minmax(3.5rem, 4.5rem) minmax(0, 58rem);
+		align-items: baseline;
+		gap: 0.9rem;
+		justify-content: center;
+		border-left: 0.2rem solid transparent;
+		border-radius: 0.18rem;
+		padding: 0.18rem 0.4rem 0.18rem 0.2rem;
+	}
+
+	.orion-reader-leaf-line.active {
+		border-left-color: color-mix(in oklab, var(--color-primary) 58%, var(--color-accent));
+		background: color-mix(in oklab, var(--color-base-100) 82%, var(--color-primary) 6%);
+		box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-primary) 10%, transparent);
+	}
+
+	.orion-reader-leaf-ref {
+		border: 0;
+		background: transparent;
+		color: color-mix(in oklab, var(--color-base-content) 32%, transparent);
+		cursor: pointer;
+		font-family: var(--font-serif);
+		font-size: 0.72rem;
+		font-weight: 700;
+		line-height: 1.2;
+		opacity: 0.72;
+		text-align: right;
+	}
+
+	.orion-reader-leaf-ref:hover {
+		color: color-mix(in oklab, var(--color-base-content) 58%, var(--color-primary));
+		opacity: 1;
+		text-decoration: underline;
+		text-decoration-thickness: 1px;
+		text-underline-offset: 0.15em;
+	}
+
+	.orion-reader-desk-text {
+		margin: 0;
+		max-width: 58rem;
+		color: color-mix(in oklab, var(--color-base-content) 88%, var(--color-primary));
+		font-family: var(--font-reader);
+		font-size: clamp(1.12rem, 1.55vw, 1.45rem);
+		font-kerning: normal;
+		line-height: 1.9;
+	}
+
+	.orion-reader-desk-text.interlinear {
+		line-height: 2.45;
+	}
+
+	.orion-reader-token {
+		display: inline;
+		border: 0;
+		border-radius: 0.16rem;
+		background: transparent;
+		padding: 0.02rem 0.08rem;
+		color: inherit;
+		cursor: pointer;
+		font: inherit;
+		line-height: inherit;
+		text-align: inherit;
+		transition:
+			background-color 120ms ease,
+			color 120ms ease,
+			box-shadow 120ms ease;
+	}
+
+	.orion-reader-token.interlinear {
+		display: inline-grid;
+		grid-template-rows: auto auto;
+		align-items: center;
+		justify-items: center;
+		gap: 0.02rem;
+		margin: 0 0.03rem;
+		vertical-align: middle;
+		line-height: 1.18;
+	}
+
+	.orion-reader-token-native {
+		display: block;
+	}
+
+	.orion-reader-token-translit {
+		display: block;
+		max-width: 7.5rem;
+		overflow-wrap: anywhere;
+		color: color-mix(in oklab, var(--color-base-content) 46%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.62em;
+		font-weight: 500;
+		line-height: 1.05;
+		text-align: center;
+	}
+
+	.orion-reader-token:hover,
+	.orion-reader-token.selected {
+		background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+		box-shadow: inset 0 -0.08em 0 color-mix(in oklab, var(--color-primary) 42%, transparent);
+		color: color-mix(in oklab, var(--color-base-content) 92%, var(--color-secondary));
+	}
+
+	.orion-reader-desk-source {
+		margin: 0 1.15rem 1rem;
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		padding-top: 0.75rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.82rem;
+	}
+
+	.orion-reader-desk-source summary {
+		cursor: pointer;
+		font-family: var(--font-serif);
+		font-weight: 700;
+	}
+
+	.orion-reader-desk-source p {
+		margin-top: 0.45rem;
+		font-family: var(--font-reader);
+		line-height: 1.6;
+	}
+
+	.orion-reader-desk-empty {
+		display: grid;
+		min-height: 14rem;
+		place-items: center;
+		align-content: center;
+		gap: 0.7rem;
+		padding: 2rem;
+		color: color-mix(in oklab, var(--color-base-content) 54%, transparent);
+		font-family: var(--font-serif);
+		text-align: center;
+	}
+
+	.orion-reader-loading-region {
+		display: grid;
+		gap: 0.72rem;
+		min-height: 10rem;
+		align-content: start;
+	}
+
+	.orion-reader-loading-status,
+	.orion-reader-loading-strip {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		padding: 0.45rem 0.62rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.82rem;
+		font-weight: 700;
+	}
+
+	.orion-reader-loading-strip {
+		border-left: 0.18rem solid color-mix(in oklab, var(--color-accent) 36%, var(--color-base-300));
+	}
+
+	.orion-reader-state-panel {
+		display: grid;
+		justify-items: start;
+		gap: 0.45rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-left: 0.18rem solid color-mix(in oklab, var(--color-warning) 45%, var(--color-base-300));
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		padding: 0.78rem 0.85rem;
+		color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+		font-family: var(--font-serif);
+	}
+
+	.orion-reader-state-panel strong {
+		color: color-mix(in oklab, var(--color-base-content) 86%, var(--color-warning));
+		font-size: 0.96rem;
+		line-height: 1.2;
+	}
+
+	.orion-reader-state-panel p {
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.84rem;
+		line-height: 1.4;
+	}
+
+	.orion-reader-state-error {
+		border-left-color: color-mix(in oklab, var(--color-error) 52%, var(--color-base-content));
+	}
+
+	.orion-reader-skeleton-list {
+		display: grid;
+		gap: 0.55rem;
+	}
+
+	.orion-reader-skeleton-row {
+		display: grid;
+		gap: 0.38rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 9%, transparent);
+		border-left: 0.18rem solid color-mix(in oklab, var(--color-accent) 30%, var(--color-base-300));
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-base-200));
+		padding: 0.62rem;
+	}
+
+	.orion-reader-skeleton-block {
+		position: relative;
+		display: block;
+		overflow: hidden;
+		border-radius: 0.34rem;
+		background: color-mix(in oklab, var(--color-base-content) 10%, var(--color-base-200));
+		animation: orion-motd-line 1.65s ease-in-out infinite;
+	}
+
+	.orion-reader-skeleton-block::after {
+		position: absolute;
+		inset: -50%;
+		background: radial-gradient(
+			circle at 45% 50%,
+			color-mix(in oklab, var(--color-accent) 18%, transparent),
+			transparent 58%
+		);
+		content: '';
+		animation: orion-motd-blob 1.7s ease-in-out infinite;
+	}
+
+	.orion-reader-skeleton-row:nth-child(2) .orion-reader-skeleton-block::after {
+		animation-delay: 0.16s;
+	}
+
+	.orion-reader-skeleton-row:nth-child(3) .orion-reader-skeleton-block::after {
+		animation-delay: 0.28s;
+	}
+
+	.orion-reader-skeleton-title {
+		width: min(72%, 28rem);
+		height: 1.1rem;
+	}
+
+	.orion-reader-skeleton-line {
+		width: 100%;
+		height: 0.78rem;
+	}
+
+	.orion-reader-skeleton-line.short {
+		width: 58%;
+	}
+
+	.orion-reader-skeleton-chip-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.34rem;
+	}
+
+	.orion-reader-skeleton-chip {
+		width: 4.8rem;
+		height: 1rem;
+		border-radius: 999px;
+	}
+
+	.orion-reader-skeleton-passage .orion-reader-skeleton-row {
+		min-height: 5.7rem;
+		border-left-color: color-mix(in oklab, var(--color-primary) 34%, var(--color-base-300));
+	}
+
+	.orion-reader-skeleton-author .orion-reader-skeleton-row {
+		border-left-color: color-mix(in oklab, var(--color-secondary) 30%, var(--color-base-300));
+	}
+
+	.orion-reader-skeleton-contents .orion-reader-skeleton-row {
+		grid-template-columns: 4rem minmax(0, 1fr);
+		align-items: center;
+		padding: 0.48rem 0.5rem;
+	}
+
+	.orion-reader-skeleton-contents .orion-reader-skeleton-title {
+		width: 3.15rem;
+	}
+
+	.orion-reader-skeleton-contents .orion-reader-skeleton-line {
+		width: 100%;
+	}
+
+	.orion-reader-skeleton-contents .orion-reader-skeleton-line.short,
+	.orion-reader-skeleton-contents .orion-reader-skeleton-chip-row {
+		display: none;
+	}
+
+	.orion-reader-discovery {
+		display: grid;
+		gap: 1rem;
+		padding: 1rem;
+	}
+
+	.orion-reader-address-lookup {
+		display: grid;
+		grid-template-columns: minmax(14rem, 26rem) auto auto;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.orion-reader-discovery-topline {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+		border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		padding-bottom: 1rem;
+	}
+
+	.orion-reader-discovery-topline .join {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+
+	.orion-reader-discovery-topline .btn {
+		min-width: max-content;
+	}
+
+	.orion-reader-discovery-topline h3 {
+		font-family: var(--font-serif);
+		font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+		font-weight: 700;
+		line-height: 1.15;
+	}
+
+	.orion-reader-discovery-search {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+		align-items: center;
+		gap: 0.55rem;
+		border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		padding-bottom: 1rem;
+	}
+
+	.orion-reader-author-search {
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+	}
+
+	.orion-reader-discovery-search h3 {
+		font-family: var(--font-serif);
+		font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+		font-weight: 700;
+		line-height: 1.15;
+	}
+
+	.orion-reader-discovery-search p {
+		margin-top: 0.25rem;
+		color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.94rem;
+		line-height: 1.45;
+	}
+
+	.orion-reader-discovery-summary {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		color: color-mix(in oklab, var(--color-base-content) 54%, transparent);
+		font-size: 0.78rem;
+		font-weight: 700;
+		text-transform: uppercase;
+	}
+
+	.orion-reader-shelf-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));
+		gap: 0.55rem;
+	}
+
+	.orion-reader-shelf-card {
+		display: grid;
+		min-height: 8.6rem;
+		align-content: start;
+		gap: 0.28rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: 0.45rem;
+		background: color-mix(in oklab, var(--color-base-100) 92%, var(--color-base-200));
+		padding: 0.8rem;
+		color: inherit;
+		cursor: pointer;
+		text-align: left;
+	}
+
+	.orion-reader-shelf-card:hover,
+	.orion-reader-shelf-card.active {
+		border-color: color-mix(in oklab, var(--color-primary) 34%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 84%, var(--color-primary) 9%);
+	}
+
+	.orion-reader-shelf-card > span {
+		color: color-mix(in oklab, var(--color-base-content) 46%, transparent);
+		font-size: 0.68rem;
+		font-weight: 800;
+		letter-spacing: 0;
+		text-transform: uppercase;
+	}
+
+	.orion-reader-shelf-card strong {
+		color: color-mix(in oklab, var(--color-base-content) 86%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-size: 1.02rem;
+		font-weight: 750;
+		line-height: 1.15;
+	}
+
+	.orion-reader-shelf-card small {
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.76rem;
+		font-weight: 750;
+		line-height: 1.25;
+	}
+
+	.orion-reader-shelf-card p {
+		display: -webkit-box;
+		overflow: hidden;
+		margin-top: 0.14rem;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		color: color-mix(in oklab, var(--color-base-content) 64%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.82rem;
+		line-height: 1.34;
+	}
+
+	.orion-reader-author-toc {
+		display: grid;
+		gap: 0.55rem;
+		border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		padding-bottom: 0.9rem;
+	}
+
+	.orion-reader-author-toc > div:first-child {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.82rem;
+		font-weight: 700;
+	}
+
+	.orion-reader-author-toc-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.28rem;
+	}
+
+	.orion-reader-author-toc-grid button {
+		display: inline-flex;
+		min-width: 2rem;
+		align-items: baseline;
+		justify-content: center;
+		gap: 0.26rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: 0.25rem;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		padding: 0.28rem 0.42rem;
+		color: color-mix(in oklab, var(--color-base-content) 72%, var(--color-primary));
+		cursor: pointer;
+		font-family: var(--font-serif);
+		font-size: 0.82rem;
+		font-weight: 700;
+		line-height: 1.1;
+	}
+
+	.orion-reader-author-section-native {
+		color: inherit;
+	}
+
+	.orion-reader-author-section-roman {
+		color: color-mix(in oklab, currentColor 46%, transparent);
+		font-family: var(--font-sans);
+		font-size: 0.68rem;
+		font-weight: 650;
+	}
+
+	.orion-reader-author-toc-grid button:hover,
+	.orion-reader-author-toc-grid button.active {
+		border-color: color-mix(in oklab, var(--color-primary) 36%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 78%, var(--color-primary) 12%);
+		color: color-mix(in oklab, var(--color-base-content) 88%, var(--color-primary));
+	}
+
+	.orion-reader-author-list {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.orion-reader-author-group {
+		display: grid;
+		gap: 0.65rem;
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 9%, transparent);
+		padding-top: 0.9rem;
+	}
+
+	.orion-reader-author-heading {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.orion-reader-author-heading h3 {
+		font-family: var(--font-serif);
+		font-size: 1.12rem;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.orion-reader-author-button {
+		display: grid;
+		min-width: 0;
+		border: 0;
+		background: transparent;
+		color: inherit;
+		cursor: pointer;
+		padding: 0;
+		text-align: left;
+	}
+
+	.orion-reader-author-button:hover h3 {
+		color: color-mix(in oklab, var(--color-base-content) 82%, var(--color-primary));
+		text-decoration: underline;
+		text-decoration-thickness: 1px;
+		text-underline-offset: 0.16em;
+	}
+
+	.orion-reader-author-button small {
+		color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.76rem;
+		line-height: 1.25;
+	}
+
+	.orion-reader-author-heading span {
+		color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+		font-size: 0.75rem;
+		font-weight: 700;
+		white-space: nowrap;
+	}
+
+	.orion-reader-discovery-pager {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		padding-top: 0.85rem;
+	}
+
+	.orion-reader-work-list {
+		display: grid;
+		gap: 0.42rem;
+	}
+
+	.orion-reader-work-list-discovery {
+		gap: 0.55rem;
+	}
+
+	.orion-reader-active-filter {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		border: 1px solid color-mix(in oklab, var(--color-primary) 16%, var(--color-base-300));
+		border-radius: 0.35rem;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-primary) 5%);
+		padding: 0.38rem 0.5rem;
+		color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+		font-size: 0.75rem;
+		font-weight: 700;
+	}
+
+	.orion-reader-work-row {
+		display: grid;
+		gap: 0.22rem;
+		width: 100%;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-left: 0.18rem solid color-mix(in oklab, var(--color-accent) 38%, var(--color-base-300));
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 92%, var(--color-base-200));
+		padding: 0.55rem 0.62rem;
+		text-align: left;
+		transition:
+			border-color 120ms ease,
+			background-color 120ms ease;
+	}
+
+	.orion-reader-work-open,
+	.orion-reader-work-author {
+		border: 0;
+		background: transparent;
+		cursor: pointer;
+		padding: 0;
+		text-align: left;
+	}
+
+	.orion-reader-work-open {
+		min-width: 0;
+		color: inherit;
+	}
+
+	.orion-reader-work-author {
+		color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+		font-size: 0.74rem;
+		font-weight: 650;
+		line-height: 1.25;
+	}
+
+	.orion-reader-work-author:hover:not(:disabled) {
+		color: color-mix(in oklab, var(--color-base-content) 76%, var(--color-primary));
+		text-decoration: underline;
+		text-underline-offset: 0.16em;
+	}
+
+	.orion-reader-work-author:disabled {
+		cursor: default;
+		opacity: 0.7;
+	}
+
+	.orion-reader-work-row-main {
+		display: flex;
+		min-width: 0;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.orion-reader-work-row:hover,
+	.orion-reader-work-row.selected {
+		border-color: color-mix(in oklab, var(--color-secondary) 30%, var(--color-base-300));
+		border-left-color: color-mix(in oklab, var(--color-primary) 54%, var(--color-accent));
+		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-secondary) 6%);
+	}
+
+	.orion-reader-work-row strong {
+		display: flex;
+		min-width: 0;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.28rem;
+		overflow: hidden;
+		font-family: var(--font-serif);
+		font-size: 0.92rem;
+		line-height: 1.25;
+		text-overflow: ellipsis;
+	}
+
+	.orion-reader-work-row span {
+		color: color-mix(in oklab, var(--color-base-content) 56%, transparent);
+		font-size: 0.74rem;
+		line-height: 1.25;
+	}
+
+	.orion-reader-work-meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.28rem;
+	}
+
+	.orion-reader-work-meta small {
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: 0.25rem;
+		background: color-mix(in oklab, var(--color-base-100) 76%, var(--color-base-200));
+		padding: 0.12rem 0.34rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.68rem;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.orion-reader-contents-list {
+		display: grid;
+		max-height: 22rem;
+		overflow: auto;
+		gap: 0.34rem;
+		padding-right: 0.12rem;
+	}
+
+	.orion-reader-contents-list button {
+		display: grid;
+		grid-template-columns: 4.25rem minmax(0, 1fr);
+		gap: 0.45rem;
+		width: 100%;
+		align-items: baseline;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-base-200));
+		padding: 0.42rem 0.5rem;
+		text-align: left;
+	}
+
+	.orion-reader-contents-list button:hover,
+	.orion-reader-contents-list button.active {
+		border-color: color-mix(in oklab, var(--color-primary) 36%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 84%, var(--color-primary) 8%);
+	}
+
+	.orion-reader-contents-list span {
+		color: color-mix(in oklab, var(--color-base-content) 70%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-size: 0.76rem;
+		font-weight: 700;
+	}
+
+	.orion-reader-contents-list small {
+		overflow: hidden;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-family: var(--font-reader);
+		font-size: 0.76rem;
+		line-height: 1.25;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.orion-reader-selected-word {
+		display: grid;
+		justify-items: start;
+		gap: 0.25rem;
+	}
+
+	.orion-reader-selected-word strong {
+		font-family: var(--font-reader);
+		font-size: 1.35rem;
+		line-height: 1.2;
+		overflow-wrap: anywhere;
+	}
+
+	.orion-reader-selected-word span {
+		color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.82rem;
+	}
+
+	@media (max-width: 80rem) {
+		.orion-reader-discovery-search {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.orion-reader-discovery-search .btn {
+			width: 100%;
+		}
+	}
+
+	@media (max-width: 48rem) {
+		.orion-reader-page-nav {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		.orion-reader-discovery-topline,
+		.orion-reader-work-row-main {
+			align-items: stretch;
+			flex-direction: column;
+		}
+
+		.orion-reader-address-lookup,
+		.orion-reader-discovery-search {
+			grid-template-columns: 1fr;
+		}
+
+		.orion-reader-page-nav > div {
+			grid-column: 1 / -1;
+			grid-row: 1;
+		}
+
+		.orion-reader-page-nav button:first-child,
+		.orion-reader-page-nav button:last-child {
+			grid-row: 2;
+		}
+
+		.orion-reader-leaf-line {
+			grid-template-columns: 3.25rem minmax(0, 1fr);
+			gap: 0.55rem;
+		}
+
+		.orion-reader-leaf-ref {
+			font-size: 0.72rem;
+		}
+	}
+
+	@media (min-width: 64rem) {
+		.orion-reader-sidebar {
+			position: sticky;
+			top: 1rem;
+			align-self: start;
+			max-height: calc(100svh - 2rem);
+			overflow-y: auto;
+			overscroll-behavior-y: contain;
+			padding-right: 0.15rem;
+			scrollbar-gutter: stable;
+		}
+
+		.orion-page-shell {
+			display: block;
+			max-width: 82rem;
+			padding-right: 24rem;
+		}
+
+		.orion-page-shell > article {
+			max-width: 48rem;
+		}
+
+		.orion-sidebar {
+			position: fixed;
+			z-index: 20;
+			top: 5.75rem;
+			right: max(2rem, calc((100vw - 82rem) / 2 + 2rem));
+			bottom: 1.5rem;
+			width: 21rem;
+			max-width: calc(100vw - 4rem);
+			overflow-y: scroll;
+			overscroll-behavior-y: contain;
+			padding-right: 0.2rem;
+			pointer-events: auto;
+			scrollbar-gutter: stable;
+			touch-action: pan-y;
+			transition:
+				top 160ms ease,
+				bottom 160ms ease;
+		}
+
+		.orion-sidebar-full {
+			top: 0.75rem;
+			bottom: 0.75rem;
+		}
+	}
+
+	@media (max-width: 48rem) {
+		.orion-result-group-head {
+			flex-direction: column;
+		}
+
+		.orion-entry-chrome {
+			width: 100%;
+			justify-items: start;
+		}
+
+		.orion-entry-chrome .orion-entry-source-strip {
+			justify-content: flex-start;
+		}
+	}
+}
+
+@keyframes orion-pulse-ring {
+	0% {
+		opacity: 0.7;
+		transform: scale(0.7);
+	}
+
+	100% {
+		opacity: 0;
+		transform: scale(1.35);
+	}
+}
+
+@keyframes orion-pulse-core {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+
+	50% {
+		transform: scale(1.06);
+	}
+}
+
+@keyframes orion-loader-breathe {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+
+	50% {
+		transform: scale(1.045);
+	}
+}
+
+@keyframes orion-loader-pulse {
+	0%,
+	100% {
+		opacity: 0.42;
+		transform: scale(0.84);
+	}
+
+	50% {
+		opacity: 1;
+		transform: scale(1.14);
+	}
+}
+
+@keyframes orion-pulse-dot {
+	0%,
+	100% {
+		opacity: 0.45;
+		transform: scale(0.82);
+	}
+
+	50% {
+		opacity: 1;
+		transform: scale(1.15);
+	}
+}
+
+@keyframes orion-translator-dot {
+	0%,
+	100% {
+		opacity: 0.3;
+		transform: translateY(0) scale(0.78);
+	}
+
+	45% {
+		opacity: 0.86;
+		transform: translateY(-0.05rem) scale(1.04);
+	}
+}
+
+@keyframes orion-translation-leaf {
+	0% {
+		border-left-color: color-mix(in oklab, var(--color-primary) 76%, var(--color-accent));
+	}
+
+	34% {
+		border-left-color: color-mix(in oklab, var(--color-secondary) 68%, var(--color-accent));
+	}
+
+	100% {
+		border-left-color: transparent;
+	}
+}
+
+@keyframes orion-translation-ink {
+	0% {
+		background: color-mix(in oklab, var(--color-base-100) 82%, var(--color-primary) 8%);
+	}
+
+	42% {
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-accent) 6%);
+	}
+
+	100% {
+		background: color-mix(in oklab, var(--color-base-100) 92%, var(--color-base-200));
+	}
+}
+
+@keyframes orion-translation-gild {
+	0% {
+		opacity: 0;
+		transform: scaleY(0.22);
+	}
+
+	28% {
+		opacity: 0.72;
+		transform: scaleY(1);
+	}
+
+	100% {
+		opacity: 0;
+		transform: scaleY(1);
+	}
+}
+
+@keyframes orion-motd-blob {
+	0%,
+	100% {
+		opacity: 0.28;
+		transform: translateX(-18%) scale(0.9);
+	}
+
+	50% {
+		opacity: 0.72;
+		transform: translateX(18%) scale(1.12);
+	}
+}
+
+@keyframes orion-motd-line {
+	0%,
+	100% {
+		opacity: 0.54;
+		transform: scaleX(0.98);
+	}
+
+	50% {
+		opacity: 0.88;
+		transform: scaleX(1);
+	}
+}
+
+@keyframes orion-motd-refresh-gloss {
+	0% {
+		opacity: 0;
+		transform: translateX(-115%);
+	}
+
+	18%,
+	70% {
+		opacity: 1;
+	}
+
+	100% {
+		opacity: 0;
+		transform: translateX(115%);
+	}
+}
+
+@keyframes orion-motd-refresh-card {
+	0%,
+	100% {
+		border-color: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+	}
+
+	50% {
+		border-color: color-mix(in oklab, var(--color-secondary) 26%, var(--color-base-300));
+	}
+}

@@ -1010,6 +1010,96 @@ def test_sanskrit_morphology_fallback_ignores_compound_component_lemmas() -> Non
     )
 
 
+def test_encounter_morphology_rows_keep_complete_sanskrit_compound_solution() -> None:
+    claim = _claim_with_triples(
+        tool="heritage",
+        subject="lex:kvacinmahamate",
+        triples=[
+            {
+                "subject": "form:kvacit",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "kvacit",
+                    "form": "kvacit",
+                    "analysis": "ind.",
+                    "solution_number": 1,
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            },
+            {
+                "subject": "form:mahat",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "mahat",
+                    "form": "mahat",
+                    "analysis": "iic.",
+                    "solution_number": 1,
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            },
+            {
+                "subject": "form:kva",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "kva",
+                    "form": "kva",
+                    "analysis": "ind.",
+                    "solution_number": 2,
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            },
+            {
+                "subject": "form:cit_2",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "cit_2",
+                    "form": "cit_2",
+                    "analysis": "iic.",
+                    "solution_number": 2,
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            },
+            {
+                "subject": "form:kvacit",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "kvacit",
+                    "form": "kvacit",
+                    "analysis": "ind.",
+                    "solution_number": 3,
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            },
+            {
+                "subject": "form:mahat",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "mahat",
+                    "form": "mahat",
+                    "analysis": "iic.",
+                    "solution_number": 3,
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            },
+            {
+                "subject": "form:mati",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "mati",
+                    "form": "mati",
+                    "analysis": "f. sg. voc.",
+                    "solution_number": 3,
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            },
+        ],
+    )
+
+    rows = _encounter_morphology_rows([asdict(claim)], language="san", original="क्वचिन्महामते")
+
+    assert [row["lemma"] for row in rows][:3] == ["kvacit", "mahat", "mati"]
+
+
 def test_encounter_sanskrit_component_candidates_follow_compound_solution() -> None:
     rows = [
         {
@@ -1060,6 +1150,78 @@ def test_encounter_sanskrit_component_candidates_follow_compound_solution() -> N
             "analysis": "n. sg. voc.",
             "source_tool": "heritage",
             "lookup_terms": ["aṅga"],
+        },
+    ]
+
+
+def test_encounter_sanskrit_component_candidates_prefer_complete_particle_compound_solution() -> (
+    None
+):
+    rows = [
+        {
+            "source_tool": "heritage",
+            "form": "kvacit",
+            "lemma": "kvacit",
+            "analysis": "ind.",
+            "solution_number": "1",
+        },
+        {
+            "source_tool": "heritage",
+            "form": "mahat",
+            "lemma": "mahat",
+            "analysis": "iic.",
+            "solution_number": "1",
+        },
+        {
+            "source_tool": "heritage",
+            "form": "kvacit",
+            "lemma": "kvacit",
+            "analysis": "ind.",
+            "solution_number": "2",
+        },
+        {
+            "source_tool": "heritage",
+            "form": "mahat",
+            "lemma": "mahat",
+            "analysis": "iic.",
+            "solution_number": "2",
+        },
+        {
+            "source_tool": "heritage",
+            "form": "mati",
+            "lemma": "mati",
+            "analysis": "f. sg. voc.",
+            "solution_number": "2",
+        },
+    ]
+
+    assert _encounter_component_candidates(rows, language="san") == [
+        {
+            "surface": "kvacit",
+            "lemma": "kvacit",
+            "display": "kvacit",
+            "role": "particle",
+            "analysis": "ind.",
+            "source_tool": "heritage",
+            "lookup_terms": ["kvacit"],
+        },
+        {
+            "surface": "mahat",
+            "lemma": "mahat",
+            "display": "mahat",
+            "role": "initial",
+            "analysis": "iic.",
+            "source_tool": "heritage",
+            "lookup_terms": ["mahat"],
+        },
+        {
+            "surface": "mati",
+            "lemma": "mati",
+            "display": "mati",
+            "role": "final",
+            "analysis": "f. sg. voc.",
+            "source_tool": "heritage",
+            "lookup_terms": ["mati"],
         },
     ]
 

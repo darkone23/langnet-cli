@@ -1,0 +1,392 @@
+import i18next from 'i18next';
+import type { LanguageMode, TranslationMode } from './search-data';
+
+const resources = {
+	en: {
+		translation: {
+			app: {
+				title: 'Project Orion Lexicon',
+				description: 'A source-aware reading desk for Sanskrit, Greek, and Latin.',
+				name: 'Project Orion',
+				motto: 'Every day is a good day for learning.'
+			},
+			boot: {
+				aria: 'Loading the reading desk',
+				title: 'Loading the reading desk',
+				detail: 'Preparing type, saved state, source controls, and the reader layer.'
+			},
+			nav: {
+				homeAria: 'Clear the desk and return home',
+				languageStat: 'Language',
+				statusStat: 'Status'
+			},
+			theme: {
+				readerAria: 'Use reader theme',
+				nightAria: 'Use night theme',
+				reader: 'Reader',
+				night: 'Night'
+			},
+			hero: {
+				badge: "Reader's lectern",
+				titleSan: 'Search Sanskrit sources',
+				titleGrc: 'Search Greek sources',
+				titleLat: 'Search Latin sources',
+				intro:
+					'Look up one word. Orion keeps each source answerable by dictionary, lexeme, and reader text.'
+			},
+			search: {
+				loadingSteps: ['Find form', 'Test sources', 'Order entries'],
+				loadingTitle: 'Consulting the sources',
+				coldSources: 'Cold sources and fresh English may take time.',
+				clear: 'Clear',
+				buttonLoading: 'Looking up',
+				buttonReady: 'Look up',
+				inputAria: 'Look up one word',
+				placeholder: 'Enter one {{language}} word',
+				opening: 'Looking up {{query}} in {{language}} with dictionary={{dictionary}}.'
+			},
+			status: {
+				searching: 'Looking up',
+				awaitingReader: 'Awaiting English',
+				attention: 'Attention',
+				reading: 'Reading',
+				ready: 'Ready',
+				askingSources_one: 'Asking {{count}} selected source.',
+				askingSources_other: 'Asking {{count}} selected sources.',
+				awaitingReaderDetail:
+					'Cached entries are open; untranslated source entries are awaiting English.',
+				showingSections:
+					'Showing {{visible}} {{sectionLabel}} of {{total}} {{totalLabel}} for {{query}}.',
+				readyForWord: 'The reading desk is ready.',
+				chooseWord: 'Choose a language and enter one word.',
+				cacheUnavailable: 'cache unavailable',
+				cacheWarm: 'cache warm',
+				newTranslations: '{{count}} new translations',
+				missingTranslations: '{{count}} missing'
+			},
+			readerLayer: {
+				label: 'Reader English',
+				modeAria: 'Reader translation mode',
+				loadingAria: 'Preparing reader English',
+				unsearched: 'Reader English appears after lookup.',
+				awaiting: 'Selected {{mode}}; cached text is open while other entries await English.',
+				cacheSupplied: 'Selected {{mode}}; cached English is available.',
+				served: 'Served with translation={{mode}}.'
+			},
+			readerText: {
+				label: 'Reader text',
+				pending: 'English pending',
+				closePassage: 'Close this passage'
+			},
+			translator: {
+				alert: 'Cached entries are open. Some source entries are still awaiting English.',
+				title: 'This source entry is awaiting English.',
+				badge: 'Awaiting English',
+				failed: 'Cached entries remain shown. English could not be prepared: {{message}}'
+			},
+			components: {
+				title: 'Component entries',
+				intro:
+					'Compound members returned by the CLI, shown as dictionary entries when evidence is available.',
+				empty: 'No source-backed component entry was returned.'
+			},
+			results: {
+				title: 'Source entries',
+				intro: 'Grouped by source and lexeme, so entries can be read, compared, and challenged.',
+				all: 'All entries',
+				noFilterMatch: 'No loaded entry is visible under the active filters.',
+				returnedEnding: 'Returned text ends here.'
+			},
+			margin: {
+				title: 'Learner folio',
+				intro: 'Three starter words for an empty desk. Refresh asks the live CLI.',
+				linkModeLoad: 'Links look up immediately.',
+				linkModePrefill: 'Links only set the word.',
+				prepareAria: 'Preparing the learner folio',
+				noWord: 'The folio has no learner word this time.',
+				noFreshWord: 'The folio could not find a fresh word this time.',
+				loadTitle: 'Choose whether folio links immediately look up the word.',
+				refreshTitle: 'Ask the live CLI for fresh learner words.',
+				linkToggleRead: 'read',
+				linkToggleInk: 'ink',
+				refresh: 'fresh word',
+				cardActionSanLoad: 'Look up this Sanskrit word',
+				cardActionSanPrefill: 'Use this Sanskrit word',
+				cardActionGrcLoad: 'Look up this Greek word',
+				cardActionGrcPrefill: 'Use this Greek word',
+				cardActionLatLoad: 'Look up this Latin word',
+				cardActionLatPrefill: 'Use this Latin word',
+				active: 'open now',
+				repeat: 'recently shown',
+				multipleAnchors: 'multiple anchors'
+			},
+			wordIndex: {
+				title: 'Dictionary index',
+				intro:
+					'Native sections and nearby headwords. Select a word to look it up; mark one to keep it nearby.',
+				loading: 'Loading nearby headwords.',
+				empty: 'No indexed neighbors were found for this word.',
+				earmarks: 'Earmarks',
+				earmarkTitle: 'Keep this term in the index panel.',
+				removeEarmarkTitle: 'Remove this term from the earmarks.',
+				clearEarmarks: 'Clear',
+				clearEarmarksTitle: 'Clear all saved earmarks.',
+				sectionsTitle: 'Native index',
+				sectionsLoading: 'Loading native index sections.',
+				browseSection: 'Browse section',
+				orderTitle: 'Nearby lexeme order',
+				active: 'resolved term',
+				before: 'before',
+				after: 'after',
+				anchor: 'index anchor',
+				nearby: 'nearby',
+				browse: 'browse'
+			},
+			sidebar: {
+				sourceTitle: 'Source shelf',
+				sourceIntro: 'Choose which dictionaries and tools may answer. No source speaks alone.',
+				returnedTitle: 'Visible entries',
+				generatorAllTitle: 'Use the generator with dictionary=all.',
+				showLoaded: 'Show every loaded entry.',
+				all: 'All'
+			},
+			colophon: {
+				title: 'Colophon',
+				translationAccount: 'Translation account',
+				requestSeal: 'Request record'
+			},
+			pageMarks: {
+				title: 'Route marks',
+				clearTitle: 'Clear URL parameters, storage, and the current desk.',
+				pageLink: 'Page link',
+				endpoint: 'Lookup endpoint',
+				contractPrefix: 'This route preserves the CLI contract: one language, one word, and',
+				contractSuffix: 'or a concrete source tool.'
+			},
+			errors: {
+				enterOneWord: 'Enter one word to look up.',
+				oneWordOnly: 'Lookup accepts one word at a time.',
+				searchFailed: 'Lookup failed.',
+				indexFailed: 'Dictionary index lookup failed.',
+				recommendationsFailed: 'Word recommendations failed.',
+				translationFailed: 'Translation enrichment failed.',
+				liveFallback: 'Live CLI fallback: {{message}}',
+				noGloss: 'No display gloss returned.',
+				noComponentGloss: 'No component gloss returned.'
+			},
+			passage: {
+				openSource: 'Open source passage',
+				openFull: 'Open full passage',
+				openNested: 'Open nested passages',
+				closeNested: 'Close nested passages',
+				openComponent: 'Open the full component entry',
+				closeComponent: 'Close this component entry'
+			}
+		}
+	}
+} as const;
+
+void i18next.init({
+	lng: 'en',
+	fallbackLng: 'en',
+	resources,
+	initAsync: false,
+	interpolation: {
+		escapeValue: false
+	}
+});
+
+function text(key: string, options?: Record<string, unknown>) {
+	return i18next.t(key, options);
+}
+
+export const uiCopy = {
+	app: {
+		title: text('app.title'),
+		description: text('app.description'),
+		name: text('app.name'),
+		motto: text('app.motto')
+	},
+	boot: {
+		aria: text('boot.aria'),
+		title: text('boot.title'),
+		detail: text('boot.detail')
+	},
+	nav: {
+		homeAria: text('nav.homeAria'),
+		languageStat: text('nav.languageStat'),
+		statusStat: text('nav.statusStat')
+	},
+	theme: {
+		readerAria: text('theme.readerAria'),
+		nightAria: text('theme.nightAria'),
+		reader: text('theme.reader'),
+		night: text('theme.night')
+	},
+	hero: {
+		badge: text('hero.badge'),
+		title: (language: 'san' | 'grc' | 'lat') =>
+			text(
+				language === 'san'
+					? 'hero.titleSan'
+					: language === 'grc'
+						? 'hero.titleGrc'
+						: 'hero.titleLat'
+			),
+		intro: text('hero.intro')
+	},
+	search: {
+		loadingSteps: i18next.t('search.loadingSteps', { returnObjects: true }) as string[],
+		loadingTitle: text('search.loadingTitle'),
+		coldSources: text('search.coldSources'),
+		clear: text('search.clear'),
+		button: (loading: boolean) => text(loading ? 'search.buttonLoading' : 'search.buttonReady'),
+		inputAria: text('search.inputAria'),
+		placeholder: (language: string) => text('search.placeholder', { language }),
+		opening: (query: string, language: string, dictionary: string) =>
+			text('search.opening', { query, language, dictionary })
+	},
+	status: {
+		searching: text('status.searching'),
+		awaitingReader: text('status.awaitingReader'),
+		attention: text('status.attention'),
+		reading: text('status.reading'),
+		ready: text('status.ready'),
+		askingSources: (count: number) => text('status.askingSources', { count }),
+		awaitingReaderDetail: text('status.awaitingReaderDetail'),
+		showingSections: (visible: number, total: number, query: string) =>
+			text('status.showingSections', {
+				visible,
+				total,
+				query,
+				sectionLabel: visible === 1 ? 'section' : 'sections',
+				totalLabel: total === 1 ? 'section' : 'sections'
+			}),
+		readyForWord: text('status.readyForWord'),
+		chooseWord: text('status.chooseWord'),
+		cacheUnavailable: text('status.cacheUnavailable'),
+		cacheWarm: text('status.cacheWarm'),
+		newTranslations: (count: number) => text('status.newTranslations', { count }),
+		missingTranslations: (count: number) => text('status.missingTranslations', { count })
+	},
+	readerLayer: {
+		label: text('readerLayer.label'),
+		modeAria: text('readerLayer.modeAria'),
+		loadingAria: text('readerLayer.loadingAria'),
+		unsearched: text('readerLayer.unsearched'),
+		awaiting: (mode: TranslationMode) => text('readerLayer.awaiting', { mode }),
+		cacheSupplied: (mode: TranslationMode) => text('readerLayer.cacheSupplied', { mode }),
+		served: (mode: TranslationMode) => text('readerLayer.served', { mode })
+	},
+	readerText: {
+		label: text('readerText.label'),
+		pending: text('readerText.pending'),
+		closePassage: text('readerText.closePassage')
+	},
+	translator: {
+		alert: text('translator.alert'),
+		title: text('translator.title'),
+		badge: text('translator.badge'),
+		failed: (message: string) => text('translator.failed', { message })
+	},
+	components: {
+		title: text('components.title'),
+		intro: text('components.intro'),
+		empty: text('components.empty')
+	},
+	results: {
+		title: text('results.title'),
+		intro: text('results.intro'),
+		all: text('results.all'),
+		noFilterMatch: text('results.noFilterMatch'),
+		returnedEnding: text('results.returnedEnding')
+	},
+	margin: {
+		title: text('margin.title'),
+		intro: text('margin.intro'),
+		linkMode: (loads: boolean) => text(loads ? 'margin.linkModeLoad' : 'margin.linkModePrefill'),
+		prepareAria: text('margin.prepareAria'),
+		noWord: text('margin.noWord'),
+		noFreshWord: text('margin.noFreshWord'),
+		loadTitle: text('margin.loadTitle'),
+		refreshTitle: text('margin.refreshTitle'),
+		linkToggle: (loads: boolean) => text(loads ? 'margin.linkToggleRead' : 'margin.linkToggleInk'),
+		refresh: text('margin.refresh'),
+		cardAction: (language: LanguageMode, loads: boolean) =>
+			text(
+				language === 'san'
+					? loads
+						? 'margin.cardActionSanLoad'
+						: 'margin.cardActionSanPrefill'
+					: language === 'grc'
+						? loads
+							? 'margin.cardActionGrcLoad'
+							: 'margin.cardActionGrcPrefill'
+						: loads
+							? 'margin.cardActionLatLoad'
+							: 'margin.cardActionLatPrefill'
+			),
+		active: text('margin.active'),
+		repeat: text('margin.repeat'),
+		multipleAnchors: text('margin.multipleAnchors')
+	},
+	wordIndex: {
+		title: text('wordIndex.title'),
+		intro: text('wordIndex.intro'),
+		loading: text('wordIndex.loading'),
+		empty: text('wordIndex.empty'),
+		earmarks: text('wordIndex.earmarks'),
+		earmarkTitle: text('wordIndex.earmarkTitle'),
+		removeEarmarkTitle: text('wordIndex.removeEarmarkTitle'),
+		clearEarmarks: text('wordIndex.clearEarmarks'),
+		clearEarmarksTitle: text('wordIndex.clearEarmarksTitle'),
+		sectionsTitle: text('wordIndex.sectionsTitle'),
+		sectionsLoading: text('wordIndex.sectionsLoading'),
+		browseSection: text('wordIndex.browseSection'),
+		orderTitle: text('wordIndex.orderTitle'),
+		active: text('wordIndex.active'),
+		browse: text('wordIndex.browse'),
+		position: (position: 'before' | 'anchor' | 'after' | 'nearby' | 'browse') =>
+			text(`wordIndex.${position}`)
+	},
+	sidebar: {
+		sourceTitle: text('sidebar.sourceTitle'),
+		sourceIntro: text('sidebar.sourceIntro'),
+		returnedTitle: text('sidebar.returnedTitle'),
+		generatorAllTitle: text('sidebar.generatorAllTitle'),
+		showLoaded: text('sidebar.showLoaded'),
+		all: text('sidebar.all')
+	},
+	colophon: {
+		title: text('colophon.title'),
+		translationAccount: text('colophon.translationAccount'),
+		requestSeal: text('colophon.requestSeal')
+	},
+	pageMarks: {
+		title: text('pageMarks.title'),
+		clearTitle: text('pageMarks.clearTitle'),
+		pageLink: text('pageMarks.pageLink'),
+		endpoint: text('pageMarks.endpoint'),
+		contractPrefix: text('pageMarks.contractPrefix'),
+		contractSuffix: text('pageMarks.contractSuffix')
+	},
+	errors: {
+		enterOneWord: text('errors.enterOneWord'),
+		oneWordOnly: text('errors.oneWordOnly'),
+		searchFailed: text('errors.searchFailed'),
+		indexFailed: text('errors.indexFailed'),
+		recommendationsFailed: text('errors.recommendationsFailed'),
+		translationFailed: text('errors.translationFailed'),
+		liveFallback: (message: string) => text('errors.liveFallback', { message }),
+		noGloss: text('errors.noGloss'),
+		noComponentGloss: text('errors.noComponentGloss')
+	},
+	passage: {
+		openSource: text('passage.openSource'),
+		openFull: text('passage.openFull'),
+		openNested: text('passage.openNested'),
+		closeNested: text('passage.closeNested'),
+		openComponent: text('passage.openComponent'),
+		closeComponent: text('passage.closeComponent')
+	}
+} as const;

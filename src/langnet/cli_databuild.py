@@ -145,6 +145,7 @@ class BuildReaderConfig:
     wipe: bool
     force: bool
     progress_every: int | None
+    source_paths: tuple[str, ...]
 
 
 def _build_cts_impl(config: BuildCtsConfig) -> None:
@@ -363,6 +364,7 @@ def _build_reader_impl(config: BuildReaderConfig) -> None:
         force_rebuild=config.force,
         progress_every=config.progress_every,
         progress_callback=progress_callback if config.progress_every else None,
+        source_paths=tuple(Path(path).expanduser() for path in config.source_paths),
     )
     result = ReaderBuilder(builder_config).build()
     _print_build_result(result)
@@ -885,6 +887,13 @@ def build_whitakers_index(  # noqa: PLR0913
 )
 @click.option("--limit", type=int, help="Limit number of parsed books for testing.")
 @click.option(
+    "--source-path",
+    "source_paths",
+    type=click.Path(exists=True),
+    multiple=True,
+    help="Rebuild only the selected source file(s); use with --no-wipe for source-slice repair.",
+)
+@click.option(
     "--progress-every",
     type=int,
     default=None,
@@ -907,6 +916,7 @@ def build_reader(  # noqa: PLR0913
     work_map_dir: str | None,
     output_root: str | None,
     limit: int | None,
+    source_paths: tuple[str, ...],
     progress_every: int | None,
     wipe: bool,
     force: bool,
@@ -926,6 +936,7 @@ def build_reader(  # noqa: PLR0913
             work_map_dir=work_map_dir,
             output_root=output_root,
             limit=limit,
+            source_paths=source_paths,
             progress_every=progress_every,
             wipe=wipe,
             force=force,

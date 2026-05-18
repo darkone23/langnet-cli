@@ -1,0 +1,38 @@
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+# Dependencies
+node_modules
+
+# SvelteKit / build output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# Local Superpowers visual companion sessions
+.superpowers/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

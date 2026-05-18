@@ -1,0 +1,7 @@
+.svelte-kit
+build
+node_modules
+bun.lock
+devenv.lock
+.devenv
+.devenv.flake.nix

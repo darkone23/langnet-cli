@@ -1,0 +1,143 @@
+set positional-arguments
+
+port := env_var_or_default("PORT", "43210")
+host := env_var_or_default("HOST", "0.0.0.0")
+cli_dir := env_var_or_default("LANGNET_CLI_DIR", "../")
+max_buckets := env_var_or_default("MAX_BUCKETS", "54321")
+max_gloss_chars := env_var_or_default("MAX_GLOSS_CHARS", "54321")
+timeout_ms := env_var_or_default("TIMEOUT_MS", "300000")
+
+# List project recipes.
+default:
+    @just --list
+
+# Install/update dependencies.
+install:
+    bun install
+
+# Check local tool and sibling CLI availability.
+doctor:
+    @command -v bun >/dev/null || (echo "missing required command: bun" && exit 1)
+    @command -v just >/dev/null || (echo "missing required command: just" && exit 1)
+    @command -v jq >/dev/null || echo "warning: missing recommended command: jq"
+    @test -d "{{cli_dir}}" || (echo "missing langnet CLI directory: {{cli_dir}}" && exit 1)
+    @cd "{{cli_dir}}" && just --list >/dev/null
+    @echo "ok: required tools are available"
+
+# Start the SvelteKit dev server on 0.0.0.0:43210 by default.
+dev:
+    bun --bun run dev -- --host {{host}} --port {{port}}
+
+# Start the dev server and open it from Vite.
+dev-open:
+    bun --bun run dev -- --host {{host}} --port {{port}} --open
+
+# Run SvelteKit type and accessibility checks.
+check:
+    bun --bun run check
+
+# Run SvelteKit checks in watch mode.
+check-watch:
+    bun --bun run check:watch
+
+# Run fast unit/regression tests.
+test:
+    bun --bun run test
+
+# Format project files with Prettier.
+format:
+    bun --bun run format
+
+# Check project formatting without writing changes.
+format-check:
+    bun --bun run format:check
+
+# Build the production bundle.
+build:
+    bun --bun run build
+
+# Run unit tests, formatting checks, Svelte checks, and production build.
+verify:
+    just test
+    just format-check
+    just check
+    just build
+
+# Preview the production build with Vite.
+preview:
+    bun --bun run preview -- --host {{host}} --port {{port}}
+
+# Preview the production build with request method, path, status, and duration logs.
+preview-logs:
+    LANGNET_HTTP_LOG=1 bun --bun run preview -- --host {{host}} --port {{port}} --clearScreen false
+
+# Start the Bun adapter production server after `just build`.
+start:
+    bun ./build/index.js
+
+# Delegate directly to langnet-cli's justfile.
+cli *args:
+    cd "{{cli_dir}}" && just cli "$@"
+
+# List available CLI tools for a language.
+cli-tools lang="lat":
+    just cli tools {{lang}}
+
+# Run a representative live CLI lookup without the web server.
+cli-encounter lang="lat" word="nexus" dictionary="gaffiot" translation="cache":
+    just cli encounter {{lang}} {{word}} {{dictionary}} --translation-mode {{translation}} --cache-policy read-only --output json --max-buckets {{max_buckets}} --max-gloss-chars {{max_gloss_chars}}
+
+# Probe the web API through the live CLI backend. Requires `just dev` in another shell.
+api lang="lat" word="nexus" dictionary="gaffiot" translation="cache":
+    curl -sS --get "http://127.0.0.1:{{port}}/api/search" \
+        --data-urlencode "backend=cli" \
+        --data-urlencode "language={{lang}}" \
+        --data-urlencode "q={{word}}" \
+        --data-urlencode "dictionary={{dictionary}}" \
+        --data-urlencode "translation={{translation}}" \
+        --data-urlencode "max_buckets={{max_buckets}}" \
+        --data-urlencode "max_gloss_chars={{max_gloss_chars}}" \
+        --data-urlencode "timeout_ms={{timeout_ms}}"
+
+# Probe the web MOTD endpoint. Requires `just dev` in another shell.
+motd candidate_source="auto":
+    curl -sS "http://127.0.0.1:{{port}}/api/motd?count=1&translation=cache&candidate_source={{candidate_source}}&timeout_ms=120000"
+
+# Probe the web MOTD refresh path. Requires `just dev` in another shell.
+motd-refresh candidate_source="llm" avoid="":
+    curl -sS "http://127.0.0.1:{{port}}/api/motd?count=1&translation=cache&candidate_source={{candidate_source}}&timeout_ms=120000&refresh=1&avoid={{avoid}}"
+
+# Summarize a live web API response. Requires `just dev` in another shell.
+api-summary lang="lat" word="nexus" dictionary="gaffiot" translation="cache":
+    just api {{lang}} {{word}} {{dictionary}} {{translation}} | jq '{query, language, dictionaries, source_tools, bucket_count: (.buckets | length), buckets: [.buckets[] | {id: .bucket_id, lemmas: .bucket_lemmas, refs: .source_refs, tools: .source_tools, display_len: (.display_gloss | length), target_len: (.translation.target_text? | length), source_len: (.translation.source_text? | length)}]}'
+
+# Summarize a live MOTD response. Requires `just dev` in another shell.
+motd-summary candidate_source="auto":
+    just motd {{candidate_source}} | jq '{generated_at, suggested_ttl_seconds, keys: [.items[]?.key], items: [.items[]? | {key, display, query, short_gloss: .ui.short_gloss, summary, confidence, evidence: .source_basis[0]}], warnings, exhaustion}'
+
+# Alias for the live web API probe.
+search lang="lat" word="nexus" dictionary="gaffiot" translation="cache":
+    just api {{lang}} {{word}} {{dictionary}} {{translation}}
+
+# Alias for the live web API probe.
+search-live lang="lat" word="nexus" dictionary="gaffiot" translation="cache":
+    just api {{lang}} {{word}} {{dictionary}} {{translation}}
+
+# Run API summaries for current long-entry and translation regression cases. Requires `just dev`.
+smoke-api:
+    just api-summary lat nox gaffiot cache
+    just api-summary lat nox lewis_1890 off
+    just api-summary grc logos bailly cache
+    just api-summary san purusa dico cache
+    just api-summary san पुराण dico cache
+    just api-summary lat nexus diogenes off
+
+# Run direct CLI probes for current long-entry and translation regression cases.
+smoke-cli:
+    just cli-encounter lat nox all cache >/dev/null
+    just cli-encounter lat nox lewis_1890 off >/dev/null
+    just cli-encounter grc logos bailly cache >/dev/null
+    just cli-encounter san purusa dico cache >/dev/null
+    just cli-encounter san पुराण dico cache >/dev/null
+    just cli-encounter lat nexus diogenes off >/dev/null
+    @echo "ok: live CLI smoke probes completed"

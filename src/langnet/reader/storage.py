@@ -590,6 +590,58 @@ def register_books(
             raise
 
 
+def delete_reader_works(catalog_path: Path, work_ids: Iterable[str]) -> None:
+    work_id_values = sorted({work_id for work_id in work_ids if work_id})
+    if not work_id_values:
+        return
+    create_catalog_db(catalog_path)
+    frame = pl.DataFrame({"work_id": work_id_values}, schema={"work_id": pl.Utf8})
+    with _connect_write(catalog_path) as conn:
+        conn.execute("BEGIN TRANSACTION")
+        try:
+            conn.register("delete_work_ids", frame)
+            conn.execute(
+                """
+                DELETE FROM aliases
+                WHERE target IN (SELECT work_id FROM delete_work_ids)
+                """
+            )
+            conn.execute(
+                """
+                DELETE FROM contained_works
+                WHERE contained_work_id IN (SELECT work_id FROM delete_work_ids)
+                   OR parent_work_id IN (SELECT work_id FROM delete_work_ids)
+                """
+            )
+            conn.execute(
+                "DELETE FROM work_map_nodes WHERE work_id IN (SELECT work_id FROM delete_work_ids)"
+            )
+            conn.execute(
+                """
+                DELETE FROM work_classification_tags
+                WHERE work_id IN (SELECT work_id FROM delete_work_ids)
+                """
+            )
+            conn.execute(
+                """
+                DELETE FROM work_classifications
+                WHERE work_id IN (SELECT work_id FROM delete_work_ids)
+                """
+            )
+            conn.execute(
+                "DELETE FROM artifacts WHERE work_id IN (SELECT work_id FROM delete_work_ids)"
+            )
+            conn.execute(
+                "DELETE FROM editions WHERE work_id IN (SELECT work_id FROM delete_work_ids)"
+            )
+            conn.execute("DELETE FROM works WHERE work_id IN (SELECT work_id FROM delete_work_ids)")
+            conn.unregister("delete_work_ids")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+
+
 def _dedupe_book_registrations(
     entries: list[tuple[ReaderWork, ReaderEdition, ReaderBookArtifact]],
 ) -> list[tuple[ReaderWork, ReaderEdition, ReaderBookArtifact]]:
@@ -3046,6 +3098,12 @@ SOURCE_METADATA_SUMMARY_KEYS = (
     "dcs_time_slot",
     "dcs_author",
     "dcs_completed",
+    "gretil_text",
+    "gretil_author",
+    "gretil_edition",
+    "gretil_comments",
+    "gretil_notes",
+    "gretil_data_entry",
     "perseus_subject",
     "perseus_author",
     "perseus_editor",

@@ -18,6 +18,7 @@ from langnet.reader.models import (
     ReaderMetadataOverlayEvidence,
     ReaderSegment,
     ReaderSegmentAddress,
+    ReaderSourceMetadata,
     ReaderWork,
     ReaderWorkClassification,
     ReaderWorkMapNode,
@@ -48,6 +49,7 @@ from langnet.reader.storage import (
     register_contained_works,
     register_metadata_attributions,
     register_segment_rows,
+    register_source_metadata,
     register_work_classifications,
     register_work_map_nodes,
     repair_work_languages,
@@ -423,6 +425,99 @@ def test_generated_canonical_author_ids_round_trip_for_author_navigation() -> No
     assert [item["canonical_author_id"] for item in authors_by_folded_name] == [canonical_author_id]
     assert [item["canonical_author_id"] for item in authors_by_common_ascii_name] == [
         canonical_author_id
+    ]
+
+
+def test_list_works_summarizes_gretil_source_metadata() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="langnet:reader:sanskrit_texts:GRETIL_sa_nAgArjuna-dharmasaMgraha",
+            collection_id="sanskrit_texts",
+            language="san",
+            title="Dharmasaṃgraha",
+            author="Nāgārjuna",
+            author_id=None,
+            source_id="GRETIL_sa_nAgArjuna-dharmasaMgraha",
+        )
+        register_source_metadata(
+            catalog_path,
+            [
+                ReaderSourceMetadata(
+                    collection_id="sanskrit_texts",
+                    subject_kind="work",
+                    subject_id="GRETIL_sa_nAgArjuna-dharmasaMgraha",
+                    key="gretil_text",
+                    value="Dharmasaṃgraha",
+                    source_path=root / "sa_nAgArjuna-dharmasaMgraha.txt",
+                ),
+                ReaderSourceMetadata(
+                    collection_id="sanskrit_texts",
+                    subject_kind="work",
+                    subject_id="GRETIL_sa_nAgArjuna-dharmasaMgraha",
+                    key="gretil_author",
+                    value="Nāgārjuna",
+                    source_path=root / "sa_nAgArjuna-dharmasaMgraha.txt",
+                ),
+                ReaderSourceMetadata(
+                    collection_id="sanskrit_texts",
+                    subject_kind="work",
+                    subject_id="GRETIL_sa_nAgArjuna-dharmasaMgraha",
+                    key="gretil_edition",
+                    value="P.L. Vaidya: Dharmasangraha. Darbhanga 1961.",
+                    source_path=root / "sa_nAgArjuna-dharmasaMgraha.txt",
+                ),
+            ],
+        )
+
+        works = list_works(catalog_path, language="san")
+
+    assert works[0]["source_metadata_summary"] == (
+        "gretil_text=Dharmasaṃgraha; gretil_author=Nāgārjuna; "
+        "gretil_edition=P.L. Vaidya: Dharmasangraha. Darbhanga 1961."
+    )
+
+
+def test_list_works_does_not_hide_stale_gretil_json_twins() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="langnet:reader:sanskrit_json:corpus_sa_nAgArjuna-dharmasaMgraha",
+            collection_id="sanskrit_json",
+            language="san",
+            title="Dharmasaṃgraha",
+            author="Nāgārjuna",
+            author_id=None,
+            source_id="corpus_sa_nAgArjuna-dharmasaMgraha",
+        )
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="langnet:reader:sanskrit_texts:GRETIL_sa_nAgArjuna-dharmasaMgraha",
+            collection_id="sanskrit_texts",
+            language="san",
+            title="Dharmasaṃgraha",
+            author="Nāgārjuna",
+            author_id=None,
+            source_id="GRETIL_sa_nAgArjuna-dharmasaMgraha",
+        )
+
+        works = list_works(catalog_path, language="san", query="Nāgārjuna")
+
+    assert [
+        (work["collection_id"], work["source_id"])
+        for work in sorted(works, key=lambda item: str(item["collection_id"]))
+    ] == [
+        ("sanskrit_json", "corpus_sa_nAgArjuna-dharmasaMgraha"),
+        ("sanskrit_texts", "GRETIL_sa_nAgArjuna-dharmasaMgraha"),
     ]
 
 

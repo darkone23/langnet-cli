@@ -1,0 +1,39 @@
+{
+	"name": "langnet-web2",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"test": "bun src/lib/headword-display.test.ts && bun src/lib/search-romanization.test.ts && bun src/lib/search-data.test.ts && bun src/lib/source-outline.test.ts && bun src/lib/desk-route.test.ts && bun src/lib/search-route.test.ts && bun src/lib/boot-state.test.ts && bun src/lib/reload-diagnostics.test.ts && bun src/lib/reader.test.ts && bun src/lib/reader-page-loading.test.ts && bun src/lib/word-index-fallbacks.test.ts && bun src/lib/word-index.test.ts && bun src/lib/paradigm-resolution.test.ts && bun src/lib/paradigm.test.ts && bun src/lib/paradigm-ui.test.ts && bun src/lib/motd-cache.test.ts && bun src/lib/component-gloss.test.ts && bun src/lib/server/http-log.test.ts && bun src/lib/server/langnet-cli-env.test.ts",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
+	},
+	"devDependencies": {
+		"@sveltejs/kit": "^2.57.0",
+		"@sveltejs/vite-plugin-svelte": "^7.0.0",
+		"@tailwindcss/vite": "^4.2.4",
+		"@types/node": "^25.6.0",
+		"daisyui": "^5.5.19",
+		"prettier": "^3.8.3",
+		"prettier-plugin-svelte": "^3.5.1",
+		"prettier-plugin-tailwindcss": "^0.8.0",
+		"svelte": "^5.55.2",
+		"svelte-adapter-bun": "^1.0.1",
+		"svelte-check": "^4.4.6",
+		"tailwindcss": "^4.2.4",
+		"typescript": "^6.0.2",
+		"vite": "^8.0.7"
+	},
+	"dependencies": {
+		"@fontsource/noto-serif": "^5.2.9",
+		"@fontsource/noto-serif-devanagari": "^5.2.10",
+		"i18next": "^26.0.8",
+		"lucide-svelte": "^1.0.1"
+	}
+}

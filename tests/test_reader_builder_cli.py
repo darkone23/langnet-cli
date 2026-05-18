@@ -11,7 +11,8 @@ from click.testing import CliRunner
 from langnet.cli import main
 from langnet.reader.builder import ReaderBuildConfig, ReaderBuilder
 from langnet.reader.metadata_overlay import load_metadata_overlays
-from langnet.reader.storage import lookup_segment_by_address
+from langnet.reader.models import ReaderBookArtifact, ReaderEdition, ReaderWork
+from langnet.reader.storage import lookup_segment_by_address, register_book
 
 FIXTURES = Path("tests/fixtures/reader")
 
@@ -844,6 +845,485 @@ def test_reader_builder_groups_sanskrit_split_texts_and_skips_ocr_chunks() -> No
         )
     ]
     assert artifacts == [("sanskrit_split_plain", 2)]
+
+
+def test_reader_builder_prefers_gretil_plain_text_over_duplicate_json_stem() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        gretil_dir = root / "sanskrit" / "GRETIL"
+        corpus_dir = gretil_dir / "corpus"
+        corpus_dir.mkdir(parents=True)
+        corpus_json = corpus_dir / "sa_nAgArjuna-dharmasaMgraha.json"
+        corpus_json.write_text(
+            json.dumps(
+                {
+                    "text": "Dharmasaṃgraha",
+                    "author": "Nāgārjuna",
+                    "lines": [[{"w": "dharma"}, {"w": "saṃgraha"}]],
+                }
+            ),
+            encoding="utf-8",
+        )
+        ashta_json = corpus_dir / "sa_aSTasAhasrikA-prajJApAramitA.json"
+        ashta_json.write_text(
+            json.dumps(
+                {
+                    "text": "Aṣṭasāhasrikā Prajñāpāramitā",
+                    "lines": [[{"w": "evaṃ"}, {"w": "mayā"}, {"w": "śrutam"}]],
+                }
+            ),
+            encoding="utf-8",
+        )
+        plain_text = gretil_dir / "sa_nAgArjuna-dharmasaMgraha.txt"
+        plain_text.write_text(
+            "\n".join(
+                [
+                    "#Author:Nāgārjuna",
+                    "#Text:Dharmasaṃgraha",
+                    "#Edition:P.L. Vaidya: Dharmasangraha. Darbhanga 1961.",
+                    "",
+                    "dharmasaṃgrahaḥ /",
+                    "// namo ratnatrayāya //",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        ashta_text = gretil_dir / "sa_aSTasAhasrikA-prajJApAramitA.txt"
+        ashta_text.write_text(
+            "\n".join(
+                [
+                    "#Text:Aṣṭasāhasrikā Prajñāpāramitā",
+                    "#Edition:P.L. Vaidya, Darbhanga: The Mithila Institute, 1960.",
+                    '#Notes:"Missing portion" on page Vaidya 229 rediscovered.',
+                    "",
+                    "om namo bhagavatyai āryaprajñāpāramitāyai /",
+                    "evaṃ mayā śrutam /",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        output_root = root / "reader"
+        result = ReaderBuilder(
+            ReaderBuildConfig(
+                sanskrit_dir=root / "sanskrit",
+                output_root=output_root,
+            )
+        ).build()
+
+        with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
+            works = conn.execute(
+                """
+                SELECT work_id, collection_id, source_id, title, author
+                FROM works
+                ORDER BY work_id
+                """
+            ).fetchall()
+            artifacts = conn.execute(
+                """
+                SELECT adapter, segment_count
+                FROM artifacts
+                ORDER BY artifact_id
+                """
+            ).fetchall()
+            metadata_rows = conn.execute(
+                """
+                SELECT subject_kind, subject_id, key, value
+                FROM source_metadata
+                WHERE collection_id = 'sanskrit_texts'
+                ORDER BY key, value
+                """
+            ).fetchall()
+
+    assert result.status.value == "success", result.message
+    assert works == [
+        (
+            "langnet:reader:sanskrit_texts:GRETIL_sa_aSTasAhasrikA-prajJApAramitA",
+            "sanskrit_texts",
+            "GRETIL_sa_aSTasAhasrikA-prajJApAramitA",
+            "Aṣṭasāhasrikā Prajñāpāramitā",
+            "Unknown",
+        ),
+        (
+            "langnet:reader:sanskrit_texts:GRETIL_sa_nAgArjuna-dharmasaMgraha",
+            "sanskrit_texts",
+            "GRETIL_sa_nAgArjuna-dharmasaMgraha",
+            "Dharmasaṃgraha",
+            "Nāgārjuna",
+        ),
+    ]
+    assert artifacts == [("sanskrit_plain", 2), ("sanskrit_plain", 2)]
+    assert set(metadata_rows) == {
+        (
+            "work",
+            "GRETIL_sa_aSTasAhasrikA-prajJApAramitA",
+            "gretil_edition",
+            "P.L. Vaidya, Darbhanga: The Mithila Institute, 1960.",
+        ),
+        (
+            "work",
+            "GRETIL_sa_aSTasAhasrikA-prajJApAramitA",
+            "gretil_notes",
+            '"Missing portion" on page Vaidya 229 rediscovered.',
+        ),
+        (
+            "work",
+            "GRETIL_sa_aSTasAhasrikA-prajJApAramitA",
+            "gretil_text",
+            "Aṣṭasāhasrikā Prajñāpāramitā",
+        ),
+        (
+            "work",
+            "GRETIL_sa_nAgArjuna-dharmasaMgraha",
+            "gretil_author",
+            "Nāgārjuna",
+        ),
+        (
+            "work",
+            "GRETIL_sa_nAgArjuna-dharmasaMgraha",
+            "gretil_edition",
+            "P.L. Vaidya: Dharmasangraha. Darbhanga 1961.",
+        ),
+        (
+            "work",
+            "GRETIL_sa_nAgArjuna-dharmasaMgraha",
+            "gretil_text",
+            "Dharmasaṃgraha",
+        ),
+    }
+
+
+def test_reader_builder_source_slice_rebuild_replaces_stale_gretil_json_work() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        sanskrit_dir = root / "sanskrit"
+        gretil_dir = sanskrit_dir / "GRETIL"
+        corpus_dir = gretil_dir / "corpus"
+        corpus_dir.mkdir(parents=True)
+        corpus_json = corpus_dir / "sa_aSTasAhasrikA-prajJApAramitA.json"
+        corpus_json.write_text(
+            json.dumps(
+                {
+                    "text": "Aṣṭasāhasrikā Prajñāpāramitā",
+                    "lines": [[{"w": "evaṃ"}, {"w": "mayā"}, {"w": "śrutam"}]],
+                }
+            ),
+            encoding="utf-8",
+        )
+        output_root = root / "reader"
+        initial_result = ReaderBuilder(
+            ReaderBuildConfig(
+                sanskrit_dir=sanskrit_dir,
+                output_root=output_root,
+            )
+        ).build()
+        ashta_text = gretil_dir / "sa_aSTasAhasrikA-prajJApAramitA.txt"
+        ashta_text.write_text(
+            "\n".join(
+                [
+                    "#Text:Aṣṭasāhasrikā Prajñāpāramitā",
+                    "#Edition:P.L. Vaidya, Darbhanga: The Mithila Institute, 1960.",
+                    "",
+                    "om namo bhagavatyai āryaprajñāpāramitāyai /",
+                    "evaṃ mayā śrutam /",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        slice_result = ReaderBuilder(
+            ReaderBuildConfig(
+                sanskrit_dir=sanskrit_dir,
+                output_root=output_root,
+                wipe_existing=False,
+                source_paths=(ashta_text,),
+            )
+        ).build()
+
+        with duckdb.connect(str(output_root / "catalog.duckdb"), read_only=True) as conn:
+            works = conn.execute(
+                """
+                SELECT collection_id, source_id
+                FROM works
+                WHERE language = 'san'
+                ORDER BY collection_id, source_id
+                """
+            ).fetchall()
+            artifact_path_row = conn.execute(
+                """
+                SELECT artifact_path
+                FROM artifacts
+                WHERE work_id =
+                  'langnet:reader:sanskrit_texts:GRETIL_sa_aSTasAhasrikA-prajJApAramitA'
+                """
+            ).fetchone()
+            assert artifact_path_row is not None
+            artifact_path = artifact_path_row[0]
+        with duckdb.connect(str(artifact_path), read_only=True) as conn:
+            segments = conn.execute(
+                """
+                SELECT citation_path, text
+                FROM segments
+                ORDER BY sort_key
+                LIMIT 2
+                """
+            ).fetchall()
+
+    assert initial_result.status.value == "success", initial_result.message
+    assert slice_result.status.value == "success", slice_result.message
+    assert works == [("sanskrit_texts", "GRETIL_sa_aSTasAhasrikA-prajJApAramitA")]
+    assert segments == [
+        ("1", "om namo bhagavatyai āryaprajñāpāramitāyai /"),
+        ("2", "evaṃ mayā śrutam /"),
+    ]
+
+
+def test_reader_builder_source_slice_cleans_all_existing_gretil_json_twins() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        output_root = root / "reader"
+        catalog_path = output_root / "catalog.duckdb"
+        sanskrit_dir = root / "sanskrit"
+        gretil_dir = sanskrit_dir / "GRETIL"
+        gretil_dir.mkdir(parents=True)
+        ashta_text = gretil_dir / "sa_aSTasAhasrikA-prajJApAramitA.txt"
+        dharma_text = gretil_dir / "sa_nAgArjuna-dharmasaMgraha.txt"
+        ashta_text.write_text(
+            "\n".join(
+                [
+                    "#Text:Aṣṭasāhasrikā Prajñāpāramitā",
+                    "",
+                    "om namo bhagavatyai āryaprajñāpāramitāyai /",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        dharma_text.write_text(
+            "\n".join(
+                [
+                    "#Author:Nāgārjuna",
+                    "#Text:Dharmasaṃgraha",
+                    "",
+                    "dharmasaṃgrahaḥ /",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        for collection_id, source_id in (
+            ("sanskrit_json", "corpus_sa_aSTasAhasrikA-prajJApAramitA"),
+            ("sanskrit_json", "corpus_sa_nAgArjuna-dharmasaMgraha"),
+            ("sanskrit_texts", "GRETIL_sa_aSTasAhasrikA-prajJApAramitA"),
+            ("sanskrit_texts", "GRETIL_sa_nAgArjuna-dharmasaMgraha"),
+        ):
+            work_id = f"langnet:reader:{collection_id}:{source_id}"
+            source_path = (
+                gretil_dir / f"{source_id.removeprefix('GRETIL_')}.txt"
+                if collection_id == "sanskrit_texts"
+                else gretil_dir / "corpus" / f"{source_id.removeprefix('corpus_')}.json"
+            )
+            register_book(
+                catalog_path,
+                ReaderWork(
+                    work_id=work_id,
+                    collection_id=collection_id,
+                    language="san",
+                    title=source_id,
+                    author="Nāgārjuna",
+                    author_id=None,
+                    source_id=source_id,
+                    cts_work_urn=None,
+                ),
+                ReaderEdition(
+                    edition_id=f"{work_id}:edition",
+                    work_id=work_id,
+                    label="stale fixture",
+                    language="san",
+                    source_path=source_path,
+                ),
+                ReaderBookArtifact(
+                    artifact_id=f"{work_id}:artifact",
+                    work_id=work_id,
+                    edition_id=f"{work_id}:edition",
+                    artifact_path=output_root / "books" / f"{source_id}.duckdb",
+                    source_path=source_path,
+                    adapter="fixture",
+                    source_hash="stale",
+                    segment_count=1,
+                    token_count=1,
+                ),
+            )
+
+        result = ReaderBuilder(
+            ReaderBuildConfig(
+                sanskrit_dir=sanskrit_dir,
+                output_root=output_root,
+                wipe_existing=False,
+                source_paths=(ashta_text,),
+            )
+        ).build()
+
+        with duckdb.connect(str(catalog_path), read_only=True) as conn:
+            works = conn.execute(
+                """
+                SELECT collection_id, source_id
+                FROM works
+                WHERE language = 'san'
+                ORDER BY collection_id, source_id
+                """
+            ).fetchall()
+
+    assert result.status.value == "success", result.message
+    assert works == [
+        ("sanskrit_texts", "GRETIL_sa_aSTasAhasrikA-prajJApAramitA"),
+        ("sanskrit_texts", "GRETIL_sa_nAgArjuna-dharmasaMgraha"),
+    ]
+
+
+def test_reader_builder_removes_legacy_work_when_same_language_perseus_work_exists() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        output_root = root / "reader"
+        catalog_path = output_root / "catalog.duckdb"
+        legacy_source = root / "tlg0086.txt"
+        perseus_source = root / "tlg0086.tlg003.perseus-grc1.xml"
+        translation_source = root / "phi0550.phi001.perseus-eng1.xml"
+        legacy_source.write_text("legacy", encoding="utf-8")
+        perseus_source.write_text("perseus", encoding="utf-8")
+        translation_source.write_text("translation", encoding="utf-8")
+
+        for work, edition_source in (
+            (
+                ReaderWork(
+                    work_id="langnet:reader:tlg:tlg0086.003",
+                    collection_id="tlg",
+                    language="grc",
+                    title="*)AQHNAÍWN POLITEÍA",
+                    author="Aristotle of Stagira",
+                    author_id="tlg0086",
+                    source_id="tlg0086.003",
+                    cts_work_urn="urn:cts:greekLit:tlg0086.tlg003",
+                ),
+                legacy_source,
+            ),
+            (
+                ReaderWork(
+                    work_id="langnet:reader:tlg:tlg0086.001",
+                    collection_id="tlg",
+                    language="grc",
+                    title="Analytica priora et posteriora",
+                    author="Aristotle of Stagira",
+                    author_id="tlg0086",
+                    source_id="tlg0086.001",
+                    cts_work_urn="urn:cts:greekLit:tlg0086.tlg001",
+                ),
+                legacy_source,
+            ),
+            (
+                ReaderWork(
+                    work_id="urn:cts:greekLit:tlg0086.tlg003",
+                    collection_id="perseus",
+                    language="grc",
+                    title="Ἀθηναίων πολιτεία",
+                    author="Aristotle",
+                    author_id="urn:cts:greekLit:tlg0086",
+                    source_id="tlg0086.tlg003",
+                    cts_work_urn="urn:cts:greekLit:tlg0086.tlg003",
+                ),
+                perseus_source,
+            ),
+            (
+                ReaderWork(
+                    work_id="langnet:reader:phi:phi0550.001",
+                    collection_id="phi",
+                    language="lat",
+                    title="De rerum natura",
+                    author="Lucretius",
+                    author_id="phi0550",
+                    source_id="phi0550.001",
+                    cts_work_urn="urn:cts:latinLit:phi0550.phi001",
+                ),
+                legacy_source,
+            ),
+            (
+                ReaderWork(
+                    work_id="urn:cts:latinLit:phi0550.phi001",
+                    collection_id="perseus",
+                    language="eng",
+                    title="On the Nature of Things",
+                    author="Lucretius",
+                    author_id="urn:cts:latinLit:phi0550",
+                    source_id="phi0550.phi001",
+                    cts_work_urn="urn:cts:latinLit:phi0550.phi001",
+                ),
+                translation_source,
+            ),
+        ):
+            register_book(
+                catalog_path,
+                work,
+                ReaderEdition(
+                    edition_id=f"{work.work_id}:edition",
+                    work_id=work.work_id,
+                    label="fixture",
+                    language=work.language,
+                    source_path=edition_source,
+                ),
+                ReaderBookArtifact(
+                    artifact_id=f"{work.work_id}:artifact",
+                    work_id=work.work_id,
+                    edition_id=f"{work.work_id}:edition",
+                    artifact_path=output_root / "books" / f"{work.source_id}.duckdb",
+                    source_path=edition_source,
+                    adapter="fixture",
+                    source_hash="fixture",
+                    segment_count=1,
+                    token_count=1,
+                ),
+            )
+
+        result = ReaderBuilder(
+            ReaderBuildConfig(output_root=output_root, wipe_existing=False)
+        ).build()
+
+        with duckdb.connect(str(catalog_path), read_only=True) as conn:
+            works = conn.execute(
+                """
+                SELECT work_id, collection_id, language, title
+                FROM works
+                ORDER BY collection_id, language, work_id
+                """
+            ).fetchall()
+
+    assert result.status.value == "success", result.message
+    assert works == [
+        (
+            "urn:cts:latinLit:phi0550.phi001",
+            "perseus",
+            "eng",
+            "On the Nature of Things",
+        ),
+        (
+            "urn:cts:greekLit:tlg0086.tlg003",
+            "perseus",
+            "grc",
+            "Ἀθηναίων πολιτεία",
+        ),
+        (
+            "langnet:reader:phi:phi0550.001",
+            "phi",
+            "lat",
+            "De rerum natura",
+        ),
+        (
+            "langnet:reader:tlg:tlg0086.001",
+            "tlg",
+            "grc",
+            "Analytica priora et posteriora",
+        ),
+    ], works
 
 
 def test_reader_builder_applies_accepted_metadata_overlay() -> None:

@@ -59,6 +59,7 @@ from langnet.reader.source_enrichment import (
 from langnet.reader.storage import (
     ReaderBookRegistration,
     create_catalog_db,
+    delete_reader_works,
     register_aliases,
     register_books,
     register_contained_works,
@@ -96,6 +97,7 @@ class ReaderBuildConfig:
     force_rebuild: bool = False
     progress_every: int | None = None
     progress_callback: Callable[[ReaderBuildProgress], None] | None = None
+    source_paths: tuple[Path, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -167,6 +169,9 @@ class ReaderBuilder:
             load_work_map_nodes(config.work_map_dir) if config.work_map_dir is not None else []
         )
         self._accepted_metadata_overlays = accepted_metadata_overlays(self._metadata_overlays)
+        self._selected_source_paths = {
+            path.expanduser().resolve() for path in self.config.source_paths
+        }
 
     def build(self) -> BuildResult[ReaderCorpusStats | BuildErrorStats]:
         try:
@@ -225,6 +230,8 @@ class ReaderBuilder:
                     segment_count=segment_count,
                 )
             register_books(self.catalog_path, book_registrations)
+            self._delete_superseded_sanskrit_json_works(book_registrations)
+            self._delete_superseded_legacy_works_with_perseus()
             self._register_sanskrit_source_enrichment_metadata()
             registered_aliases = _aliases_for_registrations(aliases, book_registrations)
             register_aliases(self.catalog_path, registered_aliases)
@@ -278,6 +285,61 @@ class ReaderBuilder:
             segment_count += len(source.parsed.segments)
         return artifact_count, segment_count
 
+    def _delete_superseded_sanskrit_json_works(
+        self,
+        registrations: list[ReaderBookRegistration],
+    ) -> None:
+        stems = {
+            stem
+            for registration in registrations
+            if registration.work.collection_id == "sanskrit_texts"
+            and (stem := _sanskrit_gretil_comparable_source_id(registration.work.source_id))
+        }
+        stems.update(self._existing_sanskrit_text_gretil_stems())
+        work_ids = [
+            f"langnet:reader:sanskrit_json:{_slug(f'corpus_{stem}')}" for stem in sorted(stems)
+        ]
+        delete_reader_works(self.catalog_path, work_ids)
+
+    def _existing_sanskrit_text_gretil_stems(self) -> set[str]:
+        if not self.catalog_path.exists():
+            return set()
+        with duckdb.connect(str(self.catalog_path), read_only=True) as conn:
+            rows = conn.execute(
+                """
+                SELECT source_id
+                FROM works
+                WHERE language = 'san'
+                  AND collection_id = 'sanskrit_texts'
+                  AND source_id LIKE 'GRETIL_sa_%'
+                """
+            ).fetchall()
+        return {
+            stem
+            for (source_id,) in rows
+            if (stem := _sanskrit_gretil_comparable_source_id(str(source_id))) is not None
+        }
+
+    def _delete_superseded_legacy_works_with_perseus(self) -> None:
+        if not self.catalog_path.exists():
+            return
+        with duckdb.connect(str(self.catalog_path), read_only=True) as conn:
+            rows = conn.execute(
+                """
+                SELECT legacy.work_id
+                FROM works AS legacy
+                JOIN works AS perseus
+                  ON legacy.cts_work_urn = perseus.cts_work_urn
+                 AND legacy.language = perseus.language
+                WHERE legacy.collection_id IN ('phi', 'tlg')
+                  AND perseus.collection_id = 'perseus'
+                  AND legacy.work_id <> perseus.work_id
+                  AND legacy.cts_work_urn IS NOT NULL
+                  AND legacy.cts_work_urn <> ''
+                """
+            ).fetchall()
+        delete_reader_works(self.catalog_path, [str(work_id) for (work_id,) in rows])
+
     def _emit_progress(
         self,
         *,
@@ -302,10 +364,21 @@ class ReaderBuilder:
         )
 
     def _iter_sources(self) -> Iterator[_ParsedSource]:
+        if self.config.source_paths:
+            yield from self._source_stream()
+            return
         if self.config.limit is None:
             yield from self._source_stream()
             return
         yield from islice(self._source_stream(), self.config.limit)
+
+    def _path_selected(self, path: Path) -> bool:
+        return not self._selected_source_paths or path.expanduser().resolve() in (
+            self._selected_source_paths
+        )
+
+    def _any_path_selected(self, paths: list[Path]) -> bool:
+        return not self._selected_source_paths or any(self._path_selected(path) for path in paths)
 
     def _source_stream(self) -> Iterator[_ParsedSource]:
         yield from self._legacy_sources(self.config.phi_latin_dir, "phi_legacy", "phi", "lat")
@@ -386,6 +459,11 @@ class ReaderBuilder:
                 )
             )
         register_source_files(self.catalog_path, files)
+        metadata: list[ReaderSourceMetadata] = []
+        for path in self._sanskrit_plain_text_paths():
+            metadata.extend(_sanskrit_plain_text_source_metadata(path))
+        if metadata:
+            register_source_metadata(self.catalog_path, metadata)
 
     def _register_sanskrit_source_enrichment_metadata(self) -> None:
         if self.config.sanskrit_dir is None or not self.config.sanskrit_dir.exists():
@@ -421,6 +499,8 @@ class ReaderBuilder:
         if self.config.perseus_dir is None:
             return
         for path in sorted(self.config.perseus_dir.rglob("*.xml")):
+            if not self._path_selected(path):
+                continue
             if _is_perseus_text_xml(path):
                 try:
                     yield _ParsedSource(parse_perseus_tei(path), "perseus_tei")
@@ -431,6 +511,8 @@ class ReaderBuilder:
         if self.config.digiliblt_dir is None:
             return
         for path in sorted(self.config.digiliblt_dir.rglob("*.xml")):
+            if not self._path_selected(path):
+                continue
             try:
                 yield _ParsedSource(parse_digiliblt_tei(path), "digiliblt_tei")
             except Exception as exc:  # noqa: BLE001
@@ -442,6 +524,8 @@ class ReaderBuilder:
         if root is None:
             return
         for path in sorted(root.rglob("*.txt")):
+            if not self._path_selected(path):
+                continue
             if collection_id == "tlg" and path.stem.lower().startswith("doccan"):
                 continue
             idt_path = path.with_suffix(".idt")
@@ -476,7 +560,13 @@ class ReaderBuilder:
     def _sanskrit_json_sources(self) -> Iterator[_ParsedSource]:
         if self.config.sanskrit_dir is None:
             return
+        plain_text_gretil_stems = self._sanskrit_plain_text_gretil_stems()
         for path in sorted(self.config.sanskrit_dir.rglob("*.json")):
+            if not self._path_selected(path):
+                continue
+            gretil_stem = _sanskrit_gretil_comparable_stem(path)
+            if gretil_stem is not None and gretil_stem in plain_text_gretil_stems:
+                continue
             try:
                 yield _ParsedSource(parse_sanskrit_json(path), "sanskrit_json")
             except Exception as exc:  # noqa: BLE001
@@ -486,6 +576,8 @@ class ReaderBuilder:
         grouped_paths = self._sanskrit_grouped_plain_text_paths()
         grouped_path_set = {path for paths in grouped_paths for path in paths}
         for paths in grouped_paths:
+            if not self._any_path_selected(paths):
+                continue
             try:
                 yield _ParsedSource(
                     parse_sanskrit_plain_text_group(
@@ -500,6 +592,8 @@ class ReaderBuilder:
 
         for path in self._sanskrit_plain_text_paths():
             if path in grouped_path_set:
+                continue
+            if not self._path_selected(path):
                 continue
             try:
                 parsed = parse_sanskrit_plain_text(
@@ -521,6 +615,8 @@ class ReaderBuilder:
 
     def _sanskrit_dcs_sources(self) -> Iterator[_ParsedSource]:
         for paths in self._sanskrit_conllu_groups():
+            if not self._any_path_selected(paths):
+                continue
             try:
                 if len(paths) == 1:
                     yield _ParsedSource(parse_dcs_conllu(paths[0]), "sanskrit_dcs_conllu")
@@ -541,6 +637,13 @@ class ReaderBuilder:
                 continue
             paths.append(path)
         return paths
+
+    def _sanskrit_plain_text_gretil_stems(self) -> set[str]:
+        return {
+            stem
+            for path in self._sanskrit_plain_text_paths()
+            if (stem := _sanskrit_gretil_comparable_stem(path)) is not None
+        }
 
     def _sanskrit_grouped_plain_text_paths(self) -> list[list[Path]]:
         groups: dict[Path, list[Path]] = defaultdict(list)
@@ -952,6 +1055,59 @@ def _digiliblt_source_metadata(path: Path) -> list[ReaderSourceMetadata]:
     return rows
 
 
+def _sanskrit_plain_text_source_metadata(path: Path) -> list[ReaderSourceMetadata]:
+    subject_id = _path_source_id(path)
+    rows: list[ReaderSourceMetadata] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        return [
+            ReaderSourceMetadata(
+                collection_id="sanskrit_texts",
+                subject_kind="source_file",
+                subject_id=subject_id,
+                key="metadata_parse_error",
+                value=str(exc),
+                source_path=path,
+            )
+        ]
+    for raw_line in lines[:50]:
+        line = raw_line.strip().lstrip("\ufeff")
+        if not line:
+            continue
+        if not line.startswith("#"):
+            break
+        key, separator, value = line[1:].partition(":")
+        if separator:
+            metadata_key = _sanskrit_plain_text_metadata_key(key)
+            metadata_value = _normalize_metadata_value(value)
+        else:
+            metadata_key = "gretil_header"
+            metadata_value = _normalize_metadata_value(key)
+        if not metadata_value:
+            continue
+        rows.append(
+            ReaderSourceMetadata(
+                collection_id="sanskrit_texts",
+                subject_kind="work",
+                subject_id=subject_id,
+                key=metadata_key,
+                value=metadata_value,
+                source_path=path,
+            )
+        )
+    return rows
+
+
+def _sanskrit_plain_text_metadata_key(value: str) -> str:
+    normalized = _slug(value.casefold().replace(" ", "_").replace("-", "_"))
+    return f"gretil_{normalized}" if normalized else "gretil_header"
+
+
+def _normalize_metadata_value(value: str) -> str:
+    return " ".join(value.split()).strip()
+
+
 def _find_xml_text(root: ET.Element, local_name: str) -> str:
     for node in root.iter():
         if node.tag.rsplit("}", 1)[-1] == local_name:
@@ -1058,6 +1214,16 @@ def _is_raw_sanskrit_ocr_chunk_with_split(path: Path) -> bool:
 
 def _path_source_id(path: Path) -> str:
     return _slug(f"{path.parent.name}_{path.stem}")
+
+
+def _sanskrit_gretil_comparable_stem(path: Path) -> str | None:
+    return _sanskrit_gretil_comparable_source_id(_path_source_id(path))
+
+
+def _sanskrit_gretil_comparable_source_id(source_id: str) -> str | None:
+    for prefix in ("corpus_", "GRETIL_"):
+        source_id = source_id.removeprefix(prefix)
+    return source_id if source_id.startswith("sa_") else None
 
 
 def _dcs_group_key(path: Path) -> str:

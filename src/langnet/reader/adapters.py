@@ -500,7 +500,7 @@ def parse_sanskrit_plain_text(
         edition_label="plain text",
         source_path=path,
     )
-    lines = [_normalize_text(line) for line in text.splitlines()]
+    lines = _sanskrit_plain_reader_lines(text.splitlines())
     return _parsed_reader_book(
         seed,
         [(index, "line", text) for index, text in _numbered_nonempty(lines)],
@@ -536,10 +536,7 @@ def parse_sanskrit_plain_text_group(
     seen: set[str] = set()
     rows: list[_ReaderSegmentRow] = []
     for path in sorted_paths:
-        lines = [
-            _normalize_text(line.lstrip("\ufeff"))
-            for line in path.read_text(encoding="utf-8").splitlines()
-        ]
+        lines = _sanskrit_plain_reader_lines(path.read_text(encoding="utf-8").splitlines())
         for line_index, text in _numbered_nonempty(lines):
             rows.append(
                 _ReaderSegmentRow(
@@ -575,6 +572,15 @@ def _sanskrit_plain_header_metadata(lines: list[str]) -> dict[str, str]:
         elif normalized_key == "text":
             metadata["title"] = clean_value
     return metadata
+
+
+def _sanskrit_plain_reader_lines(lines: list[str]) -> list[str]:
+    return [
+        normalized
+        for raw_line in lines
+        if not raw_line.strip().lstrip("\ufeff").startswith("#")
+        if (normalized := _normalize_text(raw_line.lstrip("\ufeff")))
+    ]
 
 
 def _sanskrit_group_header_metadata(paths: list[Path]) -> dict[str, str]:
@@ -648,7 +654,7 @@ def parse_legacy_text_dump_with_idt(
     collection_id: str,
     language: str,
 ) -> list[ParsedBook]:
-    works = _parse_legacy_idt(idt_path)
+    works = _parse_legacy_idt(idt_path, language=language)
     if not works:
         return [parse_legacy_text_dump(path, collection_id=collection_id, language=language)]
 
@@ -1695,7 +1701,7 @@ def _normalize_legacy_beta_diacritic_order(text: str) -> str:
     return re.sub(r"\(/\*([A-Z])", r"*(/\1", text)
 
 
-def _parse_legacy_idt(path: Path) -> list[LegacyIdtWork]:  # noqa: C901
+def _parse_legacy_idt(path: Path, *, language: str | None = None) -> list[LegacyIdtWork]:  # noqa: C901
     data = path.read_bytes()
     author_id = path.stem
     author_name = path.stem
@@ -1727,7 +1733,7 @@ def _parse_legacy_idt(path: Path) -> list[LegacyIdtWork]:  # noqa: C901
         value, i = _read_idt_pascal(data, i + 2)
         if level == 0 and value_level == 0:
             author_id = identifier
-            author_name = _legacy_metadata_text(value)
+            author_name = _legacy_metadata_text(value, language=language)
             continue
         if level != 1 or value_level != 1:
             continue
@@ -1735,13 +1741,13 @@ def _parse_legacy_idt(path: Path) -> list[LegacyIdtWork]:  # noqa: C901
         labels = []
         while i + 3 <= len(data) and data[i] == IDT_LABEL_MARKER:
             label, i = _read_idt_pascal(data, i + 2)
-            labels.append(_legacy_metadata_text(label))
+            labels.append(_legacy_metadata_text(label, language=language))
         works.append(
             LegacyIdtWork(
                 author_id=author_id,
                 author_name=author_name,
                 work_number=identifier,
-                work_name=_legacy_metadata_text(value),
+                work_name=_legacy_metadata_text(value, language=language),
                 start_block=start_block,
                 level_labels=tuple(labels),
             )
@@ -1783,7 +1789,7 @@ def _legacy_edition_label(level_labels: tuple[str, ...]) -> str:
     return f"legacy text dump + IDT ({', '.join(level_labels)})"
 
 
-def _legacy_metadata_text(text: str) -> str:
+def _legacy_metadata_text(text: str, *, language: str | None = None) -> str:
     text = text.replace("`", " ")
     text = re.sub(r"[%](\d+)", _legacy_punctuation_replacement, text)
     text = re.sub(r'"\d*', '"', text)
@@ -1792,6 +1798,8 @@ def _legacy_metadata_text(text: str) -> str:
     text = re.sub(r"[\$&]\d*", "", text)
     text = re.sub(r"[\[\]{}<>]\d*", "", text)
     text = re.sub(r"#\d+", "#", text)
+    if language == "grc" and _legacy_metadata_looks_like_greek_beta(text):
+        return _normalize_text(_legacy_greek_beta_to_unicode(text))
     text = re.sub(r"([aeiouAEIOU])/", lambda match: _legacy_latin_accent(match, "acute"), text)
     text = re.sub(r"([aeiouAEIOU])\\", lambda match: _legacy_latin_accent(match, "grave"), text)
     text = re.sub(
@@ -1805,6 +1813,12 @@ def _legacy_metadata_text(text: str) -> str:
         text,
     )
     return _normalize_text(text)
+
+
+def _legacy_metadata_looks_like_greek_beta(text: str) -> bool:
+    if any("a" <= char <= "z" for char in text):
+        return False
+    return bool(re.search(r"[*()/\\=|]", text) and re.search(r"[A-Z]", text))
 
 
 def _has_ascii_letter(value: str) -> bool:
