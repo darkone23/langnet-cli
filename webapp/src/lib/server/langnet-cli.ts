@@ -28,13 +28,25 @@ import type {
 	WordIndexSectionsResponse
 } from '$lib/word-index';
 
-type CliRequest = {
+export type CliRequest = {
 	language: LanguageMode;
 	query: string;
 	dictionaries: ToolRequest[];
 	translationMode: TranslationMode;
 	maxBuckets: number;
 	maxGlossChars: number;
+	timeoutMs: number;
+};
+
+export type TranslationRetryRequest = {
+	translationId?: string;
+	sourceLexicon?: ToolId;
+	entryId?: string;
+	occurrence?: number;
+	headword?: string;
+	sourceTextHash?: string;
+	retryReason?: string;
+	maxRetries?: number;
 	timeoutMs: number;
 };
 
@@ -47,8 +59,14 @@ type ParadigmCliRequest = {
 	timeoutMs: number;
 };
 
-type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
-type JsonObject = { [key: string]: JsonValue };
+export type JsonValue =
+	| null
+	| boolean
+	| number
+	| string
+	| JsonValue[]
+	| { [key: string]: JsonValue };
+export type JsonObject = { [key: string]: JsonValue };
 
 const cliDirectory = resolveCliDirectory();
 let cliQueue: Promise<void> = Promise.resolve();
@@ -150,6 +168,22 @@ export async function encounterWordFromCli(request: CliRequest): Promise<Encount
 	const payload = await runJsonCommand(args, request.timeoutMs, { queued: false });
 
 	return mapCliPayload(payload, request, toolFilter);
+}
+
+export async function clearTranslationCacheFromCli(
+	request: TranslationRetryRequest
+): Promise<JsonObject> {
+	const args = ['cli', 'translation-cache', 'clear', '--yes', '--output', 'json'];
+	if (request.translationId) args.push('--translation-id', request.translationId);
+	if (request.sourceLexicon) args.push('--source-lexicon', request.sourceLexicon);
+	if (request.entryId) args.push('--entry-id', request.entryId);
+	if (request.occurrence !== undefined) args.push('--occurrence', String(request.occurrence));
+	if (request.headword) args.push('--headword', request.headword);
+	if (request.sourceTextHash) args.push('--source-text-hash', request.sourceTextHash);
+	if (request.retryReason) args.push('--retry-reason', request.retryReason);
+	if (request.maxRetries !== undefined) args.push('--max-retries', String(request.maxRetries));
+
+	return await runJsonCommand(args, request.timeoutMs, { queued: true });
 }
 
 export async function wordIndexFromCli(
@@ -343,7 +377,7 @@ function parseJsonFromOutput(output: string): JsonObject | null {
 	}
 }
 
-function mapCliPayload(
+export function mapCliPayload(
 	payload: JsonObject,
 	request: CliRequest,
 	toolFilter: string
@@ -893,7 +927,8 @@ function mapCliComponentMeaning(
 					source_label: sourceLayerLabel(firstTool, nonEnglishSourceLang || 'fr'),
 					source_text: '',
 					target_lang: 'en',
-					target_text: displayGloss
+					target_text: displayGloss,
+					model: stringValue(translationPayload(meaning)?.model)
 				}
 			: nonEnglishSourceLang && firstTool && displayGloss
 				? {
@@ -907,6 +942,10 @@ function mapCliComponentMeaning(
 					}
 				: undefined
 	};
+}
+
+function translationPayload(meaning: JsonObject) {
+	return objectValue(meaning.translation);
 }
 
 function mergeComponentTranslationMeanings(
@@ -1163,6 +1202,7 @@ function mapCliBucket({
 		: sourceLangs.some((lang) => lang && lang !== 'en') && sourceText
 			? {
 					available: false,
+					...translationRetryMetadataFromEntry(entries[0]),
 					source_tool: firstSourceTool,
 					source_lang: firstSourceLang,
 					source_label: sourceLayerLabel(firstSourceTool, firstSourceLang),
@@ -1293,13 +1333,60 @@ function translationFromEntry(entry: JsonObject, sourceText: string, readerText:
 
 	return {
 		available: true,
+		...translationRetryMetadataFromEntry(entry),
 		source_tool: sourceTool,
 		source_lang: sourceLang,
 		source_label: sourceLayerLabel(sourceTool, sourceLang),
 		source_text: cleanSourceText || cleanReaderText,
 		target_lang: targetLang === 'en' ? ('en' as const) : ('en' as const),
-		target_text: cleanReaderText || cleanSourceText
+		target_text: cleanReaderText || cleanSourceText,
+		model: stringValue(translation?.model)
 	};
+}
+
+function translationRetryMetadataFromEntry(entry: JsonObject | undefined) {
+	const translation = objectValue(entry?.translation);
+	const sourceEntry = objectValue(entry?.source_entry);
+	const sourceRef = stringValue(entry?.source_ref);
+	const parsedRef = parseTranslatableSourceRef(sourceRef);
+	const sourceLexicon = normalizeToolId(
+		stringValue(translation?.source_lexicon) ||
+			stringValue(sourceEntry?.dict) ||
+			stringValue(entry?.dictionary) ||
+			stringValue(translation?.derived_from_tool)
+	);
+	const entryId =
+		stringValue(sourceEntry?.entry_id) || parsedRef.entryId || stringValue(entry?.headword);
+	const occurrence =
+		numberValue(sourceEntry?.occurrence) ||
+		(parsedRef.occurrence === undefined ? undefined : parsedRef.occurrence);
+	const headwordNorm =
+		stringValue(sourceEntry?.headword_norm) ||
+		stringValue(entry?.headword) ||
+		stringValue(entry?.display_form);
+
+	return {
+		translation_id: stringValue(translation?.translation_id) || undefined,
+		source_lexicon: isTranslatedSourceTool(sourceLexicon) ? sourceLexicon : undefined,
+		entry_id: entryId || undefined,
+		occurrence,
+		headword_norm: normalizeComparableText(headwordNorm) || undefined,
+		source_text_hash: stringValue(translation?.source_text_hash) || undefined
+	};
+}
+
+function parseTranslatableSourceRef(sourceRef: string) {
+	const parsed = /^(?:dico|gaffiot|bailly):(?:.*#)?([^:#]+)(?::(\d+))?$/.exec(sourceRef);
+	if (!parsed) return {};
+	const occurrence = parsed[2] === undefined ? undefined : Number.parseInt(parsed[2], 10);
+	return {
+		entryId: parsed[1],
+		occurrence: Number.isFinite(occurrence) ? occurrence : undefined
+	};
+}
+
+function isTranslatedSourceTool(tool: ToolId | undefined) {
+	return tool === 'dico' || tool === 'gaffiot' || tool === 'bailly';
 }
 
 function witnessFromEntry(entry: JsonObject) {
@@ -1367,6 +1454,13 @@ function mergeTranslatedSourceBucket(
 	const translation = reader.translation
 		? {
 				...reader.translation,
+				translation_id: reader.translation.translation_id ?? source.translation?.translation_id,
+				source_lexicon: reader.translation.source_lexicon ?? source.translation?.source_lexicon,
+				entry_id: reader.translation.entry_id ?? source.translation?.entry_id,
+				occurrence: reader.translation.occurrence ?? source.translation?.occurrence,
+				headword_norm: reader.translation.headword_norm ?? source.translation?.headword_norm,
+				source_text_hash:
+					reader.translation.source_text_hash ?? source.translation?.source_text_hash,
 				source_text: sourceText,
 				source_label: source.translation?.source_label ?? reader.translation.source_label,
 				source_lang: source.translation?.source_lang ?? reader.translation.source_lang

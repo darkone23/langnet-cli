@@ -88,7 +88,7 @@ def test_current_docs_use_maintained_cli_wrapper_examples() -> None:
 
 
 def test_web_justfile_forwards_cli_args_as_positional_argv() -> None:
-    text = Path("../langnet-web2/justfile").read_text(encoding="utf-8")
+    text = Path("webapp/justfile").read_text(encoding="utf-8")
 
     assert text.startswith("set positional-arguments\n")
     assert 'cd "{{cli_dir}}" && just cli "$@"' in text

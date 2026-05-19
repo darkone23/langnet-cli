@@ -12,6 +12,7 @@
 		Sun,
 		Telescope
 	} from 'lucide-svelte';
+	import { fetchPayload } from '$lib/msgpack';
 	import {
 		buildReaderTokenParts,
 		buildReaderRouteSearch,
@@ -159,6 +160,7 @@
 	let activeCollection = $state('all');
 	let pageRadius = $state(4);
 	let pageLimit = $state(14);
+	let pageTextBudget = $state(7_500);
 	let pageNextCursor = $state<string | null>(null);
 	let pagePrevCursor = $state<string | null>(null);
 	let activeAuthorSection = $state('');
@@ -379,8 +381,9 @@
 	async function loadCatalogs(historyMode: ReaderHistoryMode = 'replace') {
 		catalogError = '';
 		try {
-			const response = await fetch('/api/reader?mode=catalogs');
-			const data = (await response.json()) as ReaderCatalogsResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderCatalogsResponse>(
+				'/api/reader?mode=catalogs'
+			);
 			if (!response.ok) throw new Error(data.error || 'Reader catalogs failed.');
 			catalogs = data.items;
 			catalogDefaults = data.defaults;
@@ -405,6 +408,10 @@
 		}
 	}
 
+	async function fetchReaderApi<T>(url: string) {
+		return fetchPayload<T & { error?: string }>(url);
+	}
+
 	async function loadFacets() {
 		if (!catalogId) return;
 		try {
@@ -413,8 +420,9 @@
 				catalog: catalogId,
 				language
 			});
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderFacetsResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderFacetsResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (!response.ok) throw new Error(data.error || 'Reader facets failed.');
 			facets = data.items;
 			if (
@@ -445,8 +453,9 @@
 				sample_limit: '2',
 				timeout_ms: '300000'
 			});
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderShelvesResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderShelvesResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (!response.ok) throw new Error(data.error || 'Reader shelves failed.');
 			discoveryShelves = data.items;
 			saveReaderIndexState();
@@ -518,8 +527,9 @@
 			catalog: targetCatalogId,
 			language: targetLanguage
 		});
-		const response = await fetch(`/api/reader?${params.toString()}`);
-		const data = (await response.json()) as ReaderAuthorSectionsResponse & { error?: string };
+		const { response, data } = await fetchReaderApi<ReaderAuthorSectionsResponse>(
+			`/api/reader?${params.toString()}`
+		);
 		if (!response.ok) throw new Error(data.error || 'Reader author sections failed.');
 		return data.items;
 	}
@@ -672,8 +682,9 @@
 			if (authorHistoricity) params.set('historicity', authorHistoricity);
 			if (!activeAuthorSection && !workQuery.trim()) params.set('sort', 'prominence');
 			if (cursor) params.set('cursor', cursor);
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderAuthorsResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderAuthorsResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (!response.ok) throw new Error(data.error || 'Reader authors failed.');
 			authors = data.items;
 			authorsNextCursor = data.pagination?.next_cursor ?? null;
@@ -720,8 +731,9 @@
 			q: authorName.trim(),
 			limit: '50'
 		});
-		const response = await fetch(`/api/reader?${params.toString()}`);
-		const data = (await response.json()) as ReaderAuthorsResponse & { error?: string };
+		const { response, data } = await fetchReaderApi<ReaderAuthorsResponse>(
+			`/api/reader?${params.toString()}`
+		);
 		if (!response.ok) return null;
 		return data.items.find((author) => readerAuthorMatchesId(author, authorId)) ?? null;
 	}
@@ -787,8 +799,10 @@
 			if (!authorId && discoverySort) params.set('sort', discoverySort);
 			if (activeCollection !== 'all') params.set('collection', activeCollection);
 			if (cursor) params.set('cursor', cursor);
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			let data = (await response.json()) as ReaderWorksResponse & { error?: string };
+			const { response, data: initialData } = await fetchReaderApi<ReaderWorksResponse>(
+				`/api/reader?${params.toString()}`
+			);
+			let data = initialData;
 			if (!response.ok) throw new Error(data.error || 'Reader work search failed.');
 			if (authorName && authorId && !data.items.length && !cursor) {
 				const authorParams = new URLSearchParams({
@@ -799,10 +813,8 @@
 					author: authorName
 				});
 				if (activeCollection !== 'all') authorParams.set('collection', activeCollection);
-				const authorResponse = await fetch(`/api/reader?${authorParams.toString()}`);
-				const authorData = (await authorResponse.json()) as ReaderWorksResponse & {
-					error?: string;
-				};
+				const { response: authorResponse, data: authorData } =
+					await fetchReaderApi<ReaderWorksResponse>(`/api/reader?${authorParams.toString()}`);
 				if (authorResponse.ok && authorData.items.length) data = authorData;
 			}
 			if (authorName && !authorId && !data.items.length && !cursor) {
@@ -814,10 +826,8 @@
 					q: authorName
 				});
 				if (activeCollection !== 'all') fallbackParams.set('collection', activeCollection);
-				const fallbackResponse = await fetch(`/api/reader?${fallbackParams.toString()}`);
-				const fallbackData = (await fallbackResponse.json()) as ReaderWorksResponse & {
-					error?: string;
-				};
+				const { response: fallbackResponse, data: fallbackData } =
+					await fetchReaderApi<ReaderWorksResponse>(`/api/reader?${fallbackParams.toString()}`);
 				if (fallbackResponse.ok && fallbackData.items.length) data = fallbackData;
 			}
 			works = data.items;
@@ -872,8 +882,9 @@
 			});
 			if (activeCollection !== 'all') params.set('collection', activeCollection);
 			if (cursor) params.set('cursor', cursor);
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderSearchResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderSearchResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (!response.ok) throw new Error(data.error || 'Reader text search failed.');
 			textSearchResults = data.items;
 			textSearchNextCursor = data.pagination?.next_cursor ?? null;
@@ -931,11 +942,13 @@
 				catalog: catalogId,
 				language,
 				work,
-				limit: String(pageLimit)
+				limit: String(pageLimit),
+				char_budget: String(pageTextBudget)
 			});
 			if (cursor) params.set('cursor', cursor);
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderContentsResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderContentsResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (!response.ok) throw new Error(data.error || 'Reader contents failed.');
 			contents = data.items;
 			pageSegments = data.items;
@@ -976,8 +989,9 @@
 				work,
 				segment
 			});
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderShowResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderShowResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (!response.ok) throw new Error(data.error || 'Reader segment failed.');
 			selectedSegment = data.segment;
 			navigation = data.navigation ?? { previous: null, next: null };
@@ -1033,8 +1047,9 @@
 				language,
 				address
 			});
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderShowResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderShowResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (!response.ok) throw new Error(data.error || 'Reader segment failed.');
 			selectedSegment = data.segment;
 			navigation = data.navigation ?? { previous: null, next: null };
@@ -1065,8 +1080,9 @@
 				language,
 				address
 			});
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderShowResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderShowResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (!response.ok) throw new Error(data.error || 'Reference lookup failed.');
 			selectedSegment = data.segment;
 			navigation = data.navigation ?? { previous: null, next: null };
@@ -1103,8 +1119,9 @@
 				language,
 				work
 			});
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderWorkResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderWorkResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (response.ok && data.item) selectedWork = data.item;
 		} catch {
 			// Work metadata is helpful chrome; failure should not block exact reading.
@@ -1129,10 +1146,12 @@
 				work,
 				around: citation,
 				radius: String(pageRadius),
-				limit: String(pageRadius * 2 + 1)
+				limit: String(pageRadius * 2 + 1),
+				char_budget: String(pageTextBudget)
 			});
-			const response = await fetch(`/api/reader?${params.toString()}`);
-			const data = (await response.json()) as ReaderContentsResponse & { error?: string };
+			const { response, data } = await fetchReaderApi<ReaderContentsResponse>(
+				`/api/reader?${params.toString()}`
+			);
 			if (!response.ok) throw new Error(data.error || 'Reader page window failed.');
 			pageSegments = data.items.length ? data.items : selectedSegment ? [selectedSegment] : [];
 			contents = data.items.length ? data.items : contents;

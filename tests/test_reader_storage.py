@@ -1417,6 +1417,112 @@ def test_reader_catalog_builds_language_scoped_discovery_shelves() -> None:
     assert shelves[1]["sample_works"][0]["title"] == "Mahābhārata"
 
 
+def test_reader_catalog_discovery_shelves_do_not_loop_through_full_work_listing() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="san-medicine-1",
+            collection_id="fixture",
+            language="san",
+            title="Carakasaṃhitā",
+            author="Caraka",
+            author_id="caraka",
+            source_id="dcs_33",
+        )
+        register_work_classifications(
+            catalog_path,
+            [
+                ReaderWorkClassification(
+                    work_id="san-medicine-1",
+                    category="Medicine",
+                    period="classical",
+                    date_range="uncertain",
+                    authorship_status="traditional",
+                    popularity_score=72,
+                    popularity_tier="major",
+                    scope="Ayurveda",
+                    scope_popularity_score=96,
+                    scope_popularity_tier="canonical",
+                    confidence="high",
+                    note="Fixture",
+                    generator_models="fixture",
+                    generator_run_id="run-1",
+                    source_file="fixture.csv",
+                    discovery_group_id="medicine",
+                    discovery_tags="medicine|ayurveda|technical",
+                    global_popularity_score=72,
+                    global_popularity_tier="major",
+                    group_popularity_score=96,
+                    group_popularity_tier="canonical",
+                ),
+            ],
+        )
+
+        with mock.patch(
+            "langnet.reader.storage.list_works",
+            side_effect=AssertionError("shelves must batch sample work lookup"),
+        ):
+            shelves = list_discovery_shelves(catalog_path, language="san", sample_limit=1)
+
+    assert shelves[0]["id"] == "medicine"
+    assert shelves[0]["sample_works"][0]["title"] == "Carakasaṃhitā"
+
+
+def test_reader_catalog_prefilters_full_cts_author_urn_work_lists() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:greekLit:tlg1799.tlg001",
+            collection_id="tlg",
+            language="grc",
+            title="De somniis",
+            author="Philostratus",
+            author_id="urn:cts:greekLit:tlg1799",
+            source_id="tlg1799.tlg001",
+        )
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:greekLit:tlg0012.tlg001",
+            collection_id="tlg",
+            language="grc",
+            title="Iliad",
+            author="Homer",
+            author_id="urn:cts:greekLit:tlg0012",
+            source_id="tlg0012.tlg001",
+        )
+
+        def assert_prefiltered(_catalog_path: Path, rows: list[dict[str, object]]) -> None:
+            assert [row["source_id"] for row in rows] == ["tlg1799.tlg001"]
+            for row in rows:
+                row["source_author"] = row["author"]
+                row["source_author_id"] = row["author_id"]
+                row["canonical_author_id"] = row["author_id"]
+                row["canonical_author_name"] = row["author"]
+                row["canonical_author_kind"] = "person"
+
+        with mock.patch(
+            "langnet.reader.storage._attach_work_author_authorities",
+            side_effect=assert_prefiltered,
+        ):
+            works = list_works(
+                catalog_path,
+                language="grc",
+                author_id="urn:cts:greekLit:tlg1799",
+                limit=20,
+            )
+
+    assert [work["source_id"] for work in works] == ["tlg1799.tlg001"]
+
+
 def test_reader_catalog_reports_discovery_coverage_by_language() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)

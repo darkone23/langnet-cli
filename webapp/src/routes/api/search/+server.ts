@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import {
 	encounterWord,
 	isSingleWord,
@@ -12,12 +11,20 @@ import {
 } from '$lib/search-data';
 import { searchErrorMessage, shouldRetrySearchWithoutTranslation } from '$lib/search-route';
 import { encounterWordFromCli } from '$lib/server/langnet-cli';
+import { payloadResponse } from '$lib/server/msgpack-response';
+import {
+	canCacheSearchResponse,
+	searchCacheKey,
+	searchResponseCache
+} from '$lib/server/search-cache';
 
 const validLanguages = new Set(languageModes.map(({ id }) => id));
 const translationModes = new Set(['off', 'cache', 'populate', 'auto', 'do-it-all']);
 const searchBackends = new Set(['sample', 'cli']);
 
-export async function GET({ url }) {
+export async function GET({ url, request }) {
+	const respond = (payload: unknown, init?: ResponseInit) =>
+		payloadResponse(request, payload, init);
 	const query = url.searchParams.get('q') ?? '';
 	const word = query.trim();
 	const requestedLanguage = url.searchParams.get('language') ?? 'san';
@@ -43,7 +50,7 @@ export async function GET({ url }) {
 		hasAllDictionaryRequest || requestedToolFilters.length === 0 ? ['all'] : requestedToolFilters;
 
 	if (word && !isSingleWord(word)) {
-		return json(
+		return respond(
 			{
 				...encounterWord(word, language, dictionaries),
 				error: 'Search accepts one word at a time.',
@@ -57,19 +64,35 @@ export async function GET({ url }) {
 		const maxBuckets = readInteger(url.searchParams.get('max_buckets'), 12, 1, 100_000);
 		const maxGlossChars = readInteger(url.searchParams.get('max_gloss_chars'), 1400, 1, 100_000);
 		const timeoutMs = readInteger(url.searchParams.get('timeout_ms'), 300_000, 1_000, 300_000);
+		const cacheKey = searchCacheKey(url);
+		const cached = searchResponseCache.get(cacheKey);
+		if (cached) {
+			return respond(cached, {
+				headers: { 'server-timing': 'search_cache;desc="hit"' }
+			});
+		}
 
 		try {
-			return json(
-				await encounterWordFromCli({
-					language,
-					query: word,
-					dictionaries,
+			const result = await encounterWordFromCli({
+				language,
+				query: word,
+				dictionaries,
+				translationMode,
+				maxBuckets,
+				maxGlossChars,
+				timeoutMs
+			});
+			if (
+				canCacheSearchResponse({
+					backend,
+					word,
 					translationMode,
-					maxBuckets,
-					maxGlossChars,
-					timeoutMs
+					payload: result
 				})
-			);
+			) {
+				searchResponseCache.set(cacheKey, result);
+			}
+			return respond(result);
 		} catch (error) {
 			if (shouldRetrySearchWithoutTranslation(error, translationMode)) {
 				try {
@@ -83,19 +106,30 @@ export async function GET({ url }) {
 						timeoutMs
 					});
 
-					return json({
+					const result = {
 						...fallback,
 						warnings: [
 							...fallback.warnings,
 							`Translation enrichment skipped after CLI cache failure: ${searchErrorMessage(error)}`
 						]
-					});
+					};
+					if (
+						canCacheSearchResponse({
+							backend,
+							word,
+							translationMode,
+							payload: result
+						})
+					) {
+						searchResponseCache.set(cacheKey, result);
+					}
+					return respond(result);
 				} catch {
 					// Preserve the original translation-cache failure; it explains why the retry happened.
 				}
 			}
 
-			return json(
+			return respond(
 				{
 					query: word,
 					language,
@@ -127,7 +161,7 @@ export async function GET({ url }) {
 		}
 	}
 
-	return json({
+	return respond({
 		...encounterWord(word, language, dictionaries),
 		backend: 'sample'
 	});

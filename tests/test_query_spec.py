@@ -12,6 +12,8 @@ from query_spec import (
     ToolResponseRef,
 )
 
+from langnet.planner.core import stable_plan_hash
+
 
 def test_tool_plan_structures_are_constructible() -> None:
     query = NormalizedQuery(
@@ -93,3 +95,48 @@ def test_tool_plan_structures_are_constructible() -> None:
 
     assert executed_plan.responses[0].tool == "cdsl"
     assert not executed_plan.from_cache
+
+
+def test_stable_plan_hash_ignores_volatile_fields_and_map_order() -> None:
+    query = NormalizedQuery(
+        original="bha",
+        language=LanguageHint.LANGUAGE_HINT_SAN,
+        candidates=[],
+        normalizations=[],
+    )
+    first = ToolPlan(
+        plan_id="plan-a",
+        plan_hash="",
+        query=query,
+        tool_calls=[
+            ToolCallSpec(
+                tool="fetch.dico",
+                call_id="dico-1",
+                endpoint="duckdb://dico",
+                params={"q": "bha", "lemma": "bha", "stage": "TOOL_STAGE_FETCH"},
+            )
+        ],
+        dependencies=[
+            PlanDependency(from_call_id="dico-1", to_call_id="dico-extract-1"),
+        ],
+        created_at_unix_ms=1,
+    )
+    second = ToolPlan(
+        plan_id="plan-b",
+        plan_hash="different-existing-hash",
+        query=query,
+        tool_calls=[
+            ToolCallSpec(
+                tool="fetch.dico",
+                call_id="dico-1",
+                endpoint="duckdb://dico",
+                params={"stage": "TOOL_STAGE_FETCH", "lemma": "bha", "q": "bha"},
+            )
+        ],
+        dependencies=[
+            PlanDependency(from_call_id="dico-1", to_call_id="dico-extract-1"),
+        ],
+        created_at_unix_ms=2,
+    )
+
+    assert stable_plan_hash(first) == stable_plan_hash(second)

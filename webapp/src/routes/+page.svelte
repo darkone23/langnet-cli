@@ -38,6 +38,7 @@
 		buildHeadwordDisplay,
 		type HeadwordDisplay
 	} from '$lib/headword-display';
+	import { fetchPayload } from '$lib/msgpack';
 	import {
 		routeMatchesEncounter,
 		shouldLoadEncounterForRoute,
@@ -119,7 +120,7 @@
 	const loadingSteps = uiCopy.search.loadingSteps;
 	const motdSkeletonRows = [0, 1, 2];
 	const motdStorageKey = 'orion-motd-cache:v3';
-	const deskStorageKey = 'orion-desk-state:v2';
+	const deskStorageKey = 'orion-desk-state:v3';
 	const deskStorageTtlMs = 2 * 60 * 60 * 1000;
 	const wordIndexStorageKey = 'orion-word-index-earmarks:v1';
 	const wordIndexRadius = 5;
@@ -150,7 +151,7 @@
 	};
 
 	type StoredDeskState = {
-		version: 2;
+		version: 3;
 		expiresAt: number;
 		routeKey: string;
 		language: LanguageMode;
@@ -224,10 +225,11 @@
 	let errorMessage = $state('');
 	let enrichmentError = $state('');
 	let translationArrived = $state(false);
+	let translationRetrying = $state<Record<string, boolean>>({});
 	const initialMotd = readStoredMotd();
 	let motd: WordRecommendationResult | null = $state(initialMotd.result);
 	let motdStale = $state(initialMotd.stale);
-	let motdLoading = $state(false);
+	let motdLoading = $state(!initialMotd.result);
 	let motdRefreshing = $state(false);
 	let motdError = $state('');
 	let motdLinksLoad = $state(true);
@@ -283,7 +285,7 @@
 			: ([] as EncounterComponent[])
 	);
 	let isAllLookupSelected = $derived(lookupTools.length === availableTools.length);
-	let motdPending = $derived(!motd && !motdError);
+	let motdPending = $derived(motdLoading && !motd && !motdError);
 	let motdItems = $derived(motd?.items.filter(isPresentableMotdItem) ?? []);
 	let motdVisibleWarnings = $derived(
 		motd?.warnings.filter((warning) => shouldShowMotdWarning(warning.message)) ?? []
@@ -345,6 +347,12 @@
 	$effect(() => {
 		if (!browser || !routeStateReady) return;
 		void loadWordIndexSections(language);
+	});
+
+	$effect(() => {
+		if (!browser || !routeStateReady) return;
+		if (motdLoading || motdRefreshing || motdError) return;
+		if (!motdItems.length) void loadMotd(false);
 	});
 
 	function endpointUrl(translationOverride: TranslationMode = translationMode) {
@@ -414,8 +422,9 @@
 		wordIndexSectionsError = '';
 
 		try {
-			const response = await fetch(wordIndexSectionsEndpointUrl(targetLanguage));
-			const data = (await response.json()) as WordIndexSectionsResponse;
+			const { response, data } = await fetchPayload<WordIndexSectionsResponse>(
+				wordIndexSectionsEndpointUrl(targetLanguage)
+			);
 
 			if (!response.ok) {
 				throw new Error(data.error ?? uiCopy.errors.indexFailed);
@@ -459,8 +468,11 @@
 			let data: WordIndexResponse | null = null;
 
 			for (const candidate of candidates) {
-				const response = await fetch(wordIndexEndpointUrl(candidate, targetLanguage));
-				data = (await response.json()) as WordIndexResponse;
+				const result = await fetchPayload<WordIndexResponse>(
+					wordIndexEndpointUrl(candidate, targetLanguage)
+				);
+				const { response } = result;
+				data = result.data;
 
 				if (!response.ok) {
 					throw new Error(data.error ?? uiCopy.errors.indexFailed);
@@ -500,8 +512,9 @@
 		wordIndexError = '';
 
 		try {
-			const response = await fetch(wordIndexBrowseEndpointUrl(normalizedPrefix, targetLanguage));
-			const data = (await response.json()) as WordIndexResponse;
+			const { response, data } = await fetchPayload<WordIndexResponse>(
+				wordIndexBrowseEndpointUrl(normalizedPrefix, targetLanguage)
+			);
 
 			if (!response.ok) {
 				throw new Error(data.error ?? uiCopy.errors.indexFailed);
@@ -553,12 +566,18 @@
 				const avoid = motdItemKeys(motd);
 				if (avoid.length) params.set('avoid', avoid.join(','));
 			}
-			const response = await fetch(`/api/motd?${params.toString()}`, {
-				signal: controller.signal
-			});
-			const data = normalizeMotdResult((await response.json()) as WordRecommendationResult);
+			const { response, data: motdPayload } = await fetchPayload<WordRecommendationResult>(
+				`/api/motd?${params.toString()}`,
+				{
+					signal: controller.signal
+				}
+			);
+			const data = normalizeMotdResult(motdPayload);
 
 			if (!response.ok) {
+				throw new Error(data.error ?? uiCopy.errors.recommendationsFailed);
+			}
+			if (!data.items.length) {
 				throw new Error(data.error ?? uiCopy.errors.recommendationsFailed);
 			}
 
@@ -608,7 +627,12 @@
 			}
 
 			if (!stored.result) return { result: null, stale: false };
-			return { result: normalizeMotdResult(stored.result), stale: status === 'stale' };
+			const result = normalizeMotdResult(stored.result);
+			if (!result.items.length) {
+				localStorage.removeItem(motdStorageKey);
+				return { result: null, stale: false };
+			}
+			return { result, stale: status === 'stale' };
 		} catch {
 			localStorage.removeItem(motdStorageKey);
 			return { result: null, stale: false };
@@ -675,7 +699,7 @@
 			if (!raw) return null;
 
 			const stored = JSON.parse(raw) as Partial<StoredDeskState>;
-			if (stored.version !== 2 || !stored.expiresAt || stored.expiresAt <= Date.now()) {
+			if (stored.version !== 3 || !stored.expiresAt || stored.expiresAt <= Date.now()) {
 				sessionStorage.removeItem(deskStorageKey);
 				return null;
 			}
@@ -696,7 +720,7 @@
 		}
 
 		const stored: StoredDeskState = {
-			version: 2,
+			version: 3,
 			expiresAt: Date.now() + deskStorageTtlMs,
 			routeKey: currentRouteKey(),
 			language,
@@ -726,6 +750,7 @@
 
 		try {
 			sessionStorage.removeItem(deskStorageKey);
+			sessionStorage.removeItem('orion-desk-state:v2');
 			sessionStorage.removeItem('orion-desk-state:v1');
 		} catch {
 			// Ignore storage failures.
@@ -794,7 +819,11 @@
 		theme = stored.theme === 'vespers' || stored.theme === 'manuscript' ? stored.theme : theme;
 		lookupTools = validStoredTools(stored.lookupTools, language) || lookupTools;
 		encounter =
-			encounterMatchesStoredRoute(stored.encounter) && stored.encounter ? stored.encounter : null;
+			encounterMatchesStoredRoute(stored.encounter) &&
+			stored.encounter &&
+			!encounterNeedsFreshReaderLayer(stored.encounter)
+				? stored.encounter
+				: null;
 		visibleTools = encounter
 			? validStoredTools(stored.visibleTools, language) || returnedToolsForEncounter(encounter)
 			: [];
@@ -809,6 +838,15 @@
 		wordIndexSections =
 			stored.wordIndexSections?.request.language === language ? stored.wordIndexSections : null;
 		return Boolean(encounter);
+	}
+
+	function encounterNeedsFreshReaderLayer(result: EncounterResult) {
+		const after = result.translation_cache?.after;
+		if ((after?.missing ?? 0) > 0 || (after?.errors ?? 0) > 0 || (after?.empty ?? 0) > 0) {
+			return true;
+		}
+
+		return hasMissingSourceReaderTranslations(result);
 	}
 
 	function encounterMatchesStoredRoute(storedEncounter: EncounterResult | null | undefined) {
@@ -1395,8 +1433,8 @@
 		paradigmErrors = { ...paradigmErrors, [key]: '' };
 
 		try {
-			const response = await fetch(paradigmRequestUrl(candidate));
-			const payload = normalizeParadigmPayload(await response.json());
+			const { response, data } = await fetchPayload<ParadigmPayload>(paradigmRequestUrl(candidate));
+			const payload = normalizeParadigmPayload(data);
 			if (!response.ok || payload?.error) {
 				throw new Error(payload?.error ?? uiCopy.errors.indexFailed);
 			}
@@ -2021,8 +2059,10 @@
 	}
 
 	async function fetchEncounter(mode: TranslationMode) {
-		const [response] = await Promise.all([fetch(endpointUrl(mode)), delay(simulatedLookupDelayMs)]);
-		const data = (await response.json()) as EncounterResult;
+		const [{ response, data }] = await Promise.all([
+			fetchPayload<EncounterResult>(endpointUrl(mode)),
+			delay(simulatedLookupDelayMs)
+		]);
 
 		if (!response.ok) {
 			throw new Error(data.error ?? uiCopy.errors.searchFailed);
@@ -2095,6 +2135,51 @@
 			if (searchId === activeSearchId) {
 				enrichingTranslations = false;
 			}
+		}
+	}
+
+	async function retryGroupTranslation(group: BucketGroup) {
+		const translation = retryableGroupTranslation(group);
+		if (!translation) return;
+		const retryKey = groupTranslationRetryKey(group);
+		translationRetrying = { ...translationRetrying, [retryKey]: true };
+		enrichmentError = '';
+
+		try {
+			const { response, data } = await fetchPayload<{ error?: string; limit_reached?: boolean }>(
+				'/api/translation-cache',
+				{
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						translation_id: translation.translation_id,
+						source_lexicon: translation.source_lexicon ?? translation.source_tool,
+						entry_id: translation.entry_id,
+						occurrence: translation.occurrence,
+						headword_norm: translation.headword_norm,
+						source_text_hash: translation.source_text_hash,
+						max_retries: 3
+					})
+				}
+			);
+			if (!response.ok) {
+				throw new Error(
+					data.error ??
+						(data.limit_reached
+							? 'This translation has reached its retry limit.'
+							: uiCopy.errors.translationFailed)
+				);
+			}
+			const searchId = activeSearchId;
+			const refreshed = await fetchEncounter('auto');
+			if (searchId !== activeSearchId) return;
+			applyEncounter(refreshed, false);
+			await tick();
+			triggerTranslationArrival();
+		} catch (error) {
+			enrichmentError = error instanceof Error ? error.message : uiCopy.errors.translationFailed;
+		} finally {
+			translationRetrying = { ...translationRetrying, [retryKey]: false };
 		}
 	}
 
@@ -2185,7 +2270,6 @@
 		clearEncounterState();
 		clearPendingRouteState();
 		clearAppBrowserStorage();
-		if (browser) void loadMotd(false);
 	}
 
 	function clearRouteState() {
@@ -2679,6 +2763,11 @@
 		return meaning?.translation?.source_label ?? 'Source';
 	}
 
+	function componentTranslationModel(component: EncounterComponent) {
+		return component.evidence.meanings.find((meaning) => meaning.translation?.model)?.translation
+			?.model;
+	}
+
 	function componentMeaningSourceLabel(meaning: EncounterComponentMeaning) {
 		const tools = meaning.source_tools.length
 			? meaning.source_tools.map((tool) => toolMeta(tool).shortLabel).join(', ')
@@ -2831,6 +2920,42 @@
 		return sourceLayerLabel(bucket);
 	}
 
+	function groupTranslationModel(group: BucketGroup) {
+		return group.buckets.find((bucket) => bucket.translation?.model)?.translation?.model;
+	}
+
+	function retryableGroupTranslation(group: BucketGroup) {
+		return group.buckets.find((bucket) => {
+			const translation = bucket.translation;
+			if (!translation) return false;
+			if (!isTranslatedSourceTool(translation.source_tool)) return false;
+			return Boolean(
+				translation.translation_id ||
+				(translation.source_lexicon &&
+					translation.entry_id &&
+					translation.occurrence !== undefined &&
+					translation.source_text_hash)
+			);
+		})?.translation;
+	}
+
+	function groupTranslationRetryKey(group: BucketGroup) {
+		const translation = retryableGroupTranslation(group);
+		return (
+			translation?.translation_id ||
+			[
+				translation?.source_lexicon ?? translation?.source_tool ?? group.toolId,
+				translation?.entry_id ?? group.lexeme,
+				translation?.occurrence ?? 0,
+				translation?.source_text_hash ?? group.id
+			].join(':')
+		);
+	}
+
+	function groupTranslationRetrying(group: BucketGroup) {
+		return Boolean(translationRetrying[groupTranslationRetryKey(group)]);
+	}
+
 	function setGroupTextLayer(group: BucketGroup, layer: 'reader' | 'source') {
 		textLayers = {
 			...textLayers,
@@ -2914,6 +3039,16 @@
 
 	function hasReaderTranslation(bucket: EncounterBucket) {
 		return bucket.translation?.available === true;
+	}
+
+	function translationModelLabel(model: string | undefined) {
+		if (!model) return '';
+		const withoutProvider = model.replace(/^openai:/, '');
+		const labels: Record<string, string> = {
+			'google/gemini-2.5-flash': 'Gemini 2.5 Flash',
+			'deepseek/deepseek-v4-flash': 'DeepSeek V4 Flash'
+		};
+		return labels[withoutProvider] ?? withoutProvider;
 	}
 
 	function isTranslatedSourceTool(tool: ToolId | undefined) {
@@ -3003,7 +3138,6 @@
 		}
 
 		hydrateRouteStateFromUrl();
-		if (!motd) void loadMotd(false);
 
 		const syncSidebarHeight = () => {
 			sidebarFullHeight = window.scrollY > 72;
@@ -3319,8 +3453,6 @@
 									</a>
 								{/each}
 							</div>
-						{:else}
-							<div class="orion-motd-warning">{uiCopy.margin.noWord}</div>
 						{/if}
 
 						{#if motdError}
@@ -3466,25 +3598,32 @@
 										</div>
 
 										{#if componentCanSwitchTextLayer(component)}
-											<div class="orion-layer-switch join shrink-0">
-												<button
-													type="button"
-													class={componentLayerIsSource(component)
-														? 'btn btn-xs join-item'
-														: 'btn btn-xs join-item btn-secondary'}
-													onclick={() => setComponentTextLayer(component, 'reader')}
-												>
-													Reader English
-												</button>
-												<button
-													type="button"
-													class={componentLayerIsSource(component)
-														? 'btn btn-xs join-item btn-secondary'
-														: 'btn btn-xs join-item'}
-													onclick={() => setComponentTextLayer(component, 'source')}
-												>
-													{componentSourceLayerLabel(component)}
-												</button>
+											<div class="flex shrink-0 flex-col items-end gap-1">
+												<div class="orion-layer-switch join">
+													<button
+														type="button"
+														class={componentLayerIsSource(component)
+															? 'btn btn-xs join-item'
+															: 'btn btn-xs join-item btn-secondary'}
+														onclick={() => setComponentTextLayer(component, 'reader')}
+													>
+														Reader English
+													</button>
+													<button
+														type="button"
+														class={componentLayerIsSource(component)
+															? 'btn btn-xs join-item btn-secondary'
+															: 'btn btn-xs join-item'}
+														onclick={() => setComponentTextLayer(component, 'source')}
+													>
+														{componentSourceLayerLabel(component)}
+													</button>
+												</div>
+												{#if translationModelLabel(componentTranslationModel(component))}
+													<div class="text-base-content/50 text-[0.68rem] leading-none">
+														EN by {translationModelLabel(componentTranslationModel(component))}
+													</div>
+												{/if}
 											</div>
 										{:else if componentHasTranslationToggle(component)}
 											<span class="badge badge-outline"
@@ -3815,28 +3954,71 @@
 									</div>
 
 									{#if groupCanSwitchTextLayer(group)}
-										<div class="orion-layer-switch join shrink-0">
-											<button
-												type="button"
-												class={groupLayerIsSource(group)
-													? 'btn btn-xs join-item'
-													: 'btn btn-xs join-item btn-secondary'}
-												onclick={() => setGroupTextLayer(group, 'reader')}
-											>
-												Reader English
-											</button>
-											<button
-												type="button"
-												class={groupLayerIsSource(group) || !groupHasReaderTranslation(group)
-													? 'btn btn-xs join-item btn-secondary'
-													: 'btn btn-xs join-item'}
-												onclick={() => setGroupTextLayer(group, 'source')}
-											>
-												{groupSourceLayerLabel(group)}
-											</button>
+										<div class="flex shrink-0 flex-col items-end gap-1">
+											<div class="orion-layer-switch join">
+												<button
+													type="button"
+													class={groupLayerIsSource(group)
+														? 'btn btn-xs join-item'
+														: 'btn btn-xs join-item btn-secondary'}
+													onclick={() => setGroupTextLayer(group, 'reader')}
+												>
+													Reader English
+												</button>
+												<button
+													type="button"
+													class={groupLayerIsSource(group) || !groupHasReaderTranslation(group)
+														? 'btn btn-xs join-item btn-secondary'
+														: 'btn btn-xs join-item'}
+													onclick={() => setGroupTextLayer(group, 'source')}
+												>
+													{groupSourceLayerLabel(group)}
+												</button>
+											</div>
+											{#if translationModelLabel(groupTranslationModel(group))}
+												<div
+													class="text-base-content/50 flex items-center gap-1 text-[0.68rem] leading-none"
+												>
+													<span>EN by {translationModelLabel(groupTranslationModel(group))}</span>
+													{#if retryableGroupTranslation(group)}
+														<button
+															type="button"
+															class="btn btn-ghost btn-xs h-5 min-h-0 px-1"
+															disabled={groupTranslationRetrying(group)}
+															aria-label="Retry English translation"
+															title="Retry English translation"
+															onclick={() => retryGroupTranslation(group)}
+														>
+															{#if groupTranslationRetrying(group)}
+																<span class="loading loading-spinner loading-xs"></span>
+															{:else}
+																<RefreshCw size={12} />
+															{/if}
+														</button>
+													{/if}
+												</div>
+											{/if}
 										</div>
 									{:else if groupHasTranslationToggle(group)}
-										<span class="badge badge-outline">{groupSourceLayerLabel(group)} only</span>
+										<div class="flex shrink-0 items-center gap-1">
+											<span class="badge badge-outline">{groupSourceLayerLabel(group)} only</span>
+											{#if retryableGroupTranslation(group)}
+												<button
+													type="button"
+													class="btn btn-ghost btn-xs h-5 min-h-0 px-1"
+													disabled={groupTranslationRetrying(group)}
+													aria-label="Retry English translation"
+													title="Retry English translation"
+													onclick={() => retryGroupTranslation(group)}
+												>
+													{#if groupTranslationRetrying(group)}
+														<span class="loading loading-spinner loading-xs"></span>
+													{:else}
+														<RefreshCw size={12} />
+													{/if}
+												</button>
+											{/if}
+										</div>
 									{/if}
 									{#if groupAwaitsReaderTranslation(group)}
 										<span class="orion-translator-sigil" title={uiCopy.translator.title}>

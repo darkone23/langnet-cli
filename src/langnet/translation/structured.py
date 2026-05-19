@@ -17,39 +17,6 @@ STRUCTURED_TRANSLATION_MAX_BLOCKS_PER_REQUEST = 3
 STRUCTURED_TRANSLATION_MAX_CHARS_PER_REQUEST = 900
 _GREEK_TOKEN_RE = re.compile(r"[\u0370-\u03ff\u1f00-\u1fff]+")
 _ABBREVIATION_RE = re.compile(r"\b[^\W\d_][^\W_]*\.", re.UNICODE)
-_FRENCH_RESIDUE_PATTERNS = [
-    re.compile(pattern, re.IGNORECASE | re.UNICODE)
-    for pattern in (
-        r"\bparole\b",
-        r"\braison\b",
-        r"\braisonner\b",
-        r"\bfacult[ée]\s+de\b",
-        r"\bd[’']o[uù]\b",
-        r"\bce\s+qu[’']on\b",
-        r"\bdans\s+l[’']",
-        r"\bprendre\s+la\b",
-        r"\bavec\s+rai-\s*son\b",
-        r"\bselon\s+la\b",
-        r"\b[eê]tre\s+conforme\b",
-        r"\bcomme\s+cela\b",
-        r"\bsans\s+aucune\b",
-        r"\bd[’']apr[eè]s\b",
-        r"\bbonne\s+opinion\b",
-        r"\bestime\b",
-        r"\bfaire\s+cas\b",
-        r"\bne\s+faire\s+aucun\s+cas\b",
-        r"\bcompte\s+qu[’']on\b",
-        r"\bqqn\b",
-        r"\bqqe\s+ch\b",
-        r"\ben\s+g[ée]n\b",
-        r"\bp\.\s+suite\b",
-        r"\bp\.\s+ext\b",
-        r"\bparticul\b",
-        r"\bpropr\b",
-        r"\bau\s+sens\b",
-        r"\btra-?\s*ditions\s+historiques\b",
-    )
-]
 
 
 class StructuredTranslationError(ValueError):
@@ -163,15 +130,6 @@ def normalize_translation_response(projection: object, response_text: str) -> st
         restored_text = _restore_source_tokens(
             str(source_block.get("text") or ""),
             translated_text.strip(),
-        )
-        restored_text = _repair_known_bailly_header(
-            source_text=str(source_block.get("text") or ""),
-            translated_text=restored_text,
-        )
-        _validate_translated_french_residue(
-            path=str(source_block["path"]),
-            source_text=str(source_block.get("text") or ""),
-            translated_text=restored_text,
         )
         translated_block = dict(source_block)
         translated_block["source_text"] = str(source_block.get("text") or "")
@@ -355,50 +313,6 @@ def _restore_source_tokens(source_text: str, translated_text: str) -> str:
         source_text,
         _restore_source_greek_tokens(source_text, translated_text),
     )
-
-
-def _validate_translated_french_residue(
-    *,
-    path: str,
-    source_text: str,
-    translated_text: str,
-) -> None:
-    source_probe = _french_residue_probe(source_text)
-    translated_probe = _french_residue_probe(translated_text)
-    if not source_probe or not translated_probe:
-        return
-    if _compact_probe(source_probe) == _compact_probe(translated_probe) and _has_french_residue_cue(
-        source_probe
-    ):
-        raise StructuredTranslationError(f"Bailly translation block {path} appears untranslated")
-    for pattern in _FRENCH_RESIDUE_PATTERNS:
-        if pattern.search(source_probe) and pattern.search(translated_probe):
-            raise StructuredTranslationError(
-                f"Bailly translation block {path} kept French dictionary prose"
-            )
-
-
-def _has_french_residue_cue(text: str) -> bool:
-    return any(pattern.search(text) for pattern in _FRENCH_RESIDUE_PATTERNS)
-
-
-def _repair_known_bailly_header(*, source_text: str, translated_text: str) -> str:
-    if _compact_probe(_french_residue_probe(source_text)) != _compact_probe(
-        _french_residue_probe(translated_text)
-    ):
-        return translated_text
-    match = re.fullmatch(r"(\s*)parole(\s*:\s*)", translated_text, re.IGNORECASE)
-    if match is None:
-        return translated_text
-    return f"{match.group(1)}speech{match.group(2)}"
-
-
-def _french_residue_probe(text: str) -> str:
-    return text.replace("’", "'").replace("œ", "oe").replace("Œ", "oe").lower()
-
-
-def _compact_probe(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip()
 
 
 def _restore_source_greek_tokens(source_text: str, translated_text: str) -> str:

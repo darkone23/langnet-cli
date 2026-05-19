@@ -8,6 +8,11 @@ fetch external text at read time.
 
 Use `--output json` for all integration calls.
 
+The SvelteKit API keeps JSON compatibility by default. Browser clients in this
+repo send `Accept: application/msgpack, application/json`; endpoints return
+MessagePack only when that header explicitly includes `application/msgpack`.
+External consumers that do not opt in continue to receive JSON.
+
 ## Catalog Selection
 
 The web app should choose a catalog explicitly.
@@ -92,6 +97,11 @@ translators. Work rows expose the matched didactic names as structured
 Contained works, such as the `Bhagavadgītā` inside the `Mahābhārata`, are
 returned with `work_kind = "contained"` and can be passed to `reader contents`
 or `reader show` like any other exact work reference.
+
+`reader contents` also accepts `--char-budget` for reader-page windows. Clients
+should use it when rendering a composed page rather than a raw table of
+contents: the response keeps at least one segment and trims neighboring
+segments when a work is segmented by long chapters instead of short lines.
 
 ## Text Search
 

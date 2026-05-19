@@ -11,7 +11,7 @@ from query_spec import ExecutedPlan, ToolResponseRef
 from langnet.clients.base import RawResponseEffect
 from langnet.execution.effects import ClaimEffect, DerivationEffect, ExtractionEffect
 from langnet.storage.claim_index import ClaimIndex
-from langnet.storage.db import connect_duckdb
+from langnet.storage.db import connect_duckdb, connect_duckdb_ro
 from langnet.storage.derivation_index import DerivationIndex
 from langnet.storage.effects_index import RawResponseIndex, apply_schema
 from langnet.storage.extraction_index import ExtractionIndex
@@ -26,6 +26,12 @@ def _locked_rw_connection(path: Path) -> Iterator[duckdb.DuckDBPyConnection]:
         yield conn
 
 
+@contextmanager
+def _read_only_connection(path: Path) -> Iterator[duckdb.DuckDBPyConnection]:
+    with connect_duckdb_ro(path) as conn:
+        yield conn
+
+
 @dataclass(frozen=True, slots=True)
 class PathRawResponseIndex:
     """Path-backed raw response index with per-operation DuckDB lock scope."""
@@ -35,7 +41,7 @@ class PathRawResponseIndex:
     def get(self, response_id: str) -> RawResponseEffect | None:
         if not self.path.exists():
             return None
-        with _locked_rw_connection(self.path) as conn:
+        with _read_only_connection(self.path) as conn:
             return RawResponseIndex(conn).get(response_id)
 
     def store(self, effect: RawResponseEffect) -> ToolResponseRef:
@@ -85,7 +91,7 @@ class PathPlanResponseIndex:
     def get(self, plan_hash: str) -> ExecutedPlan | None:
         if not self.path.exists():
             return None
-        with _locked_rw_connection(self.path) as conn:
+        with _read_only_connection(self.path) as conn:
             return PlanResponseIndex(conn).get(plan_hash)
 
     def upsert(

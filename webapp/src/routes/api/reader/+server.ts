@@ -1,4 +1,9 @@
-import { json } from '@sveltejs/kit';
+import { payloadResponse } from '$lib/server/msgpack-response';
+import {
+	canCacheReaderResponse,
+	readerCacheKey,
+	readerResponseCache
+} from '$lib/server/reader-cache';
 import { languageModes, type LanguageMode } from '$lib/search-data';
 import {
 	readerAliases,
@@ -48,23 +53,47 @@ export async function GET({ url, request }) {
 	const language = readLanguage(url.searchParams.get('language') ?? url.searchParams.get('lang'));
 	const timeoutMs = readInteger(url.searchParams.get('timeout_ms'), 120_000, 1_000, 300_000);
 	const options = { timeoutMs, signal: request.signal };
+	const startedAt = performance.now();
+	const respond = (payload: unknown, init: ResponseInit = {}) => {
+		const headers = new Headers(init.headers);
+		const readerTiming = `reader;dur=${(performance.now() - startedAt).toFixed(1)}`;
+		const existingTiming = headers.get('server-timing');
+		headers.set(
+			'server-timing',
+			existingTiming ? `${existingTiming}, ${readerTiming}` : readerTiming
+		);
+		return payloadResponse(request, payload, { ...init, headers });
+	};
+	const cacheKey = readerCacheKey(url);
+	const cached = readerResponseCache.get(cacheKey);
+	if (cached) {
+		return respond(cached, {
+			headers: { 'server-timing': 'reader_cache;desc="hit"' }
+		});
+	}
+	const cachedRespond = (payload: unknown, init: ResponseInit = {}) => {
+		if ((init.status ?? 200) < 400 && canCacheReaderResponse(payload)) {
+			readerResponseCache.set(cacheKey, payload);
+		}
+		return respond(payload, init);
+	};
 
 	try {
-		if (mode === 'catalogs') return json(await readerCatalogs(options));
-		if (mode === 'summary') return json(await readerSummary(catalogId, options));
-		if (mode === 'collections') return json(await readerCollections(catalogId, options));
-		if (mode === 'aliases') return json(await readerAliases(catalogId, options));
-		if (mode === 'facets') return json(await readerFacets(catalogId, language, options));
-		if (mode === 'groups') return json(await readerGroups(catalogId, language, options));
-		if (mode === 'tags') return json(await readerTags(catalogId, language, options));
+		if (mode === 'catalogs') return cachedRespond(await readerCatalogs(options));
+		if (mode === 'summary') return cachedRespond(await readerSummary(catalogId, options));
+		if (mode === 'collections') return cachedRespond(await readerCollections(catalogId, options));
+		if (mode === 'aliases') return cachedRespond(await readerAliases(catalogId, options));
+		if (mode === 'facets') return cachedRespond(await readerFacets(catalogId, language, options));
+		if (mode === 'groups') return cachedRespond(await readerGroups(catalogId, language, options));
+		if (mode === 'tags') return cachedRespond(await readerTags(catalogId, language, options));
 		if (mode === 'author-facets') {
-			return json(await readerAuthorFacets(catalogId, language, options));
+			return cachedRespond(await readerAuthorFacets(catalogId, language, options));
 		}
 		if (mode === 'shelves') {
 			if (!language) {
-				return json({ error: 'Reader shelves require a language.' }, { status: 400 });
+				return respond({ error: 'Reader shelves require a language.' }, { status: 400 });
 			}
-			return json(
+			return cachedRespond(
 				await readerShelves({
 					catalogId,
 					language,
@@ -81,8 +110,9 @@ export async function GET({ url, request }) {
 		}
 		if (mode === 'search') {
 			const query = (url.searchParams.get('q') ?? url.searchParams.get('query') ?? '').trim();
-			if (!query) return json({ error: 'Reader text search requires a query.' }, { status: 400 });
-			return json(
+			if (!query)
+				return respond({ error: 'Reader text search requires a query.' }, { status: 400 });
+			return cachedRespond(
 				await readerSearch({
 					catalogId,
 					language,
@@ -105,12 +135,12 @@ export async function GET({ url, request }) {
 		}
 		if (mode === 'author-sections') {
 			if (!language) {
-				return json({ error: 'Reader author sections require a language.' }, { status: 400 });
+				return respond({ error: 'Reader author sections require a language.' }, { status: 400 });
 			}
-			return json(await readerAuthorSections({ catalogId, language, options }));
+			return cachedRespond(await readerAuthorSections({ catalogId, language, options }));
 		}
 		if (mode === 'authors') {
-			return json(
+			return cachedRespond(
 				await readerAuthors({
 					catalogId,
 					language,
@@ -129,11 +159,11 @@ export async function GET({ url, request }) {
 		if (mode === 'work') {
 			const work = (url.searchParams.get('work') ?? url.searchParams.get('ref') ?? '').trim();
 			if (!work)
-				return json({ error: 'Reader work lookup requires a work parameter.' }, { status: 400 });
-			return json(await readerWork({ catalogId, language, work, options }));
+				return respond({ error: 'Reader work lookup requires a work parameter.' }, { status: 400 });
+			return cachedRespond(await readerWork({ catalogId, language, work, options }));
 		}
 		if (mode === 'works') {
-			return json(
+			return cachedRespond(
 				await readerWorks({
 					catalogId,
 					language,
@@ -156,8 +186,8 @@ export async function GET({ url, request }) {
 		if (mode === 'contents') {
 			const work = (url.searchParams.get('work') ?? '').trim();
 			if (!work)
-				return json({ error: 'Reader contents requires a work parameter.' }, { status: 400 });
-			return json(
+				return respond({ error: 'Reader contents requires a work parameter.' }, { status: 400 });
+			return cachedRespond(
 				await readerContents({
 					catalogId,
 					language,
@@ -167,6 +197,11 @@ export async function GET({ url, request }) {
 					from: url.searchParams.get('from') ?? undefined,
 					around: url.searchParams.get('around') ?? undefined,
 					radius: readOptionalInteger(url.searchParams.get('radius'), 1, 250),
+					charBudget: readOptionalInteger(
+						url.searchParams.get('char_budget') ?? url.searchParams.get('charBudget'),
+						500,
+						100_000
+					),
 					options
 				})
 			);
@@ -178,11 +213,11 @@ export async function GET({ url, request }) {
 				''
 			).trim();
 			if (!address)
-				return json(
+				return respond(
 					{ error: 'Reader show requires an address or work parameter.' },
 					{ status: 400 }
 				);
-			return json(
+			return cachedRespond(
 				await readerShow({
 					catalogId,
 					language,
@@ -195,15 +230,15 @@ export async function GET({ url, request }) {
 		if (mode === 'resolve-address') {
 			const address = (url.searchParams.get('address') ?? '').trim();
 			if (!address) {
-				return json(
+				return respond(
 					{ error: 'Reader address resolution requires an address parameter.' },
 					{ status: 400 }
 				);
 			}
-			return json(await readerResolveAddress({ catalogId, language, address, options }));
+			return cachedRespond(await readerResolveAddress({ catalogId, language, address, options }));
 		}
 	} catch (error) {
-		return json(
+		return respond(
 			{
 				error: error instanceof Error ? error.message : 'Reader request failed.',
 				mode
@@ -212,7 +247,7 @@ export async function GET({ url, request }) {
 		);
 	}
 
-	return json({ error: 'Unsupported reader mode.', mode }, { status: 400 });
+	return respond({ error: 'Unsupported reader mode.', mode }, { status: 400 });
 }
 
 function readLanguage(value: string | null): LanguageMode | undefined {

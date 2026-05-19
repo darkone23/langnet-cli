@@ -17,10 +17,11 @@ By default this binds Vite to:
 0.0.0.0:43210
 ```
 
-The configured allowed host is:
+The configured allowed hosts are:
 
 ```txt
 langnet.computerdream.club
+project-orion.net
 ```
 
 Use a different bind address or port when needed:
@@ -96,6 +97,10 @@ just smoke-cli
 ```
 
 ## Web API Probes
+
+Reader and search endpoints include `Server-Timing` headers. `reader_cache` and
+`search_cache` indicate an in-process exact-request cache hit; restart the
+preview/dev process to pick up code changes or clear those in-memory caches.
 
 Summarize a result:
 

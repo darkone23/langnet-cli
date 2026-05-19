@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Protocol, cast
 
@@ -140,6 +141,9 @@ class _ExecutionContext:
     claim_index: ClaimIndexProtocol
 
 
+MAX_PARALLEL_FETCHES = 8
+
+
 def _stage_name(stage: int) -> str:
     try:
         return ToolStage.Name(stage).removeprefix("TOOL_STAGE_").lower()
@@ -231,7 +235,28 @@ def _handle_fetch_stage(
         raise ValueError(f"No client registered for tool '{call.tool}'")
 
     params = call.params or {}
-    effect = client.execute(call_id=call.call_id, endpoint=call.endpoint, params=params)
+    effect = _execute_fetch_call(call, client, params)
+    _store_fetch_effect(call, effect, ctx, state, raw_effects, executed_plan)
+    return True
+
+
+def _execute_fetch_call(
+    call: ToolCallSpec,
+    client: ToolClient,
+    params: Mapping[str, str],
+) -> RawResponseEffect:
+    return client.execute(call_id=call.call_id, endpoint=call.endpoint, params=params)
+
+
+def _store_fetch_effect(  # noqa: PLR0913
+    call: ToolCallSpec,
+    effect: RawResponseEffect,
+    ctx: _ExecutionContext,
+    state: _ExecutionState,
+    raw_effects: list[RawResponseEffect],
+    executed_plan: ExecutedPlan,
+) -> None:
+    call_id = call.call_id
     ref = ctx.raw_index.store(effect)
     raw_effects.append(effect)
     state.raw_by_call[call_id] = effect
@@ -243,7 +268,57 @@ def _handle_fetch_stage(
         status=effect.status_code,
         duration_ms=effect.fetch_duration_ms,
     )
-    return True
+
+
+def _handle_ready_fetch_calls(
+    calls: Sequence[ToolCallSpec],
+    ctx: _ExecutionContext,
+    state: _ExecutionState,
+    raw_effects: list[RawResponseEffect],
+    executed_plan: ExecutedPlan,
+) -> list[str]:
+    processed_call_ids: list[str] = []
+    executable: list[tuple[ToolCallSpec, ToolClient, Mapping[str, str]]] = []
+
+    for call in calls:
+        call_id = call.call_id
+        if call_id in state.raw_by_call:
+            ctx.logger.debug("executor.skip.fetch.cached", call_id=call_id, tool=call.tool)  # type: ignore[attr-defined]
+            processed_call_ids.append(call_id)
+            continue
+
+        client = ctx.clients.get(call.tool)
+        if client is None:
+            if call.optional:
+                ctx.logger.info(  # type: ignore[attr-defined]
+                    "executor.skip.missing_client", call_id=call_id, tool=call.tool
+                )
+                _record_skip(state, call, "missing_client")
+                processed_call_ids.append(call_id)
+                continue
+            raise ValueError(f"No client registered for tool '{call.tool}'")
+
+        executable.append((call, client, call.params or {}))
+
+    if len(executable) == 1:
+        call, client, params = executable[0]
+        effect = _execute_fetch_call(call, client, params)
+        _store_fetch_effect(call, effect, ctx, state, raw_effects, executed_plan)
+        processed_call_ids.append(call.call_id)
+        return processed_call_ids
+
+    if executable:
+        with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL_FETCHES, len(executable))) as pool:
+            futures = [
+                (call, pool.submit(_execute_fetch_call, call, client, params))
+                for call, client, params in executable
+            ]
+            for call, future in futures:
+                effect = future.result()
+                _store_fetch_effect(call, effect, ctx, state, raw_effects, executed_plan)
+                processed_call_ids.append(call.call_id)
+
+    return processed_call_ids
 
 
 def _handle_extract_stage(
@@ -477,6 +552,25 @@ def _process_pending_calls(  # noqa: PLR0913
     """
     Process one iteration of pending calls. Returns True if progress was made.
     """
+    ready_fetch_calls = [
+        call
+        for call_id, call in list(pending.items())
+        if call.stage == ToolStage.TOOL_STAGE_FETCH
+        and not any(dep not in state.completed for dep in deps.get(call_id, set()))
+    ]
+    if ready_fetch_calls:
+        processed_call_ids = _handle_ready_fetch_calls(
+            ready_fetch_calls,
+            ctx,
+            state,
+            raw_effects,
+            executed_plan,
+        )
+        for call_id in processed_call_ids:
+            state.completed.add(call_id)
+            pending.pop(call_id, None)
+        return bool(processed_call_ids)
+
     progressed = False
     for call_id, call in list(pending.items()):
         if any(dep not in state.completed for dep in deps.get(call_id, set())):

@@ -1,7 +1,8 @@
-import { json } from '@sveltejs/kit';
 import { isSingleWord, languageModes, tools, type LanguageMode } from '$lib/search-data';
 import { wordIndexFromCli } from '$lib/server/langnet-cli';
+import { payloadResponse } from '$lib/server/msgpack-response';
 import type { WordIndexLanguage, WordIndexMode, WordIndexRequest } from '$lib/word-index';
+import { wordIndexSectionsResponse } from '$lib/word-index-sections';
 
 const validLanguages = new Set<WordIndexLanguage>(['all', ...languageModes.map(({ id }) => id)]);
 const validModes = new Set<WordIndexMode>([
@@ -13,7 +14,9 @@ const validModes = new Set<WordIndexMode>([
 	'browse'
 ]);
 
-export async function GET({ url }) {
+export async function GET({ url, request: httpRequest }) {
+	const respond = (payload: unknown, init?: ResponseInit) =>
+		payloadResponse(httpRequest, payload, init);
 	const requestedMode = url.searchParams.get('mode') ?? 'nearby';
 	const mode = validModes.has(requestedMode as WordIndexMode)
 		? (requestedMode as WordIndexMode)
@@ -42,7 +45,7 @@ export async function GET({ url }) {
 		(mode === 'nearby' || mode === 'list' || mode === 'sections' || mode === 'browse') &&
 		language === 'all'
 	) {
-		return json(
+		return respond(
 			{
 				...emptyWordIndexResponse(request),
 				error: 'Dictionary index lookup needs one language.'
@@ -52,7 +55,7 @@ export async function GET({ url }) {
 	}
 
 	if (mode === 'nearby' && (!query || !isSingleWord(query))) {
-		return json(
+		return respond(
 			{
 				...emptyWordIndexResponse(request),
 				error: 'Nearby lookup accepts one word at a time.'
@@ -61,10 +64,14 @@ export async function GET({ url }) {
 		);
 	}
 
+	if (mode === 'sections') {
+		return respond(wordIndexSectionsResponse(language as LanguageMode, source));
+	}
+
 	try {
-		return json(await wordIndexFromCli(request));
+		return respond(await wordIndexFromCli(request));
 	} catch (error) {
-		return json(
+		return respond(
 			{
 				...emptyWordIndexResponse(request),
 				error: friendlyIndexError(error)

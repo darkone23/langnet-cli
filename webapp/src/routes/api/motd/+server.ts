@@ -1,6 +1,6 @@
-import { json } from '@sveltejs/kit';
 import { motdItemKeys, motdTtlMs } from '$lib/motd-cache';
 import { wordRecommendationsFromCli } from '$lib/server/langnet-cli';
+import { payloadResponse } from '$lib/server/msgpack-response';
 import type { TranslationMode, WordRecommendationResult } from '$lib/search-data';
 
 const translationModes = new Set(['off', 'cache', 'populate', 'auto', 'do-it-all']);
@@ -11,6 +11,8 @@ const recentKeys: string[] = [];
 const maxRecentKeys = 24;
 
 export async function GET({ url, request }) {
+	const respond = (payload: unknown, init?: ResponseInit) =>
+		payloadResponse(request, payload, init);
 	const count = readInteger(url.searchParams.get('count'), 1, 1, 5);
 	const requestedLevel = url.searchParams.get('level') ?? 'beginner';
 	const level = levels.has(requestedLevel) ? requestedLevel : 'beginner';
@@ -28,30 +30,34 @@ export async function GET({ url, request }) {
 		: shouldRefresh
 			? 'llm'
 			: 'auto';
+	const generationCandidateSource = candidateSource;
 	const explicitAvoid = readList(url.searchParams.get('avoid'));
 	const avoid = dedupe([...recentKeys, ...explicitAvoid]);
 	const nonce = shouldRefresh
 		? url.searchParams.get('nonce') ||
 			`web-motd-${Date.now()}-${Math.random().toString(36).slice(2)}`
 		: (url.searchParams.get('nonce') ?? undefined);
-	const cacheKey = motdCacheKey({
-		count,
-		level,
-		translationMode,
-		candidateSource,
-		avoid: shouldRefresh ? [] : explicitAvoid
-	});
-	const stickyCacheKey = motdCacheKey({
+	const currentCacheKey = motdCacheKey({
 		count,
 		level,
 		translationMode,
 		candidateSource: 'auto',
 		avoid: []
 	});
+	const cacheKey =
+		candidateSource === 'auto' && !explicitAvoid.length
+			? currentCacheKey
+			: motdCacheKey({
+					count,
+					level,
+					translationMode,
+					candidateSource: generationCandidateSource,
+					avoid: shouldRefresh ? [] : explicitAvoid
+				});
 	const cached = cache.get(cacheKey);
 
 	if (!shouldRefresh && cached && cached.expiresAt > Date.now()) {
-		return json(cached.result);
+		return respond(cached.result);
 	}
 
 	try {
@@ -60,18 +66,36 @@ export async function GET({ url, request }) {
 			level,
 			translationMode,
 			timeoutMs,
-			candidateSource,
-			fresh: shouldRefresh,
-			avoid,
-			nonce,
+			candidateSource: generationCandidateSource,
+			fresh: shouldRefresh || Boolean(cached),
+			avoid: shouldRefresh || cached ? avoid : explicitAvoid,
+			nonce:
+				nonce ||
+				(cached
+					? `web-motd-refresh-${Date.now()}-${Math.random().toString(36).slice(2)}`
+					: undefined),
 			signal: request.signal
 		});
 		rememberRecentKeys(motdItemKeys(result));
 		const ttlMs = result.items.length ? motdTtlMs(result.suggested_ttl_seconds) : 60_000;
-		cache.set(shouldRefresh ? stickyCacheKey : cacheKey, { expiresAt: Date.now() + ttlMs, result });
-		return json(result);
+		cache.set(cacheKey, { expiresAt: Date.now() + ttlMs, result });
+		if (candidateSource === 'auto') {
+			cache.set(currentCacheKey, { expiresAt: Date.now() + ttlMs, result });
+		}
+		return respond(result);
 	} catch (error) {
-		return json(
+		if (cached?.result) {
+			return respond({
+				...cached.result,
+				warnings: [
+					{
+						message: `Using the previous word of the day; replacement could not be prepared: ${error instanceof Error ? error.message : 'Word recommendations failed.'}`
+					},
+					...cached.result.warnings
+				]
+			});
+		}
+		return respond(
 			{
 				schema_version: 'langnet.word_of_day.v1',
 				generated_at: new Date().toISOString(),

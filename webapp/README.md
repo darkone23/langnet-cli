@@ -37,6 +37,7 @@ PORT=5173 HOST=127.0.0.1 just dev
 just                 # list recipes
 just doctor          # verify bun, just, jq, and langnet-cli availability
 just dev             # start Vite on 0.0.0.0:43210
+sudo just caddy-proxy # proxy :80 to the dev server on 127.0.0.1:43210
 just test            # run fast unit/regression tests
 just check           # run svelte-check
 just check-watch     # run svelte checks in watch mode
@@ -59,6 +60,10 @@ just smoke-cli       # run current direct CLI regression probes
 `just cli ...`, `just cli-tools`, `just cli-encounter`, and `just smoke-cli`
 use `LANGNET_CLI_DIR` when it is set. API and CLI probe recipes also honor
 `MAX_BUCKETS`, `MAX_GLOSS_CHARS`, and `TIMEOUT_MS`.
+
+`just caddy-proxy` honors `PORT` and `CADDY_FROM`; for example,
+`CADDY_FROM=:8080 PORT=5173 just caddy-proxy` proxies port 8080 to a dev server
+on port 5173.
 
 Latin grammar depends on Whitaker's Words being visible to the CLI process. The
 web adapter appends `$HOME/.local/bin` to the subprocess `PATH` so server

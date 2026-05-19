@@ -2,6 +2,7 @@ set positional-arguments
 
 port := env_var_or_default("PORT", "43210")
 host := env_var_or_default("HOST", "0.0.0.0")
+caddy_from := env_var_or_default("CADDY_FROM", ":80")
 cli_dir := env_var_or_default("LANGNET_CLI_DIR", "../")
 max_buckets := env_var_or_default("MAX_BUCKETS", "54321")
 max_gloss_chars := env_var_or_default("MAX_GLOSS_CHARS", "54321")
@@ -31,6 +32,13 @@ dev:
 # Start the dev server and open it from Vite.
 dev-open:
     bun --bun run dev -- --host {{host}} --port {{port}} --open
+
+# Reverse proxy public HTTP to the dev server. Use sudo for CADDY_FROM=:80.
+caddy-proxy:
+    @caddy_bin="${CADDY_BIN:-$(command -v caddy || systemctl show -p ExecStart --value caddy 2>/dev/null | sed -n 's/^{ path=\([^ ;]*\).*/\1/p')}"; \
+    test -n "$caddy_bin" || (echo "missing required command: caddy; set CADDY_BIN=/path/to/caddy" && exit 1); \
+    echo "proxying {{caddy_from}} -> 127.0.0.1:{{port}}"; \
+    exec "$caddy_bin" reverse-proxy --from "{{caddy_from}}" --to "127.0.0.1:{{port}}"
 
 # Run SvelteKit type and accessibility checks.
 check:

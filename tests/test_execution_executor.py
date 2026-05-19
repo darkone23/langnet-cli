@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import threading
+import time
 from collections.abc import Mapping
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import duckdb
 from filelock import FileLock
@@ -36,6 +40,8 @@ from langnet.storage.path_indices import (
 )
 from langnet.storage.plan_index import PlanResponseIndex, apply_schema
 
+EXPECTED_PARALLEL_FETCHES = 2
+
 
 class _FakeClient:
     def __init__(self, tool: str) -> None:
@@ -70,6 +76,26 @@ class _LockAssertingClient(_FakeClient):
         with FileLock(f"{self.db_path}.lock", timeout=0.05):
             pass
         return super().execute(call_id, endpoint, params)
+
+
+class _ConcurrentProbeClient(_FakeClient):
+    def __init__(self, tool: str, probe: dict[str, int], lock: threading.Lock) -> None:
+        super().__init__(tool=tool)
+        self.probe = probe
+        self.lock = lock
+
+    def execute(
+        self, call_id: str, endpoint: str, params: Mapping[str, str] | None = None
+    ) -> RawResponseEffect:
+        with self.lock:
+            self.probe["active"] += 1
+            self.probe["max_active"] = max(self.probe["max_active"], self.probe["active"])
+        try:
+            time.sleep(0.05)
+            return super().execute(call_id, endpoint, params)
+        finally:
+            with self.lock:
+                self.probe["active"] -= 1
 
 
 def _build_plan() -> ToolPlan:
@@ -305,6 +331,66 @@ def test_executor_runs_all_stages_and_caches_fetch() -> None:
     assert second.from_cache is True
 
 
+def test_executor_overlaps_independent_fetch_calls() -> None:
+    conn = duckdb.connect(database=":memory:")
+    apply_schema(conn)
+    raw_index = RawResponseIndex(conn)
+    extraction_index = ExtractionIndex(conn)
+    derivation_index = DerivationIndex(conn)
+    claim_index = ClaimIndex(conn)
+    plan_response_index = PlanResponseIndex(conn)
+
+    normalized = NormalizedQuery(
+        original="bha",
+        language=LanguageHint.LANGUAGE_HINT_SAN,
+        candidates=[],
+        normalizations=[],
+    )
+    calls = [
+        ToolCallSpec(
+            tool="fetch.alpha",
+            call_id="fetch-alpha",
+            endpoint="internal://alpha",
+            params={"q": "bha"},
+            stage=ToolStage.TOOL_STAGE_FETCH,
+        ),
+        ToolCallSpec(
+            tool="fetch.beta",
+            call_id="fetch-beta",
+            endpoint="internal://beta",
+            params={"q": "bha"},
+            stage=ToolStage.TOOL_STAGE_FETCH,
+        ),
+    ]
+    plan = ToolPlan(
+        plan_id="plan-independent-fetches",
+        plan_hash="",
+        query=normalized,
+        tool_calls=calls,
+        dependencies=[],
+    )
+    probe = {"active": 0, "max_active": 0}
+    lock = threading.Lock()
+
+    result = execute_plan_staged(
+        plan=plan,
+        clients={
+            "fetch.alpha": _ConcurrentProbeClient("fetch.alpha", probe, lock),
+            "fetch.beta": _ConcurrentProbeClient("fetch.beta", probe, lock),
+        },
+        registry=_registry(),
+        raw_index=raw_index,
+        extraction_index=extraction_index,
+        derivation_index=derivation_index,
+        claim_index=claim_index,
+        plan_response_index=plan_response_index,
+        allow_cache=False,
+    )
+
+    assert [effect.call_id for effect in result.raw_effects] == ["fetch-alpha", "fetch-beta"]
+    assert probe["max_active"] == EXPECTED_PARALLEL_FETCHES
+
+
 def test_path_indexes_do_not_hold_file_lock_during_fetch(tmp_path) -> None:
     db_path = tmp_path / "runtime.duckdb"
     first_client = _LockAssertingClient(tool="fetch.dummy", db_path=db_path)
@@ -340,6 +426,35 @@ def test_path_indexes_do_not_hold_file_lock_during_fetch(tmp_path) -> None:
     assert second.from_cache is True
     assert second.raw_effects and second.claims
     assert second_client.calls == []
+
+
+def test_path_response_cache_reads_do_not_take_write_lock() -> None:
+    with TemporaryDirectory() as tmp_dir:
+        db_path = Path(tmp_dir) / "runtime.duckdb"
+        _assert_path_response_cache_reads_do_not_take_write_lock(db_path)
+
+
+def _assert_path_response_cache_reads_do_not_take_write_lock(db_path) -> None:
+    first_client = _FakeClient(tool="fetch.dummy")
+    first = execute_plan_staged(
+        plan=_build_plan(),
+        clients={first_client.tool: first_client},
+        registry=_registry(),
+        raw_index=PathRawResponseIndex(db_path),
+        extraction_index=PathExtractionIndex(db_path),
+        derivation_index=PathDerivationIndex(db_path),
+        claim_index=PathClaimIndex(db_path),
+        plan_response_index=PathPlanResponseIndex(db_path),
+        allow_cache=True,
+    )
+    assert first.raw_effects and first.executed.responses
+
+    with FileLock(f"{db_path}.lock", timeout=0.05):
+        cached_plan = PathPlanResponseIndex(db_path).get(first.plan.plan_hash)
+        cached_raw = PathRawResponseIndex(db_path).get(first.executed.responses[0].response_id)
+
+    assert cached_plan is not None
+    assert cached_raw is not None
 
 
 def test_executor_reports_optional_skipped_calls() -> None:

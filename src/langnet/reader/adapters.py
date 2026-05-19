@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from langnet.reader.models import (
     ReaderEdition,
@@ -1656,6 +1656,7 @@ def _legacy_greek_beta_to_unicode(text: str) -> str:
         from betacode import conv as betacode_conv  # type: ignore[import-untyped]  # noqa: PLC0415
     except ImportError:
         return text
+    text = _legacy_beta_accent_artifacts_to_markers(text)
     parts = re.split(r"(\s[&$]\s)", text)
     greek = True
     output: list[str] = []
@@ -1671,6 +1672,115 @@ def _legacy_greek_beta_to_unicode(text: str) -> str:
             output.append(str(betacode_conv.beta_to_uni(normalized_part)))
         else:
             output.append(part)
+    return "".join(output)
+
+
+def _legacy_mixed_greek_beta_to_unicode(text: str) -> str:
+    try:
+        from betacode import conv as betacode_conv  # type: ignore[import-untyped]  # noqa: PLC0415
+    except ImportError:
+        return text
+
+    text = _legacy_beta_accent_artifacts_to_markers(text)
+    tokens = re.split(r"(\s+)", text)
+    output: list[str] = []
+    index = 0
+    while index < len(tokens):
+        run = _legacy_next_beta_run(tokens, index)
+        if run is None:
+            output.append(tokens[index])
+            index += 1
+            continue
+        start, end = run
+        output.extend(_legacy_decode_beta_run(tokens[start:end], betacode_conv))
+        index = end
+    return "".join(output)
+
+
+def _legacy_next_beta_run(tokens: list[str], index: int) -> tuple[int, int] | None:
+    token = tokens[index]
+    if not token or token.isspace():
+        return None
+    parts = _legacy_beta_token_parts(token)
+    if parts is None:
+        return None
+    run_end = index + 1
+    run_has_beta_marker = _legacy_beta_core_has_marker(parts[1])
+    while run_end + 1 < len(tokens):
+        space = tokens[run_end]
+        next_token = tokens[run_end + 1]
+        if not space.isspace():
+            break
+        next_parts = _legacy_beta_token_parts(next_token)
+        if next_parts is None:
+            break
+        run_has_beta_marker = run_has_beta_marker or _legacy_beta_core_has_marker(next_parts[1])
+        run_end += 2
+    return (index, run_end) if run_has_beta_marker else None
+
+
+def _legacy_decode_beta_run(tokens: list[str], betacode_conv: Any) -> list[str]:
+    output: list[str] = []
+    for token in tokens:
+        if token.isspace():
+            output.append(token)
+            continue
+        parts = _legacy_beta_token_parts(token)
+        if parts is None:
+            output.append(token)
+            continue
+        leading, core, trailing = parts
+        normalized_core = _normalize_legacy_beta_diacritic_order(core)
+        output.append(f"{leading}{betacode_conv.beta_to_uni(normalized_core)}{trailing}")
+    return output
+
+
+def _legacy_beta_token_parts(token: str) -> tuple[str, str, str] | None:
+    if any("a" <= char <= "z" for char in token):
+        return None
+    match = re.fullmatch(r"([^A-Z*]*)([A-Z*()/\\=|+]+)(.*)", token)
+    if match is None:
+        return None
+    leading, core, trailing = match.groups()
+    while core.endswith((")", "]", "}", ",", ".", ";", ":")) and len(core) > 1:
+        trailing = f"{core[-1]}{trailing}"
+        core = core[:-1]
+    if not re.search(r"[A-Z]", core):
+        return None
+    letter_count = len(re.findall(r"[A-Z]", core))
+    has_marker = _legacy_beta_core_has_marker(core)
+    if letter_count == 1 and (not has_marker or re.fullmatch(r"\*?[A-Z]", core)):
+        return None
+    return leading, core, trailing
+
+
+def _legacy_beta_core_has_marker(core: str) -> bool:
+    return bool(re.search(r"[*()/\\=|+]", core))
+
+
+def _legacy_beta_accent_artifacts_to_markers(text: str) -> str:
+    output: list[str] = []
+    for char in text:
+        decomposed = unicodedata.normalize("NFD", char)
+        if not decomposed:
+            output.append(char)
+            continue
+        base = decomposed[0]
+        marks = decomposed[1:]
+        if base not in "AEIOUY" or not marks:
+            output.append(char)
+            continue
+        marker = ""
+        if "\u0301" in marks:
+            marker = "/"
+        elif "\u0300" in marks:
+            marker = "\\"
+        elif "\u0302" in marks:
+            marker = "="
+        if marker:
+            output.append(f"{base}{marker}")
+        else:
+            output.append(char)
     return "".join(output)
 
 
@@ -1800,6 +1910,8 @@ def _legacy_metadata_text(text: str, *, language: str | None = None) -> str:
     text = re.sub(r"#\d+", "#", text)
     if language == "grc" and _legacy_metadata_looks_like_greek_beta(text):
         return _normalize_text(_legacy_greek_beta_to_unicode(text))
+    if language == "grc" and _legacy_metadata_has_mixed_greek_beta(text):
+        return _normalize_text(_legacy_mixed_greek_beta_to_unicode(text))
     text = re.sub(r"([aeiouAEIOU])/", lambda match: _legacy_latin_accent(match, "acute"), text)
     text = re.sub(r"([aeiouAEIOU])\\", lambda match: _legacy_latin_accent(match, "grave"), text)
     text = re.sub(
@@ -1818,6 +1930,10 @@ def _legacy_metadata_text(text: str, *, language: str | None = None) -> str:
 def _legacy_metadata_looks_like_greek_beta(text: str) -> bool:
     if any("a" <= char <= "z" for char in text):
         return False
+    return bool(re.search(r"[*()/\\=|]", text) and re.search(r"[A-Z]", text))
+
+
+def _legacy_metadata_has_mixed_greek_beta(text: str) -> bool:
     return bool(re.search(r"[*()/\\=|]", text) and re.search(r"[A-Z]", text))
 
 

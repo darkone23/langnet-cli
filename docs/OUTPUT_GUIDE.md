@@ -721,8 +721,12 @@ just cli encounter san dharma dico --translation-mode auto --translation-cache-d
 To warm translations ahead of reading, place one term per line in a text file
 and run `translation-warm`. This is explicit cache population, so it may call
 the configured model for cache misses. The default translation model is
-`openai:deepseek/deepseek-v4-flash`; pass `--translation-model` to test or pin a
-different OpenRouter model for cache keys and population:
+`openai:google/gemini-2.5-flash`, with
+`openai:deepseek/deepseek-v4-flash` as the default fallback on provider failures,
+empty responses, or slow completed responses. Pass `--translation-model` to test
+or pin a different OpenRouter model for population. Cache writes remain
+model-stamped, but cache-only reads can reuse any compatible successful row for
+the same source, prompt, and hint:
 
 ```bash
 just cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffiot --translation-cache-db data/cache/langnet.duckdb

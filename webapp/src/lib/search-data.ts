@@ -57,12 +57,19 @@ export type EncounterBucket = {
 	translation_note: string;
 	translation?: {
 		available: boolean;
+		translation_id?: string;
 		source_tool?: ToolId;
+		source_lexicon?: ToolId;
+		entry_id?: string;
+		occurrence?: number;
+		headword_norm?: string;
+		source_text_hash?: string;
 		source_lang: string;
 		source_label: string;
 		source_text: string;
 		target_lang: 'en';
 		target_text: string;
+		model?: string;
 	};
 };
 
@@ -83,12 +90,19 @@ export type EncounterComponentMeaning = {
 	source_langs: string[];
 	translation?: {
 		available: boolean;
+		translation_id?: string;
 		source_tool?: ToolId;
+		source_lexicon?: ToolId;
+		entry_id?: string;
+		occurrence?: number;
+		headword_norm?: string;
+		source_text_hash?: string;
 		source_lang: string;
 		source_label: string;
 		source_text: string;
 		target_lang: 'en';
 		target_text: string;
+		model?: string;
 	};
 };
 

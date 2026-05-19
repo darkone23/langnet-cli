@@ -256,6 +256,279 @@ def test_translation_cache_cli_status_and_clear_removes_translation_rows() -> No
         assert clear_payload["after"]["row_count"] == 0
 
 
+def test_translation_cache_cli_clear_filters_error_rows_by_source_and_headword() -> None:
+    model = "test-model"
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "langnet.duckdb"
+        with duckdb.connect(str(cache_path)) as conn:
+            cache = TranslationCache(conn)
+            cache.upsert(
+                TranslationRecord(
+                    key=build_translation_key(
+                        source_lexicon="bailly",
+                        entry_id="bailly-p1450-c1-0024",
+                        occurrence=0,
+                        headword_norm="logos",
+                        source_text="raison, d'où",
+                        model=model,
+                        prompt=BASE_SYSTEM,
+                        hint="\n".join(default_hints_for_language("grc")),
+                    ),
+                    translated_text=None,
+                    status="error",
+                    error="Bailly translation block 01 appears untranslated",
+                    duration_ms=5,
+                )
+            )
+            cache.upsert(
+                TranslationRecord(
+                    key=build_translation_key(
+                        source_lexicon="bailly",
+                        entry_id="bailly-p090-c1-0004",
+                        occurrence=0,
+                        headword_norm="agelaios",
+                        source_text="qui forme un troupeau",
+                        model=model,
+                        prompt=BASE_SYSTEM,
+                        hint="\n".join(default_hints_for_language("grc")),
+                    ),
+                    translated_text="which forms a herd",
+                    status="ok",
+                    duration_ms=5,
+                )
+            )
+
+        runner = CliRunner()
+        cleared = runner.invoke(
+            main,
+            [
+                "translation-cache",
+                "clear",
+                "--translation-cache-db",
+                str(cache_path),
+                "--source-lexicon",
+                "bailly",
+                "--status",
+                "error",
+                "--headword",
+                "logos",
+                "--yes",
+                "--output",
+                "json",
+            ],
+        )
+
+        assert cleared.exit_code == 0, cleared.output
+        clear_payload = json.loads(cleared.output)
+        _assert_matches_translation_cache_schema(clear_payload)
+        assert clear_payload["deleted"] == 1
+        assert clear_payload["source_lexicon"] == "bailly"
+        assert clear_payload["status"] == "error"
+        assert clear_payload["headword"] == "logos"
+        assert clear_payload["after"]["row_count"] == 1
+        assert clear_payload["after"]["status_counts"] == {"ok": 1}
+
+
+def test_translation_cache_cli_clear_removes_bad_ok_row_by_translation_id() -> None:
+    source_text = "alors, il y a"
+    model = "test-model"
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "langnet.duckdb"
+        with duckdb.connect(str(cache_path)) as conn:
+            cache = TranslationCache(conn)
+            key = build_translation_key(
+                source_lexicon="dico",
+                entry_id="asti",
+                occurrence=0,
+                headword_norm="asti",
+                source_text=source_text,
+                model=model,
+                prompt=BASE_SYSTEM,
+                hint="\n".join(default_hints_for_language("san")),
+            )
+            cache.upsert(
+                TranslationRecord(
+                    key=key,
+                    translated_text="asti",
+                    status="ok",
+                    duration_ms=5,
+                )
+            )
+
+        runner = CliRunner()
+        cleared = runner.invoke(
+            main,
+            [
+                "translation-cache",
+                "clear",
+                "--translation-cache-db",
+                str(cache_path),
+                "--translation-id",
+                key.translation_id,
+                "--yes",
+                "--output",
+                "json",
+            ],
+        )
+
+        assert cleared.exit_code == 0, cleared.output
+        clear_payload = json.loads(cleared.output)
+        _assert_matches_translation_cache_schema(clear_payload)
+        assert clear_payload["deleted"] == 1
+        assert clear_payload["translation_id"] == key.translation_id
+        assert clear_payload["after"]["row_count"] == 0
+
+
+def test_translation_cache_cli_clear_removes_compatible_projection_rows() -> None:
+    source_text = "alors, il y a"
+    model = "test-model"
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "langnet.duckdb"
+        with duckdb.connect(str(cache_path)) as conn:
+            cache = TranslationCache(conn)
+            bad_key = build_translation_key(
+                source_lexicon="dico",
+                entry_id="asti",
+                occurrence=0,
+                headword_norm="asti",
+                source_text=source_text,
+                model=model,
+                prompt=BASE_SYSTEM,
+                hint="\n".join(default_hints_for_language("san")),
+            )
+            keep_key = build_translation_key(
+                source_lexicon="dico",
+                entry_id="astitva",
+                occurrence=0,
+                headword_norm="astitva",
+                source_text="existence ; réalité",
+                model=model,
+                prompt=BASE_SYSTEM,
+                hint="\n".join(default_hints_for_language("san")),
+            )
+            cache.upsert(
+                TranslationRecord(
+                    key=bad_key,
+                    translated_text="asti",
+                    status="ok",
+                    duration_ms=5,
+                )
+            )
+            cache.upsert(
+                TranslationRecord(
+                    key=keep_key,
+                    translated_text="existence; reality",
+                    status="ok",
+                    duration_ms=5,
+                )
+            )
+
+        runner = CliRunner()
+        cleared = runner.invoke(
+            main,
+            [
+                "translation-cache",
+                "clear",
+                "--translation-cache-db",
+                str(cache_path),
+                "--source-lexicon",
+                "dico",
+                "--entry-id",
+                "asti",
+                "--occurrence",
+                "0",
+                "--source-text-hash",
+                bad_key.source_text_hash,
+                "--yes",
+                "--output",
+                "json",
+            ],
+        )
+
+        assert cleared.exit_code == 0, cleared.output
+        clear_payload = json.loads(cleared.output)
+        _assert_matches_translation_cache_schema(clear_payload)
+        assert clear_payload["deleted"] == 1
+        assert clear_payload["entry_id"] == "asti"
+        assert clear_payload["source_text_hash"] == bad_key.source_text_hash
+        assert clear_payload["after"]["row_count"] == 1
+
+
+def test_translation_cache_cli_clear_caps_user_rejection_generation() -> None:
+    source_text = "alors, il y a"
+    model = "test-model"
+    with TemporaryDirectory() as tmpdir:
+        cache_path = Path(tmpdir) / "langnet.duckdb"
+        with duckdb.connect(str(cache_path)) as conn:
+            cache = TranslationCache(conn)
+            key = build_translation_key(
+                source_lexicon="dico",
+                entry_id="asti",
+                occurrence=0,
+                headword_norm="asti",
+                source_text=source_text,
+                model=model,
+                prompt=BASE_SYSTEM,
+                hint="\n".join(default_hints_for_language("san")),
+            )
+            cache.upsert(
+                TranslationRecord(
+                    key=key,
+                    translated_text="asti",
+                    status="ok",
+                    duration_ms=5,
+                )
+            )
+
+        clear_args = [
+            "translation-cache",
+            "clear",
+            "--translation-cache-db",
+            str(cache_path),
+            "--source-lexicon",
+            "dico",
+            "--entry-id",
+            "asti",
+            "--occurrence",
+            "0",
+            "--source-text-hash",
+            key.source_text_hash,
+            "--retry-reason",
+            "user_rejected",
+            "--max-retries",
+            "1",
+            "--yes",
+            "--output",
+            "json",
+        ]
+        runner = CliRunner()
+        first = runner.invoke(main, clear_args)
+        assert first.exit_code == 0, first.output
+        first_payload = json.loads(first.output)
+        assert first_payload["deleted"] == 1
+        assert first_payload["retry_generation"] == 1
+        assert first_payload["limit_reached"] is False
+
+        with duckdb.connect(str(cache_path)) as conn:
+            cache = TranslationCache(conn)
+            cache.upsert(
+                TranslationRecord(
+                    key=key,
+                    translated_text="asti again",
+                    status="ok",
+                    duration_ms=5,
+                )
+            )
+
+        second = runner.invoke(main, clear_args)
+        assert second.exit_code == 0, second.output
+        second_payload = json.loads(second.output)
+        assert second_payload["deleted"] == 0
+        assert second_payload["retry_generation"] == 1
+        assert second_payload["limit_reached"] is True
+        assert second_payload["after"]["row_count"] == 1
+
+
 def test_path_translation_cache_does_not_hold_lock_during_model_call() -> None:
     with TemporaryDirectory() as tmpdir:
         cache_path = Path(tmpdir) / "langnet.duckdb"

@@ -92,6 +92,21 @@ def apply_translation_schema(conn: duckdb.DuckDBPyConnection) -> None:
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS entry_translation_rejections (
+          rejection_id TEXT PRIMARY KEY,
+          translation_id TEXT,
+          source_lexicon TEXT NOT NULL,
+          entry_id TEXT NOT NULL,
+          occurrence INTEGER NOT NULL,
+          headword_norm TEXT,
+          source_text_hash TEXT NOT NULL,
+          reason TEXT,
+          created_at DOUBLE NOT NULL
+        )
+        """
+    )
 
 
 class TranslationCache:
@@ -111,14 +126,7 @@ class TranslationCache:
     def get(self, key: TranslationCacheKey) -> TranslationRecord | None:
         self._ensure_schema()
         try:
-            row = self.conn.execute(
-                """
-                SELECT translated_text, status, error, duration_ms
-                FROM entry_translations
-                WHERE translation_id = ?
-                """,
-                [key.translation_id],
-            ).fetchone()
+            row = self._get_row(key)
         except duckdb.CatalogException:
             if self.read_only:
                 return None
@@ -126,12 +134,80 @@ class TranslationCache:
         if row is None:
             return None
         return TranslationRecord(
-            key=key,
-            translated_text=row[0],
-            status=row[1],
-            error=row[2],
-            duration_ms=row[3],
+            key=TranslationCacheKey(
+                source_lexicon=row[0],
+                entry_id=row[1],
+                occurrence=row[2],
+                headword_norm=row[3] or "",
+                source_text_hash=row[4],
+                source_lang=row[5],
+                target_lang=row[6],
+                model=row[7],
+                prompt_hash=row[8],
+                hint_hash=row[9],
+            ),
+            translated_text=row[10],
+            status=row[11],
+            error=row[12],
+            duration_ms=row[13],
         )
+
+    def _get_row(self, key: TranslationCacheKey) -> tuple | None:
+        columns = """
+            source_lexicon, entry_id, occurrence, headword_norm, source_text_hash,
+            source_lang, target_lang, model, prompt_hash, hint_hash,
+            translated_text, status, error, duration_ms
+        """
+        exact_ok = self.conn.execute(
+            f"""
+            SELECT {columns}
+            FROM entry_translations
+            WHERE translation_id = ?
+              AND status = 'ok'
+              AND translated_text IS NOT NULL
+            """,
+            [key.translation_id],
+        ).fetchone()
+        if exact_ok is not None:
+            return exact_ok
+        compatible_ok = self.conn.execute(
+            f"""
+            SELECT {columns}
+            FROM entry_translations
+            WHERE source_lexicon = ?
+              AND entry_id = ?
+              AND occurrence = ?
+              AND source_text_hash = ?
+              AND source_lang = ?
+              AND target_lang = ?
+              AND prompt_hash = ?
+              AND hint_hash = ?
+              AND status = 'ok'
+              AND translated_text IS NOT NULL
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+            """,
+            [
+                key.source_lexicon,
+                key.entry_id,
+                key.occurrence,
+                key.source_text_hash,
+                key.source_lang,
+                key.target_lang,
+                key.prompt_hash,
+                key.hint_hash,
+            ],
+        ).fetchone()
+        if compatible_ok is not None:
+            return compatible_ok
+        return self.conn.execute(
+            f"""
+            SELECT {columns}
+            FROM entry_translations
+            WHERE translation_id = ?
+            """,
+            [key.translation_id],
+        ).fetchone()
 
     def upsert(self, record: TranslationRecord) -> str:
         self._ensure_schema()

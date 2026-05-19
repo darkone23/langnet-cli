@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -3149,16 +3149,29 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
     post_author_filter = _uses_post_author_filter(author_id)
     if author_id and not post_author_filter:
         author_id_key = author_id.casefold()
+        compact_author_key = compact_author_id(author_id).casefold()
         conditions.append(
             """
             (
                 lower(coalesce(author_id, '')) = ?
+                OR lower(coalesce(author_id, '')) = ?
                 OR lower(coalesce(author_id, '')) LIKE ?
-                OR lower(source_id) LIKE ?
+                OR lower(coalesce(source_id, '')) LIKE ?
+                OR lower(coalesce(source_id, '')) LIKE ?
+                OR lower(coalesce(cts_work_urn, '')) LIKE ?
             )
             """
         )
-        where_params.extend([author_id_key, f"%:{author_id_key}", f"{author_id_key}.%"])
+        where_params.extend(
+            [
+                author_id_key,
+                compact_author_key,
+                f"%:{compact_author_key}",
+                f"{author_id_key}.%",
+                f"{compact_author_key}.%",
+                f"{author_id_key}.%",
+            ]
+        )
     if query:
         query_like = f"%{query.lower()}%"
         conditions.append(
@@ -3511,16 +3524,17 @@ def list_discovery_shelves(
     groups = list_discovery_group_summaries(catalog_path, language=language)
     if limit is not None:
         groups = groups[:limit]
+    group_ids = [str(group["id"]) for group in groups]
+    sample_rows_by_group = _discovery_shelf_sample_works(
+        catalog_path,
+        language=language,
+        group_ids=group_ids,
+        sample_limit=sample_limit,
+    )
     shelves: list[dict[str, Any]] = []
     for group in groups:
         group_id = str(group["id"])
-        sample_rows = list_works(
-            catalog_path,
-            language=language,
-            classification_group=group_id,
-            limit=sample_limit,
-            sort="group-popularity",
-        )
+        sample_rows = sample_rows_by_group.get(group_id, [])
         sample_works = [
             {
                 "work_id": str(row["work_id"]),
@@ -3551,6 +3565,82 @@ def list_discovery_shelves(
             }
         )
     return shelves
+
+
+def _discovery_shelf_sample_works(
+    catalog_path: Path,
+    *,
+    language: str | None,
+    group_ids: Sequence[str],
+    sample_limit: int,
+) -> dict[str, list[dict[str, Any]]]:
+    if not catalog_path.exists() or not group_ids or sample_limit <= 0:
+        return {}
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "work_classifications"):
+            return {}
+        columns = _table_columns(conn, "work_classifications")
+        if "discovery_group_id" not in columns:
+            return {}
+        group_frame = pl.DataFrame(
+            [(group_id,) for group_id in group_ids],
+            schema={"group_id": pl.Utf8},
+            orient="row",
+        )
+        conn.register("shelf_group_ids", group_frame)
+        try:
+            rows = _dict_rows(
+                conn,
+                """
+                WITH ranked AS (
+                    SELECT
+                        wc.discovery_group_id AS shelf_group_id,
+                        w.work_id,
+                        w.title,
+                        w.author,
+                        w.language,
+                        w.source_id,
+                        w.collection_id,
+                        wc.group_popularity_score
+                            AS classification_group_popularity_score,
+                        row_number() OVER (
+                            PARTITION BY wc.discovery_group_id
+                            ORDER BY
+                                wc.group_popularity_score IS NULL,
+                                wc.group_popularity_score DESC,
+                                wc.global_popularity_score DESC,
+                                wc.popularity_score DESC,
+                                w.language,
+                                w.author,
+                                w.title,
+                                w.work_id
+                        ) AS shelf_rank
+                    FROM works w
+                    JOIN work_classifications wc ON wc.work_id = w.work_id
+                    JOIN shelf_group_ids s ON s.group_id = wc.discovery_group_id
+                    WHERE (? IS NULL OR w.language = ?)
+                )
+                SELECT
+                    shelf_group_id,
+                    work_id,
+                    title,
+                    author,
+                    language,
+                    source_id,
+                    collection_id,
+                    classification_group_popularity_score
+                FROM ranked
+                WHERE shelf_rank <= ?
+                ORDER BY shelf_group_id, shelf_rank
+                """,
+                [language, language, sample_limit],
+            )
+        finally:
+            conn.unregister("shelf_group_ids")
+    samples: dict[str, list[dict[str, Any]]] = {group_id: [] for group_id in group_ids}
+    for row in rows:
+        samples.setdefault(str(row["shelf_group_id"]), []).append(row)
+    return samples
 
 
 def reader_discovery_coverage(catalog_path: Path) -> list[dict[str, Any]]:
@@ -3712,7 +3802,11 @@ def _merge_discovery_counts(
 
 def _uses_post_author_filter(author_id: str | None) -> bool:
     return bool(
-        author_id and (is_synthetic_author_selector(author_id) or author_id.startswith("urn:cts:"))
+        author_id
+        and (
+            is_synthetic_author_selector(author_id)
+            or author_id.startswith("urn:cts:langnet:author")
+        )
     )
 
 

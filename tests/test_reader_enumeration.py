@@ -112,6 +112,48 @@ def test_reader_service_show_resolves_friendly_address_before_segment_lookup() -
         assert lookup_calls[0] == "urn:cts:greekLit:tlg0012.tlg002:1.8"
 
 
+def test_reader_service_segment_budget_keeps_large_anchor() -> None:
+    segments = [
+        {"citation_path": "1.8", "text": "a" * 3_000, "sort_key": 8},
+        {"citation_path": "1.9", "text": "b" * 9_000, "sort_key": 9},
+        {"citation_path": "1.10", "text": "c" * 900, "sort_key": 10},
+    ]
+
+    budgeted = reader_service_module._budget_reader_segments(
+        segments,
+        char_budget=6_000,
+        anchor="1.9",
+        limit=9,
+    )
+
+    assert [item["citation_path"] for item in budgeted] == ["1.9"]
+
+
+def test_reader_service_segment_budget_pages_forward_without_skipping() -> None:
+    segments = [
+        {"citation_path": "1.1", "text": "a" * 4_000, "sort_key": 1},
+        {"citation_path": "1.2", "text": "b" * 4_000, "sort_key": 2},
+        {"citation_path": "1.3", "text": "c" * 4_000, "sort_key": 3},
+    ]
+
+    budgeted = reader_service_module._budget_reader_segments(
+        segments,
+        char_budget=6_000,
+        anchor=None,
+        limit=14,
+    )
+    pagination = reader_service_module._pagination(
+        limit=14,
+        offset=0,
+        has_more=len(segments) > len(budgeted),
+        next_offset=len(budgeted),
+    )
+
+    assert [item["citation_path"] for item in budgeted] == ["1.1"]
+    assert pagination is not None
+    assert pagination["next_cursor"] == "1"
+
+
 def test_reader_service_summary_aliases_and_conflicts() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         service = ReaderService(_build_fixture_catalog(Path(tmpdir)))

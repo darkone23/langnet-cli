@@ -1015,6 +1015,95 @@ def test_parse_legacy_text_dump_with_idt_decodes_greek_beta_work_title() -> None
     assert books[0].work.title == "Ἀθηναίων πολιτεία"
 
 
+def test_parse_legacy_text_dump_with_idt_decodes_mixed_greek_beta_title() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "tlg4319.txt"
+        idt_path = root / "tlg4319.idt"
+        txt_path.write_bytes(b"W)/XRA\n")
+        idt_path.write_bytes(
+            _idt_author_record("4319", "Zosimus")
+            + _idt_work_record(
+                "026",
+                "*PERI\\ SKEUASI/AS W)/XRAS "
+                "(fort. pars operis *XEIRO/MHKTA) "
+                "(e cod. Venet. Marc. 299, fol. 157r)",
+                0,
+                [],
+            )
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="tlg",
+            language="grc",
+        )
+
+    assert (
+        books[0].work.title == "Περὶ σκευασίας ὤχρας (fort. pars operis Χειρόμηκτα) "
+        "(e cod. Venet. Marc. 299, fol. 157r)"
+    )
+
+
+def test_parse_legacy_text_dump_with_idt_repairs_preaccented_mixed_greek_beta_title() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "tlg4319.txt"
+        idt_path = root / "tlg4319.idt"
+        txt_path.write_bytes(b"W)/XRA\n")
+        idt_path.write_bytes(
+            _idt_author_record("4319", "Zosimus")
+            + _idt_work_record(
+                "026",
+                "*PERÌ SKEUASÍAS W)/XRAS (fort. pars operis *XEIRÓMHKTA)",
+                0,
+                [],
+            )
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="tlg",
+            language="grc",
+        )
+
+    assert books[0].work.title == "Περὶ σκευασίας ὤχρας (fort. pars operis Χειρόμηκτα)"
+
+
+def test_parse_legacy_text_dump_with_idt_keeps_latin_sigla_near_greek_title() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        txt_path = root / "tlg0072.txt"
+        idt_path = root / "tlg0072.idt"
+        txt_path.write_bytes(b"KLISIS\n")
+        idt_path.write_bytes(
+            _idt_author_record("0072", "Apollonius Dyscolus")
+            + _idt_work_record(
+                "017",
+                "Commentarium in anonymi opus PERI\\ KLI/SEWS O)NOMA/TWN (P. Oxy. 15.1801v)",
+                0,
+                [],
+            )
+            + b"\x00"
+        )
+
+        books = parse_legacy_text_dump_with_idt(
+            txt_path,
+            idt_path=idt_path,
+            collection_id="tlg",
+            language="grc",
+        )
+
+    assert (
+        books[0].work.title
+        == "Commentarium in anonymi opus περὶ κλίσεως ὀνομάτων (P. Oxy. 15.1801v)"
+    )
+
+
 def test_parse_legacy_text_dump_with_idt_sets_cts_work_urn_for_tlg() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)

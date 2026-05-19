@@ -77,13 +77,31 @@ just cli encounter san karman dico
 just cli word-of-day san --output json
 just cli recommend-words grc --count 3 --output json
 just cli translation-warm lat examples/debug/latin_words.txt --tool-filter gaffiot --dry-run
+just cli translation-cache clear --source-lexicon bailly --status error --headword logos --yes
 ```
 
 Use `--translation-mode auto` only when you intentionally want to populate
-missing DICO/Gaffiot translations through OpenRouter. It may be slow on long
+missing DICO/Gaffiot/Bailly translations through OpenRouter. It may be slow on long
 entries and requires `OPENAI_API_KEY` on cache misses. The default translation
-model is `openai:deepseek/deepseek-v4-flash`; override with
-`--translation-model` when comparing model quality or cost.
+model is `openai:google/gemini-2.5-flash`, with
+`openai:deepseek/deepseek-v4-flash` as the default fallback on provider failures,
+empty responses, or slow completed responses. Override with `--translation-model`
+when comparing model quality or cost. Cache-only reads do not call the model;
+successful cache rows are reusable across compatible models for the same source,
+prompt, and hint, while writes remain model-stamped for provenance. If a row is
+stuck in `error`, clear that targeted row and run `translation-warm` or
+`encounter --translation-mode auto` to rebuild it.
+Set `LANGNET_TRANSLATION_FALLBACK_MODELS` to a comma-separated model list when
+translation warming should retry a different provider/model after an empty
+response, slow completed response, or provider exception from the primary model.
+`LANGNET_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND` sets the minimum accepted
+completed-output rate before falling through to the next model; use
+`LANGNET_TRANSLATION_MIN_RATE_TOKENS` and `LANGNET_TRANSLATION_MIN_RATE_SECONDS`
+to keep very small or very fast responses from tripping that budget. Cache
+population validates deterministic transport/shape failures such as empty
+responses and Bailly block/schema mismatches. It does not reject translations
+with repeated source n-grams; quality review should be handled by explicit cache
+invalidation and re-warming.
 
 ## Runtime Pipeline
 

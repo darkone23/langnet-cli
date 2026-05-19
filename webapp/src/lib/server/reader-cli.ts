@@ -18,6 +18,7 @@ import {
 	resolveReaderCatalogChoice
 } from '$lib/reader';
 import { buildCliEnvironment, resolveCliDirectory } from './langnet-cli';
+import { readerCatalogCache } from './reader-cache';
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 type JsonObject = { [key: string]: JsonValue };
@@ -423,6 +424,7 @@ export async function readerContents({
 	from,
 	around,
 	radius,
+	charBudget,
 	options = {}
 }: {
 	catalogId: string | null;
@@ -433,6 +435,7 @@ export async function readerContents({
 	from?: string;
 	around?: string;
 	radius?: number;
+	charBudget?: number;
 	options?: ReaderCliOptions;
 }) {
 	const catalog = await resolveReaderCatalog(catalogId, language, options);
@@ -441,6 +444,7 @@ export async function readerContents({
 	if (from) args.push('--from', from);
 	if (around) args.push('--around', around);
 	if (radius) args.push('--radius', String(radius));
+	if (charBudget) args.push('--char-budget', String(charBudget));
 	args.push('--output', 'json');
 	return withCatalog(await runReaderJsonCommand(catalog, args, options), catalog);
 }
@@ -497,11 +501,16 @@ async function resolveReaderCatalog(
 }
 
 async function loadReaderCatalogs(options: ReaderCliOptions = {}) {
+	const cached = readerCatalogCache.get('catalogs');
+	if (cached) return cached;
+
 	const payload = await runReaderJsonCommandWithoutCatalog(
 		['catalogs', '--output', 'json'],
 		options
 	);
-	return arrayOfObjects(payload.items).map(mapReaderCatalog);
+	const catalogs = arrayOfObjects(payload.items).map(mapReaderCatalog);
+	readerCatalogCache.set('catalogs', catalogs);
+	return catalogs;
 }
 
 async function runReaderJsonCommand(

@@ -628,6 +628,7 @@ class ReaderService:
         from_citation: str | None = None,
         around: str | None = None,
         radius: int = 20,
+        char_budget: int | None = None,
     ) -> dict[str, Any]:
         offset = _cursor_offset(cursor)
         fetch_limit = limit + 1 if around is None else limit
@@ -640,12 +641,19 @@ class ReaderService:
             around=around,
             radius=radius,
         )
-        has_more = around is None and len(items) > limit
+        source_count = len(items)
         if around is None:
             items = items[:limit]
         work = get_work(self.catalog_path, work_id)
         language = _work_language(work)
         items = [decorate_segment_display(item, language=language) for item in items]
+        items = _budget_reader_segments(
+            items,
+            char_budget=char_budget,
+            anchor=around,
+            limit=limit,
+        )
+        has_more = around is None and source_count > len(items)
         return self._payload(
             "contents",
             items,
@@ -662,7 +670,12 @@ class ReaderService:
                 if around
                 else None
             ),
-            pagination=_pagination(limit=limit, offset=offset, has_more=has_more),
+            pagination=_pagination(
+                limit=limit,
+                offset=offset,
+                has_more=has_more,
+                next_offset=offset + len(items),
+            ),
         )
 
     def contents(self, work_id: str, *, limit: int = 50) -> dict[str, Any]:
@@ -1105,15 +1118,115 @@ def _cursor_offset(cursor: str | None) -> int:
         return 0
 
 
-def _pagination(*, limit: int | None, offset: int, has_more: bool) -> dict[str, Any] | None:
+def _pagination(
+    *,
+    limit: int | None,
+    offset: int,
+    has_more: bool,
+    next_offset: int | None = None,
+) -> dict[str, Any] | None:
     if limit is None:
         return None
     previous_offset = max(0, offset - limit)
     return {
-        "next_cursor": str(offset + limit) if has_more else None,
+        "next_cursor": str(next_offset if next_offset is not None else offset + limit)
+        if has_more
+        else None,
         "prev_cursor": str(previous_offset) if offset > 0 else None,
         "limit": limit,
     }
+
+
+def _budget_reader_segments(
+    items: list[dict[str, Any]],
+    *,
+    char_budget: int | None,
+    anchor: str | None,
+    limit: int | None,
+) -> list[dict[str, Any]]:
+    count_limit = limit if limit is not None and limit > 0 else len(items)
+    if not items or not char_budget or char_budget <= 0:
+        return items[:count_limit]
+    if anchor:
+        return _budget_reader_segments_around_anchor(
+            items,
+            char_budget=char_budget,
+            anchor=anchor,
+            limit=count_limit,
+        )
+
+    budgeted: list[dict[str, Any]] = []
+    total_chars = 0
+    for item in items:
+        item_chars = _segment_reader_text_length(item)
+        if budgeted and (len(budgeted) >= count_limit or total_chars + item_chars > char_budget):
+            break
+        budgeted.append(item)
+        total_chars += item_chars
+        if len(budgeted) >= count_limit:
+            break
+    return budgeted or items[:1]
+
+
+def _budget_reader_segments_around_anchor(
+    items: list[dict[str, Any]],
+    *,
+    char_budget: int,
+    anchor: str,
+    limit: int,
+) -> list[dict[str, Any]]:
+    anchor_index = next(
+        (
+            index
+            for index, item in enumerate(items)
+            if str(item.get("citation_path") or "") == anchor
+        ),
+        0,
+    )
+    selected = {anchor_index}
+    total_chars = _segment_reader_text_length(items[anchor_index])
+    before_index = anchor_index - 1
+    after_index = anchor_index + 1
+    before_open = before_index >= 0
+    after_open = after_index < len(items)
+
+    while len(selected) < limit and (before_open or after_open):
+        changed = False
+        if before_open:
+            item_chars = _segment_reader_text_length(items[before_index])
+            if total_chars + item_chars <= char_budget:
+                selected.add(before_index)
+                total_chars += item_chars
+                changed = True
+                before_index -= 1
+                before_open = before_index >= 0
+            else:
+                before_open = False
+        if len(selected) >= limit:
+            break
+        if after_open:
+            item_chars = _segment_reader_text_length(items[after_index])
+            if total_chars + item_chars <= char_budget:
+                selected.add(after_index)
+                total_chars += item_chars
+                changed = True
+                after_index += 1
+                after_open = after_index < len(items)
+            else:
+                after_open = False
+        if not changed and not before_open and not after_open:
+            break
+
+    return [items[index] for index in sorted(selected)]
+
+
+def _segment_reader_text_length(item: dict[str, Any]) -> int:
+    display = item.get("display")
+    if isinstance(display, dict):
+        primary = display.get("primary") or display.get("native_script")
+        if primary:
+            return len(str(primary))
+    return len(str(item.get("text") or ""))
 
 
 def _decorate_segment(catalog_path: Path, segment: dict[str, Any] | None) -> dict[str, Any] | None:

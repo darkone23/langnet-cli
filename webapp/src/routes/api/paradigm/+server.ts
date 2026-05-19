@@ -1,12 +1,14 @@
-import { json } from '@sveltejs/kit';
 import { paradigmPayloadHasForms, sanskritParadigmLemmaFallbacks } from '$lib/paradigm-ui';
+import { payloadResponse } from '$lib/server/msgpack-response';
 import { languageModes, type LanguageMode } from '$lib/search-data';
 import { paradigmFromCli } from '$lib/server/langnet-cli';
 
 const validLanguages = new Set(languageModes.map(({ id }) => id));
 const validKinds = new Set(['declension', 'conjugation']);
 
-export async function GET({ url }) {
+export async function GET({ url, request }) {
+	const respond = (payload: unknown, init?: ResponseInit) =>
+		payloadResponse(request, payload, init);
 	const requestedLanguage = url.searchParams.get('language') ?? 'san';
 	const language = validLanguages.has(requestedLanguage as LanguageMode)
 		? (requestedLanguage as LanguageMode)
@@ -18,7 +20,7 @@ export async function GET({ url }) {
 	const presentClass = url.searchParams.get('class') ?? undefined;
 
 	if (!lemma) {
-		return json(
+		return respond(
 			{
 				schema_version: 'langnet.paradigm.v1',
 				language,
@@ -51,16 +53,16 @@ export async function GET({ url }) {
 				});
 
 				firstPayload ??= payload;
-				if (paradigmPayloadHasForms(payload)) return json(payload);
+				if (paradigmPayloadHasForms(payload)) return respond(payload);
 			} catch (error) {
 				lastError = error;
 			}
 		}
 
-		if (firstPayload) return json(firstPayload);
+		if (firstPayload) return respond(firstPayload);
 		throw lastError;
 	} catch (error) {
-		return json(
+		return respond(
 			{
 				schema_version: 'langnet.paradigm.v1',
 				language,

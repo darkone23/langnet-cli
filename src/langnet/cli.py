@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import importlib.util
 import logging
 import multiprocessing
@@ -87,7 +88,6 @@ from langnet.execution.handlers import gaffiot as gaffiot_handlers
 from langnet.execution.handlers import heritage as heritage_handlers
 from langnet.execution.handlers.diogenes import _parse_diogenes_html
 from langnet.execution.handlers.whitakers import _parse_whitaker_output
-from langnet.execution.registry import default_registry
 from langnet.execution.source_text import analyze_source_entry, compact_source_gloss
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.normalizer.core import NormalizationResult, _hash_query
@@ -166,6 +166,13 @@ from langnet.word_of_day import (
     resolve_word_of_day_languages,
 )
 
+
+def _default_registry(*, use_stubs: bool = False):
+    from langnet.execution.registry import default_registry  # noqa: PLC0415
+
+    return default_registry(use_stubs=use_stubs)
+
+
 LanguageHint = query_spec.LanguageHint
 LanguageValue = query_spec.LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
@@ -179,12 +186,20 @@ ENCOUNTER_JSON_ERROR_SCHEMA_VERSION = "langnet.encounter.error.v1"
 DATABASE_BUSY_RETRY_AFTER_MS = 1500
 TRANSLATION_CACHE_SCHEMA_VERSION = "langnet.translation_cache.v1"
 DOCTOR_SCHEMA_VERSION = "langnet.doctor.v1"
-DEFAULT_TRANSLATION_MODEL = "openai:deepseek/deepseek-v4-flash"
+DEFAULT_TRANSLATION_MODEL = "openai:google/gemini-2.5-flash"
 DEFAULT_CLASSIFICATION_MODEL = "openai:deepseek/deepseek-v4-flash"
 DEFAULT_CLASSIFICATION_BATCH_SIZE = 25
 DEFAULT_CLASSIFICATION_TIMEOUT_SECONDS = 120.0
 DEFAULT_CLASSIFICATION_MAX_ATTEMPTS = 3
-DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-3.1-pro-preview"
+TRANSLATION_FALLBACK_MODELS_ENV = "LANGNET_TRANSLATION_FALLBACK_MODELS"
+DEFAULT_TRANSLATION_FALLBACK_MODELS = ("openai:deepseek/deepseek-v4-flash",)
+TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND_ENV = "LANGNET_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND"
+TRANSLATION_MIN_RATE_TOKENS_ENV = "LANGNET_TRANSLATION_MIN_RATE_TOKENS"
+TRANSLATION_MIN_RATE_SECONDS_ENV = "LANGNET_TRANSLATION_MIN_RATE_SECONDS"
+DEFAULT_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND = 8.0
+DEFAULT_TRANSLATION_MIN_RATE_TOKENS = 24
+DEFAULT_TRANSLATION_MIN_RATE_SECONDS = 5.0
+DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-2.5-flash"
 WORD_INDEX_CONTEXT_RADIUS = 1
 WORD_INDEX_SOURCES = {
     "all",
@@ -2488,6 +2503,12 @@ def reader_sync_source_enrichment(  # noqa: PLR0913
 @click.option("--around", default=None, help="Center contents around a citation path.")
 @click.option("--radius", default=20, show_default=True, type=click.IntRange(1, 250))
 @click.option(
+    "--char-budget",
+    default=None,
+    type=click.IntRange(500, 100_000),
+    help="Maximum text characters to return while preserving at least one segment.",
+)
+@click.option(
     "--output",
     type=click.Choice(["pretty", "json"]),
     default="pretty",
@@ -2503,6 +2524,7 @@ def reader_contents(  # noqa: PLR0913
     from_citation: str | None,
     around: str | None,
     radius: int,
+    char_budget: int | None,
     output: str,
 ) -> None:
     """List segments for one reader work."""
@@ -2514,6 +2536,7 @@ def reader_contents(  # noqa: PLR0913
             from_citation=from_citation,
             around=around,
             radius=radius,
+            char_budget=char_budget,
         ),
         output,
     )
@@ -5449,7 +5472,7 @@ def _plan_exec_impl(config: PlanExecConfig, language: str, text: str) -> None:
     candidate = planner.select_candidate(normalized.normalized)
     plan = planner.build(normalized.normalized, candidate)
 
-    registry = default_registry(use_stubs=config.use_stub_handlers)
+    registry = _default_registry(use_stubs=config.use_stub_handlers)
     clients = _build_exec_clients(plan, config.diogenes_endpoint, config.use_stub_handlers)
 
     if config.no_cache:
@@ -5874,7 +5897,7 @@ def triples_dump(  # noqa: PLR0913
         derivation_index = DerivationIndex(conn)
         claim_index = ClaimIndex(conn)
         plan_response_index = PlanResponseIndex(conn)
-        registry = default_registry(use_stubs=False)
+        registry = _default_registry(use_stubs=False)
         clients = _build_exec_clients(plan, diogenes_endpoint, use_stubs=False)
         result = execute_plan_staged(
             plan=plan,
@@ -8182,6 +8205,7 @@ def _encounter_bucket_sort_key(
 
 def _openrouter_translation_callback(model: str):
     client = None
+    model_candidates = _translation_model_candidates(model)
 
     def translate(projection) -> str:
         nonlocal client
@@ -8212,17 +8236,126 @@ def _openrouter_translation_callback(model: str):
         else:
             messages.append({"role": "user", "content": projection.source_text})
 
-        kwargs = {"model": model, "messages": messages}
+        kwargs = {"messages": messages}
         if requires_structured_translation(projection):
             kwargs["response_format"] = {"type": "json_object"}
             kwargs["temperature"] = 0
-        response = client.chat.completions.create(**kwargs)
-        content = response.choices[0].message.content or ""
+        response = _create_translation_completion_with_model_fallback(
+            client.chat.completions,
+            model_candidates=model_candidates,
+            request_kwargs=kwargs,
+        )
+        content = _translation_response_content(response)
         if requires_structured_translation(projection):
             return content.strip()
         return content.replace("*", "").strip()
 
     return translate
+
+
+def _translation_model_candidates(primary_model: str) -> list[str]:
+    fallback_source = os.getenv(TRANSLATION_FALLBACK_MODELS_ENV)
+    fallback_models = [
+        model.strip()
+        for model in (
+            fallback_source.split(",")
+            if fallback_source is not None
+            else DEFAULT_TRANSLATION_FALLBACK_MODELS
+        )
+        if model.strip()
+    ]
+    return list(dict.fromkeys([primary_model, *fallback_models]))
+
+
+def _create_translation_completion_with_model_fallback(
+    completions,
+    *,
+    model_candidates: Sequence[str],
+    request_kwargs: Mapping[str, Any],
+):
+    last_exception: Exception | None = None
+    for candidate in model_candidates:
+        try:
+            start = time.perf_counter()
+            response = completions.create(model=candidate, **request_kwargs)
+            elapsed_seconds = time.perf_counter() - start
+            if not _translation_response_content(response).strip():
+                raise ValueError("translation provider returned an empty response")
+            _validate_translation_response_latency_budget(
+                response,
+                elapsed_seconds=elapsed_seconds,
+                model=candidate,
+            )
+            return response
+        except Exception as exc:  # noqa: BLE001
+            last_exception = exc
+    assert last_exception is not None
+    raise last_exception
+
+
+def _translation_response_content(response) -> str:
+    return str(response.choices[0].message.content or "")
+
+
+def _validate_translation_response_latency_budget(
+    response: object,
+    *,
+    elapsed_seconds: float,
+    model: str,
+) -> None:
+    min_tokens_per_second = _float_env(
+        TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND_ENV,
+        DEFAULT_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND,
+    )
+    if min_tokens_per_second <= 0:
+        return
+    min_tokens = _int_env(TRANSLATION_MIN_RATE_TOKENS_ENV, DEFAULT_TRANSLATION_MIN_RATE_TOKENS)
+    min_seconds = _float_env(
+        TRANSLATION_MIN_RATE_SECONDS_ENV,
+        DEFAULT_TRANSLATION_MIN_RATE_SECONDS,
+    )
+    output_tokens = _translation_output_token_count(response)
+    if elapsed_seconds < min_seconds or output_tokens < min_tokens:
+        return
+    tokens_per_second = output_tokens / max(elapsed_seconds, 0.001)
+    if tokens_per_second < min_tokens_per_second:
+        raise ValueError(
+            f"translation provider {model} was too slow: "
+            f"{tokens_per_second:.1f} output tokens/sec over {elapsed_seconds:.1f}s "
+            f"for {output_tokens} output tokens; "
+            f"minimum is {min_tokens_per_second:.1f}"
+        )
+
+
+def _translation_output_token_count(response: object) -> int:
+    usage = getattr(response, "usage", None)
+    usage_tokens = getattr(usage, "completion_tokens", None)
+    if isinstance(usage_tokens, int) and usage_tokens > 0:
+        return usage_tokens
+    if isinstance(usage, Mapping):
+        usage_value = usage.get("completion_tokens")
+        if isinstance(usage_value, int) and usage_value > 0:
+            return usage_value
+    content = _translation_response_content(response)
+    return max(1, len(content.split()), len(content) // 4)
+
+
+def _float_env(name: str, default: float) -> float:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    with suppress(ValueError):
+        return float(value)
+    return default
+
+
+def _int_env(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    with suppress(ValueError):
+        return int(value)
+    return default
 
 
 def _call_work_classifier_with_retries(
@@ -8485,6 +8618,39 @@ def _execute_lookup_plan(  # noqa: PLR0913
     if tool_filter and tool_filter.lower() != "all":
         _filter_plan_tools(plan, tool_filter)
 
+    path = Path(norm_cfg.db_path).expanduser() if norm_cfg.db_path else normalization_db_path()
+    registry = _default_registry(use_stubs=False)
+    clients = _build_exec_clients(plan, diogenes_endpoint, use_stubs=False)
+    if cache_policy == "read-write" and not no_cache:
+        return execute_plan_staged(
+            plan=plan,
+            clients=clients,
+            registry=registry,
+            raw_index=PathRawResponseIndex(path),
+            extraction_index=PathExtractionIndex(path),
+            derivation_index=PathDerivationIndex(path),
+            claim_index=PathClaimIndex(path),
+            plan_response_index=PathPlanResponseIndex(path),
+            allow_cache=True,
+        )
+
+    if cache_policy == "read-only" and not no_cache and path.exists():
+        cached_plan = PathPlanResponseIndex(path).get(plan.plan_hash)
+        if cached_plan is not None:
+            with duckdb.connect(database=":memory:") as conn:
+                apply_schema(conn)
+                return execute_plan_staged(
+                    plan=plan,
+                    clients=clients,
+                    registry=registry,
+                    raw_index=PathRawResponseIndex(path),
+                    extraction_index=ExtractionIndex(conn),
+                    derivation_index=DerivationIndex(conn),
+                    claim_index=ClaimIndex(conn),
+                    plan_response_index=PathPlanResponseIndex(path),
+                    allow_cache=True,
+                )
+
     with duckdb.connect(database=":memory:") as conn:
         apply_schema(conn)
         raw_index = RawResponseIndex(conn)
@@ -8492,8 +8658,6 @@ def _execute_lookup_plan(  # noqa: PLR0913
         derivation_index = DerivationIndex(conn)
         claim_index = ClaimIndex(conn)
         plan_response_index = PlanResponseIndex(conn)
-        registry = default_registry(use_stubs=False)
-        clients = _build_exec_clients(plan, diogenes_endpoint, use_stubs=False)
         return execute_plan_staged(
             plan=plan,
             clients=clients,
@@ -8592,17 +8756,116 @@ def _translation_cache_status_payload(cache_path: Path) -> dict[str, object]:
     return payload
 
 
-def _translation_cache_clear_payload(
+def _translation_retry_generation(  # noqa: PLR0913
+    conn: duckdb.DuckDBPyConnection,
+    *,
+    source_lexicon: str | None,
+    entry_id: str | None,
+    occurrence: int | None,
+    source_text_hash: str | None,
+    translation_id: str | None,
+) -> int:
+    if source_lexicon and entry_id and occurrence is not None and source_text_hash:
+        row = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM entry_translation_rejections
+            WHERE source_lexicon = ?
+              AND entry_id = ?
+              AND occurrence = ?
+              AND source_text_hash = ?
+            """,
+            [source_lexicon, entry_id, occurrence, source_text_hash],
+        ).fetchone()
+    elif translation_id:
+        row = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM entry_translation_rejections
+            WHERE translation_id = ?
+            """,
+            [translation_id],
+        ).fetchone()
+    else:
+        return 0
+    return int(row[0]) if row is not None else 0
+
+
+def _record_translation_retry_rejection(  # noqa: PLR0913
+    conn: duckdb.DuckDBPyConnection,
+    *,
+    translation_id: str | None,
+    source_lexicon: str | None,
+    entry_id: str | None,
+    occurrence: int | None,
+    source_text_hash: str | None,
+    headword: str | None,
+    retry_reason: str | None,
+) -> None:
+    if not (source_lexicon and entry_id and occurrence is not None and source_text_hash):
+        return
+    material = "\x1f".join(
+        [
+            translation_id or "",
+            source_lexicon,
+            entry_id,
+            str(occurrence),
+            source_text_hash,
+            str(time.time()),
+        ]
+    )
+    rejection_id = f"tr-reject:{hashlib.sha256(material.encode('utf-8')).hexdigest()[:24]}"
+    conn.execute(
+        """
+        INSERT INTO entry_translation_rejections
+        (rejection_id, translation_id, source_lexicon, entry_id, occurrence, headword_norm,
+         source_text_hash, reason, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            rejection_id,
+            translation_id,
+            source_lexicon,
+            entry_id,
+            occurrence,
+            headword,
+            source_text_hash,
+            retry_reason,
+            time.time(),
+        ],
+    )
+
+
+def _translation_cache_clear_payload(  # noqa: C901, PLR0913
     cache_path: Path,
     *,
+    translation_id: str | None = None,
     source_lexicon: str | None = None,
+    status: str | None = None,
+    headword: str | None = None,
+    entry_id: str | None = None,
+    occurrence: int | None = None,
+    source_text_hash: str | None = None,
+    retry_reason: str | None = None,
+    max_retries: int | None = None,
 ) -> dict[str, object]:
+    filters_payload = {
+        "translation_id": translation_id,
+        "source_lexicon": source_lexicon,
+        "status": status,
+        "headword": headword,
+        "entry_id": entry_id,
+        "occurrence": occurrence,
+        "source_text_hash": source_text_hash,
+        "retry_reason": retry_reason,
+        "max_retries": max_retries,
+    }
     before = _translation_cache_status_payload(cache_path)
     if before.get("error"):
         return {
             "schema_version": TRANSLATION_CACHE_SCHEMA_VERSION,
             "cache_db": str(cache_path),
-            "source_lexicon": source_lexicon,
+            **filters_payload,
             "deleted": 0,
             "before": before,
             "after": before,
@@ -8611,28 +8874,85 @@ def _translation_cache_clear_payload(
     if cache_path.exists():
         with connect_duckdb(cache_path, read_only=False, lock=True) as conn:
             apply_translation_schema(conn)
+            retry_generation = _translation_retry_generation(
+                conn,
+                source_lexicon=source_lexicon,
+                entry_id=entry_id,
+                occurrence=occurrence,
+                source_text_hash=source_text_hash,
+                translation_id=translation_id,
+            )
+            if max_retries is not None and retry_generation >= max_retries:
+                return {
+                    "schema_version": TRANSLATION_CACHE_SCHEMA_VERSION,
+                    "cache_db": str(cache_path),
+                    **filters_payload,
+                    "deleted": 0,
+                    "retry_generation": retry_generation,
+                    "limit_reached": True,
+                    "before": before,
+                    "after": before,
+                }
+            where_clauses: list[str] = []
+            params: list[object] = []
+            if translation_id:
+                where_clauses.append("translation_id = ?")
+                params.append(translation_id)
             if source_lexicon:
-                row = conn.execute(
-                    "SELECT COUNT(*) FROM entry_translations WHERE source_lexicon = ?",
-                    [source_lexicon],
-                ).fetchone()
-                deleted = int(row[0]) if row is not None else 0
-                conn.execute(
-                    "DELETE FROM entry_translations WHERE source_lexicon = ?",
-                    [source_lexicon],
+                where_clauses.append("source_lexicon = ?")
+                params.append(source_lexicon)
+            if status:
+                where_clauses.append("status = ?")
+                params.append(status)
+            if headword:
+                where_clauses.append("headword_norm = ?")
+                params.append(headword)
+            if entry_id:
+                where_clauses.append("entry_id = ?")
+                params.append(entry_id)
+            if occurrence is not None:
+                where_clauses.append("occurrence = ?")
+                params.append(occurrence)
+            if source_text_hash:
+                where_clauses.append("source_text_hash = ?")
+                params.append(source_text_hash)
+            where_sql = f" WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+            row = conn.execute(
+                f"SELECT COUNT(*) FROM entry_translations{where_sql}",
+                params,
+            ).fetchone()
+            deleted = int(row[0]) if row is not None else 0
+            conn.execute(f"DELETE FROM entry_translations{where_sql}", params)
+            if retry_reason and deleted:
+                _record_translation_retry_rejection(
+                    conn,
+                    translation_id=translation_id,
+                    source_lexicon=source_lexicon,
+                    entry_id=entry_id,
+                    occurrence=occurrence,
+                    source_text_hash=source_text_hash,
+                    headword=headword,
+                    retry_reason=retry_reason,
                 )
-            else:
-                row_count = before["row_count"]
-                deleted = row_count if isinstance(row_count, int) else 0
-                conn.execute("DELETE FROM entry_translations")
+                retry_generation = _translation_retry_generation(
+                    conn,
+                    source_lexicon=source_lexicon,
+                    entry_id=entry_id,
+                    occurrence=occurrence,
+                    source_text_hash=source_text_hash,
+                    translation_id=translation_id,
+                )
     else:
         deleted = 0
+        retry_generation = 0
     after = _translation_cache_status_payload(cache_path)
     return {
         "schema_version": TRANSLATION_CACHE_SCHEMA_VERSION,
         "cache_db": str(cache_path),
-        "source_lexicon": source_lexicon,
+        **filters_payload,
         "deleted": deleted,
+        "retry_generation": retry_generation,
+        "limit_reached": False,
         "before": before,
         "after": after,
     }
@@ -8695,25 +9015,99 @@ def translation_cache_status(translation_cache_db: str, output: str) -> None:
     default=None,
     help="Delete only rows for one generated translation source.",
 )
+@click.option(
+    "--translation-id",
+    default=None,
+    help="Delete one exact cached translation row by translation_id.",
+)
+@click.option(
+    "--status",
+    type=click.Choice(["ok", "empty", "error"]),
+    default=None,
+    help="Delete only rows with one cache status.",
+)
+@click.option(
+    "--headword",
+    default=None,
+    help="Delete only rows for one normalized headword.",
+)
+@click.option(
+    "--entry-id",
+    default=None,
+    help="Delete only rows for one source entry id.",
+)
+@click.option(
+    "--occurrence",
+    type=int,
+    default=None,
+    help="Delete only rows for one source entry occurrence.",
+)
+@click.option(
+    "--source-text-hash",
+    default=None,
+    help="Delete only rows for one source text hash.",
+)
+@click.option(
+    "--retry-reason",
+    default=None,
+    help="Record a bounded user-triggered retry reason while clearing.",
+)
+@click.option(
+    "--max-retries",
+    type=click.IntRange(min=0),
+    default=None,
+    help="Refuse to clear when this projection already has this many retry rejections.",
+)
 @click.confirmation_option(
     "--yes",
     prompt="Delete matching cached translation rows?",
 )
-def translation_cache_clear(
+def translation_cache_clear(  # noqa: PLR0913
     translation_cache_db: str,
     output: str,
+    translation_id: str | None,
     source_lexicon: str | None,
+    status: str | None,
+    headword: str | None,
+    entry_id: str | None,
+    occurrence: int | None,
+    source_text_hash: str | None,
+    retry_reason: str | None,
+    max_retries: int | None,
 ) -> None:
     """Delete cached DICO/Gaffiot/Bailly translation rows."""
     payload = _translation_cache_clear_payload(
         Path(translation_cache_db),
+        translation_id=translation_id,
         source_lexicon=source_lexicon,
+        status=status,
+        headword=headword,
+        entry_id=entry_id,
+        occurrence=occurrence,
+        source_text_hash=source_text_hash,
+        retry_reason=retry_reason,
+        max_retries=max_retries,
     )
     if output == "json":
         click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
         return
 
-    label = f" for {source_lexicon}" if source_lexicon is not None else ""
+    filters = [
+        label
+        for label in (
+            f"translation_id={translation_id}" if translation_id is not None else None,
+            source_lexicon,
+            f"status={status}" if status is not None else None,
+            f"headword={headword}" if headword is not None else None,
+            f"entry_id={entry_id}" if entry_id is not None else None,
+            f"occurrence={occurrence}" if occurrence is not None else None,
+            f"source_text_hash={source_text_hash}" if source_text_hash is not None else None,
+            f"retry_reason={retry_reason}" if retry_reason is not None else None,
+            f"max_retries={max_retries}" if max_retries is not None else None,
+        )
+        if label
+    ]
+    label = f" for {', '.join(filters)}" if filters else ""
     click.echo(
         f"Cleared {payload['deleted']} translation row(s){label} from {payload['cache_db']}."
     )

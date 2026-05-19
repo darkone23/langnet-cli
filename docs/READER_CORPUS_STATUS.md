@@ -224,7 +224,10 @@ Catalog-level questions are answered from the catalog DuckDB.
 - Accepted contained works participate in catalog-level work discovery and
   author-selector browsing. Verified example: the contained `Bhagavadgītā`
   appears under `Vyāsa` with selector `langnet:reader:author:san:vyasa`.
-- `reader contents` supports `--cursor`, `--from`, and `--around` windows.
+- `reader contents` supports `--cursor`, `--from`, `--around`, and
+  `--char-budget` windows. `--char-budget` caps returned text characters while
+  preserving at least one segment, so chapter-sized segments do not produce
+  oversized reader pages.
 - JSON `reader show` responses include next/previous segment pointers.
 - Sanskrit segment JSON includes additive display fields for transliteration
   and Devanagari where conversion is available. The stored `text` field remains

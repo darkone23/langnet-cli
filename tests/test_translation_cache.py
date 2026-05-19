@@ -63,6 +63,93 @@ def test_translation_cache_round_trips_ok_record() -> None:
     assert loaded.duration_ms == TRANSLATION_DURATION_MS
 
 
+def test_translation_cache_reads_ok_record_from_any_model_for_same_projection() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    stored_key = build_translation_key(
+        source_lexicon="gaffiot",
+        entry_id="gaffiot_38776",
+        occurrence=1,
+        headword_norm="lupus",
+        source_text="loup",
+        model="test:fast",
+        prompt="translate",
+        hint="keep Latin",
+    )
+    requested_key = build_translation_key(
+        source_lexicon="gaffiot",
+        entry_id="gaffiot_38776",
+        occurrence=1,
+        headword_norm="lupus",
+        source_text="loup",
+        model="test:slow",
+        prompt="translate",
+        hint="keep Latin",
+    )
+
+    cache.upsert(
+        TranslationRecord(
+            key=stored_key,
+            translated_text="wolf",
+            status="ok",
+            duration_ms=TRANSLATION_DURATION_MS,
+        )
+    )
+    loaded = cache.get(requested_key)
+
+    assert loaded is not None
+    assert loaded.key == stored_key
+    assert loaded.translated_text == "wolf"
+
+
+def test_translation_cache_does_not_return_cross_model_error_when_ok_record_exists() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    error_key = build_translation_key(
+        source_lexicon="gaffiot",
+        entry_id="gaffiot_38776",
+        occurrence=1,
+        headword_norm="lupus",
+        source_text="loup",
+        model="test:slow",
+        prompt="translate",
+        hint="keep Latin",
+    )
+    ok_key = build_translation_key(
+        source_lexicon="gaffiot",
+        entry_id="gaffiot_38776",
+        occurrence=1,
+        headword_norm="lupus",
+        source_text="loup",
+        model="test:fast",
+        prompt="translate",
+        hint="keep Latin",
+    )
+
+    cache.upsert(
+        TranslationRecord(
+            key=error_key,
+            translated_text=None,
+            status="error",
+            error="bad upstream",
+            duration_ms=99,
+        )
+    )
+    cache.upsert(
+        TranslationRecord(
+            key=ok_key,
+            translated_text="wolf",
+            status="ok",
+            duration_ms=TRANSLATION_DURATION_MS,
+        )
+    )
+    loaded = cache.get(error_key)
+
+    assert loaded is not None
+    assert loaded.status == "ok"
+    assert loaded.key == ok_key
+
+
 def test_read_only_translation_cache_without_table_is_a_miss() -> None:
     conn = duckdb.connect(database=":memory:")
     cache = TranslationCache(conn, read_only=True)

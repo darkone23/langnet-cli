@@ -66,8 +66,8 @@ def test_translation_cache_subcommand_help() -> None:
         _assert_help(["translation-cache", command])
 
 
-def test_translation_cli_defaults_use_deepseek_flash() -> None:
-    expected_model = "openai:deepseek/deepseek-v4-flash"
+def test_translation_cli_defaults_use_gemini_flash() -> None:
+    expected_model = "openai:google/gemini-2.5-flash"
     for command in ["encounter", "translation-warm", "reader-eval"]:
         runner = CliRunner()
         result = runner.invoke(main, [command, "--help"])

@@ -30,6 +30,18 @@ from langnet.translation.structured import (
 
 _DICO_SOURCE_RE = re.compile(r"#(?P<entry>[^:]+):(?P<occurrence>\d+)$")
 STRUCTURED_TRANSLATION_MAX_ATTEMPTS = 3
+STRUCTURED_TRANSLATION_REPAIR_HINT = (
+    "The previous Bailly translation response failed validation. Retry from the same source "
+    "blocks, return only the requested JSON object, preserve every requested block path, "
+    "and translate all ordinary French prose into English. Do not echo French labels or "
+    "definitions unless they are source-language tokens that must be preserved."
+)
+UNSTRUCTURED_TRANSLATION_REPAIR_HINT_TEMPLATE = (
+    "The previous {source_label} translation response failed validation. Retry from the "
+    "same source text and return only concise English. Translate ordinary French "
+    "dictionary prose into English. Do not echo French labels or definitions unless they "
+    "are source-language tokens that must be preserved."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -323,7 +335,7 @@ def _translate_projection(
     translate: Callable[[TranslationProjection], str],
 ) -> str:
     if not requires_structured_translation(projection):
-        return normalize_translation_response(projection, translate(projection))
+        return _translate_unstructured_projection_with_retries(projection, translate)
 
     batches = structured_translation_source_batches(projection.source_blocks)
     if len(batches) <= 1:
@@ -342,18 +354,68 @@ def _translate_projection(
     return merge_cached_translation_texts(translated_batches)
 
 
+def _translate_unstructured_projection_with_retries(
+    projection: TranslationProjection,
+    translate: Callable[[TranslationProjection], str],
+) -> str:
+    last_error: Exception | None = None
+    source_label = _translation_source_label(projection)
+    for attempt in range(STRUCTURED_TRANSLATION_MAX_ATTEMPTS):
+        try:
+            active_projection = (
+                projection
+                if attempt == 0
+                else replace(
+                    projection,
+                    hint=(
+                        f"{projection.hint}\n\n"
+                        f"{UNSTRUCTURED_TRANSLATION_REPAIR_HINT_TEMPLATE.format(source_label=source_label)}\n"
+                        f"Validation failure to repair: {last_error}"
+                    ),
+                )
+            )
+            return normalize_translation_response(
+                active_projection,
+                translate(active_projection),
+            )
+        except (StructuredTranslationError, ValueError) as exc:
+            last_error = exc
+    assert last_error is not None
+    raise last_error
+
+
 def _translate_structured_projection_with_retries(
     projection: TranslationProjection,
     translate: Callable[[TranslationProjection], str],
 ) -> str:
     last_error: Exception | None = None
-    for _attempt in range(STRUCTURED_TRANSLATION_MAX_ATTEMPTS):
+    for attempt in range(STRUCTURED_TRANSLATION_MAX_ATTEMPTS):
         try:
-            return normalize_translation_response(projection, translate(projection))
+            active_projection = (
+                projection
+                if attempt == 0
+                else replace(
+                    projection,
+                    hint=(
+                        f"{projection.hint}\n\n{STRUCTURED_TRANSLATION_REPAIR_HINT}\n"
+                        f"Validation failure to repair: {last_error}"
+                    ),
+                )
+            )
+            return normalize_translation_response(
+                active_projection,
+                translate(active_projection),
+            )
         except (StructuredTranslationError, ValueError) as exc:
             last_error = exc
     assert last_error is not None
     raise last_error
+
+
+def _translation_source_label(projection: TranslationProjection) -> str:
+    if projection.source.source_lexicon == "dico":
+        return "DICO"
+    return projection.source.source_lexicon.capitalize()
 
 
 def translation_cache_status_counts(

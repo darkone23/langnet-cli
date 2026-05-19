@@ -67,14 +67,17 @@ class PlanResponseIndex:
         self.conn = conn
 
     def get(self, plan_hash: str) -> ExecutedPlan | None:
-        row = self.conn.execute(
-            """
-            SELECT plan_id, tool_response_ids
-            FROM plan_response_index
-            WHERE plan_hash = ?
-            """,
-            [plan_hash],
-        ).fetchone()
+        try:
+            row = self.conn.execute(
+                """
+                SELECT plan_id, tool_response_ids
+                FROM plan_response_index
+                WHERE plan_hash = ?
+                """,
+                [plan_hash],
+            ).fetchone()
+        except duckdb.CatalogException:
+            return None
         if not row:
             return None
         response_ids = orjson.loads(row[1]) if row[1] else []

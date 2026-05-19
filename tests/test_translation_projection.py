@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import duckdb
 
-from langnet.cli import _openrouter_translation_callback
+from langnet.cli import _openrouter_translation_callback, _translation_model_candidates
 from langnet.reduction import reduce_claims
 from langnet.translation import (
     BASE_SYSTEM,
@@ -944,23 +944,7 @@ def test_bailly_populate_retries_cached_translation_error() -> None:
     assert record.translated_text is not None
 
 
-def test_bailly_structured_translation_retries_untranslated_french_residue() -> None:
-    responses = iter(
-        [
-            (
-                '{"blocks":['
-                '{"path":"01","text":"raison, d’où :"},'
-                '{"path":"01:00","text":"faculté de raisonner, raison"}'
-                "]}"
-            ),
-            (
-                '{"blocks":['
-                '{"path":"01","text":"reason, whence:"},'
-                '{"path":"01:00","text":"faculty of reasoning, reason"}'
-                "]}"
-            ),
-        ]
-    )
+def test_bailly_structured_translation_allows_unchanged_source_fragments_for_review() -> None:
     conn = duckdb.connect(database=":memory:")
     cache = TranslationCache(conn)
     claim = _bailly_structured_claim()
@@ -974,7 +958,12 @@ def test_bailly_structured_translation_retries_untranslated_french_residue() -> 
         language="grc",
         model="test:model",
         cache=cache,
-        translate=lambda _projection: next(responses),
+        translate=lambda _projection: (
+            '{"blocks":['
+            '{"path":"01","text":"raison, d’où :"},'
+            '{"path":"01:00","text":"faculté de raisonner, raison"}'
+            "]}"
+        ),
     )
     projected = project_cached_translations(
         claims=[claim],
@@ -992,26 +981,10 @@ def test_bailly_structured_translation_retries_untranslated_french_residue() -> 
     )
 
     assert written == 1
-    assert translated["object"] == "reason, whence:\nfaculty of reasoning, reason"
+    assert translated["object"] == "raison, d’où :\nfaculté de raisonner, raison"
 
 
-def test_bailly_structured_translation_retries_mixed_french_residue() -> None:
-    responses = iter(
-        [
-            (
-                '{"blocks":['
-                '{"path":"01","text":"whence in plur. tra- ditions historiques"},'
-                '{"path":"01:00","text":"figuratively, gathered together"}'
-                "]}"
-            ),
-            (
-                '{"blocks":['
-                '{"path":"01","text":"whence in plur. historical traditions"},'
-                '{"path":"01:00","text":"figuratively, gathered together"}'
-                "]}"
-            ),
-        ]
-    )
+def test_bailly_structured_translation_allows_expected_unchanged_ngrams() -> None:
     conn = duckdb.connect(database=":memory:")
     cache = TranslationCache(conn)
     claim = _bailly_structured_claim()
@@ -1024,7 +997,12 @@ def test_bailly_structured_translation_retries_mixed_french_residue() -> None:
         language="grc",
         model="test:model",
         cache=cache,
-        translate=lambda _projection: next(responses),
+        translate=lambda _projection: (
+            '{"blocks":['
+            '{"path":"01","text":"whence in plur. tra- ditions historiques"},'
+            '{"path":"01:00","text":"figuratively, gathered together"}'
+            "]}"
+        ),
     )
     projected = project_cached_translations(
         claims=[claim],
@@ -1042,10 +1020,10 @@ def test_bailly_structured_translation_retries_mixed_french_residue() -> None:
     )
 
     assert written == 1
-    assert translated["object"].startswith("whence in plur. historical traditions")
+    assert translated["object"].startswith("whence in plur. tra- ditions historiques")
 
 
-def test_bailly_structured_translation_repairs_known_untranslated_header() -> None:
+def test_bailly_structured_translation_does_not_rewrite_semantic_content() -> None:
     conn = duckdb.connect(database=":memory:")
     cache = TranslationCache(conn)
     claim = _bailly_structured_claim()
@@ -1082,7 +1060,7 @@ def test_bailly_structured_translation_repairs_known_untranslated_header() -> No
     )
 
     assert written == 1
-    assert translated["object"].startswith("speech :")
+    assert translated["object"].startswith("parole :")
 
 
 def test_bailly_structured_translation_accepts_valid_cognate_block() -> None:
@@ -1175,6 +1153,240 @@ def test_openrouter_callback_sends_bailly_blocks_as_structured_json() -> None:
     assert captured["temperature"] == 0
     assert user_payload["schema_version"] == "langnet.translation.blocks.request.v1"
     assert user_payload["blocks"] == [{"path": "01", "text": "qui forme un troupeau"}]
+
+
+def test_openrouter_callback_falls_back_to_alternate_translation_model() -> None:
+    captured_models: list[str] = []
+
+    class FakeCompletions:
+        def create(
+            self,
+            *,
+            model: str,
+            messages: list[dict[str, str]],
+            response_format: Mapping[str, str] | None = None,
+            temperature: int | None = None,
+        ) -> object:
+            captured_models.append(model)
+            if model == "test:primary":
+                raise RuntimeError("bad upstream provider")
+            return SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        message=SimpleNamespace(
+                            content=(
+                                '{"schema_version":"langnet.translation.blocks.v1",'
+                                '"blocks":[{"path":"01","text":"which forms a herd"}]}'
+                            )
+                        )
+                    )
+                ]
+            )
+
+    class FakeClient:
+        def __init__(self, _config: Mapping[str, str]) -> None:
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    fake_aisuite = SimpleNamespace(Client=FakeClient)
+    projection = SimpleNamespace(
+        source=SimpleNamespace(
+            source_lexicon="bailly",
+            entry_id="bailly-p090-c1-0004",
+            source_ref="bailly:bailly-p090-c1-0004",
+        ),
+        hint="Bailly hint",
+        source_text="qui forme un troupeau",
+        source_blocks=[
+            {
+                "path": "01",
+                "kind": "sense",
+                "text": "qui forme un troupeau",
+                "source_ref": "bailly:bailly-p090-c1-0004:01",
+            }
+        ],
+    )
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "LANGNET_TRANSLATION_FALLBACK_MODELS": "test:fallback",
+            },
+            clear=False,
+        ),
+        patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+    ):
+        translated = _openrouter_translation_callback("test:primary")(projection)
+
+    assert captured_models == ["test:primary", "test:fallback"]
+    assert translated.startswith('{"schema_version":"langnet.translation.blocks.v1"')
+
+
+def test_translation_model_candidates_default_to_deepseek_after_gemini_primary() -> None:
+    with patch.dict(os.environ, {}, clear=True):
+        candidates = _translation_model_candidates("openai:google/gemini-2.5-flash")
+
+    assert candidates == [
+        "openai:google/gemini-2.5-flash",
+        "openai:deepseek/deepseek-v4-flash",
+    ]
+
+
+def test_openrouter_callback_treats_empty_provider_response_as_retryable() -> None:
+    captured_models: list[str] = []
+
+    class FakeCompletions:
+        def create(
+            self,
+            *,
+            model: str,
+            messages: list[dict[str, str]],
+            response_format: Mapping[str, str] | None = None,
+            temperature: int | None = None,
+        ) -> object:
+            captured_models.append(model)
+            content = "" if model == "test:primary" else "wolf"
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+            )
+
+    class FakeClient:
+        def __init__(self, _config: Mapping[str, str]) -> None:
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    fake_aisuite = SimpleNamespace(Client=FakeClient)
+    projection = SimpleNamespace(
+        source=SimpleNamespace(source_lexicon="gaffiot"),
+        hint="Gaffiot hint",
+        source_text="loup",
+        source_blocks=[],
+    )
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "LANGNET_TRANSLATION_FALLBACK_MODELS": "test:fallback",
+            },
+            clear=False,
+        ),
+        patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+    ):
+        translated = _openrouter_translation_callback("test:primary")(projection)
+
+    assert captured_models == ["test:primary", "test:fallback"]
+    assert translated == "wolf"
+
+
+def test_openrouter_callback_falls_back_when_token_rate_is_too_slow() -> None:
+    captured_models: list[str] = []
+
+    class FakeCompletions:
+        def create(
+            self,
+            *,
+            model: str,
+            messages: list[dict[str, str]],
+            response_format: Mapping[str, str] | None = None,
+            temperature: int | None = None,
+        ) -> object:
+            captured_models.append(model)
+            usage = SimpleNamespace(completion_tokens=40)
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="wolf"))],
+                usage=usage,
+            )
+
+    class FakeClient:
+        def __init__(self, _config: Mapping[str, str]) -> None:
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    fake_aisuite = SimpleNamespace(Client=FakeClient)
+    projection = SimpleNamespace(
+        source=SimpleNamespace(source_lexicon="gaffiot"),
+        hint="Gaffiot hint",
+        source_text="loup",
+        source_blocks=[],
+    )
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "LANGNET_TRANSLATION_FALLBACK_MODELS": "test:fallback",
+                "LANGNET_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND": "5",
+                "LANGNET_TRANSLATION_MIN_RATE_TOKENS": "24",
+                "LANGNET_TRANSLATION_MIN_RATE_SECONDS": "1",
+            },
+            clear=False,
+        ),
+        patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+        patch("langnet.cli.time.perf_counter", side_effect=[0.0, 20.0, 20.0, 21.0]),
+    ):
+        translated = _openrouter_translation_callback("test:primary")(projection)
+
+    assert captured_models == ["test:primary", "test:fallback"]
+    assert translated == "wolf"
+
+
+def test_openrouter_callback_rate_budget_estimates_compact_json_tokens() -> None:
+    captured_models: list[str] = []
+    compact_json = (
+        '{"schema_version":"langnet.translation.blocks.v1",'
+        '"blocks":[{"path":"01","text":"reason, speech, account, reckoning, '
+        "argument, explanation, principle, relation, proportion, formula, "
+        'doctrine, report, narrative, statement, discourse"}]}'
+    )
+
+    class FakeCompletions:
+        def create(
+            self,
+            *,
+            model: str,
+            messages: list[dict[str, str]],
+            response_format: Mapping[str, str] | None = None,
+            temperature: int | None = None,
+        ) -> object:
+            captured_models.append(model)
+            content = compact_json if model == "test:primary" else "wolf"
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+            )
+
+    class FakeClient:
+        def __init__(self, _config: Mapping[str, str]) -> None:
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    fake_aisuite = SimpleNamespace(Client=FakeClient)
+    projection = SimpleNamespace(
+        source=SimpleNamespace(source_lexicon="gaffiot"),
+        hint="Gaffiot hint",
+        source_text="loup",
+        source_blocks=[],
+    )
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "LANGNET_TRANSLATION_FALLBACK_MODELS": "test:fallback",
+                "LANGNET_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND": "8",
+                "LANGNET_TRANSLATION_MIN_RATE_TOKENS": "24",
+                "LANGNET_TRANSLATION_MIN_RATE_SECONDS": "1",
+            },
+            clear=False,
+        ),
+        patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+        patch("langnet.cli.time.perf_counter", side_effect=[0.0, 30.0, 30.0, 31.0]),
+    ):
+        translated = _openrouter_translation_callback("test:primary")(projection)
+
+    assert captured_models == ["test:primary", "test:fallback"]
+    assert translated == "wolf"
 
 
 def test_bailly_structured_translation_projects_parallel_english_hierarchy() -> None:

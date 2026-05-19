@@ -71,16 +71,18 @@ class RawResponseIndex:
         )
 
     def get(self, response_id: str) -> RawResponseEffect | None:
-        self._ensure_schema()
-        row = self.conn.execute(
-            """
-            SELECT tool, call_id, endpoint, status_code, content_type,
-                   headers, body, fetch_duration_ms
-            FROM raw_response_index
-            WHERE response_id = ?
-            """,
-            [response_id],
-        ).fetchone()
+        try:
+            row = self.conn.execute(
+                """
+                SELECT tool, call_id, endpoint, status_code, content_type,
+                       headers, body, fetch_duration_ms
+                FROM raw_response_index
+                WHERE response_id = ?
+                """,
+                [response_id],
+            ).fetchone()
+        except duckdb.CatalogException:
+            return None
         if not row:
             return None
         headers = orjson.loads(row[5]) if row[5] else {}

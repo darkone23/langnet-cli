@@ -1158,7 +1158,7 @@ def stable_plan_hash(plan: ToolPlan) -> str:
     Compute a stable hash for a ToolPlan by omitting volatile fields
     (plan_id, plan_hash, created_at_unix_ms).
     """
-    data = MessageToDict(plan)
+    data = MessageToDict(plan, preserving_proto_field_name=True)
     data["plan_id"] = ""
     data["plan_hash"] = ""
     data["created_at_unix_ms"] = 0
