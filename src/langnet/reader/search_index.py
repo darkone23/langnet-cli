@@ -49,6 +49,8 @@ SEARCH_INDEX_POLARS_SCHEMA = {
     "canonical_author_id": pl.String,
     "canonical_author_name": pl.String,
     "cts_work_urn": pl.String,
+    "canonical_text_id": pl.String,
+    "canonical_address": pl.String,
     "citation_path": pl.String,
     "sort_key": pl.Int64,
     "work_kind": pl.String,
@@ -462,13 +464,20 @@ def _catalog_artifact_rows(
         params.append(collection_id)
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        works_columns = _table_columns(conn, "works")
+        canonical_select = (
+            "w.canonical_text_id"
+            if "canonical_text_id" in works_columns
+            else "NULL::VARCHAR AS canonical_text_id"
+        )
         return _dict_rows(
             conn,
             f"""
             SELECT
                 a.artifact_id, a.work_id, a.edition_id, a.artifact_path,
                 a.source_hash, w.collection_id, w.language, w.title, w.author,
-                w.author_id, w.cts_work_urn, coalesce(wc.discovery_group_id, '') AS group_id,
+                w.author_id, w.cts_work_urn, {canonical_select},
+                coalesce(wc.discovery_group_id, '') AS group_id,
                 coalesce(wc.discovery_tags, '') AS tags,
                 wc.global_popularity_score, wc.group_popularity_score
             FROM artifacts a
@@ -522,6 +531,11 @@ def _search_row(
         "canonical_author_id": artifact.get("author_id"),
         "canonical_author_name": str(artifact["author"]),
         "cts_work_urn": artifact.get("cts_work_urn"),
+        "canonical_text_id": artifact.get("canonical_text_id"),
+        "canonical_address": _search_result_address(
+            artifact.get("canonical_text_id"),
+            str(segment["citation_path"]),
+        ),
         "citation_path": str(segment["citation_path"]),
         "sort_key": int(segment["sort_key"]),
         "work_kind": "work",
@@ -931,6 +945,8 @@ def _result_item(row: dict[str, Any]) -> dict[str, Any]:
         "canonical_author_id": row.get("canonical_author_id"),
         "canonical_author_name": row.get("canonical_author_name"),
         "cts_work_urn": row.get("cts_work_urn"),
+        "canonical_text_id": row.get("canonical_text_id"),
+        "canonical_address": row.get("canonical_address"),
         "citation_path": str(row["citation_path"]),
         "segment_id": str(row["segment_id"]),
         "sort_key": int(row["sort_key"]),
@@ -940,10 +956,17 @@ def _result_item(row: dict[str, Any]) -> dict[str, Any]:
         "context_after": [],
         "target": {
             "reader_command": "reader show",
-            "work_ref": str(row["work_id"]),
+            "work_ref": str(row.get("canonical_text_id") or row["work_id"]),
             "segment": str(row["citation_path"]),
         },
     }
+
+
+def _search_result_address(canonical_text_id: object, citation_path: str) -> str:
+    text_id = str(canonical_text_id or "").strip()
+    if not text_id:
+        return ""
+    return f"{text_id}?ref={citation_path}"
 
 
 def _context_item(row: dict[str, Any]) -> dict[str, Any]:
@@ -970,6 +993,10 @@ def _dict_rows(
     result = conn.execute(query, params or [])
     columns = [column[0] for column in result.description]
     return [dict(zip(columns, row, strict=True)) for row in result.fetchall()]
+
+
+def _table_columns(conn: duckdb.DuckDBPyConnection, table_name: str) -> set[str]:
+    return {str(row[1]) for row in conn.execute(f"PRAGMA table_info('{table_name}')").fetchall()}
 
 
 def _sql_literal(value: Path | str) -> str:

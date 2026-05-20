@@ -1627,6 +1627,43 @@ def test_reader_cli_sync_classifications_merge_preserves_existing_rows() -> None
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
         catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        for work_id, language, title, author_id in (
+            ("lat-1", "lat", "Latin Fixture", "lat-author"),
+            ("grc-1", "grc", "Greek Fixture", "grc-author"),
+        ):
+            book_path = root / "books" / f"{work_id}.duckdb"
+            create_book_db(book_path)
+            register_book(
+                catalog_path,
+                ReaderWork(
+                    work_id=work_id,
+                    collection_id="fixture",
+                    language=language,
+                    title=title,
+                    author=title.replace(" Fixture", " Author"),
+                    author_id=author_id,
+                    source_id=work_id,
+                ),
+                ReaderEdition(
+                    edition_id=f"{work_id}:edition",
+                    work_id=work_id,
+                    label="Fixture edition",
+                    language=language,
+                    source_path=root / f"{work_id}.xml",
+                ),
+                ReaderBookArtifact(
+                    artifact_id=f"{work_id}:artifact",
+                    work_id=work_id,
+                    edition_id=f"{work_id}:edition",
+                    artifact_path=book_path,
+                    source_path=root / f"{work_id}.xml",
+                    adapter="fixture",
+                    source_hash="hash",
+                    segment_count=0,
+                    token_count=0,
+                ),
+            )
         first_csv = root / "latin.csv"
         second_csv = root / "greek.csv"
         header = (
@@ -2187,9 +2224,7 @@ def test_reader_cli_supports_catalog_discovery_and_env_default() -> None:
         assert env_item["work_count"] == 1
         assert env_item["languages"] == ["grc"]
         catalog_items = {item["id"]: item for item in json.loads(catalogs.output)["items"]}
-        assert catalog_items["development"]["path"] == (
-            "examples/debug/reader_full_curated_current/catalog.duckdb"
-        )
+        assert catalog_items["development"]["path"] == "data/build/reader/catalog.duckdb"
         assert catalog_items["classics"]["readiness"] in {"audit_artifact", "missing"}
         assert catalog_items["sanskrit"]["readiness"] in {"audit_artifact", "missing"}
         assert catalog_items["classics"]["label"].startswith("Audit")

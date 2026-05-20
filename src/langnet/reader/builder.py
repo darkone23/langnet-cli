@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import shutil
+import unicodedata
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from collections.abc import Callable, Iterator
@@ -36,6 +38,7 @@ from langnet.reader.author_normalization import (
     normalize_reader_author,
 )
 from langnet.reader.contained_work import load_contained_works
+from langnet.reader.ctsv2 import ctsv2_text_id
 from langnet.reader.legacy_metadata import (
     legacy_source_files,
     legacy_source_metadata,
@@ -51,6 +54,8 @@ from langnet.reader.models import (
     ReaderSegmentAddress,
     ReaderSourceFile,
     ReaderSourceMetadata,
+    ReaderSourceWitness,
+    ReaderWorkRelation,
 )
 from langnet.reader.source_enrichment import (
     parse_dcs_chapter_info_metadata,
@@ -68,7 +73,9 @@ from langnet.reader.storage import (
     register_segment_rows,
     register_source_files,
     register_source_metadata,
+    register_source_witnesses,
     register_work_map_nodes,
+    register_work_relations,
 )
 from langnet.reader.work_map import accepted_work_map_nodes, load_work_map_nodes
 
@@ -81,6 +88,7 @@ NUMBERED_SANSKRIT_MIN_MATCHES = 3
 @dataclass(frozen=True)
 class ReaderBuildConfig:
     perseus_dir: Path | None = None
+    first1k_greek_dir: Path | None = None
     digiliblt_dir: Path | None = None
     phi_latin_dir: Path | None = None
     tlg_e_dir: Path | None = None
@@ -191,6 +199,7 @@ class ReaderBuilder:
             self._register_digiliblt_source_metadata()
             self._register_sanskrit_source_metadata()
             self._register_perseus_source_metadata()
+            self._register_first1k_greek_source_metadata()
 
             artifact_count = 0
             segment_count = 0
@@ -201,6 +210,7 @@ class ReaderBuilder:
                 source = self._apply_metadata_overlays(
                     self._normalize_author_source(self._canonicalize_source(raw_source))
                 )
+                source = self._apply_ctsv2_identity(source)
                 if not source.parsed.segments:
                     continue
                 book_path = self._book_path(source.parsed)
@@ -229,19 +239,43 @@ class ReaderBuilder:
                     artifact_count=artifact_count,
                     segment_count=segment_count,
                 )
+            book_registrations = _dedupe_book_registrations_for_catalog(
+                _ensure_unique_canonical_text_ids(book_registrations)
+            )
             register_books(self.catalog_path, book_registrations)
             self._delete_superseded_sanskrit_json_works(book_registrations)
             self._delete_superseded_legacy_works_with_perseus()
+            self._delete_superseded_legacy_works_with_first1k()
+            surviving_registrations = _registrations_for_work_ids(
+                book_registrations,
+                self._catalog_work_ids(),
+            )
             self._register_sanskrit_source_enrichment_metadata()
-            registered_aliases = _aliases_for_registrations(aliases, book_registrations)
-            register_aliases(self.catalog_path, registered_aliases)
+            register_source_witnesses(
+                self.catalog_path,
+                _source_witnesses_for_registrations(surviving_registrations),
+                replace=not self.config.source_paths,
+            )
+            register_work_relations(
+                self.catalog_path,
+                _work_relations_for_contained_works(self._contained_works),
+            )
+            registered_aliases = _aliases_for_registrations(aliases, surviving_registrations)
+            register_aliases(
+                self.catalog_path,
+                registered_aliases,
+                replace=not self.config.source_paths,
+            )
             self._register_source_errors()
+            catalog_work_count, catalog_artifact_count, catalog_segment_count = (
+                self._catalog_counts()
+            )
 
             stats = ReaderCorpusStats(
                 catalog_path=str(self.catalog_path),
-                artifact_count=artifact_count,
-                work_count=artifact_count,
-                segment_count=segment_count,
+                artifact_count=catalog_artifact_count,
+                work_count=catalog_work_count,
+                segment_count=catalog_segment_count,
                 alias_count=len(registered_aliases),
                 source_error_count=len(self.source_errors),
             )
@@ -340,6 +374,59 @@ class ReaderBuilder:
             ).fetchall()
         delete_reader_works(self.catalog_path, [str(work_id) for (work_id,) in rows])
 
+    def _delete_superseded_legacy_works_with_first1k(self) -> None:
+        if not self.catalog_path.exists():
+            return
+        with duckdb.connect(str(self.catalog_path), read_only=True) as conn:
+            rows = conn.execute(
+                """
+                SELECT legacy.work_id
+                FROM works AS legacy
+                JOIN works AS first1k
+                  ON (
+                    (
+                      legacy.cts_work_urn = first1k.cts_work_urn
+                      AND legacy.cts_work_urn IS NOT NULL
+                      AND legacy.cts_work_urn <> ''
+                    )
+                    OR (
+                      legacy.canonical_text_id = first1k.canonical_text_id
+                      AND legacy.canonical_text_id IS NOT NULL
+                      AND legacy.canonical_text_id <> ''
+                    )
+                  )
+                 AND legacy.language = first1k.language
+                WHERE legacy.collection_id IN ('phi', 'tlg')
+                  AND first1k.collection_id = 'first1kgreek'
+                  AND legacy.work_id <> first1k.work_id
+                """
+            ).fetchall()
+        delete_reader_works(self.catalog_path, [str(work_id) for (work_id,) in rows])
+
+    def _catalog_work_ids(self) -> set[str]:
+        if not self.catalog_path.exists():
+            return set()
+        with duckdb.connect(str(self.catalog_path), read_only=True) as conn:
+            rows = conn.execute("SELECT work_id FROM works").fetchall()
+        return {str(work_id) for (work_id,) in rows}
+
+    def _catalog_counts(self) -> tuple[int, int, int]:
+        if not self.catalog_path.exists():
+            return 0, 0, 0
+        with duckdb.connect(str(self.catalog_path), read_only=True) as conn:
+            work_row = conn.execute("SELECT COUNT(*) FROM works").fetchone()
+            artifact_row = conn.execute(
+                """
+                SELECT COUNT(*), COALESCE(SUM(segment_count), 0)
+                FROM artifacts
+                """
+            ).fetchone()
+        if work_row is None or artifact_row is None:
+            return 0, 0, 0
+        artifact_count, segment_count = artifact_row
+        work_count = int(work_row[0])
+        return work_count, int(artifact_count), int(segment_count)
+
     def _emit_progress(
         self,
         *,
@@ -386,6 +473,7 @@ class ReaderBuilder:
         yield from self._sanskrit_sources()
         yield from self._digiliblt_sources()
         yield from self._perseus_sources()
+        yield from self._first1k_greek_sources()
 
     def _register_legacy_source_metadata(self) -> None:
         for root, collection_id in (
@@ -495,6 +583,15 @@ class ReaderBuilder:
         ]
         register_source_files(self.catalog_path, files)
 
+    def _register_first1k_greek_source_metadata(self) -> None:
+        if self.config.first1k_greek_dir is None or not self.config.first1k_greek_dir.exists():
+            return
+        files = [
+            _source_file("first1kgreek", path, "first1kgreek_tei")
+            for path in self._first1k_greek_text_paths()
+        ]
+        register_source_files(self.catalog_path, files)
+
     def _perseus_sources(self) -> Iterator[_ParsedSource]:
         if self.config.perseus_dir is None:
             return
@@ -506,6 +603,35 @@ class ReaderBuilder:
                     yield _ParsedSource(parse_perseus_tei(path), "perseus_tei")
                 except Exception as exc:  # noqa: BLE001
                     self._record_source_error(path, "perseus", exc)
+
+    def _first1k_greek_sources(self) -> Iterator[_ParsedSource]:
+        if self.config.first1k_greek_dir is None:
+            return
+        for path in self._first1k_greek_text_paths():
+            if not self._path_selected(path):
+                continue
+            try:
+                parsed = parse_perseus_tei(path, collection_id="first1kgreek")
+                if parsed.work.language != "grc":
+                    continue
+                yield _ParsedSource(parsed, "first1kgreek_tei")
+            except Exception as exc:  # noqa: BLE001
+                self._record_source_error(path, "first1kgreek", exc)
+
+    def _first1k_greek_text_paths(self) -> list[Path]:
+        root = self.config.first1k_greek_dir
+        if root is None or not root.exists():
+            return []
+        data_root = root / "data"
+        search_root = data_root if data_root.exists() else root
+        paths = [
+            path
+            for path in sorted(search_root.rglob("*.xml"))
+            if path.name != "__cts__.xml" and _is_perseus_text_xml(path)
+        ]
+        if self.config.source_paths:
+            return paths
+        return _preferred_first1k_greek_text_paths(paths)
 
     def _digiliblt_sources(self) -> Iterator[_ParsedSource]:
         if self.config.digiliblt_dir is None:
@@ -780,6 +906,25 @@ class ReaderBuilder:
             adapter=source.adapter,
         )
 
+    def _apply_ctsv2_identity(self, source: _ParsedSource) -> _ParsedSource:
+        work = source.parsed.work
+        if work.canonical_text_id:
+            return source
+        incipit = next(
+            (segment.text for segment in source.parsed.segments if segment.text.strip()),
+            "",
+        )
+        canonical_text_id = ctsv2_text_id(work.language, work.title, incipit)
+        return _ParsedSource(
+            parsed=ParsedBook(
+                work=replace(work, canonical_text_id=canonical_text_id),
+                edition=source.parsed.edition,
+                segments=source.parsed.segments,
+                addresses=source.parsed.addresses,
+            ),
+            adapter=source.adapter,
+        )
+
     def _canonical_author(self, author_id: str) -> tuple[str, str | None] | None:
         return self._load_author_authority().get(author_id)
 
@@ -953,6 +1098,24 @@ def _overlay_matches_work(overlay, work) -> bool:
 
 def _is_perseus_text_xml(path: Path) -> bool:
     return path.name not in {"__cts__.xml", "build.xml", "expath-pkg.xml", "repo.xml"}
+
+
+def _preferred_first1k_greek_text_paths(paths: list[Path]) -> list[Path]:
+    by_work_dir: dict[Path, list[Path]] = defaultdict(list)
+    for path in paths:
+        by_work_dir[path.parent].append(path)
+    return [
+        sorted(group, key=_first1k_greek_text_preference_key)[0]
+        for _, group in sorted(by_work_dir.items(), key=lambda item: str(item[0]))
+    ]
+
+
+def _first1k_greek_text_preference_key(path: Path) -> tuple[int, str]:
+    match = re.search(r"\.1st1K-grc(?P<edition>\d+)\.xml$", path.name)
+    if not match:
+        return 100, path.name
+    edition = int(match.group("edition"))
+    return edition - 1, path.name
 
 
 def _digiliblt_source_metadata(path: Path) -> list[ReaderSourceMetadata]:
@@ -1138,7 +1301,212 @@ def _aliases_for_registrations(
         for registration in registrations
         if registration.work.cts_work_urn is not None
     }
-    return [alias for alias in aliases if alias.target in work_ids or alias.target in cts_work_urns]
+    canonical_text_ids = {
+        registration.work.canonical_text_id
+        for registration in registrations
+        if registration.work.canonical_text_id is not None
+    }
+    curated = [
+        alias
+        for alias in aliases
+        if alias.target in work_ids
+        or alias.target in cts_work_urns
+        or alias.target in canonical_text_ids
+    ]
+    generated: list[ReaderAlias] = []
+    seen = {(alias.language, alias.alias, alias.target) for alias in curated}
+    for registration in registrations:
+        work = registration.work
+        target = work.canonical_text_id or work.cts_work_urn or work.work_id
+        display = f"{work.author}, {work.title}" if work.author else work.title
+        for alias_value, kind, sources in (
+            (work.canonical_text_id, "canonical_text_id", ("ctsv2",)),
+            (work.cts_work_urn, "source_urn", (work.collection_id,)),
+            (work.work_id, "work_id", (work.collection_id,)),
+            (work.source_id, "source_id", (work.collection_id,)),
+        ):
+            if not alias_value:
+                continue
+            key = (work.language, alias_value, target)
+            if key in seen:
+                continue
+            seen.add(key)
+            generated.append(
+                ReaderAlias(
+                    alias=alias_value,
+                    language=work.language,
+                    kind=kind,
+                    target=target,
+                    display=display,
+                    source_file="generated:reader-builder",
+                    sources=sources,
+                )
+            )
+    return [*curated, *_unambiguous_aliases(generated)]
+
+
+def _ensure_unique_canonical_text_ids(
+    registrations: list[ReaderBookRegistration],
+) -> list[ReaderBookRegistration]:
+    by_text_id: dict[tuple[str, str], list[ReaderBookRegistration]] = defaultdict(list)
+    for registration in registrations:
+        canonical_text_id = registration.work.canonical_text_id
+        if not canonical_text_id:
+            continue
+        by_text_id[(registration.work.language, canonical_text_id)].append(registration)
+
+    replacements: dict[str, str] = {}
+    used: set[tuple[str, str]] = set()
+    for (language, canonical_text_id), group in by_text_id.items():
+        if len(group) == 1:
+            used.add((language, canonical_text_id))
+            continue
+        for index, registration in enumerate(group, start=1):
+            suffix = _ctsv2_disambiguator(registration, fallback_index=index)
+            candidate = f"{canonical_text_id}-{suffix}"
+            disambiguation_index = index
+            while (language, candidate) in used:
+                disambiguation_index += 1
+                candidate = f"{canonical_text_id}-{suffix}-{disambiguation_index}"
+            used.add((language, candidate))
+            replacements[registration.work.work_id] = candidate
+
+    if not replacements:
+        return registrations
+    return [
+        _replace_registration_work(
+            registration,
+            canonical_text_id=replacements.get(registration.work.work_id),
+        )
+        for registration in registrations
+    ]
+
+
+def _replace_registration_work(
+    registration: ReaderBookRegistration,
+    *,
+    canonical_text_id: str | None,
+) -> ReaderBookRegistration:
+    if canonical_text_id is None:
+        return registration
+    return ReaderBookRegistration(
+        work=replace(registration.work, canonical_text_id=canonical_text_id),
+        edition=registration.edition,
+        artifact=registration.artifact,
+    )
+
+
+def _ctsv2_disambiguator(
+    registration: ReaderBookRegistration,
+    *,
+    fallback_index: int,
+) -> str:
+    work = registration.work
+    for value in (work.source_id, work.cts_work_urn, work.work_id):
+        suffix = _ascii_slug(value)
+        if suffix:
+            return suffix
+    return f"text-{fallback_index}"
+
+
+def _ascii_slug(value: str | None) -> str:
+    if not value:
+        return ""
+    normalized = unicodedata.normalize("NFKD", value.casefold())
+    without_marks = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9]+", "-", without_marks).strip("-")
+
+
+def _registrations_for_work_ids(
+    registrations: list[ReaderBookRegistration],
+    work_ids: set[str],
+) -> list[ReaderBookRegistration]:
+    return [registration for registration in registrations if registration.work.work_id in work_ids]
+
+
+def _dedupe_book_registrations_for_catalog(
+    registrations: list[ReaderBookRegistration],
+) -> list[ReaderBookRegistration]:
+    by_work_id: dict[str, ReaderBookRegistration] = {}
+    by_edition_id: dict[str, str] = {}
+    by_artifact_id: dict[str, str] = {}
+    for registration in registrations:
+        old_work_id = by_edition_id.get(registration.edition.edition_id)
+        if old_work_id is not None and old_work_id != registration.work.work_id:
+            by_work_id.pop(old_work_id, None)
+        old_work_id = by_artifact_id.get(registration.artifact.artifact_id)
+        if old_work_id is not None and old_work_id != registration.work.work_id:
+            by_work_id.pop(old_work_id, None)
+        by_work_id[registration.work.work_id] = registration
+        by_edition_id[registration.edition.edition_id] = registration.work.work_id
+        by_artifact_id[registration.artifact.artifact_id] = registration.work.work_id
+    return list(by_work_id.values())
+
+
+def _unambiguous_aliases(aliases: list[ReaderAlias]) -> list[ReaderAlias]:
+    targets_by_alias: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for alias in aliases:
+        targets_by_alias[(alias.language, alias.alias)].add(alias.target)
+    return [alias for alias in aliases if len(targets_by_alias[(alias.language, alias.alias)]) == 1]
+
+
+def _source_witnesses_for_registrations(
+    registrations: list[ReaderBookRegistration],
+) -> list[ReaderSourceWitness]:
+    witnesses: list[ReaderSourceWitness] = []
+    for registration in registrations:
+        work = registration.work
+        if not work.canonical_text_id:
+            continue
+        witness_id = work.cts_work_urn or work.source_id or work.work_id
+        witnesses.append(
+            ReaderSourceWitness(
+                canonical_text_id=work.canonical_text_id,
+                work_id=work.work_id,
+                collection_id=work.collection_id,
+                language=work.language,
+                witness_id=witness_id,
+                source_id=work.source_id,
+                source_urn=work.cts_work_urn or "",
+                source_path=registration.edition.source_path,
+                status="accepted",
+                confidence="medium",
+                note="Generated during reader build from accepted source registration.",
+            )
+        )
+    return witnesses
+
+
+def _work_relations_for_contained_works(
+    contained_works: list,
+) -> list[ReaderWorkRelation]:
+    relations: list[ReaderWorkRelation] = []
+    for contained in contained_works:
+        if contained.status != "accepted":
+            continue
+        relations.append(
+            ReaderWorkRelation(
+                source_id=contained.contained_work_id,
+                target_id=contained.parent_work_id,
+                relation_type="contained_in",
+                status=contained.status,
+                confidence=contained.confidence,
+                note=contained.note,
+                source_file=contained.source_file,
+            )
+        )
+        relations.append(
+            ReaderWorkRelation(
+                source_id=contained.parent_work_id,
+                target_id=contained.contained_work_id,
+                relation_type="contains",
+                status=contained.status,
+                confidence=contained.confidence,
+                note=contained.note,
+                source_file=contained.source_file,
+            )
+        )
+    return relations
 
 
 def _usable_authority_name(name: str) -> bool:

@@ -32,6 +32,7 @@
 		readerSegmentDisplayText,
 		readerShelfRouteState,
 		readerWorkContributorLabels,
+		readerWorkDisplayAuthor,
 		readerWorkListDiscriminator,
 		readerWorkListLabel,
 		readerWorkDiscoveryTags,
@@ -1102,13 +1103,21 @@
 	}
 
 	function isCanonicalReaderRef(value: string) {
-		return value.startsWith('urn:cts:') || value.startsWith('langnet:reader:');
+		return (
+			value.startsWith('urn:ctsv2:') ||
+			value.startsWith('ctsv2://') ||
+			value.startsWith('urn:cts:') ||
+			value.startsWith('langnet:reader:')
+		);
 	}
 
 	async function ensureSelectedWork(work: string) {
 		if (
 			selectedWork &&
-			(selectedWork.work_id === work || selectedWork.cts_work_urn === work) &&
+			(selectedWork.work_id === work ||
+				selectedWork.cts_work_urn === work ||
+				selectedWork.canonical_text_id === work ||
+				selectedWork.canonical_address === work) &&
 			workHasContributorMetadata(selectedWork)
 		)
 			return;
@@ -1248,6 +1257,9 @@
 	}
 
 	function formatReaderAddress(work: string, segment: string) {
+		if (work.startsWith('urn:ctsv2:') || work.startsWith('ctsv2://')) {
+			return `${work}?ref=${encodeURIComponent(segment)}`;
+		}
 		return [work, segment].filter(Boolean).join(' ');
 	}
 
@@ -1570,8 +1582,7 @@
 	}
 
 	function syntheticAuthorFromWork(work: ReaderWork, authorId: string): ReaderAuthor {
-		const displayName =
-			work.author || work.canonical_author_name || work.source_author || 'Unknown';
+		const displayName = readerWorkDisplayAuthor(work);
 		return {
 			author_id: authorId,
 			source_author_id: work.source_author_id || '',
@@ -1661,12 +1672,7 @@
 
 	function selectedWorkAuthorLabel() {
 		if (!selectedWork) return '';
-		return (
-			selectedWork.author ||
-			selectedWork.canonical_author_name ||
-			selectedWork.source_author ||
-			'Unknown'
-		);
+		return readerWorkDisplayAuthor(selectedWork);
 	}
 
 	function openSelectedWorkAuthor() {
@@ -2041,7 +2047,11 @@
 									<button
 										type="button"
 										class="orion-reader-desk-author"
-										disabled={!(selectedWork.canonical_author_id || selectedWork.author_id)}
+										disabled={!(
+											selectedWork.canonical_author_id ||
+											selectedWork.source_author_id ||
+											selectedWork.author_id
+										)}
 										onclick={openSelectedWorkAuthor}
 									>
 										{selectedWorkAuthorLabel()}
@@ -2585,10 +2595,14 @@
 												<button
 													type="button"
 													class="orion-reader-work-author"
-													disabled={!(work.canonical_author_id || work.author_id)}
+													disabled={!(
+														work.canonical_author_id ||
+														work.source_author_id ||
+														work.author_id
+													)}
 													onclick={() => filterDiscoveryByAuthor(work)}
 												>
-													{work.author || work.canonical_author_name || 'Unknown'}
+													{readerWorkDisplayAuthor(work)}
 												</button>
 											</div>
 											{#if workMetaLine(work)}

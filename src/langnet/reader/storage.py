@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +22,7 @@ from langnet.reader.author_index import (
     normalize_section_key,
 )
 from langnet.reader.author_normalization import normalize_reader_author
+from langnet.reader.ctsv2 import ctsv2_segment_address, parse_ctsv2_resource
 from langnet.reader.discovery_taxonomy import (
     DISCOVERY_GROUPS,
     DISCOVERY_TAGS,
@@ -39,9 +40,11 @@ from langnet.reader.models import (
     ReaderSegmentAddress,
     ReaderSourceFile,
     ReaderSourceMetadata,
+    ReaderSourceWitness,
     ReaderWork,
     ReaderWorkClassification,
     ReaderWorkMapNode,
+    ReaderWorkRelation,
 )
 
 ASCII_MAX_CODEPOINT = 127
@@ -112,7 +115,8 @@ CREATE TABLE IF NOT EXISTS works (
     author VARCHAR NOT NULL,
     author_id VARCHAR,
     source_id VARCHAR NOT NULL,
-    cts_work_urn VARCHAR
+    cts_work_urn VARCHAR,
+    canonical_text_id VARCHAR
 );
 
 CREATE TABLE IF NOT EXISTS editions (
@@ -163,6 +167,30 @@ CREATE TABLE IF NOT EXISTS source_metadata (
     key VARCHAR NOT NULL,
     value TEXT NOT NULL,
     source_path VARCHAR NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS source_witnesses (
+    canonical_text_id VARCHAR NOT NULL,
+    work_id VARCHAR NOT NULL,
+    collection_id VARCHAR NOT NULL,
+    language VARCHAR NOT NULL,
+    witness_id VARCHAR NOT NULL,
+    source_id VARCHAR NOT NULL,
+    source_urn VARCHAR NOT NULL,
+    source_path VARCHAR NOT NULL,
+    status VARCHAR NOT NULL,
+    confidence VARCHAR NOT NULL,
+    note TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS work_relations (
+    source_id VARCHAR NOT NULL,
+    target_id VARCHAR NOT NULL,
+    relation_type VARCHAR NOT NULL,
+    status VARCHAR NOT NULL,
+    confidence VARCHAR NOT NULL,
+    note TEXT NOT NULL,
+    source_file VARCHAR NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS metadata_overlays (
@@ -299,6 +327,10 @@ CREATE INDEX IF NOT EXISTS aliases_alias_idx ON aliases(language, alias);
 CREATE INDEX IF NOT EXISTS source_files_collection_idx ON source_files(collection_id);
 CREATE INDEX IF NOT EXISTS source_metadata_subject_idx
     ON source_metadata(collection_id, subject_kind, subject_id);
+CREATE INDEX IF NOT EXISTS source_witnesses_text_idx
+    ON source_witnesses(canonical_text_id, collection_id);
+CREATE INDEX IF NOT EXISTS work_relations_source_idx
+    ON work_relations(source_id, relation_type);
 CREATE INDEX IF NOT EXISTS metadata_overlays_match_idx
     ON metadata_overlays(collection_id, match_field, match_value);
 CREATE INDEX IF NOT EXISTS metadata_attributions_match_idx
@@ -372,10 +404,18 @@ def _ensure_book_schema(conn: duckdb.DuckDBPyConnection) -> None:
 
 
 def _ensure_catalog_schema(conn: duckdb.DuckDBPyConnection) -> None:  # noqa: C901
+    if _table_exists(conn, "works"):
+        _ensure_works_schema(conn)
     if _table_exists(conn, "work_classifications"):
         _ensure_work_classification_schema(conn)
     if _table_exists(conn, "author_classifications"):
         _ensure_author_classification_schema(conn)
+
+
+def _ensure_works_schema(conn: duckdb.DuckDBPyConnection) -> None:
+    columns = _table_columns(conn, "works")
+    if "canonical_text_id" not in columns:
+        conn.execute("ALTER TABLE works ADD COLUMN canonical_text_id VARCHAR")
 
 
 def _ensure_work_classification_schema(conn: duckdb.DuckDBPyConnection) -> None:
@@ -466,6 +506,7 @@ def register_books(
             work.author_id,
             work.source_id,
             work.cts_work_urn,
+            work.canonical_text_id,
         )
         for work, _edition, _artifact in normalized_entries
     ]
@@ -508,6 +549,7 @@ def register_books(
                     "author_id": pl.Utf8,
                     "source_id": pl.Utf8,
                     "cts_work_urn": pl.Utf8,
+                    "canonical_text_id": pl.Utf8,
                 },
                 orient="row",
             )
@@ -542,6 +584,8 @@ def register_books(
             conn.register("edition_rows", edition_frame)
             conn.register("artifact_rows", artifact_frame)
             conn.execute("DELETE FROM works WHERE work_id IN (SELECT work_id FROM work_rows)")
+            conn.execute("DELETE FROM editions WHERE work_id IN (SELECT work_id FROM work_rows)")
+            conn.execute("DELETE FROM artifacts WHERE work_id IN (SELECT work_id FROM work_rows)")
             conn.execute(
                 "DELETE FROM editions WHERE edition_id IN (SELECT edition_id FROM edition_rows)"
             )
@@ -552,11 +596,11 @@ def register_books(
                 """
                 INSERT INTO works (
                     work_id, collection_id, language, title, author, author_id,
-                    source_id, cts_work_urn
+                    source_id, cts_work_urn, canonical_text_id
                 )
                 SELECT
                     work_id, collection_id, language, title, author, author_id,
-                    source_id, cts_work_urn
+                    source_id, cts_work_urn, canonical_text_id
                 FROM work_rows
                 """
             )
@@ -768,7 +812,12 @@ def register_segment_rows(
             raise
 
 
-def register_aliases(catalog_path: Path, aliases: Iterable[ReaderAlias]) -> None:
+def register_aliases(
+    catalog_path: Path,
+    aliases: Iterable[ReaderAlias],
+    *,
+    replace: bool = True,
+) -> None:
     create_catalog_db(catalog_path)
     rows = [
         (
@@ -783,32 +832,46 @@ def register_aliases(catalog_path: Path, aliases: Iterable[ReaderAlias]) -> None
         for alias in aliases
     ]
     with _connect_write(catalog_path) as conn:
-        conn.execute("DELETE FROM aliases")
-        if rows:
-            frame = pl.DataFrame(
-                rows,
-                schema={
-                    "alias": pl.Utf8,
-                    "language": pl.Utf8,
-                    "kind": pl.Utf8,
-                    "target": pl.Utf8,
-                    "display": pl.Utf8,
-                    "source_file": pl.Utf8,
-                    "sources": pl.Utf8,
-                },
-                orient="row",
-            )
-            conn.register("alias_rows", frame)
+        if replace:
+            conn.execute("DELETE FROM aliases")
+        if not rows:
+            return
+        frame = pl.DataFrame(
+            rows,
+            schema={
+                "alias": pl.Utf8,
+                "language": pl.Utf8,
+                "kind": pl.Utf8,
+                "target": pl.Utf8,
+                "display": pl.Utf8,
+                "source_file": pl.Utf8,
+                "sources": pl.Utf8,
+            },
+            orient="row",
+        )
+        conn.register("alias_rows", frame)
+        if not replace:
             conn.execute(
                 """
-                INSERT INTO aliases (
-                    alias, language, kind, target, display, source_file, sources
+                DELETE FROM aliases
+                WHERE (language, alias) IN (
+                    SELECT language, alias FROM alias_rows
                 )
-                SELECT alias, language, kind, target, display, source_file, sources
-                FROM alias_rows
-                """,
+                   OR target IN (
+                    SELECT target FROM alias_rows
+                )
+                """
             )
-            conn.unregister("alias_rows")
+        conn.execute(
+            """
+            INSERT INTO aliases (
+                alias, language, kind, target, display, source_file, sources
+            )
+            SELECT alias, language, kind, target, display, source_file, sources
+            FROM alias_rows
+            """,
+        )
+        conn.unregister("alias_rows")
 
 
 def register_metadata_overlays(
@@ -1215,7 +1278,13 @@ def register_work_classifications(
     merge: bool = False,
 ) -> None:
     create_catalog_db(catalog_path)
-    classification_list = list(classifications)
+    requested_classification_list = list(classifications)
+    work_id_map = _catalog_work_classification_id_map(catalog_path)
+    classification_list = [
+        replace(classification, work_id=resolved_work_id)
+        for classification in requested_classification_list
+        if (resolved_work_id := _resolve_work_classification_id(classification, work_id_map))
+    ]
     rows = [
         (
             classification.work_id,
@@ -1249,10 +1318,14 @@ def register_work_classifications(
     ]
     with _connect_write(catalog_path) as conn:
         if merge:
-            if not classification_list:
+            if not requested_classification_list:
                 return
             work_id_frame = pl.DataFrame(
-                [(classification.work_id,) for classification in classification_list],
+                [
+                    (work_id,)
+                    for classification in requested_classification_list
+                    for work_id in _work_classification_delete_ids(classification, work_id_map)
+                ],
                 schema={"work_id": pl.Utf8},
                 orient="row",
             )
@@ -1333,10 +1406,83 @@ def register_work_classifications(
             conn.execute(
                 """
                 INSERT INTO work_classification_tags (work_id, tag_id)
-                SELECT work_id, tag_id FROM work_classification_tag_rows
+                SELECT work_id, tag_id
+                FROM work_classification_tag_rows
                 """
             )
             conn.unregister("work_classification_tag_rows")
+
+
+def _catalog_work_classification_id_map(catalog_path: Path) -> dict[str, str]:
+    with _connect_read(catalog_path) as conn:
+        rows = _dict_rows(
+            conn,
+            """
+            SELECT work_id, source_id, cts_work_urn
+            FROM works
+            """,
+        )
+    candidates: dict[str, set[str]] = {}
+    for row in rows:
+        work_id = str(row.get("work_id") or "")
+        for key in _work_classification_lookup_keys(
+            work_id,
+            str(row.get("source_id") or ""),
+            str(row.get("cts_work_urn") or ""),
+        ):
+            candidates.setdefault(key, set()).add(work_id)
+    return {key: next(iter(values)) for key, values in candidates.items() if len(values) == 1}
+
+
+def _work_classification_lookup_keys(*values: str) -> set[str]:
+    keys: set[str] = set()
+    for value in values:
+        raw = value.strip()
+        if not raw:
+            continue
+        keys.add(raw)
+        compact = raw.rsplit(":", 1)[-1]
+        keys.add(compact)
+        match = re.fullmatch(r"(tlg\d+[A-Za-z]?)\.(?:tlg)?(\d+[A-Za-z]?)", compact)
+        if match:
+            author_id = match.group(1)
+            work_number = match.group(2)
+            keys.add(f"{author_id}.{work_number}")
+            keys.add(f"{author_id}.tlg{work_number}")
+            keys.add(f"urn:cts:greekLit:{author_id}.tlg{work_number}")
+            keys.add(f"langnet:reader:tlg:{author_id}.{work_number}")
+            keys.add(f"langnet:reader:tlg:{author_id}.tlg{work_number}")
+        match = re.fullmatch(r"(phi\d+[A-Za-z]?)\.(?:phi)?(\d+[A-Za-z]?)", compact)
+        if match:
+            author_id = match.group(1)
+            work_number = match.group(2)
+            keys.add(f"{author_id}.{work_number}")
+            keys.add(f"{author_id}.phi{work_number}")
+            keys.add(f"urn:cts:latinLit:{author_id}.phi{work_number}")
+            keys.add(f"langnet:reader:phi:{author_id}.{work_number}")
+            keys.add(f"langnet:reader:phi:{author_id}.phi{work_number}")
+    return keys
+
+
+def _resolve_work_classification_id(
+    classification: ReaderWorkClassification,
+    work_id_map: Mapping[str, str],
+) -> str | None:
+    for key in _work_classification_lookup_keys(classification.work_id):
+        if key in work_id_map:
+            return work_id_map[key]
+    return None
+
+
+def _work_classification_delete_ids(
+    classification: ReaderWorkClassification,
+    work_id_map: Mapping[str, str],
+) -> set[str]:
+    ids = {classification.work_id}
+    resolved = _resolve_work_classification_id(classification, work_id_map)
+    if resolved:
+        ids.add(resolved)
+    return ids
 
 
 def prune_stale_work_classifications(
@@ -1436,7 +1582,13 @@ def register_author_classifications(
     merge: bool = False,
 ) -> None:
     create_catalog_db(catalog_path)
-    classification_list = list(classifications)
+    requested_classification_list = list(classifications)
+    valid_keys = _catalog_author_classification_keys(catalog_path)
+    classification_list = [
+        classification
+        for classification in requested_classification_list
+        if _author_classification_matches_catalog(classification, valid_keys)
+    ]
     rows = [
         (
             classification.author_id,
@@ -1462,12 +1614,12 @@ def register_author_classifications(
     ]
     with _connect_write(catalog_path) as conn:
         if merge:
-            if not classification_list:
+            if not requested_classification_list:
                 return
             key_frame = pl.DataFrame(
                 [
                     (classification.author_id, classification.language)
-                    for classification in classification_list
+                    for classification in requested_classification_list
                 ],
                 schema={"author_id": pl.Utf8, "language": pl.Utf8},
                 orient="row",
@@ -1519,14 +1671,87 @@ def register_author_classifications(
                     confidence, note, generator_models, generator_run_id, source_file
                 )
                 SELECT
-                    author_id, language, source_author_id, canonical_name, agent_kind,
-                    historicity_status, period, date_range, region, cultural_context, bio,
-                    prominence_score, prominence_tier,
-                    confidence, note, generator_models, generator_run_id, source_file
+                    rows.author_id, rows.language, rows.source_author_id,
+                    rows.canonical_name, rows.agent_kind, rows.historicity_status,
+                    rows.period, rows.date_range, rows.region, rows.cultural_context,
+                    rows.bio, rows.prominence_score, rows.prominence_tier,
+                    rows.confidence, rows.note, rows.generator_models,
+                    rows.generator_run_id, rows.source_file
                 FROM author_classification_rows
+                AS rows
                 """
             )
             conn.unregister("author_classification_rows")
+
+
+def _catalog_author_classification_keys(catalog_path: Path) -> set[tuple[str, str]]:
+    with _connect_read(catalog_path) as conn:
+        rows = _dict_rows(
+            conn,
+            """
+            SELECT DISTINCT language, COALESCE(author_id, '') AS author_id, author
+            FROM works
+            WHERE COALESCE(author, '') <> ''
+            """,
+        )
+    keys: set[tuple[str, str]] = set()
+    for row in rows:
+        language = str(row.get("language") or "")
+        for key in _author_catalog_keys(
+            language,
+            str(row.get("author_id") or ""),
+            str(row.get("author") or ""),
+        ):
+            keys.add((language, key))
+    return keys
+
+
+def _author_catalog_keys(language: str, source_author_id: str, author: str) -> set[str]:
+    source_author_id = source_author_id.strip()
+    keys = {source_author_id} if source_author_id else set()
+    compact = compact_author_id(source_author_id)
+    if compact:
+        keys.add(compact)
+    if source_author_id:
+        keys.add(
+            canonical_author_id_for_source(
+                language,
+                source_author_id,
+                compact or source_author_id,
+                author,
+            )
+        )
+    else:
+        keys.add(
+            author_index_entry(
+                {
+                    "language": language,
+                    "source_author_id": "",
+                    "author": author,
+                }
+            )["author_id"]
+        )
+    return {key for key in keys if key}
+
+
+def _author_classification_matches_catalog(
+    classification: ReaderAuthorClassification,
+    valid_keys: set[tuple[str, str]],
+) -> bool:
+    language = classification.language
+    keys = {
+        classification.author_id,
+        classification.source_author_id,
+        compact_author_id(classification.author_id),
+        compact_author_id(classification.source_author_id),
+        canonical_author_id_for_source(
+            language,
+            classification.source_author_id or classification.author_id,
+            classification.author_id,
+            classification.canonical_name,
+        ),
+    }
+    return any((language, key) in valid_keys for key in keys if key)
 
 
 def register_source_files(catalog_path: Path, source_files: Iterable[ReaderSourceFile]) -> None:
@@ -1629,6 +1854,121 @@ def register_source_metadata(
             """,
         )
         conn.unregister("source_metadata_rows")
+
+
+def register_source_witnesses(
+    catalog_path: Path,
+    witnesses: Iterable[ReaderSourceWitness],
+    *,
+    replace: bool = True,
+) -> None:
+    create_catalog_db(catalog_path)
+    rows = [
+        (
+            witness.canonical_text_id,
+            witness.work_id,
+            witness.collection_id,
+            witness.language,
+            witness.witness_id,
+            witness.source_id,
+            witness.source_urn,
+            str(witness.source_path),
+            witness.status,
+            witness.confidence,
+            witness.note,
+        )
+        for witness in witnesses
+    ]
+    with _connect_write(catalog_path) as conn:
+        if replace:
+            conn.execute("DELETE FROM source_witnesses")
+        if not rows:
+            return
+        frame = pl.DataFrame(
+            rows,
+            schema={
+                "canonical_text_id": pl.Utf8,
+                "work_id": pl.Utf8,
+                "collection_id": pl.Utf8,
+                "language": pl.Utf8,
+                "witness_id": pl.Utf8,
+                "source_id": pl.Utf8,
+                "source_urn": pl.Utf8,
+                "source_path": pl.Utf8,
+                "status": pl.Utf8,
+                "confidence": pl.Utf8,
+                "note": pl.Utf8,
+            },
+            orient="row",
+        )
+        conn.register("source_witness_rows", frame)
+        if not replace:
+            conn.execute(
+                """
+                DELETE FROM source_witnesses
+                WHERE work_id IN (SELECT DISTINCT work_id FROM source_witness_rows)
+                """
+            )
+        conn.execute(
+            """
+            INSERT INTO source_witnesses (
+                canonical_text_id, work_id, collection_id, language, witness_id,
+                source_id, source_urn, source_path, status, confidence, note
+            )
+            SELECT
+                canonical_text_id, work_id, collection_id, language, witness_id,
+                source_id, source_urn, source_path, status, confidence, note
+            FROM source_witness_rows
+            """
+        )
+        conn.unregister("source_witness_rows")
+
+
+def register_work_relations(
+    catalog_path: Path,
+    relations: Iterable[ReaderWorkRelation],
+) -> None:
+    create_catalog_db(catalog_path)
+    rows = [
+        (
+            relation.source_id,
+            relation.target_id,
+            relation.relation_type,
+            relation.status,
+            relation.confidence,
+            relation.note,
+            relation.source_file,
+        )
+        for relation in relations
+    ]
+    with _connect_write(catalog_path) as conn:
+        conn.execute("DELETE FROM work_relations")
+        if not rows:
+            return
+        frame = pl.DataFrame(
+            rows,
+            schema={
+                "source_id": pl.Utf8,
+                "target_id": pl.Utf8,
+                "relation_type": pl.Utf8,
+                "status": pl.Utf8,
+                "confidence": pl.Utf8,
+                "note": pl.Utf8,
+                "source_file": pl.Utf8,
+            },
+            orient="row",
+        )
+        conn.register("work_relation_rows", frame)
+        conn.execute(
+            """
+            INSERT INTO work_relations (
+                source_id, target_id, relation_type, status, confidence, note, source_file
+            )
+            SELECT source_id, target_id, relation_type, status, confidence, note, source_file
+            FROM work_relation_rows
+            """
+        )
+        conn.unregister("work_relation_rows")
 
 
 def repair_work_languages(catalog_path: Path, *, dry_run: bool = False) -> dict[str, Any]:
@@ -2049,6 +2389,11 @@ def _segment_address_parts(address: str) -> tuple[str, str] | None:
 
 def _address_lookup_candidates(catalog_path: Path, address: str) -> list[str]:
     candidates = [address]
+    resource = parse_ctsv2_resource(address)
+    if resource is not None and resource.ref:
+        resolved_work_id = resolve_work_ref(catalog_path, resource.text_id)
+        if resolved_work_id:
+            candidates.append(f"{resolved_work_id}:{resource.ref}")
     parts = _segment_address_parts(address)
     if parts is not None:
         work_ref, citation_path = parts
@@ -2113,15 +2458,19 @@ def _lookup_artifact_and_address_for_address(
 ) -> tuple[dict[str, Any], str] | None:
     artifacts = _catalog_artifacts(catalog_path)
     candidates = _address_lookup_candidates(catalog_path, address)
+    had_work_scoped_candidate = False
     for candidate in candidates:
         work_id = _address_work_id_from_artifacts(candidate, artifacts)
         if work_id is not None:
+            had_work_scoped_candidate = True
             for artifact in artifacts:
                 if artifact["work_id"] == work_id and _book_has_address(
                     Path(str(artifact["artifact_path"])),
                     candidate,
                 ):
                     return artifact, candidate
+    if had_work_scoped_candidate:
+        return None
 
     for candidate in candidates:
         for artifact in artifacts:
@@ -2159,6 +2508,7 @@ def lookup_segment_by_address(catalog_path: Path, address: str) -> dict[str, Any
     if query_address != address:
         segment["stored_address"] = segment["address"]
         segment["address"] = address
+    _attach_segment_canonical_address(catalog_path, segment)
     return segment
 
 
@@ -2188,22 +2538,43 @@ def lookup_alias(
 
 
 def resolve_work_ref(catalog_path: Path, work_ref: str) -> str | None:
+    resource = parse_ctsv2_resource(work_ref)
+    if resource is not None:
+        work_ref = resource.text_id
     alias = lookup_alias(catalog_path, work_ref)
     if alias is not None:
         target = alias.get("target")
-        return str(target) if target is not None else None
+        if target is None:
+            return None
+        target_text = str(target)
+        if target_text == work_ref:
+            return _resolve_work_ref_without_alias(catalog_path, target_text) or target_text
+        resolved_target = _resolve_work_ref_without_alias(catalog_path, target_text)
+        return resolved_target or target_text
+    if not catalog_path.exists():
+        return None
+    return _resolve_work_ref_without_alias(catalog_path, work_ref)
+
+
+def _resolve_work_ref_without_alias(catalog_path: Path, work_ref: str) -> str | None:
     if not catalog_path.exists():
         return None
     with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        columns = _table_columns(conn, "works")
+        canonical_condition = " OR canonical_text_id = ?" if "canonical_text_id" in columns else ""
+        params: list[object] = [work_ref, work_ref]
+        if canonical_condition:
+            params.append(work_ref)
+        params.append(work_ref)
         row = conn.execute(
-            """
+            f"""
             SELECT work_id
             FROM works
-            WHERE work_id = ? OR cts_work_urn = ?
+            WHERE work_id = ? OR cts_work_urn = ?{canonical_condition}
             ORDER BY CASE WHEN work_id = ? THEN 0 ELSE 1 END, work_id
             LIMIT 1
             """,
-            [work_ref, work_ref, work_ref],
+            params,
         ).fetchone()
     return str(row[0]) if row else None
 
@@ -2240,12 +2611,17 @@ def get_work(catalog_path: Path, work_ref: str) -> dict[str, Any] | None:
     if not work_id:
         return None
     with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        canonical_select = (
+            "canonical_text_id"
+            if "canonical_text_id" in _table_columns(conn, "works")
+            else "NULL::VARCHAR AS canonical_text_id"
+        )
         rows = _dict_rows(
             conn,
-            """
+            f"""
             SELECT
                 work_id, collection_id, language, title, author, author_id, source_id,
-                cts_work_urn
+                cts_work_urn, {canonical_select}
             FROM works
             WHERE work_id = ?
             LIMIT 1
@@ -2290,13 +2666,25 @@ def lookup_segment_by_work_and_citation(
             )
         if rows:
             address = f"{work_id}:{citation_path}"
-            return {
+            segment = {
                 **rows[0],
                 "address": address,
                 "address_kind": "langnet",
                 "artifact": artifact,
             }
+            _attach_segment_canonical_address(catalog_path, segment)
+            return segment
     return None
+
+
+def _attach_segment_canonical_address(catalog_path: Path, segment: dict[str, Any]) -> None:
+    work = get_work(catalog_path, str(segment.get("work_id") or ""))
+    canonical_text_id = str(work.get("canonical_text_id") or "") if work else ""
+    if not canonical_text_id:
+        return
+    citation_path = str(segment.get("citation_path") or "")
+    segment["canonical_text_id"] = canonical_text_id
+    segment["canonical_address"] = ctsv2_segment_address(canonical_text_id, citation_path)
 
 
 def segment_navigation(catalog_path: Path, segment: dict[str, Any]) -> dict[str, Any]:
@@ -2332,7 +2720,13 @@ def segment_navigation(catalog_path: Path, segment: dict[str, Any]) -> dict[str,
             [work_id, sort_key],
         )
     work = get_work(catalog_path, work_id)
-    base_address = str(work.get("cts_work_urn")) if work and work.get("cts_work_urn") else work_id
+    base_address = (
+        str(work.get("canonical_text_id"))
+        if work and work.get("canonical_text_id")
+        else str(work.get("cts_work_urn"))
+        if work and work.get("cts_work_urn")
+        else work_id
+    )
     return {
         "previous": _navigation_item(previous_rows, base_address),
         "next": _navigation_item(next_rows, base_address),
@@ -2345,7 +2739,11 @@ def _navigation_item(rows: list[dict[str, Any]], base_address: str) -> dict[str,
     citation_path = str(rows[0]["citation_path"])
     return {
         "citation_path": citation_path,
-        "address": f"{base_address}:{citation_path}",
+        "address": (
+            ctsv2_segment_address(base_address, citation_path)
+            if base_address.startswith("urn:ctsv2:")
+            else f"{base_address}:{citation_path}"
+        ),
     }
 
 
@@ -2506,16 +2904,30 @@ def _author_prominence_sort_key(item: Mapping[str, Any]) -> tuple[object, ...]:
     return (
         score is None,
         -(int(score) if score is not None else 0),
+        _author_prominence_tier_rank(str(item.get("author_prominence_tier") or "")),
+        -(int(item.get("work_count") or 0)),
+        -(int(item.get("word_count") or 0)),
         item["language"],
         item["sort_key"],
         item["display_name"],
     )
 
 
+def _author_prominence_tier_rank(tier: str) -> int:
+    return {
+        "canonical": 0,
+        "major": 1,
+        "common": 2,
+        "specialist": 3,
+        "minor": 4,
+    }.get(tier.casefold(), 9)
+
+
 def _merge_duplicate_author_selectors(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     merged_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     for item in items:
-        identity = str(item.get("source_author_id") or item["author_id"])
+        raw_identity = str(item.get("source_author_id") or item["author_id"])
+        identity = compact_author_id(raw_identity) or raw_identity
         key = (str(item["language"]), identity)
         existing = merged_by_key.get(key)
         if existing is None:
@@ -2680,8 +3092,12 @@ def _attach_author_classifications(
 
 def _attach_canonical_author_authorities(items: list[dict[str, Any]]) -> None:
     for item in items:
-        source_author_name = str(item.get("display_name") or item.get("author") or "Unknown")
         source_author_id = str(item.get("source_author_id") or "")
+        source_author_name = _source_author_display_name(
+            str(item.get("collection_id") or ""),
+            source_author_id,
+            str(item.get("display_name") or item.get("author") or "Unknown"),
+        )
         agent_kind = str(item.get("author_agent_kind") or "")
         item["source_author_name"] = source_author_name
         item["source_author_kind"] = agent_kind
@@ -3131,6 +3547,9 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
 ) -> list[dict[str, Any]]:
     if not catalog_path.exists():
         return []
+    with duckdb.connect(str(catalog_path), read_only=True) as schema_conn:
+        works_columns = _table_columns(schema_conn, "works")
+    has_canonical_text_id = "canonical_text_id" in works_columns
     include_contained = collection_id is None or collection_id == "contained"
     conditions = []
     where_params: list[object] = []
@@ -3174,14 +3593,18 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
         )
     if query:
         query_like = f"%{query.lower()}%"
+        canonical_query_sql = (
+            "OR lower(coalesce(canonical_text_id, '')) LIKE ?" if has_canonical_text_id else ""
+        )
         conditions.append(
-            """
+            f"""
             (
                 lower(title) LIKE ?
                 OR lower(author) LIKE ?
                 OR lower(works.work_id) LIKE ?
                 OR lower(source_id) LIKE ?
                 OR lower(coalesce(cts_work_urn, '')) LIKE ?
+                {canonical_query_sql}
                 OR EXISTS (
                     SELECT 1
                     FROM aliases al
@@ -3191,7 +3614,7 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
             )
             """
         )
-        where_params.extend([query_like] * 7)
+        where_params.extend([query_like] * (8 if has_canonical_text_id else 7))
     attribution_cte = ""
     if attributed_to:
         attribution_cte = """
@@ -3323,13 +3746,18 @@ def list_works(  # noqa: C901, PLR0912, PLR0913, PLR0915
             if sort in {"popularity", "global-popularity", "group-popularity"}
             else "ORDER BY language, author, title, works.work_id"
         )
+        canonical_text_select = (
+            "canonical_text_id" if has_canonical_text_id else "NULL::VARCHAR AS canonical_text_id"
+        )
         rows = _dict_rows(
             conn,
             f"""
             {attribution_cte}
             SELECT
                 works.work_id, collection_id, language, title, author, author_id, source_id,
-                cts_work_urn, 'work' AS work_kind, NULL::VARCHAR AS parent_work_id,
+                cts_work_urn,
+                {canonical_text_select},
+                'work' AS work_kind, NULL::VARCHAR AS parent_work_id,
                 NULL::VARCHAR AS start_citation, NULL::VARCHAR AS end_citation,
                 COALESCE(metrics.word_count, 0) AS word_count,
                 'whitespace_tokens' AS word_count_method,
@@ -3879,14 +4307,21 @@ def _attach_work_author_authorities(
         row["source_author"] = source_author_name
         row["source_author_id"] = source_author_id or None
         if item is None:
+            canonical_author_name = _fallback_canonical_author_name(
+                row,
+                source_author_id=source_author_id,
+                source_author_name=source_author_name,
+                fallback_author_name=display_author_name,
+            )
             row["canonical_author_id"] = canonical_author_id_for_source(
                 language,
                 display_author_id,
                 display_author_id,
-                display_author_name,
+                canonical_author_name,
             )
-            row["canonical_author_name"] = display_author_name
+            row["canonical_author_name"] = canonical_author_name
             row["canonical_author_kind"] = ""
+            row["author"] = canonical_author_name
             continue
         row["canonical_author_id"] = item["canonical_author_id"]
         row["canonical_author_name"] = item["canonical_author_name"]
@@ -3954,14 +4389,55 @@ def _source_author_identity(
     for subject_id in _source_author_subject_candidates(row):
         source_name = source_metadata_names.get((collection_id, subject_id))
         if source_name:
-            return subject_id, source_name
-    return fallback_author_id, fallback_author_name
+            return subject_id, _source_author_display_name(
+                collection_id,
+                subject_id,
+                source_name,
+            )
+    return fallback_author_id, _source_author_display_name(
+        collection_id,
+        fallback_author_id,
+        fallback_author_name,
+    )
+
+
+def _source_author_display_name(
+    collection_id: str,
+    source_author_id: str,
+    source_author_name: str,
+) -> str:
+    if (
+        collection_id in {"", "first1kgreek", "tlg"}
+        and source_author_id in {"tlg9010", "urn:cts:greekLit:tlg9010"}
+        and source_author_name == "Suda"
+    ):
+        return "Soudas"
+    return source_author_name
+
+
+def _fallback_canonical_author_name(
+    row: Mapping[str, Any],
+    *,
+    source_author_id: str,
+    source_author_name: str,
+    fallback_author_name: str,
+) -> str:
+    collection_id = str(row.get("collection_id") or "")
+    if (
+        collection_id in {"first1kgreek", "tlg"}
+        and source_author_id in {"tlg9010", "urn:cts:greekLit:tlg9010"}
+        and source_author_name == "Soudas"
+        and fallback_author_name == "Suda"
+    ):
+        return source_author_name
+    return fallback_author_name
 
 
 def _attach_work_display_labels(rows: list[dict[str, Any]]) -> None:
     for row in rows:
         collection_id = str(row.get("collection_id") or "").strip()
         source_id = str(row.get("source_id") or "").strip()
+        canonical_text_id = str(row.get("canonical_text_id") or "").strip()
         collection_label = collection_id.upper()
         row["source_label"] = (
             f"{collection_label} {source_id}".strip() if source_id else collection_label
@@ -3970,6 +4446,9 @@ def _attach_work_display_labels(rows: list[dict[str, Any]]) -> None:
             f"{collection_label} reader text" if collection_label else "Reader text"
         )
         row["short_disambiguation_label"] = source_id or str(row.get("work_id") or "")
+        row["canonical_address"] = canonical_text_id or str(
+            row.get("cts_work_urn") or row.get("work_id") or ""
+        )
 
 
 def _source_author_subject_candidates(row: Mapping[str, Any]) -> tuple[str, ...]:
@@ -4462,6 +4941,7 @@ def list_segments_for_work(  # noqa: PLR0913
                     )
                 )
                 if len(rows) >= (radius * 2) + 1:
+                    _attach_segments_canonical_addresses(catalog_path, rows)
                     return rows[: (radius * 2) + 1]
                 continue
             conditions = ["work_id = ?"]
@@ -4508,8 +4988,18 @@ def list_segments_for_work(  # noqa: PLR0913
                 )
             )
         if len(rows) >= limit:
+            _attach_segments_canonical_addresses(catalog_path, rows)
             return rows[:limit]
+    _attach_segments_canonical_addresses(catalog_path, rows)
     return rows
+
+
+def _attach_segments_canonical_addresses(
+    catalog_path: Path,
+    rows: list[dict[str, Any]],
+) -> None:
+    for row in rows:
+        _attach_segment_canonical_address(catalog_path, row)
 
 
 def work_map_for_work(catalog_path: Path, work_ref: str) -> list[dict[str, Any]]:
@@ -4558,8 +5048,16 @@ def _decorate_work_map_node(catalog_path: Path, row: dict[str, Any]) -> dict[str
         str(row["start_citation"]),
         str(row["end_citation"]),
     )
+    work = get_work(catalog_path, work_id)
+    canonical_text_id = str(work.get("canonical_text_id") or "") if work else ""
     return {
         **row,
+        "canonical_text_id": canonical_text_id or None,
+        "canonical_address": (
+            ctsv2_segment_address(canonical_text_id, str(row["start_citation"]))
+            if canonical_text_id
+            else None
+        ),
         "word_count": word_count,
         "word_count_method": "whitespace_tokens",
     }
@@ -4793,6 +5291,81 @@ def list_source_metadata(
             FROM source_metadata
             {where}
             ORDER BY collection_id, subject_kind, subject_id, key, value
+            LIMIT ?
+            """,
+            params,
+        )
+
+
+def list_source_witnesses(
+    catalog_path: Path,
+    *,
+    canonical_text_id: str | None = None,
+    collection_id: str | None = None,
+    limit: int = 500,
+) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    conditions = []
+    params: list[object] = []
+    if canonical_text_id:
+        conditions.append("canonical_text_id = ?")
+        params.append(canonical_text_id)
+    if collection_id:
+        conditions.append("collection_id = ?")
+        params.append(collection_id)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "source_witnesses"):
+            return []
+        return _dict_rows(
+            conn,
+            f"""
+            SELECT canonical_text_id, work_id, collection_id, language, witness_id,
+                   source_id, source_urn, source_path, status, confidence, note
+            FROM source_witnesses
+            {where}
+            ORDER BY canonical_text_id, collection_id, witness_id
+            LIMIT ?
+            """,
+            params,
+        )
+
+
+def list_work_relations(
+    catalog_path: Path,
+    *,
+    source_id: str | None = None,
+    target_id: str | None = None,
+    relation_type: str | None = None,
+    limit: int = 500,
+) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    conditions = []
+    params: list[object] = []
+    if source_id:
+        conditions.append("source_id = ?")
+        params.append(source_id)
+    if target_id:
+        conditions.append("target_id = ?")
+        params.append(target_id)
+    if relation_type:
+        conditions.append("relation_type = ?")
+        params.append(relation_type)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "work_relations"):
+            return []
+        return _dict_rows(
+            conn,
+            f"""
+            SELECT source_id, target_id, relation_type, status, confidence, note, source_file
+            FROM work_relations
+            {where}
+            ORDER BY source_id, relation_type, target_id
             LIMIT ?
             """,
             params,

@@ -61,6 +61,7 @@ class ReaderWork:
     source_id: str
     author_id: str | None = None
     cts_work_urn: str | None = None
+    canonical_text_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,32 @@ class ReaderSourceMetadata:
     key: str
     value: str
     source_path: Path
+
+
+@dataclass(frozen=True)
+class ReaderSourceWitness:
+    canonical_text_id: str
+    work_id: str
+    collection_id: str
+    language: str
+    witness_id: str
+    source_id: str
+    source_urn: str
+    source_path: Path
+    status: str
+    confidence: str
+    note: str
+
+
+@dataclass(frozen=True)
+class ReaderWorkRelation:
+    source_id: str
+    target_id: str
+    relation_type: str
+    status: str
+    confidence: str
+    note: str
+    source_file: str = ""
 
 
 @dataclass(frozen=True)

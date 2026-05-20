@@ -39,8 +39,9 @@ Ready today for:
 Not yet final:
 
 - Sanskrit still has 564 `Unknown` display authors.
-- Friendly dictionary shorthand is secondary; canonical `work_id` and
-  `cts_work_urn` are the reliable path.
+- Friendly dictionary shorthand is secondary. New catalogs should prefer
+  `canonical_text_id` / `canonical_address`; older `work_id` and `cts_work_urn`
+  remain reliable compatibility paths.
 - Citation schemes are source-native. DCS Sanskrit texts often use sentence IDs
   such as `386927`, not always book/line numbering.
 - Catalogs under `examples/debug/` are generated development artifacts, not
@@ -67,6 +68,7 @@ just cli-databuild reader \
   --phi-latin-dir /path/to/phi-latin \
   --tlg-e-dir /path/to/tlg_e \
   --perseus-dir /path/to/perseus \
+  --first1k-greek-dir /path/to/First1KGreek \
   --digiliblt-dir /path/to/digiliblt \
   --sanskrit-dir /path/to/sanskrit \
   --metadata-overlay-dir data/curated/reader_metadata \
@@ -80,6 +82,18 @@ just cli-databuild reader \
 Add `--output-root examples/debug/reader_full_curated_current` for a local
 development build. Rebuild after parser/importer changes, then rebuild the
 derived search index.
+
+Reader outputs now include LangNet CTSv2 addresses when the catalog was built
+with current code:
+
+- `canonical_text_id`: flat logical text id such as
+  `urn:ctsv2:lat:aeneid-arma-virumque-cano`;
+- `canonical_address`: segment/resource address such as
+  `urn:ctsv2:lat:aeneid-arma-virumque-cano?ref=1.23`.
+
+Downstream consumers should prefer CTSv2 fields for new links. Existing
+`work_id`, `cts_work_urn`, TLG/PHI ids, and source URNs remain compatibility
+aliases.
 
 ## Current Audit Catalogs
 
@@ -384,7 +398,37 @@ Current full generated work-classification artifacts:
 - Sanskrit:
   `examples/debug/reader-full-classification-2026-05-16/discovery/sanskrit-generated-discovery.csv`.
 
-The Greek/Latin catalog is shared, so sync those files with `--merge`.
+The unified catalog is shared. After a full rebuild, restore discovery metadata
+before verifying shelves: sync one full-language file in replace mode, sync the
+other full-language files and correction layers with `--merge`, then prune rows
+that came from the wrong language batch. The sync commands now only insert
+generated rows whose work exists in the current catalog, so classifier CSVs from
+older builds do not leave orphan metadata after dedupe or source-preference
+changes. Work sync resolves generated rows through catalog `work_id`,
+`source_id`, and `cts_work_urn` aliases, so a generated
+`langnet:reader:tlg:tlg0059.030` row still applies when the current catalog uses
+`urn:cts:greekLit:tlg0059.tlg030`. Author sync also treats compact and CTS
+author ids as equivalent, so a generated `tlg0059` author row still applies when
+the current work catalog uses `urn:cts:greekLit:tlg0059`.
+
+```bash
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/greek-generated-discovery-b50.csv \
+  --output json
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/latin-generated-discovery-b50.csv \
+  --merge \
+  --output json
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/sanskrit-generated-discovery.csv \
+  --merge \
+  --output json
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/audit-corrections-2026-05-17.csv \
+  --merge \
+  --output json
+just cli reader --catalog $CATALOG prune-stale-classifications --output json
+```
 
 Current audit correction layer:
 
@@ -442,6 +486,18 @@ It keeps feed-provided author strings intact while adding normalized/canonical
 agent metadata for author-index navigation:
 
 ```bash
+just cli reader --catalog $CATALOG sync-author-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/authors/full/grc-author-full-generated-v2-b10.csv \
+  --output json
+just cli reader --catalog $CATALOG sync-author-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/authors/full/lat-author-full-generated-v2.csv \
+  --merge \
+  --output json
+just cli reader --catalog $CATALOG sync-author-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/authors/full/san-author-full-generated-merged-b10.csv \
+  --merge \
+  --output json
+
 just cli reader --catalog $CATALOG author-classification-export \
   --language lat \
   --path examples/debug/reader-author-classification-latin.csv

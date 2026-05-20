@@ -131,6 +131,7 @@ class BuildWhitakersConfig:
 @dataclass
 class BuildReaderConfig:
     perseus_dir: str | None
+    first1k_greek_dir: str | None
     digiliblt_dir: str | None
     phi_latin_dir: str | None
     tlg_e_dir: str | None
@@ -341,6 +342,9 @@ def _build_reader_impl(config: BuildReaderConfig) -> None:
 
     builder_config = ReaderBuildConfig(
         perseus_dir=Path(config.perseus_dir).expanduser() if config.perseus_dir else None,
+        first1k_greek_dir=(
+            Path(config.first1k_greek_dir).expanduser() if config.first1k_greek_dir else None
+        ),
         digiliblt_dir=Path(config.digiliblt_dir).expanduser() if config.digiliblt_dir else None,
         phi_latin_dir=Path(config.phi_latin_dir).expanduser() if config.phi_latin_dir else None,
         tlg_e_dir=Path(config.tlg_e_dir).expanduser() if config.tlg_e_dir else None,
@@ -822,6 +826,12 @@ def build_whitakers_index(  # noqa: PLR0913
     help="Perseus corpus root or fixture directory.",
 )
 @click.option(
+    "--first1k-greek-dir",
+    type=click.Path(),
+    default=None,
+    help="First1KGreek repository root or data directory.",
+)
+@click.option(
     "--digiliblt-dir",
     type=click.Path(),
     default=None,
@@ -905,6 +915,7 @@ def build_whitakers_index(  # noqa: PLR0913
 @click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
 def build_reader(  # noqa: PLR0913
     perseus_dir: str | None,
+    first1k_greek_dir: str | None,
     digiliblt_dir: str | None,
     phi_latin_dir: str | None,
     tlg_e_dir: str | None,
@@ -925,6 +936,7 @@ def build_reader(  # noqa: PLR0913
     _build_reader_impl(
         BuildReaderConfig(
             perseus_dir=perseus_dir,
+            first1k_greek_dir=first1k_greek_dir,
             digiliblt_dir=digiliblt_dir,
             phi_latin_dir=phi_latin_dir,
             tlg_e_dir=tlg_e_dir,

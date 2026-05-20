@@ -18,6 +18,7 @@ import {
 	readerSegmentDisplayText,
 	readerSegmentTransliterationText,
 	readerWorkDiscoveryTags,
+	readerWorkDisplayAuthor,
 	readerWorkContributorLabels,
 	readerWorkListDiscriminator,
 	readerWorkLabel,
@@ -188,6 +189,8 @@ const work = {
 	source_author: 'Homer',
 	source_id: 'tlg0012.002',
 	cts_work_urn: 'urn:cts:greekLit:tlg0012.tlg002',
+	canonical_text_id: 'urn:ctsv2:grc:odyssey-andra-moi-ennepe',
+	canonical_address: 'urn:ctsv2:grc:odyssey-andra-moi-ennepe',
 	classification_discovery_group_id: 'epic',
 	classification_discovery_tags: 'epic|homeric|poetry',
 	classification_global_popularity_score: 99,
@@ -197,15 +200,39 @@ const work = {
 	word_count: 121000
 };
 
-assert.equal(readerWorkRef(work), 'urn:cts:greekLit:tlg0012.tlg002');
+assert.equal(readerWorkRef(work), 'urn:ctsv2:grc:odyssey-andra-moi-ennepe');
 assert.equal(readerWorkLabel(work), 'Homer, Odyssea');
 assert.equal(readerWorkListLabel(work, [work]), 'Odyssea');
+assert.equal(readerWorkDisplayAuthor(work), 'Homer');
 assert.deepEqual(readerWorkDiscoveryTags(work), ['epic', 'homeric', 'poetry']);
 assert.equal(readerPopularityLabel(work), 'Canonical · 99 global · 98 group');
 assert.deepEqual(readerAuthorRouteStateFromWork(work), {
 	readerView: 'authors',
 	authorId: 'urn:cts:greekLit:tlg0012',
 	authorName: 'Homer'
+});
+
+const sudaLexicon = {
+	...work,
+	work_id: 'langnet:reader:tlg:tlg9010.001',
+	title: 'Lexicon',
+	author: 'Unknown',
+	author_id: 'tlg9010',
+	source_author: 'Soudas',
+	source_author_id: 'tlg9010',
+	source_id: 'tlg9010.001',
+	cts_work_urn: 'urn:cts:greekLit:tlg9010.tlg001',
+	canonical_author_id: 'urn:cts:langnet:author.grc.unknown',
+	canonical_author_name: 'Unknown',
+	canonical_author_kind: 'anonymous_label'
+};
+
+assert.equal(readerWorkDisplayAuthor(sudaLexicon), 'Soudas');
+assert.equal(readerWorkLabel(sudaLexicon), 'Soudas, Lexicon');
+assert.deepEqual(readerAuthorRouteStateFromWork(sudaLexicon), {
+	readerView: 'authors',
+	authorId: 'tlg9010',
+	authorName: 'Soudas'
 });
 
 assert.deepEqual(

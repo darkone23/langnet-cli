@@ -18,6 +18,7 @@ Useful source roots:
 - PHI Latin text dump directory: `--phi-latin-dir /path/to/phi-latin`
 - TLG Greek text dump directory: `--tlg-e-dir /path/to/tlg_e`
 - Perseus corpus root or fixture directory: `--perseus-dir /path/to/perseus`
+- First1KGreek TEI corpus root: `--first1k-greek-dir /path/to/First1KGreek`
 - digilibLT TEI corpus root: `--digiliblt-dir /path/to/digiliblt`
 - Sanskrit/DCS JSON or plain-text corpus root: `--sanskrit-dir /path/to/sanskrit`
 
@@ -28,6 +29,10 @@ The reader builder collates these local inputs:
 - `--tlg-e-dir`: TLG `.txt` legacy dumps, sibling `.idt` files when present,
   and `cd.authors.php`/`doccan*.txt` author metadata files.
 - `--perseus-dir`: Perseus TEI `.xml` text files discovered recursively.
+- `--first1k-greek-dir`: First1KGreek TEI `.xml` text files discovered
+  recursively. When the same CTS work is available from Perseus/First1K and a
+  legacy TLG row, the curated build prefers the TEI source and deletes the
+  superseded legacy catalog row.
 - `--digiliblt-dir`: digilibLT TEI `.xml` files in the root directory.
 - `--sanskrit-dir`: Sanskrit `.json` corpus files, plain `.txt` files,
   grouped split plain-text chunks, DCS `.conllu`/`.conllu_parsed` files, and
@@ -53,6 +58,7 @@ just cli-databuild reader \
   --phi-latin-dir /path/to/phi-latin \
   --tlg-e-dir /path/to/tlg_e \
   --perseus-dir /path/to/perseus \
+  --first1k-greek-dir /path/to/First1KGreek \
   --digiliblt-dir /path/to/digiliblt \
   --sanskrit-dir /path/to/sanskrit \
   --metadata-overlay-dir data/curated/reader_metadata \
@@ -72,6 +78,7 @@ just cli-databuild reader \
   --phi-latin-dir /path/to/phi-latin \
   --tlg-e-dir /path/to/tlg_e \
   --perseus-dir /path/to/perseus \
+  --first1k-greek-dir /path/to/First1KGreek \
   --digiliblt-dir /path/to/digiliblt \
   --sanskrit-dir /path/to/sanskrit \
   --metadata-overlay-dir data/curated/reader_metadata \
@@ -91,6 +98,64 @@ After parser, importer, overlay, contained-work, or work-map changes, rebuild
 the catalog. Applying selected overlay sync commands can be useful for quick
 checks, but parser and importer behavior is baked into the generated book DBs.
 
+## Restore Generated Discovery Metadata
+
+Generated work and author classifications are catalog metadata used by
+`reader shelves`, `reader popular`, discovery facets, and prominence-sorted
+author views. A full `cli-databuild reader` rebuild creates the base catalog
+and book artifacts, but it does not regenerate LLM classification CSVs. Restore
+the current generated metadata layer before declaring shelves or discovery
+surfaces ready.
+
+Use replace mode for the first full-language file, then `--merge` for the
+remaining language files and small correction layers:
+
+```bash
+export CATALOG=data/build/reader/catalog.duckdb
+
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/greek-generated-discovery-b50.csv \
+  --output json
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/latin-generated-discovery-b50.csv \
+  --merge \
+  --output json
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/sanskrit-generated-discovery.csv \
+  --merge \
+  --output json
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/audit-corrections-2026-05-17.csv \
+  --merge \
+  --output json
+just cli reader --catalog $CATALOG prune-stale-classifications --output json
+
+just cli reader --catalog $CATALOG sync-author-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/authors/full/grc-author-full-generated-v2-b10.csv \
+  --output json
+just cli reader --catalog $CATALOG sync-author-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/authors/full/lat-author-full-generated-v2.csv \
+  --merge \
+  --output json
+just cli reader --catalog $CATALOG sync-author-classifications \
+  --classification-csv examples/debug/reader-full-classification-2026-05-16/authors/full/san-author-full-generated-merged-b10.csv \
+  --merge \
+  --output json
+```
+
+The sync commands only insert generated rows whose work or author is present in
+the current catalog. Work sync resolves generated rows through the catalog's
+`work_id`, `source_id`, and `cts_work_urn` aliases, so a legacy row such as
+`langnet:reader:tlg:tlg0059.030` still attaches to the current
+`urn:cts:greekLit:tlg0059.tlg030` work after TEI source preference. Author sync
+accepts compact-equivalent source ids, such as `tlg0059` matching
+`urn:cts:greekLit:tlg0059`, and synthetic display-author selectors for sources
+that do not carry stable author ids. This is important after dedupe or
+source-preference changes: stale classifier rows from older builds must not
+survive as orphan metadata, but equivalent legacy/CTS work and author ids must
+still keep their generated metadata. `prune-stale-classifications` additionally
+removes generated work rows imported from the wrong language batch.
+
 ## Rebuild One Input Source
 
 Use a source-slice rebuild when one input file has changed or when an importer
@@ -108,10 +173,15 @@ Rules for this pattern:
   catalog containing only the selected source slice.
 - Pass `--source-path` more than once when a logical work is represented by
   multiple files, such as grouped split plain-text chunks or DCS chapter groups.
+- Incremental registration replaces stale same-work catalog rows, editions,
+  artifacts, source witnesses, and generated aliases. It must not globally wipe
+  aliases or leave old same-work artifacts referenced in the catalog.
 - Rebuild all affected source files after parser behavior changes. A
   source-slice rebuild is appropriate for stale per-book artifacts, duplicate
   work repair, and one-source metadata refreshes; a full rebuild is still the
   safer handoff path after broad adapter or catalog-schema changes.
+- Rebuild the derived search index after any source-slice repair that changes
+  visible text, segment counts, titles, canonical addresses, or aliases.
 
 ```bash
 just cli-databuild reader \
@@ -143,6 +213,23 @@ row with the same `cts_work_urn`. The cleanup deletes the superseded `tlg` or
 `phi` catalog row during build/repair. It intentionally requires a language
 match, so an English Perseus translation does not remove the Greek or Latin
 legacy original when no same-language Perseus text is present.
+
+First1KGreek is imported with `--first1k-greek-dir` as collection
+`first1kgreek`. Its TEI files are parsed from `data/**/*.xml`, excluding
+`__cts__.xml`, and only Greek text editions are registered. When First1KGreek
+has multiple Greek edition files for the same CTS work directory, the default
+full build chooses one preferred edition deterministically, with `grc1`
+preferred over later same-work editions. First1KGreek source URNs are preserved
+as aliases and `source_witnesses`; they are not treated as LangNet canonical
+identity. When a First1KGreek text overlaps a legacy TLG row by exact
+same-language CTS work URN or canonical CTSv2 text id, the lower priority
+legacy row is removed from the visible catalog during build.
+
+New builds also mint a public `canonical_text_id` for visible works using the
+LangNet CTSv2 shape `urn:ctsv2:<language>:<title>-<incipit>`. Existing
+`work_id`, `cts_work_urn`, TLG/PHI ids, and source URNs remain accepted as AKA
+names/aliases, but downstream links should prefer `canonical_text_id` and
+segment `canonical_address` when present.
 
 The TXT header lines remain available as `source_metadata` values such as
 `gretil_text`, `gretil_author`, `gretil_edition`, `gretil_notes`, and
@@ -207,6 +294,9 @@ export SEARCH_INDEX=data/build/reader/search.lance
 just cli reader --catalog $CATALOG summary
 just cli reader --catalog $CATALOG validate --output json
 just cli reader --catalog $CATALOG coverage --output json
+just cli reader --catalog $CATALOG shelves --language san --limit 12 --sample-limit 2 --output json
+just cli reader --catalog $CATALOG shelves --language grc --limit 12 --sample-limit 2 --output json
+just cli reader --catalog $CATALOG shelves --language lat --limit 12 --sample-limit 2 --output json
 just cli reader --catalog $CATALOG contents urn:cts:greekLit:tlg0012.tlg002 --limit 5
 just cli reader --catalog $CATALOG search-index validate \
   --index $SEARCH_INDEX \

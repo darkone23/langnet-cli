@@ -9,10 +9,17 @@ import duckdb
 from click.testing import CliRunner
 
 from langnet.cli import main
-from langnet.reader.builder import ReaderBuildConfig, ReaderBuilder
+from langnet.reader.builder import (
+    ReaderBuildConfig,
+    ReaderBuilder,
+    _aliases_for_registrations,
+    _dedupe_book_registrations_for_catalog,
+    _ensure_unique_canonical_text_ids,
+    _registrations_for_work_ids,
+)
 from langnet.reader.metadata_overlay import load_metadata_overlays
-from langnet.reader.models import ReaderBookArtifact, ReaderEdition, ReaderWork
-from langnet.reader.storage import lookup_segment_by_address, register_book
+from langnet.reader.models import ReaderAlias, ReaderBookArtifact, ReaderEdition, ReaderWork
+from langnet.reader.storage import ReaderBookRegistration, lookup_segment_by_address, register_book
 
 FIXTURES = Path("tests/fixtures/reader")
 
@@ -20,6 +27,149 @@ FIXTURES = Path("tests/fixtures/reader")
 def _copy_fixture(name: str, target_dir: Path) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(FIXTURES / name, target_dir / name)
+
+
+def _reader_registration(
+    *,
+    work_id: str,
+    source_id: str,
+    cts_work_urn: str | None = None,
+    canonical_text_id: str | None = None,
+    language: str = "grc",
+) -> ReaderBookRegistration:
+    edition = ReaderEdition(
+        edition_id=f"{work_id}:edition",
+        work_id=work_id,
+        label="Fixture edition",
+        language=language,
+        source_path=Path(f"/tmp/{source_id}.xml"),
+    )
+    return ReaderBookRegistration(
+        work=ReaderWork(
+            work_id=work_id,
+            collection_id="fixture",
+            language=language,
+            title="Fragmenta",
+            author="Anonymous",
+            author_id=None,
+            source_id=source_id,
+            cts_work_urn=cts_work_urn,
+            canonical_text_id=canonical_text_id,
+        ),
+        edition=edition,
+        artifact=ReaderBookArtifact(
+            artifact_id=f"{work_id}:artifact",
+            work_id=work_id,
+            edition_id=edition.edition_id,
+            artifact_path=Path(f"/tmp/{source_id}.duckdb"),
+            source_path=edition.source_path,
+            adapter="fixture",
+            source_hash="hash",
+            segment_count=1,
+            token_count=1,
+        ),
+    )
+
+
+def test_generated_ctsv2_ids_are_disambiguated_when_title_and_incipit_collide() -> None:
+    first = _reader_registration(
+        work_id="urn:cts:greekLit:tlg0001.tlg001",
+        source_id="tlg0001.tlg001",
+        canonical_text_id="urn:ctsv2:grc:fragmenta-agroikos",
+    )
+    second = _reader_registration(
+        work_id="urn:cts:greekLit:tlg0002.tlg001",
+        source_id="tlg0002.tlg001",
+        canonical_text_id="urn:ctsv2:grc:fragmenta-agroikos",
+    )
+
+    registrations = _ensure_unique_canonical_text_ids([first, second])
+    canonical_ids = [registration.work.canonical_text_id for registration in registrations]
+
+    assert canonical_ids == [
+        "urn:ctsv2:grc:fragmenta-agroikos-tlg0001-tlg001",
+        "urn:ctsv2:grc:fragmenta-agroikos-tlg0002-tlg001",
+    ]
+
+
+def test_generated_aliases_skip_ambiguous_source_identifiers() -> None:
+    first = _reader_registration(
+        work_id="work-a",
+        source_id="shared.source",
+        cts_work_urn="urn:cts:greekLit:tlg0001.tlg001",
+        canonical_text_id="urn:ctsv2:grc:first",
+    )
+    second = _reader_registration(
+        work_id="work-b",
+        source_id="shared.source",
+        cts_work_urn="urn:cts:greekLit:tlg0001.tlg001",
+        canonical_text_id="urn:ctsv2:grc:second",
+    )
+
+    aliases = _aliases_for_registrations([], [first, second])
+    aliases_by_kind = {(alias.kind, alias.alias, alias.target) for alias in aliases}
+
+    assert ("canonical_text_id", "urn:ctsv2:grc:first", "urn:ctsv2:grc:first") in aliases_by_kind
+    assert (
+        "canonical_text_id",
+        "urn:ctsv2:grc:second",
+        "urn:ctsv2:grc:second",
+    ) in aliases_by_kind
+    assert not any(alias.alias == "shared.source" for alias in aliases)
+    assert not any(alias.alias == "urn:cts:greekLit:tlg0001.tlg001" for alias in aliases)
+
+
+def test_generated_aliases_use_only_surviving_work_registrations() -> None:
+    surviving = _reader_registration(
+        work_id="surviving-work",
+        source_id="surviving",
+        canonical_text_id="urn:ctsv2:grc:surviving",
+    )
+    suppressed = _reader_registration(
+        work_id="suppressed-work",
+        source_id="suppressed",
+        canonical_text_id="urn:ctsv2:grc:suppressed",
+    )
+
+    registrations = _registrations_for_work_ids([surviving, suppressed], {"surviving-work"})
+    aliases = _aliases_for_registrations(
+        [
+            ReaderAlias(
+                alias="Suppressed",
+                language="grc",
+                kind="manual",
+                target="suppressed-work",
+                display="Suppressed",
+                source_file="fixture",
+            )
+        ],
+        registrations,
+    )
+
+    assert registrations == [surviving]
+    assert all(alias.target != "suppressed-work" for alias in aliases)
+
+
+def test_catalog_dedupe_removes_overwritten_work_registrations_before_aliases() -> None:
+    overwritten = _reader_registration(
+        work_id="urn:cts:latinLit:phi0119.phi001",
+        source_id="phi0119.phi001",
+        canonical_text_id="urn:ctsv2:eng:amphitryon-translation",
+        language="eng",
+    )
+    final = _reader_registration(
+        work_id="urn:cts:latinLit:phi0119.phi001",
+        source_id="phi0119.phi001",
+        canonical_text_id="urn:ctsv2:lat:amphitruo-vt-vos-in",
+        language="lat",
+    )
+
+    registrations = _dedupe_book_registrations_for_catalog([overwritten, final])
+    aliases = _aliases_for_registrations([], registrations)
+
+    assert registrations == [final]
+    assert all(alias.language == "lat" for alias in aliases)
+    assert all(alias.target == "urn:ctsv2:lat:amphitruo-vt-vos-in" for alias in aliases)
 
 
 def test_reader_builder_writes_catalog_books_and_aliases() -> None:  # noqa: PLR0915
@@ -91,6 +241,13 @@ def test_reader_builder_writes_catalog_books_and_aliases() -> None:  # noqa: PLR
             alias_rows = conn.execute(
                 "SELECT alias, target FROM aliases WHERE alias = 'Od.'"
             ).fetchall()
+            odyssey_canonical = conn.execute(
+                """
+                SELECT canonical_text_id
+                FROM works
+                WHERE work_id = 'urn:cts:greekLit:tlg0012.tlg002'
+                """
+            ).fetchone()
             source_rows = conn.execute(
                 """
                 SELECT file_role, file_status, source_path
@@ -121,6 +278,8 @@ def test_reader_builder_writes_catalog_books_and_aliases() -> None:  # noqa: PLR
         } <= artifacts
         assert ("Homer",) in greek_authors
         assert alias_rows == [("Od.", "urn:cts:greekLit:tlg0012.tlg002")]
+        assert odyssey_canonical is not None
+        assert str(odyssey_canonical[0]).startswith("urn:ctsv2:grc:odyssey-")
         assert ("diogenes_authtab", "metadata", str(phi_dir / "authtab.dir")) in source_rows
         assert ("diogenes_idt", "metadata", str(phi_dir / "phi_legacy.idt")) in source_rows
         assert ("diogenes_text", "text", str(phi_dir / "phi_legacy.txt")) in source_rows
@@ -196,6 +355,80 @@ def test_reader_builder_writes_catalog_books_and_aliases() -> None:  # noqa: PLR
             "TLG Test Author Hist.",
         ) in metadata_rows
     assert odyssey_lookup
+
+
+def test_reader_builder_imports_first1k_greek_with_ctsv2_aliases() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        first1k_dir = root / "First1KGreek"
+        first1k_data = first1k_dir / "data" / "tlg9010" / "tlg001"
+        _copy_fixture("first1k_suda.xml", first1k_data)
+        alternate = (FIXTURES / "first1k_suda.xml").read_text(encoding="utf-8")
+        (first1k_data / "first1k_suda_grc2.xml").write_text(
+            alternate.replace("Suidae lexicon", "Fragmenta lexici")
+            .replace(".1st1K-grc1", ".1st1K-grc2")
+            .replace("ἄλφα λεξικὸν παράδειγμα", "βῆτα λεξικὸν παράδειγμα"),
+            encoding="utf-8",
+        )
+
+        output_root = root / "build" / "reader"
+        result = ReaderBuilder(
+            ReaderBuildConfig(
+                first1k_greek_dir=first1k_dir,
+                output_root=output_root,
+            )
+        ).build()
+
+        catalog_path = output_root / "catalog.duckdb"
+        with duckdb.connect(str(catalog_path), read_only=True) as conn:
+            work_row = conn.execute(
+                """
+                SELECT collection_id, language, title, cts_work_urn, canonical_text_id
+                FROM works
+                WHERE work_id = 'urn:cts:greekLit:tlg9010.tlg001'
+                """
+            ).fetchone()
+            source_file_row = conn.execute(
+                """
+                SELECT collection_id, file_role, COUNT(*)
+                FROM source_files
+                WHERE collection_id = 'first1kgreek'
+                GROUP BY collection_id, file_role
+                LIMIT 1
+                """
+            ).fetchone()
+            alias_row = conn.execute(
+                """
+                SELECT target
+                FROM aliases
+                WHERE alias = 'urn:cts:greekLit:tlg9010.tlg001'
+                LIMIT 1
+                """
+            ).fetchone()
+            witness_row = conn.execute(
+                """
+                SELECT collection_id, witness_id, source_urn
+                FROM source_witnesses
+                WHERE work_id = 'urn:cts:greekLit:tlg9010.tlg001'
+                LIMIT 1
+                """
+            ).fetchone()
+
+    assert result.message is None
+    assert work_row is not None
+    assert work_row[0] == "first1kgreek"
+    assert work_row[1] == "grc"
+    assert work_row[2] == "Suidae lexicon"
+    assert work_row[3] == "urn:cts:greekLit:tlg9010.tlg001"
+    assert str(work_row[4]).startswith("urn:ctsv2:grc:suidae-lexicon-")
+    assert source_file_row == ("first1kgreek", "first1kgreek_tei", 1)
+    assert alias_row is not None
+    assert str(alias_row[0]).startswith("urn:ctsv2:grc:suidae-lexicon-")
+    assert witness_row == (
+        "first1kgreek",
+        "urn:cts:greekLit:tlg9010.tlg001",
+        "urn:cts:greekLit:tlg9010.tlg001",
+    )
 
 
 def test_reader_builder_keeps_digiliblt_files_with_duplicate_tei_idno() -> None:

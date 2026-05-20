@@ -11,7 +11,7 @@ from langnet.reader.service import ReaderService
 
 FIXTURES = Path("tests/fixtures/reader")
 FIXTURE_WORK_COUNT = 2
-FIXTURE_ALIAS_COUNT = 3
+FIXTURE_ALIAS_COUNT = 9
 
 
 def _copy_fixture(name: str, target_dir: Path) -> None:
@@ -165,4 +165,5 @@ def test_reader_service_summary_aliases_and_conflicts() -> None:
         assert summary["summary"]["work_count"] == FIXTURE_WORK_COUNT
         assert summary["summary"]["alias_count"] == FIXTURE_ALIAS_COUNT
         assert any(alias["alias"] == "Od." for alias in aliases["items"])
+        assert any(alias["kind"] == "canonical_text_id" for alias in aliases["items"])
         assert conflicts["items"] == []

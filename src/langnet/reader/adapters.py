@@ -232,7 +232,7 @@ class LegacyIdtWork:
     level_labels: tuple[str, ...] = ()
 
 
-def parse_perseus_tei(path: Path) -> ParsedBook:
+def parse_perseus_tei(path: Path, *, collection_id: str = "perseus") -> ParsedBook:
     root = _parse_perseus_xml(path)
     edition_node = _find_perseus_text_node(root)
     edition_urn = ""
@@ -267,7 +267,7 @@ def parse_perseus_tei(path: Path) -> ParsedBook:
     )
     work = ReaderWork(
         work_id=work_urn,
-        collection_id="perseus",
+        collection_id=collection_id,
         language=language,
         title=title,
         author=author,

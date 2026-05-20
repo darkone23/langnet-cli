@@ -60,6 +60,7 @@ def validate_reader_catalog(catalog_path: Path) -> list[dict[str, str]]:  # noqa
             }
         )
     issues.extend(_alias_target_issues(catalog_path))
+    issues.extend(_duplicate_canonical_text_id_issues(catalog_path))
 
     for work in _work_rows(catalog_path):
         work_id = str(work["work_id"])
@@ -144,8 +145,10 @@ def _alias_target_issues(catalog_path: Path) -> list[dict[str, str]]:
             FROM aliases a
             LEFT JOIN works by_id ON by_id.work_id = a.target
             LEFT JOIN works by_cts ON by_cts.cts_work_urn = a.target
+            LEFT JOIN works by_ctsv2 ON by_ctsv2.canonical_text_id = a.target
             WHERE by_id.work_id IS NULL
               AND by_cts.work_id IS NULL
+              AND by_ctsv2.work_id IS NULL
             ORDER BY a.language, a.alias, a.target
             LIMIT 20
             """
@@ -156,6 +159,32 @@ def _alias_target_issues(catalog_path: Path) -> list[dict[str, str]]:
             "message": f"Alias {language}:{alias} targets missing work {target}",
         }
         for language, alias, target in rows
+    ]
+
+
+def _duplicate_canonical_text_id_issues(catalog_path: Path) -> list[dict[str, str]]:
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if "canonical_text_id" not in _table_columns(conn, "works"):
+            return []
+        rows = conn.execute(
+            """
+            SELECT canonical_text_id, language, COUNT(*) AS work_count
+            FROM works
+            WHERE canonical_text_id IS NOT NULL AND trim(canonical_text_id) <> ''
+            GROUP BY canonical_text_id, language
+            HAVING COUNT(*) > 1
+            ORDER BY work_count DESC, canonical_text_id
+            LIMIT 20
+            """
+        ).fetchall()
+    return [
+        {
+            "code": "duplicate_canonical_text_id",
+            "message": (
+                f"Canonical text id {canonical_text_id} has {work_count} visible {language} works"
+            ),
+        }
+        for canonical_text_id, language, work_count in rows
     ]
 
 
@@ -270,3 +299,7 @@ def _tables_for_connection(conn: duckdb.DuckDBPyConnection) -> set[str]:
             "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'"
         ).fetchall()
     }
+
+
+def _table_columns(conn: duckdb.DuckDBPyConnection, table_name: str) -> set[str]:
+    return {str(row[1]) for row in conn.execute(f"PRAGMA table_info('{table_name}')").fetchall()}

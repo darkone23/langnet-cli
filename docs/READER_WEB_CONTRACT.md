@@ -65,6 +65,8 @@ Stable fields:
 - `items[].author_id`
 - `items[].source_id`
 - `items[].cts_work_urn`
+- `items[].canonical_text_id`
+- `items[].canonical_address`
 - `items[].work_kind`
 - `items[].parent_work_id`
 - `items[].start_citation`
@@ -362,6 +364,23 @@ into the reader catalog while preserving `classification_generator_models` and
 catalog's generated classification table. Pass `--merge` to replace only the
 work ids present in the CSV, which is the correct mode when Latin and Greek
 classifications are generated separately for the shared classics catalog.
+`sync-classifications` only inserts rows whose work can be resolved in the
+current catalog, and `sync-author-classifications` only inserts rows for current
+catalog authors. Work sync resolves generated rows through catalog `work_id`,
+`source_id`, and `cts_work_urn` aliases, so a generated row keyed as
+`langnet:reader:tlg:tlg0059.030` still applies to a TEI-preferred catalog work
+keyed as `urn:cts:greekLit:tlg0059.tlg030`. Author sync treats compact and CTS
+source ids as equivalent, so a generated row keyed as `tlg0059` still applies to
+a catalog author keyed as `urn:cts:greekLit:tlg0059`. Run
+`prune-stale-classifications` after merging generated files to remove rows that
+came from the wrong language batch. Discovery shelves and prominence-sorted
+author surfaces are not ready after a full catalog rebuild until this generated
+work and author metadata layer has been restored.
+
+`reader authors --sort prominence` ranks by generated prominence score, then
+prominence tier, then catalog evidence (`work_count`, `word_count`) before
+falling back to catalog order. This prevents score ties from turning into an
+alphabetical "top authors" list.
 `popular` and
 `works --sort popularity` then use `classification_popularity_score` to rank
 works, with unclassified works sorted after classified works. New clients should
@@ -566,6 +585,8 @@ just cli reader --catalog $CATALOG map <work-ref> --output json
 Stable fields:
 
 - `items[].work_id`
+- `items[].canonical_text_id`
+- `items[].canonical_address`
 - `items[].node_id`
 - `items[].parent_node_id`
 - `items[].level`
@@ -610,18 +631,22 @@ Sanskrit segment display fields:
 ```bash
 just cli reader --catalog $CATALOG show <work-ref> --segment <citation> --output json
 just cli reader --catalog $CATALOG show <full-segment-address> --output json
+just cli reader --catalog $CATALOG show 'urn:ctsv2:lat:aeneid-arma-virumque-cano?ref=1.23' --output json
 ```
 
 Stable fields:
 
 - `segment`: same segment contract as `contents`;
+- `segment.canonical_text_id`: preferred LangNet CTSv2 logical text id when
+  available;
+- `segment.canonical_address`: preferred CTSv2 resource address when available;
 - `navigation.previous.citation_path`
 - `navigation.previous.address`
 - `navigation.next.citation_path`
 - `navigation.next.address`
 
-Navigation addresses prefer the work's CTS work URN when present, falling back
-to the catalog `work_id`.
+Navigation addresses prefer CTSv2 when present, then the work's CTS work URN,
+then the catalog `work_id`.
 
 ## Resolve Address
 

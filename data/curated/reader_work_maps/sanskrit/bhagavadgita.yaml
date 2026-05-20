@@ -7,12 +7,12 @@ work_maps:
     label: "Arjuna Viṣāda Yoga"
     native_label: "अर्जुनविषादयोग"
     ordinal: 1
-    start_citation: "230573_1"
+    start_citation: "230571_1"
     end_citation: "230666"
     provenance: "curated"
     confidence: "high"
     status: "accepted"
-    note: "Traditional Bhagavadgītā chapter title aligned to the DCS Mahābhārata Bhagavadgītā chapter 1 source file. The current reader address surface uses DCS sentence ids."
+    note: "Traditional Bhagavadgītā chapter title aligned to the DCS Mahābhārata Bhagavadgītā chapter 1 source file. The range includes the opening Dhṛtarāṣṭra uvāca segment. The current reader address surface uses DCS sentence ids."
     evidence:
       - source_type: "source-root"
         citation: "sanskrit-dcs:data/conllu/files/Mahābhārata/Mahābhārata-0883-MBh, 6, BhaGī 1-7242.conllu"

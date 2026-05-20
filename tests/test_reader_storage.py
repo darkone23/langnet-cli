@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
@@ -25,6 +26,7 @@ from langnet.reader.models import (
 )
 from langnet.reader.paths import reader_book_path, reader_catalog_path, reader_root
 from langnet.reader.storage import (
+    _book_has_address,
     create_book_db,
     create_catalog_db,
     list_author_index,
@@ -43,6 +45,7 @@ from langnet.reader.storage import (
     prune_stale_work_classifications,
     reader_discovery_coverage,
     reader_summary,
+    register_aliases,
     register_author_classifications,
     register_book,
     register_books,
@@ -64,6 +67,7 @@ CANONICAL_SCOPE_POPULARITY_SCORE = 95
 DISCOVERY_GLOBAL_POPULARITY_SCORE = 72
 DISCOVERY_GROUP_POPULARITY_SCORE = 96
 AUTHOR_CANONICAL_PROMINENCE_SCORE = 100
+PYTHAGORAS_MERGED_WORK_COUNT = 2
 MANDANA_FIXTURE_WORK_COUNT = 2
 SANSKRIT_MEDICINE_FIXTURE_COUNT = 2
 
@@ -79,6 +83,7 @@ def _register_fixture_work(  # noqa: PLR0913
     author: str,
     author_id: str | None,
     source_id: str,
+    canonical_text_id: str | None = None,
 ) -> None:
     safe_source = source_id.replace(":", "_").replace(".", "_")
     book_path = root / "books" / f"{safe_source}.duckdb"
@@ -101,6 +106,7 @@ def _register_fixture_work(  # noqa: PLR0913
             author_id=author_id,
             source_id=source_id,
             cts_work_urn=work_id if work_id.startswith("urn:cts:") else None,
+            canonical_text_id=canonical_text_id,
         ),
         edition,
         ReaderBookArtifact(
@@ -115,6 +121,191 @@ def _register_fixture_work(  # noqa: PLR0913
             token_count=0,
         ),
     )
+
+
+def test_work_rows_include_and_resolve_ctsv2_canonical_text_id() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        canonical_text_id = "urn:ctsv2:lat:aeneid-arma-virumque-cano"
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:latinLit:phi0690.phi003",
+            collection_id="phi",
+            language="lat",
+            title="Aeneid",
+            author="Vergil",
+            author_id="urn:cts:latinLit:phi0690",
+            source_id="phi0690.phi003",
+            canonical_text_id=canonical_text_id,
+        )
+
+        works = list_works(catalog_path, language="lat", query="aeneid")
+        item = works[0]
+
+        assert item["canonical_text_id"] == canonical_text_id
+        assert item["canonical_address"] == canonical_text_id
+        assert lookup_segment_by_work_and_citation(catalog_path, canonical_text_id, "1.1") is None
+
+
+def test_ctsv2_resource_address_resolves_to_segment() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "aeneid.duckdb"
+        canonical_text_id = "urn:ctsv2:lat:aeneid-arma-virumque-cano"
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="urn:cts:latinLit:phi0690.phi003",
+            collection_id="phi",
+            language="lat",
+            title="Aeneid",
+            author="Vergil",
+            author_id="urn:cts:latinLit:phi0690",
+            source_id="phi0690.phi003",
+            cts_work_urn="urn:cts:latinLit:phi0690.phi003",
+            canonical_text_id=canonical_text_id,
+        )
+        edition = ReaderEdition(
+            edition_id="urn:cts:latinLit:phi0690.phi003:edition",
+            work_id=work.work_id,
+            label="Fixture",
+            language="lat",
+            source_path=root / "aeneid.xml",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="aeneid-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=1,
+                token_count=3,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:1.1",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="line",
+                    citation_path="1.1",
+                    text="Arma virumque cano",
+                    normalized_text="arma virumque cano",
+                    sort_key=1,
+                )
+            ],
+            addresses=[
+                ReaderSegmentAddress(
+                    segment_id=f"{work.work_id}:1.1",
+                    address=f"{work.work_id}:1.1",
+                    address_kind="fixture",
+                    citation_path="1.1",
+                )
+            ],
+        )
+        register_aliases(
+            catalog_path,
+            [
+                ReaderAlias(
+                    alias=canonical_text_id,
+                    language="lat",
+                    kind="canonical_text_id",
+                    target=canonical_text_id,
+                    display="Aeneid",
+                    source_file="fixture",
+                    sources=("ctsv2",),
+                )
+            ],
+        )
+
+        segment = lookup_segment_by_address(catalog_path, f"{canonical_text_id}?ref=1.1")
+        contents = list_segments_for_work(catalog_path, canonical_text_id, limit=1)
+
+    assert segment is not None
+    assert segment["citation_path"] == "1.1"
+    assert segment["canonical_text_id"] == canonical_text_id
+    assert segment["canonical_address"] == f"{canonical_text_id}?ref=1.1"
+    assert [row["citation_path"] for row in contents] == ["1.1"]
+
+
+def test_ctsv2_missing_segment_does_not_scan_unrelated_books() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        first_book = root / "books" / "aeneid.duckdb"
+        second_book = root / "books" / "odyssey.duckdb"
+        canonical_text_id = "urn:ctsv2:lat:aeneid-arma-virumque-cano"
+        create_catalog_db(catalog_path)
+        create_book_db(first_book)
+        create_book_db(second_book)
+        for work_id, book_path, title, language, canonical in [
+            (
+                "urn:cts:latinLit:phi0690.phi003",
+                first_book,
+                "Aeneid",
+                "lat",
+                canonical_text_id,
+            ),
+            (
+                "urn:cts:greekLit:tlg0012.tlg002",
+                second_book,
+                "Odyssey",
+                "grc",
+                "urn:ctsv2:grc:odyssey-andra-moi-ennepe",
+            ),
+        ]:
+            edition = ReaderEdition(
+                edition_id=f"{work_id}:edition",
+                work_id=work_id,
+                label="Fixture",
+                language=language,
+                source_path=root / f"{title}.xml",
+            )
+            register_book(
+                catalog_path,
+                ReaderWork(
+                    work_id=work_id,
+                    collection_id="fixture",
+                    language=language,
+                    title=title,
+                    author="Fixture",
+                    author_id=None,
+                    source_id=work_id.rsplit(":", 1)[-1],
+                    cts_work_urn=work_id,
+                    canonical_text_id=canonical,
+                ),
+                edition,
+                ReaderBookArtifact(
+                    artifact_id=f"{work_id}:artifact",
+                    work_id=work_id,
+                    edition_id=edition.edition_id,
+                    artifact_path=book_path,
+                    source_path=edition.source_path,
+                    adapter="fixture",
+                    source_hash="hash",
+                    segment_count=0,
+                    token_count=0,
+                ),
+            )
+
+        with mock.patch(
+            "langnet.reader.storage._book_has_address",
+            wraps=_book_has_address,
+        ) as has_address:
+            segment = lookup_segment_by_address(catalog_path, f"{canonical_text_id}?ref=9.9")
+
+    assert segment is None
+    assert has_address.call_count == 1
 
 
 def test_reader_paths_are_under_build_reader() -> None:
@@ -578,6 +769,78 @@ def test_reader_catalog_maps_work_title_author_headings_to_unknown_authority() -
     assert works[0]["source_author"] == "Acta Joannis"
     assert works[0]["source_author_id"] == "tlg0317"
     assert works[0]["canonical_author_id"] == "urn:cts:langnet:author.grc.unknown"
+
+
+def test_reader_catalog_displays_suda_source_author_as_soudas() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="langnet:reader:tlg:tlg9010.001",
+            collection_id="tlg",
+            language="grc",
+            title="Lexicon",
+            author="Suda",
+            author_id="tlg9010",
+            source_id="tlg9010.001",
+        )
+        register_author_classifications(
+            catalog_path,
+            [
+                ReaderAuthorClassification(
+                    author_id="tlg9010",
+                    language="grc",
+                    source_author_id="tlg9010",
+                    canonical_name="Suda",
+                    agent_kind="work_title",
+                    historicity_status="not_applicable",
+                    prominence_score=95,
+                    prominence_tier="canonical",
+                    confidence="high",
+                    note="The Suda authority is a work-title label.",
+                    generator_models="test-model",
+                    generator_run_id="run-1",
+                    source_file="authors.csv",
+                ),
+            ],
+        )
+
+        works = list_works(catalog_path, language="grc", query="suda")
+
+    assert works[0]["title"] == "Lexicon"
+    assert works[0]["author"] == "Unknown"
+    assert works[0]["source_author"] == "Soudas"
+    assert works[0]["source_author_id"] == "tlg9010"
+    assert works[0]["canonical_author_id"] == "urn:cts:langnet:author.grc.unknown"
+
+
+def test_reader_catalog_displays_first1k_suda_author_as_soudas() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:greekLit:tlg9010.tlg001",
+            collection_id="first1kgreek",
+            language="grc",
+            title="Suidae lexicon",
+            author="Suda",
+            author_id="urn:cts:greekLit:tlg9010",
+            source_id="tlg9010.tlg001",
+        )
+
+        works = list_works(catalog_path, language="grc", query="suidae")
+
+    assert works[0]["title"] == "Suidae lexicon"
+    assert works[0]["author"] == "Soudas"
+    assert works[0]["source_author"] == "Soudas"
+    assert works[0]["source_author_id"] == "urn:cts:greekLit:tlg9010"
+    assert works[0]["canonical_author_name"] == "Soudas"
 
 
 def test_reader_catalog_surfaces_generated_work_classifications_and_popularity_sort() -> None:
@@ -1632,8 +1895,30 @@ def test_reader_catalog_reports_discovery_coverage_by_language() -> None:
 
 def test_register_work_classifications_can_merge_without_dropping_other_rows() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
-        catalog_path = Path(tmpdir) / "catalog.duckdb"
-        create_catalog_db(catalog_path)
+        root = Path(tmpdir)
+        catalog_path = reader_catalog_path(root)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="lat-1",
+            collection_id="fixture",
+            language="lat",
+            title="Latin Fixture",
+            author="Latin Author",
+            author_id="lat-author",
+            source_id="lat-1",
+        )
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="grc-1",
+            collection_id="fixture",
+            language="grc",
+            title="Greek Fixture",
+            author="Greek Author",
+            author_id="grc-author",
+            source_id="grc-1",
+        )
         register_work_classifications(
             catalog_path,
             [
@@ -1716,7 +2001,30 @@ def test_register_work_classifications_can_merge_without_dropping_other_rows() -
                     global_popularity_tier="canonical",
                     group_popularity_score=99,
                     group_popularity_tier="canonical",
-                )
+                ),
+                ReaderWorkClassification(
+                    work_id="missing-work",
+                    category="Epic",
+                    period="unknown",
+                    date_range="",
+                    authorship_status="uncertain",
+                    popularity_score=1,
+                    popularity_tier="minor",
+                    scope="Epic",
+                    scope_popularity_score=1,
+                    scope_popularity_tier="minor",
+                    confidence="low",
+                    note="Orphan row",
+                    generator_models="test",
+                    generator_run_id="run-3",
+                    source_file="latin-updated.csv",
+                    discovery_group_id="epic",
+                    discovery_tags="orphan",
+                    global_popularity_score=1,
+                    global_popularity_tier="minor",
+                    group_popularity_score=1,
+                    group_popularity_tier="minor",
+                ),
             ],
             merge=True,
         )
@@ -1738,6 +2046,335 @@ def test_register_work_classifications_can_merge_without_dropping_other_rows() -
 
     assert rows == [("grc-1", 88), ("lat-1", 99)]
     assert tags == [("grc-1", "drama"), ("lat-1", "epic"), ("lat-1", "poetry")]
+
+
+def test_register_work_classifications_maps_legacy_tlg_id_to_cts_work() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = reader_catalog_path(root)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:greekLit:tlg0059.tlg030",
+            collection_id="first1k",
+            language="grc",
+            title="Πολιτεία",
+            author="Plato",
+            author_id="urn:cts:greekLit:tlg0059",
+            source_id="tlg0059.tlg030",
+            canonical_text_id="urn:cts:greekLit:tlg0059.tlg030",
+        )
+        register_work_classifications(
+            catalog_path,
+            [
+                ReaderWorkClassification(
+                    work_id="langnet:reader:tlg:tlg0059.030",
+                    category="Philosophy",
+                    period="Classical",
+                    date_range="4th c. BCE",
+                    authorship_status="single_attributed",
+                    popularity_score=100,
+                    popularity_tier="canonical",
+                    scope="Greek Philosophy",
+                    scope_popularity_score=100,
+                    scope_popularity_tier="canonical",
+                    confidence="high",
+                    note="Fixture row",
+                    generator_models="test",
+                    generator_run_id="run-1",
+                    source_file="greek.csv",
+                    discovery_group_id="philosophy",
+                    discovery_tags="philosophy",
+                    global_popularity_score=100,
+                    global_popularity_tier="canonical",
+                    group_popularity_score=100,
+                    group_popularity_tier="canonical",
+                )
+            ],
+        )
+
+        with duckdb.connect(str(catalog_path), read_only=True) as conn:
+            rows = conn.execute(
+                """
+                SELECT work_id, discovery_group_id, group_popularity_score
+                FROM work_classifications
+                """
+            ).fetchall()
+
+    assert rows == [("urn:cts:greekLit:tlg0059.tlg030", "philosophy", 100)]
+
+
+def test_register_author_classifications_skips_authors_not_in_catalog() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = reader_catalog_path(root)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="lat-1",
+            collection_id="fixture",
+            language="lat",
+            title="Latin Fixture",
+            author="Latin Author",
+            author_id="lat-author",
+            source_id="lat-1",
+        )
+        register_author_classifications(
+            catalog_path,
+            [
+                ReaderAuthorClassification(
+                    author_id="lat-author",
+                    language="lat",
+                    source_author_id="lat-author",
+                    canonical_name="Latin Author",
+                    agent_kind="person",
+                    historicity_status="historical",
+                    period="classical",
+                    date_range="",
+                    region="",
+                    cultural_context="",
+                    bio="",
+                    prominence_score=70,
+                    prominence_tier="major",
+                    confidence="high",
+                    note="Fixture row",
+                    generator_models="test",
+                    generator_run_id="run-1",
+                    source_file="authors.csv",
+                ),
+                ReaderAuthorClassification(
+                    author_id="missing-author",
+                    language="lat",
+                    source_author_id="missing-author",
+                    canonical_name="Missing Author",
+                    agent_kind="person",
+                    historicity_status="uncertain",
+                    period="",
+                    date_range="",
+                    region="",
+                    cultural_context="",
+                    bio="",
+                    prominence_score=1,
+                    prominence_tier="minor",
+                    confidence="low",
+                    note="Orphan row",
+                    generator_models="test",
+                    generator_run_id="run-1",
+                    source_file="authors.csv",
+                ),
+            ],
+            merge=True,
+        )
+
+        with duckdb.connect(str(catalog_path), read_only=True) as conn:
+            rows = conn.execute(
+                """
+                SELECT author_id, canonical_name
+                FROM author_classifications
+                ORDER BY author_id
+                """
+            ).fetchall()
+
+    assert rows == [("lat-author", "Latin Author")]
+
+
+def test_author_index_merges_bare_and_cts_author_selectors() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = reader_catalog_path(root)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:greekLit:tlg0632.tlg001",
+            collection_id="first1k",
+            language="grc",
+            title="Pythagorean Sayings",
+            author="Pythagoras",
+            author_id="urn:cts:greekLit:tlg0632",
+            source_id="tlg0632.tlg001",
+        )
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="langnet:reader:tlg:tlg0632.002",
+            collection_id="tlg",
+            language="grc",
+            title="Fragmenta",
+            author="Pythagoras",
+            author_id="tlg0632",
+            source_id="tlg0632.002",
+        )
+        register_author_classifications(
+            catalog_path,
+            [
+                ReaderAuthorClassification(
+                    author_id="tlg0632",
+                    language="grc",
+                    source_author_id="tlg0632",
+                    canonical_name="Pythagoras",
+                    agent_kind="person",
+                    historicity_status="legendary",
+                    period="Archaic",
+                    date_range="6th c. BCE",
+                    region="Samos / Croton",
+                    cultural_context="Greek philosophy",
+                    bio="Traditional founder of the Pythagorean school.",
+                    prominence_score=90,
+                    prominence_tier="canonical",
+                    confidence="high",
+                    note="Fixture row",
+                    generator_models="test",
+                    generator_run_id="run-1",
+                    source_file="authors.csv",
+                )
+            ],
+            merge=True,
+        )
+
+        authors = list_author_index(catalog_path, language="grc", query="pythagoras")
+
+    assert len(authors) == 1
+    assert authors[0]["canonical_author_id"] == "urn:cts:greekLit:tlg0632"
+    assert authors[0]["display_name"] == "Pythagoras"
+    assert authors[0]["work_count"] == PYTHAGORAS_MERGED_WORK_COUNT
+
+
+def test_register_author_classifications_accepts_compact_id_for_cts_author() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = reader_catalog_path(root)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:greekLit:tlg0059.tlg001",
+            collection_id="first1k",
+            language="grc",
+            title="Euthyphro",
+            author="Plato",
+            author_id="urn:cts:greekLit:tlg0059",
+            source_id="tlg0059.tlg001",
+        )
+        register_author_classifications(
+            catalog_path,
+            [
+                ReaderAuthorClassification(
+                    author_id="tlg0059",
+                    language="grc",
+                    source_author_id="tlg0059",
+                    canonical_name="Plato",
+                    agent_kind="person",
+                    historicity_status="historical",
+                    period="Classical",
+                    date_range="c. 428-348 BCE",
+                    region="Athens",
+                    cultural_context="Greek philosophy",
+                    bio="Classical Athenian philosopher.",
+                    prominence_score=100,
+                    prominence_tier="canonical",
+                    confidence="high",
+                    note="Fixture row",
+                    generator_models="test",
+                    generator_run_id="run-1",
+                    source_file="authors.csv",
+                )
+            ],
+            merge=True,
+        )
+
+        authors = list_author_index(catalog_path, language="grc", query="plato")
+
+    assert authors[0]["author_canonical_name"] == "Plato"
+    assert authors[0]["author_prominence_score"] == AUTHOR_CANONICAL_PROMINENCE_SCORE
+    assert authors[0]["canonical_author_id"] == "urn:cts:greekLit:tlg0059"
+
+
+def test_author_prominence_sort_uses_corpus_evidence_for_score_ties() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = reader_catalog_path(root)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="archimedes-1",
+            collection_id="fixture",
+            language="grc",
+            title="Measurement of the Circle",
+            author="Archimedes",
+            author_id="tlg0552",
+            source_id="tlg0552.001",
+        )
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="plato-1",
+            collection_id="fixture",
+            language="grc",
+            title="Republic",
+            author="Plato",
+            author_id="tlg0059",
+            source_id="tlg0059.001",
+        )
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="plato-2",
+            collection_id="fixture",
+            language="grc",
+            title="Phaedo",
+            author="Plato",
+            author_id="tlg0059",
+            source_id="tlg0059.002",
+        )
+        register_author_classifications(
+            catalog_path,
+            [
+                ReaderAuthorClassification(
+                    author_id="tlg0552",
+                    language="grc",
+                    source_author_id="tlg0552",
+                    canonical_name="Archimedes",
+                    agent_kind="person",
+                    historicity_status="historical",
+                    period="Hellenistic",
+                    date_range="287-212 BCE",
+                    region="Syracuse",
+                    cultural_context="Greek science",
+                    bio="Mathematician.",
+                    prominence_score=100,
+                    prominence_tier="canonical",
+                    confidence="high",
+                    note="Fixture row",
+                    generator_models="test",
+                    generator_run_id="run-1",
+                    source_file="authors.csv",
+                ),
+                ReaderAuthorClassification(
+                    author_id="tlg0059",
+                    language="grc",
+                    source_author_id="tlg0059",
+                    canonical_name="Plato",
+                    agent_kind="person",
+                    historicity_status="historical",
+                    period="Classical",
+                    date_range="c. 428-348 BCE",
+                    region="Athens",
+                    cultural_context="Greek philosophy",
+                    bio="Philosopher.",
+                    prominence_score=100,
+                    prominence_tier="canonical",
+                    confidence="high",
+                    note="Fixture row",
+                    generator_models="test",
+                    generator_run_id="run-1",
+                    source_file="authors.csv",
+                ),
+            ],
+            merge=True,
+        )
+
+        authors = list_author_index(catalog_path, language="grc", sort="prominence")
+
+    assert [item["canonical_author_name"] for item in authors[:2]] == ["Plato", "Archimedes"]
 
 
 def test_prune_stale_work_classifications_removes_wrong_language_generated_rows() -> None:
@@ -2011,6 +2648,8 @@ def test_catalog_routes_address_to_book_db() -> None:
                 "edition_label": "PERSEUS reader text",
                 "short_disambiguation_label": "tlg0012.tlg002",
                 "cts_work_urn": work.cts_work_urn,
+                "canonical_text_id": None,
+                "canonical_address": work.cts_work_urn,
                 "work_kind": "work",
                 "parent_work_id": None,
                 "start_citation": None,
@@ -2563,6 +3202,136 @@ def test_register_books_bulk_keeps_last_duplicate_catalog_row() -> None:
             ).fetchall()
 
     assert rows == [("Second", "hash-2")]
+
+
+def test_register_books_replaces_stale_artifacts_for_existing_work() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        work = ReaderWork(
+            work_id="langnet:reader:test:replace",
+            collection_id="test",
+            language="grc",
+            title="First",
+            author="Author",
+            author_id=None,
+            source_id="replace",
+            cts_work_urn=None,
+        )
+
+        first_edition = ReaderEdition(
+            edition_id="edition-1",
+            work_id=work.work_id,
+            label="first",
+            language="grc",
+            source_path=root / "first.xml",
+            cts_edition_urn=None,
+        )
+        register_book(
+            catalog_path,
+            work,
+            first_edition,
+            ReaderBookArtifact(
+                artifact_id="artifact-1",
+                work_id=work.work_id,
+                edition_id=first_edition.edition_id,
+                artifact_path=root / "first.duckdb",
+                source_path=first_edition.source_path,
+                adapter="fixture",
+                source_hash="hash-1",
+                segment_count=4,
+                token_count=20,
+            ),
+        )
+
+        second_edition = ReaderEdition(
+            edition_id="edition-2",
+            work_id=work.work_id,
+            label="second",
+            language="grc",
+            source_path=root / "second.xml",
+            cts_edition_urn=None,
+        )
+        register_book(
+            catalog_path,
+            replace(work, title="Second"),
+            second_edition,
+            ReaderBookArtifact(
+                artifact_id="artifact-2",
+                work_id=work.work_id,
+                edition_id=second_edition.edition_id,
+                artifact_path=root / "second.duckdb",
+                source_path=second_edition.source_path,
+                adapter="fixture",
+                source_hash="hash-2",
+                segment_count=7,
+                token_count=30,
+            ),
+        )
+
+        with duckdb.connect(str(catalog_path), read_only=True) as conn:
+            rows = conn.execute(
+                """
+                SELECT w.title, e.edition_id, a.artifact_id, a.segment_count
+                FROM works w
+                JOIN editions e ON e.work_id = w.work_id
+                JOIN artifacts a ON a.work_id = w.work_id
+                """
+            ).fetchall()
+
+    assert rows == [("Second", "edition-2", "artifact-2", 7)]
+
+
+def test_register_aliases_can_replace_incremental_alias_slice() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        catalog_path = Path(tmpdir) / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        register_aliases(
+            catalog_path,
+            [
+                ReaderAlias(
+                    alias="old",
+                    language="grc",
+                    kind="source_id",
+                    target="target-old",
+                    display="Old",
+                    source_file="fixture",
+                    sources=("fixture",),
+                ),
+                ReaderAlias(
+                    alias="stable",
+                    language="grc",
+                    kind="source_id",
+                    target="target-stable",
+                    display="Stable",
+                    source_file="fixture",
+                    sources=("fixture",),
+                ),
+            ],
+        )
+        register_aliases(
+            catalog_path,
+            [
+                ReaderAlias(
+                    alias="old",
+                    language="grc",
+                    kind="source_id",
+                    target="target-new",
+                    display="New",
+                    source_file="fixture",
+                    sources=("fixture",),
+                )
+            ],
+            replace=False,
+        )
+
+        with duckdb.connect(str(catalog_path), read_only=True) as conn:
+            rows = conn.execute(
+                "SELECT alias, target, display FROM aliases ORDER BY alias"
+            ).fetchall()
+
+    assert rows == [("old", "target-new", "New"), ("stable", "target-stable", "Stable")]
 
 
 def test_catalog_routes_langnet_address_without_scanning_unrelated_books() -> None:

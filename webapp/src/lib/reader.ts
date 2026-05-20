@@ -34,6 +34,8 @@ export type ReaderWork = {
 	source_author_id?: string | null;
 	source_id: string;
 	cts_work_urn: string | null;
+	canonical_text_id?: string | null;
+	canonical_address?: string | null;
 	work_kind?: string;
 	parent_work_id?: string | null;
 	start_citation?: string | null;
@@ -117,6 +119,8 @@ export type ReaderSegment = {
 	address?: string;
 	address_kind?: string;
 	stored_address?: string;
+	canonical_text_id?: string | null;
+	canonical_address?: string | null;
 	language?: LanguageMode;
 	script?: string;
 	transliteration?: string;
@@ -216,6 +220,8 @@ export type ReaderSearchResult = {
 	canonical_author_id?: string | null;
 	canonical_author_name?: string | null;
 	cts_work_urn?: string | null;
+	canonical_text_id?: string | null;
+	canonical_address?: string | null;
 	citation_path: string;
 	segment_id: string;
 	sort_key?: number;
@@ -466,11 +472,33 @@ export function buildReaderRouteSearch(state: Partial<ReaderRouteState>) {
 }
 
 export function readerWorkRef(work: ReaderWork) {
-	return work.cts_work_urn || work.work_id;
+	return work.canonical_text_id || work.canonical_address || work.cts_work_urn || work.work_id;
+}
+
+function meaningfulAuthorName(value: string | null | undefined) {
+	const name = value?.trim() ?? '';
+	if (!name) return '';
+	const normalized = name.toLocaleLowerCase();
+	return normalized === 'unknown' || normalized === 'anonymous' ? '' : name;
+}
+
+function meaningfulAuthorId(value: string | null | undefined) {
+	const id = value?.trim() ?? '';
+	if (!id) return '';
+	return id.includes('.unknown') ? '' : id;
+}
+
+export function readerWorkDisplayAuthor(work: ReaderWork) {
+	return (
+		meaningfulAuthorName(work.author) ||
+		meaningfulAuthorName(work.source_author) ||
+		meaningfulAuthorName(work.canonical_author_name) ||
+		'Unknown'
+	);
 }
 
 export function readerWorkLabel(work: ReaderWork) {
-	const author = work.author?.trim() || 'Unknown';
+	const author = readerWorkDisplayAuthor(work);
 	const title = work.title?.trim() || work.source_id || work.work_id;
 	return `${author}, ${title}`;
 }
@@ -486,16 +514,17 @@ export function readerWorkListDiscriminator(work: ReaderWork, peers: ReaderWork[
 		(peer) =>
 			peer.work_id !== work.work_id &&
 			(peer.title?.trim() || peer.source_id || peer.work_id) === title &&
-			(peer.author || peer.canonical_author_name || '') ===
-				(work.author || work.canonical_author_name || '')
+			readerWorkDisplayAuthor(peer) === readerWorkDisplayAuthor(work)
 	);
 	return duplicateTitle ? work.source_id || work.cts_work_urn || work.work_id : '';
 }
 
 export function readerAuthorRouteStateFromWork(work: ReaderWork): Partial<ReaderRouteState> | null {
-	const authorId = work.canonical_author_id || work.author_id;
-	const authorName = work.source_author || work.author || work.canonical_author_name || '';
-	if (!authorId && !authorName) return null;
+	const canonicalAuthorId = meaningfulAuthorId(work.canonical_author_id);
+	const sourceAuthorId = meaningfulAuthorId(work.source_author_id);
+	const authorId = canonicalAuthorId || sourceAuthorId || meaningfulAuthorId(work.author_id);
+	const authorName = readerWorkDisplayAuthor(work);
+	if (!authorId && (!authorName || authorName === 'Unknown')) return null;
 	return {
 		readerView: 'authors',
 		authorId: authorId || authorName,

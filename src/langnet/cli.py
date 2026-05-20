@@ -1139,7 +1139,7 @@ def reader_catalogs(output: str) -> None:
         (
             "development",
             "Development unified reader catalog",
-            "examples/debug/reader_full_curated_current/catalog.duckdb",
+            "data/build/reader/catalog.duckdb",
             "development",
         ),
         (

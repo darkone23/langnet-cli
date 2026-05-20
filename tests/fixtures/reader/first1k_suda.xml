@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Suidae lexicon</title>
+        <author>Suda</author>
+      </titleStmt>
+      <publicationStmt>
+        <p>Fixture</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>First1KGreek fixture source</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div type="edition" n="urn:cts:greekLit:tlg9010.tlg001.1st1K-grc1" xml:lang="grc">
+        <div type="textpart" subtype="entry" n="alpha.1">
+          <p>ἄλφα λεξικὸν παράδειγμα</p>
+        </div>
+      </div>
+    </body>
+  </text>
+</TEI>
