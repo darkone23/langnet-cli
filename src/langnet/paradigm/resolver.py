@@ -26,6 +26,7 @@ from langnet.paradigm.greek_learner_keys import (
     greek_learner_paradigm_record,
     is_unresolved_greek_learner_key,
 )
+from langnet.pedagogy.foster import foster_display_for_features
 
 
 def resolve_paradigm_request(
@@ -34,7 +35,7 @@ def resolve_paradigm_request(
     normalized_form = _normalized_form(searched_form, lookup_records)
     enriched_records = _enrich_lookup_records(language, searched_form, lookup_records)
     candidates = [
-        _candidate_from_evidence(searched_form, evidence)
+        _candidate_from_evidence(searched_form, evidence, record)
         for record in enriched_records
         for evidence in _extract_for_language(language, record)
     ]
@@ -132,7 +133,9 @@ def _normalized_form(searched_form: str, records: Sequence[Mapping[str, object]]
 
 
 def _candidate_from_evidence(
-    searched_form: str, evidence: GrammarEvidence
+    searched_form: str,
+    evidence: GrammarEvidence,
+    record: Mapping[str, object],
 ) -> ParadigmResolutionCandidate:
     paradigm_kind = _paradigm_kind(evidence.part_of_speech)
     native_analyses = _native_analyses(evidence)
@@ -143,11 +146,23 @@ def _candidate_from_evidence(
     ]
     request, unresolved_reason = _build_request(evidence, paradigm_kind)
     entry_type = _entry_type(searched_form, evidence)
+    observed_form = _record_observed_form(record, searched_form)
+    slot_features = _primary_slot_features(native_analyses)
+    foster_display = _record_foster_display(record, evidence.language, slot_features)
     return ParadigmResolutionCandidate(
         lemma=evidence.lemma,
         entry_type=entry_type,
         part_of_speech=evidence.part_of_speech,
         paradigm_kind=paradigm_kind,
+        observed_form=observed_form,
+        slot_features=slot_features,
+        foster_display=foster_display,
+        display_summary=_candidate_display_summary(
+            evidence.lemma,
+            slot_features,
+            foster_display,
+        ),
+        ranking_reasons=_record_string_list(record, "ranking_reasons"),
         native_analyses=native_analyses,
         functional_analyses=functional_analyses,
         paradigm_request=request,
@@ -155,6 +170,59 @@ def _candidate_from_evidence(
         provenance=[evidence.source],
         unresolved_reason=unresolved_reason,
     )
+
+
+def _record_observed_form(record: Mapping[str, object], searched_form: str) -> str:
+    for key in ("observed_form", "normalized_form", "form"):
+        value = record.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return searched_form
+
+
+def _primary_slot_features(native_analyses: Sequence[NativeAnalysis]) -> dict[str, FeatureValue]:
+    if not native_analyses:
+        return {}
+    features = native_analyses[0].features
+    return {
+        key: value
+        for key, value in features.items()
+        if key in {"case", "number", "gender", "person", "tense", "voice", "mood"}
+    }
+
+
+def _record_foster_display(
+    record: Mapping[str, object],
+    language: LanguageCode,
+    features: Mapping[str, FeatureValue],
+) -> str:
+    value = record.get("foster_display")
+    if isinstance(value, str):
+        return value
+    return foster_display_for_features(language, features)
+
+
+def _candidate_display_summary(
+    lemma: str,
+    features: Mapping[str, FeatureValue],
+    foster_display: str,
+) -> str | None:
+    if not foster_display:
+        return None
+    grammar_bits = [
+        str(features[key])
+        for key in ("case", "number", "gender", "person", "tense", "voice", "mood")
+        if features.get(key)
+    ]
+    grammar = " ".join(grammar_bits)
+    return f"{lemma}: {grammar} ({foster_display})" if grammar else f"{lemma}: {foster_display}"
+
+
+def _record_string_list(record: Mapping[str, object], key: str) -> list[str]:
+    value = record.get(key)
+    if not isinstance(value, Sequence) or isinstance(value, str | bytes):
+        return []
+    return [item for item in value if isinstance(item, str)]
 
 
 def _entry_type(searched_form: str, evidence: GrammarEvidence) -> EntryType:
@@ -296,6 +364,10 @@ def _build_diogenes_request(
         return None, "unsupported_part_of_speech"
     fetchable_kind = cast(FetchableParadigmKind, paradigm_kind)
     lemma = evidence.features.get("source_key") if evidence.language == "grc" else evidence.lemma
+    if evidence.language == "grc" and not isinstance(lemma, str):
+        hint_record = greek_learner_paradigm_record(evidence.lemma)
+        if hint_record is not None:
+            lemma = _record_source_key(hint_record)
     if not isinstance(lemma, str) or not lemma:
         return None, "missing_lemma"
     return (

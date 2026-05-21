@@ -52,6 +52,9 @@ def _base_features(
     genitive = _first_string([record, metadata], ["genitive_singular", "genitive", "gen_sg"])
     if genitive:
         features["genitive_singular"] = genitive
+    declension = _first_string([record, metadata], ["declension"])
+    if declension:
+        features["declension"] = declension
     article = _first_string([record, metadata], ["article"])
     if article:
         features["article"] = article
@@ -212,6 +215,8 @@ def _confidence_for(
     if part_of_speech in {"noun", "adjective", "pronoun"}:
         if language == "san":
             return "high" if "heritage_gender" in features else "low"
+        if language in {"lat", "grc"} and {"case", "number"}.issubset(features):
+            return "high"
         if language in {"lat", "grc"}:
             return "high" if "declension" in features else "medium"
     return "low"

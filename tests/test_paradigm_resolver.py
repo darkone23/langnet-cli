@@ -29,6 +29,12 @@ def test_resolver_maps_sanskrit_inflected_noun_to_declension_request() -> None:
     assert candidate.paradigm_request.source == "heritage:sktdeclin"
     assert candidate.paradigm_request.options == {"gender": "Mas"}
     assert candidate.functional_analyses[0].relation == "possession_or_association"
+    assert candidate.observed_form == "putrāṇām"
+    assert candidate.slot_features == {
+        "case": "genitive",
+        "number": "plural",
+        "gender": "masculine",
+    }
 
 
 def test_resolver_preserves_sanskrit_syncretic_case_ambiguity() -> None:
@@ -89,6 +95,39 @@ def test_resolver_keeps_latin_puellae_ambiguous_under_one_lemma() -> None:
     assert candidate.paradigm_request.lemma == "puella"
 
 
+def test_resolver_carries_candidate_learner_display_fields_from_record() -> None:
+    payload = resolve_paradigm_request(
+        "lat",
+        "puellae",
+        [
+            {
+                "normalized_form": "puellae",
+                "observed_form": "puellae",
+                "lemma": "puella",
+                "part_of_speech": "noun",
+                "gender": "feminine",
+                "source": "whitakers",
+                "foster_display": "Possessing Function; Single; Female",
+                "ranking_reasons": ["observed-form", "case-number-gender"],
+                "analyses": [{"case": "genitive", "number": "singular"}],
+            }
+        ],
+    )
+
+    candidate = payload.candidates[0]
+    assert candidate.observed_form == "puellae"
+    assert candidate.slot_features == {
+        "case": "genitive",
+        "number": "singular",
+        "gender": "feminine",
+    }
+    assert candidate.foster_display == "Possessing Function; Single; Female"
+    assert candidate.display_summary == (
+        "puella: genitive singular feminine (Possessing Function; Single; Female)"
+    )
+    assert candidate.ranking_reasons == ["observed-form", "case-number-gender"]
+
+
 def test_resolver_maps_greek_inflected_noun_to_diogenes_request() -> None:
     payload = resolve_paradigm_request(
         "grc",
@@ -117,6 +156,32 @@ def test_resolver_maps_greek_inflected_noun_to_diogenes_request() -> None:
         "location",
         "instrument_or_means",
     }
+
+
+def test_resolver_uses_greek_learner_key_for_analyzed_morpheus_lemma() -> None:
+    payload = resolve_paradigm_request(
+        "grc",
+        "λόγου",
+        [
+            {
+                "normalized_form": "λόγου",
+                "observed_form": "λόγου",
+                "lemma": "logos",
+                "part_of_speech": "noun",
+                "gender": "masculine",
+                "source": "diogenes:morpheus",
+                "foster_display": "Possessing Function; Single; Male",
+                "analyses": [{"case": "genitive", "number": "singular"}],
+            }
+        ],
+    )
+
+    candidate = payload.candidates[0]
+    assert candidate.lemma == "logos"
+    assert candidate.paradigm_request is not None
+    assert candidate.paradigm_request.lemma == "lo/gos"
+    assert candidate.observed_form == "λόγου"
+    assert candidate.foster_display == "Possessing Function; Single; Male"
 
 
 def test_resolver_maps_greek_learner_key_to_diogenes_request() -> None:

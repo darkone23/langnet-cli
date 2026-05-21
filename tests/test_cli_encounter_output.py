@@ -234,6 +234,47 @@ def test_encounter_paradigm_resolution_uses_sanskrit_morphology_features() -> No
     assert functional_analyses[0]["relation"] == "possession_or_association"
 
 
+def test_encounter_paradigm_resolution_carries_candidate_learner_fields() -> None:
+    claim = _claim_with_triples(
+        tool="heritage",
+        subject="lex:putra",
+        triples=[
+            {
+                "subject": "form:putra",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "putra",
+                    "form": "putrāṇām",
+                    "analysis": "m. gen. pl.",
+                    "features": {
+                        "case": "genitive",
+                        "number": "plural",
+                        "gender": "masculine",
+                    },
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            }
+        ],
+    )
+
+    payload = _encounter_paradigm_resolution_payload(
+        "san",
+        "putraa.naam",
+        [asdict(claim)],
+    )
+
+    _assert_matches_schema(payload, Path("docs/schemas/paradigm_resolution.v1.schema.json"))
+    candidate = cast(list[dict[str, object]], payload["candidates"])[0]
+    assert candidate["observed_form"] == "putrāṇām"
+    assert candidate["slot_features"] == {
+        "case": "genitive",
+        "number": "plural",
+        "gender": "masculine",
+    }
+    assert candidate["foster_display"] == "Possessing Function; Group; Male"
+    assert candidate["ranking_reasons"] == ["observed-form", "lemma", "case-number-gender"]
+
+
 def test_encounter_paradigm_resolution_preserves_latin_ambiguity_from_triples() -> None:
     claim = _claim_with_triples(
         tool="whitakers",
@@ -353,6 +394,67 @@ def test_encounter_paradigm_resolution_preserves_latin_ambiguity_from_triples() 
     }
     paradigm_request = cast(dict[str, object], candidate["paradigm_request"])
     assert paradigm_request["source"] == "diogenes:inflect"
+
+
+def test_encounter_paradigm_resolution_uses_diogenes_morpheus_form_graph() -> None:
+    claim = _claim_with_triples(
+        tool="diogenes",
+        subject="lex:logos",
+        triples=[
+            {
+                "subject": "form:logou",
+                "predicate": "inflection_of",
+                "object": "lex:logos",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "form:logou",
+                "predicate": "has_form",
+                "object": "λόγου",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "form:logou",
+                "predicate": "has_pos",
+                "object": "noun",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "form:logou",
+                "predicate": "has_case",
+                "object": "genitive",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "form:logou",
+                "predicate": "has_number",
+                "object": "singular",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+            {
+                "subject": "form:logou",
+                "predicate": "has_gender",
+                "object": "masculine",
+                "metadata": {"evidence": {"source_tool": "diogenes"}},
+            },
+        ],
+    )
+
+    payload = _encounter_paradigm_resolution_payload("grc", "λόγου", [asdict(claim)])
+
+    _assert_matches_schema(payload, Path("docs/schemas/paradigm_resolution.v1.schema.json"))
+    candidate = cast(list[dict[str, object]], payload["candidates"])[0]
+    assert candidate["lemma"] == "logos"
+    assert candidate["observed_form"] == "λόγου"
+    assert candidate["slot_features"] == {
+        "case": "genitive",
+        "number": "singular",
+        "gender": "masculine",
+    }
+    assert candidate["foster_display"] == "Possessing Function; Single; Male"
+    paradigm_request = cast(dict[str, object], candidate["paradigm_request"])
+    assert paradigm_request["source"] == "diogenes:inflect"
+    assert paradigm_request["lemma"] == "lo/gos"
 
 
 def test_encounter_json_includes_paradigm_resolution_when_requested() -> None:

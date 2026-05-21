@@ -3,6 +3,7 @@ from langnet.pedagogy.foster import (
     FOSTER_LATIN_MAPPINGS,
     FOSTER_SANSKRIT_MAPPINGS,
     foster_codes_for_features,
+    foster_display_for_features,
 )
 
 
@@ -53,3 +54,27 @@ def test_foster_codes_for_current_feature_dicts() -> None:
         "tense": "TIME_NOW",
         "voice": "DOING",
     }
+
+
+def test_foster_display_for_feature_dicts_uses_learner_labels() -> None:
+    assert (
+        foster_display_for_features(
+            "san",
+            {"case": "genitive", "number": "plural", "gender": "masculine"},
+        )
+        == "Possessing Function; Group; Male"
+    )
+
+    assert (
+        foster_display_for_features(
+            "lat",
+            {
+                "person": "1",
+                "number": "plural",
+                "tense": "present",
+                "voice": "active",
+                "mood": "indicative",
+            },
+        )
+        == "Group; Time-Now; Statement; Doing"
+    )

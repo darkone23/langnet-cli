@@ -27,6 +27,11 @@ export type ParadigmResolutionCandidate = {
 	entry_type: string;
 	part_of_speech: string;
 	paradigm_kind: string;
+	observed_form: string | null;
+	slot_features: Record<string, ParadigmFeatureValue>;
+	foster_display: string;
+	display_summary: string | null;
+	ranking_reasons: string[];
 	native_analyses: ParadigmAnalysis[];
 	functional_analyses: FunctionalParadigmAnalysis[];
 	paradigm_request: ParadigmRequest | null;
@@ -69,6 +74,11 @@ function normalizeCandidate(candidate: JsonRecord): ParadigmResolutionCandidate 
 		entry_type: stringValue(candidate.entry_type),
 		part_of_speech: stringValue(candidate.part_of_speech),
 		paradigm_kind: stringValue(candidate.paradigm_kind),
+		observed_form: stringValue(candidate.observed_form) || null,
+		slot_features: featureRecord(candidate.slot_features),
+		foster_display: stringValue(candidate.foster_display),
+		display_summary: stringValue(candidate.display_summary) || null,
+		ranking_reasons: arrayOfStrings(candidate.ranking_reasons),
 		native_analyses: arrayOfRecords(candidate.native_analyses).map(normalizeNativeAnalysis),
 		functional_analyses: arrayOfRecords(candidate.functional_analyses).map(
 			normalizeFunctionalAnalysis

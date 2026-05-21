@@ -4,6 +4,7 @@ import type { ParadigmResolutionCandidate } from './paradigm-resolution';
 import {
 	curateParadigmCandidates,
 	paradigmPayloadHasForms,
+	paradigmSlotMatchesCandidate,
 	paradigmSlotGroups,
 	sanskritParadigmLemmaFallbacks
 } from './paradigm-ui';
@@ -23,6 +24,11 @@ function candidate(
 		confidence: 'low',
 		provenance: ['test'],
 		unresolved_reason: 'missing_gender_or_declension',
+		observed_form: null,
+		slot_features: {},
+		foster_display: '',
+		display_summary: null,
+		ranking_reasons: [],
 		...overrides
 	};
 }
@@ -52,6 +58,37 @@ assert.deepEqual(
 	['aṅga_1']
 );
 assert.equal(curatedAshtanga.hiddenCount, 5);
+
+const fosterCandidates = [
+	candidate('noise', {
+		confidence: 'high',
+		unresolved_reason: null,
+		paradigm_request: {
+			source: 'heritage:sktdeclin',
+			language: 'san',
+			lemma: 'noise',
+			kind: 'declension',
+			options: { gender: 'Mas' }
+		}
+	}),
+	candidate('putra', {
+		confidence: 'high',
+		unresolved_reason: null,
+		observed_form: 'putrāṇām',
+		slot_features: { case: 'genitive', number: 'plural', gender: 'masculine' },
+		foster_display: 'Possessing Function; Group; Male',
+		ranking_reasons: ['observed-form', 'lemma', 'case-number-gender'],
+		paradigm_request: {
+			source: 'heritage:sktdeclin',
+			language: 'san',
+			lemma: 'putra',
+			kind: 'declension',
+			options: { gender: 'Mas' }
+		}
+	})
+];
+
+assert.equal(curateParadigmCandidates(fosterCandidates).visible[0].lemma, 'putra');
 
 const unresolvedOnly = curateParadigmCandidates([
 	candidate('unknown-a'),
@@ -131,6 +168,23 @@ const amoBlock = {
 assert.deepEqual(
 	paradigmSlotGroups(amoBlock).map((group) => group.label),
 	['Indicative · present · active', 'Indicative · present · passive']
+);
+
+assert.equal(
+	paradigmSlotMatchesCandidate(
+		{
+			features: { case: 'genitive', number: 'singular' },
+			forms: [{ text: 'λόγου', normalized: 'λόγου', source_key: 'lo/gou' }],
+			source_label: '',
+			is_ambiguous: false
+		},
+		candidate('λόγος', {
+			observed_form: 'λόγου',
+			slot_features: { case: 'genitive', number: 'singular' }
+		}),
+		'λόγου'
+	),
+	true
 );
 
 assert.deepEqual(sanskritParadigmLemmaFallbacks('aṅga_1'), ['aṅga_1', 'anga']);

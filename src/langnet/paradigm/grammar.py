@@ -67,6 +67,11 @@ class ParadigmResolutionCandidate:
     entry_type: EntryType
     part_of_speech: str
     paradigm_kind: ParadigmKind
+    observed_form: str | None = None
+    slot_features: dict[str, FeatureValue] = field(default_factory=dict)
+    foster_display: str = ""
+    display_summary: str | None = None
+    ranking_reasons: list[str] = field(default_factory=list)
     native_analyses: list[NativeAnalysis] = field(default_factory=list)
     functional_analyses: list[FunctionalAnalysis] = field(default_factory=list)
     paradigm_request: ParadigmRequest | None = None

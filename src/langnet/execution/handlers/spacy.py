@@ -200,15 +200,19 @@ def _process_token_triples(
 
     pos_val = tok.get("pos")
     if isinstance(pos_val, str):
-        triples.append(_make_triple(lex_anchor, "has_pos", pos_val.lower(), base_evidence))
+        pos = pos_val.lower()
+        triples.append(_make_triple(lex_anchor, "has_pos", pos, base_evidence))
+        if form_anchor:
+            triples.append(_make_triple(form_anchor, "has_pos", pos, base_evidence))
 
     morph_val = tok.get("morph")
     morph = cast(dict[str, object], morph_val) if isinstance(morph_val, Mapping) else {}
+    morph_anchor = form_anchor or lex_anchor
     for feature_key, pred in _FEATURE_PRED_MAP.items():
         val = _pick_first(morph.get(feature_key)) if morph else None
         if val:
             mapped = _map_feature(feature_key, str(val))
-            triples.append(_make_triple(lex_anchor, pred, mapped, base_evidence))
+            triples.append(_make_triple(morph_anchor, pred, mapped, base_evidence))
 
     return triples
 

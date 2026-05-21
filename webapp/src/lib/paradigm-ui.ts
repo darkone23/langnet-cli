@@ -1,4 +1,9 @@
-import { paradigmRequestKey, type ParadigmBlock, type ParadigmPayload } from './paradigm';
+import {
+	paradigmRequestKey,
+	type ParadigmBlock,
+	type ParadigmPayload,
+	type ParadigmSlot
+} from './paradigm';
 import type { ParadigmResolutionCandidate } from './paradigm-resolution';
 
 export type CuratedParadigmCandidates = {
@@ -45,6 +50,32 @@ export function paradigmUnavailableMessage(payload: ParadigmPayload | undefined)
 	const warning = payload?.warnings.find(Boolean);
 	if (warning) return `Table unavailable: ${warning.replace(/_/g, ' ')}.`;
 	return 'Table unavailable: the source returned no forms.';
+}
+
+export function paradigmSlotMatchesCandidate(
+	slot: ParadigmSlot,
+	candidate: ParadigmResolutionCandidate,
+	query: string
+) {
+	const slotFeatures = slot.features ?? {};
+	const targetFeatures = candidate.slot_features ?? {};
+	const featureKeys = Object.keys(targetFeatures);
+
+	if (
+		featureKeys.length > 0 &&
+		featureKeys.every(
+			(key) => String(slotFeatures[key] ?? '') === String(targetFeatures[key] ?? '')
+		)
+	) {
+		return true;
+	}
+
+	const targets = new Set(
+		[candidate.observed_form, query].filter((value): value is string => Boolean(value))
+	);
+	return slot.forms.some(
+		(form) => targets.has(form.text) || targets.has(form.normalized) || targets.has(form.source_key)
+	);
 }
 
 export function paradigmSlotGroups(block: ParadigmBlock): ParadigmSlotGroup[] {
@@ -97,6 +128,8 @@ function dedupeCandidates(candidates: ParadigmResolutionCandidate[]) {
 function compareCandidates(left: ParadigmResolutionCandidate, right: ParadigmResolutionCandidate) {
 	return (
 		Number(isResolvedCandidate(right)) - Number(isResolvedCandidate(left)) ||
+		determinedRank(right) - determinedRank(left) ||
+		Number(Boolean(right.observed_form)) - Number(Boolean(left.observed_form)) ||
 		confidenceRank(right.confidence) - confidenceRank(left.confidence) ||
 		right.native_analyses.length - left.native_analyses.length ||
 		left.lemma.localeCompare(right.lemma)
@@ -111,6 +144,15 @@ function confidenceRank(value: string) {
 	if (value === 'high') return 3;
 	if (value === 'medium') return 2;
 	if (value === 'low') return 1;
+	return 0;
+}
+
+function determinedRank(candidate: ParadigmResolutionCandidate) {
+	const reasons = new Set(candidate.ranking_reasons);
+	if (reasons.has('case-number-gender') || reasons.has('person-number-tense-voice-mood')) {
+		return 2;
+	}
+	if (Object.keys(candidate.slot_features ?? {}).length > 0) return 1;
 	return 0;
 }
 

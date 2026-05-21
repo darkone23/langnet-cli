@@ -4,6 +4,7 @@ from langnet.pedagogy.foster import (
     FOSTER_SANSKRIT_MAPPINGS,
     FosterMappings,
     foster_codes_for_features,
+    foster_display_for_features,
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "FOSTER_SANSKRIT_MAPPINGS",
     "FosterMappings",
     "foster_codes_for_features",
+    "foster_display_for_features",
 ]

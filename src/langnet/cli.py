@@ -90,6 +90,7 @@ from langnet.execution.handlers.diogenes import _parse_diogenes_html
 from langnet.execution.handlers.whitakers import _parse_whitaker_output
 from langnet.execution.source_text import analyze_source_entry, compact_source_gloss
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
+from langnet.morphology.candidates import MorphologyCandidate, candidates_from_triples
 from langnet.normalizer.core import NormalizationResult, _hash_query
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
 from langnet.normalizer.utils import normalize_greek_compatibility, strip_accents
@@ -6074,6 +6075,7 @@ _PARADIGM_ANALYSIS_FEATURES = {
 
 _PARADIGM_DIRECT_FEATURE_KEYS = {
     "gender",
+    "declension",
     "genitive_singular",
     "genitive",
     "gen_sg",
@@ -6144,9 +6146,43 @@ def _encounter_paradigm_records(
     claims: Sequence[Mapping[str, object]],
 ) -> list[Mapping[str, object]]:
     triples = _encounter_claim_triples_with_tools(claims)
-    records = _direct_paradigm_records(language, text, triples)
+    records = _candidate_paradigm_records(language, text, triples)
+    records.extend(_direct_paradigm_records(language, text, triples))
     records.extend(_graph_paradigm_records(language, text, triples))
     return _merge_paradigm_records(records)
+
+
+def _candidate_paradigm_records(
+    language: str,
+    text: str,
+    triples: Sequence[tuple[str, Mapping[str, object]]],
+) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
+    raw_triples = [triple for _, triple in triples]
+    for candidate in candidates_from_triples(language, text, raw_triples):
+        if not candidate.features:
+            continue
+        records.append(_paradigm_record_from_candidate(candidate))
+    return records
+
+
+def _paradigm_record_from_candidate(candidate: MorphologyCandidate) -> dict[str, object]:
+    features: dict[str, object] = dict(candidate.features)
+    if candidate.part_of_speech:
+        features.setdefault("part_of_speech", candidate.part_of_speech)
+    record = _paradigm_record_from_features(
+        language=candidate.language,
+        normalized_form=candidate.normalized_form,
+        lemma=candidate.lemma,
+        features=features,
+        source=_paradigm_source_label(candidate.source),
+    )
+    record["observed_form"] = candidate.observed_form
+    record["foster_display"] = candidate.foster_display
+    record["ranking_reasons"] = list(candidate.ranking_reasons)
+    if candidate.functional_relations:
+        record["functional_relations"] = list(candidate.functional_relations)
+    return record
 
 
 def _direct_paradigm_records(

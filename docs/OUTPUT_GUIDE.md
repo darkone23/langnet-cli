@@ -208,6 +208,39 @@ Important resolver fields:
   table.
 - `unresolved_reason` explains why a table should not be fetched yet.
 
+The Foster-friendly morphology path should keep source features and learner
+labels together. A source-backed candidate for Sanskrit `putraa.naam` should be
+representable in this shape:
+
+```json
+{
+  "lemma": "putra",
+  "observed_form": "putrāṇām",
+  "native_analyses": [
+    {
+      "language": "san",
+      "features": {"case": "genitive", "number": "plural", "gender": "masculine"},
+      "source": "heritage:sktreader"
+    }
+  ],
+  "functional_analyses": [
+    {
+      "relation": "possession_or_association",
+      "native_feature": {"case": "genitive", "number": "plural"},
+      "confidence": "high"
+    }
+  ],
+  "foster_display": "Possessing Function; Group; Male",
+  "paradigm_request": {
+    "source": "heritage:sktdeclin",
+    "language": "san",
+    "lemma": "putra",
+    "kind": "declension",
+    "options": {"gender": "Mas"}
+  }
+}
+```
+
 Graceful degradation is part of the contract. If a source request fails, the
 payload should prefer structured warnings over pretending the table is complete.
 If Diogenes or Heritage returns source labels that cannot be fully normalized,

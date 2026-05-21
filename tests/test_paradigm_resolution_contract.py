@@ -97,6 +97,11 @@ def test_latin_puellae_can_carry_multiple_native_analyses_for_one_lemma() -> Non
         entry_type="variant",
         part_of_speech="noun",
         paradigm_kind="declension",
+        observed_form="puellae",
+        slot_features={"case": "genitive", "number": "singular"},
+        foster_display="Possessing Function; Single; Female",
+        display_summary="puella: genitive singular (Possessing Function; Single; Female)",
+        ranking_reasons=["observed-form", "case-number-gender"],
         native_analyses=[
             NativeAnalysis(
                 language="lat",
@@ -152,6 +157,8 @@ def test_latin_puellae_can_carry_multiple_native_analyses_for_one_lemma() -> Non
 
     _assert_matches_schema(data)
     assert len(data["candidates"][0]["native_analyses"]) == PUELLAE_ANALYSIS_COUNT
+    assert data["candidates"][0]["observed_form"] == "puellae"
+    assert data["candidates"][0]["foster_display"] == "Possessing Function; Single; Female"
     assert data["candidates"][0]["paradigm_request"]["source"] == "diogenes:inflect"
 
 

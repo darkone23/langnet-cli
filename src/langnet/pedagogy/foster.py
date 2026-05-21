@@ -172,6 +172,47 @@ _LANGUAGE_MAPPINGS = {
     "sanskrit": FOSTER_SANSKRIT_MAPPINGS,
 }
 
+FOSTER_DISPLAY_LABELS = {
+    "NAMING": "Naming Function",
+    "CALLING": "Calling Function",
+    "RECEIVING": "Receiving Function",
+    "POSSESSING": "Possessing Function",
+    "TO_FOR": "To-For Function",
+    "BY_WITH_FROM_IN": "By-With-From-In Function",
+    "IN_WHERE": "In-Where Function",
+    "MALE": "Male",
+    "FEMALE": "Female",
+    "NEUTER": "Neuter",
+    "SINGLE": "Single",
+    "PAIR": "Pair",
+    "GROUP": "Group",
+    "TIME_NOW": "Time-Now",
+    "TIME_LATER": "Time-Later",
+    "TIME_WAS_DOING": "Time-Was-Doing",
+    "TIME_PAST": "Time-Past",
+    "TIME_HAD_DONE": "Time-Had-Done",
+    "ONCE_DONE": "Once-Done",
+    "STATEMENT": "Statement",
+    "WISH_MAY_BE": "Wish-May-Be",
+    "MAYBE_WILL_DO": "Maybe-Will-Do",
+    "COMMAND": "Command",
+    "DOING": "Doing",
+    "BEING_DONE_TO": "Being Done To",
+    "FOR_SELF": "For Self",
+    "PARTICIPLE": "Participle",
+}
+
+FOSTER_DISPLAY_ORDER = (
+    "case",
+    "number",
+    "gender",
+    "tense",
+    "mood",
+    "voice",
+    "participle",
+    "pos",
+)
+
 
 def _normalize_feature_value(value: object) -> str | None:
     if not isinstance(value, str):
@@ -220,3 +261,17 @@ def foster_codes_for_features(
         result["pos"] = pos_label
 
     return result
+
+
+def foster_display_for_features(language: str, features: Mapping[str, object]) -> str:
+    """Return learner-facing Foster labels for a grammar feature dictionary."""
+    codes = foster_codes_for_features(language, features)
+    labels: list[str] = []
+    for key in FOSTER_DISPLAY_ORDER:
+        code = codes.get(key)
+        if code is None:
+            continue
+        label = FOSTER_DISPLAY_LABELS.get(code, code.replace("_", " ").title())
+        if label not in labels:
+            labels.append(label)
+    return "; ".join(labels)

@@ -54,6 +54,7 @@
 	import {
 		curateParadigmCandidates,
 		paradigmPayloadHasForms,
+		paradigmSlotMatchesCandidate,
 		paradigmSlotGroups,
 		paradigmUnavailableMessage
 	} from '$lib/paradigm-ui';
@@ -1358,10 +1359,12 @@
 
 	function paradigmCandidateSubtitle(candidate: ParadigmResolutionCandidate) {
 		return [
+			candidate.observed_form ? `form ${candidate.observed_form}` : '',
 			candidate.part_of_speech && candidate.part_of_speech !== 'unknown'
 				? candidate.part_of_speech
 				: '',
 			candidate.entry_type && candidate.entry_type !== 'unknown' ? candidate.entry_type : '',
+			candidate.foster_display,
 			candidate.confidence ? `${candidate.confidence} confidence` : ''
 		]
 			.filter(Boolean)
@@ -1449,22 +1452,6 @@
 		} finally {
 			paradigmLoading = { ...paradigmLoading, [key]: false };
 		}
-	}
-
-	function paradigmSlotMatches(
-		slotForms: { text: string; normalized: string; source_key: string }[]
-	) {
-		const resolution = encounter?.paradigm_resolution;
-		const targets = new Set(
-			[resolution?.searched_form, resolution?.normalized_form, encounter?.query]
-				.filter((value): value is string => Boolean(value))
-				.map((value) => value.normalize('NFC').toLowerCase())
-		);
-		return slotForms.some((form) =>
-			[form.text, form.normalized, form.source_key].some((value) =>
-				targets.has(value.normalize('NFC').toLowerCase())
-			)
-		);
 	}
 
 	function paradigmSlotFeatureSummary(features: Record<string, unknown>) {
@@ -3831,7 +3818,11 @@
 																	<div class="orion-paradigm-slots">
 																		{#each group.slots as slot}
 																			<div
-																				class={paradigmSlotMatches(slot.forms)
+																				class={paradigmSlotMatchesCandidate(
+																					slot,
+																					candidate,
+																					encounter?.query ?? ''
+																				)
 																					? 'orion-paradigm-slot orion-paradigm-slot-match'
 																					: 'orion-paradigm-slot'}
 																			>

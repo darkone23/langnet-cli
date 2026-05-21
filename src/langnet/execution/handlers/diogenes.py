@@ -97,6 +97,44 @@ _POS_CANONICAL = {
     "interj": "interjection",
 }
 
+_MORPHEUS_TAG_FEATURES: dict[str, tuple[str, str]] = {
+    "nom": (predicates.HAS_CASE, "nominative"),
+    "gen": (predicates.HAS_CASE, "genitive"),
+    "dat": (predicates.HAS_CASE, "dative"),
+    "acc": (predicates.HAS_CASE, "accusative"),
+    "voc": (predicates.HAS_CASE, "vocative"),
+    "abl": (predicates.HAS_CASE, "ablative"),
+    "loc": (predicates.HAS_CASE, "locative"),
+    "sg": (predicates.HAS_NUMBER, "singular"),
+    "sing": (predicates.HAS_NUMBER, "singular"),
+    "dual": (predicates.HAS_NUMBER, "dual"),
+    "du": (predicates.HAS_NUMBER, "dual"),
+    "pl": (predicates.HAS_NUMBER, "plural"),
+    "masc": (predicates.HAS_GENDER, "masculine"),
+    "fem": (predicates.HAS_GENDER, "feminine"),
+    "neut": (predicates.HAS_GENDER, "neuter"),
+    "1st": (predicates.HAS_PERSON, "1"),
+    "2nd": (predicates.HAS_PERSON, "2"),
+    "3rd": (predicates.HAS_PERSON, "3"),
+    "pres": (predicates.HAS_TENSE, "present"),
+    "imperf": (predicates.HAS_TENSE, "imperfect"),
+    "fut": (predicates.HAS_TENSE, "future"),
+    "aor": (predicates.HAS_TENSE, "aorist"),
+    "perf": (predicates.HAS_TENSE, "perfect"),
+    "plup": (predicates.HAS_TENSE, "pluperfect"),
+    "act": (predicates.HAS_VOICE, "active"),
+    "mid": (predicates.HAS_VOICE, "middle"),
+    "pass": (predicates.HAS_VOICE, "passive"),
+    "mp": (predicates.HAS_VOICE, "middle/passive"),
+    "ind": (predicates.HAS_MOOD, "indicative"),
+    "subj": (predicates.HAS_MOOD, "subjunctive"),
+    "opt": (predicates.HAS_MOOD, "optative"),
+    "imperat": (predicates.HAS_MOOD, "imperative"),
+    "imper": (predicates.HAS_MOOD, "imperative"),
+    "inf": (predicates.HAS_MOOD, "infinitive"),
+    "part": (predicates.HAS_MOOD, "participle"),
+}
+
 
 def _make_soup(html: str) -> BeautifulSoup:
     for parser in _PARSER_PREFERENCE:
@@ -256,6 +294,23 @@ def _normalize_pos(tags: Sequence[str]) -> str | None:
         if pos:
             return pos
     return None
+
+
+def _morpheus_feature_triples(
+    form_anchor: str,
+    tags: Sequence[str],
+    base_evidence: Mapping[str, object],
+) -> list[dict[str, object]]:
+    triples: list[dict[str, object]] = []
+    emitted: set[tuple[str, str]] = set()
+    for tag in tags:
+        feature = _MORPHEUS_TAG_FEATURES.get(tag.lower())
+        if feature is None or feature in emitted:
+            continue
+        predicate, value = feature
+        triples.append(_make_triple(form_anchor, predicate, value, base_evidence))
+        emitted.add(feature)
+    return triples
 
 
 def _lex_for_chunk(
@@ -614,6 +669,7 @@ def _build_perseus_header_triples(
             triples.append(_make_triple(form_anchor, "has_form", stem, base_evidence))
             if pos:
                 triples.append(_make_triple(form_anchor, predicates.HAS_POS, pos, base_evidence))
+            triples.extend(_morpheus_feature_triples(form_anchor, tags, base_evidence))
             if tags:
                 triples.append(
                     _make_triple(form_anchor, predicates.HAS_FEATURE, {"tags": tags}, base_evidence)

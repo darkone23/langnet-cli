@@ -60,6 +60,8 @@ The stable learner-facing vocabulary should stay small and cross-language:
 
 These labels should be optional display aids. JSON claims should continue to carry exact predicates such as `has_case`, `has_tense`, `has_voice`, and `has_mood`.
 
+Concrete examples live in [Foster Functional Grammar Examples](FOSTER_FUNCTIONAL_GRAMMAR_EXAMPLES.md). That page is the learner-facing reference for mapping terms such as Naming Function and Possessing Function back to conventional case labels in Latin, Greek, and Sanskrit.
+
 ## Evidence Policy
 
 Students should be able to trust the explanation without treating LangNet as an oracle. When sources disagree, are incomplete, or expose raw encodings, the output should say so plainly.

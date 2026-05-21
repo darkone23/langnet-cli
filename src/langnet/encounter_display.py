@@ -5,47 +5,10 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import cast
 
-from langnet.pedagogy.foster import foster_codes_for_features
-
-FOSTER_DISPLAY_LABELS = {
-    "NAMING": "Naming Function",
-    "CALLING": "Calling Function",
-    "RECEIVING": "Receiving Function",
-    "POSSESSING": "Possessing Function",
-    "TO_FOR": "To-For Function",
-    "BY_WITH_FROM_IN": "By-With-From-In Function",
-    "IN_WHERE": "In-Where Function",
-    "MALE": "Male",
-    "FEMALE": "Female",
-    "NEUTER": "Neuter",
-    "SINGLE": "Single",
-    "PAIR": "Pair",
-    "GROUP": "Group",
-    "TIME_NOW": "Time-Now",
-    "TIME_LATER": "Time-Later",
-    "TIME_WAS_DOING": "Time-Was-Doing",
-    "TIME_PAST": "Time-Past",
-    "TIME_HAD_DONE": "Time-Had-Done",
-    "ONCE_DONE": "Once-Done",
-    "STATEMENT": "Statement",
-    "WISH_MAY_BE": "Wish-May-Be",
-    "MAYBE_WILL_DO": "Maybe-Will-Do",
-    "COMMAND": "Command",
-    "DOING": "Doing",
-    "BEING_DONE_TO": "Being Done To",
-    "FOR_SELF": "For Self",
-    "PARTICIPLE": "Participle",
-}
-
-FOSTER_DISPLAY_ORDER = (
-    "case",
-    "number",
-    "gender",
-    "tense",
-    "mood",
-    "voice",
-    "participle",
-    "pos",
+from langnet.pedagogy.foster import (
+    FOSTER_DISPLAY_LABELS,
+    FOSTER_DISPLAY_ORDER,
+    foster_codes_for_features,
 )
 
 FOSTER_ANALYSIS_ALIASES = {

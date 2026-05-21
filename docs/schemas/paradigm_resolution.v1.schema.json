@@ -34,6 +34,11 @@
         "entry_type",
         "part_of_speech",
         "paradigm_kind",
+        "observed_form",
+        "slot_features",
+        "foster_display",
+        "display_summary",
+        "ranking_reasons",
         "native_analyses",
         "functional_analyses",
         "paradigm_request",
@@ -46,6 +51,19 @@
         "entry_type": { "enum": ["root", "variant", "indeclinable", "compound_member", "unknown"] },
         "part_of_speech": { "type": "string" },
         "paradigm_kind": { "enum": ["declension", "conjugation", "none", "unknown"] },
+        "observed_form": { "type": ["string", "null"] },
+        "slot_features": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "integer", "boolean", "null"]
+          }
+        },
+        "foster_display": { "type": "string" },
+        "display_summary": { "type": ["string", "null"] },
+        "ranking_reasons": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "native_analyses": {
           "type": "array",
           "items": { "$ref": "#/$defs/nativeAnalysis" }
