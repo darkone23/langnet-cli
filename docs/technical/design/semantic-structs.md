@@ -1,6 +1,7 @@
 # Semantic Structures
 
-Planned structures for the semantic reduction MVP.
+Current and target structures for semantic reduction. The exact-bucket path is
+implemented for `encounter`; broader semantic matching remains future work.
 
 ## WitnessSenseUnit
 
@@ -15,6 +16,7 @@ Fields:
 - `source_tool`
 - `claim_id`
 - `evidence`
+- optional source-entry and translated-segment display metadata
 
 ## SenseBucket
 
@@ -28,6 +30,8 @@ Fields:
 - `witnesses`
 - `confidence_label`
 - `notes`
+- ranking/display helpers derived from witness count, source order, translation
+  status, and learner-quality policy
 
 ## ReductionResult
 
@@ -48,3 +52,5 @@ Fields:
 - Evidence must survive reduction.
 - Display glosses are not source facts unless marked as generated.
 - Reducer input is claims/triples, not backend-specific payloads.
+- Reader, word-index, paradigm, and translation-cache schemas remain separate
+  CLI JSON contracts unless they are explicitly projected into claims/triples.

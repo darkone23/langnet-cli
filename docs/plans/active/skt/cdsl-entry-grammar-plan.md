@@ -21,8 +21,8 @@ Implemented:
 
 - CDSL claims preserve raw gloss, display gloss, source ref, and source entry
   metadata.
-- Source segments are split conservatively on semicolons.
-- Recognized citation-only and cross-reference-only segments are typed without
+- Source chunks are split conservatively on semicolons.
+- Recognized citation-only and cross-reference-only chunks are typed without
   dropping unclassified text.
 - SLP1/IAST display conversion is covered by tests.
 - Sanskrit case extraction now uses standard case numbering:
@@ -35,7 +35,7 @@ Implemented:
   declension markers from `info lex`, root/etymology markers, `ls` lexicon
   references, and `s1` cross references in grammar metadata.
 
-Captured from `codesketch/src/langnet/cologne/` and `codesketch/tests/test_cdsl.py`:
+Earlier prototype notes already captured for the maintained parser:
 
 - Key/key2 preservation matters.
 - `lex`, `info`, and body text can contain useful grammatical metadata.

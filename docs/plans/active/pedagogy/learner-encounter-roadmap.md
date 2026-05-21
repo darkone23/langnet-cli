@@ -38,7 +38,7 @@ What works:
 - Heritage morphology reaches the encounter output.
 - CDSL and DICO claims are available for Sanskrit meaning evidence.
 - CDSL entries carry `display_iast`, `display_slp1`, source refs, source
-  entries, segments, and notes where recognized.
+  entries, source chunks, and notes where recognized.
 - Stale normalization cache fallback now recovers `nirudha` into `nirūḍha`
   evidence instead of stopping at unknown Heritage morphology.
 
@@ -225,8 +225,8 @@ for source-fidelity review.
 Goal: turn source blobs into displayable learner sense units without losing
 source content.
 
-Status: started. CDSL source-note segments and generic typed
-`source_segments` are surfaced as compact `source notes` in `encounter`.
+Status: started. CDSL source-note chunks and generic typed source-detail
+metadata are surfaced as compact `source notes` in `encounter`.
 `--no-source-details` hides that summary for a quieter first screen. Header rows
 analysis rows, Foster labels, and meaning rows are now assembled as
 `EncounterHeaderView`, `EncounterAnalysisView`, and `EncounterMeaningView`
@@ -246,7 +246,7 @@ Tasks:
   - `source_refs`
   - `display_warnings`
 - For CDSL, split confidently recognized headword/grammar/citation material
-  away from learner gloss text while preserving raw segments.
+  away from learner gloss text while preserving raw source chunks.
 - Fix Sanskrit display conversion bugs that affect abbreviations and source
   labels, especially cases like `BhP.`.
 - For Diogenes/LSJ, identify the concise English sense head before examples and
@@ -270,47 +270,7 @@ just test test_cdsl_triples test_wsu_extraction test_cli_encounter_output
 just validate-stabilization
 ```
 
-### Phase 4: Translation Cache As Default Enrichment
-
-**Owner persona:** @architect for policy, @coder for CLI behavior, @auditor for
-provenance.
-
-Goal: make existing cached DICO/Gaffiot translations help learners without
-creating hidden network dependency.
-
-Status: implemented for `encounter` cache-hit projection, explicit word-list
-warming through `translation-warm`, and JSON hit/miss diagnostics through
-`encounter --output json`. Pretty/debug diagnostics remain a possible follow-up.
-
-Tasks:
-
-- Use resolved translation cache rows by default when the cache DB exists.
-- Keep live translation explicit. The current explicit spelling is
-  `--translation-mode auto`; default encounter behavior must remain network-free.
-- Prefer translated English witnesses over untranslated French witnesses in
-  learner display.
-- Always show that translated text is derived from DICO/Gaffiot source evidence.
-- Add cache-miss diagnostics only in debug/JSON output.
-
-Acceptance:
-
-- `encounter lat lupus` uses a cached Gaffiot translation if the exact cache key
-  exists once cache-hit default enrichment is enabled.
-- `encounter san dharma` uses a cached DICO translation if the exact cache key
-  exists once cache-hit default enrichment is enabled.
-- `encounter lat lupus --translation-mode auto` and `encounter san dharma
-  --translation-mode auto` can populate missing cache rows explicitly.
-- Source French evidence remains inspectable and is not replaced.
-- No network call happens during default encounter.
-
-Validation:
-
-```bash
-just test test_translation_projection test_cli_encounter_output
-just validate-stabilization
-```
-
-### Phase 5: Learner Ranking Policy
+### Phase 4: Learner Ranking Policy
 
 **Owner persona:** @architect for ranking design, @auditor for edge cases,
 @coder for implementation.
@@ -323,15 +283,14 @@ Initial ranking factors:
 - translated English derived witnesses before untranslated French source
   witnesses
 - exact selected lemma/headword matches before loose related entries
-- concise definition segments before cross-reference-only or citation-only
-  segments
+- concise definition chunks before cross-reference-only or citation-only chunks
 - multi-source agreement before single-source evidence
 - morphology-compatible senses before unrelated analyzer candidates
 - deterministic source order as final fallback
 
-Tasks:
+Remaining tasks:
 
-- Implement a scored sort key with named components and JSON/debug visibility.
+- Refine the scored sort key with named components and JSON/debug visibility.
 - Add accepted-output tests for `nirudha`, `dharma`, `lupus`, and `logos`.
 - Document why each ranking factor exists and what it must not hide.
 
@@ -352,7 +311,7 @@ just test test_cli_encounter_output test_reducer
 just validate-stabilization
 ```
 
-### Phase 6: Progressive Disclosure CLI
+### Phase 5: Progressive Disclosure CLI
 
 **Owner persona:** @scribe for command documentation, @coder for CLI flags.
 

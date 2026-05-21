@@ -14,11 +14,14 @@ Implemented:
 - deterministic exact-match sense buckets
 - `encounter` display over reduced buckets
 - accepted-output snapshots for representative word encounters
+- translation-backed witnesses for DICO, Gaffiot, and Bailly cache rows
+- source-order and learner-quality ranking helpers for encounter display
 
 Not implemented:
 
-- semantic constants
+- broad semantic constants beyond the current predicate vocabulary
 - embedding or LLM similarity
+- passage-aware reduction
 
 ## MVP Input
 
@@ -27,6 +30,7 @@ Claims containing triples:
 - `lex:* has_sense sense:*`
 - `sense:* gloss "..."`;
 - optional citations/evidence in `metadata.evidence`
+- optional source-entry and translated-segment metadata used for display
 
 ## MVP Output
 

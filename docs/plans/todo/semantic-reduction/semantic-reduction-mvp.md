@@ -24,8 +24,7 @@ Implemented baseline:
 - Compact gloss display metadata.
 - Source-aware ranking backed by accepted-output tests.
 - More structured source fields for long dictionary entries.
-- Deterministic token-similarity helpers inspired by the old
-  `codesketch/src/langnet/semantic_reducer/` prototype:
+- Deterministic token-similarity helpers inspired by the retired prototype:
   - normalized token sets;
   - Jaccard/Dice-style overlap;
   - source-priority tie breaking;
@@ -53,7 +52,7 @@ Create reader-form fixtures for `virumque`, `μῆνιν`, `θεὰ`, and
 `karma/karman`. Assert expected top-1/top-3 lemma and rough gloss behavior
 without hardcoding full terminal output.
 
-## Codesketch Capture Notes
+## Prototype Capture Notes
 
 Keep concepts, not the old schema:
 

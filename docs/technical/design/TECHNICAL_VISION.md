@@ -23,16 +23,23 @@ Each layer should be inspectable on its own. Later layers may summarize earlier 
 
 Implemented today:
 
-- CLI lookup, parse, normalize, plan, plan-exec, triples-dump, encounter, databuild, and index commands.
+- CLI lookup, parse, normalize, plan, plan-exec, triples-dump, encounter,
+  reader, word-index, paradigm, paradigm-resolve, translation-cache,
+  translation-warm, databuild, index, doctor, langs, tools, entry-analyze, and
+  Bailly/Lewis inspection commands.
+- SvelteKit adapter routes for search, reader, word-index, paradigm, MOTD, and
+  translation-cache.
 - Query normalization and deterministic tool planning.
 - Staged execution through fetch, extract, derive, and claim.
-- DuckDB-backed storage indexes for raw responses and staged effects.
+- DuckDB-backed storage indexes for raw responses, staged effects, local
+  dictionary sources, CTS metadata, reader/search catalogs, word indexes, and
+  the translation cache.
 - Claim/triple projection for core Latin, Greek, and Sanskrit handlers.
 - Runtime Witness Sense Unit extraction and exact sense-bucket reduction for the `encounter` command.
 - Sanskrit `encounter` output that shows Heritage morphology/analysis rows alongside CDSL/DICO meaning evidence where available.
 - Structured `triples-dump --output json` for claim/triple inspection.
-- Translation-cache projection for cache-backed DICO/Gaffiot English gloss evidence.
-- Explicit DICO/Gaffiot cache-miss population through `encounter
+- Translation-cache projection for cache-backed DICO/Gaffiot/Bailly English gloss evidence.
+- Explicit DICO/Gaffiot/Bailly cache-miss population through `encounter
   --translation-mode auto`.
 - Encounter JSON ranking explanations for downstream CLI/web renderers.
 - Encounter display, ranking, and translation-cache orchestration helpers that
@@ -47,7 +54,8 @@ Not implemented yet:
   source-specific structuring across all representative examples.
 - Hydration as a separate optional enrichment layer.
 - Passage-level interpretation.
-- Native web/API entrypoint; near-term web work should consume CLI JSON first.
+- First-class Python ASGI/API product contract; current web work consumes CLI
+  JSON through the SvelteKit adapter.
 
 ## Pipeline Layers
 
@@ -152,7 +160,7 @@ The technical roadmap originally followed this order:
 2. Improve evidence inspection. **Partly implemented through `triples-dump --output json` and `plan-exec --output json`; narrative trace examples still need refinement.**
 3. Implement WSU extraction from fixture claims. **Implemented for the exact-bucket path.**
 4. Add deterministic exact-match sense buckets. **Runtime-wired through `encounter`.**
-5. Add learner-facing semantic output behind an explicit command or flag. **Started as `encounter`; not release-quality yet.**
+5. Add learner-facing semantic output behind an explicit command or flag. **Started as `encounter`; SvelteKit search/reader adapters can consume its JSON.**
 6. Add hydration as optional enrichment. **Still future work.**
 7. Expand to compounds and passages after word-level behavior is stable. **Still future work.**
 

@@ -11,6 +11,8 @@ Explain compound terms, especially Sanskrit compounds, using the same word-level
 ## Dependency
 
 This should follow stable word-level claims and semantic buckets. Compound support must not create a parallel lookup path that bypasses evidence.
+Primitive Sanskrit splitter behavior exists; remaining work should focus on
+source-backed component evidence and cautious learner display.
 
 ## Intended Flow
 
@@ -22,7 +24,7 @@ compound input
   → display compound explanation with evidence
 ```
 
-## First Task
+## Remaining First Task
 
 Create a service-free fixture for one Sanskrit compound with:
 

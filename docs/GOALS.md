@@ -31,7 +31,7 @@ The project is not only a backend aggregator. It is an educational layer over di
 
 LangNet is moving toward this layered model:
 
-1. **Tool evidence** — raw responses from Diogenes, Whitaker, CLTK, Heritage, CDSL, and future tools.
+1. **Tool evidence** — raw responses and local rows from Diogenes, Whitaker, CLTK, Heritage, CDSL, DICO, Gaffiot, Bailly, Lewis, and related data builders.
 2. **Claims/triples** — normalized assertions such as `lex:lupus has_sense sense:...` with evidence metadata.
 3. **Witness Sense Units** — source-backed gloss witnesses extracted from claims.
 4. **Sense buckets** — deterministic clusters of equivalent or near-equivalent meanings.
@@ -44,8 +44,11 @@ The current runtime has a first version of this path: staged tool evidence becom
 - Replacing source dictionaries with opaque generated answers.
 - Building passage-level interpretation before word-level claims and sense buckets are stable.
 - Adding embedding similarity before deterministic semantic reduction exists.
-- Treating HTTP/API work as more important than CLI correctness and evidence inspection.
+- Treating web adapter work as more important than CLI correctness and evidence inspection.
 
 ## Current North Star
 
 Build a reliable word-level evidence engine first. Then reduce evidence into learner-facing semantic explanations.
+
+The current SvelteKit webapp should stay an adapter over structured CLI/data
+contracts while the word-level evidence layer stabilizes.

@@ -23,13 +23,17 @@ Claims can include:
 CDSL data is not assumed to be present by default. Build local data with the project’s `databuild` commands when needed.
 
 ```bash
-just cli-databuild --help
+just cli-databuild cdsl --help
 ```
+
+Built CDSL rows also feed the Sanskrit `word-index` surface when the word-index
+databuild includes Sanskrit dictionary sources.
 
 ## Debugging
 
 ```bash
-just triples-dump san agni cdsl
+just cli triples-dump san agni cdsl
+just cli word-index sections san --output json
 ```
 
 ## Testing

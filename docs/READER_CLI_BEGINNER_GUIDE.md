@@ -29,17 +29,32 @@ Normal builds should also include the curated repo layers:
 ## Pick A Catalog
 
 A production-style reader build should combine all available corpora into one
-catalog. During development we also keep smaller debug catalogs so each import
-family can be audited independently.
-
-Default unified catalog:
+catalog. The normal local path is:
 
 ```bash
 export CATALOG=data/build/reader/catalog.duckdb
+```
+
+If no `--catalog` is passed, the CLI looks for this default unified build
+catalog. You can also set `LANGNET_READER_CATALOG` for a process, or inspect
+likely choices with:
+
+```bash
+just cli reader catalogs --output json
+```
+
+In this checkout, the `default` and `development` catalog candidates may both
+resolve to the same local product-style path. During importer work we also keep
+smaller debug catalogs so each import family can be audited independently; those
+paths are not the normal learner/web target.
+
+Start with the default unified catalog:
+
+```bash
 just cli reader --catalog $CATALOG summary
 ```
 
-Unified curated development catalog, when present:
+Historical/debug unified catalog, when present:
 
 ```bash
 export CATALOG=examples/debug/reader_full_curated_current/catalog.duckdb
@@ -63,14 +78,6 @@ just cli reader --catalog examples/debug/reader_sanskrit_full_curated_current/ca
 just cli reader --catalog examples/debug/reader_classics_legacy_full_curated_current/catalog.duckdb summary
 ```
 
-If no `--catalog` is passed, the CLI looks for the default unified build
-catalog at `data/build/reader/catalog.duckdb`. You can also set
-`LANGNET_READER_CATALOG` for a process, or inspect likely choices with:
-
-```bash
-just cli reader catalogs --output json
-```
-
 For long operator rebuilds, use progress output:
 
 ```bash
@@ -85,13 +92,14 @@ just cli-databuild reader \
   --alias-dir data/curated/reader_aliases \
   --contained-work-dir data/curated/reader_contained_works \
   --work-map-dir data/curated/reader_work_maps \
-  --progress-every 100 \
-  --output-root examples/debug/reader_full_curated_current
+  --progress-every 100
 ```
 
 Omit unavailable source-root flags for partial local builds, and document the
-omission. Rebuild the catalog after parser/importer changes. Rebuild the
-derived search index after every catalog rebuild; see
+omission. Add `--output-root examples/debug/reader_full_curated_current` only
+for a historical/debug comparison build. Rebuild the catalog after
+parser/importer changes. Rebuild the derived search index after every catalog
+rebuild; see
 `docs/READER_DATA_BUILD.md` for the search-index command.
 
 ## Ask What Is In The Library
@@ -134,6 +142,19 @@ Filter works by language:
 ```bash
 just cli reader --catalog $CATALOG works --language grc
 just cli reader --catalog $CATALOG works --language lat
+```
+
+Explore discovery facets and shelves when generated classification metadata has
+been restored:
+
+```bash
+just cli reader --catalog $CATALOG facets --language grc --output json
+just cli reader --catalog $CATALOG groups --language lat --output json
+just cli reader --catalog $CATALOG tags --language san --output json
+just cli reader --catalog $CATALOG author-facets --output json
+just cli reader --catalog $CATALOG shelves --language san --sample-limit 3 --output json
+just cli reader --catalog $CATALOG works --language san --tag ayurveda --sort group-popularity
+just cli reader --catalog $CATALOG works --language lat --group grammar --sort group-popularity
 ```
 
 Filter works by visible display author:
@@ -299,15 +320,15 @@ Use attribution claims for cases like "possibly Aristotle or Avicenna." Use a
 metadata overlay only when you are ready to change the reader-facing display
 author.
 
-You can also ask for works by an attribution agent directly from the works
+You can also ask for works by an attribution agent directly from the current
 catalog:
 
 ```bash
-just cli reader --catalog examples/debug/reader_attributions_seed_verify/catalog.duckdb \
-  works --attributed-to Chanakya
+just cli reader --catalog $CATALOG works --attributed-to Chanakya
 ```
 
-During the current build-out, the real-data attribution proof catalog is:
+Historical/debug attribution proof catalogs may still be useful when validating
+old seed data:
 
 ```bash
 just cli reader --catalog examples/debug/reader_attributions_seed_verify/catalog.duckdb \
@@ -359,21 +380,44 @@ An empty validation item list means the reader catalog passed the current QA
 checks. The search-index check is required after the derived index has been
 rebuilt for the catalog.
 
+## Search Text
+
+Full text search uses the derived Lance index at
+`data/build/reader/search.lance`. Rebuild it after the catalog changes, then
+query through `reader search`:
+
+```bash
+export SEARCH_INDEX=data/build/reader/search.lance
+
+just cli reader --catalog $CATALOG search-index build \
+  --index $SEARCH_INDEX \
+  --replace \
+  --output json
+
+just cli reader --catalog $CATALOG search "λόγος" \
+  --index $SEARCH_INDEX \
+  --language grc \
+  --mode fuzzy \
+  --context 1 \
+  --limit 10 \
+  --output json
+```
+
 ## First-Session Walkthrough
 
 For someone encountering the library for the first time, the fastest useful
 path is:
 
 ```bash
-export CATALOG=examples/debug/reader_full_curated_current/catalog.duckdb
+export CATALOG=data/build/reader/catalog.duckdb
 just cli reader --catalog $CATALOG summary
 just cli reader --catalog $CATALOG works --author Homer
 just cli reader --catalog $CATALOG contents urn:cts:greekLit:tlg0012.tlg002 --limit 10
 just cli reader --catalog $CATALOG show urn:cts:greekLit:tlg0012.tlg002 --segment 1.1
 ```
 
-If that catalog is not present yet, use a source-split audit catalog for the
-same walkthrough while the unified build is being prepared:
+If the default catalog is not present yet, use a source-split audit catalog for
+the same walkthrough while the unified build is being prepared:
 
 ```bash
 export CATALOG=examples/debug/reader_classics_legacy_full_curated_current/catalog.duckdb

@@ -1,6 +1,7 @@
 # Plans
 
-Plans are for work management, not permanent reference. Keep this directory small and current.
+Plans are for work management, not permanent reference. Keep this directory
+small, current, and tied to work that can be resumed.
 
 ## Structure
 
@@ -11,56 +12,52 @@ docs/plans/
 └── completed/   # completed plans and handoff records
 ```
 
-Feature areas should be subdirectories such as `infra`, `skt`, `pedagogy`, `dico`, or `semantic-reduction`.
+Feature areas should be subdirectories such as `infra`, `skt`, `pedagogy`,
+`dico`, or `semantic-reduction`.
 
-## Current Planning References
+## Active Plans
 
-- `docs/EXECUTION_PLAN.md`
-- `docs/plans/active/infra/design-to-runtime-roadmap.md`
-- `docs/plans/active/infra/stabilization-planning-session.md`
+Only these plans are active after the 2026-05 documentation overhaul:
+
+- `docs/plans/active/infra/reader-source-backed-enrichment.md`
 - `docs/plans/active/pedagogy/learner-encounter-roadmap.md`
 - `docs/plans/active/pedagogy/real-input-fuzzing-roadmap.md`
+- `docs/plans/active/skt/cdsl-entry-grammar-plan.md`
 
-The execution plan is the compact operating view. The roadmap remains the milestone sequence. The active implementation roadmap contains detailed sequencing.
-The stabilization planning session is the current working agenda for reconciling
-status, target state, gaps, and ranked next tasks.
-The learner encounter roadmap is the active plan for turning `encounter` from a
-source-first evidence display into validated learner-facing output across
-Sanskrit, Latin, and Greek.
-The real-input fuzzing roadmap records the current research -> plan -> implement
-loop for classic-reader forms and keeps Sanskrit, Latin, and Greek improvement
-tracks balanced.
+Current milestone status and broad planning belong in `docs/ROADMAP.md` and
+`docs/EXECUTION_PLAN.md`, not in `docs/plans/active/`.
 
-Recently completed infra plans live in `docs/plans/completed/infra/`, including
-the codesketch retirement/deletion records and the devenv recipe runner
-stabilization record.
+## Todo Plans
 
-Recently completed pedagogy plans live in `docs/plans/completed/pedagogy/`,
-including the source-backed V1 inflectional paradigm implementation and native
-word-index ordering records, plus the encounter action contract that exposes
-lazy paradigm, word-index, and source-entry follow-up targets. Broader future
-morphology and UI work remains in `docs/plans/todo/pedagogy/`.
+Todo plans are scoped future work, not broad status pages:
 
-## Junior Work
+- `dico/`: DICO refinement.
+- `infra/`: citation resolution follow-up.
+- `pedagogy/`: compound lookup, contextual meaning, paradigm follow-up, and
+  word-index exploration.
+- `semantic-reduction/`: reducer similarity refinement.
+- `skt/`: Sanskrit tokenization and compound evidence.
 
-Keep small pickup tasks in `docs/EXECUTION_PLAN.md` unless they need a dedicated plan. Tasks should be explicit, service-free where possible, and independently testable.
+Archive placeholders, superseded web enablement notes, and completed
+implementation plans instead of leaving them in `todo/`.
+
+## Completed Records
+
+`docs/plans/completed/` keeps implementation records and handoff history. These
+files may contain old commands, checklist snapshots, and historical context, but
+they are not active guidance.
 
 ## Archival Rule
 
-Move stale plans to `docs/archive/` rather than leaving them under `active/` or `todo/`.
+Move stale plans to `docs/archive/` rather than leaving them under `active/` or
+`todo/`.
 
 A stale plan is one that:
 
-- describes foundation work already implemented
-- has old test counts or old command names
-- duplicates the canonical roadmap
-- depends on an architecture that no longer exists
+- describes foundation work already implemented;
+- has old test counts or old command names;
+- duplicates the canonical roadmap;
+- depends on an architecture that no longer exists.
 
-## Status Markers
-
-Use simple markers:
-
-- `🔄 ACTIVE`
-- `⏳ TODO`
-- `✅ DONE`
-- `🧊 ARCHIVED`
+Status docs and handoff snapshots should live in `docs/ROADMAP.md`,
+`docs/EXECUTION_PLAN.md`, or `docs/archive/`, not under `active/`.

@@ -64,6 +64,11 @@ Examples:
 - Parser bug fix with same payload shape: version bump may be optional.
 - New field added to claim payload: bump.
 - Anchor/predicate semantics changed: bump.
+- Source-entry segmentation, translation projection, or source-reference
+  semantics changed: bump the affected extract/derive/claim handler so cached
+  rows are not reused as current evidence.
+- Display-only CLI wording changed with unchanged JSON payload semantics:
+  handler version bump is usually unnecessary.
 
 ## Evidence Rules
 
@@ -80,6 +85,10 @@ Each claim should preserve:
 For triples, put this under `metadata.evidence`.
 
 Do not put evidence into `subject` or `object` IDs.
+
+For translation-cache witnesses, preserve both the derived translation metadata
+and the original source witness. DICO, Gaffiot, and Bailly translation rows are
+derived evidence, not replacements for source-language dictionary entries.
 
 ## Anchor Rules
 
@@ -108,6 +117,9 @@ Good examples:
 - `tests/test_whitakers_triples.py`
 - `tests/test_cdsl_triples.py`
 - `tests/test_claim_contracts.py`
+- source-entry, translation-cache, Bailly, Lewis 1890, reader, word-index, and
+  paradigm tests for adjacent JSON contracts where the handler touches those
+  surfaces.
 
 Run:
 
@@ -125,6 +137,10 @@ Handlers are wired through the execution registry. When adding a backend:
 3. Register them in the default registry.
 4. Add planner coverage if the tool should be selected automatically.
 5. Add fixture tests before relying on live services.
+6. Add databuild/inspection commands if the backend depends on local DuckDB
+   source files.
+7. Update `tools`, `doctor`, reader/word-index, paradigm, or SvelteKit adapter
+   contracts when the new handler becomes a user-visible source.
 
 ## Checklist
 
@@ -134,4 +150,8 @@ Handlers are wired through the execution registry. When adding a backend:
 - Claims include evidence.
 - Triples use canonical predicates where possible.
 - Tests do not require live services.
+- Local DuckDB source files and translation-cache behavior are documented when
+  the handler depends on them.
+- CLI JSON and SvelteKit adapter consumers are considered before changing
+  payload shape.
 - `just lint-all` and targeted tests pass.

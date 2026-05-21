@@ -34,9 +34,11 @@ PORT=5173 HOST=127.0.0.1 just dev
 ## Daily Commands
 
 ```sh
+just install         # install/update Bun dependencies
 just                 # list recipes
 just doctor          # verify bun, just, jq, and langnet-cli availability
 just dev             # start Vite on 0.0.0.0:43210
+just dev-open        # start Vite and ask Vite to open a browser
 sudo just caddy-proxy # proxy :80 to the dev server on 127.0.0.1:43210
 just test            # run fast unit/regression tests
 just check           # run svelte-check
@@ -46,8 +48,12 @@ just format-check    # verify formatting without writing changes
 just build           # build the production bundle
 just verify          # run test + format-check + check + build
 just preview         # preview the built app with Vite
+just preview-logs    # preview the built app with request logs
+just start           # run the Bun adapter production server after build
 just api             # probe the live API; requires just dev
 just api-summary     # summarize a live API response with jq
+just search          # alias for the live /api/search probe
+just search-live     # alias for the live /api/search probe
 just motd            # probe the MOTD endpoint; requires just dev
 just motd-refresh    # probe the LLM-backed MOTD refresh path
 just motd-summary    # summarize a live MOTD response with jq
@@ -221,6 +227,15 @@ curl 'http://127.0.0.1:43210/api/word-index?mode=browse&language=san&source=all&
 curl 'http://127.0.0.1:43210/api/word-index?mode=nearby&language=grc&source=all&q=logos&radius=5'
 ```
 
+Current endpoints:
+
+- `GET /api/search`
+- `GET /api/reader`
+- `GET /api/word-index`
+- `GET /api/paradigm`
+- `GET /api/motd`
+- `POST /api/translation-cache`
+
 Reader endpoint:
 
 ```txt
@@ -230,6 +245,10 @@ GET /api/reader
 Common modes:
 
 - `mode=catalogs`: list learner-facing reader catalogs
+- `mode=facets`, `mode=groups`, `mode=tags`, `mode=author-facets`: list
+  discovery affordances
+- `mode=shelves`: list discovery shelves for a language
+- `mode=search`: search indexed reader text
 - `mode=works`: search/list works for a catalog and language
 - `mode=work`: resolve exact work metadata
 - `mode=contents`: list a first, cursor, from, or around segment window for a work
@@ -241,6 +260,8 @@ Examples:
 ```sh
 curl 'http://127.0.0.1:43210/api/reader?mode=catalogs'
 curl 'http://127.0.0.1:43210/api/reader?mode=works&catalog=development&language=grc&q=Odyssey&limit=5'
+curl 'http://127.0.0.1:43210/api/reader?mode=shelves&catalog=development&language=san&sample_limit=2'
+curl 'http://127.0.0.1:43210/api/reader?mode=search&catalog=development&language=grc&q=logos&search_mode=fuzzy&group=epic&limit=5'
 curl 'http://127.0.0.1:43210/api/reader?mode=work&catalog=development&work=urn:cts:greekLit:tlg0012.tlg002'
 curl 'http://127.0.0.1:43210/api/reader?mode=contents&catalog=development&work=urn:cts:greekLit:tlg0012.tlg002&around=3.74&radius=2'
 curl 'http://127.0.0.1:43210/api/reader?mode=show&catalog=development&work=urn:cts:greekLit:tlg0012.tlg002&segment=3.74'
@@ -260,9 +281,11 @@ exact citation still uses `show` to locate the active segment, then loads a
 surrounding page.
 
 Reader route state is URL-resumable where upstream cursors and identifiers allow
-it. The `/reader` query string can carry `lang`, `catalog`, `q`,
+it. The `/reader` query string can carry `lang`, `catalog`, `view`, `q`,
+`text_q`, `search_mode`, `group`, `tag`, `sort`, `page_cursor`,
 `author_section`, `author`, `authors_cursor`, `works_cursor`,
-`contents_cursor`, `collection`, `work`, `segment`, `word`, and `theme`.
+`contents_cursor`, `collection`, `work`, `address`, `segment`, `word`, and
+`theme`.
 Session storage remains a matching-cache optimization, not the canonical reader
 state.
 

@@ -26,13 +26,16 @@ The product target is one unified reader catalog:
 data/build/reader/catalog.duckdb
 ```
 
-For development, use:
+In older handoff notes, local development often used:
 
 ```bash
 examples/debug/reader_full_curated_current/catalog.duckdb
 ```
 
-Build the unified catalog from the local source roots that are available:
+Treat that as a historical/debug comparison path. Normal current commands should
+use `data/build/reader/catalog.duckdb` unless an operator is explicitly
+validating a debug artifact. Build the unified catalog from the local source
+roots that are available:
 PHI Latin, TLG Greek, Perseus, digilibLT, and Sanskrit/DCS. Include the curated
 repo layers for aliases, display metadata, attribution claims, contained works,
 and work maps. Concrete build and smoke-test commands are in
@@ -60,9 +63,17 @@ just cli reader --catalog <catalog.duckdb> works --query homer --limit 50
 just cli reader --catalog <catalog.duckdb> works --language lat --author-id phi0690
 just cli reader --catalog <catalog.duckdb> works --author Plato
 just cli reader --catalog <catalog.duckdb> works --attributed-to Plato
+just cli reader --catalog <catalog.duckdb> facets --language grc --output json
+just cli reader --catalog <catalog.duckdb> groups --language lat --output json
+just cli reader --catalog <catalog.duckdb> tags --language san --output json
+just cli reader --catalog <catalog.duckdb> author-facets --output json
+just cli reader --catalog <catalog.duckdb> shelves --language san --sample-limit 3 --output json
+just cli reader --catalog <catalog.duckdb> search "λόγος" --index data/build/reader/search.lance --language grc --mode fuzzy
+just cli reader --catalog <catalog.duckdb> search-index validate --index data/build/reader/search.lance --output json
 just cli reader --catalog <catalog.duckdb> contents <work_id>
 just cli reader --catalog <catalog.duckdb> contents <work_id> --around <citation> --radius 20
 just cli reader --catalog <catalog.duckdb> show <work_id> --segment <citation>
+just cli reader --catalog <catalog.duckdb> resolve-address "Od. 3.74"
 just cli reader --catalog <catalog.duckdb> validate
 ```
 
@@ -289,7 +300,7 @@ just cli reader --catalog $CATALOG search-index validate \
   --output json
 ```
 
-For long corpus imports, pass `--progress-every <N>` to `databuild reader` to
+For long corpus imports, pass `--progress-every <N>` to `cli-databuild reader` to
 print parsed source, artifact, segment, and latest-source counts every `N`
 parsed books.
 

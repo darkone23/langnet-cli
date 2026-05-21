@@ -14,8 +14,10 @@ Or run commands through the project recipes:
 
 ```bash
 just cli --help
+just cli lookup lat lupus --output json
 just cli encounter lat arma gaffiot --translation-mode cache
 just cli encounter san dharma dico --translation-mode cache
+just cli translation-cache status --output json
 ```
 
 ## Current Reliable Surface
@@ -34,7 +36,7 @@ requirements, validation commands, and troubleshooting.
 Older V2 implementation notes have been moved out of this root quick-start. For
 current architecture and roadmap decisions, start with:
 
-- `docs/BASELINE_AND_ROADMAP.md`
-- `docs/PROJECT_STATUS.md`
+- `docs/README.md`
 - `docs/ROADMAP.md`
+- `docs/EXECUTION_PLAN.md`
 - `docs/technical/design/TECHNICAL_VISION.md`

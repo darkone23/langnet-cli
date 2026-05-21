@@ -1,6 +1,8 @@
 # Diogenes Backend
 
-Diogenes supplies Greek and Latin dictionary data, especially Lewis & Short and Liddell & Scott entries.
+Diogenes supplies Greek and Latin dictionary data, especially Lewis & Short and
+Liddell & Scott entries. It also backs Greek/Latin source-backed paradigm tables
+through the Diogenes `do=inflect` path.
 
 ## Requirement
 
@@ -30,8 +32,13 @@ Claims can include:
 ```bash
 just cli parse diogenes lat lupus --format pretty
 just cli plan-exec lat lupus
-just triples-dump lat lupus diogenes
+just cli triples-dump lat lupus diogenes
+just cli paradigm grc logos --output json
 ```
+
+Diogenes dictionary evidence may also contribute to word-index and reader
+workflows through local databuild/index steps, depending on which source indexes
+are present.
 
 ## Testing
 

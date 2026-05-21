@@ -22,6 +22,12 @@ Run fast unit/regression tests without a server:
 just test
 ```
 
+Run the full local web verification set:
+
+```sh
+just verify
+```
+
 These cover display-model edge cases and source-neighborhood candidate ordering
 that are easier to lock down in code than by manual visual inspection.
 
@@ -267,9 +273,7 @@ Protected by:
 Manual checks:
 
 ```sh
-bun --bun run check
-bun --bun run test
-bun --bun run build
+just verify
 ```
 
 Then, with the human-owned dev server running:
@@ -284,9 +288,10 @@ Then, with the human-owned dev server running:
   same tab. The visible author index should restore without repeating the initial
   catalog and author-section request chain.
 - On `/reader`, move through an author section, author list cursor, work, page
-  cursor, passage segment, and selected word. The URL should carry the state; a
-  refresh or copied URL should reconstruct the same reader position as far as the
-  upstream cursor remains valid.
+  cursor, text-search query, discovery group/tag, passage segment, and selected
+  word. The URL should carry the state; a refresh or copied URL should
+  reconstruct the same reader position as far as the upstream cursor remains
+  valid.
 - Watch first paint for Latin, Greek, Greek Extended, and Devanagari text. The
   splash should hide fallback-font rendering, and the visible app should not
   perform a late Noto font swap.
@@ -328,6 +333,26 @@ Expected shape:
 Protected by:
 
 - `src/lib/component-gloss.test.ts`
+
+## Reader Desk Discovery And Text Search
+
+```sh
+curl 'http://127.0.0.1:43210/api/reader?mode=shelves&catalog=development&language=san&sample_limit=2' |
+  jq '{mode, count: (.items|length), first: .items[0]}'
+curl 'http://127.0.0.1:43210/api/reader?mode=search&catalog=development&language=grc&q=logos&search_mode=fuzzy&limit=5' |
+  jq '{mode, count: (.items|length), first: .items[0]}'
+curl 'http://127.0.0.1:43210/api/reader?mode=facets&catalog=development&language=lat' |
+  jq '{mode, count: (.items|length)}'
+```
+
+Purpose:
+
+- checks that Reader Desk discovery routes reach shelves, facets, groups, tags,
+  and author facets through `/api/reader`
+- checks that text search uses the reader search index path instead of work
+  title search
+- checks URL state for `view`, `text_q`, `search_mode`, `group`, `tag`, `sort`,
+  and `page_cursor`
 
 ## MOTD Daily Rotation
 

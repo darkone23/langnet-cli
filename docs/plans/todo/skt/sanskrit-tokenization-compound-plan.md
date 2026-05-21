@@ -10,7 +10,7 @@ Improve Sanskrit tokenization and compound handling without bypassing the claim/
 
 ## Current Position
 
-Sanskrit lookup uses Heritage and CDSL. Word-level claims are now the foundation. Tokenization and compounds should feed that same path.
+Sanskrit lookup uses Heritage and CDSL. Word-level claims are now the foundation. Primitive splitting exists, but tokenization and compounds still need fixture-backed integration through the same claim/evidence path.
 
 ## Scope
 
@@ -26,6 +26,6 @@ Sanskrit lookup uses Heritage and CDSL. Word-level claims are now the foundation
 - Generated explanations without source evidence.
 - Broad sandhi search before fixture tests exist.
 
-## First Task
+## Remaining First Task
 
 Add a fixture-only tokenizer test for one compound. Expected output should include candidate components and the query forms that would be sent to Heritage/CDSL.

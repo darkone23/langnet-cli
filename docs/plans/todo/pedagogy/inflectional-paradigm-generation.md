@@ -86,10 +86,9 @@ beta code.
 
 ## Product Scope
 
-### V1: Source-Backed Paradigm Views
+### Completed V1: Source-Backed Paradigm Views
 
-V1 should not start by writing a full local morphology generator. It should
-adapt existing source-backed engines:
+The completed source-backed V1 adapts existing source-backed engines:
 
 - Heritage `sktdeclin` for Sanskrit noun/adjective/pronoun declensions.
 - Heritage `sktconjug` for Sanskrit root conjugations when root and class are
@@ -99,7 +98,8 @@ adapt existing source-backed engines:
   and highlight resolution.
 
 This gives users useful paradigm tables while preserving source provenance and
-avoiding premature local grammar-engine complexity.
+avoiding premature local grammar-engine complexity. Remaining work below should
+not re-plan the V1 implementation record.
 
 ### Later: Local Template Registry
 
@@ -298,11 +298,11 @@ until a reliable source or rule implementation is available.
 CLI examples:
 
 ```bash
-just cli paradigm san deva --source heritage --kind declension --gender Mas --output json
-just cli paradigm san gam --source heritage --kind conjugation --class 1 --output json
-just cli paradigm lat amo --source diogenes --output json
-just cli paradigm grc logos --source diogenes --output json
-just cli encounter san devebhyaḥ --show-paradigm --output json
+just cli paradigm san deva --kind declension --gender Mas --output json
+just cli paradigm san gam --kind conjugation --class 1 --output json
+just cli paradigm lat amo --output json
+just cli paradigm grc logos --output json
+just cli encounter san devebhyaḥ --output json
 ```
 
 The first implementation can expose a CLI command before adding a web endpoint.
@@ -310,75 +310,48 @@ The web UI can then call the CLI/API surface used by `langnet-web2`.
 
 ## Implementation Phases
 
-### Phase 1: Endpoint Adapters And Fixtures
+### Completed V1 Phases
 
-- Add fixture HTML for `sktdeclin`, `sktconjug`, and Diogenes `do=inflect`.
-- Add parser tests for table rows, forms, and feature labels.
-- Add a small service boundary that fetches from source endpoints and returns
-  raw HTML plus parsed rows.
+Endpoint adapters, fixture parsers, unified paradigm models, the CLI command,
+basic lookup/encounter action metadata, and source-backed limitations are
+captured in
+`docs/plans/completed/pedagogy/inflectional-paradigm-generation-implementation.md`.
 
-### Phase 2: Unified Paradigm Model
+### Remaining Phase 1: Reverse And Local Generation Research
 
-- Add `ParadigmResponse`, `ParadigmEntry`, `ParadigmCell`, and
-  `ParadigmAnalysis` models.
-- Preserve source references and request URLs.
-- Normalize feature names across languages without dropping source labels.
+- Decide whether to pre-generate variants or generate them on demand.
+- Add fixture-backed reverse morphology for one narrow high-value subset before
+  broadening language coverage.
+- Start with the narrowest high-value subset: Sanskrit a-stem nouns, Latin first
+  declension nouns, and Greek second declension nouns.
 
-### Phase 3: CLI Command
+### Remaining Phase 2: UI Highlighting And Navigation
 
-- Add `langnet-cli paradigm`.
-- Support Sanskrit Heritage declension/conjugation.
-- Support Latin/Greek Diogenes `do=inflect`.
-- Add JSON-first output and a compact pretty view.
+- Improve variant-origin highlighting across ambiguous surface forms.
+- Add web UI navigation from search results to paradigm views.
+- Preserve multiple candidate roots instead of collapsing ambiguity.
 
-### Phase 4: Lookup And Encounter Integration
+### Remaining Phase 3: Cross-Language And Drill Scope
 
-- Add `paradigm_available` and `paradigm_request` metadata to lookup and
-  encounter results.
-- When the surface form has analyses, highlight matching paradigm cells.
-- Preserve ambiguous analyses and expose multiple candidate roots when needed.
-
-### Phase 5: Documentation And UX
-
-- Document source-backed coverage, limitations, and example commands.
-- Update learner-facing docs to explain ambiguity and highlighting.
-- Add web integration notes for `langnet-web2`.
-
-### Phase 6: Local Generation Research
-
-- Revisit the full template registry only after source-backed views work.
-- Decide whether to pre-generate variants or generate on demand.
-- If local generation is pursued, start with the narrowest high-value subset:
-  Sanskrit a-stem nouns, Latin first declension nouns, and Greek second
-  declension nouns.
+- Evaluate cross-language comparison and drill/quiz mode only after the local
+  template registry has a narrow tested subset.
 
 ## Acceptance Criteria
 
-V1 is complete when:
+The remaining todo work is complete when:
 
-- `sktdeclin` output for a known Sanskrit noun parses into structured rows.
-- `sktconjug` output for a known Sanskrit root parses at least finite-form
-  tables and participle links.
-- Diogenes `do=inflect` output for Latin and Greek parses into structured form
-  rows with source morphology labels.
-- A CLI user can request a paradigm for at least:
-  - Sanskrit `putra` or `deva`;
-  - Sanskrit `gam` class 1;
-  - Latin `amo`;
-  - Greek `λόγος` or beta-code `lo/gos`.
-- A lookup/encounter result can advertise an available paradigm target.
-- Variant-origin highlighting works for at least one Sanskrit, one Latin, and
-  one Greek fixture.
-- Ambiguous analyses remain represented as arrays.
-- Docs describe source-backed limitations clearly.
-
-Full long-term completion additionally requires:
-
-- complete entry classification for dictionary rows;
-- variant-to-root resolution for generated or indexed variants;
-- local root metadata for supported paradigms;
-- a local template registry for the agreed subset;
-- UI navigation from search results to paradigm views.
+- reverse or local generation is implemented for one narrow fixture-backed
+  subset before broader language coverage;
+- variant-to-root resolution works for generated or indexed variants in that
+  subset;
+- local root metadata exists for supported paradigms;
+- a local template registry exists for the agreed subset;
+- variant-origin highlighting works for at least one Sanskrit, one Latin, and
+  one Greek fixture;
+- UI navigation from search results to paradigm views is covered by tests or
+  documented regression cases;
+- ambiguous analyses remain represented as arrays;
+- docs continue to describe source-backed limitations clearly.
 
 ## Out Of Scope For V1
 

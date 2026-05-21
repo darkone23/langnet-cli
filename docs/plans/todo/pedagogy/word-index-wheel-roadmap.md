@@ -159,7 +159,7 @@ just cli word-index sources --output json
 just cli word-index list san --source all --limit 50 --output json
 just cli word-index browse san --source all --prefix d --limit 50 --output json
 just cli word-index list lat --source gaffiot --prefix lu --limit 25 --output json
-just cli word-index neighborhood grc logos --source diogenes --radius 10 --output json
+just cli word-index neighborhood grc logos --source all --radius 10 --output json
 just cli word-index wheel all --count 12 --seed daily-2026-05-05 --output json
 ```
 
@@ -331,32 +331,28 @@ Full-source crawling belongs in `databuild`, not in interactive `word-index` or
 - **Failure mode**: if a crawl/index is missing, return `available: false` and a
   warning. Do not silently start a crawl from an interactive command.
 
-## Implementation Phases
+## Completed Baseline And Remaining Phases
 
-### Phase 1: Contract and Local DB Sources
+The source-backed V1 ordering, native-section browsing, local source adapters,
+wheel command, and Diogenes index import are completed or captured in completed
+implementation records. This roadmap now keeps only the remaining UX, quality,
+and coverage work.
 
-- Add `WordIndexItem`, `WordIndexSourceStatus`, request/page models. ✅ first
-  slice exists in `src/langnet/word_index/`.
-- Add `docs/schemas/word_index.v1.schema.json`. ✅
-- Implement source status plus list/neighborhood for Gaffiot, DICO, CDSL. ✅
-- Implement source status plus list/neighborhood/wheel for Whitaker's Words. ✅
-- Add `word-index sources`, `word-index list`, and `word-index neighborhood`. ✅
-- Keep all operations read-only against existing built DBs.
-- Add explicit `native_order_key` ordering for integrated neighborhoods. ✅
-- Make `word-index nearby --source all` default to learner-facing integrated
-  language-native windows, with source groups retained as provenance. ✅
-- Next: materialize native collation keys in future build outputs if candidate
+### Phase 1: Native Collation And Coverage
+
+- Materialize native collation keys in future build outputs if candidate
   windows need to grow beyond the current indexed section windows.
+- Add source coverage reports: counts by language/source/dictionary.
+- Add a coverage report comparing direct-import counts against crawl windows
+  and common-term hit fixtures.
 
-### Phase 2: Wheel
+### Phase 2: Wheel Quality
 
-- Add deterministic seeded sampling across one or more source adapters. ✅ first
-  slice samples within each local DuckDB source before interleaving.
-- Expose `word-index wheel`. ✅
-- Reuse canonical display projection from word-of-day where practical.
-- Add basic text output and JSON schema tests.
-- Next: filter out learner-hostile rows, such as numbered proper-name variants,
+- Filter out learner-hostile rows, such as numbered proper-name variants,
   unless explicitly requested.
+- Add optional scoring for learner-friendly wheel items: short headword, has
+  source gloss, not punctuation fragment, not obscure variant unless explicitly
+  requested.
 
 ### Phase 3: Encounter Integration
 
@@ -365,25 +361,9 @@ Full-source crawling belongs in `databuild`, not in interactive `word-index` or
 - Ensure no live crawler or translation population happens because a caller asked
   for neighbors.
 
-### Phase 4: Diogenes Enumeration
+### Phase 4: Quality and Pedagogy
 
-- Research exact Diogenes next/previous CGI contract with fixture captures. ✅
-- Extend parser to preserve previous/next navigation offsets. ✅
-- Add a `databuild diogenes-index lat|grc` command. ✅
-- Store Diogenes headwords locally before enabling `word-index list grc
-  --source diogenes`. ✅
-- Prefer direct XML import for full dictionary enumeration; keep CGI crawl mode
-  for fixed windows and verification. ✅
-- Next: add a coverage report comparing direct-import counts against crawl
-  windows and common-term hit fixtures.
-
-### Phase 5: Quality and Pedagogy
-
-- Add source coverage reports: counts by language/source/dictionary.
 - Add acceptance fixtures for common terms and adjacent neighborhoods.
-- Add optional scoring for learner-friendly wheel items:
-  short headword, has source gloss, not punctuation fragment, not obscure variant
-  unless explicitly requested.
 
 ## Testing Plan
 

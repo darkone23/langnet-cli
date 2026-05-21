@@ -71,7 +71,7 @@ just cli-databuild reader \
 
 This writes `data/build/reader/catalog.duckdb` by default.
 
-Development output that is easy to compare with existing debug artifacts:
+Historical/debug output that is easy to compare with existing audit artifacts:
 
 ```bash
 just cli-databuild reader \
@@ -183,6 +183,10 @@ Rules for this pattern:
 - Rebuild the derived search index after any source-slice repair that changes
   visible text, segment counts, titles, canonical addresses, or aliases.
 
+The following source-slice repair example uses a historical/debug output root so
+it can be compared with prior generated artifacts. Use
+`data/build/reader/catalog.duckdb` for normal product-style repairs.
+
 ```bash
 just cli-databuild reader \
   --sanskrit-dir /home/nixos/Classics-Data/sanskrit/corpus \
@@ -240,8 +244,8 @@ does not currently delete the old orphaned per-book artifact file from disk.
 That file is harmless because the catalog no longer references it, but disk
 maintenance can remove orphaned artifacts separately if space becomes tight.
 
-After a source-slice rebuild, smoke test both the work list and the first
-contents rows:
+After a historical/debug source-slice rebuild, smoke test both the work list and
+the first contents rows:
 
 ```bash
 export CATALOG=examples/debug/reader_full_curated_current/catalog.duckdb
@@ -303,7 +307,7 @@ just cli reader --catalog $CATALOG search-index validate \
   --output json
 ```
 
-For a development unified catalog, set:
+For a historical/debug unified catalog comparison, set:
 
 ```bash
 export CATALOG=examples/debug/reader_full_curated_current/catalog.duckdb

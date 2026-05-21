@@ -8,6 +8,9 @@ fetch external text at read time.
 
 Use `--output json` for all integration calls.
 
+See also `webapp/README.md` for running the SvelteKit app and
+`webapp/docs/BACKEND.md` for adapter behavior.
+
 The SvelteKit API keeps JSON compatibility by default. Browser clients in this
 repo send `Accept: application/msgpack, application/json`; endpoints return
 MessagePack only when that header explicitly includes `application/msgpack`.
@@ -18,11 +21,11 @@ External consumers that do not opt in continue to receive JSON.
 The web app should choose a catalog explicitly.
 
 The intended product catalog is unified across source families:
-`data/build/reader/catalog.duckdb` for the default build, or
-`examples/debug/reader_full_curated_current/catalog.duckdb` for a local
-development build. Source-split catalogs such as classics, Sanskrit, Perseus,
-or digilibLT are audit/debug artifacts and should not be presented as separate
-product catalogs unless the UI is explicitly in an operator-debug mode.
+`data/build/reader/catalog.duckdb`. In this checkout, `default` and
+`development` catalog ids may resolve to the same local path. Source-split
+catalogs such as classics, Sanskrit, Perseus, or digilibLT are audit/debug
+artifacts and should not be presented as separate product catalogs unless the UI
+is explicitly in an operator-debug mode.
 
 Supported contract:
 
@@ -47,6 +50,26 @@ Stable `reader catalogs` fields:
 - `items[].segment_count`
 - `items[].languages`
 - `items[].readiness`
+
+## SvelteKit API Surface
+
+The current web adapter exposes:
+
+- `GET /api/search`: one-word dictionary encounter.
+- `GET /api/reader`: mode-based reader catalog, discovery, search, contents,
+  segment, and address-resolution endpoint.
+- `GET /api/word-index`: dictionary section, browse, and nearby index endpoint.
+- `GET /api/paradigm`: lazy paradigm table endpoint.
+- `GET /api/motd`: Marginal word recommendation endpoint.
+- `POST /api/translation-cache`: retry or clear rejected DICO, Gaffiot, and
+  Bailly translation-cache entries, then clear the in-process search cache.
+
+Current `/api/reader` modes are `catalogs`, `summary`, `collections`,
+`aliases`, `facets`, `groups`, `tags`, `author-facets`, `shelves`, `search`,
+`author-sections`, `authors`, `work`, `works`, `contents`, `show`, and
+`resolve-address`. The endpoint accepts `language`; legacy `lang` is still read
+by the adapter for compatibility, but new route state and examples should use
+`language`.
 
 ## Works
 
@@ -171,8 +194,8 @@ Stable search response fields:
 - `pagination.limit`
 
 Supported filters: `--language`, `--collection`, `--work-id`, `--author-id`,
-`--group`, `--tag`, `--mode keyword|phrase|exact`, `--field`, `--context`,
-`--limit`, and `--cursor`.
+`--group`, `--tag`, `--mode keyword|phrase|exact|fuzzy`, `--field`,
+`--context`, `--limit`, and `--cursor`.
 
 `search-index inspect-normalize --language <lang> <text> --output json` exposes
 the segment/query normalization fields used to build and query the index.

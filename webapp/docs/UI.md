@@ -23,7 +23,8 @@ the evidence came from.
 - Metadata belongs in compact card chrome.
 - Expansion controls should appear only inline with dictionary text that is long,
   clipped, or has fuller same-entry detail available.
-- DICO and Gaffiot expose Reader EN / Source layers only when relevant.
+- DICO, Gaffiot, and Bailly expose Reader EN / Source layers only when
+  relevant.
 - Slow translation modes should not hide cached dictionary results while waiting
   for cache population or generation.
 
@@ -100,19 +101,23 @@ Current behavior:
 
 - The discovery surface defaults to a language-scoped browse when the query is
   empty.
+- Discovery can pivot through shelves, facets, groups, tags, author facets,
+  work-title search, author browse, and indexed text search without leaving the
+  Reader Desk.
 - Author discovery relies on CLI-native `author-sections`,
   `authors --section`, author query, and `works --author-id` contracts. The
   first author page preloads after the section index loads, and non-Latin section
   controls include roman hints such as `Π P` and `व va`.
 - Returning to the Reader Desk in the same tab may restore the visible author
   index from `sessionStorage` instead of repeating the initial catalog and author
-  requests. This is a resume optimization only; changing language or search
-  state still asks the API for fresh data.
+  requests. This is a resume optimization only; changing language, discovery
+  filter, or text-search state still asks the API for fresh data.
 - The Reader Desk treats the browser URL as canonical navigation state. Language,
   catalog, author section, author/work query, author and cursor positions,
-  selected work, segment, selected word, and theme are mirrored into query
-  parameters so refresh, copy/paste, and browser back/forward can resume the
-  same place as far as upstream cursors remain valid.
+  selected work, segment, selected word, text query, text-search mode, discovery
+  group/tag, sort, page cursor, and theme are mirrored into query parameters so
+  refresh, copy/paste, and browser back/forward can resume the same place as far
+  as upstream cursors remain valid.
 - The Book TOC panel shows the current page-local contents window, not a global
   library search.
 - The central leaf renders one page at a time, where a page is a bounded chunk of
@@ -363,8 +368,8 @@ layer instead of replacing the layer with mixed evidence detail.
 
 ## Translation Layers
 
-DICO and Gaffiot may provide source FR plus Reader EN. Those layers are shown as a
-card-level toggle when relevant.
+DICO, Gaffiot, and Bailly may provide source FR plus Reader EN. Those layers are
+shown as a card-level toggle when relevant.
 
 Rules:
 
@@ -374,10 +379,10 @@ Rules:
 - Prefer "Reader EN" and "Source" language wording over generic bilingual labels.
 
 For `auto`, `populate`, and `do-it-all`, the page uses a progressive flow: show
-cached results first, inspect whether DICO/Gaffiot still returned FR source text
-without Reader EN, and only then display a small enrichment status while the slow
-translation pass runs in the background. The main reading column should remain
-usable during that pass.
+cached results first, inspect whether DICO/Gaffiot/Bailly still returned FR
+source text without Reader EN, and only then display a small enrichment status
+while the slow translation pass runs in the background. The main reading column
+should remain usable during that pass.
 
 ## Visual Direction
 

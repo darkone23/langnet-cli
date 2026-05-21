@@ -1,4 +1,8 @@
-# Multi-Model AI Development: Complete How-To Guide
+# Multi-Model AI Development Guide
+
+Status: current workflow note. The authoritative persona names live in
+`.opencode/opencode.json` and `AGENTS.md`; this guide mirrors that configuration
+for day-to-day routing.
 
 ## Quick Start
 
@@ -29,7 +33,7 @@ just autobot model skill testing  # Get persona for testing skill
 | **The Architect** | `deepseek/deepseek-v3.2` | System design, planning, complex logic | `@architect "Design new caching layer"` |
 | **The Sleuth** | `z-ai/glm-4.7` | Debugging, root cause analysis | `@sleuth "Fix deadlock in parser"` |
 | **The Artisan** | `minimax/minimax-m2.1` | Code optimization, style improvements | `@artisan "Refactor cache for performance"` |
-| **The coder** | `z-ai/glm-4.5-air` | Feature development, testing | `@coder "Implement new API endpoint"` |
+| **The Coder** | `z-ai/glm-4.5-air` | Feature development, testing | `@coder "Implement new CLI command"` |
 | **The Scribe** | `xiaomi/mimo-v2-flash` | Documentation, comments, prose | `@scribe "Document the new module"` |
 | **The Auditor** | `openai/gpt-oss-120b` | Code review, security analysis | `@auditor "Check for vulnerabilities"` |
 
@@ -41,13 +45,13 @@ just autobot model skill testing  # Get persona for testing skill
 # 1. Research and Design (Architect)
 @architect "Design Old Norse dictionary integration with morphology parsing"
 
-# 2. Implementation (coder)
+# 2. Implementation (Coder)
 @coder "Create Old Norse backend module following the design"
 
 # 3. Data Models (Architect)
 @architect "Design dataclass models for Old Norse morphology results"
 
-# 4. Testing (coder)
+# 4. Testing (Coder)
 @coder "Write comprehensive tests for Old Norse backend"
 
 # 5. Documentation (Scribe)
@@ -63,13 +67,13 @@ just autobot model skill testing  # Get persona for testing skill
 # 1. Investigation (Sleuth)
 @sleuth "Debug memory leak in DuckDB cache"
 
-# 2. Fix Implementation (coder)
+# 2. Fix Implementation (Coder)
 @coder "Implement memory leak fix based on findings"
 
 # 3. Optimization (Artisan)
 @artisan "Optimize cache memory usage after fix"
 
-# 4. Testing (coder)
+# 4. Testing (Coder)
 @coder "Add tests to prevent regression"
 
 # 5. Review (Auditor)
@@ -85,7 +89,7 @@ just autobot model skill testing  # Get persona for testing skill
 # 2. Design (Architect)
 @architect "Design modular refactoring for diogenes"
 
-# 3. Implementation (coder)
+# 3. Implementation (Coder)
 @coder "Implement modular refactoring step by step"
 
 # 4. Refactoring (Artisan)
@@ -103,15 +107,15 @@ All 10 skills are mapped to personas:
 |-------|---------|-------------|
 | **backend-integration.md** | Architect | Designing new backends, system architecture |
 | **data-models.md** | Architect | Schema design, complex type systems |
-| **api-development.md** | coder | API implementation, endpoint development |
-| **testing.md** | coder | Test writing, debugging failures |
+| **api-development.md** | Coder | SvelteKit adapter or CLI JSON contract work |
+| **testing.md** | Coder | Test writing, debugging failures |
 | **debugging.md** | sleuth | Troubleshooting, root cause analysis |
 | **code-style.md** | Artisan | Code optimization, linting improvements |
 | **cache-management.md** | Artisan | Performance optimization, cache design |
-| **cli-development.md** | coder | CLI command implementation |
-| **multi-model-ai.md** | coder | AI workflow setup and configuration |
-| **persona-routing.md** | coder | Persona selection guidance |
-| **project-tools.md** | coder | Autobot command development |
+| **cli-development.md** | Coder | CLI command implementation |
+| **multi-model-ai.md** | Coder | AI workflow setup and configuration |
+| **persona-routing.md** | Coder | Persona selection guidance |
+| **project-tools.md** | Coder | project command development |
 
 ## Advanced Techniques
 
@@ -172,6 +176,10 @@ All 10 skills are mapped to personas:
 ```
 
 ## Using Autobot for Guidance
+
+Older examples mention `autobot`; use the current project wrappers and
+`.opencode/opencode.json` as the source of truth if those recipes are absent in
+your checkout.
 
 ```bash
 # Get persona recommendations for tasks

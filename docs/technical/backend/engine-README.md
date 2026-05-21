@@ -1,6 +1,9 @@
 # Runtime Engine Notes
 
-The old engine/HTTP path is not the current product contract. The active runtime is CLI-first and staged.
+The active runtime is CLI-first and staged. The current web bridge is the
+SvelteKit adapter in `webapp/src/routes/api/*`, which shells through repository
+wrappers to CLI JSON and local files. There is no supported Python HTTP product
+contract in this checkout.
 
 ## Current Runtime
 
@@ -9,6 +12,7 @@ The old engine/HTTP path is not the current product contract. The active runtime
 - Effects: `src/langnet/execution/effects.py`
 - Handlers: `src/langnet/execution/handlers/`
 - CLI: `src/langnet/cli.py`
+- Web adapter: `webapp/src/routes/api/`
 
 ## Flow
 
@@ -21,9 +25,12 @@ Use:
 ```bash
 just cli plan lat lupus
 just cli plan-exec lat lupus
-just triples-dump lat lupus whitakers
+just cli triples-dump lat lupus whitakers
 ```
 
-## API Note
+## Web Bridge
 
-Some local setups may still run HTTP process-manager helpers. Do not document those as the canonical interface unless the repo grows a first-class supported API entrypoint again.
+The SvelteKit adapter currently exposes `/api/search`, `/api/reader`,
+`/api/word-index`, `/api/paradigm`, `/api/motd`, and
+`/api/translation-cache`. Treat those routes as UI adapter code around CLI JSON,
+not as a separate backend engine.

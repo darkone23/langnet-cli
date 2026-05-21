@@ -53,56 +53,12 @@ The fuzz probes show strong tool-level evidence availability:
 These numbers are diagnostic. They show that source evidence exists, not that
 the default learner display is already good.
 
-## Completed In This Iteration
+## Recent Baseline Context
 
-- Greek planning now keeps the canonical Diogenes lookup for dictionary senses
-  and adds an optional morphology-only surface-form parse when normalization
-  changes the token.
-- The surface-form claim path excludes Diogenes dictionary definitions, so fuzzy
-  surface lookups can add morphology without polluting meaning buckets.
-- `μῆνιν` now reaches a Diogenes morphology row (`fem acc sg`) while meaning
-  evidence still comes from the canonical `μῆνις` entry.
-- Sanskrit compound display remains protected: Heritage segment lemmas are
-  visible, while compound component lemmas do not become whole-token meaning
-  fallbacks.
-- Greek-script reader inputs now bypass the heavy normalizer and go directly to
-  Diogenes, which keeps `ἀρχῇ` fast while preserving morphology and meaning
-  evidence.
-- Diogenes and Gaffiot source references now influence learner-display ranking,
-  so primary senses like Greek `ἀρχῇ` "beginning" and Latin `erat` under
-  `sum/esse` are preferred over alphabetically earlier sub-senses or adjacent
-  entries.
-- Sanskrit morphology fallback terms now act as preferred learner lemmas when
-  sorting encounter buckets, so `tvā` leads with `yuṣmad` pronoun evidence
-  instead of unrelated `tva` material.
-- Morphology rows now provide ordered preferred lemmas for learner-display
-  ranking. This lets analyzed forms such as Latin `principio` lead with the
-  noun `principium` while preserving the visible alternate verb analysis.
-- Learner-quality ranking now demotes metalinguistic/cross-reference headings
-  and derivative-only Sanskrit entries when a more direct reader answer is
-  available. The corpus-expansion fixture now reaches 15/15 broad meaning and
-  15/15 top-answer checks without cached translations.
-- Preferred-lemma matching is transliteration-tolerant for common Sanskrit
-  display variants, so DICO remains preferred for same-headword cases such as
-  `varuṇaḥ` / `varu.na` and `ūrje` / `uurja`.
-- `encounter` now has a compact learner-gloss display pass. It prefers parsed
-  cached glosses, existing learner-gloss metadata, translated segment display
-  text, and then conservative source-entry compaction. When that compact line
-  differs from the full dictionary evidence, the full evidence line remains
-  visible.
-- The compact-gloss implementation was refactored during the quality pass into
-  named limits and compiled patterns, keeping the display logic inspectable and
-  source-backed rather than word-specific.
-- The compact-gloss logic now lives in the shared source-text layer. DICO and
-  Gaffiot claim triples emit `learner_gloss` and typed `learner_segments`, so
-  the terminal display consumes source metadata instead of rediscovering all
-  structure at the end of the pipeline. The Sanskrit `dharma` live probe now
-  shows `loi, condition, nature propre` with the full DICO entry retained as
-  evidence.
-- Generic source segmentation now recognizes clear cross-reference, source
-  reference, and citation/example segments while preserving the original source
-  text. This gives the next display pass typed material to hide or show without
-  scraping dictionary strings.
+The current fuzz loop already has source-backed fixes for Greek surface-form
+morphology, Sanskrit compound-display protection, preferred-lemma ranking,
+compact learner glosses, and generic source segmentation. The active queue below
+keeps only the remaining work needed to expand and harden that loop.
 
 ## Active Work Queue
 
@@ -126,7 +82,7 @@ Validation:
 
 ```bash
 just test test_claim_contracts test_cli_encounter_output test_reader_eval
-just cli reader-eval --language san --no-cache --translation-mode cache --output json
+just cli reader-eval [Sanskrit language filter] --no-cache --translation-mode cache --output json
 just validate-stabilization
 ```
 
@@ -146,7 +102,7 @@ Tasks:
 Validation:
 
 ```bash
-just cli reader-eval --language grc --no-cache --translation-mode cache --output json
+just cli reader-eval [Greek language filter] --no-cache --translation-mode cache --output json
 just test test_planner_core test_greek_anchor_normalization test_reader_eval
 ```
 
@@ -164,7 +120,7 @@ Tasks:
 Validation:
 
 ```bash
-just cli reader-eval --language lat --no-cache --translation-mode cache --output json
+just cli reader-eval [Latin language filter] --no-cache --translation-mode cache --output json
 just test test_cli_encounter_output test_reader_eval
 ```
 
@@ -190,7 +146,7 @@ just validate-stabilization
 
 ### 5. Compact Gloss Source Structuring
 
-Goal: move from conservative display compaction to typed learner segments while
+Goal: move from conservative display compaction to typed learner chunks while
 preserving source accountability.
 
 Tasks:

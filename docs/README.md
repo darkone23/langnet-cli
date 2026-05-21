@@ -1,45 +1,73 @@
 # LangNet Documentation
 
-This directory is the working documentation set for `langnet-cli`.
+This directory is the maintained documentation map for `langnet-cli`. Use it to
+find the current guide for a task; archived and upstream-reference material is
+kept for history, not day-to-day operation.
 
-## Start Here
+## Current Path
 
-- `docs/VISION.md` — product promise, audience, principles, and long-term direction.
-- `docs/BASELINE_AND_ROADMAP.md` — current working baseline, vision comparison, and concrete next steps.
-- `docs/PROJECT_STATUS.md` — current health card, risks, and next decisions.
-- `docs/EXECUTION_PLAN.md` — compact roadmap, task, gap, and risk index.
-- `docs/REFINEMENT_AUDIT.md` — section-by-section refinement stocktake and acceptance checks.
-- `docs/GETTING_STARTED.md` — setup, service requirements, and first commands.
-- `docs/ROADMAP.md` — canonical implementation sequence.
-- `docs/GOALS.md` — concise goals and current north star.
-- `docs/PEDAGOGICAL_PHILOSOPHY.md` — learner-facing grammar and evidence policy.
-- `docs/JUST_RECIPE_HEALTH.md` — current recipe wiring and fuzz-harness findings.
-- `docs/SEMANTIC_READINESS.md` — current exact-reduction readiness and gaps before broader semantic generalization.
-- `docs/TRANSLATION_CACHE_PLAN.md` — lazy DICO/Gaffiot French → English translation cache design.
+Start here:
+
+- `README.md` - project overview and current product surfaces.
+- `docs/GETTING_STARTED.md` - setup, services, and first commands.
+- `docs/OUTPUT_GUIDE.md` - CLI and JSON output guide.
+- `docs/DEVELOPER.md` - local workflow, validation, and debugging notes.
+- `docs/ROADMAP.md` - canonical milestone roadmap.
+- `docs/EXECUTION_PLAN.md` - compact active queue and decision gates.
+- `docs/READER_CLI_BEGINNER_GUIDE.md` - reader corpus operation.
+- `webapp/README.md` - SvelteKit webapp operation.
+
+## Reader And Web
+
+- `docs/READER_CLI_BEGINNER_GUIDE.md` - discover, enumerate, and read locally indexed texts.
+- `docs/READER_CORPUS_STATUS.md` - reader corpus status and validation checkpoints.
+- `docs/READER_DATA_BUILD.md` - reader data build and index workflow.
+- `docs/READER_WEB_CONTRACT.md` - reader/web integration contract.
+- `webapp/README.md` - webapp setup and operational notes.
+- `webapp/docs/` - webapp-specific backend, UI, operations, and regression notes.
 
 ## Developer References
 
-- `docs/DEVELOPER.md` — local workflow, validation commands, and debugging notes.
-- `docs/OUTPUT_GUIDE.md` — current output shapes and evidence inspection.
-- `docs/handler-development-guide.md` — how to add or change staged handlers.
-- `docs/storage-schema.md` — DuckDB cache/index schema and staged effect tables.
+- `docs/DEVELOPER.md` - development workflow and validation commands.
+- `docs/OUTPUT_GUIDE.md` - output shapes, evidence inspection, and JSON contracts.
+- `docs/GOALS.md` - concise product goals and non-goals.
+- `docs/VISION.md` - product promise, audience, and principles.
+- `docs/PEDAGOGICAL_PHILOSOPHY.md` - learner-facing grammar and evidence policy.
+- `docs/SEMANTIC_READINESS.md` - semantic-reduction readiness gates.
+- `docs/TRANSLATION_CACHE_PLAN.md` - translation cache behavior and constraints.
 
 ## Technical References
 
-- `docs/technical/ARCHITECTURE.md` — current runtime architecture.
-- `docs/technical/design/TECHNICAL_VISION.md` — target technical design map.
-- `docs/technical/predicates_evidence.md` — canonical claim/triple predicates and evidence fields.
-- `docs/technical/design/` — design notes for semantic reduction, hydration, planning, and witness contracts.
-- `docs/technical/backend/` — backend-specific notes for Diogenes, Whitaker, Heritage/CDSL, and related tooling.
+- `docs/technical/README.md` - technical documentation map.
+- `docs/technical/ARCHITECTURE.md` - current runtime architecture.
+- `docs/technical/backend/` - backend-specific notes.
+- `docs/technical/design/` - design notes for planning, reduction, hydration, and witness contracts.
+- `docs/technical/predicates_evidence.md` - canonical predicates and evidence fields.
+- `docs/storage-schema.md` - DuckDB cache and index schema notes.
+- `docs/CITATIONS.md` - source credits and attribution.
 
 ## Planning
 
-- `docs/plans/active/infra/design-to-runtime-roadmap.md` — current active plan.
-- `docs/plans/active/pedagogy/learner-encounter-roadmap.md` — active learner-output refinement plan.
-- `docs/plans/active/infra/local-lexicon-witness-handoff.md` — Gaffiot/DICO source-witness handoff retained for local lexicon context.
-- `docs/plans/completed/` — completed work records.
-- `docs/archive/2026-04-cleanup/` — historical reports and superseded plans retained for audit only.
+- `docs/plans/README.md` - current active, todo, and completed plan map.
+- `docs/ROADMAP.md` - durable milestone sequence.
+- `docs/EXECUTION_PLAN.md` - current operating queue.
+- `docs/DOCUMENTATION_AUDIT.md` - documentation overhaul ledger.
+
+Avoid maintaining separate lists of many active plans here; `docs/plans/README.md`
+is the canonical plan index.
+
+## Archive And Upstream References
+
+- `docs/archive/` - historical reports, superseded plans, and dated status docs.
+- `docs/upstream-docs/` - copied upstream/vendor references.
+- `docs/superpowers/` - overhaul specs and implementation plans for the agent workflow.
+
+Archive files may contain stale commands or older architecture names. Use them
+only for historical context unless a current doc points to a specific decision.
 
 ## Maintenance Rule
 
-Keep active docs factual and short. If a document describes completed work, session notes, stale architecture, or speculative old planning, move it to `docs/archive/` instead of leaving it in the main reading path.
+Keep current docs factual and short. If a document describes completed work,
+session notes, stale architecture, or speculative old planning, move it to
+`docs/archive/` or `docs/plans/completed/` instead of leaving it in the main
+reading path.

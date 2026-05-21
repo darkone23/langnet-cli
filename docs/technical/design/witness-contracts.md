@@ -49,7 +49,7 @@ Preferred-lemma ranking helpers, source-order ranking, learner-quality ordering,
 and bucket sort-key assembly live in `encounter_ranking`; ranking remains
 separate from display view construction.
 
-For translated DICO/Gaffiot output, cached English translations are derived
+For translated DICO/Gaffiot/Bailly output, cached English translations are derived
 witnesses. They should carry translation evidence plus parsed display helpers:
 
 - `parsed_glosses`: individual English gloss candidates parsed from the translated text
@@ -58,6 +58,10 @@ witnesses. They should carry translation evidence plus parsed display helpers:
 These parsed fields support learner display and future reduction experiments. They
 do not replace source glosses, and they must not be treated as unproven original
 dictionary facts.
+
+Reader, word-index, paradigm, and translation-cache JSON are adjacent product
+contracts, not WSU input by default. If they later feed reduction, add an
+explicit claim/triple projection layer first.
 
 ## Reducer Requirements
 

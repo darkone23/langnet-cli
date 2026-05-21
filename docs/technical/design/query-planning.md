@@ -25,6 +25,11 @@ input language + query
 - Stages should preserve dependency edges.
 - Missing optional tools should produce explicit errors or skipped calls, not silent success.
 - Tests should not require live services unless marked as integration tests.
+- Local lexicon appenders such as DICO, Gaffiot, Bailly, Lewis 1890, and CTS
+  index lookups should appear as explicit plan tools when selected.
+- Busy, missing, or disabled optional services should surface as skipped calls,
+  warnings, or structured failures that CLI JSON and the SvelteKit adapter can
+  render.
 
 ## Inspection
 
@@ -33,6 +38,7 @@ Use:
 ```bash
 just cli plan lat lupus
 just cli plan-exec lat lupus
+just cli tools --output json
 ```
 
 `plan-exec --output json` reports cache status, stage counts, skipped-call

@@ -30,6 +30,9 @@ This is the canonical documentation contract for claim triples. Keep it aligned 
 - `has_pronunciation`
 - `has_citation`
 - `has_frequency`
+- `has_root`
+- `has_domain`
+- `has_register`
 
 ### Morphology
 
@@ -56,7 +59,7 @@ Every evidence-backed triple should use:
 
 ```json
 {
-  "source_tool": "whitaker|diogenes|cltk|cdsl|heritage|spacy",
+  "source_tool": "whitaker|diogenes|cltk|cdsl|heritage|spacy|dico|gaffiot|bailly|lewis_1890|cts_index|translation",
   "call_id": "...",
   "response_id": "...",
   "extraction_id": "...",
@@ -70,6 +73,23 @@ Every evidence-backed triple should use:
 
 Optional fields should be omitted when unavailable, not filled with empty strings.
 
+Current source-tool values:
+
+| Source tool | Role |
+| --- | --- |
+| `whitaker` / `whitakers` | Latin morphology and compact senses |
+| `diogenes` | Latin/Greek dictionary, morphology, citations, and inflection data |
+| `cltk` | supplemental lexicon/IPA data |
+| `cdsl` | Sanskrit MW/AP90 dictionary rows |
+| `heritage` | Sanskrit morphology and segmentation |
+| `spacy` | supplemental Greek morphology |
+| `dico` | Sanskrit-French dictionary rows |
+| `gaffiot` | Latin-French dictionary rows |
+| `bailly` | Greek-French dictionary rows |
+| `lewis_1890` | Lewis 1890 Latin-English dictionary rows |
+| `cts_index` | CTS citation/reader metadata |
+| `translation` | derived English translation-cache witness |
+
 ## Rules
 
 - Provenance belongs in `metadata.evidence`, not in anchor IDs.
@@ -77,3 +97,7 @@ Optional fields should be omitted when unavailable, not filled with empty string
 - Senses attach to lexemes/sense nodes, not directly to ambiguous surface forms.
 - `has_feature` is acceptable for preserving detail, but stable repeated fields should graduate to canonical predicates.
 - Tests should assert evidence IDs whenever fixture data makes them available.
+- Translation-derived triples should identify the translated source with fields
+  such as `derived_from_tool`, `derived_from_source_ref`, or
+  `derived_from_sense` in evidence/payload metadata rather than overwriting the
+  original source witness.

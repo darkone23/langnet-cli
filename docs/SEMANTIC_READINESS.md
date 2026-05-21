@@ -7,7 +7,7 @@ LangNet now has a small runtime semantic path: claim triples become Witness Sens
 ## What Is Ready
 
 - Core handlers emit claim triples.
-- Fixture-backed claim contract tests exist for Whitaker, CDSL, Diogenes, CLTK, Heritage, DICO, and Gaffiot.
+- Fixture-backed claim contract tests exist for Whitaker, CDSL, Diogenes, CLTK, Heritage, DICO, Gaffiot, and current local lexicon/index slices.
 - Predicate drift is guarded by a test.
 - A hand-written `lupus` WSU fixture exists under `tests/fixtures/`.
 - DICO/Gaffiot local raw response IDs are content-addressed and regression-tested.
@@ -15,9 +15,10 @@ LangNet now has a small runtime semantic path: claim triples become Witness Sens
 - Runtime WSU extraction exists over `has_sense + gloss + evidence`.
 - Exact-match bucket grouping exists.
 - `langnet-cli encounter` displays reduced buckets and shows Heritage morphology analysis rows for Sanskrit.
-- Cached DICO/Gaffiot translations can be projected as derived evidence before reduction.
+- Cached DICO/Gaffiot/Bailly translations can be projected as derived evidence before reduction when exact cache rows exist.
 - `encounter --translation-mode auto` can explicitly populate missing
-  DICO/Gaffiot translation rows, then display the projected English evidence.
+  DICO/Gaffiot/Bailly translation rows when source rows are available, then
+  display the projected English evidence.
 - `triples-dump --output json` exposes structured claims and triples for reducer debugging.
 - A 50-word diagnostic audit now distinguishes gloss hits from Heritage morphology/evidence hits.
 - Accepted `encounter` snapshots now cover translated DICO/Gaffiot cache hits and multi-witness ranking.
@@ -57,10 +58,12 @@ The current reducer groups exact normalized gloss strings. It is deterministic a
 
 ### 7. Translation Is Cache-Bearing But Selectively Populated
 
-DICO and Gaffiot source entries are French. The cache schema, cache-hit
-projection, explicit `auto` miss population, and Gaffiot/DICO golden rows exist.
-Representative cache rows are not yet broadly populated, live translation can be
-slow for long entries, and network translation must remain explicit opt-in.
+DICO, Gaffiot, and Bailly source entries are French. The cache schema, cache-hit
+projection, explicit miss population, and DICO/Gaffiot golden rows exist.
+Bailly uses the same translation/cache scope as local French lexicon evidence
+where source rows are available. Representative cache rows are not yet broadly
+populated, live translation can be slow for long entries, and network
+translation must remain explicit opt-in.
 
 ### 8. CDSL Entries Are Still Flat
 
@@ -93,7 +96,7 @@ every segment with the compound headword.
 2. Fix candidate/form hygiene so unrelated analyzer candidates do not pollute learner output.
 3. Add compact learner glosses over translated/source dictionary entries.
 4. Split source glosses into structured display fields before attempting semantic similarity.
-5. Expand cache-backed translation examples beyond the current golden rows and snapshots.
+5. Expand cache-backed translation examples beyond the current golden rows and snapshots, including Bailly once source fixtures are stable.
 6. Delay embeddings and LLM similarity until exact buckets plus source display are boring.
 
 ## Readiness Bar
@@ -104,7 +107,7 @@ Semantic reduction can advance beyond the exact-bucket MVP when:
 - Each WSU carries claim/evidence IDs and display metadata.
 - No live backend is required for reducer tests.
 - `triples-dump` can inspect the same facts the reducer consumes.
-- DICO/Gaffiot translated glosses are cache-backed and evidence-bearing before they influence buckets.
+- DICO/Gaffiot/Bailly translated glosses are cache-backed and evidence-bearing before they influence buckets.
 - CDSL flat entry strings are structured enough that ranking does not privilege undifferentiated source notation.
 - The representative encounter set (`san nirudha`, `san dharma`, `lat lupus`,
   `grc logos`) has accepted learner-facing output and JSON evidence fixtures.

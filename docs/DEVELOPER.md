@@ -174,8 +174,10 @@ Relevant docs:
 
 ## Documentation Workflow
 
-- Update `docs/PROJECT_STATUS.md` when the project grade or major gap changes.
-- Update `docs/ROADMAP.md` only for milestone-level direction.
+- Update `docs/ROADMAP.md` for milestone-level direction.
+- Update `docs/EXECUTION_PLAN.md` for the compact active queue.
+- Update `docs/DOCUMENTATION_AUDIT.md` when moving, merging, or archiving
+  documentation during the overhaul.
 - Put implementation task lists under `docs/plans/`.
 - Move stale session reports and superseded plans to `docs/archive/`.
 

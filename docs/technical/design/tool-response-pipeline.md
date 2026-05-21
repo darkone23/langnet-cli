@@ -16,6 +16,9 @@ Examples:
 - Heritage HTML response
 - Whitaker plain text
 - CDSL DuckDB JSON rows
+- DICO, Gaffiot, Bailly, and Lewis 1890 DuckDB rows
+- CTS index rows
+- reader catalog/search rows and word-index rows when exposed through CLI JSON
 
 ## Extract
 
@@ -30,6 +33,11 @@ Normalizes extracted data into handler-specific derivations. This is where backe
 Projects derivations into stable claim values and triples with evidence.
 
 Claims are the intended input for semantic reduction.
+
+Reader catalog/search, word-index, paradigm, and translation-cache commands may
+return purpose-built JSON schemas rather than claim triples. The SvelteKit
+adapter should consume those CLI JSON contracts directly instead of inventing a
+parallel backend contract.
 
 ## Testing Rule
 

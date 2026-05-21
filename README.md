@@ -1,37 +1,34 @@
 # langnet-cli
 
-LangNet is a local evidence engine for reading Latin, Greek, and Sanskrit. It connects inflected words to dictionary meanings, morphological analyses, and source-backed claims so students, teachers, and researchers can see both the answer and the evidence behind it.
+LangNet is a local evidence engine for reading Latin, Greek, and Sanskrit. It
+connects inflected words to dictionary meanings, morphological analyses, source
+claims, and reader-oriented explanations so students, teachers, and researchers
+can see both the answer and the evidence behind it.
 
-The reliable product surface today is the CLI. External services such as Heritage, Diogenes, and Whitaker's Words are not bundled and must already be running for live lookup.
+The reliable backend contract today is CLI JSON. The webapp is a SvelteKit
+adapter over that contract, with API routes for search, reader texts, word
+index browsing, paradigms, message-of-the-day data, and translation-cache
+inspection.
 
 ## Quick Start
 
 ```sh
-# Enter the devenv shell, then run commands normally
+# Enter the devenv shell, then run commands normally.
 devenv shell
 langnet-cli --help
 
-# Or run a one-off command with the environment activated
+# Or run one-off commands through the maintained wrapper.
 just cli lookup lat lupus --output json
+just cli encounter san dharma all --output json
+just cli translation-cache status --output json
 
-# Inspect the staged plan, source evidence, and learner-facing MVP
+# Inspect source-backed learner output and evidence.
 just cli plan lat lupus
 just triples-dump lat lupus whitakers
-just cli encounter san dharma all --no-cache
-
-# Use cache-backed DICO/Gaffiot English evidence when available
 just cli encounter lat arma gaffiot --translation-mode cache
 just cli encounter san dharma dico --translation-mode cache
-just cli reader-eval --limit 3 --translation-mode cache
 
-# Explicitly populate missing DICO/Gaffiot translations, then display them
-just cli encounter lat cano gaffiot --translation-mode auto
-
-# Ask for learner word recommendations backed by encounter probes
-just cli word-of-day san --output json
-just cli recommend-words lat --count 3
-
-# Inspect source-backed inflection tables
+# Inspect source-backed inflection tables.
 just cli paradigm san putra --kind declension --gender Mas --output json
 just cli paradigm san gam --kind conjugation --class 1 --output json
 just cli paradigm lat amo --kind conjugation --output json
@@ -41,62 +38,57 @@ just cli paradigm grc lo/gos --kind declension --output json
 ## Language Support
 
 | Language | Lexicon | Morphology | Encoding Support |
-|----------|---------|------------|------------------|
-| **Latin** | Diogenes (Lewis & Short), local Gaffiot | Whitaker's Words | UTF-8 |
-| **Greek** | Diogenes (Liddell & Scott) | Diogenes + CLTK | UTF-8, Betacode |
-| **Sanskrit** | CDSL (Monier-Williams/AP90), local DICO | Heritage Platform | IAST, Devanagari, SLP1, Velthuis |
+| --- | --- | --- | --- |
+| **Latin** | Diogenes Lewis & Short, local Gaffiot, Lewis 1890 index data | Whitaker's Words | UTF-8 |
+| **Greek** | Diogenes Liddell & Scott | Diogenes + CLTK where configured | UTF-8, Betacode |
+| **Sanskrit** | CDSL Monier-Williams/AP90, local DICO | Heritage Platform | IAST, Devanagari, SLP1, Velthuis |
+| **French-to-English lexicon support** | DICO, Gaffiot, Bailly | Translation cache projection | Cache-backed English derived evidence |
 
-## External Dependencies
+Bailly and Lewis surfaces are local data/index surfaces, not replacements for
+the CLI encounter contract. Bailly/Gaffiot/DICO French source entries can be
+projected through the translation cache when exact cache rows exist or when
+population is explicitly requested.
 
-Services that must be installed and running locally:
-1. **Sanskrit Heritage Platform** (`localhost:48080`) – preferred Sanskrit analysis/morphology source
-2. **Diogenes** (`localhost:8888`) – Greek/Latin lexicons
-3. **Whitaker's Words** (`~/.local/bin/whitakers-words`) – Latin morphology
+## Current Surfaces
 
-Manually sourced or downloaded data (plan ahead before running indexers or semantic reduction):
-- **Perseus canonical corpora** (`~/perseus`): `canonical-greekLit` and `canonical-latinLit` trees needed for CTS URN indexing and citation lookups.
-- **Classics-Data (PHI CD-ROM) legacy corpus** (`~/Classics-Data`): optional gap-fill for works missing from Perseus.
-- **Stanza resources** (`~/stanza_resources/`): downloaded automatically on first Stanza use; allow network or preinstall to avoid runtime stalls.
-- **Gensim embeddings** (`~/gensim-data/`): not required yet; embeddings are explicitly deferred until deterministic semantic buckets exist.
-- **CLTK models** (to `~/cltk_data/`)
-- **CDSL data** (to `~/cdsl_data/`)
+- `langnet-cli encounter` is the learner-facing word encounter.
+- `langnet-cli lookup`, `plan`, `plan-exec`, and `triples-dump` are inspection
+  and debugging surfaces.
+- `word-index`, `reader`, `paradigm`, `translation-cache`, `word-of-day`, and
+  `recommend-words` expose reader and learning workflows.
+- The SvelteKit webapp lives in `webapp/` and adapts CLI-backed data through
+  `/api/search`, `/api/reader`, `/api/word-index`, `/api/paradigm`,
+  `/api/motd`, and `/api/translation-cache`.
 
-After code changes, restart any long-running local process manager so Python modules reload.
+External services and local data remain environment-dependent. Sanskrit
+Heritage, Diogenes, Whitaker's Words, CLTK data, CDSL data, and corpus/index
+databases must be installed or built separately for live lookup and browsing.
 
 ## Documentation
 
-- **[docs/VISION.md](docs/VISION.md)** - Product vision, audience, and strategic direction
-- **[docs/BASELINE_AND_ROADMAP.md](docs/BASELINE_AND_ROADMAP.md)** - Current working baseline, vision comparison, and next concrete steps
-- **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** - Installation and first queries
-- **[docs/DEVELOPER.md](docs/DEVELOPER.md)** - Development setup and workflow
-- **[docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md)** - Roadmap, task, gap, and risk operating view
-- **[docs/GOALS.md](docs/GOALS.md)** - Educational approach and product goals
-- **[docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md)** - Learner-facing grammar and evidence principles
-- **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** - Current health card and next priorities
-- **[docs/OUTPUT_GUIDE.md](docs/OUTPUT_GUIDE.md)** - How to read CLI/API JSON (pedagogy-first)
-- **[docs/READER_CORPUS_STATUS.md](docs/READER_CORPUS_STATUS.md)** - Current reader corpus status, metadata policy, and validation checkpoints
-- **[docs/READER_CLI_BEGINNER_GUIDE.md](docs/READER_CLI_BEGINNER_GUIDE.md)** - How to discover, enumerate, and read locally indexed texts
-- **[docs/technical/](docs/technical/)** - Technical reference docs
-- **[AGENTS.md](AGENTS.md)** - Multi-model AI personas and workflows
+- **[docs/README.md](docs/README.md)** - documentation map
+- **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** - setup and first commands
+- **[docs/OUTPUT_GUIDE.md](docs/OUTPUT_GUIDE.md)** - CLI and JSON output guide
+- **[docs/DEVELOPER.md](docs/DEVELOPER.md)** - development workflow
+- **[docs/ROADMAP.md](docs/ROADMAP.md)** - milestone roadmap
+- **[docs/EXECUTION_PLAN.md](docs/EXECUTION_PLAN.md)** - current active queue
+- **[docs/READER_CLI_BEGINNER_GUIDE.md](docs/READER_CLI_BEGINNER_GUIDE.md)** - reader corpus operation
+- **[docs/READER_WEB_CONTRACT.md](docs/READER_WEB_CONTRACT.md)** - reader/web integration contract
+- **[webapp/README.md](webapp/README.md)** - SvelteKit webapp operation
+- **[AGENTS.md](AGENTS.md)** - AI-agent workflow notes
 
 ## Development
 
-This project uses multi-model AI-assisted development via OpenRouter. See `AGENTS.md` for specialized agent usage:
-- **@architect** - System design and planning
-- **@sleuth** - Debugging and root cause analysis  
-- **@coder** - Feature implementation and testing
-- **@artisan** - Code optimization and style
-- **@scribe** - Documentation and comments
-- **@auditor** - Code review and security
+This project uses multi-model AI-assisted development via OpenRouter. See
+`AGENTS.md` for specialized agent usage:
 
-## Current Status and Known Gaps
+- **@architect** - system design and planning
+- **@sleuth** - debugging and root cause analysis
+- **@coder** - feature implementation and testing
+- **@artisan** - code optimization and style
+- **@scribe** - documentation and comments
+- **@auditor** - code review and security
 
-- External services are required for live lookup; without them `langnet-cli lookup` returns per-tool errors for unavailable sources.
-- The current learner-facing MVP is `langnet-cli encounter`. It reduces claim triples into exact Witness Sense Unit buckets and shows source-backed meanings plus Heritage morphology analysis for Sanskrit.
-- `paradigm` and `paradigm-resolve` expose source-backed inflection table work. They currently wrap Heritage `sktdeclin`/`sktconjug` and Diogenes `do=inflect`; see `docs/technical/backend/paradigm-generation-limitations.md` for graceful-degradation behavior and known limits.
-- `word-of-day` and `recommend-words` provide on-demand learner word suggestions. JSON output uses `langnet.word_of_day.v1` and includes verified encounter summaries when lookup evidence is available.
-- `triples-dump --output json` is the current evidence-inspection surface for claims, triples, source refs, and display metadata.
-- DICO/Gaffiot French source entries are wired as source evidence. Cache-backed English translations can be projected into `encounter` with `--translation-mode cache`; missing rows can be populated only when explicitly requested with `--translation-mode auto`.
-- Several open issues remain: CTS URN enrichment is deferred, CDSL entries are still flat source-heavy strings, some long upstream entries need better source segmentation, and exact buckets are not yet broad semantic merging.
-- Use `just lint-all`, `just test-fast`, and `just validate-stabilization` for local validation. Routine recipes route through local wrappers and should be run sequentially when auditing recipe health. Restart long-lived servers after code changes.
-- Planning docs live under `docs/plans/`; the canonical roadmap is `docs/ROADMAP.md`, with the active implementation plan at `docs/plans/active/infra/design-to-runtime-roadmap.md`.
+Use `just lint-all`, `just test-fast`, and focused `just test ...` recipes for
+local validation. Run recipe probes sequentially when auditing recipe health,
+and restart long-lived web or process-manager sessions after code changes.

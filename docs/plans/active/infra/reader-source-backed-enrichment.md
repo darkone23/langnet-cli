@@ -91,68 +91,24 @@ examples/debug/dcs-overlay-source-note-2026-05-16.md
   - Extend `tests/test_reader_bulk_classification.py`.
   - Extend `tests/test_reader_cli.py` or `tests/test_reader_storage.py`.
 
-## Task 1: Source Evidence Model
+## Completed Baseline
 
-- [x] Add a normalized source evidence dataclass or mapping convention for:
-  - `collection_id`
-  - `subject_kind`
-  - `subject_id`
-  - `key`
-  - `value`
-  - `source_path`
-  - source citation/provenance fields where applicable.
-- [x] Ensure source rows can represent:
-  - Perseus subject membership and catalog URLs.
-  - Perseus series/editor/year metadata when useful.
-  - DCS author, time slot, subject, and completion/link flags.
-  - DCS chapter metadata from `chapter-info.xml`.
+The source evidence model, Perseus/DCS import paths, source metadata storage,
+classification export context, and bulk-classifier prompt integration are in
+place. This active plan now tracks only the remaining enrichment/regeneration
+work.
 
-## Task 2: Perseus Catalog Harvester
+## Remaining Work
 
-- [x] Implement a parser for saved or fetched Perseus Catalog result pages.
-- [x] Extract title, CTS edition URN, work URN, author, editor/translator, year, language, subject, and source URL.
-- [x] Match local works by `cts_work_urn`, then by normalized `source_id`.
-- [x] Register subject membership as `source_metadata`.
-- [ ] Emit candidate metadata overlays only when Perseus provides a field correction.
-
-## Task 3: DCS Corpus Metadata Importer
-
-- [x] Parse the DCS corpus table export into rows keyed by DCS text name.
-- [x] Match rows to `sanskrit_dcs` works by title/source id/local path.
-- [x] Register:
-  - `dcs_author`
-  - `dcs_time_slot`
-  - `dcs_subject`
-  - `dcs_completed`
-  - `dcs_has_show`
-  - `dcs_has_bib`
-  - `dcs_has_dict`
-  - `dcs_has_freq`
-- [x] Parse `chapter-info.xml` and register chapter id/order/time-slot metadata.
-- [ ] Feed chapter structure into work-map sync where it is reliable.
-
-## Task 4: Classifier Context Integration
-
-- [x] Extend `reader classification-export` with a compact `source_metadata_summary` field.
-- [x] Include:
-  - high-value source subjects;
-  - DCS author/time-slot/subject;
-  - Perseus subject/series hints;
-  - source URL labels only when needed for provenance.
-- [x] Update the bulk classifier prompt to treat source-backed context as evidence and generated fields as synthesis.
-- [x] Preserve deterministic shuffle batching.
-
-## Task 5: Full Regeneration Lifecycle
-
-- [ ] Let the current Sanskrit/Latin classifier runs finish as a baseline.
-- [x] Import Perseus and DCS source-backed evidence.
-- [x] Re-export classification CSVs with enriched context.
-- [ ] Re-run classification for affected languages.
-- [ ] Sync generated classifications into the catalog.
-- [ ] Spot-check:
-  - popular Greek medical texts;
-  - Latin grammar texts by scope popularity;
-  - Sanskrit Ayurveda/Kosha/Paniniya/Vedic works.
+1. Emit candidate metadata overlays only when Perseus provides a display-field
+   correction.
+2. Feed DCS chapter structure into work-map sync where it is reliable.
+3. Re-run classification for affected languages using the enriched context.
+4. Sync generated classifications into the catalog.
+5. Spot-check:
+   - popular Greek medical texts;
+   - Latin grammar texts by scope popularity;
+   - Sanskrit Ayurveda/Kosha/Paniniya/Vedic works.
 
 ## Self-Review
 

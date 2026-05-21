@@ -1,6 +1,13 @@
 # Latin Grammar Abbreviations (Cassell-derived)
 
-These abbreviations appear in Latin dictionary and grammar entries (e.g., LSJ/L&S, Cassell). Use them in the parsing layer to normalize, expand, and label grammar/source markers while preserving the source text.
+Status: source/reference-only. This list is retained as historical parsing
+research and is not a currently imported code API. Do not cite
+`GrammarAbbreviations` as an implemented runtime class unless code is added to
+use it directly.
+
+These abbreviations appear in Latin dictionary and grammar entries (e.g.,
+LSJ/L&S, Cassell). They may inform future parser normalization, expansion, and
+source-label preservation work.
 
 ```python
 class GrammarAbbreviations:

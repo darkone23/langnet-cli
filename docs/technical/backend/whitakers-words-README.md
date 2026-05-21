@@ -1,6 +1,8 @@
 # Whitaker's Words Backend
 
-Whitaker's Words supplies Latin morphology, lemmas, and senses.
+Whitaker's Words supplies Latin morphology, lemmas, and senses. It is also a
+useful Latin source for word-index builds because its output gives compact
+headword and morphology evidence.
 
 ## Requirement
 
@@ -8,6 +10,12 @@ The binary is expected at:
 
 ```text
 ~/.local/bin/whitakers-words
+```
+
+Check local discovery with:
+
+```bash
+just cli doctor --output json
 ```
 
 ## Runtime Role
@@ -31,7 +39,8 @@ Whitaker is currently one of the best fixtures for scoped interpretations becaus
 
 ```bash
 just cli parse whitakers lat amarem --format json
-just triples-dump lat amarem whitakers
+just cli triples-dump lat amarem whitakers
+just cli word-index sections lat --output json
 ```
 
 ## Testing

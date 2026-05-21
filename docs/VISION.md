@@ -61,7 +61,12 @@ LangNet should preserve traditional grammatical terms while explaining what they
 
 The reliable product surface is the local CLI. External services can be required for live lookup, but fixture-backed behavior and evidence inspection should not depend on network access.
 
+The current webapp is a SvelteKit adapter over structured CLI/data contracts,
+not a separate semantic backend. Bailly, Gaffiot, DICO, and Lewis local
+dictionary/index surfaces should remain source-backed and provenance-preserving;
+French-to-English translation cache projection is derived evidence, never a
+replacement for the source entry.
+
 ## Current North Star
 
 Build a reliable word-level evidence engine first. Then reduce that evidence into grouped meanings that make classical texts easier to read without hiding the sources.
-

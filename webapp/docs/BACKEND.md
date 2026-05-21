@@ -4,6 +4,10 @@ The web app is live-CLI first. Sample data remains in `src/lib/search-data.ts`
 as a development fixture, but normal searches call the real LangNet CLI through
 `/api/search`.
 
+Current SvelteKit endpoints are `/api/search`, `/api/reader`,
+`/api/word-index`, `/api/paradigm`, `/api/motd`, and
+`/api/translation-cache`.
+
 ## Request Flow
 
 The main UI builds an API URL like:
@@ -34,6 +38,12 @@ The endpoint follows the app's existing mode-based pattern:
 
 ```txt
 /api/reader?mode=catalogs
+/api/reader?mode=facets&catalog=development&language=grc
+/api/reader?mode=groups&catalog=development&language=lat
+/api/reader?mode=tags&catalog=development&language=san
+/api/reader?mode=author-facets&catalog=development&language=lat
+/api/reader?mode=shelves&catalog=development&language=san&sample_limit=2
+/api/reader?mode=search&catalog=development&language=grc&q=logos&search_mode=fuzzy&limit=20
 /api/reader?mode=works&catalog=development&language=grc&q=Odyssey&limit=40
 /api/reader?mode=work&catalog=development&work=urn:cts:greekLit:tlg0012.tlg002
 /api/reader?mode=contents&catalog=development&work=urn:cts:greekLit:tlg0012.tlg002&around=3.74&radius=4
@@ -57,6 +67,11 @@ product catalog for the active language.
 
 Reading flow:
 
+- `facets`, `groups`, `tags`, `author-facets`, and `shelves` power Reader Desk
+  discovery.
+- `search` delegates to the CLI reader text-search index and accepts
+  `search_mode`, `group`, `tag`, `collection`, `work_id`, `author_id`,
+  `context`, `limit`, and `cursor`.
 - `author-sections`, `authors`, and `works --author-id` provide native author
   index discovery by source-language section.
 - `works` and `authors` pass CLI-native `--query`, `--limit`, and `--cursor`.
@@ -70,10 +85,23 @@ Reading flow:
   available in the page detail.
 
 The reader route serializes durable UI state into the browser URL. Supported
-route parameters include `lang`, `catalog`, `q`, `author_section`, `author`,
-`authors_cursor`, `works_cursor`, `contents_cursor`, `collection`, `work`,
-`segment`, `word`, and `theme`. Session storage is only a cache for already
-loaded index payloads that match the URL.
+route parameters include `lang`, `catalog`, `view`, `q`, `text_q`,
+`search_mode`, `group`, `tag`, `sort`, `page_cursor`, `author_section`,
+`author`, `authors_cursor`, `works_cursor`, `contents_cursor`, `collection`,
+`work`, `address`, `segment`, `word`, and `theme`. Session storage is only a
+cache for already loaded index payloads that match the URL.
+
+## Translation Cache API
+
+`POST /api/translation-cache` lets the UI retry or clear rejected generated
+translations for DICO, Gaffiot, and Bailly. The body can include either
+`translation_id` or source projection fields such as `source_lexicon`,
+`entry_id`, `occurrence`, `headword_norm`, and `source_text_hash`, plus optional
+`max_retries` and `timeout_ms`. A successful retry clears the in-process search
+response cache so the next encounter can show the refreshed translation layer.
+
+The web API uses MessagePack only when the browser sends
+`Accept: application/msgpack`; JSON remains the default-compatible format.
 
 ## CLI Invocation
 
@@ -311,7 +339,8 @@ Marginal word panel.
 Normal load:
 
 ```sh
-langnet-cli word-of-day all \
+cd ..
+just cli word-of-day all \
   --count 1 \
   --level beginner \
   --translation-mode cache \
@@ -322,7 +351,8 @@ langnet-cli word-of-day all \
 Refresh:
 
 ```sh
-langnet-cli word-of-day all \
+cd ..
+just cli word-of-day all \
   --count 1 \
   --level beginner \
   --translation-mode cache \

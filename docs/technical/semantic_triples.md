@@ -37,6 +37,15 @@ Raw payloads are still preserved. Triples are not a lossy replacement; they are 
 - CLTK: pronunciation, Lewis lines, and inflection links.
 - Heritage: morphology objects.
 - CDSL: Sanskrit dictionary senses and source references.
+- DICO: Sanskrit-French dictionary entry senses and source text.
+- Gaffiot: Latin-French dictionary entry senses and source text.
+- Bailly: Greek-French dictionary entry senses and source text.
+- Lewis 1890: Latin-English local dictionary entry senses.
+- CTS index: citation and reader metadata hydration evidence.
+
+Current lexical predicates include `has_root`, `has_domain`, and
+`has_register` for source-backed root, domain, and register facts when handlers
+can emit them without guessing.
 
 ## Next Use
 

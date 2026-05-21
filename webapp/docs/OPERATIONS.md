@@ -75,6 +75,20 @@ This runs:
 - `just check`
 - `just build`
 
+The main webapp recipe set is:
+
+```sh
+just install
+just dev
+just dev-open
+just preview
+just preview-logs
+just start
+just search
+just search-live
+just verify
+```
+
 Run only the fast unit/regression tests:
 
 ```sh
@@ -116,6 +130,25 @@ The `just api` recipe URL-encodes query parameters, so non-ASCII words are safe:
 
 ```sh
 just api san पुराण dico cache
+```
+
+`just search` and `just search-live` are aliases for the same live
+`/api/search` probe.
+
+Translation-cache retry is a POST endpoint. Use a real payload from the UI or an
+API response when testing it; the endpoint requires either `translation_id` or
+source projection metadata and clears the in-process search cache after a
+successful CLI retry.
+
+## Reader Probes
+
+While `just dev` is running, probe the Reader Desk API directly:
+
+```sh
+curl -sS 'http://127.0.0.1:43210/api/reader?mode=catalogs' | jq '.items'
+curl -sS 'http://127.0.0.1:43210/api/reader?mode=shelves&catalog=development&language=san&sample_limit=2' | jq '.items[0]'
+curl -sS 'http://127.0.0.1:43210/api/reader?mode=search&catalog=development&language=grc&q=logos&search_mode=fuzzy&limit=5' | jq '.items[0]'
+curl -sS 'http://127.0.0.1:43210/api/reader?mode=resolve-address&catalog=development&language=grc&address=Od.%203.74' | jq
 ```
 
 ## MOTD Probes

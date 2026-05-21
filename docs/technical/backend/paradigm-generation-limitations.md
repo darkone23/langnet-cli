@@ -18,6 +18,8 @@ LangNet paradigm generation is source-backed. It wraps Sanskrit Heritage and Dio
 - CLI probes:
   - `paradigm-resolve`
   - `paradigm`
+- Web adapter consumer:
+  - `webapp/src/routes/api/paradigm/+server.ts`
 
 ## Current Limits
 
@@ -62,5 +64,5 @@ Examples of current warning values:
 2. Expand dictionary grammar extraction per source, especially source-native gender/class metadata.
 3. Improve Heritage conjugation block labels for all tense/mood categories.
 4. Group equivalent Diogenes forms into richer multi-analysis slots instead of preserving only `case_alternates`.
-5. Add UI highlighting from originating forms to matching paradigm slots.
+5. Add UI highlighting in the SvelteKit adapter from originating forms to matching paradigm slots.
 6. Add local template generation only after source-backed behavior is stable and well documented.
