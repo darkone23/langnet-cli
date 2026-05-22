@@ -126,14 +126,20 @@ audit the teaching contract before the web UI hardens around it:
 ```bash
 just cli learn concepts --output json
 just cli learn concepts --kind case --output json
+just cli learn concepts --kind case --view compact --output json
 just cli learn concept case.genitive --output json
 just cli learn evidence-report --output json
+just cli learn doctor --output json
+just cli learn foster-bridge --output json
+just cli learn foster-bridge of-possession --view compact --output json
+just cli learn foster-bridge by-with-from-in --output json
 just cli learn map \
   --pos noun \
   --paradigm-kind declension \
   --feature case=genitive \
   --feature number=plural \
   --feature gender=masculine \
+  --view compact \
   --output json
 just cli encounter san putraa.naam heritage --include-learning --output json
 ```
@@ -144,7 +150,28 @@ source-backed integration point: it derives candidate-local learning overlays
 from morphology-driven paradigm resolution, without fetching full paradigm
 tables. Learning concepts include `source_evidence` records, so CLI JSON can
 point to classical grammar source works before individual segment citations are
-available.
+available. `learn map` normalizes feature keys and values, rejects duplicate
+feature keys, and returns diagnostics for unmapped grammar values or ignored
+source-specific feature keys. `encounter --include-learning` includes
+candidate-local `evidence_gaps` so the CLI and web UI can point to the exact
+concept still missing passage-level grounding.
+
+`learn foster-bridge` is the reviewed Foster/Ossa bridge surface. It keeps
+source-derived Foster labels separate from the stable grammar concept registry
+while showing which labels can already map to concepts. The first promoted set
+covers `of-possession`, `to-for-from`, `object form`, `function of address`,
+`location function`, and `subject form`. `by-with-from-in` remains an aggregate
+candidate linked to ablative, instrumental, and locative rather than a single
+promoted concept. The bridge is also cross-linked back into `learn concept`,
+`learn map`, and `encounter --include-learning` concept payloads, so downstream
+didactic surfaces do not need a second lookup to show reviewed Foster/Ossa
+labels.
+
+Use `--view compact` for UI planning and server integration. The compact view
+keeps stable concept IDs, Foster gateways, traditional terms, source-evidence
+counts, bridge IDs, bridge summaries, learner actions, product-use notes,
+morphology predicates, source refs, and source-action hints while omitting full
+evidence arrays. Full JSON remains the audit/debug view.
 
 Use `learn evidence-report` as the stabilization gate before expanding into
 segment-level grammar-source research or web UI wiring. It should show every
@@ -155,6 +182,13 @@ Greek, Latin, or Sanskrit reader passages. `process.declension` remains the
 known gap because the available local lines are not yet strong enough to carry
 a precise teaching claim. Sanskrit sound-change examples include
 `sound_change.guna`, `sound_change.vrddhi`, and `sound_relation.savarna`.
+
+Use `learn doctor` as the didactic readiness gate before UI wiring. It combines
+concept evidence coverage, Foster essentials coverage, Foster source-reference
+actionability, and morphology-predicate mapper checks. The current expected
+state is `ok: true` with warnings for `process.declension` lacking exact
+segment evidence and for Foster `page:*`/`toc:*` refs being actionable but not
+yet embedded as local snippets.
 
 Local source texts are explored through the reader works tool. The current
 local Aṣṭādhyāyī record is:

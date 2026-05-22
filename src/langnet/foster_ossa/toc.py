@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from typing import TypedDict
 
 from langnet.foster_ossa.models import FosterOssaPage, FosterOssaTocEntry
 
@@ -34,10 +35,32 @@ PRINTED_PAGE_RE = re.compile(r"^(?P<title>.+?)\s+(?P<page>\d{1,4})$")
 SKIP_LINE_PREFIXES = ("contents", "ossa latinitatis sola")
 
 
+class _PendingTocEntry(TypedDict):
+    source_page_number: int
+    experience: int
+    encounter: int
+    global_encounter: int | None
+    title_parts: list[str]
+
+
+class _TocRow(TypedDict):
+    toc_id: str
+    source_page_number: int
+    section_kind: str
+    experience: int
+    encounter: int
+    global_encounter: int | None
+    encounter_id: str
+    latin_title: str
+    english_title: str
+    printed_page: int
+    inferred_page_number: int
+
+
 def parse_toc_entries(pages: Sequence[FosterOssaPage]) -> list[FosterOssaTocEntry]:
-    rows: list[dict[str, object]] = []
+    rows: list[_TocRow] = []
     current_experience: int | None = None
-    pending: dict[str, object] | None = None
+    pending: _PendingTocEntry | None = None
     english_row_index: int | None = None
     for page in pages:
         if page.page_number > TOC_PAGE_MAX:
@@ -79,10 +102,10 @@ def parse_toc_entries(pages: Sequence[FosterOssaPage]) -> list[FosterOssaTocEntr
 
 
 def _try_finalize_pending(
-    rows: list[dict[str, object]],
-    pending: dict[str, object],
+    rows: list[_TocRow],
+    pending: _PendingTocEntry,
 ) -> int | None:
-    title = _join_title_parts([str(part) for part in pending["title_parts"]])
+    title = _join_title_parts(pending["title_parts"])
     split = PRINTED_PAGE_RE.match(title)
     if split is None:
         return None
@@ -118,7 +141,7 @@ def _try_finalize_pending(
     return len(rows) - 1
 
 
-def _toc_entry_from_row(row: dict[str, object]) -> FosterOssaTocEntry:
+def _toc_entry_from_row(row: _TocRow) -> FosterOssaTocEntry:
     return FosterOssaTocEntry(
         toc_id=str(row["toc_id"]),
         source_page_number=int(row["source_page_number"]),

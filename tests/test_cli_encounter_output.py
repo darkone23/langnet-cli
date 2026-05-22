@@ -610,6 +610,9 @@ def test_encounter_learning_overlay_projects_concepts_from_candidate() -> None:
     concepts = cast(list[dict[str, object]], overlay["concepts"])
     concept = concepts[0]
     assert concept["id"] == "case.genitive"
+    foster_bridges = cast(list[dict[str, object]], concept["foster_bridges"])
+    assert foster_bridges[0]["id"] == "of-possession"
+    assert foster_bridges[0]["concept_ids"] == ["case.genitive"]
     traditional = cast(dict[str, str], concept["traditional"])
     assert traditional["san_role"] == "sambandha"
     assert "source_basis" not in concept
@@ -622,6 +625,9 @@ def test_encounter_learning_overlay_projects_concepts_from_candidate() -> None:
         "grammar.source.panini.astadhyayi",
     }
     assert overlay["missing_evidence"] == ["reader_segment_links"]
+    assert overlay["evidence_gaps"] == [
+        {"concept_id": "process.declension", "missing": ["reader_segment_links"]}
+    ]
 
 
 def test_encounter_learning_overlay_matches_golden_fixture() -> None:

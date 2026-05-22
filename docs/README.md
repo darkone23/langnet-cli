@@ -33,7 +33,11 @@ Start here:
 - `docs/GOALS.md` - concise product goals and non-goals.
 - `docs/VISION.md` - product promise, audience, and principles.
 - `docs/PEDAGOGICAL_PHILOSOPHY.md` - learner-facing grammar and evidence policy.
+- `docs/reference/foster-ossa/INTEGRATION_STATUS.md` - Foster integration status, gaps, and essentials roadmap.
+- `docs/reference/foster-ossa/FOSTER_ESSENTIALS.md` - structured starter pack of codified Foster essentials.
 - `docs/reference/foster-ossa/DIDACTIC_SYNTHESIS.md` - Foster Ossa synthesis and platform implications.
+- `docs/reference/foster-ossa/CORE_FUNCTION_BRIDGE.md` - conservative Foster function mappings into LangNet concepts.
+- `docs/reference/foster-ossa/TAXONOMY_AUDIT.md` - generated Foster-to-LangNet concept audit.
 - `docs/SEMANTIC_READINESS.md` - semantic-reduction readiness gates.
 - `docs/TRANSLATION_CACHE_PLAN.md` - translation cache behavior and constraints.
 

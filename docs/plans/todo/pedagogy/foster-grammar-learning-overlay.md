@@ -46,6 +46,8 @@
 - Modify: `docs/OUTPUT_GUIDE.md`
 
 - [x] Add `learn concepts`, `learn concept <concept-id>`, and `learn map --feature key=value --output json`.
+- [x] Add `learn foster-bridge` for reviewed Foster/Ossa-to-concept mappings
+  without promoting generated review material directly into the core registry.
 - [x] Add `--include-learning/--no-include-learning` to `encounter`.
 - [x] Include concept summaries under candidate-local `learning_overlay` payloads.
 - [x] Keep human-readable output compact by limiting this slice to JSON output.

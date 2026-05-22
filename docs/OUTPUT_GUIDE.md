@@ -100,14 +100,20 @@ mapper without calling dictionary services or the web UI.
 ```bash
 just cli learn concepts --output json
 just cli learn concepts --kind case --output json
+just cli learn concepts --kind case --view compact --output json
 just cli learn concept case.genitive --output json
 just cli learn evidence-report --output json
+just cli learn doctor --output json
+just cli learn foster-bridge --output json
+just cli learn foster-bridge of-possession --output json
+just cli learn foster-bridge of-possession --view compact --output json
 just cli learn map \
   --pos noun \
   --paradigm-kind declension \
   --feature case=genitive \
   --feature number=plural \
   --feature gender=masculine \
+  --view compact \
   --output json
 ```
 
@@ -124,10 +130,37 @@ current segment-backed slice covers 23 of 24 exposed concepts with exact
 Greek, Latin, or Sanskrit reader passages. `process.declension` remains the
 known passage-level gap.
 
-Mapping output includes the input feature map, `concept_ids`, and the embedded
-concept records. Use this command to audit Foster gateway labels, traditional
-Greek/Latin/Sanskrit terms, grammar-source anchors, and process concepts before
-wiring the same contract into `encounter` or the web app.
+`learn foster-bridge` exposes the reviewed Foster/Ossa bridge layer from
+`docs/reference/foster-ossa/`. This is intentionally separate from the core
+concept registry: promoted matches such as `of-possession -> case.genitive`
+can be used for product behavior, while aggregate candidates such as
+`by-with-from-in` remain reviewable bundles linked to related concepts
+(`case.ablative`, `case.instrumental`, `case.locative`) rather than flattened
+into one case. Concept and map payloads also include `foster_bridges`, so a
+consumer starting from `case.genitive` can discover the Foster/Ossa
+`of-possession` bridge without calling the bridge command separately.
+
+Use `--view compact` when planning web/server integration. Compact concept and
+map payloads keep stable IDs, Foster gateways, traditional terms, evidence
+counts, bridge IDs, and compact bridge summaries without returning every source
+evidence record. Compact bridge payloads add learner actions, product-use notes,
+morphology predicates, caveats, source refs, summary refs, and source-action
+hints. Full JSON remains the review/audit projection.
+
+Mapping output includes the normalized input feature map, `concept_ids`, the
+embedded concept records, and `diagnostics`. Diagnostics list grammar features
+whose values are not yet mapped, such as a future `voice=middle`, separately
+from ignored feature keys such as source-specific notes. Use this command to
+audit Foster gateway labels, traditional Greek/Latin/Sanskrit terms,
+grammar-source anchors, and process concepts before wiring the same contract
+into `encounter` or the web app.
+
+`learn doctor` is the didactic readiness gate for UI work. It reports concept
+evidence coverage, Foster essentials/bridge consistency, unresolved but
+actionable Foster source refs, and whether bridge morphology predicates map
+back to the expected concept IDs. The current expected state is `ok: true` with
+warnings for the known `process.declension` segment gap and unresolved embedded
+Foster snippets.
 
 `word-of-day --output json` and `recommend-words --output json` return learner
 recommendation cards using schema version `langnet.word_of_day.v1`. The schema
@@ -564,6 +597,42 @@ These Markdown files are generated review surfaces. They should stay concise
 and grounded in `toc:*` and `page:*` references, while the JSONL summary artifact
 remains the machine-readable source for rollups and audits.
 
+The generated TOC summary set currently has Experience 1, 3, and 4 documents.
+Experience 2 is present in the page extraction as the spoken/application
+experience and its reading sheets, but it does not have numbered systematic
+grammar encounters in the TOC-entry scope.
+
+To audit generated Foster terms against the current grammar concept registry:
+
+```bash
+just cli foster-ossa-taxonomy-audit \
+  --toc-summaries examples/debug/foster-ossa-toc-all-summaries-v2.jsonl \
+  --experience-summaries examples/debug/foster-ossa-experience-summaries-v2.jsonl \
+  --output docs/reference/foster-ossa/TAXONOMY_AUDIT.md
+```
+
+The audit classifies extracted terms as existing registry concepts, directly
+source-backed candidates, broader method-supported candidates, or platform
+overlay candidates. Review this file before promoting generated terms into
+stable concept IDs. The first conservative function mappings are recorded in
+`docs/reference/foster-ossa/CORE_FUNCTION_BRIDGE.md`.
+
+The first codified Foster essentials pack is available through the nested
+`foster-ossa essentials` commands:
+
+```bash
+just cli foster-ossa essentials list --output json
+just cli foster-ossa essentials show of-possession --output json
+just cli foster-ossa essentials validate --output json
+just cli foster-ossa essentials write \
+  --json-output data/build/foster_essentials.json \
+  --markdown-output docs/reference/foster-ossa/FOSTER_ESSENTIALS.md
+```
+
+The JSON artifact is the machine-readable substrate for product work. The
+Markdown artifact is the review surface for humans. The first pack contains six
+codified bridges and keeps `by-with-from-in` as an aggregate candidate.
+
 Diogenes Greek/Latin neighborhoods require a local built index. Full indexes
 should use direct Diogenes XML import when the local Diogenes data files are
 available:
@@ -737,11 +806,14 @@ New renderer-facing fields are additive:
 - `paradigm_resolution.candidates[*].learning_overlay`: present when
   `--include-learning` is passed. This embeds `langnet.learning_overlay.v1`
   summaries for the candidate's `concept_ids`, including Foster gateway labels
-  and traditional Greek, Latin, and Sanskrit terms. The overlay deliberately
+  traditional Greek, Latin, and Sanskrit terms, and compact `foster_bridges`
+  when a concept has reviewed Foster/Ossa mappings. The overlay deliberately
   does not duplicate `slot_features`, `native_analyses`, confidence, or
   provenance; those remain on the candidate as the evidence-bearing fields.
-  `missing_evidence` reports follow-up gaps such as
-  `structured_grammar_source_links`.
+  `missing_evidence` reports follow-up gaps such as `reader_segment_links`.
+  `evidence_gaps` identifies the individual concept IDs behind those gaps, so
+  clients can show that `process.declension` is the remaining weak link without
+  down-ranking the whole candidate.
 - `actions` and `display.actions`: UI-ready lazy follow-up targets derived from
   the encounter context. Current action kinds are `view_paradigm`,
   `open_word_index_neighborhood`, and `inspect_source_entry`. These actions

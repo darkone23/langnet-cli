@@ -57,6 +57,21 @@ def test_concept_mapper_maps_expanded_nominal_features() -> None:
     ]
 
 
+def test_concept_mapper_normalizes_feature_keys_values_and_process_inputs() -> None:
+    concept_ids = concept_ids_for_features(
+        {"Case": " Ablative ", "Number": " Dual ", "Gender": " Neuter "},
+        part_of_speech="NOUN",
+        paradigm_kind="DECLENSION",
+    )
+
+    assert concept_ids == [
+        "case.ablative",
+        "number.dual",
+        "gender.neuter",
+        "process.declension",
+    ]
+
+
 def test_concept_mapper_maps_passive_voice() -> None:
     concept_ids = concept_ids_for_features(
         {"person": "1", "number": "singular", "tense": "present", "voice": "passive"},

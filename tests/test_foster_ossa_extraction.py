@@ -813,9 +813,9 @@ def test_write_summary_markdown_docs_writes_index_and_experience_file() -> None:
         written = write_summary_markdown_docs(input_path=input_path, output_dir=output_dir)
 
         assert written == [output_dir / "README.md", output_dir / "experience-1.md"]
-        assert "# Foster Ossa Generated Summary Documents" in (output_dir / "README.md").read_text(
-            encoding="utf-8"
-        )
+        index_text = (output_dir / "README.md").read_text(encoding="utf-8")
+        assert "# Foster Ossa Generated Summary Documents" in index_text
+        assert "Experience 2 is present in the source extraction" in index_text
         experience_text = (output_dir / "experience-1.md").read_text(encoding="utf-8")
         assert "## toc:1.1 - Ossium Gluten" in experience_text
         assert "`page:49`" in experience_text

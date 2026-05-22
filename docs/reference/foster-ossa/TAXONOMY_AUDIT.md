@@ -1,0 +1,883 @@
+# Foster Ossa Taxonomy Audit
+
+Generated from validated Foster Ossa summary JSON. Use this as a review surface before changing the stable grammar concept registry.
+
+- Total candidates: 862
+- direct_source_candidate: 727
+- existing_concept: 34
+- method_supported_candidate: 67
+- platform_overlay_candidate: 34
+
+## Existing Concept
+
+- **indicative** -> `mood.indicative` (6 occurrence(s); foster_terms, traditional_terms) — `page:316`, `page:317`, `page:318`, `page:319`, `page:320`, `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, ... (30 refs)
+- **function to-for-from** -> `case.dative` (4 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (289 refs)
+- **genitive** -> `case.genitive` (3 occurrence(s); traditional_terms) — `page:125`, `page:126`, `page:127`, `page:128`, `page:129`, `page:130`, `page:131`, `page:132`, `page:149`, `page:150`, `page:151`, `page:152`, ... (14 refs)
+- **object form** -> `case.accusative` (3 occurrence(s); foster_terms, traditional_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`, `page:448`, `page:449`, `page:450`, `page:451`, `page:452`, `page:453`, `page:529`, ... (16 refs)
+- **of-possession** -> `case.genitive` (3 occurrence(s); foster_terms, traditional_terms) — `page:125`, `page:126`, `page:127`, `page:128`, `page:129`, `page:130`, `page:131`, `page:132`, `page:140`, `page:141`, `page:142`, `page:143`, ... (18 refs)
+- **ablative** -> `case.ablative` (2 occurrence(s); traditional_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`, `page:154`, `page:155`, `page:156`, `page:157`, `page:158`, `page:159`, `page:160`
+- **accusative** -> `case.accusative` (2 occurrence(s); traditional_terms) — `page:86`, `page:87`, `page:88`, `page:522`
+- **feminine** -> `gender.feminine` (2 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`, `page:86`, `page:87`, `page:88`
+- **form to-for-from** -> `case.dative` (2 occurrence(s); foster_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (20 refs)
+- **form-of-possession** -> `case.genitive` (2 occurrence(s); foster_terms) — `page:522`, `page:529`, `page:530`, `page:531`, `page:532`, `page:533`
+- **function of address** -> `case.vocative` (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **function of-possession** -> `case.genitive` (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **location function** -> `case.locative` (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **locative** -> `case.locative` (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **masculine** -> `gender.masculine` (2 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`, `page:86`, `page:87`, `page:88`
+- **neuter** -> `gender.neuter` (2 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`, `page:86`, `page:87`, `page:88`
+- **object forms** -> `case.accusative` (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **plural** -> `number.plural` (2 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`, `page:86`, `page:87`, `page:88`
+- **singular** -> `number.singular` (2 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`, `page:86`, `page:87`, `page:88`
+- **vocative** -> `case.vocative` (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **vocativus** -> `case.vocative` (2 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **ablativus** -> `case.ablative` (1 occurrence(s); traditional_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`
+- **active** -> `voice.active` (1 occurrence(s); traditional_terms) — `page:316`, `page:317`, `page:318`, `page:319`, `page:320`
+- **direct address** -> `case.vocative` (1 occurrence(s); traditional_terms) — `page:311`, `page:312`, `page:313`, `page:314`, `page:315`
+- **gen. of-possession** -> `case.genitive` (1 occurrence(s); foster_terms) — `page:618`, `page:619`
+- **genitive form of-possession** -> `case.genitive` (1 occurrence(s); foster_terms) — `page:611`, `page:612`
+- **nominative** -> `case.nominative` (1 occurrence(s); traditional_terms) — `page:86`, `page:87`, `page:88`
+- **of-possession function** -> `case.genitive` (1 occurrence(s); foster_terms) — `page:523`, `page:524`, `page:525`
+- **passive** -> `voice.passive` (1 occurrence(s); traditional_terms) — `page:316`, `page:317`, `page:318`, `page:319`, `page:320`
+- **the double function of-possession** -> `case.genitive` (1 occurrence(s); foster_terms) — `page:125`, `page:126`, `page:127`, `page:128`, `page:129`, `page:130`, `page:131`, `page:132`
+- **the form of-possession** -> `case.genitive` (1 occurrence(s); foster_terms) — `page:125`, `page:126`, `page:127`, `page:128`, `page:129`, `page:130`, `page:131`, `page:132`
+- **the function of-possession** -> `case.genitive` (1 occurrence(s); foster_terms) — `page:125`, `page:126`, `page:127`, `page:128`, `page:129`, `page:130`, `page:131`, `page:132`
+- **to-for-from** -> `case.dative` (1 occurrence(s); traditional_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`
+- **to-for-from function** -> `case.dative` (1 occurrence(s); foster_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+
+## Direct Source Candidate
+
+- **sequence of tenses** (12 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:352`, `page:353`, `page:354`, `page:355`, `page:356`, `page:357`, `page:358`, `page:359`, `page:360`, `page:361`, `page:362`, `page:410`, ... (403 refs)
+- **subjunctive** (9 occurrence(s); foster_terms, traditional_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`, `page:348`, `page:349`, `page:350`, ... (46 refs)
+- **indirect question** (8 occurrence(s); core_foster_terms, foster_terms, traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (578 refs)
+- **ablative absolute** (7 occurrence(s); core_foster_terms, foster_terms, traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (205 refs)
+- **reflexive pronoun** (7 occurrence(s); core_foster_terms, foster_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (296 refs)
+- **form by-with-from-in** (6 occurrence(s); foster_terms, traditional_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`, `page:154`, `page:155`, `page:156`, `page:157`, `page:158`, `page:159`, `page:160`, ... (34 refs)
+- **relative pronoun** (6 occurrence(s); core_foster_terms, foster_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (295 refs)
+- **antecedent** (5 occurrence(s); core_foster_terms, foster_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (294 refs)
+- **deponent verbs** (5 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:137`, `page:161`, `page:162`, `page:163`, `page:164`, `page:165`, `page:166`, `page:167`, `page:505`, `page:506`, `page:507`, `page:508`, ... (383 refs)
+- **indirect discourse** (5 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **partitive genitive** (5 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (661 refs)
+- **T.1s** (5 occurrence(s); foster_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`, `page:358`, `page:359`, `page:360`, ... (22 refs)
+- **T.2s** (5 occurrence(s); foster_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`, `page:358`, `page:359`, `page:360`, ... (22 refs)
+- **T.4s** (5 occurrence(s); foster_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`, `page:358`, `page:359`, `page:360`, ... (22 refs)
+- **Track II** (5 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`, `page:418`, `page:419`, `page:420`, `page:421`, `page:434`, `page:435`, `page:436`, `page:515`, ... (28 refs)
+- **causal clauses** (4 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **comparative degree** (4 occurrence(s); traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:336`, `page:337`, ... (23 refs)
+- **contemporaneous active participle** (4 occurrence(s); foster_terms) — `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`, `page:375`, `page:376`, `page:377`, `page:378`, `page:379`, ... (21 refs)
+- **function by-with-from-in** (4 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **future imperative** (4 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (293 refs)
+- **gerund** (4 occurrence(s); core_foster_terms, foster_terms, traditional_terms) — `page:79`, `page:80`, `page:81`, `page:82`, `page:375`, `page:376`, `page:377`, `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, ... (381 refs)
+- **gerundive** (4 occurrence(s); core_foster_terms, foster_terms, traditional_terms) — `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`, `page:378`, `page:379`, `page:380`, `page:381`, `page:505`, ... (385 refs)
+- **modal attraction** (4 occurrence(s); core_foster_terms, foster_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **Oratio obliqua** (4 occurrence(s); core_foster_terms, foster_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **participle of passive necessity** (4 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **result clauses** (4 occurrence(s); foster_terms, traditional_terms) — `page:348`, `page:349`, `page:350`, `page:437`, `page:438`, `page:439`, `page:440`, `page:441`, `page:442`, `page:443`, `page:444`, `page:445`, ... (18 refs)
+- **T.3s** (4 occurrence(s); foster_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`, `page:358`, `page:359`, `page:360`, ... (21 refs)
+- **Track I** (4 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`, `page:418`, `page:419`, `page:420`, `page:421`, `page:515`, `page:516`, `page:517`, `page:518`, ... (25 refs)
+- **ablative of comparison** (3 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **ablative of measure** (3 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **accusative with the infinitive** (3 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **ACI** (3 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **active futurity formula** (3 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **antecedent participle** (3 occurrence(s); foster_terms) — `page:363`, `page:364`, `page:365`, `page:366`, `page:367`, `page:378`, `page:379`, `page:380`, `page:381`, `page:418`, `page:419`, `page:420`, ... (13 refs)
+- **Block I nouns** (3 occurrence(s); core_foster_terms, foster_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **consecutio temporum** (3 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (205 refs)
+- **dative case** (3 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **dative of possession** (3 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **dative of purpose** (3 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **elegiac pentameter** (3 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **future passive participle** (3 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`, `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, ... (381 refs)
+- **futurity participle** (3 occurrence(s); foster_terms) — `page:363`, `page:364`, `page:365`, `page:366`, `page:367`, `page:378`, `page:379`, `page:380`, `page:381`, `page:418`, `page:419`, `page:420`, ... (13 refs)
+- **Gildersleeve and Lodge** (3 occurrence(s); traditional_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`, `page:316`, `page:317`, `page:318`, `page:319`, `page:320`, `page:331`, `page:332`, ... (15 refs)
+- **imperative** (3 occurrence(s); traditional_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`, `page:316`, `page:317`, `page:318`, `page:319`, `page:320`, `page:339`, `page:340`, ... (19 refs)
+- **imperfect tense** (3 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **M & M verb** (3 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **object** (3 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`, `page:86`, `page:87`, `page:88`, `page:149`, `page:150`, `page:151`, ... (14 refs)
+- **objective genitive** (3 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **passive necessity participle** (3 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`, `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, ... (381 refs)
+- **perfect passive participle** (3 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (294 refs)
+- **personal endings** (3 occurrence(s); foster_terms, traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **present imperative** (3 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (293 refs)
+- **present tense** (3 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **pure result clauses** (3 occurrence(s); foster_terms, traditional_terms) — `page:437`, `page:438`, `page:439`, `page:440`, `page:441`, `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`, `page:604`, ... (15 refs)
+- **purpose clauses** (3 occurrence(s); traditional_terms) — `page:348`, `page:349`, `page:350`, `page:395`, `page:396`, `page:397`, `page:398`, `page:399`, `page:400`, `page:442`, `page:443`, `page:444`, ... (15 refs)
+- **reading sheets** (3 occurrence(s); foster_terms) — `page:124`, `page:137`, `page:149`, `page:150`, `page:151`, `page:152`, `page:153`, `toc:1.22`
+- **result clause** (3 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **subject** (3 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`, `page:86`, `page:87`, `page:88`, `page:149`, `page:150`, `page:151`, ... (14 refs)
+- **super principle** (3 occurrence(s); foster_terms) — `page:86`, `page:87`, `page:88`, `page:89`, `page:90`, `page:91`, `page:92`, `page:93`, `page:94`, `page:108`, `page:109`, `page:110`, ... (14 refs)
+- **superlative degree** (3 occurrence(s); traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:336`, `page:337`, ... (13 refs)
+- **T.2i** (3 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`, `page:418`, `page:419`, `page:420`, `page:421`, `page:551`, `page:552`, `page:553`, `page:554`
+- **T.5i** (3 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`, `page:418`, `page:419`, `page:420`, `page:421`, `page:551`, `page:552`, `page:553`, `page:554`
+- **T.6i** (3 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`, `page:418`, `page:419`, `page:420`, `page:421`, `page:551`, `page:552`, `page:553`, `page:554`
+- **--ne** (2 occurrence(s); foster_terms) — `page:101`, `page:102`, `page:103`, `page:620`, `page:621`
+- **ablative case** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **ablative of definite price** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **accusative case** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **active periphrastic** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **Adiectiva Velut Substantiva** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **adverb degrees** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **ali-s fly away ditty** (2 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **antecedent infinitive** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **Block II adjectives** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **both . . . and** (2 occurrence(s); traditional_terms) — `page:62`, `page:63`, `page:64`
+- **Brevitas Et Ambiguitas** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **by, with, from, in** (2 occurrence(s); foster_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`, `page:154`, `page:155`, `page:156`, `page:157`, `page:158`, `page:159`, `page:160`
+- **common gender** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **comparatio adiectivorum** (2 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **complementary infinitive** (2 occurrence(s); traditional_terms) — `page:602`, `page:603`, `page:608`, `page:609`, `page:610`
+- **concessive conjunction** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **concessive sentences** (2 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **conditionals** (2 occurrence(s); traditional_terms) — `page:578`, `page:604`, `page:605`, `page:606`, `page:607`
+- **conjugations (rejected by Foster)** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **contemporaneous participle** (2 occurrence(s); foster_terms) — `page:363`, `page:364`, `page:365`, `page:366`, `page:367`, `page:418`, `page:419`, `page:420`, `page:421`
+- **contracted forms** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **copulative verbs** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **correlative** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **correlatives** (2 occurrence(s); foster_terms, traditional_terms) — `page:336`, `page:337`, `page:338`, `page:588`, `page:589`, `page:590`, `page:591`, `page:592`, `page:593`, `page:594`, `page:595`, `page:596`, ... (13 refs)
+- **cum clauses** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **dactylic hexameters** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **declensions** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **dictionary entry (subject form, family sign, gender, meaning)** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **direct reflexive** (2 occurrence(s); foster_terms) — `page:170`, `page:171`, `page:172`, `page:173`, `page:174`, `page:175`, `page:176`, `page:177`, `page:422`, `page:423`, `page:424`
+- **double dative** (2 occurrence(s); foster_terms, traditional_bridge_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **Et . . . Et** (2 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **first declension** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Foggy future** (2 occurrence(s); foster_terms, traditional_terms) — `page:574`, `page:575`, `page:576`, `page:577`, `page:579`
+- **fore + ut** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **future active periphrastic** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **future infinitive** (2 occurrence(s); traditional_terms) — `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:600`, `page:601`
+- **future less vivid** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **future perfect tense** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **futurity active participle** (2 occurrence(s); foster_terms) — `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`, `page:564`, `page:565`, `page:566`, `page:567`
+- **futurity infinitive** (2 occurrence(s); core_foster_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **genitive case** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **genitive forms of the personal pronouns** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **genitive of indefinite price** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **genitive of personal pronouns (partitive vs objective)** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **genitive of possession** (2 occurrence(s); traditional_terms) — `page:598`, `page:599`, `page:618`, `page:619`
+- **genitive of possession in the predicate** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **genitive singular in –is** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Genitivus partitivus** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **gradus comparativus** (2 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **gradus superlativus** (2 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **grammar** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **heroic hexameter** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **historical perfect or Greek aorist** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **ideal or hypothetical conditional** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **imperative deponents** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **imperatives** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **imperfect subjunctive** (2 occurrence(s); traditional_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`, `page:551`, `page:552`, `page:553`, ... (13 refs)
+- **impersonal passive of intransitive verbs** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **indicative mode** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **indirect reflexive** (2 occurrence(s); foster_terms) — `page:170`, `page:171`, `page:172`, `page:173`, `page:174`, `page:175`, `page:176`, `page:177`, `page:422`, `page:423`, `page:424`
+- **interrogative pronouns** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **intransitive verbs** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **involved oratio obliqua** (2 occurrence(s); foster_terms, traditional_terms) — `page:555`, `page:556`, `page:557`, `page:558`, `page:559`, `page:560`, `page:561`, `page:562`, `page:563`
+- **irregular verbs** (2 occurrence(s); foster_terms, traditional_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **is** (2 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`, `page:108`, `page:109`, `page:110`, `page:111`, `page:112`
+- **iussive subjunctive** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **joining Blocks I and II** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **locative case** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **M & M verbs** (2 occurrence(s); foster_terms) — `page:410`, `page:411`, `page:412`, `page:505`, `page:506`, `page:507`
+- **memorization charts** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **negative final clauses** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **no declensions for the Romans** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **no paradigms or charts in this method** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **nominative case** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **noun families signaled by dictionary entry second element** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **passive imperatives** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **passive necessity formula** (2 occurrence(s); foster_terms) — `page:378`, `page:379`, `page:380`, `page:381`, `page:580`, `page:581`, `page:582`, `page:583`, `page:584`, `page:585`, `page:586`, `page:587`
+- **passive voice** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **patristic, medieval, or scholastic Latin** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **personal construction** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **personal pronoun** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Personarum Pronomina** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **phonetic exceptions** (2 occurrence(s); foster_terms, traditional_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **pluperfect tense** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **possessive adjective** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **possessive genitive** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **predominant vowels (ā, ē, ĕ, ī)** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **present participle** (2 occurrence(s); traditional_terms) — `page:363`, `page:364`, `page:365`, `page:366`, `page:367`, `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`
+- **present subjunctive** (2 occurrence(s); traditional_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`, `page:551`, `page:552`, `page:553`, ... (13 refs)
+- **principal parts** (2 occurrence(s); foster_terms, traditional_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **principal parts of verbs** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Prohibendi vocabula** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **prohibitive construction** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **pronouns of persons** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **pure or present perfect** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **purpose clause** (2 occurrence(s); traditional_terms) — `page:418`, `page:419`, `page:420`, `page:421`, `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **quam** (2 occurrence(s); foster_terms, traditional_terms) — `page:86`, `page:87`, `page:88`, `page:588`, `page:589`, `page:590`, `page:591`, `page:592`, `page:593`, `page:594`, `page:595`, `page:596`, ... (13 refs)
+- **quattuor imperia** (2 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **question particles** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **quod** (2 occurrence(s); foster_terms) — `page:86`, `page:87`, `page:88`, `page:526`, `page:527`, `page:528`
+- **reflexive adjective** (2 occurrence(s); foster_terms) — `page:170`, `page:171`, `page:172`, `page:173`, `page:174`, `page:175`, `page:176`, `page:177`, `page:325`, `page:326`, `page:327`, `page:328`, ... (14 refs)
+- **reflexive use of all the pronouns** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **relative clause** (2 occurrence(s); traditional_terms) — `page:89`, `page:90`, `page:91`, `page:92`, `page:93`, `page:94`, `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, ... (14 refs)
+- **relative clause of purpose** (2 occurrence(s); traditional_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`, `page:564`, `page:565`, `page:566`, `page:567`
+- **Repetitio ex prima experientia verborum** (2 occurrence(s); core_foster_terms, foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **reported speech** (2 occurrence(s); foster_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:515`, `page:516`, `page:517`, `page:518`, `page:519`, `page:520`, `page:521`
+- **res metrica** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **reversing (making singular plural or plural singular)** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **se – sui – sibi** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **second declension** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **second imperative** (2 occurrence(s); foster_terms) — `page:114`, `page:115`, `page:116`, `page:117`, `page:118`, `page:193`, `page:194`, `page:195`, `page:196`
+- **Serioris Latinitatis proprietates** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **signs of persons in verbs** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **simple future** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **special verbs (TAEDET, PAENITET, PUDET, MISERET, PIGET)** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **subjunctive mood** (2 occurrence(s); traditional_terms) — `page:425`, `page:426`, `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **subjunctive of 'esse'** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **substantive clause** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **supine** (2 occurrence(s); foster_terms, traditional_terms) — `page:546`, `page:547`, `page:548`, `page:549`, `page:550`
+- **supinum duplex** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **T.1i** (2 occurrence(s); foster_terms) — `page:418`, `page:419`, `page:420`, `page:421`, `page:551`, `page:552`, `page:553`, `page:554`
+- **T.3i** (2 occurrence(s); foster_terms) — `page:434`, `page:435`, `page:436`, `page:551`, `page:552`, `page:553`, `page:554`
+- **T.4ai** (2 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`, `page:418`, `page:419`, `page:420`, `page:421`
+- **T.4bi** (2 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`, `page:418`, `page:419`, `page:420`, `page:421`
+- **temporal clauses** (2 occurrence(s); foster_terms, traditional_terms) — `page:348`, `page:349`, `page:350`, `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **temporal conjunctions** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **tenses** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **third declension** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Time 4** (2 occurrence(s); foster_terms) — `page:74`, `page:75`, `page:76`, `page:77`, `page:78`, `page:79`, `page:80`, `page:81`, `page:82`
+- **Time 5** (2 occurrence(s); foster_terms) — `page:74`, `page:75`, `page:76`, `page:77`, `page:78`, `page:79`, `page:80`, `page:81`, `page:82`
+- **Time 6** (2 occurrence(s); foster_terms) — `page:74`, `page:75`, `page:76`, `page:77`, `page:78`, `page:79`, `page:80`, `page:81`, `page:82`
+- **timendi verba** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **unreal or impossible or contrary-to-fact conditional** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **ut** (2 occurrence(s); foster_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`, `page:437`, `page:438`, `page:439`, `page:440`, `page:441`
+- **utinam** (2 occurrence(s); core_foster_terms, foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **verb Groups (Gp.I, II, III, IV)** (2 occurrence(s); core_foster_terms, foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **verbs taking the ablative** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **vivid present** (2 occurrence(s); foster_terms, traditional_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **vocative case** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **word order** (2 occurrence(s); traditional_bridge_terms, traditional_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **3%** (1 occurrence(s); foster_terms) — `page:604`, `page:605`, `page:606`, `page:607`
+- **95% preference for gerundive** (1 occurrence(s); foster_terms) — `page:529`, `page:530`, `page:531`, `page:532`, `page:533`
+- **97% pattern** (1 occurrence(s); foster_terms) — `page:604`, `page:605`, `page:606`, `page:607`
+- **abl.** (1 occurrence(s); traditional_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`
+- **abl. of specification or limitation** (1 occurrence(s); traditional_terms) — `page:611`, `page:612`
+- **ablative absolute without the participle 'being'** (1 occurrence(s); foster_terms) — `page:393`, `page:394`
+- **ablative form by-with-from-in** (1 occurrence(s); foster_terms) — `page:611`, `page:612`
+- **ablative of respect (rē)** (1 occurrence(s); traditional_terms) — `page:622`, `page:623`, `page:624`, `page:625`
+- **ablative of time at which** (1 occurrence(s); traditional_terms) — `page:454`, `page:455`, `page:456`, `page:457`, `page:458`, `page:459`, `page:460`, `page:461`, `page:462`, `page:463`, `page:464`, `page:465`, ... (51 refs)
+- **ablative of time within which** (1 occurrence(s); traditional_terms) — `page:454`, `page:455`, `page:456`, `page:457`, `page:458`, `page:459`, `page:460`, `page:461`, `page:462`, `page:463`, `page:464`, `page:465`, ... (51 refs)
+- **absolute** (1 occurrence(s); foster_terms) — `page:382`, `page:383`, `page:384`, `toc:3.19`
+- **Ac** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **accusative of duration of time** (1 occurrence(s); traditional_terms) — `page:454`, `page:455`, `page:456`, `page:457`, `page:458`, `page:459`, `page:460`, `page:461`, `page:462`, `page:463`, `page:464`, `page:465`, ... (51 refs)
+- **accusative subject with infinitive** (1 occurrence(s); traditional_terms) — `page:515`, `page:516`, `page:517`, `page:518`, `page:519`, `page:520`, `page:521`
+- **accusative with infinitive** (1 occurrence(s); traditional_terms) — `page:588`, `page:589`, `page:590`, `page:591`, `page:592`, `page:593`, `page:594`, `page:595`, `page:596`, `page:597`
+- **accusative with the infinitive (ACI)** (1 occurrence(s); traditional_terms) — `page:526`, `page:527`, `page:528`
+- **Accusativus Cum Infinitivo** (1 occurrence(s); traditional_terms) — `page:505`, `page:506`, `page:507`
+- **acerrimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **active form** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **Ad + gerund** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **ad + gerund for purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **Ad + gerundive** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **ad + gerundive for purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **addition of the preposition per** (1 occurrence(s); foster_terms) — `page:454`, `page:455`, `page:456`, `page:457`, `page:458`, `page:459`, `page:460`, `page:461`, `page:462`, `page:463`, `page:464`, `page:465`, ... (51 refs)
+- **adjective defined by a noun in the ablative** (1 occurrence(s); foster_terms) — `page:611`, `page:612`
+- **adjectives of Block I** (1 occurrence(s); traditional_terms) — `page:65`, `page:66`
+- **adjectives of one termination** (1 occurrence(s); traditional_terms) — `page:119`, `page:120`, `page:121`, `page:122`, `page:123`
+- **adjectives of the -us, -a, -um type** (1 occurrence(s); traditional_terms) — `page:65`, `page:66`
+- **adjectives of three terminations** (1 occurrence(s); traditional_terms) — `page:119`, `page:120`, `page:121`, `page:122`, `page:123`
+- **adjectives of two terminations** (1 occurrence(s); traditional_terms) — `page:119`, `page:120`, `page:121`, `page:122`, `page:123`
+- **adjectives used as nouns** (1 occurrence(s); traditional_terms) — `page:67`, `page:68`
+- **adjectives with er-variation (liber, era, erum)** (1 occurrence(s); traditional_terms) — `page:65`, `page:66`
+- **ALIA QUAESITA SIMILIA** (1 occurrence(s); foster_terms) — `page:101`, `page:102`, `page:103`
+- **ambiguity resolved by vocabulary knowledge** (1 occurrence(s); foster_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`
+- **ante . . . quam** (1 occurrence(s); foster_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **antecedent participle with passive meaning** (1 occurrence(s); foster_terms) — `page:385`, `page:386`, `page:387`, `page:388`, `page:389`, `page:390`, `page:391`
+- **antecedent passive participle** (1 occurrence(s); foster_terms) — `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`
+- **antequam** (1 occurrence(s); foster_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **appendix** (1 occurrence(s); foster_terms) — `page:197`, `page:198`, `page:199`, `page:200`, `page:201`, `page:202`, `page:203`, `page:204`, `page:205`, `page:206`, `page:207`, `page:208`, ... (104 refs)
+- **arbiter, -tri** (1 occurrence(s); foster_terms) — `page:65`, `page:66`
+- **atque** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **attraction of mode** (1 occurrence(s); traditional_terms) — `page:555`, `page:556`, `page:557`, `page:558`, `page:559`, `page:560`, `page:561`, `page:562`, `page:563`
+- **attraction of the subjunctive** (1 occurrence(s); foster_terms) — `page:555`, `page:556`, `page:557`, `page:558`, `page:559`, `page:560`, `page:561`, `page:562`, `page:563`
+- **Block I** (1 occurrence(s); foster_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+- **Block I nouns and adjectives** (1 occurrence(s); foster_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`
+- **Block II** (1 occurrence(s); foster_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+- **Block II nouns** (1 occurrence(s); foster_terms) — `page:108`, `page:109`, `page:110`, `page:111`, `page:112`
+- **Block II nouns and adjectives** (1 occurrence(s); foster_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`
+- **Block species, iei** (1 occurrence(s); foster_terms) — `page:197`, `page:198`, `page:199`, `page:200`, `page:201`, `page:202`, `page:203`, `page:204`, `page:205`, `page:206`, `page:207`, `page:208`, ... (104 refs)
+- **Block –us, us** (1 occurrence(s); foster_terms) — `page:197`, `page:198`, `page:199`, `page:200`, `page:201`, `page:202`, `page:203`, `page:204`, `page:205`, `page:206`, `page:207`, `page:208`, ... (104 refs)
+- **bones’ glue** (1 occurrence(s); foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`
+- **brevior** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **brevissimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **brevity and ambiguity** (1 occurrence(s); traditional_terms) — `page:67`, `page:68`
+- **brevius** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **by-with-from-in function** (1 occurrence(s); foster_terms) — `page:523`, `page:524`, `page:525`
+- **cantat** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **cantatis** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **canto** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **capio, ere** (1 occurrence(s); foster_terms) — `page:104`, `page:105`, `page:106`, `page:107`
+- **casus dativus** (1 occurrence(s); traditional_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+- **CASUS LOCATIVUS** (1 occurrence(s); foster_terms) — `page:448`, `page:449`, `page:450`, `page:451`, `page:452`, `page:453`
+- **causal relative clause** (1 occurrence(s); traditional_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **causal sentences** (1 occurrence(s); foster_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **Causal: qui, quae, quod and quis, quid + subjunctive = cum is, cum ea, cum id and cum quis, cum quid as a relative expression of cause, in English sounding indicative** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **celerrimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **Ceterae passivi verbi formulae: 4, 5, 6** (1 occurrence(s); foster_terms) — `page:146`, `page:147`, `page:148`
+- **characteristic clause** (1 occurrence(s); traditional_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **characteristic result clauses** (1 occurrence(s); foster_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **Characteristic result: qui, quae, quod and quis, quid + subjunctive = talis ut is, talis ut ea, tale ut id and talis ut quis, tale ut quid as a relative expression of characteristic result, in English sounding indicative** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **characteristics of later Latin literature** (1 occurrence(s); traditional_terms) — `page:638`, `page:639`, `page:640`, `page:641`, `page:642`, `page:643`, `page:644`, `page:645`, `page:646`, `page:647`, `page:648`, `page:649`, ... (241 refs)
+- **charts** (1 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`
+- **Circus Latinitatis maximus** (1 occurrence(s); foster_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+- **classical indirect speech** (1 occurrence(s); traditional_terms) — `page:526`, `page:527`, `page:528`
+- **Collocatio partium** (1 occurrence(s); foster_terms) — `page:146`, `page:147`, `page:148`
+- **command mode of speaking** (1 occurrence(s); foster_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`
+- **comparative adverb** (1 occurrence(s); foster_terms) — `page:306`, `page:307`, `page:308`, `page:309`, `page:310`
+- **comparison of adjectives** (1 occurrence(s); traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **complementary result clauses** (1 occurrence(s); foster_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **complementary sentences of result** (1 occurrence(s); foster_terms) — `page:437`, `page:438`, `page:439`, `page:440`, `page:441`
+- **complures, complura (–ia)** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **compound verbs** (1 occurrence(s); foster_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+- **Concession: qui, quae, quod and quis, quid + subjunctive = cum is, cum ea, cum id and cum quis, cum quid as a relative expression of concession, in English sounding indicative** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **concessive relative clause** (1 occurrence(s); traditional_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **conditional clauses** (1 occurrence(s); traditional_terms) — `page:348`, `page:349`, `page:350`
+- **conditional sentences** (1 occurrence(s); traditional_terms) — `page:425`, `page:426`
+- **conditionales** (1 occurrence(s); foster_terms) — `page:578`
+- **conditionals in indirect discourse** (1 occurrence(s); traditional_terms) — `page:626`, `page:627`, `page:628`, `page:629`, `page:630`, `page:631`, `page:632`, `page:633`, `page:634`
+- **conjugations 1, 2, 3, 4** (1 occurrence(s); traditional_terms) — `page:95`, `page:96`, `page:97`, `page:98`, `page:99`, `page:100`
+- **conjunctions: and, also, even** (1 occurrence(s); traditional_terms) — `page:62`, `page:63`, `page:64`
+- **conjunctive** (1 occurrence(s); traditional_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`
+- **Consecutio minutatim** (1 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`
+- **consecutive** (1 occurrence(s); traditional_terms) — `page:437`, `page:438`, `page:439`, `page:440`, `page:441`
+- **consecutive clauses** (1 occurrence(s); foster_terms) — `page:437`, `page:438`, `page:439`, `page:440`, `page:441`
+- **contemporaneous** (1 occurrence(s); foster_terms) — `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`
+- **contemporaneous active infinitive** (1 occurrence(s); foster_terms) — `page:529`, `page:530`, `page:531`, `page:532`, `page:533`
+- **contendo, ere** (1 occurrence(s); foster_terms) — `page:104`, `page:105`, `page:106`, `page:107`
+- **continual familiarity** (1 occurrence(s); foster_terms) — `page:137`, `toc:1.22`
+- **contracted perfect forms** (1 occurrence(s); traditional_terms) — `page:104`, `page:105`, `page:106`, `page:107`
+- **contraction** (1 occurrence(s); foster_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **contraction because of -v** (1 occurrence(s); foster_terms) — `page:316`, `page:317`, `page:318`, `page:319`, `page:320`
+- **contrary-to-fact conditional** (1 occurrence(s); traditional_terms) — `page:579`
+- **Contrary-to-fact conditionals** (1 occurrence(s); foster_terms) — `page:574`, `page:575`, `page:576`, `page:577`
+- **contrary-to-fact conditions** (1 occurrence(s); foster_terms) — `page:604`, `page:605`, `page:606`, `page:607`
+- **coordinating comparatives** (1 occurrence(s); foster_terms) — `page:588`, `page:589`, `page:590`, `page:591`, `page:592`, `page:593`, `page:594`, `page:595`, `page:596`, `page:597`
+- **crazy form** (1 occurrence(s); foster_terms) — `page:108`, `page:109`, `page:110`, `page:111`, `page:112`
+- **cuius** (1 occurrence(s); foster_terms) — `page:138`, `page:139`
+- **cum + subjunctive** (1 occurrence(s); foster_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **cum causal** (1 occurrence(s); traditional_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **cum hoc fecisset** (1 occurrence(s); foster_terms) — `page:348`, `page:349`, `page:350`
+- **cum with subjunctive** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **dactylic hexameter** (1 occurrence(s); foster_terms) — `page:635`, `page:636`, `page:637`
+- **dat.** (1 occurrence(s); traditional_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+- **Dative function of the gerund** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **Dative function of the gerundive** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **dative gerund for purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **dative gerundive for purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **dative in -i** (1 occurrence(s); traditional_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **dative mentality** (1 occurrence(s); traditional_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+- **dative of agent** (1 occurrence(s); foster_terms) — `page:378`, `page:379`, `page:380`, `page:381`
+- **deliberative subjunctive** (1 occurrence(s); traditional_terms) — `page:604`, `page:605`, `page:606`, `page:607`
+- **demonstrative pronoun** (1 occurrence(s); traditional_terms) — `page:325`, `page:326`, `page:327`, `page:328`, `page:329`, `page:330`
+- **demonstrative pronouns** (1 occurrence(s); traditional_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **demonstro, are** (1 occurrence(s); foster_terms) — `page:104`, `page:105`, `page:106`, `page:107`
+- **deponent imperative** (1 occurrence(s); traditional_terms) — `page:193`, `page:194`, `page:195`, `page:196`
+- **deponent participles** (1 occurrence(s); foster_terms) — `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`
+- **dignus qui** (1 occurrence(s); foster_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **direct question** (1 occurrence(s); traditional_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **Direct question: qui, quae, quod and quis, quid ask a question** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **donec** (1 occurrence(s); foster_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **dot system** (1 occurrence(s); foster_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`
+- **double command** (1 occurrence(s); foster_terms) — `page:114`, `page:115`, `page:116`, `page:117`, `page:118`
+- **double supine** (1 occurrence(s); traditional_terms) — `page:546`, `page:547`, `page:548`, `page:549`, `page:550`
+- **dubitare + complementary infinitive** (1 occurrence(s); foster_terms) — `page:602`, `page:603`
+- **dubitare + indirect statement in accusative with the infinitive** (1 occurrence(s); foster_terms) — `page:602`, `page:603`
+- **ea** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **eae** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **eam** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **eas** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **ego** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **ei** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **eis = iis** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **elegiac distich** (1 occurrence(s); foster_terms) — `page:635`, `page:636`, `page:637`
+- **enclitic** (1 occurrence(s); foster_terms) — `page:101`, `page:102`, `page:103`
+- **enclitic -ce** (1 occurrence(s); traditional_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **eos** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **eram** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **erimus** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **erit** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **ero** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **erunt** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **es** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **est** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **estis** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **Et** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **etiamsi** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **etsi** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **eum** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **Exempla brevitatis** (1 occurrence(s); foster_terms) — `page:375`, `page:376`, `page:377`
+- **facillimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **famous four** (1 occurrence(s); foster_terms) — `page:316`, `page:317`, `page:318`, `page:319`, `page:320`
+- **fifth declension** (1 occurrence(s); traditional_terms) — `page:197`, `page:198`, `page:199`, `page:200`, `page:201`, `page:202`, `page:203`, `page:204`, `page:205`, `page:206`, `page:207`, `page:208`, ... (104 refs)
+- **final** (1 occurrence(s); traditional_terms) — `page:437`, `page:438`, `page:439`, `page:440`, `page:441`
+- **final clauses** (1 occurrence(s); traditional_terms) — `page:395`, `page:396`, `page:397`, `page:398`, `page:399`, `page:400`
+- **final qui, quae, quod** (1 occurrence(s); foster_terms) — `page:395`, `page:396`, `page:397`, `page:398`, `page:399`, `page:400`
+- **final ut, ne** (1 occurrence(s); foster_terms) — `page:395`, `page:396`, `page:397`, `page:398`, `page:399`, `page:400`
+- **finality** (1 occurrence(s); traditional_terms) — `page:395`, `page:396`, `page:397`, `page:398`, `page:399`, `page:400`
+- **first conjugation** (1 occurrence(s); traditional_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **first or present imperative mode** (1 occurrence(s); foster_terms) — `page:568`, `page:569`, `page:570`, `page:571`, `page:572`, `page:573`
+- **flip** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **flip system** (1 occurrence(s); foster_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`
+- **fluctuation in Time 4** (1 occurrence(s); foster_terms) — `page:316`, `page:317`, `page:318`, `page:319`, `page:320`
+- **fore + ut non** (1 occurrence(s); foster_terms) — `page:600`, `page:601`
+- **form by-with-from-in ends in -u** (1 occurrence(s); foster_terms) — `page:546`, `page:547`, `page:548`, `page:549`, `page:550`
+- **form by-with-from-in without a preposition** (1 occurrence(s); foster_terms) — `page:454`, `page:455`, `page:456`, `page:457`, `page:458`, `page:459`, `page:460`, `page:461`, `page:462`, `page:463`, `page:464`, `page:465`, ... (51 refs)
+- **forms of the double command** (1 occurrence(s); foster_terms) — `page:114`, `page:115`, `page:116`, `page:117`, `page:118`
+- **fourth declension** (1 occurrence(s); traditional_terms) — `page:197`, `page:198`, `page:199`, `page:200`, `page:201`, `page:202`, `page:203`, `page:204`, `page:205`, `page:206`, `page:207`, `page:208`, ... (104 refs)
+- **fourth principal part** (1 occurrence(s); foster_terms) — `page:79`, `page:80`, `page:81`, `page:82`
+- **frugalior** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **frugalissimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **fueram** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **fuero** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **fui** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **full natural meaning** (1 occurrence(s); foster_terms) — `page:385`, `page:386`, `page:387`, `page:388`, `page:389`, `page:390`, `page:391`
+- **Fur fuerit! Tamen vitam emendavit** (1 occurrence(s); foster_terms) — `page:348`, `page:349`, `page:350`
+- **future active participle** (1 occurrence(s); traditional_terms) — `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`
+- **future active participle for purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **future imperative passive** (1 occurrence(s); traditional_terms) — `page:193`, `page:194`, `page:195`, `page:196`
+- **future indicative** (1 occurrence(s); traditional_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **future participle** (1 occurrence(s); traditional_terms) — `page:363`, `page:364`, `page:365`, `page:366`, `page:367`
+- **future passive infinitive** (1 occurrence(s); traditional_terms) — `page:600`, `page:601`
+- **future tense** (1 occurrence(s); traditional_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **futurity** (1 occurrence(s); foster_terms) — `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`
+- **futurity formula** (1 occurrence(s); foster_terms) — `page:413`, `page:414`, `page:415`, `page:416`, `page:417`
+- **futurity passive infinitive** (1 occurrence(s); traditional_terms) — `page:546`, `page:547`, `page:548`, `page:549`, `page:550`
+- **futurity passive participle** (1 occurrence(s); traditional_terms) — `page:378`, `page:379`, `page:380`, `page:381`
+- **futurum esse + ut** (1 occurrence(s); foster_terms) — `page:600`, `page:601`
+- **gen. (genitive)** (1 occurrence(s); traditional_terms) — `page:522`
+- **Genitive gerund + gratia, causa, ergo** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **genitive gerund with gratia/causa/ergo for purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **Genitive gerundive + gratia, causa, ergo** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **genitive gerundive with gratia/causa/ergo for purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **genitive in -ius** (1 occurrence(s); traditional_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **genitive of part** (1 occurrence(s); foster_terms) — `page:616`, `page:617`
+- **genitive of person with refert** (1 occurrence(s); traditional_terms) — `page:622`, `page:623`, `page:624`, `page:625`
+- **genitive of the predicate** (1 occurrence(s); traditional_terms) — `page:618`, `page:619`
+- **gerund and gerundive of intransitive verbs** (1 occurrence(s); traditional_terms) — `page:580`, `page:581`, `page:582`, `page:583`, `page:584`, `page:585`, `page:586`, `page:587`
+- **gerundive (differentiated from passive necessity participle)** (1 occurrence(s); foster_terms) — `page:368`, `page:369`, `page:370`, `page:371`, `page:372`, `page:373`, `page:374`
+- **gerundive as adjective** (1 occurrence(s); foster_terms) — `page:529`, `page:530`, `page:531`, `page:532`, `page:533`
+- **Gp.I** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **Gp.II** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **Gp.III** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **gradus comparationis** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **gradus positivus** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **grammatical subject** (1 occurrence(s); traditional_terms) — `page:422`, `page:423`, `page:424`
+- **Group III verbs** (1 occurrence(s); traditional_terms) — `page:104`, `page:105`, `page:106`, `page:107`
+- **Group IV verbs** (1 occurrence(s); traditional_terms) — `page:104`, `page:105`, `page:106`, `page:107`
+- **hi, hae, haec** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **hic, haec, hoc** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **his** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **hisce** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **historical circumstances** (1 occurrence(s); foster_terms) — `page:434`, `page:435`, `page:436`
+- **Historical variations** (1 occurrence(s); foster_terms) — `page:574`, `page:575`, `page:576`, `page:577`
+- **hoc, hac** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **honestior** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **honestissimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **honestius** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **Honestus, -a, -um** (1 occurrence(s); foster_terms) — `page:65`, `page:66`
+- **horum, harum** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **hos, has, haec** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **How to think this through** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **huic** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **huius** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **humillimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **hunc, hanc, hoc** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **id** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **idoneus qui** (1 occurrence(s); foster_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **ii** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **imperfect indicative** (1 occurrence(s); traditional_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **imperfect subjunctive (for T.2s)** (1 occurrence(s); traditional_terms) — `page:352`, `page:353`, `page:354`, `page:355`, `page:356`, `page:357`
+- **imperfect tense marker -ba-** (1 occurrence(s); traditional_terms) — `page:95`, `page:96`, `page:97`, `page:98`, `page:99`, `page:100`
+- **impersonal expression** (1 occurrence(s); traditional_terms) — `page:515`, `page:516`, `page:517`, `page:518`, `page:519`, `page:520`, `page:521`
+- **impersonal passive** (1 occurrence(s); foster_terms) — `page:580`, `page:581`, `page:582`, `page:583`, `page:584`, `page:585`, `page:586`, `page:587`
+- **In vernaculis maior difficultas** (1 occurrence(s); foster_terms) — `page:534`, `page:535`
+- **indefinite pronoun** (1 occurrence(s); traditional_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **indefinite relative** (1 occurrence(s); traditional_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **Indefinite: qui, qua, quod stand for the indefinite aliqui, aliqua, aliquod** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **independent subjunctive** (1 occurrence(s); traditional_terms) — `page:348`, `page:349`, `page:350`
+- **indignus qui** (1 occurrence(s); foster_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **Indirect question: qui, quae, quod and quis, quid + subjunctive ask an indirect question** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **indirect questions** (1 occurrence(s); traditional_terms) — `page:348`, `page:349`, `page:350`
+- **indirect speech** (1 occurrence(s); traditional_terms) — `page:515`, `page:516`, `page:517`, `page:518`, `page:519`, `page:520`, `page:521`
+- **indirect statement** (1 occurrence(s); traditional_terms) — `page:515`, `page:516`, `page:517`, `page:518`, `page:519`, `page:520`, `page:521`
+- **infinitive** (1 occurrence(s); foster_terms) — `page:79`, `page:80`, `page:81`, `page:82`
+- **infinitive (not recommended)** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **infinitive endings** (1 occurrence(s); traditional_terms) — `page:95`, `page:96`, `page:97`, `page:98`, `page:99`, `page:100`
+- **intensive pronoun** (1 occurrence(s); traditional_terms) — `page:325`, `page:326`, `page:327`, `page:328`, `page:329`, `page:330`
+- **interest** (1 occurrence(s); foster_terms) — `page:622`, `page:623`, `page:624`, `page:625`
+- **internal vowel that indicates the time of the verb** (1 occurrence(s); foster_terms) — `page:137`, `toc:1.22`
+- **INTERROGANDI FORMULAE** (1 occurrence(s); foster_terms) — `page:101`, `page:102`, `page:103`
+- **interrogative pronoun** (1 occurrence(s); traditional_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **intersum, interesse, interfui** (1 occurrence(s); foster_terms) — `page:622`, `page:623`, `page:624`, `page:625`
+- **intransitive verbs with oblique complements** (1 occurrence(s); foster_terms) — `page:580`, `page:581`, `page:582`, `page:583`, `page:584`, `page:585`, `page:586`, `page:587`
+- **io verbs of third conjugation** (1 occurrence(s); traditional_terms) — `page:104`, `page:105`, `page:106`, `page:107`
+- **iri + supine** (1 occurrence(s); foster_terms) — `page:546`, `page:547`, `page:548`, `page:549`, `page:550`
+- **is = es** (1 occurrence(s); foster_terms) — `page:311`, `page:312`, `page:313`, `page:314`, `page:315`
+- **is, ea, id** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **iste – ille – ipse** (1 occurrence(s); foster_terms) — `page:325`, `page:326`, `page:327`, `page:328`, `page:329`, `page:330`
+- **Iteratio possessionis in pronominibus** (1 occurrence(s); foster_terms) — `page:145`
+- **Latin style** (1 occurrence(s); traditional_terms) — `page:178`
+- **Lewis and Short** (1 occurrence(s); traditional_terms) — `page:316`, `page:317`, `page:318`, `page:319`, `page:320`
+- **Lewis and Short dictionary** (1 occurrence(s); traditional_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **Liber, -era, -erum** (1 occurrence(s); foster_terms) — `page:65`, `page:66`
+- **licet** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **lists of endings** (1 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`
+- **little branch hanging out on the extreme end** (1 occurrence(s); foster_terms) — `page:197`, `page:198`, `page:199`, `page:200`, `page:201`, `page:202`, `page:203`, `page:204`, `page:205`, `page:206`, `page:207`, `page:208`, ... (104 refs)
+- **logical reflexive** (1 occurrence(s); foster_terms) — `page:170`, `page:171`, `page:172`, `page:173`, `page:174`, `page:175`, `page:176`, `page:177`
+- **logical subject** (1 occurrence(s); foster_terms) — `page:422`, `page:423`, `page:424`
+- **ludi** (1 occurrence(s); foster_terms) — `page:124`
+- **main clause** (1 occurrence(s); traditional_terms) — `page:89`, `page:90`, `page:91`, `page:92`, `page:93`, `page:94`
+- **maior, maius** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **masculine nouns ending in -a -ae** (1 occurrence(s); traditional_terms) — `page:65`, `page:66`
+- **mater ac pater** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **mater et pater** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **mater paterque** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **maximus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **melior, melius** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **memorizing forms (rejected)** (1 occurrence(s); traditional_terms) — `page:79`, `page:80`, `page:81`, `page:82`
+- **minimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **minor, minus** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **minutatim** (1 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`
+- **Modal attraction: qui, quae, quod and quis, quid + the verb in the subjunctive by modal attraction** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **mode of direct discourse and question** (1 occurrence(s); foster_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`
+- **mouth and mind verbs** (1 occurrence(s); foster_terms) — `page:410`, `page:411`, `page:412`
+- **natural function meaning 'of'** (1 occurrence(s); foster_terms) — `page:522`
+- **natural usage** (1 occurrence(s); foster_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+- **nauta, -ae** (1 occurrence(s); foster_terms) — `page:65`, `page:66`
+- **ne = that** (1 occurrence(s); traditional_terms) — `page:608`, `page:609`, `page:610`
+- **ne non = that not** (1 occurrence(s); traditional_terms) — `page:608`, `page:609`, `page:610`
+- **necessity participle** (1 occurrence(s); foster_terms) — `page:363`, `page:364`, `page:365`, `page:366`, `page:367`
+- **negative dubitare + quin + subjunctive** (1 occurrence(s); foster_terms) — `page:602`, `page:603`
+- **nequior, nequius** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **nequissimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **nestling boxes** (1 occurrence(s); foster_terms) — `page:89`, `page:90`, `page:91`, `page:92`, `page:93`, `page:94`
+- **nine adjectives unus...solus** (1 occurrence(s); traditional_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **nominative with the infinitive** (1 occurrence(s); foster_terms) — `page:515`, `page:516`, `page:517`, `page:518`, `page:519`, `page:520`, `page:521`
+- **nonne** (1 occurrence(s); foster_terms) — `page:101`, `page:102`, `page:103`
+- **nos** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **nostri, nostrum** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **noun clause** (1 occurrence(s); traditional_terms) — `page:602`, `page:603`
+- **nouns in –is** (1 occurrence(s); foster_terms) — `page:113`
+- **nouns with singular subject variation (e.g., socer, arbiter)** (1 occurrence(s); traditional_terms) — `page:65`, `page:66`
+- **num** (1 occurrence(s); foster_terms) — `page:101`, `page:102`, `page:103`
+- **object form in -um** (1 occurrence(s); foster_terms) — `page:546`, `page:547`, `page:548`, `page:549`, `page:550`
+- **object form without a preposition** (1 occurrence(s); foster_terms) — `page:454`, `page:455`, `page:456`, `page:457`, `page:458`, `page:459`, `page:460`, `page:461`, `page:462`, `page:463`, `page:464`, `page:465`, ... (51 refs)
+- **object-accusative and infinitive expression** (1 occurrence(s); foster_terms) — `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`
+- **obliqua oratio** (1 occurrence(s); foster_terms) — `page:515`, `page:516`, `page:517`, `page:518`, `page:519`, `page:520`, `page:521`
+- **oblique cases with passive verbs** (1 occurrence(s); traditional_terms) — `page:580`, `page:581`, `page:582`, `page:583`, `page:584`, `page:585`, `page:586`, `page:587`
+- **of which** (1 occurrence(s); traditional_terms) — `page:138`, `page:139`
+- **of whom** (1 occurrence(s); traditional_terms) — `page:138`, `page:139`
+- **OMNIA ITERANTUR MODI INDICATIVI TEMPORA** (1 occurrence(s); foster_terms) — `page:101`, `page:102`, `page:103`
+- **one letter difference** (1 occurrence(s); foster_terms) — `page:137`, `toc:1.22`
+- **optimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **oratio obliqua conditionals** (1 occurrence(s); traditional_terms) — `page:626`, `page:627`, `page:628`, `page:629`, `page:630`, `page:631`, `page:632`, `page:633`, `page:634`
+- **Oratione in obliqua condicionales** (1 occurrence(s); foster_terms) — `page:626`, `page:627`, `page:628`, `page:629`, `page:630`, `page:631`, `page:632`, `page:633`, `page:634`
+- **original subjunctives** (1 occurrence(s); foster_terms) — `page:604`, `page:605`, `page:606`, `page:607`
+- **Ossium gluten** (1 occurrence(s); foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`
+- **paradigms** (1 occurrence(s); traditional_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`
+- **Participia ut nomina** (1 occurrence(s); foster_terms) — `page:375`, `page:376`, `page:377`
+- **participle** (1 occurrence(s); traditional_terms) — `page:418`, `page:419`, `page:420`, `page:421`
+- **passive endings** (1 occurrence(s); traditional_terms) — `page:137`, `toc:1.22`
+- **passive expression of verbs with genitive, dative, ablative** (1 occurrence(s); foster_terms) — `page:580`, `page:581`, `page:582`, `page:583`, `page:584`, `page:585`, `page:586`, `page:587`
+- **passive imperative** (1 occurrence(s); traditional_terms) — `page:193`, `page:194`, `page:195`, `page:196`
+- **passive purpose clause with ut** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **passive relative clause of purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **passive verb forms in Times 4, 5, 6** (1 occurrence(s); traditional_terms) — `page:146`, `page:147`, `page:148`
+- **pauperrimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **peior, peius** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **perfect infinitive** (1 occurrence(s); traditional_terms) — `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`
+- **perfect participle** (1 occurrence(s); traditional_terms) — `page:363`, `page:364`, `page:365`, `page:366`, `page:367`
+- **perfect subjunctive** (1 occurrence(s); traditional_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`
+- **perfect subjunctive (for T.3s)** (1 occurrence(s); traditional_terms) — `page:352`, `page:353`, `page:354`, `page:355`, `page:356`, `page:357`
+- **periculum ... est** (1 occurrence(s); foster_terms) — `page:608`, `page:609`, `page:610`
+- **personal ending** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **personal pronouns** (1 occurrence(s); traditional_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **pessimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **place form** (1 occurrence(s); traditional_terms) — `page:448`, `page:449`, `page:450`, `page:451`, `page:452`, `page:453`
+- **pluperfect subjunctive** (1 occurrence(s); traditional_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`
+- **pluperfect subjunctive (for T.4s)** (1 occurrence(s); traditional_terms) — `page:352`, `page:353`, `page:354`, `page:355`, `page:356`, `page:357`
+- **plures, plura** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **pluribus in exemplis** (1 occurrence(s); foster_terms) — `page:362`, `toc:3.14`
+- **plus** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **positive adverb** (1 occurrence(s); foster_terms) — `page:306`, `page:307`, `page:308`, `page:309`, `page:310`
+- **positive degree** (1 occurrence(s); traditional_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **positive dubitare + num + subjunctive** (1 occurrence(s); foster_terms) — `page:602`, `page:603`
+- **possessive adjectives meus, a, um and tuus, a, um** (1 occurrence(s); traditional_terms) — `page:168`, `page:169`
+- **possessive genitive with refert** (1 occurrence(s); traditional_terms) — `page:622`, `page:623`, `page:624`, `page:625`
+- **post . . . quam** (1 occurrence(s); foster_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **postquam** (1 occurrence(s); foster_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **preposition** (1 occurrence(s); traditional_terms) — `page:149`, `page:150`, `page:151`, `page:152`, `page:153`
+- **preposition with the ablative** (1 occurrence(s); traditional_terms) — `page:154`, `page:155`, `page:156`, `page:157`, `page:158`, `page:159`, `page:160`
+- **present indicative** (1 occurrence(s); traditional_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **present infinitive** (1 occurrence(s); traditional_terms) — `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`
+- **present subjunctive (for T.1s)** (1 occurrence(s); traditional_terms) — `page:352`, `page:353`, `page:354`, `page:355`, `page:356`, `page:357`
+- **prius . . . quam** (1 occurrence(s); foster_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **priusquam** (1 occurrence(s); foster_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **prohibition** (1 occurrence(s); traditional_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **purpose** (1 occurrence(s); traditional_terms) — `page:437`, `page:438`, `page:439`, `page:440`, `page:441`
+- **purpose clause with ut + subjunctive** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **Purpose: qui, quae, quod and quis, quid + subjunctive = ut is, ut ea, ut id and ut quis, ut quid as an expression of purpose** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **quae** (1 occurrence(s); foster_terms) — `page:86`, `page:87`, `page:88`
+- **quam (adverb)** (1 occurrence(s); foster_terms) — `page:336`, `page:337`, `page:338`
+- **quam with the comparative** (1 occurrence(s); foster_terms) — `page:336`, `page:337`, `page:338`
+- **quam with the superlative** (1 occurrence(s); foster_terms) — `page:336`, `page:337`, `page:338`
+- **quamquam** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **quamvis** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **quando** (1 occurrence(s); traditional_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **quando, quandoquidem, siquidem + indicative** (1 occurrence(s); foster_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **quantumvis** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **quarum** (1 occurrence(s); foster_terms) — `page:138`, `page:139`
+- **quas** (1 occurrence(s); foster_terms) — `page:86`, `page:87`, `page:88`
+- **quem** (1 occurrence(s); foster_terms) — `page:86`, `page:87`, `page:88`
+- **qui** (1 occurrence(s); foster_terms) — `page:86`, `page:87`, `page:88`
+- **qui, quae, quod + passive subjunctive = ut is, ea, id + subjunctive** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **qui, quae, quod + subjunctive (causal relative)** (1 occurrence(s); foster_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **qui, quae, quod + subjunctive = ut is, ea, id + subjunctive** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **qui, quae, quod begin a relative sentence** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **Qui, quae, quod; quis, quid: varii usus decem** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **quia** (1 occurrence(s); foster_terms) — `page:526`, `page:527`, `page:528`
+- **quin** (1 occurrence(s); foster_terms) — `page:620`, `page:621`
+- **quippe qui, utpote qui** (1 occurrence(s); traditional_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **quippe qui, utpote qui + subjunctive** (1 occurrence(s); foster_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **QUO** (1 occurrence(s); foster_terms) — `page:448`, `page:449`, `page:450`, `page:451`, `page:452`, `page:453`
+- **quo + comparative + passive subjunctive = ut eo + comparative + passive subjunctive** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **quo + comparative + passive subjunctive for purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **quo + comparative + subjunctive = ut eo + comparative + subjunctive** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **quo + comparative + subjunctive for purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **quod, quia, quoniam** (1 occurrence(s); traditional_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **quod, quia, quoniam + indicative (author's reason)** (1 occurrence(s); foster_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **quod, quia, quoniam + subjunctive (reported reason)** (1 occurrence(s); foster_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **quominus** (1 occurrence(s); foster_terms) — `page:620`, `page:621`
+- **quoniam** (1 occurrence(s); foster_terms) — `page:526`, `page:527`, `page:528`
+- **quorum** (1 occurrence(s); foster_terms) — `page:138`, `page:139`
+- **quos** (1 occurrence(s); foster_terms) — `page:86`, `page:87`, `page:88`
+- **real conditional** (1 occurrence(s); traditional_terms) — `page:579`
+- **Real or Factual or Logical conditions** (1 occurrence(s); foster_terms) — `page:574`, `page:575`, `page:576`, `page:577`
+- **reflecting back to the subject** (1 occurrence(s); foster_terms) — `page:168`, `page:169`
+- **reflexive** (1 occurrence(s); traditional_terms) — `page:325`, `page:326`, `page:327`, `page:328`, `page:329`, `page:330`
+- **reflexivum pronomen** (1 occurrence(s); foster_terms) — `page:422`, `page:423`, `page:424`
+- **relative box** (1 occurrence(s); foster_terms) — `page:89`, `page:90`, `page:91`, `page:92`, `page:93`, `page:94`
+- **relative clause of cause** (1 occurrence(s); traditional_terms) — `page:401`, `page:402`, `page:403`, `page:404`, `page:405`, `page:406`, `page:407`, `page:408`, `page:409`
+- **relative clause of result** (1 occurrence(s); traditional_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **relative clauses of cause** (1 occurrence(s); traditional_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **relative clauses of characteristic result** (1 occurrence(s); foster_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **relative clauses of concession** (1 occurrence(s); traditional_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **relative clauses of purpose** (1 occurrence(s); traditional_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **relative clauses of result** (1 occurrence(s); traditional_terms) — `page:442`, `page:443`, `page:444`, `page:445`, `page:446`, `page:447`
+- **relative pronoun qui, quae, quod with subjunctive** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **relative pronouns** (1 occurrence(s); traditional_terms) — `page:101`, `page:102`, `page:103`
+- **Repetitio ex prima experientia nominum** (1 occurrence(s); foster_terms) — `page:311`, `page:312`, `page:313`, `page:314`, `page:315`
+- **repetition of things done before** (1 occurrence(s); foster_terms) — `page:613`
+- **Repetitiones ante actorum** (1 occurrence(s); foster_terms) — `page:613`
+- **repetitiones omnium** (1 occurrence(s); foster_terms) — `page:178`
+- **Respiciuntur iterum MODI CONIUNCTIVI USUS QUIDAM** (1 occurrence(s); foster_terms) — `page:614`, `page:615`
+- **Result: qui, quae, quod and quis, quid + subjunctive = ut is, ut ea, ut id and ut quis, ut quid as an expression of result, in English sounding indicative** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **reversing verbs** (1 occurrence(s); foster_terms) — `page:95`, `page:96`, `page:97`, `page:98`, `page:99`, `page:100`
+- **review** (1 occurrence(s); traditional_terms) — `page:178`
+- **rē fert** (1 occurrence(s); foster_terms) — `page:622`, `page:623`, `page:624`, `page:625`
+- **rēfero, rēferre, rēttuli, rēlatum, 3** (1 occurrence(s); foster_terms) — `page:622`, `page:623`, `page:624`, `page:625`
+- **second conjugation** (1 occurrence(s); traditional_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **second or future imperative mode** (1 occurrence(s); foster_terms) — `page:568`, `page:569`, `page:570`, `page:571`, `page:572`, `page:573`
+- **second part of the dictionary entry** (1 occurrence(s); foster_terms) — `page:108`, `page:109`, `page:110`, `page:111`, `page:112`
+- **second principal part** (1 occurrence(s); foster_terms) — `page:95`, `page:96`, `page:97`, `page:98`, `page:99`, `page:100`
+- **simillimus, a, um** (1 occurrence(s); foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`
+- **simple clock-time** (1 occurrence(s); foster_terms) — `page:434`, `page:435`, `page:436`
+- **simple straight present imperative** (1 occurrence(s); foster_terms) — `page:114`, `page:115`, `page:116`, `page:117`, `page:118`
+- **six times** (1 occurrence(s); foster_terms) — `page:124`
+- **Socer, -eri** (1 occurrence(s); foster_terms) — `page:65`, `page:66`
+- **soli soli soli ditty** (1 occurrence(s); foster_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **style note: preposition between noun and adjective** (1 occurrence(s); foster_terms) — `page:178`
+- **subjunctive by attraction** (1 occurrence(s); traditional_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **subjunctive mode of speaking** (1 occurrence(s); foster_terms) — `page:339`, `page:340`, `page:341`, `page:342`, `page:343`, `page:344`, `page:345`, `page:346`, `page:347`
+- **subjunctive modes of the verb 'to be' itself** (1 occurrence(s); foster_terms) — `page:351`
+- **subsequent infinitive** (1 occurrence(s); foster_terms) — `page:515`, `page:516`, `page:517`, `page:518`, `page:519`, `page:520`, `page:521`
+- **substantive clauses** (1 occurrence(s); traditional_terms) — `page:608`, `page:609`, `page:610`
+- **sum** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **sum, esse, fui, futurus –a –um** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **sumus** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **sunt** (1 occurrence(s); foster_terms) — `page:83`, `page:84`, `page:85`
+- **super principle for neuter nouns** (1 occurrence(s); foster_terms) — `page:529`, `page:530`, `page:531`, `page:532`, `page:533`
+- **super principle in neuters** (1 occurrence(s); foster_terms) — `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, `page:61`
+- **superlative adverb** (1 occurrence(s); foster_terms) — `page:306`, `page:307`, `page:308`, `page:309`, `page:310`
+- **Supine (accusative)** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **supine (accusative) to express purpose** (1 occurrence(s); traditional_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **suus, a, um** (1 occurrence(s); foster_terms) — `page:170`, `page:171`, `page:172`, `page:173`, `page:174`, `page:175`, `page:176`, `page:177`
+- **T.1** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **T.1 passive** (1 occurrence(s); traditional_terms) — `page:137`, `toc:1.22`
+- **T.1i, T.2i, T.3i, T.4ai, T.4bi, T.5i, T.6i for indicative** (1 occurrence(s); foster_terms) — `page:352`, `page:353`, `page:354`, `page:355`, `page:356`, `page:357`
+- **T.1s, T.2s, T.3s, T.4s for subjunctive** (1 occurrence(s); foster_terms) — `page:352`, `page:353`, `page:354`, `page:355`, `page:356`, `page:357`
+- **T.2** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **T.2i, 4bi, 5i** (1 occurrence(s); foster_terms) — `page:434`, `page:435`, `page:436`
+- **T.3** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **T.3 passive** (1 occurrence(s); traditional_terms) — `page:137`, `toc:1.22`
+- **T.4a** (1 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`
+- **T.4b** (1 occurrence(s); foster_terms) — `page:358`, `page:359`, `page:360`, `page:361`
+- **T.4i** (1 occurrence(s); foster_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **T.5s** (1 occurrence(s); foster_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **T.6s** (1 occurrence(s); foster_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **tam ... quam** (1 occurrence(s); foster_terms) — `page:336`, `page:337`, `page:338`
+- **tametsi** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **Ten ways to use qui, quae, quod and quis, quid** (1 occurrence(s); foster_terms) — `page:536`, `page:537`, `page:538`, `page:539`, `page:540`, `page:541`, `page:542`, `page:543`
+- **tenses (present, imperfect, future)** (1 occurrence(s); traditional_terms) — `page:95`, `page:96`, `page:97`, `page:98`, `page:99`, `page:100`
+- **the 65** (1 occurrence(s); foster_terms) — `page:179`, `page:180`, `page:181`, `page:182`, `page:183`, `page:184`, `page:185`, `page:186`, `page:187`, `page:188`, `page:189`, `page:190`, ... (15 refs)
+- **the 9** (1 occurrence(s); foster_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **the famous nine** (1 occurrence(s); foster_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **third conjugation** (1 occurrence(s); traditional_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **third meaning of interest (III in Lewis and Short)** (1 occurrence(s); traditional_terms) — `page:622`, `page:623`, `page:624`, `page:625`
+- **third principal part** (1 occurrence(s); foster_terms) — `page:79`, `page:80`, `page:81`, `page:82`
+- **three ways in the dictionary** (1 occurrence(s); foster_terms) — `page:119`, `page:120`, `page:121`, `page:122`, `page:123`
+- **Time 1** (1 occurrence(s); foster_terms) — `page:74`, `page:75`, `page:76`, `page:77`, `page:78`
+- **Time 1 subjunctive** (1 occurrence(s); foster_terms) — `page:568`, `page:569`, `page:570`, `page:571`, `page:572`, `page:573`
+- **Time 1, 2, 3, 4, 5, 6** (1 occurrence(s); foster_terms) — `page:95`, `page:96`, `page:97`, `page:98`, `page:99`, `page:100`
+- **Time 2** (1 occurrence(s); foster_terms) — `page:74`, `page:75`, `page:76`, `page:77`, `page:78`
+- **Time 2 subjunctive** (1 occurrence(s); foster_terms) — `page:568`, `page:569`, `page:570`, `page:571`, `page:572`, `page:573`
+- **Time 3** (1 occurrence(s); foster_terms) — `page:74`, `page:75`, `page:76`, `page:77`, `page:78`
+- **Time 3 indicative** (1 occurrence(s); foster_terms) — `page:568`, `page:569`, `page:570`, `page:571`, `page:572`, `page:573`
+- **Time 3 subjunctive** (1 occurrence(s); foster_terms) — `page:568`, `page:569`, `page:570`, `page:571`, `page:572`, `page:573`
+- **Time 4a** (1 occurrence(s); foster_terms) — `page:74`, `page:75`, `page:76`, `page:77`, `page:78`
+- **Time 4b** (1 occurrence(s); foster_terms) — `page:74`, `page:75`, `page:76`, `page:77`, `page:78`
+- **Times 1, 2, 3 passive** (1 occurrence(s); foster_terms) — `page:133`, `page:134`, `page:135`, `page:136`
+- **Track I and Track II** (1 occurrence(s); foster_terms) — `page:352`, `page:353`, `page:354`, `page:355`, `page:356`, `page:357`
+- **Trapezita, -ae** (1 occurrence(s); foster_terms) — `page:65`, `page:66`
+- **tu** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **two-thumbnail system** (1 occurrence(s); foster_terms) — `page:352`, `page:353`, `page:354`, `page:355`, `page:356`, `page:357`
+- **UBI** (1 occurrence(s); foster_terms) — `page:448`, `page:449`, `page:450`, `page:451`, `page:452`, `page:453`
+- **uncertainty** (1 occurrence(s); traditional_terms) — `page:427`, `page:428`, `page:429`, `page:430`, `page:431`, `page:432`, `page:433`
+- **UNDE** (1 occurrence(s); foster_terms) — `page:448`, `page:449`, `page:450`, `page:451`, `page:452`, `page:453`
+- **unus nauta acronym** (1 occurrence(s); foster_terms) — `page:331`, `page:332`, `page:333`, `page:334`, `page:335`
+- **use of the preposition intra** (1 occurrence(s); foster_terms) — `page:454`, `page:455`, `page:456`, `page:457`, `page:458`, `page:459`, `page:460`, `page:461`, `page:462`, `page:463`, `page:464`, `page:465`, ... (51 refs)
+- **USUS LOCI** (1 occurrence(s); foster_terms) — `page:448`, `page:449`, `page:450`, `page:451`, `page:452`, `page:453`
+- **usus quin** (1 occurrence(s); foster_terms) — `page:620`, `page:621`
+- **ut + passive subjunctive** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **ut + subjunctive** (1 occurrence(s); foster_terms) — `page:564`, `page:565`, `page:566`, `page:567`
+- **ut = that not** (1 occurrence(s); traditional_terms) — `page:608`, `page:609`, `page:610`
+- **ut non** (1 occurrence(s); foster_terms) — `page:437`, `page:438`, `page:439`, `page:440`, `page:441`
+- **ut with subjunctive** (1 occurrence(s); foster_terms) — `page:425`, `page:426`
+- **v. dep.** (1 occurrence(s); traditional_terms) — `page:161`, `page:162`, `page:163`, `page:164`, `page:165`, `page:166`, `page:167`
+- **variation of -ris** (1 occurrence(s); foster_terms) — `page:316`, `page:317`, `page:318`, `page:319`, `page:320`
+- **verb Gp.III** (1 occurrence(s); foster_terms) — `page:551`, `page:552`, `page:553`, `page:554`
+- **Verba cum ablativo** (1 occurrence(s); foster_terms) — `page:534`, `page:535`
+- **verba deponentia** (1 occurrence(s); foster_terms) — `page:161`, `page:162`, `page:163`, `page:164`, `page:165`, `page:166`, `page:167`
+- **verba dicendi et cogitandi** (1 occurrence(s); foster_terms) — `page:410`, `page:411`, `page:412`
+- **verbs of fearing** (1 occurrence(s); traditional_terms) — `page:608`, `page:609`, `page:610`
+- **verbs of forbidding, impeding, prohibiting** (1 occurrence(s); traditional_terms) — `page:620`, `page:621`
+- **verbs of interest and attention** (1 occurrence(s); traditional_terms) — `page:622`, `page:623`, `page:624`, `page:625`
+- **verbs of remembering and forgetting** (1 occurrence(s); foster_terms) — `page:522`
+- **verbs of speaking and thinking** (1 occurrence(s); traditional_terms) — `page:410`, `page:411`, `page:412`
+- **vestri, vestrum** (1 occurrence(s); foster_terms) — `page:321`, `page:322`, `page:323`, `page:324`
+- **vos** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+- **whose** (1 occurrence(s); traditional_terms) — `page:138`, `page:139`
+- **word order of verbal parts** (1 occurrence(s); traditional_terms) — `page:146`, `page:147`, `page:148`
+- **–io, ere** (1 occurrence(s); foster_terms) — `page:104`, `page:105`, `page:106`, `page:107`
+- **–que . . . –que** (1 occurrence(s); foster_terms) — `page:62`, `page:63`, `page:64`
+
+## Method Supported Candidate
+
+- **Track I, Track II** (2 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (578 refs)
+- **ablative of time at which, accusative of duration of time, ablative of time within which** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **adjectives of three, two, one termination(s)** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **appendix (for remaining 20% of nouns)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Block II nouns (in –is)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Block species, iei (fifth declension)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Block –us, us (fourth declension)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **casus dativus, dative case, dative mentality** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **causal sentences with cum, quod, quia, quoniam, quando, quippe qui, utpote qui** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **complementary result clauses, characteristic result clauses** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **conditionales (logical, foggy future, contrary-to-fact)** (1 occurrence(s); core_foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **conjunctions: and, also, even; both . . . and** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **contemporaneous infinitive** (1 occurrence(s); core_foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **contemporaneous participle, antecedent participle, futurity participle, necessity participle** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **crazy form (first dictionary part of Block II nouns)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **cum + indicative vs cum + subjunctive** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **demonstrative pronouns, intensive pronoun, reflexive** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **deponent verbs, v. dep.** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **direct reflexive, indirect reflexive, logical reflexive** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **double command (simple straight present imperative and second/future imperative)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **dubitare + num / quin** (1 occurrence(s); core_foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **final ut, ne; final qui, quae, quod** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **first, second, third conjugation** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **flip (active to passive endings)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **fourth declension, fifth declension** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **genitive in -ius, dative in -i** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **indicative, active, passive, imperative** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **is, ea, id; hic, haec, hoc; ille, iste, ipse** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **ludi (games/exercises)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **M & M verbs (verba dicendi et cogitandi)** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **masculine, feminine, neuter** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **nostri, nostrum; vestri, vestrum** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **of-possession (double function)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Ossium gluten / bones' glue** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **paradigms, charts, lists of endings** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **passive imperative, deponent imperative, future imperative passive** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **passive voice in Times 1,2,3** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **phonetic exceptions (in passive formation)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **plural, singular** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **positive adverb, comparative adverb, superlative adverb** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **positive degree, comparative degree, superlative degree** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **present infinitive, perfect infinitive, future infinitive** (1 occurrence(s); traditional_bridge_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **present participle, perfect participle, future active participle, future passive participle, gerundive** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **present subjunctive, imperfect subjunctive, perfect subjunctive, pluperfect subjunctive** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **present tense, imperfect tense, future tense** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **pure result clauses (ut, ut non)** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **purpose clauses, final clauses** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **reflexive adjective suus, a, um** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **reflexive pronoun, possessive adjectives meus, a, um and tuus, a, um** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **reflexive pronoun, reflexive adjective** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **relative box / nestling boxes** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **relative pronoun, antecedent** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **relative pronoun, interrogative pronoun, indefinite pronoun** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **result clauses, consecutive clauses** (1 occurrence(s); traditional_bridge_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **rē fert / interest** (1 occurrence(s); core_foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **subject, object** (1 occurrence(s); traditional_bridge_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **super principle in neuters (neuter subject = object)** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **T.1i, T.2i, T.3i, etc.** (1 occurrence(s); core_foster_terms) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **T.1s, T.2s, T.3s, T.4s (subjunctive time labels)** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **temporal clauses (postquam, ut, donec, priusquam, antequam)** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **Temporis usus: form by-with-from-in, object form, per, intra** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **the 9 (unus...solus)** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **third principal part, fourth principal part** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **three ways in the dictionary for Block II adjectives** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Time 1, Time 2, Time 3, Time 4, Time 4a, Time 4b, Time 5, Time 6** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **USUS LOCI: QUO, UNDE, UBI, CASUS LOCATIVUS** (1 occurrence(s); core_foster_terms) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **verba deponentia / deponent verbs** (1 occurrence(s); core_foster_terms) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+
+## Platform Overlay Candidate
+
+- **Adjective comparison is taught as two systematic patterns without memorizing declension paradigms.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **Adverb formation is taught as a simple transformation from adjectives, using neutral comparative and long -e superlative.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **Dictionary work (e.g., Lewis and Short) is explicitly required for understanding verbs like interest/refert and for discovering uses of dubito.** (1 occurrence(s); platform_taxonomy_implications) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **Foster's own tense-number notation (T.1i, T.2s, etc.) replaces traditional tense names.** (1 occurrence(s); platform_taxonomy_implications) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **Gerund and gerundive are deliberately separated by a full academic year from the participle of passive necessity to avoid confusion.** (1 occurrence(s); platform_taxonomy_implications) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **Later Latin (Christian, medieval) is included as half of Latin literature, not as a degenerate form, requiring the platform to cover both classical and later usage.** (1 occurrence(s); platform_taxonomy_implications) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **Modal attraction is presented as a preference, not a law, and is especially associated with historians and oratio obliqua.** (1 occurrence(s); platform_taxonomy_implications) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **Participles are categorized by time relationship (contemporaneous, antecedent, futurity, necessity) rather than by traditional present/perfect/future labels.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **Repeated contrast with traditional terminology (e.g., 'Accusativus Cum Infinitivo' as 'traditional term' for oratio obliqua).** (1 occurrence(s); platform_taxonomy_implications) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **Subjunctive meaning is not assigned until the type of clause and introducing particle are studied; translation is avoided initially.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **The 'by-with-from-in' and 'to-for-from' and 'of-possession' function labels replace traditional case names.** (1 occurrence(s); platform_taxonomy_implications) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **The 'passive necessity participle' is explicitly distinguished from the 'gerundive' in function, and the gerund is deferred to a later experience.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **The locative is treated as a distinct case for cities and small islands, with isolated common expressions (rus, domus, humus, foris) imitating the pattern.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **The method covers all major grammatical structures in a non-traditional sequence: bones' glue → Block I nouns → pronouns → prepositions → verb times → principal parts → relative pronoun → Block II nouns → imperatives → Block II adjectives → genitive → passive → deponent → reflexive → dative → passive imperatives → appendix nouns.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method distinguishes direct, indirect, and logical reflexive pronouns, which is a more nuanced taxonomy than traditional grammar.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method divides all Latin nouns into two large Blocks (each ~40%) plus an appendix (~20%), and all adjectives into two Blocks (each 50%), which is a non-traditional categorization.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method emphasizes 'one letter can change meaning', implying the platform should support fine-grained morphological highlighting and comparison.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method includes 'ludi' (games, exercises), suggesting the platform should have interactive practice modes.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method insists on reading whole sentences and never beginning with the first word, implying a platform should promote holistic sentence analysis rather than left-to-right parsing.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method introduces the 'relative box' or 'nestling boxes' concept for clause nesting, implying a visual or structural diagramming tool.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method prioritizes dictionary use (especially Lewis and Short) from day one over vocabulary lists and grammar textbooks.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method prioritizes real Latin literature and reading sheets over isolated example sentences or charts.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **The method recommends reading sheets compiled from real literature (Bible, Cicero, Caesar, Virgil, Plautus, Augustine, Martial, Piccolomini, Codex Iuris Canonici), not invented sentences.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method teaches verb tenses by numbers (Time 1-6) and groups (Gp.I-IV) with predominant vowels, which is a non-standard but systematic approach.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method treats deponent verbs as a separate but integrated topic, with their own imperative forms.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method treats the passive voice in two separate blocks (T.1-3 passive, then T.4-6 passive as compound forms), which must be reflected in any curriculum sequencing.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method uses 'reversing' (singular/plural, subject/object) as a core exercise, suggesting the platform should include tools for automatic inflection transformation.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The method uses functional labels (e.g., 'of-possession', 'by-with-from-in', 'to-for-from', 'Time 1-6') rather than traditional grammatical case/tense names, which may require platform mapping to standard taxonomy.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **The sequence of English renderings (acc+inf, 'that' clause, finite clause without 'that') for the accusative+infinitive suggests a translation method.** (1 occurrence(s); platform_taxonomy_implications) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **The three conditional types are taught in Latin terms (real/logical, foggy future, contrary-to-fact) before any English translation is attempted.** (1 occurrence(s); platform_taxonomy_implications) — `page:505`, `page:506`, `page:507`, `page:508`, `page:509`, `page:510`, `page:511`, `page:512`, `page:513`, `page:514`, `page:515`, `page:516`, ... (374 refs)
+- **The two-track sequence system for subjunctive avoids traditional present/imperfect/perfect/pluperfect labels, using T.1s–T.4s instead.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **This method entirely rejects traditional declension/conjugation charts, paradigms, and memorization of isolated endings.** (1 occurrence(s); platform_taxonomy_implications) — `page:49`, `page:50`, `page:51`, `page:52`, `page:53`, `page:54`, `page:55`, `page:56`, `page:57`, `page:58`, `page:59`, `page:60`, ... (287 refs)
+- **Time and place expressions are taught by function (quo, unde, ubi; at which, through which, within which) rather than by traditional case names alone.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)
+- **Verb forms are practiced by 'jumping around' times and active/passive, and by reversing singular/plural, not by memorizing isolated paradigms.** (1 occurrence(s); platform_taxonomy_implications) — `page:301`, `page:302`, `page:303`, `page:304`, `page:305`, `page:306`, `page:307`, `page:308`, `page:309`, `page:310`, `page:311`, `page:312`, ... (204 refs)

@@ -43,6 +43,16 @@ _VOICE_CONCEPTS = {
     "passive": "voice.passive",
 }
 
+_FEATURE_CONCEPT_MAPS = {
+    "case": _CASE_CONCEPTS,
+    "person": _PERSON_CONCEPTS,
+    "number": _NUMBER_CONCEPTS,
+    "gender": _GENDER_CONCEPTS,
+    "tense": _TENSE_CONCEPTS,
+    "mood": _MOOD_CONCEPTS,
+    "voice": _VOICE_CONCEPTS,
+}
+
 
 def concept_ids_for_features(
     features: Mapping[str, object],
@@ -51,20 +61,55 @@ def concept_ids_for_features(
     paradigm_kind: str,
 ) -> list[str]:
     concept_ids: list[str] = []
-    _append_mapped(concept_ids, _CASE_CONCEPTS, features.get("case"))
-    _append_mapped(concept_ids, _PERSON_CONCEPTS, features.get("person"))
-    _append_mapped(concept_ids, _NUMBER_CONCEPTS, features.get("number"))
-    _append_mapped(concept_ids, _GENDER_CONCEPTS, features.get("gender"))
-    _append_mapped(concept_ids, _TENSE_CONCEPTS, features.get("tense"))
-    _append_mapped(concept_ids, _MOOD_CONCEPTS, features.get("mood"))
-    _append_mapped(concept_ids, _VOICE_CONCEPTS, features.get("voice"))
+    normalized_features = normalize_feature_map(features)
+    _append_mapped(concept_ids, _CASE_CONCEPTS, normalized_features.get("case"))
+    _append_mapped(concept_ids, _PERSON_CONCEPTS, normalized_features.get("person"))
+    _append_mapped(concept_ids, _NUMBER_CONCEPTS, normalized_features.get("number"))
+    _append_mapped(concept_ids, _GENDER_CONCEPTS, normalized_features.get("gender"))
+    _append_mapped(concept_ids, _TENSE_CONCEPTS, normalized_features.get("tense"))
+    _append_mapped(concept_ids, _MOOD_CONCEPTS, normalized_features.get("mood"))
+    _append_mapped(concept_ids, _VOICE_CONCEPTS, normalized_features.get("voice"))
 
-    if paradigm_kind == "declension" or part_of_speech in {"noun", "adjective", "pronoun"}:
+    part_of_speech_key = _normalize_feature_value(part_of_speech)
+    paradigm_kind_key = _normalize_feature_value(paradigm_kind)
+    if paradigm_kind_key == "declension" or part_of_speech_key in {
+        "noun",
+        "adjective",
+        "pronoun",
+    }:
         concept_ids.append("process.declension")
-    elif paradigm_kind == "conjugation" or part_of_speech == "verb":
+    elif paradigm_kind_key == "conjugation" or part_of_speech_key == "verb":
         concept_ids.append("process.conjugation")
 
     return list(dict.fromkeys(concept_ids))
+
+
+def normalize_feature_map(features: Mapping[str, object]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for key, value in features.items():
+        if not isinstance(key, str) or not isinstance(value, str):
+            continue
+        key_name = _normalize_feature_key(key)
+        value_name = _normalize_feature_value(value)
+        if key_name and value_name:
+            normalized[key_name] = value_name
+    return normalized
+
+
+def feature_mapping_diagnostics(features: Mapping[str, object]) -> dict[str, list[dict[str, str]]]:
+    normalized_features = normalize_feature_map(features)
+    unmapped_features: list[dict[str, str]] = []
+    ignored_features: list[dict[str, str]] = []
+    for key, value in normalized_features.items():
+        concept_map = _FEATURE_CONCEPT_MAPS.get(key)
+        if concept_map is None:
+            ignored_features.append({"key": key, "value": value})
+        elif value not in concept_map:
+            unmapped_features.append({"key": key, "value": value})
+    return {
+        "unmapped_features": unmapped_features,
+        "ignored_features": ignored_features,
+    }
 
 
 def _append_mapped(
@@ -77,3 +122,11 @@ def _append_mapped(
     concept_id = mapping.get(value.casefold())
     if concept_id:
         concept_ids.append(concept_id)
+
+
+def _normalize_feature_key(key: str) -> str:
+    return key.strip().replace("-", "_").casefold()
+
+
+def _normalize_feature_value(value: str) -> str:
+    return value.strip().casefold()

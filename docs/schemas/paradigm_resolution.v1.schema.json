@@ -112,6 +112,22 @@
         "missing_evidence": {
           "type": "array",
           "items": { "type": "string" }
+        },
+        "evidence_gaps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/learningEvidenceGap" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "learningEvidenceGap": {
+      "type": "object",
+      "required": ["concept_id", "missing"],
+      "properties": {
+        "concept_id": { "type": ["string", "null"] },
+        "missing": {
+          "type": "array",
+          "items": { "type": "string" }
         }
       },
       "additionalProperties": false
@@ -162,6 +178,44 @@
         "source_evidence": {
           "type": "array",
           "items": { "$ref": "#/$defs/sourceEvidence" }
+        },
+        "foster_bridges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/learningFosterBridge" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "learningFosterBridge": {
+      "type": "object",
+      "required": [
+        "id",
+        "status",
+        "foster_terms",
+        "concept_ids",
+        "related_concept_ids",
+        "plain_english",
+        "source_refs"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "type": "string" },
+        "foster_terms": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "concept_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "related_concept_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "plain_english": { "type": "string" },
+        "source_refs": {
+          "type": "array",
+          "items": { "type": "string" }
         }
       },
       "additionalProperties": false

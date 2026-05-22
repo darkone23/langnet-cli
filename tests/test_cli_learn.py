@@ -7,6 +7,8 @@ from typing import cast
 from click.testing import CliRunner
 
 from langnet.cli import main
+from langnet.foster_ossa.essentials import default_foster_essentials
+from langnet.learning.foster_bridge import load_foster_bridges
 
 FIXTURE_DIR = Path("tests/fixtures/learning")
 MIN_GENITIVE_WORK_EVIDENCE = 3
@@ -46,6 +48,29 @@ def test_learn_concepts_lists_registry_for_cli_exploration() -> None:
     assert "process.declension" in ids
 
 
+def test_learn_concepts_compact_view_is_ui_friendly() -> None:
+    result = CliRunner().invoke(
+        main,
+        ["learn", "concepts", "--kind", "case", "--view", "compact", "--output", "json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["view"] == "compact"
+    genitive = next(concept for concept in payload["concepts"] if concept["id"] == "case.genitive")
+    assert genitive["source_evidence_counts"]["reader_segment"] >= GENITIVE_SEGMENT_EVIDENCE_COUNT
+    assert genitive["foster_bridge_ids"] == ["of-possession"]
+    assert genitive["foster_bridges"][0] == {
+        "id": "of-possession",
+        "status": "promoted_match",
+        "concept_ids": ["case.genitive"],
+        "related_concept_ids": [],
+        "plain_english": "Foster/Ossa possession or relation maps to the genitive concept.",
+        "source_refs": ["page:69", "page:125", "page:140", "page:522", "page:618"],
+    }
+    assert "evidence" not in genitive
+
+
 def test_learn_concept_shows_foster_and_native_traditional_terms() -> None:
     result = CliRunner().invoke(main, ["learn", "concept", "case.genitive", "--output", "json"])
 
@@ -57,6 +82,12 @@ def test_learn_concept_shows_foster_and_native_traditional_terms() -> None:
     assert payload["concept"]["traditional"]["san"] == "ṣaṣṭhī vibhakti"
     assert payload["concept"]["traditional"]["san_role"] == "sambandha"
     assert "Sanskrit kāraka/vibhakti grammatical tradition" in payload["concept"]["source_basis"]
+    foster_bridges = payload["concept"]["foster_bridges"]
+    assert foster_bridges[0]["id"] == "of-possession"
+    assert foster_bridges[0]["foster_terms"][:2] == [
+        "of-possession",
+        "function of-possession",
+    ]
     evidence = payload["concept"]["evidence"]
     assert evidence[0]["evidence_level"] == "reader_work"
     assert {item["source_anchor_id"] for item in evidence} >= {
@@ -107,6 +138,111 @@ def test_learn_evidence_report_summarizes_ready_and_remaining_evidence() -> None
     assert guna["missing"] == []
 
 
+def test_learn_foster_bridge_lists_reviewed_foster_ossa_mappings() -> None:
+    result = CliRunner().invoke(main, ["learn", "foster-bridge", "--output", "json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["schema_version"] == "langnet.foster_bridge.v1"
+    bridges = {bridge["id"]: bridge for bridge in payload["bridges"]}
+    assert bridges["of-possession"]["status"] == "promoted_match"
+    assert bridges["of-possession"]["concept_ids"] == ["case.genitive"]
+    assert bridges["by-with-from-in"]["status"] == "aggregate_candidate"
+    assert bridges["by-with-from-in"]["concept_ids"] == []
+    assert bridges["by-with-from-in"]["related_concept_ids"] == [
+        "case.ablative",
+        "case.instrumental",
+        "case.locative",
+    ]
+
+
+def test_learn_foster_bridges_are_sourced_from_foster_essentials() -> None:
+    essentials = {essential.id: essential for essential in default_foster_essentials()}
+    bridges = load_foster_bridges()
+
+    assert set(bridges) == set(essentials)
+    for bridge_id, essential in essentials.items():
+        bridge = bridges[bridge_id]
+        assert bridge.source_refs == list(essential.source_refs)
+        assert bridge.summary_refs == list(essential.summary_refs)
+        assert bridge.learner_action == essential.learner_action
+        assert bridge.product_use == essential.product_use
+        assert bridge.morphology_predicates == list(essential.morphology_predicates)
+
+    assert bridges["by-with-from-in"].concept_ids == []
+    assert bridges["by-with-from-in"].related_concept_ids == [
+        "case.ablative",
+        "case.instrumental",
+        "case.locative",
+    ]
+
+
+def test_learn_foster_bridge_detail_resolves_alias_and_embeds_concepts() -> None:
+    result = CliRunner().invoke(
+        main,
+        ["learn", "foster-bridge", "function to-for-from", "--output", "json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    bridge = payload["bridge"]
+    assert bridge["id"] == "to-for-from"
+    assert bridge["concept_ids"] == ["case.dative"]
+    assert bridge["concepts"][0]["id"] == "case.dative"
+    assert bridge["concepts"][0]["foster_gateway"] == "To-For Function"
+    assert "docs/reference/foster-ossa/CORE_FUNCTION_BRIDGE.md" in bridge["review_docs"]
+
+
+def test_learn_foster_bridge_pretty_output_shows_aggregate_status() -> None:
+    result = CliRunner().invoke(main, ["learn", "foster-bridge", "by-with-from-in"])
+
+    assert result.exit_code == 0, result.output
+    assert "by-with-from-in [aggregate_candidate]" in result.output
+    assert "related: case.ablative, case.instrumental, case.locative" in result.output
+    assert "not a single universal case concept" in result.output
+
+
+def test_learn_foster_bridge_compact_view_includes_ui_actions() -> None:
+    result = CliRunner().invoke(
+        main,
+        ["learn", "foster-bridge", "of-possession", "--view", "compact", "--output", "json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    bridge = payload["bridge"]
+    assert payload["view"] == "compact"
+    assert bridge["id"] == "of-possession"
+    assert bridge["learner_action"].startswith("Ask what relation")
+    assert bridge["product_use"] == "Show a possession/relation gateway beside genitive evidence."
+    assert bridge["morphology_predicates"] == ["case=genitive"]
+    assert bridge["source_actions"][0] == {
+        "ref": "page:69",
+        "kind": "foster_ossa_page",
+        "status": "actionable_unresolved",
+        "command": [
+            "foster-ossa",
+            "search",
+            "of-possession",
+            "--limit",
+            "5",
+            "--output",
+            "json",
+        ],
+    }
+
+
+def test_learn_concept_links_related_foster_aggregate_candidates() -> None:
+    result = CliRunner().invoke(main, ["learn", "concept", "case.ablative", "--output", "json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    concept = payload["concept"]
+    assert concept["related_foster_bridge_ids"] == ["by-with-from-in"]
+    assert concept["foster_bridges"][0]["id"] == "by-with-from-in"
+    assert concept["foster_bridges"][0]["status"] == "aggregate_candidate"
+
+
 def test_learn_map_projects_features_to_concepts() -> None:
     result = CliRunner().invoke(
         main,
@@ -137,6 +273,160 @@ def test_learn_map_projects_features_to_concepts() -> None:
         "process.declension",
     ]
     assert payload["concepts"][0]["traditional"]["san_role"] == "sambandha"
+    assert payload["concepts"][0]["foster_bridge_ids"] == ["of-possession"]
+    assert payload["diagnostics"] == {"unmapped_features": [], "ignored_features": []}
+
+
+def test_learn_map_compact_view_keeps_diagnostics_and_small_concepts() -> None:
+    result = CliRunner().invoke(
+        main,
+        [
+            "learn",
+            "map",
+            "--pos",
+            "noun",
+            "--paradigm-kind",
+            "declension",
+            "--feature",
+            "case=genitive",
+            "--view",
+            "compact",
+            "--output",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["view"] == "compact"
+    assert payload["concept_ids"] == ["case.genitive", "process.declension"]
+    assert payload["diagnostics"] == {"unmapped_features": [], "ignored_features": []}
+    assert payload["concepts"][0]["foster_bridge_ids"] == ["of-possession"]
+    assert "evidence" not in payload["concepts"][0]
+
+
+def test_learn_map_normalizes_feature_input_for_cli_exploration() -> None:
+    result = CliRunner().invoke(
+        main,
+        [
+            "learn",
+            "map",
+            "--pos",
+            "NOUN",
+            "--paradigm-kind",
+            "DECLENSION",
+            "--feature",
+            "Case= Ablative ",
+            "--feature",
+            "Number= Dual ",
+            "--feature",
+            "Gender= Neuter ",
+            "--output",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["input"] == {
+        "features": {"case": "ablative", "number": "dual", "gender": "neuter"},
+        "part_of_speech": "noun",
+        "paradigm_kind": "declension",
+    }
+    assert payload["concept_ids"] == [
+        "case.ablative",
+        "number.dual",
+        "gender.neuter",
+        "process.declension",
+    ]
+    assert payload["diagnostics"] == {"unmapped_features": [], "ignored_features": []}
+
+
+def test_learn_map_rejects_duplicate_feature_keys() -> None:
+    result = CliRunner().invoke(
+        main,
+        [
+            "learn",
+            "map",
+            "--feature",
+            "case=genitive",
+            "--feature",
+            "Case=dative",
+            "--output",
+            "json",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "duplicate --feature key: case" in result.output
+
+
+def test_learn_doctor_reports_didactic_readiness_and_known_gaps() -> None:
+    result = CliRunner().invoke(main, ["learn", "doctor", "--output", "json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["schema_version"] == "langnet.learn_doctor.v1"
+    assert payload["ok"] is True
+    checks = {check["id"]: check for check in payload["checks"]}
+    assert checks["learn:evidence"]["status"] == "warn"
+    assert "process.declension" in checks["learn:evidence"]["metadata"]["concepts_with_gaps"]
+    assert checks["learn:foster_essentials"]["status"] == "pass"
+    assert checks["learn:foster_refs"]["status"] == "warn"
+    assert checks["learn:foster_refs"]["metadata"]["sample_actions"][0]["status"] == (
+        "actionable_unresolved"
+    )
+    assert checks["learn:mapper"]["status"] == "pass"
+
+
+def test_learn_map_reports_unmapped_and_ignored_features() -> None:
+    result = CliRunner().invoke(
+        main,
+        [
+            "learn",
+            "map",
+            "--pos",
+            "verb",
+            "--feature",
+            "voice=middle",
+            "--feature",
+            "dialect=ionic",
+            "--output",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["concept_ids"] == ["process.conjugation"]
+    assert payload["diagnostics"] == {
+        "unmapped_features": [{"key": "voice", "value": "middle"}],
+        "ignored_features": [{"key": "dialect", "value": "ionic"}],
+    }
+
+
+def test_learn_map_pretty_output_shows_mapping_diagnostics() -> None:
+    result = CliRunner().invoke(
+        main,
+        [
+            "learn",
+            "map",
+            "--pos",
+            "verb",
+            "--feature",
+            "voice=middle",
+            "--feature",
+            "dialect=ionic",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Concept mapping:" in result.output
+    assert "- process.conjugation" in result.output
+    assert "Unmapped features:" in result.output
+    assert "- voice=middle" in result.output
+    assert "Ignored features:" in result.output
+    assert "- dialect=ionic" in result.output
 
 
 def test_learn_map_genitive_plural_masculine_matches_golden_fixture() -> None:

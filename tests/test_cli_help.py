@@ -183,11 +183,30 @@ def test_foster_ossa_command_help() -> None:
         ["foster-ossa", "search-index", "build"],
         ["foster-ossa", "search-index", "status"],
         ["foster-ossa", "search-index", "validate"],
+        ["foster-ossa", "essentials"],
+        ["foster-ossa", "essentials", "list"],
+        ["foster-ossa", "essentials", "show"],
+        ["foster-ossa", "essentials", "validate"],
+        ["foster-ossa", "essentials", "write"],
         ["foster-ossa", "toc"],
         ["foster-ossa", "concept"],
         ["foster-ossa", "encounter"],
         ["foster-ossa-summarize"],
         ["foster-ossa-summary-docs"],
+        ["foster-ossa-taxonomy-audit"],
         ["databuild", "foster-ossa"],
+    ]:
+        _assert_help(args)
+
+
+def test_learn_command_help() -> None:
+    for args in [
+        ["learn"],
+        ["learn", "concepts"],
+        ["learn", "concept"],
+        ["learn", "doctor"],
+        ["learn", "evidence-report"],
+        ["learn", "foster-bridge"],
+        ["learn", "map"],
     ]:
         _assert_help(args)

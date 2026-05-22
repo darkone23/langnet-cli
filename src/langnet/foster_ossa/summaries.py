@@ -12,6 +12,7 @@ from langnet.foster_ossa.models import FosterOssaSummaryPlan
 PROMPT_VERSION = "foster-ossa-summary-v1"
 TOC_SUMMARY_PROMPT_VERSION = "foster-ossa-toc-summary-v2"
 EXPERIENCE_SUMMARY_PROMPT_VERSION = "foster-ossa-experience-summary-v2"
+SECOND_EXPERIENCE = 2
 TOC_SUMMARY_REQUIRED_KEYS = (
     "source_ref",
     "encounter_id",
@@ -411,6 +412,17 @@ def _summary_docs_index(grouped: Mapping[int, list[dict[str, Any]]]) -> str:
         "They are review aids, not replacement source text.",
         "",
     ]
+    if SECOND_EXPERIENCE not in grouped:
+        lines.extend(
+            [
+                "Experience 2 is present in the source extraction, but it is not "
+                "represented here because the TOC-entry summary scope follows "
+                "numbered systematic grammar encounters. The Second Experience "
+                "is the spoken/application experience with reading sheets rather "
+                "than a numbered grammar-encounter sequence.",
+                "",
+            ]
+        )
     for experience, rows in sorted(grouped.items()):
         lines.append(
             f"- [Experience {experience}](experience-{experience}.md): {len(rows)} entries"

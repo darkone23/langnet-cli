@@ -5,7 +5,12 @@ artifacts:
 
 - `examples/debug/foster-ossa-toc-all-summaries-v2.jsonl`
 - `examples/debug/foster-ossa-experience-summaries-v2.jsonl`
+- `data/build/foster_essentials.json`
 - `docs/reference/foster-ossa/generated/`
+- `docs/reference/foster-ossa/INTEGRATION_STATUS.md`
+- `docs/reference/foster-ossa/FOSTER_ESSENTIALS.md`
+- `docs/reference/foster-ossa/TAXONOMY_AUDIT.md`
+- `docs/reference/foster-ossa/CORE_FUNCTION_BRIDGE.md`
 
 The generated artifacts are secondary aids. The source-backed anchors remain the
 local page rows, TOC entries, and `toc:*` / `page:*` references carried by each
@@ -95,3 +100,11 @@ The next implementation target should be a Foster concept registry audit:
 3. Mark each node as directly supported, method-supported, or platform overlay.
 4. Add reader examples and dictionary evidence for the first small set:
    subject, object, of-possession, to-for-from, and by-with-from-in.
+
+The first audit now lives in
+[`TAXONOMY_AUDIT.md`](TAXONOMY_AUDIT.md). The first conservative concept bridge
+is recorded in [`CORE_FUNCTION_BRIDGE.md`](CORE_FUNCTION_BRIDGE.md). Treat both
+as review surfaces: clear aliases can support product behavior, while broader
+bundles such as `by-with-from-in` still need a deliberate taxonomy decision.
+The current machine-readable starter pack is `data/build/foster_essentials.json`,
+with a readable version in [`FOSTER_ESSENTIALS.md`](FOSTER_ESSENTIALS.md).

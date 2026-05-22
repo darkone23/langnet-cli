@@ -90,7 +90,21 @@ from langnet.execution.handlers.diogenes import _parse_diogenes_html
 from langnet.execution.handlers.whitakers import _parse_whitaker_output
 from langnet.execution.source_text import analyze_source_entry, compact_source_gloss
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
-from langnet.learning.concept_mapper import concept_ids_for_features
+from langnet.learning.concept_mapper import (
+    concept_ids_for_features,
+    feature_mapping_diagnostics,
+    normalize_feature_map,
+)
+from langnet.learning.foster_bridge import (
+    FOSTER_BRIDGE_SCHEMA_VERSION,
+    FosterBridge,
+    foster_bridge_learning_payload,
+    foster_bridge_payload,
+    foster_bridge_summary_payload,
+    foster_bridges_for_concept,
+    get_foster_bridge,
+    load_foster_bridges,
+)
 from langnet.learning.grammar_concepts import (
     GrammarConcept,
     get_grammar_concept,
@@ -211,6 +225,7 @@ DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-2.5-flash"
 WORD_INDEX_CONTEXT_RADIUS = 1
 GRAMMAR_CONCEPTS_SCHEMA_VERSION = "langnet.grammar_concepts.v1"
 GRAMMAR_EVIDENCE_REPORT_SCHEMA_VERSION = "langnet.grammar_evidence_report.v1"
+LEARN_DOCTOR_SCHEMA_VERSION = "langnet.learn_doctor.v1"
 WORD_INDEX_SOURCES = {
     "all",
     "cdsl",
@@ -1090,22 +1105,165 @@ def _echo_foster_ossa_search_index_payload(payload: dict[str, object], output: s
         click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
         return
     summary = payload.get("summary")
-    if isinstance(summary, dict):
-        click.echo(f"backend: {summary.get('backend')}")
-        click.echo(f"dataset_path: {summary.get('dataset_path')}")
-        click.echo(f"record_count: {summary.get('record_count')}")
-        if summary.get("record_kind_counts"):
-            click.echo(f"record_kind_counts: {summary.get('record_kind_counts')}")
-        if summary.get("fts_indexes"):
-            click.echo(f"fts_indexes: {', '.join(str(item) for item in summary['fts_indexes'])}")
+    if isinstance(summary, Mapping):
+        summary_map = cast(Mapping[str, object], summary)
+        click.echo(f"backend: {summary_map.get('backend')}")
+        click.echo(f"dataset_path: {summary_map.get('dataset_path')}")
+        click.echo(f"record_count: {summary_map.get('record_count')}")
+        if summary_map.get("record_kind_counts"):
+            click.echo(f"record_kind_counts: {summary_map.get('record_kind_counts')}")
+        fts_indexes = summary_map.get("fts_indexes")
+        if isinstance(fts_indexes, Sequence) and not isinstance(fts_indexes, str):
+            click.echo(f"fts_indexes: {', '.join(str(item) for item in fts_indexes)}")
         return
     validation = payload.get("validation")
-    if isinstance(validation, dict):
-        issues = validation.get("issues") or []
+    if isinstance(validation, Mapping):
+        validation_map = cast(Mapping[str, object], validation)
+        raw_issues = validation_map.get("issues")
+        issues = raw_issues if isinstance(raw_issues, Sequence) else []
         click.echo(f"issues: {len(issues)}")
         for issue in issues:
-            if isinstance(issue, dict):
-                click.echo(f"- {issue.get('code')}: {issue.get('message')}")
+            if isinstance(issue, Mapping):
+                issue_map = cast(Mapping[str, object], issue)
+                click.echo(f"- {issue_map.get('code')}: {issue_map.get('message')}")
+
+
+@foster_ossa.group("essentials")
+def foster_ossa_essentials() -> None:
+    """Inspect and write the source-backed Foster essentials pack."""
+
+
+@foster_ossa_essentials.command("list")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_essentials_list(output: str) -> None:
+    """List codified and candidate Foster essentials."""
+    from langnet.foster_ossa.essentials import foster_essentials_payload  # noqa: PLC0415
+
+    payload = foster_essentials_payload()
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    for item in cast(Sequence[Mapping[str, object]], payload["essentials"]):
+        raw_concepts = item.get("concept_ids")
+        concept_values = (
+            raw_concepts
+            if isinstance(raw_concepts, Sequence) and not isinstance(raw_concepts, str)
+            else []
+        )
+        concepts = ", ".join(str(value) for value in concept_values)
+        click.echo(f"{item['id']} [{item['status']}] -> {concepts or '-'}")
+
+
+@foster_ossa_essentials.command("show")
+@click.argument("essential_id")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_essentials_show(essential_id: str, output: str) -> None:
+    """Show one Foster essential by id or Foster term alias."""
+    from langnet.foster_ossa.essentials import get_foster_essential  # noqa: PLC0415
+
+    essential = get_foster_essential(essential_id)
+    if essential is None:
+        raise click.ClickException(f"No Foster essential found for {essential_id!r}.")
+    payload = {
+        "schema_version": "langnet.foster_ossa_essentials.item.v1",
+        "essential": essential.as_dict(),
+    }
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    _echo_foster_essential(essential.as_dict())
+
+
+@foster_ossa_essentials.command("validate")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_essentials_validate(output: str) -> None:
+    """Validate the Foster essentials pack."""
+    from langnet.foster_ossa.essentials import foster_essentials_payload  # noqa: PLC0415
+
+    payload = foster_essentials_payload()
+    validation = cast(Mapping[str, object], payload["validation"])
+    if output == "json":
+        click.echo(
+            orjson.dumps(
+                {"schema_version": payload["schema_version"], "validation": validation},
+                option=orjson.OPT_INDENT_2,
+            ).decode("utf-8")
+        )
+        return
+    click.echo(f"valid: {validation['valid']}")
+    summary = cast(Mapping[str, object], validation.get("summary") or {})
+    click.echo(f"total: {summary.get('total')}")
+    issues = validation.get("issues")
+    if isinstance(issues, Sequence) and issues:
+        for issue in issues:
+            if isinstance(issue, Mapping):
+                issue_map = cast(Mapping[str, object], issue)
+                click.echo(f"- {issue_map.get('code')}: {issue_map.get('message')}")
+
+
+@foster_ossa_essentials.command("write")
+@click.option(
+    "--json-output",
+    type=click.Path(path_type=Path),
+    default=Path("data/build/foster_essentials.json"),
+    show_default=True,
+    help="Machine-readable essentials JSON path.",
+)
+@click.option(
+    "--markdown-output",
+    type=click.Path(path_type=Path),
+    default=Path("docs/reference/foster-ossa/FOSTER_ESSENTIALS.md"),
+    show_default=True,
+    help="Reviewable Markdown essentials path.",
+)
+def foster_ossa_essentials_write(json_output: Path, markdown_output: Path) -> None:
+    """Write Foster essentials JSON and Markdown artifacts."""
+    from langnet.foster_ossa.essentials import (  # noqa: PLC0415
+        write_foster_essentials_artifacts,
+    )
+
+    written = write_foster_essentials_artifacts(
+        json_output=json_output,
+        markdown_output=markdown_output,
+    )
+    click.echo(f"wrote: {len(written)}")
+    for path in written:
+        click.echo(path)
+
+
+def _echo_foster_essential(essential: Mapping[str, object]) -> None:
+    click.echo(f"{essential['id']} [{essential['status']}]")
+    click.echo(f"label: {essential['label']}")
+    for field in [
+        "concept_ids",
+        "foster_terms",
+        "source_refs",
+        "summary_refs",
+        "morphology_predicates",
+    ]:
+        values = essential.get(field)
+        if isinstance(values, Sequence) and not isinstance(values, str):
+            click.echo(f"{field}: {', '.join(str(value) for value in values)}")
+    click.echo(f"learner_action: {essential['learner_action']}")
+    click.echo(f"product_use: {essential['product_use']}")
 
 
 @foster_ossa.command("toc")
@@ -1376,6 +1534,57 @@ def foster_ossa_summary_docs(input_summaries: Path, output_dir: Path) -> None:
         click.echo(str(path))
 
 
+@main.command("foster-ossa-taxonomy-audit")
+@click.option(
+    "--toc-summaries",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Validated TOC-entry summary JSONL path.",
+)
+@click.option(
+    "--experience-summaries",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Optional validated experience summary JSONL path.",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Output audit path.",
+)
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["markdown", "json"]),
+    default="markdown",
+    show_default=True,
+)
+def foster_ossa_taxonomy_audit(
+    toc_summaries: Path,
+    experience_summaries: Path | None,
+    output: Path,
+    output_format: str,
+) -> None:
+    """Audit Foster Ossa summary terms against LangNet grammar concepts."""
+    from langnet.foster_ossa.taxonomy import (  # noqa: PLC0415
+        audit_foster_taxonomy,
+        render_taxonomy_audit_markdown,
+    )
+
+    audit = audit_foster_taxonomy(
+        toc_summary_path=toc_summaries,
+        experience_summary_path=experience_summaries,
+    )
+    output_path = output.expanduser()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_format == "json":
+        output_path.write_bytes(orjson.dumps(audit, option=orjson.OPT_INDENT_2))
+    else:
+        output_path.write_text(render_taxonomy_audit_markdown(audit), encoding="utf-8")
+    click.echo(f"wrote: {output_path}")
+
+
 # Register subcommands
 main.add_command(index)
 main.add_command(databuild)
@@ -1383,7 +1592,164 @@ main.add_command(foster_ossa)
 
 
 def _grammar_concept_payload(concept: GrammarConcept) -> dict[str, object]:
-    return cast(dict[str, object], asdict(concept))
+    payload = cast(dict[str, object], asdict(concept))
+    bridge_payloads = [
+        foster_bridge_learning_payload(bridge)
+        for bridge in foster_bridges_for_concept(concept.id, include_related=True)
+    ]
+    payload["foster_bridges"] = bridge_payloads
+    payload["foster_bridge_ids"] = [
+        str(bridge["id"])
+        for bridge in bridge_payloads
+        if concept.id in cast(list[str], bridge["concept_ids"])
+    ]
+    payload["related_foster_bridge_ids"] = [
+        str(bridge["id"])
+        for bridge in bridge_payloads
+        if concept.id in cast(list[str], bridge["related_concept_ids"])
+    ]
+    return payload
+
+
+def _grammar_concept_compact_payload(concept: GrammarConcept) -> dict[str, object]:
+    bridge_payloads = [
+        foster_bridge_learning_payload(bridge)
+        for bridge in foster_bridges_for_concept(concept.id, include_related=True)
+    ]
+    return {
+        "id": concept.id,
+        "kind": concept.kind,
+        "foster_gateway": concept.foster_gateway,
+        "plain_english": concept.plain_english,
+        "traditional": dict(concept.traditional),
+        "source_evidence_counts": _grammar_concept_source_evidence_counts(concept),
+        "foster_bridge_ids": [
+            str(bridge["id"])
+            for bridge in bridge_payloads
+            if concept.id in cast(list[str], bridge["concept_ids"])
+        ],
+        "related_foster_bridge_ids": [
+            str(bridge["id"])
+            for bridge in bridge_payloads
+            if concept.id in cast(list[str], bridge["related_concept_ids"])
+        ],
+        "foster_bridges": [
+            _compact_bridge_from_learning_payload(cast(Mapping[str, object], bridge))
+            for bridge in bridge_payloads
+        ],
+    }
+
+
+def _grammar_concept_source_evidence_counts(concept: GrammarConcept) -> dict[str, int]:
+    evidence_counts = Counter(evidence.evidence_level for evidence in concept.evidence)
+    return {
+        "reader_work": evidence_counts["reader_work"],
+        "reader_segment": evidence_counts["reader_segment"],
+    }
+
+
+def _compact_bridge_from_learning_payload(bridge: Mapping[str, object]) -> dict[str, object]:
+    return {
+        "id": bridge.get("id"),
+        "status": bridge.get("status"),
+        "concept_ids": bridge.get("concept_ids") or [],
+        "related_concept_ids": bridge.get("related_concept_ids") or [],
+        "plain_english": bridge.get("plain_english") or "",
+        "source_refs": bridge.get("source_refs") or [],
+    }
+
+
+def _foster_bridge_list_payload(
+    status: str | None = None,
+    *,
+    view: str = "full",
+) -> dict[str, object]:
+    bridges = sorted(load_foster_bridges().values(), key=lambda item: (item.status, item.id))
+    if status:
+        status_key = status.strip().casefold()
+        bridges = [bridge for bridge in bridges if bridge.status.casefold() == status_key]
+    return {
+        "schema_version": FOSTER_BRIDGE_SCHEMA_VERSION,
+        "view": view,
+        "bridges": [
+            _foster_bridge_compact_payload(bridge)
+            if view == "compact"
+            else _foster_bridge_summary_payload(bridge)
+            for bridge in bridges
+        ],
+    }
+
+
+def _foster_bridge_detail_payload(query: str, *, view: str = "full") -> dict[str, object]:
+    try:
+        bridge = get_foster_bridge(query)
+    except KeyError as exc:
+        raise click.UsageError(str(exc)) from exc
+    return {
+        "schema_version": FOSTER_BRIDGE_SCHEMA_VERSION,
+        "view": view,
+        "bridge": (
+            _foster_bridge_compact_payload(bridge)
+            if view == "compact"
+            else foster_bridge_payload(bridge)
+        ),
+    }
+
+
+def _foster_bridge_summary_payload(bridge: FosterBridge) -> dict[str, object]:
+    return foster_bridge_summary_payload(bridge)
+
+
+def _foster_bridge_compact_payload(bridge: FosterBridge) -> dict[str, object]:
+    return {
+        "id": bridge.id,
+        "status": bridge.status,
+        "foster_label": bridge.foster_terms[0] if bridge.foster_terms else bridge.id,
+        "concept_ids": list(bridge.concept_ids),
+        "related_concept_ids": list(bridge.related_concept_ids),
+        "plain_english": bridge.plain_english,
+        "learner_action": bridge.learner_action,
+        "product_use": bridge.product_use,
+        "morphology_predicates": list(bridge.morphology_predicates),
+        "source_refs": list(bridge.source_refs),
+        "summary_refs": list(bridge.summary_refs),
+        "caveats": list(bridge.caveats),
+        "source_actions": _foster_bridge_source_actions(bridge),
+    }
+
+
+def _foster_bridge_source_actions(bridge: FosterBridge) -> list[dict[str, object]]:
+    actions: list[dict[str, object]] = []
+    for ref in [*bridge.source_refs, *bridge.summary_refs]:
+        ref_text = str(ref)
+        if ref_text.startswith("page:"):
+            query = bridge.foster_terms[0] if bridge.foster_terms else bridge.id
+            actions.append(
+                {
+                    "ref": ref_text,
+                    "kind": "foster_ossa_page",
+                    "status": "actionable_unresolved",
+                    "command": [
+                        "foster-ossa",
+                        "search",
+                        query,
+                        "--limit",
+                        "5",
+                        "--output",
+                        "json",
+                    ],
+                }
+            )
+        elif ref_text.startswith("toc:"):
+            actions.append(
+                {
+                    "ref": ref_text,
+                    "kind": "foster_ossa_toc",
+                    "status": "actionable_unresolved",
+                    "command": ["foster-ossa", "toc", "--output", "json"],
+                }
+            )
+    return actions
 
 
 def _grammar_concept_learning_payload(concept: GrammarConcept) -> dict[str, object]:
@@ -1394,28 +1760,43 @@ def _grammar_concept_learning_payload(concept: GrammarConcept) -> dict[str, obje
         "plain_english": concept.plain_english,
         "traditional": dict(concept.traditional),
         "source_evidence": [asdict(evidence) for evidence in concept.evidence],
+        "foster_bridges": [
+            foster_bridge_learning_payload(bridge)
+            for bridge in foster_bridges_for_concept(concept.id, include_related=True)
+        ],
     }
 
 
-def _grammar_concepts_payload(kind: str | None = None) -> dict[str, object]:
+def _grammar_concepts_payload(kind: str | None = None, *, view: str = "full") -> dict[str, object]:
     concepts = sorted(load_grammar_concepts().values(), key=lambda item: (item.kind, item.id))
     if kind:
         kind_key = kind.casefold()
         concepts = [concept for concept in concepts if concept.kind.casefold() == kind_key]
     return {
         "schema_version": GRAMMAR_CONCEPTS_SCHEMA_VERSION,
-        "concepts": [_grammar_concept_payload(concept) for concept in concepts],
+        "view": view,
+        "concepts": [
+            _grammar_concept_compact_payload(concept)
+            if view == "compact"
+            else _grammar_concept_payload(concept)
+            for concept in concepts
+        ],
     }
 
 
-def _grammar_concept_detail_payload(concept_id: str) -> dict[str, object]:
+def _grammar_concept_detail_payload(concept_id: str, *, view: str = "full") -> dict[str, object]:
     try:
         concept = get_grammar_concept(concept_id)
     except KeyError as exc:
         raise click.UsageError(str(exc)) from exc
     return {
         "schema_version": GRAMMAR_CONCEPTS_SCHEMA_VERSION,
-        "concept": _grammar_concept_payload(concept),
+        "view": view,
+        "concept": (
+            _grammar_concept_compact_payload(concept)
+            if view == "compact"
+            else _grammar_concept_payload(concept)
+        ),
     }
 
 
@@ -1491,8 +1872,11 @@ def _learn_feature_map(features: Sequence[str]) -> dict[str, str]:
         value = value.strip()
         if not sep or not key or not value:
             raise click.UsageError("--feature values must use key=value form.")
-        feature_map[key] = value
-    return feature_map
+        normalized_key = key.replace("-", "_").casefold()
+        if normalized_key in feature_map:
+            raise click.UsageError(f"duplicate --feature key: {normalized_key}")
+        feature_map[normalized_key] = value
+    return normalize_feature_map(feature_map)
 
 
 def _learn_map_payload(
@@ -1500,6 +1884,7 @@ def _learn_map_payload(
     features: Sequence[str],
     part_of_speech: str,
     paradigm_kind: str,
+    view: str = "full",
 ) -> dict[str, object]:
     feature_map = _learn_feature_map(features)
     concept_ids = concept_ids_for_features(
@@ -1508,40 +1893,263 @@ def _learn_map_payload(
         paradigm_kind=paradigm_kind,
     )
     concepts = [
-        _grammar_concept_payload(get_grammar_concept(concept_id)) for concept_id in concept_ids
+        (
+            _grammar_concept_compact_payload(get_grammar_concept(concept_id))
+            if view == "compact"
+            else _grammar_concept_payload(get_grammar_concept(concept_id))
+        )
+        for concept_id in concept_ids
     ]
+    diagnostics = feature_mapping_diagnostics(feature_map)
     return {
         "schema_version": GRAMMAR_CONCEPTS_SCHEMA_VERSION,
+        "view": view,
         "input": {
             "features": feature_map,
-            "part_of_speech": part_of_speech,
-            "paradigm_kind": paradigm_kind,
+            "part_of_speech": part_of_speech.strip().casefold(),
+            "paradigm_kind": paradigm_kind.strip().casefold(),
         },
         "concept_ids": concept_ids,
         "concepts": concepts,
+        "diagnostics": diagnostics,
     }
+
+
+def _learn_doctor_payload(kind: str | None = None) -> dict[str, object]:
+    checks: list[dict[str, object]] = []
+    _learn_doctor_evidence_checks(checks, kind=kind)
+    _learn_doctor_foster_bridge_checks(checks)
+    _learn_doctor_mapper_checks(checks)
+    failures = [check for check in checks if check["status"] == "fail"]
+    warnings = [check for check in checks if check["status"] == "warn"]
+    return {
+        "schema_version": LEARN_DOCTOR_SCHEMA_VERSION,
+        "ok": not failures,
+        "summary": {
+            "checks": len(checks),
+            "failures": len(failures),
+            "warnings": len(warnings),
+        },
+        "checks": checks,
+    }
+
+
+def _learn_doctor_evidence_checks(checks: list[dict[str, object]], *, kind: str | None) -> None:
+    report = _grammar_evidence_report_payload(kind)
+    summary = cast(Mapping[str, object], report["summary"])
+    missing_work = cast(int, summary["missing_work_evidence"])
+    missing_segment = cast(int, summary["missing_segment_evidence"])
+    missing_concepts = [
+        str(concept["id"])
+        for concept in cast(Sequence[Mapping[str, object]], report["concepts"])
+        if concept.get("missing")
+    ]
+    if missing_work:
+        status = "fail"
+        severity = "error"
+    elif missing_segment:
+        status = "warn"
+        severity = "warning"
+    else:
+        status = "pass"
+        severity = "info"
+    _doctor_check(
+        checks,
+        check_id="learn:evidence",
+        status=status,
+        severity=severity,
+        message=(
+            "Grammar concept evidence is complete enough for UI planning."
+            if status == "pass"
+            else "Some grammar concepts still need stronger reader evidence."
+        ),
+        metadata={
+            "summary": dict(summary),
+            "concepts_with_gaps": missing_concepts,
+        },
+    )
+
+
+def _learn_doctor_foster_bridge_checks(checks: list[dict[str, object]]) -> None:
+    from langnet.foster_ossa.essentials import (  # noqa: PLC0415
+        default_foster_essentials,
+        validate_foster_essentials,
+    )
+
+    essentials = default_foster_essentials()
+    validation = validate_foster_essentials(essentials)
+    bridges = load_foster_bridges()
+    essential_ids = {essential.id for essential in essentials}
+    bridge_ids = set(bridges)
+    missing = sorted(essential_ids - bridge_ids)
+    extra = sorted(bridge_ids - essential_ids)
+    validation_issues = cast(Sequence[object], validation["issues"])
+    status = "pass" if not missing and not extra and not validation_issues else "fail"
+    _doctor_check(
+        checks,
+        check_id="learn:foster_essentials",
+        status=status,
+        severity="info" if status == "pass" else "error",
+        message=(
+            "Foster bridge records are sourced from the essentials pack."
+            if status == "pass"
+            else "Foster bridge records have drifted from the essentials pack."
+        ),
+        metadata={
+            "essential_count": len(essentials),
+            "bridge_count": len(bridges),
+            "missing_bridge_ids": missing,
+            "extra_bridge_ids": extra,
+            "validation": validation,
+        },
+    )
+
+    unresolved_actions = [
+        action
+        for bridge in bridges.values()
+        for action in _foster_bridge_source_actions(bridge)
+        if action["status"] == "actionable_unresolved"
+    ]
+    _doctor_check(
+        checks,
+        check_id="learn:foster_refs",
+        status="warn" if unresolved_actions else "pass",
+        severity="warning" if unresolved_actions else "info",
+        message=(
+            "Foster refs are actionable but not yet resolved to embedded snippets."
+            if unresolved_actions
+            else "Foster refs are resolved for direct product display."
+        ),
+        metadata={
+            "unresolved_action_count": len(unresolved_actions),
+            "sample_actions": unresolved_actions[:8],
+        },
+    )
+
+
+def _learn_doctor_mapper_checks(checks: list[dict[str, object]]) -> None:
+    bridges = load_foster_bridges()
+    issues: list[dict[str, object]] = []
+    for bridge in bridges.values():
+        expected = set(bridge.concept_ids or bridge.related_concept_ids)
+        mapped = set(_concept_ids_for_bridge_predicates(bridge))
+        if expected and not expected.issubset(mapped):
+            issues.append(
+                {
+                    "bridge_id": bridge.id,
+                    "expected_concept_ids": sorted(expected),
+                    "mapped_concept_ids": sorted(mapped),
+                    "morphology_predicates": list(bridge.morphology_predicates),
+                }
+            )
+    _doctor_check(
+        checks,
+        check_id="learn:mapper",
+        status="pass" if not issues else "fail",
+        severity="info" if not issues else "error",
+        message=(
+            "Foster bridge morphology predicates map back to the expected concepts."
+            if not issues
+            else "Some Foster bridge predicates do not map back to expected concepts."
+        ),
+        metadata={"issues": issues},
+    )
+
+
+def _concept_ids_for_bridge_predicates(bridge: FosterBridge) -> list[str]:
+    mapped: list[str] = []
+    for predicate in bridge.morphology_predicates:
+        key, sep, value = predicate.partition("=")
+        if not sep:
+            continue
+        mapped.extend(
+            concept_ids_for_features(
+                {key: value},
+                part_of_speech="noun",
+                paradigm_kind="declension",
+            )
+        )
+    return sorted(set(mapped))
 
 
 def _emit_learn_payload(payload: Mapping[str, object], output: str) -> None:
     if output == "json":
         click.echo(orjson.dumps(dict(payload), option=orjson.OPT_INDENT_2).decode("utf-8"))
         return
+    for emitter in (
+        _try_emit_learn_doctor_payload,
+        _try_emit_foster_bridge_payload,
+        _try_emit_learn_mapping_payload,
+        _try_emit_grammar_concepts_payload,
+        _try_emit_grammar_concept_payload,
+    ):
+        if emitter(payload):
+            return
 
+
+def _try_emit_learn_doctor_payload(payload: Mapping[str, object]) -> bool:
+    if payload.get("schema_version") != LEARN_DOCTOR_SCHEMA_VERSION:
+        return False
+    summary = payload.get("summary")
+    if isinstance(summary, Mapping):
+        summary_map = cast(Mapping[str, object], summary)
+        status = "OK" if payload.get("ok") else "FAIL"
+        click.echo(
+            f"Learn doctor: {status} "
+            f"checks={summary_map.get('checks')} failures={summary_map.get('failures')} "
+            f"warnings={summary_map.get('warnings')}"
+        )
+    checks = payload.get("checks")
+    if isinstance(checks, Sequence) and not isinstance(checks, (str, bytes)):
+        for check in checks:
+            if isinstance(check, Mapping):
+                check_map = cast(Mapping[str, object], check)
+                click.echo(
+                    f"- {check_map.get('status')} "
+                    f"{check_map.get('id')}: {check_map.get('message')}"
+                )
+    return True
+
+
+def _try_emit_foster_bridge_payload(payload: Mapping[str, object]) -> bool:
+    bridge = payload.get("bridge")
+    if isinstance(bridge, Mapping):
+        _echo_foster_bridge_detail(cast(Mapping[str, object], bridge))
+        return True
+
+    bridges = payload.get("bridges")
+    if isinstance(bridges, Sequence) and not isinstance(bridges, (str, bytes)):
+        for item in bridges:
+            if isinstance(item, Mapping):
+                _echo_foster_bridge_summary(cast(Mapping[str, object], item))
+        return True
+    return False
+
+
+def _try_emit_learn_mapping_payload(payload: Mapping[str, object]) -> bool:
     concept_ids = payload.get("concept_ids")
     if isinstance(concept_ids, Sequence) and not isinstance(concept_ids, (str, bytes)):
         _echo_learn_mapping(payload, concept_ids)
-        return
+        return True
+    return False
 
+
+def _try_emit_grammar_concepts_payload(payload: Mapping[str, object]) -> bool:
     concepts = payload.get("concepts")
     if isinstance(concepts, Sequence) and not isinstance(concepts, (str, bytes)):
         for concept in concepts:
             if isinstance(concept, Mapping):
                 _echo_grammar_concept_summary(cast(Mapping[str, object], concept))
-        return
+        return True
+    return False
 
+
+def _try_emit_grammar_concept_payload(payload: Mapping[str, object]) -> bool:
     concept = payload.get("concept")
     if isinstance(concept, Mapping):
         _echo_grammar_concept_detail(cast(Mapping[str, object], concept))
+        return True
+    return False
 
 
 def _emit_grammar_evidence_report_payload(payload: Mapping[str, object], output: str) -> None:
@@ -1573,11 +2181,71 @@ def _echo_learn_mapping(payload: Mapping[str, object], concept_ids: Sequence[obj
     click.echo("Concept mapping:")
     for concept_id in concept_ids:
         click.echo(f"- {concept_id}")
+    diagnostics = payload.get("diagnostics")
+    if isinstance(diagnostics, Mapping):
+        _echo_learn_mapping_diagnostics(cast(Mapping[str, object], diagnostics))
     mapped_concepts = payload.get("concepts")
     if isinstance(mapped_concepts, Sequence) and not isinstance(mapped_concepts, (str, bytes)):
         for concept in mapped_concepts:
             if isinstance(concept, Mapping):
                 _echo_grammar_concept_summary(cast(Mapping[str, object], concept))
+
+
+def _echo_learn_mapping_diagnostics(diagnostics: Mapping[str, object]) -> None:
+    unmapped = diagnostics.get("unmapped_features")
+    ignored = diagnostics.get("ignored_features")
+    if isinstance(unmapped, Sequence) and not isinstance(unmapped, (str, bytes)) and unmapped:
+        click.echo("Unmapped features:")
+        for item in unmapped:
+            if isinstance(item, Mapping):
+                item_map = cast(Mapping[str, object], item)
+                click.echo(f"- {item_map.get('key')}={item_map.get('value')}")
+    if isinstance(ignored, Sequence) and not isinstance(ignored, (str, bytes)) and ignored:
+        click.echo("Ignored features:")
+        for item in ignored:
+            if isinstance(item, Mapping):
+                item_map = cast(Mapping[str, object], item)
+                click.echo(f"- {item_map.get('key')}={item_map.get('value')}")
+
+
+def _echo_foster_bridge_summary(bridge: Mapping[str, object]) -> None:
+    concept_ids = bridge.get("concept_ids")
+    related = bridge.get("related_concept_ids")
+    mapped = _display_id_list(concept_ids)
+    if not mapped:
+        mapped = f"related: {_display_id_list(related)}" if _display_id_list(related) else "-"
+    click.echo(f"- {bridge.get('id')} [{bridge.get('status')}] -> {mapped}")
+    plain = bridge.get("plain_english")
+    if plain:
+        click.echo(f"  {plain}")
+
+
+def _echo_foster_bridge_detail(bridge: Mapping[str, object]) -> None:
+    _echo_foster_bridge_summary(bridge)
+    terms = bridge.get("foster_terms")
+    if isinstance(terms, Sequence) and not isinstance(terms, (str, bytes)) and terms:
+        click.echo("  terms:")
+        for term in terms:
+            click.echo(f"    - {term}")
+    rationale = bridge.get("rationale")
+    if rationale:
+        click.echo(f"  rationale: {rationale}")
+    refs = bridge.get("source_refs")
+    if isinstance(refs, Sequence) and not isinstance(refs, (str, bytes)) and refs:
+        click.echo("  source refs:")
+        for ref in refs:
+            click.echo(f"    - {ref}")
+    actions = bridge.get("next_actions")
+    if isinstance(actions, Sequence) and not isinstance(actions, (str, bytes)) and actions:
+        click.echo("  next actions:")
+        for action in actions:
+            click.echo(f"    - {action}")
+
+
+def _display_id_list(value: object) -> str:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return ""
+    return ", ".join(str(item) for item in value)
 
 
 def _echo_grammar_concept_summary(concept: Mapping[str, object]) -> None:
@@ -1588,6 +2256,12 @@ def _echo_grammar_concept_summary(concept: Mapping[str, object]) -> None:
 
 def _echo_grammar_concept_detail(concept: Mapping[str, object]) -> None:
     _echo_grammar_concept_summary(concept)
+    bridges = concept.get("foster_bridges")
+    if isinstance(bridges, Sequence) and not isinstance(bridges, (str, bytes)) and bridges:
+        click.echo("  Foster/Ossa bridges:")
+        for bridge in bridges:
+            if isinstance(bridge, Mapping):
+                _echo_foster_bridge_summary(cast(Mapping[str, object], bridge))
     traditional = concept.get("traditional")
     if isinstance(traditional, Mapping) and traditional:
         click.echo("  traditional:")
@@ -1608,19 +2282,12 @@ def learn_cli() -> None:
 @learn_cli.command("concepts")
 @click.option("--kind", help="Optional concept kind filter, e.g. case, number, process.")
 @click.option(
-    "--output",
-    type=click.Choice(["pretty", "json"]),
-    default="pretty",
+    "--view",
+    type=click.Choice(["full", "compact"]),
+    default="full",
     show_default=True,
-    help="Output format.",
+    help="Payload projection for JSON consumers.",
 )
-def learn_concepts(kind: str | None, output: str) -> None:
-    """List grammar concepts in the Foster/traditional registry."""
-    _emit_learn_payload(_grammar_concepts_payload(kind), output)
-
-
-@learn_cli.command("concept")
-@click.argument("concept_id")
 @click.option(
     "--output",
     type=click.Choice(["pretty", "json"]),
@@ -1628,9 +2295,30 @@ def learn_concepts(kind: str | None, output: str) -> None:
     show_default=True,
     help="Output format.",
 )
-def learn_concept(concept_id: str, output: str) -> None:
+def learn_concepts(kind: str | None, view: str, output: str) -> None:
+    """List grammar concepts in the Foster/traditional registry."""
+    _emit_learn_payload(_grammar_concepts_payload(kind, view=view), output)
+
+
+@learn_cli.command("concept")
+@click.argument("concept_id")
+@click.option(
+    "--view",
+    type=click.Choice(["full", "compact"]),
+    default="full",
+    show_default=True,
+    help="Payload projection for JSON consumers.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def learn_concept(concept_id: str, view: str, output: str) -> None:
     """Show one grammar concept with Foster and traditional terms."""
-    _emit_learn_payload(_grammar_concept_detail_payload(concept_id), output)
+    _emit_learn_payload(_grammar_concept_detail_payload(concept_id, view=view), output)
 
 
 @learn_cli.command("evidence-report")
@@ -1647,6 +2335,34 @@ def learn_evidence_report(kind: str | None, output: str) -> None:
     _emit_grammar_evidence_report_payload(_grammar_evidence_report_payload(kind), output)
 
 
+@learn_cli.command("foster-bridge")
+@click.argument("term", required=False)
+@click.option(
+    "--status",
+    help="Optional bridge status filter, e.g. promoted_match or aggregate_candidate.",
+)
+@click.option(
+    "--view",
+    type=click.Choice(["full", "compact"]),
+    default="full",
+    show_default=True,
+    help="Payload projection for JSON consumers.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def learn_foster_bridge(term: str | None, status: str | None, view: str, output: str) -> None:
+    """Explore reviewed Foster/Ossa function bridges."""
+    if term:
+        _emit_learn_payload(_foster_bridge_detail_payload(term, view=view), output)
+        return
+    _emit_learn_payload(_foster_bridge_list_payload(status, view=view), output)
+
+
 @learn_cli.command("map")
 @click.option(
     "--feature",
@@ -1656,6 +2372,13 @@ def learn_evidence_report(kind: str | None, output: str) -> None:
 )
 @click.option("--part-of-speech", "--pos", default="unknown", show_default=True)
 @click.option("--paradigm-kind", default="unknown", show_default=True)
+@click.option(
+    "--view",
+    type=click.Choice(["full", "compact"]),
+    default="full",
+    show_default=True,
+    help="Payload projection for JSON consumers.",
+)
 @click.option(
     "--output",
     type=click.Choice(["pretty", "json"]),
@@ -1667,6 +2390,7 @@ def learn_map(
     features: tuple[str, ...],
     part_of_speech: str,
     paradigm_kind: str,
+    view: str,
     output: str,
 ) -> None:
     """Map morphology facts to teachable grammar concepts."""
@@ -1675,9 +2399,27 @@ def learn_map(
             features=features,
             part_of_speech=part_of_speech,
             paradigm_kind=paradigm_kind,
+            view=view,
         ),
         output,
     )
+
+
+@learn_cli.command("doctor")
+@click.option("--kind", help="Optional concept kind filter, e.g. case, number, process.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def learn_doctor(kind: str | None, output: str) -> None:
+    """Audit didactic concept, Foster bridge, and mapper readiness."""
+    payload = _learn_doctor_payload(kind)
+    _emit_learn_payload(payload, output)
+    if not payload["ok"]:
+        raise click.exceptions.Exit(1)
 
 
 main.add_command(learn_cli)
@@ -6952,10 +7694,17 @@ def _encounter_learning_candidate_overlay(candidate: Mapping[str, object]) -> di
             missing_evidence.append(f"unknown_concept:{concept_id}")
             continue
         concepts.append(_grammar_concept_learning_payload(concept))
+    evidence_gaps = _learning_concept_evidence_gaps(concepts)
     if concepts:
-        if not any(concept.get("source_evidence") for concept in concepts):
+        missing_kinds = {
+            missing
+            for gap in evidence_gaps
+            for missing in cast(Sequence[object], gap.get("missing", []))
+            if isinstance(missing, str)
+        }
+        if "source_work_links" in missing_kinds:
             missing_evidence.append("source_work_links")
-        if not _learning_concepts_all_have_reader_segments(concepts):
+        if "reader_segment_links" in missing_kinds:
             missing_evidence.append("reader_segment_links")
     if not concept_ids:
         missing_evidence.append(_encounter_learning_missing_reason(candidate))
@@ -6965,14 +7714,27 @@ def _encounter_learning_candidate_overlay(candidate: Mapping[str, object]) -> di
         "concept_ids": concept_ids,
         "concepts": concepts,
         "missing_evidence": missing_evidence,
+        "evidence_gaps": evidence_gaps,
     }
 
 
-def _learning_concepts_all_have_reader_segments(concepts: Sequence[Mapping[str, object]]) -> bool:
+def _learning_concept_evidence_gaps(
+    concepts: Sequence[Mapping[str, object]],
+) -> list[dict[str, object]]:
+    gaps: list[dict[str, object]] = []
     for concept in concepts:
+        missing: list[str] = []
         raw_evidence = concept.get("source_evidence")
         if not isinstance(raw_evidence, Sequence) or isinstance(raw_evidence, (str, bytes)):
-            return False
+            missing.extend(["source_work_links", "reader_segment_links"])
+            gaps.append({"concept_id": concept.get("id"), "missing": missing})
+            continue
+        if not any(
+            isinstance(evidence, Mapping)
+            and cast(Mapping[str, object], evidence).get("evidence_level") == "reader_work"
+            for evidence in raw_evidence
+        ):
+            missing.append("source_work_links")
         has_reader_segment = False
         for evidence in raw_evidence:
             if not isinstance(evidence, Mapping):
@@ -6982,8 +7744,10 @@ def _learning_concepts_all_have_reader_segments(concepts: Sequence[Mapping[str, 
                 has_reader_segment = True
                 break
         if not has_reader_segment:
-            return False
-    return bool(concepts)
+            missing.append("reader_segment_links")
+        if missing:
+            gaps.append({"concept_id": concept.get("id"), "missing": missing})
+    return gaps
 
 
 def _encounter_learning_missing_reason(candidate: Mapping[str, object]) -> str:
