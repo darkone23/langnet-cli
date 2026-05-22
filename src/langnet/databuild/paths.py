@@ -108,6 +108,20 @@ def default_lewis_1890_path() -> Path:
     return build_dir() / "lex_lewis_1890.duckdb"
 
 
+def default_foster_ossa_path() -> Path:
+    """
+    Default output path for the local Foster Ossa extraction index.
+    """
+    return build_dir() / "foster_ossa.duckdb"
+
+
+def default_foster_ossa_search_index_path() -> Path:
+    """
+    Default output path for the derived Foster Ossa full-text search index.
+    """
+    return build_dir() / "foster_ossa_search.lance"
+
+
 def default_reader_catalog_path() -> Path:
     """
     Default output path for the reader catalog index.

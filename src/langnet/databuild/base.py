@@ -56,7 +56,25 @@ class ReaderCorpusStats:
     source_error_count: int = 0
 
 
-BuildStats = CTSStats | CdslStats | LexiconStats | ReaderCorpusStats | BuildErrorStats
+@dataclass(frozen=True)
+class FosterOssaStats:
+    path: str
+    page_count: int | None = None
+    section_count: int | None = None
+    encounter_count: int | None = None
+    concept_mention_count: int | None = None
+    summary_count: int | None = None
+    size_mb: float | None = None
+
+
+BuildStats = (
+    CTSStats
+    | CdslStats
+    | LexiconStats
+    | ReaderCorpusStats
+    | FosterOssaStats
+    | BuildErrorStats
+)
 StatsType = TypeVar("StatsType", bound=BuildStats)
 
 logger = logging.getLogger(__name__)

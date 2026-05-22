@@ -135,6 +135,8 @@ Common local DuckDB stores include:
 | `data/build/lex_lewis_1890.duckdb` | Latin Lewis 1890 dictionary rows |
 | `data/build/lex_whitakers.duckdb` | Whitaker's Words dictionary rows |
 | `data/build/lex_diogenes_<lang>.duckdb` | Diogenes dictionary rows by language |
+| `data/build/foster_ossa.duckdb` | Foster Ossa extracted pages, sections, encounters, concept mentions, and summary slots |
+| `data/build/foster_ossa_search.lance` | Foster Ossa page/encounter full-text search artifact |
 | `data/build/cts_urn.duckdb` | CTS URN/citation metadata used by reader/citation workflows |
 | reader catalog/search builds | DuckDB reader catalog/work-map files plus `data/build/reader/search.lance` text search |
 | word-index builds | per-language dictionary headword sections and entries |

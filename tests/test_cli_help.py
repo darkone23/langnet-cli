@@ -172,3 +172,22 @@ def test_databuild_subcommand_help() -> None:
         "reader",
     ]:
         _assert_help(["databuild", command])
+
+
+def test_foster_ossa_command_help() -> None:
+    for args in [
+        ["foster-ossa-extract"],
+        ["foster-ossa"],
+        ["foster-ossa", "search"],
+        ["foster-ossa", "search-index"],
+        ["foster-ossa", "search-index", "build"],
+        ["foster-ossa", "search-index", "status"],
+        ["foster-ossa", "search-index", "validate"],
+        ["foster-ossa", "toc"],
+        ["foster-ossa", "concept"],
+        ["foster-ossa", "encounter"],
+        ["foster-ossa-summarize"],
+        ["foster-ossa-summary-docs"],
+        ["databuild", "foster-ossa"],
+    ]:
+        _assert_help(args)

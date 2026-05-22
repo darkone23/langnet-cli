@@ -129,6 +129,15 @@ class BuildWhitakersConfig:
 
 
 @dataclass
+class BuildFosterOssaConfig:
+    source_path: str
+    output: str | None
+    limit: int | None
+    wipe: bool
+    force: bool
+
+
+@dataclass
 class BuildReaderConfig:
     perseus_dir: str | None
     first1k_greek_dir: str | None
@@ -321,6 +330,28 @@ def _build_whitakers_impl(config: BuildWhitakersConfig) -> None:
     builder = WhitakersBuilder(builder_config)
     result = builder.build()
     _print_build_result(result)
+
+
+def _build_foster_ossa_impl(config: BuildFosterOssaConfig) -> None:
+    _ensure_logging()
+    from langnet.databuild.foster_ossa import (  # noqa: PLC0415
+        FosterOssaBuildConfig,
+        FosterOssaBuilder,
+    )
+    from langnet.databuild.paths import default_foster_ossa_path  # noqa: PLC0415
+
+    output_path = Path(config.output).expanduser() if config.output else default_foster_ossa_path()
+    builder_config = FosterOssaBuildConfig(
+        source_path=Path(config.source_path).expanduser(),
+        output_path=output_path,
+        limit=config.limit,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+    )
+    result = FosterOssaBuilder(builder_config).build()
+    _print_build_result(result)
+    if result.status.value == "failed":
+        raise click.ClickException(result.message or "Foster Ossa build failed")
 
 
 def _build_reader_impl(config: BuildReaderConfig) -> None:
@@ -816,6 +847,46 @@ def build_whitakers_index(  # noqa: PLR0913
         force=force,
     )
     _build_whitakers_impl(config)
+
+
+@databuild.command("foster-ossa")
+@click.option(
+    "--source",
+    "source_path",
+    type=click.Path(exists=True),
+    required=True,
+    help="Path to PDF-derived Foster Ossa page JSONL.",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output DuckDB path (defaults to data/build/foster_ossa.duckdb)",
+)
+@click.option("--limit", type=click.IntRange(min=0), help="Limit pages for testing.")
+@click.option(
+    "--wipe/--no-wipe",
+    default=True,
+    show_default=True,
+    help="Delete existing DB before building.",
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_foster_ossa(
+    source_path: str,
+    output: str | None,
+    limit: int | None,
+    wipe: bool,
+    force: bool,
+) -> None:
+    """Build local Foster Ossa extraction index from page JSONL."""
+    config = BuildFosterOssaConfig(
+        source_path=source_path,
+        output=output,
+        limit=limit,
+        wipe=wipe,
+        force=force,
+    )
+    _build_foster_ossa_impl(config)
 
 
 @databuild.command("reader")

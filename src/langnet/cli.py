@@ -896,9 +896,490 @@ def main() -> None:
     """langnet-cli — classical language tools."""
 
 
+@main.command("foster-ossa-extract")
+@click.option(
+    "--source",
+    "source_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Path to local Ossa Latinitatis Sola PDF.",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Output page JSONL path.",
+)
+def foster_ossa_extract(source_path: Path, output: Path) -> None:
+    """Extract Foster Ossa PDF pages to local generated JSONL."""
+    from langnet.foster_ossa.extraction import (  # noqa: PLC0415
+        extract_pdf_pages,
+        write_page_rows_jsonl,
+    )
+
+    count = write_page_rows_jsonl(extract_pdf_pages(source_path), output)
+    click.echo(f"wrote: {output.expanduser()} pages={count}")
+
+
+@click.group("foster-ossa")
+def foster_ossa() -> None:
+    """Inspect the local Foster Ossa extraction index."""
+
+
+@foster_ossa.command("search")
+@click.argument("query")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Foster Ossa DuckDB path. Defaults to data/build/foster_ossa.duckdb.",
+)
+@click.option(
+    "--index",
+    "index_path",
+    type=click.Path(path_type=Path),
+    help="Optional Foster Ossa Lance search index path.",
+)
+@click.option(
+    "--limit",
+    type=click.IntRange(min=0),
+    default=10,
+    show_default=True,
+    help="Maximum pages.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_search(
+    query: str,
+    db_path: Path | None,
+    index_path: Path | None,
+    limit: int,
+    output: str,
+) -> None:
+    """Search page text in the local Foster Ossa index."""
+    if index_path is not None:
+        from langnet.foster_ossa.search_index import search_foster_ossa_lance  # noqa: PLC0415
+
+        payload = search_foster_ossa_lance(query, index_path=index_path, limit=limit)
+        if output == "json":
+            click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+            return
+        _echo_foster_ossa_search_results(query, payload["results"])
+        return
+
+    from langnet.databuild.foster_ossa import search_foster_ossa  # noqa: PLC0415
+
+    results = search_foster_ossa(query, db_path=db_path, limit=limit)
+    if output == "json":
+        click.echo(
+            orjson.dumps(
+                {"backend": "duckdb-like", "results": results},
+                option=orjson.OPT_INDENT_2,
+            ).decode("utf-8")
+        )
+        return
+    _echo_foster_ossa_search_results(query, results)
+
+
+@foster_ossa.group("search-index")
+def foster_ossa_search_index() -> None:
+    """Build and inspect the derived Foster Ossa full-text search index."""
+
+
+@foster_ossa_search_index.command("build")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Foster Ossa DuckDB path. Defaults to data/build/foster_ossa.duckdb.",
+)
+@click.option("--index", "index_path", type=click.Path(path_type=Path), help="Search index path.")
+@click.option("--replace", is_flag=True, help="Replace any existing Lance search index.")
+@click.option("--limit", type=click.IntRange(min=0), help="Debug record cap.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_search_index_build(
+    db_path: Path | None,
+    index_path: Path | None,
+    replace: bool,
+    limit: int | None,
+    output: str,
+) -> None:
+    """Build a derived Foster Ossa Lance full-text search index."""
+    from langnet.foster_ossa.search_index import build_foster_ossa_search_index  # noqa: PLC0415
+
+    try:
+        payload = {
+            "mode": "foster-ossa-search-index-build",
+            "summary": build_foster_ossa_search_index(
+                db_path=db_path,
+                index_path=index_path,
+                replace=replace,
+                limit=limit,
+            ),
+        }
+    except FileNotFoundError as exc:
+        raise click.ClickException(str(exc)) from exc
+    _echo_foster_ossa_search_index_payload(payload, output)
+
+
+@foster_ossa_search_index.command("status")
+@click.option("--index", "index_path", type=click.Path(path_type=Path), help="Search index path.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_search_index_status(index_path: Path | None, output: str) -> None:
+    """Show derived Foster Ossa text index status."""
+    from langnet.foster_ossa.search_index import foster_ossa_search_index_status  # noqa: PLC0415
+
+    payload = {
+        "mode": "foster-ossa-search-index-status",
+        "summary": foster_ossa_search_index_status(index_path),
+    }
+    _echo_foster_ossa_search_index_payload(payload, output)
+
+
+@foster_ossa_search_index.command("validate")
+@click.option("--index", "index_path", type=click.Path(path_type=Path), help="Search index path.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_search_index_validate(index_path: Path | None, output: str) -> None:
+    """Validate the derived Foster Ossa text index."""
+    from langnet.foster_ossa.search_index import validate_foster_ossa_search_index  # noqa: PLC0415
+
+    payload = {
+        "mode": "foster-ossa-search-index-validate",
+        "validation": validate_foster_ossa_search_index(index_path),
+    }
+    _echo_foster_ossa_search_index_payload(payload, output)
+
+
+def _echo_foster_ossa_search_results(query: str, results: list[dict[str, object]]) -> None:
+    if not results:
+        click.echo(f"No Foster Ossa pages found for {query!r}.")
+        return
+    for row in results:
+        source_ref = row.get("source_ref") or f"page:{row['page_number']}"
+        record_kind = row.get("record_kind") or "page"
+        click.echo(f"{source_ref} {record_kind} p. {row['page_number']} [{row['section']}]")
+        click.echo(f"  {str(row['text']).replace(chr(10), ' ')[:240]}")
+
+
+def _echo_foster_ossa_search_index_payload(payload: dict[str, object], output: str) -> None:
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    summary = payload.get("summary")
+    if isinstance(summary, dict):
+        click.echo(f"backend: {summary.get('backend')}")
+        click.echo(f"dataset_path: {summary.get('dataset_path')}")
+        click.echo(f"record_count: {summary.get('record_count')}")
+        if summary.get("record_kind_counts"):
+            click.echo(f"record_kind_counts: {summary.get('record_kind_counts')}")
+        if summary.get("fts_indexes"):
+            click.echo(f"fts_indexes: {', '.join(str(item) for item in summary['fts_indexes'])}")
+        return
+    validation = payload.get("validation")
+    if isinstance(validation, dict):
+        issues = validation.get("issues") or []
+        click.echo(f"issues: {len(issues)}")
+        for issue in issues:
+            if isinstance(issue, dict):
+                click.echo(f"- {issue.get('code')}: {issue.get('message')}")
+
+
+@foster_ossa.command("toc")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Foster Ossa DuckDB path. Defaults to data/build/foster_ossa.duckdb.",
+)
+@click.option(
+    "--experience",
+    type=click.IntRange(min=1, max=5),
+    help="Optional experience number.",
+)
+@click.option(
+    "--limit",
+    type=click.IntRange(min=0),
+    default=200,
+    show_default=True,
+    help="Maximum TOC entries.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_toc(
+    db_path: Path | None,
+    experience: int | None,
+    limit: int,
+    output: str,
+) -> None:
+    """Show structured Foster Ossa table-of-contents entries."""
+    from langnet.databuild.foster_ossa import lookup_toc_entries  # noqa: PLC0415
+
+    entries = lookup_toc_entries(db_path=db_path, experience=experience, limit=limit)
+    if output == "json":
+        click.echo(orjson.dumps({"entries": entries}, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    if not entries:
+        click.echo("No Foster Ossa TOC entries found.")
+        return
+    for entry in entries:
+        encounter = entry.get("encounter_id") or "-"
+        click.echo(
+            f"{encounter} printed={entry['printed_page']} page={entry['inferred_page_number']}"
+        )
+        click.echo(f"  {entry['latin_title']}")
+        if entry.get("english_title"):
+            click.echo(f"  {entry['english_title']}")
+
+
+@foster_ossa.command("concept")
+@click.argument("term")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Foster Ossa DuckDB path. Defaults to data/build/foster_ossa.duckdb.",
+)
+@click.option(
+    "--limit",
+    type=click.IntRange(min=0),
+    default=20,
+    show_default=True,
+    help="Maximum mentions.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_concept(term: str, db_path: Path | None, limit: int, output: str) -> None:
+    """Show page-backed concept mentions from the Foster Ossa index."""
+    from langnet.databuild.foster_ossa import lookup_concept_mentions  # noqa: PLC0415
+
+    mentions = lookup_concept_mentions(term, db_path=db_path, limit=limit)
+    if output == "json":
+        click.echo(orjson.dumps({"mentions": mentions}, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    if not mentions:
+        click.echo(f"No Foster Ossa concept mentions found for {term!r}.")
+        return
+    for mention in mentions:
+        encounter = mention.get("encounter_id") or "-"
+        click.echo(f"p. {mention['page_number']} encounter={encounter} {mention['term']}")
+        click.echo(f"  {mention['context']}")
+
+
+@foster_ossa.command("encounter")
+@click.argument("encounter_id")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Foster Ossa DuckDB path. Defaults to data/build/foster_ossa.duckdb.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def foster_ossa_encounter(encounter_id: str, db_path: Path | None, output: str) -> None:
+    """Show a Foster Ossa encounter summary row and page span."""
+    from langnet.databuild.foster_ossa import lookup_encounter  # noqa: PLC0415
+
+    row = lookup_encounter(encounter_id, db_path=db_path)
+    if output == "json":
+        click.echo(orjson.dumps({"encounter": row}, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    if row is None:
+        click.echo(f"No Foster Ossa encounter found for {encounter_id!r}.")
+        return
+    click.echo(
+        f"{row['encounter_id']}: {row['heading']} pages {row['page_start']}-{row['page_end']}"
+    )
+    if row["title"]:
+        click.echo(f"  {row['title']}")
+
+
+@main.command("foster-ossa-summarize")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Foster Ossa DuckDB path. Defaults to data/build/foster_ossa.duckdb.",
+)
+@click.option(
+    "--scope",
+    type=click.Choice(["page", "toc-entry", "experience"]),
+    default="page",
+    show_default=True,
+    help="Summary scope.",
+)
+@click.option(
+    "--model",
+    default="openai:deepseek/deepseek-v4-flash",
+    show_default=True,
+    help="aisuite model identifier.",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Summary JSONL output path.",
+)
+@click.option(
+    "--limit",
+    type=click.IntRange(min=0),
+    help="Maximum summary plans.",
+)
+@click.option(
+    "--input-summaries",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Generated TOC-entry summary JSONL path for rollup scopes.",
+)
+@click.option("--encounter", "encounter_id", help="Summarize pages in one encounter, e.g. 1.1.")
+@click.option("--dry-run", is_flag=True, help="Plan summaries without generating text.")
+def foster_ossa_summarize(  # noqa: C901, PLR0913
+    db_path: Path | None,
+    scope: str,
+    model: str,
+    output: Path,
+    limit: int | None,
+    input_summaries: Path | None,
+    encounter_id: str | None,
+    dry_run: bool,
+) -> None:
+    """Generate or plan local Foster Ossa LLM summaries."""
+    from langnet.databuild.foster_ossa import (  # noqa: PLC0415
+        page_rows_for_summary,
+        toc_entry_rows_for_summary,
+    )
+    from langnet.foster_ossa.summaries import (  # noqa: PLC0415
+        experience_rows_from_toc_summary_jsonl,
+        generated_summary_json,
+        plan_summary_chunks,
+        summarize_plan,
+        validate_generated_summary,
+    )
+
+    if scope == "experience":
+        if input_summaries is None:
+            raise click.ClickException("--input-summaries is required for --scope experience")
+        rows = experience_rows_from_toc_summary_jsonl(input_summaries)
+        if limit is not None:
+            rows = rows[:limit]
+    elif scope == "toc-entry":
+        rows = toc_entry_rows_for_summary(
+            db_path=db_path,
+            limit=limit,
+            encounter_id=encounter_id,
+        )
+    else:
+        rows = page_rows_for_summary(db_path=db_path, limit=limit, encounter_id=encounter_id)
+    plans = plan_summary_chunks(rows, scope=scope, model=model)
+    output_path = output.expanduser()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("wb") as handle:
+        for plan in plans:
+            generated_text = ""
+            validation_status = "planned"
+            validation_issues: list[str] = []
+            normalized_json = ""
+            if not dry_run:
+                try:
+                    generated_text = summarize_plan(plan)
+                except RuntimeError as exc:
+                    raise click.ClickException(str(exc)) from exc
+                validation_issues = validate_generated_summary(
+                    scope=plan.scope,
+                    generated_text=generated_text,
+                    expected_source_ref=plan.source_ref,
+                )
+                validation_status = (
+                    "generated_valid" if not validation_issues else "generated_invalid"
+                )
+                if not validation_issues:
+                    normalized_json = generated_summary_json(
+                        scope=plan.scope,
+                        generated_text=generated_text,
+                    )
+            payload = {
+                "source_ref": plan.source_ref,
+                "scope": plan.scope,
+                "model": plan.model,
+                "prompt_version": plan.prompt_version,
+                "input_hash": plan.input_hash,
+                "generated_text": generated_text,
+                "validation_status": validation_status,
+            }
+            if validation_issues:
+                payload["validation_issues"] = validation_issues
+            if normalized_json:
+                payload["generated_json"] = normalized_json
+            handle.write(orjson.dumps(payload))
+            handle.write(b"\n")
+    click.echo(f"planned: {len(plans)}")
+
+
+@main.command("foster-ossa-summary-docs")
+@click.option(
+    "--input-summaries",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Generated TOC-entry summary JSONL path.",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    required=True,
+    help="Directory for generated Foster Ossa summary Markdown docs.",
+)
+def foster_ossa_summary_docs(input_summaries: Path, output_dir: Path) -> None:
+    """Write reviewable Markdown docs from validated Foster Ossa summary JSONL."""
+    from langnet.foster_ossa.summaries import write_summary_markdown_docs  # noqa: PLC0415
+
+    written = write_summary_markdown_docs(input_path=input_summaries, output_dir=output_dir)
+    click.echo(f"wrote: {len(written)}")
+    for path in written:
+        click.echo(str(path))
+
+
 # Register subcommands
 main.add_command(index)
 main.add_command(databuild)
+main.add_command(foster_ossa)
 
 
 def _grammar_concept_payload(concept: GrammarConcept) -> dict[str, object]:

@@ -64,6 +64,20 @@ Concrete examples live in [Foster Functional Grammar Examples](FOSTER_FUNCTIONAL
 
 The broader feature direction is captured in [Grammar Learning Overlay](GRAMMAR_LEARNING_OVERLAY.md). That document treats Foster labels as the gateway into traditional grammar names, process rules, and source-backed examples for reading, understanding, learning, and writing.
 
+## Foster Ossa Source Discipline
+
+Foster-derived tooling should prefer terms and examples that can point back to
+the local Ossa Latinitatis Sola artifact. The first source of truth is the page
+JSONL extracted from the local PDF, then the DuckDB index derived from those
+page rows. Search results, concept mentions, encounter spans, and summary plans
+should carry concrete source references such as `page:49` or `encounter:1.1`
+where available.
+
+LLM summaries are allowed as generated study aids only when they are explicit
+artifacts. They should use a recorded prompt version, model name, input hash,
+and source reference, and they should not replace the extracted Foster text or
+the conventional grammatical labels used elsewhere in LangNet.
+
 ## Evidence Policy
 
 Students should be able to trust the explanation without treating LangNet as an oracle. When sources disagree, are incomplete, or expose raw encodings, the output should say so plainly.

@@ -33,6 +33,7 @@ Start here:
 - `docs/GOALS.md` - concise product goals and non-goals.
 - `docs/VISION.md` - product promise, audience, and principles.
 - `docs/PEDAGOGICAL_PHILOSOPHY.md` - learner-facing grammar and evidence policy.
+- `docs/reference/foster-ossa/DIDACTIC_SYNTHESIS.md` - Foster Ossa synthesis and platform implications.
 - `docs/SEMANTIC_READINESS.md` - semantic-reduction readiness gates.
 - `docs/TRANSLATION_CACHE_PLAN.md` - translation cache behavior and constraints.
 

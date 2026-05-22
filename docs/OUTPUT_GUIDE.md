@@ -442,6 +442,128 @@ just cli word-index sources lat --output json
 just cli word-index nearby lat lupus --source all --radius 5 --output json
 ```
 
+## Foster Ossa Local Index
+
+The Foster Ossa import is a local generated artifact workflow. It extracts page
+text from a local PDF, builds a small DuckDB index, and keeps all search,
+concept, encounter, and dry-run summary planning tied to source page rows.
+
+```bash
+just cli foster-ossa-extract \
+  --source ~/reginald-foster/reginald-foster-latin.pdf \
+  --output examples/debug/foster-ossa-pages.jsonl
+
+just cli-databuild foster-ossa \
+  --source examples/debug/foster-ossa-pages.jsonl \
+  --output data/build/foster_ossa.duckdb \
+  --wipe
+```
+
+The JSONL page rows preserve physical page numbers, extracted text, extraction
+tool, source path, page hash, and blank-page warnings. The DuckDB builder derives
+page sections, encounter spans, and concept mentions from those page rows.
+
+Inspect the artifact with:
+
+```bash
+just cli foster-ossa search "Functions produce true meaning" \
+  --db data/build/foster_ossa.duckdb --output json
+
+just cli foster-ossa concept "nom." \
+  --db data/build/foster_ossa.duckdb --limit 5 --output json
+
+just cli foster-ossa encounter 1.1 \
+  --db data/build/foster_ossa.duckdb --output json
+
+just cli foster-ossa toc \
+  --db data/build/foster_ossa.duckdb --experience 1 --output json
+```
+
+For ranked full-text search, derive the Lance index from the DuckDB artifact:
+
+```bash
+just cli foster-ossa search-index build \
+  --db data/build/foster_ossa.duckdb \
+  --index data/build/foster_ossa_search.lance \
+  --replace \
+  --output json
+
+just cli foster-ossa search-index status \
+  --index data/build/foster_ossa_search.lance --output json
+
+just cli foster-ossa search-index validate \
+  --index data/build/foster_ossa_search.lance --output json
+```
+
+Use `--index` on `foster-ossa search` to search the Lance artifact instead of
+the DuckDB substring fallback:
+
+```bash
+just cli foster-ossa search "Functions produce true meaning" \
+  --index data/build/foster_ossa_search.lance \
+  --limit 5 \
+  --output json
+```
+
+The Lance artifact currently indexes page records and encounter records. Search
+results expose `source_ref` values such as `page:51` and `encounter:1.1`, a
+`record_kind`, a page number, an optional `encounter_id`, and a target command
+hint.
+
+Summary planning is explicit. Dry runs create local JSONL plans without an API
+key and without generated text. Use `--encounter` to plan summaries for a
+book-native encounter span instead of starting at the first physical page:
+
+```bash
+just cli foster-ossa-summarize \
+  --db data/build/foster_ossa.duckdb \
+  --scope toc-entry \
+  --encounter 1.1 \
+  --limit 2 \
+  --output examples/debug/foster-ossa-summaries.jsonl \
+  --dry-run
+```
+
+Each summary row uses source references such as `toc:1.1` or `page:49`, records
+the model and prompt version, and stores an input hash. The `toc-entry` scope is
+the preferred unit for book-native Foster summaries because it follows the
+structured table of contents and uses adjacent TOC entries to infer page spans.
+Generated `toc-entry` summaries are expected to be JSON objects with source
+references, Foster terms, traditional terms, method claims, learner actions, and
+unclear/unsupported points. Generated summaries should be treated as secondary
+aids; the page rows and TOC spans remain the inspectable source-backed artifact.
+
+Valid generated summaries also include a normalized `generated_json` field so
+later rollups do not need to handle markdown fences or provider-specific text
+wrapping. Invalid rows keep `validation_issues` and should be regenerated or
+reviewed before they feed higher-level summaries.
+
+Experience-level rollups read generated TOC-entry JSONL and skip invalid rows:
+
+```bash
+just cli foster-ossa-summarize \
+  --scope experience \
+  --input-summaries examples/debug/foster-ossa-toc-all-summaries-v2.jsonl \
+  --output examples/debug/foster-ossa-experience-rollup.jsonl \
+  --dry-run
+```
+
+The `experience` scope is for rollups over validated TOC-entry summaries. It
+does not read the PDF directly; it preserves the TOC and page citations carried
+by those lower-level artifacts.
+
+To produce reviewable Markdown documents from validated TOC-entry summaries:
+
+```bash
+just cli foster-ossa-summary-docs \
+  --input-summaries examples/debug/foster-ossa-toc-all-summaries-v2.jsonl \
+  --output-dir docs/reference/foster-ossa/generated
+```
+
+These Markdown files are generated review surfaces. They should stay concise
+and grounded in `toc:*` and `page:*` references, while the JSONL summary artifact
+remains the machine-readable source for rollups and audits.
+
 Diogenes Greek/Latin neighborhoods require a local built index. Full indexes
 should use direct Diogenes XML import when the local Diogenes data files are
 available:
