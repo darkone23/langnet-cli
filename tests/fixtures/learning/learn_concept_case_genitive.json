@@ -1,0 +1,31 @@
+{
+  "schema_version": "langnet.grammar_concepts.v1",
+  "concept": {
+    "id": "case.genitive",
+    "kind": "case",
+    "foster_gateway": "Possessing Function",
+    "traditional": {
+      "en": "genitive",
+      "grc": "γενική",
+      "lat": "genetivus",
+      "san": "ṣaṣṭhī vibhakti",
+      "san_role": "sambandha"
+    },
+    "source_anchor_ids": [
+      "grammar.source.dionysius_thrax.ars_grammatica",
+      "grammar.source.varro.de_lingua_latina",
+      "grammar.source.donatus.ars_minor",
+      "grammar.source.panini.astadhyayi",
+      "grammar.source.kasikavrtti",
+      "grammar.source.panini.astadhyayi",
+      "grammar.source.dionysius_thrax.ars_grammatica",
+      "grammar.source.donatus.ars_minor"
+    ],
+    "skill_keys": [
+      "learn",
+      "read",
+      "understand",
+      "write"
+    ]
+  }
+}

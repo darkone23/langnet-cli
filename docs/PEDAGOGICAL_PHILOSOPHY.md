@@ -62,6 +62,8 @@ These labels should be optional display aids. JSON claims should continue to car
 
 Concrete examples live in [Foster Functional Grammar Examples](FOSTER_FUNCTIONAL_GRAMMAR_EXAMPLES.md). That page is the learner-facing reference for mapping terms such as Naming Function and Possessing Function back to conventional case labels in Latin, Greek, and Sanskrit.
 
+The broader feature direction is captured in [Grammar Learning Overlay](GRAMMAR_LEARNING_OVERLAY.md). That document treats Foster labels as the gateway into traditional grammar names, process rules, and source-backed examples for reading, understanding, learning, and writing.
+
 ## Evidence Policy
 
 Students should be able to trust the explanation without treating LangNet as an oracle. When sources disagree, are incomplete, or expose raw encodings, the output should say so plainly.

@@ -90,6 +90,12 @@ from langnet.execution.handlers.diogenes import _parse_diogenes_html
 from langnet.execution.handlers.whitakers import _parse_whitaker_output
 from langnet.execution.source_text import analyze_source_entry, compact_source_gloss
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
+from langnet.learning.concept_mapper import concept_ids_for_features
+from langnet.learning.grammar_concepts import (
+    GrammarConcept,
+    get_grammar_concept,
+    load_grammar_concepts,
+)
 from langnet.morphology.candidates import MorphologyCandidate, candidates_from_triples
 from langnet.normalizer.core import NormalizationResult, _hash_query
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
@@ -197,11 +203,14 @@ DEFAULT_TRANSLATION_FALLBACK_MODELS = ("openai:deepseek/deepseek-v4-flash",)
 TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND_ENV = "LANGNET_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND"
 TRANSLATION_MIN_RATE_TOKENS_ENV = "LANGNET_TRANSLATION_MIN_RATE_TOKENS"
 TRANSLATION_MIN_RATE_SECONDS_ENV = "LANGNET_TRANSLATION_MIN_RATE_SECONDS"
+LEARNING_OVERLAY_SCHEMA_VERSION = "langnet.learning_overlay.v1"
 DEFAULT_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND = 8.0
 DEFAULT_TRANSLATION_MIN_RATE_TOKENS = 24
 DEFAULT_TRANSLATION_MIN_RATE_SECONDS = 5.0
 DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-2.5-flash"
 WORD_INDEX_CONTEXT_RADIUS = 1
+GRAMMAR_CONCEPTS_SCHEMA_VERSION = "langnet.grammar_concepts.v1"
+GRAMMAR_EVIDENCE_REPORT_SCHEMA_VERSION = "langnet.grammar_evidence_report.v1"
 WORD_INDEX_SOURCES = {
     "all",
     "cdsl",
@@ -890,6 +899,307 @@ def main() -> None:
 # Register subcommands
 main.add_command(index)
 main.add_command(databuild)
+
+
+def _grammar_concept_payload(concept: GrammarConcept) -> dict[str, object]:
+    return cast(dict[str, object], asdict(concept))
+
+
+def _grammar_concept_learning_payload(concept: GrammarConcept) -> dict[str, object]:
+    return {
+        "id": concept.id,
+        "kind": concept.kind,
+        "foster_gateway": concept.foster_gateway,
+        "plain_english": concept.plain_english,
+        "traditional": dict(concept.traditional),
+        "source_evidence": [asdict(evidence) for evidence in concept.evidence],
+    }
+
+
+def _grammar_concepts_payload(kind: str | None = None) -> dict[str, object]:
+    concepts = sorted(load_grammar_concepts().values(), key=lambda item: (item.kind, item.id))
+    if kind:
+        kind_key = kind.casefold()
+        concepts = [concept for concept in concepts if concept.kind.casefold() == kind_key]
+    return {
+        "schema_version": GRAMMAR_CONCEPTS_SCHEMA_VERSION,
+        "concepts": [_grammar_concept_payload(concept) for concept in concepts],
+    }
+
+
+def _grammar_concept_detail_payload(concept_id: str) -> dict[str, object]:
+    try:
+        concept = get_grammar_concept(concept_id)
+    except KeyError as exc:
+        raise click.UsageError(str(exc)) from exc
+    return {
+        "schema_version": GRAMMAR_CONCEPTS_SCHEMA_VERSION,
+        "concept": _grammar_concept_payload(concept),
+    }
+
+
+def _grammar_evidence_report_payload(kind: str | None = None) -> dict[str, object]:
+    concepts = sorted(load_grammar_concepts().values(), key=lambda item: (item.kind, item.id))
+    if kind:
+        kind_key = kind.casefold()
+        concepts = [concept for concept in concepts if concept.kind.casefold() == kind_key]
+    concept_reports = [_grammar_concept_evidence_report(concept) for concept in concepts]
+    total_concepts = len(concept_reports)
+    with_source_basis = sum(1 for report in concept_reports if report["source_basis_count"])
+    with_work_evidence = sum(
+        1 for report in concept_reports if _evidence_count(report, "reader_work")
+    )
+    with_segment_evidence = sum(
+        1 for report in concept_reports if _evidence_count(report, "reader_segment")
+    )
+    return {
+        "schema_version": GRAMMAR_EVIDENCE_REPORT_SCHEMA_VERSION,
+        "summary": {
+            "total_concepts": total_concepts,
+            "with_source_basis": with_source_basis,
+            "missing_source_basis": total_concepts - with_source_basis,
+            "with_work_evidence": with_work_evidence,
+            "missing_work_evidence": total_concepts - with_work_evidence,
+            "with_segment_evidence": with_segment_evidence,
+            "missing_segment_evidence": total_concepts - with_segment_evidence,
+        },
+        "concepts": concept_reports,
+    }
+
+
+def _evidence_count(report: Mapping[str, object], level: str) -> int:
+    counts = report.get("evidence_counts")
+    if not isinstance(counts, Mapping):
+        return 0
+    value = cast(Mapping[str, object], counts).get(level)
+    return value if isinstance(value, int) else 0
+
+
+def _grammar_concept_evidence_report(concept: GrammarConcept) -> dict[str, object]:
+    evidence_counts = Counter(evidence.evidence_level for evidence in concept.evidence)
+    missing: list[str] = []
+    if not concept.source_basis:
+        missing.append("source_basis")
+    if not evidence_counts["reader_work"]:
+        missing.append("source_work_links")
+    if not evidence_counts["reader_segment"]:
+        missing.append("reader_segment_links")
+    if not concept.traditional:
+        missing.append("traditional_terms")
+    if not concept.examples:
+        missing.append("examples")
+    if not concept.skills:
+        missing.append("skills")
+    return {
+        "id": concept.id,
+        "kind": concept.kind,
+        "source_basis_count": len(concept.source_basis),
+        "evidence_counts": {
+            "reader_work": evidence_counts["reader_work"],
+            "reader_segment": evidence_counts["reader_segment"],
+        },
+        "missing": missing,
+    }
+
+
+def _learn_feature_map(features: Sequence[str]) -> dict[str, str]:
+    feature_map: dict[str, str] = {}
+    for feature in features:
+        key, sep, value = feature.partition("=")
+        key = key.strip()
+        value = value.strip()
+        if not sep or not key or not value:
+            raise click.UsageError("--feature values must use key=value form.")
+        feature_map[key] = value
+    return feature_map
+
+
+def _learn_map_payload(
+    *,
+    features: Sequence[str],
+    part_of_speech: str,
+    paradigm_kind: str,
+) -> dict[str, object]:
+    feature_map = _learn_feature_map(features)
+    concept_ids = concept_ids_for_features(
+        feature_map,
+        part_of_speech=part_of_speech,
+        paradigm_kind=paradigm_kind,
+    )
+    concepts = [
+        _grammar_concept_payload(get_grammar_concept(concept_id)) for concept_id in concept_ids
+    ]
+    return {
+        "schema_version": GRAMMAR_CONCEPTS_SCHEMA_VERSION,
+        "input": {
+            "features": feature_map,
+            "part_of_speech": part_of_speech,
+            "paradigm_kind": paradigm_kind,
+        },
+        "concept_ids": concept_ids,
+        "concepts": concepts,
+    }
+
+
+def _emit_learn_payload(payload: Mapping[str, object], output: str) -> None:
+    if output == "json":
+        click.echo(orjson.dumps(dict(payload), option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+
+    concept_ids = payload.get("concept_ids")
+    if isinstance(concept_ids, Sequence) and not isinstance(concept_ids, (str, bytes)):
+        _echo_learn_mapping(payload, concept_ids)
+        return
+
+    concepts = payload.get("concepts")
+    if isinstance(concepts, Sequence) and not isinstance(concepts, (str, bytes)):
+        for concept in concepts:
+            if isinstance(concept, Mapping):
+                _echo_grammar_concept_summary(cast(Mapping[str, object], concept))
+        return
+
+    concept = payload.get("concept")
+    if isinstance(concept, Mapping):
+        _echo_grammar_concept_detail(cast(Mapping[str, object], concept))
+
+
+def _emit_grammar_evidence_report_payload(payload: Mapping[str, object], output: str) -> None:
+    if output == "json":
+        click.echo(orjson.dumps(dict(payload), option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    summary = payload.get("summary")
+    if isinstance(summary, Mapping):
+        summary_map = cast(Mapping[str, object], summary)
+        click.echo("Grammar evidence report:")
+        click.echo(f"- total concepts: {summary_map.get('total_concepts')}")
+        click.echo(f"- with work evidence: {summary_map.get('with_work_evidence')}")
+        click.echo(f"- with segment evidence: {summary_map.get('with_segment_evidence')}")
+        click.echo(f"- missing segment evidence: {summary_map.get('missing_segment_evidence')}")
+    concepts = payload.get("concepts")
+    if isinstance(concepts, Sequence) and not isinstance(concepts, (str, bytes)):
+        for concept in concepts:
+            if not isinstance(concept, Mapping):
+                continue
+            concept_map = cast(Mapping[str, object], concept)
+            missing = concept_map.get("missing")
+            missing_text = (
+                ", ".join(str(item) for item in missing) if isinstance(missing, list) else ""
+            )
+            click.echo(f"- {concept_map.get('id')}: {missing_text or 'complete'}")
+
+
+def _echo_learn_mapping(payload: Mapping[str, object], concept_ids: Sequence[object]) -> None:
+    click.echo("Concept mapping:")
+    for concept_id in concept_ids:
+        click.echo(f"- {concept_id}")
+    mapped_concepts = payload.get("concepts")
+    if isinstance(mapped_concepts, Sequence) and not isinstance(mapped_concepts, (str, bytes)):
+        for concept in mapped_concepts:
+            if isinstance(concept, Mapping):
+                _echo_grammar_concept_summary(cast(Mapping[str, object], concept))
+
+
+def _echo_grammar_concept_summary(concept: Mapping[str, object]) -> None:
+    foster = concept.get("foster_gateway") or "-"
+    plain = concept.get("plain_english") or ""
+    click.echo(f"- {concept.get('id')} [{concept.get('kind')}] {foster}: {plain}")
+
+
+def _echo_grammar_concept_detail(concept: Mapping[str, object]) -> None:
+    _echo_grammar_concept_summary(concept)
+    traditional = concept.get("traditional")
+    if isinstance(traditional, Mapping) and traditional:
+        click.echo("  traditional:")
+        for key, value in sorted(traditional.items()):
+            click.echo(f"    {key}: {value}")
+    examples = concept.get("examples")
+    if isinstance(examples, Mapping) and examples:
+        click.echo("  examples:")
+        for key, value in sorted(examples.items()):
+            click.echo(f"    {key}: {value}")
+
+
+@click.group("learn")
+def learn_cli() -> None:
+    """Explore learner-facing grammar concepts and mappings."""
+
+
+@learn_cli.command("concepts")
+@click.option("--kind", help="Optional concept kind filter, e.g. case, number, process.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def learn_concepts(kind: str | None, output: str) -> None:
+    """List grammar concepts in the Foster/traditional registry."""
+    _emit_learn_payload(_grammar_concepts_payload(kind), output)
+
+
+@learn_cli.command("concept")
+@click.argument("concept_id")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def learn_concept(concept_id: str, output: str) -> None:
+    """Show one grammar concept with Foster and traditional terms."""
+    _emit_learn_payload(_grammar_concept_detail_payload(concept_id), output)
+
+
+@learn_cli.command("evidence-report")
+@click.option("--kind", help="Optional concept kind filter, e.g. case, number, process.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def learn_evidence_report(kind: str | None, output: str) -> None:
+    """Summarize grammar-source evidence coverage for exposed concepts."""
+    _emit_grammar_evidence_report_payload(_grammar_evidence_report_payload(kind), output)
+
+
+@learn_cli.command("map")
+@click.option(
+    "--feature",
+    "features",
+    multiple=True,
+    help="Morphology feature in key=value form. May be supplied more than once.",
+)
+@click.option("--part-of-speech", "--pos", default="unknown", show_default=True)
+@click.option("--paradigm-kind", default="unknown", show_default=True)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def learn_map(
+    features: tuple[str, ...],
+    part_of_speech: str,
+    paradigm_kind: str,
+    output: str,
+) -> None:
+    """Map morphology facts to teachable grammar concepts."""
+    _emit_learn_payload(
+        _learn_map_payload(
+            features=features,
+            part_of_speech=part_of_speech,
+            paradigm_kind=paradigm_kind,
+        ),
+        output,
+    )
+
+
+main.add_command(learn_cli)
 
 
 def _reader_service_from_context(ctx: click.Context):
@@ -6124,6 +6434,85 @@ def _encounter_paradigm_resolution_payload(
         )
 
 
+def _encounter_add_learning_overlays(
+    paradigm_resolution: Mapping[str, object],
+) -> dict[str, object]:
+    payload = dict(paradigm_resolution)
+    candidates = paradigm_resolution.get("candidates")
+    if not isinstance(candidates, Sequence) or isinstance(candidates, (str, bytes)):
+        return payload
+
+    overlayed_candidates: list[object] = []
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            overlayed_candidates.append(candidate)
+            continue
+        candidate_map = cast(Mapping[str, object], candidate)
+        candidate_payload = dict(candidate_map)
+        candidate_payload["learning_overlay"] = _encounter_learning_candidate_overlay(candidate_map)
+        overlayed_candidates.append(candidate_payload)
+    payload["candidates"] = overlayed_candidates
+    return payload
+
+
+def _encounter_learning_candidate_overlay(candidate: Mapping[str, object]) -> dict[str, object]:
+    raw_concept_ids = candidate.get("concept_ids")
+    concept_ids = (
+        [concept_id for concept_id in raw_concept_ids if isinstance(concept_id, str)]
+        if isinstance(raw_concept_ids, Sequence) and not isinstance(raw_concept_ids, (str, bytes))
+        else []
+    )
+    concepts: list[dict[str, object]] = []
+    missing_evidence: list[str] = []
+    for concept_id in concept_ids:
+        try:
+            concept = get_grammar_concept(concept_id)
+        except KeyError:
+            missing_evidence.append(f"unknown_concept:{concept_id}")
+            continue
+        concepts.append(_grammar_concept_learning_payload(concept))
+    if concepts:
+        if not any(concept.get("source_evidence") for concept in concepts):
+            missing_evidence.append("source_work_links")
+        if not _learning_concepts_all_have_reader_segments(concepts):
+            missing_evidence.append("reader_segment_links")
+    if not concept_ids:
+        missing_evidence.append(_encounter_learning_missing_reason(candidate))
+    return {
+        "schema_version": LEARNING_OVERLAY_SCHEMA_VERSION,
+        "status": "mapped" if concepts else "unmapped",
+        "concept_ids": concept_ids,
+        "concepts": concepts,
+        "missing_evidence": missing_evidence,
+    }
+
+
+def _learning_concepts_all_have_reader_segments(concepts: Sequence[Mapping[str, object]]) -> bool:
+    for concept in concepts:
+        raw_evidence = concept.get("source_evidence")
+        if not isinstance(raw_evidence, Sequence) or isinstance(raw_evidence, (str, bytes)):
+            return False
+        has_reader_segment = False
+        for evidence in raw_evidence:
+            if not isinstance(evidence, Mapping):
+                continue
+            evidence_map = cast(Mapping[str, object], evidence)
+            if evidence_map.get("evidence_level") == "reader_segment":
+                has_reader_segment = True
+                break
+        if not has_reader_segment:
+            return False
+    return bool(concepts)
+
+
+def _encounter_learning_missing_reason(candidate: Mapping[str, object]) -> str:
+    if candidate.get("unresolved_reason"):
+        return f"unresolved:{candidate['unresolved_reason']}"
+    if not candidate.get("slot_features"):
+        return "no_grammar_evidence"
+    return "no_mapped_concepts"
+
+
 def _empty_encounter_paradigm_resolution(
     *,
     language: str,
@@ -9465,6 +9854,15 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     help="Include local paradigm-resolution metadata in JSON output without fetching tables.",
 )
 @click.option(
+    "--include-learning/--no-include-learning",
+    default=False,
+    show_default=True,
+    help=(
+        "Attach Foster/traditional learning overlays to paradigm-resolution candidates. "
+        "This computes paradigm resolution if needed."
+    ),
+)
+@click.option(
     "--include-reader-search/--no-include-reader-search",
     default=False,
     show_default=True,
@@ -9531,6 +9929,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     foster_labels: bool,
     source_details: bool,
     include_paradigm_resolution: bool,
+    include_learning: bool,
     include_reader_search: bool,
     reader_search_index: str | None,
     reader_catalog: str | None,
@@ -9813,6 +10212,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 "translation_mode": resolved_translation_mode,
                 "translation_cache_writes": populate_translations,
                 "include_paradigm_resolution": include_paradigm_resolution,
+                "include_learning": include_learning,
             }
             if include_reader_search_payload:
                 request_payload.update(
@@ -9865,12 +10265,16 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 ),
             )
             paradigm_resolution_payload = None
-            if include_paradigm_resolution:
+            if include_paradigm_resolution or include_learning:
                 paradigm_resolution_payload = _encounter_paradigm_resolution_payload(
                     language,
                     text,
                     morphology_claims,
                 )
+                if include_learning:
+                    paradigm_resolution_payload = _encounter_add_learning_overlays(
+                        paradigm_resolution_payload
+                    )
                 payload["paradigm_resolution"] = paradigm_resolution_payload
             reader_search_payload = None
             reader_search_index_path = (

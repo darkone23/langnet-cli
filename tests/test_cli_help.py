@@ -40,6 +40,7 @@ def test_documented_command_help() -> None:
         "doctor",
         "index",
         "langs",
+        "learn",
         "normalize",
         "translation-cache",
         "tools",
@@ -64,6 +65,11 @@ def test_index_subcommand_help() -> None:
 def test_translation_cache_subcommand_help() -> None:
     for command in ["status", "clear"]:
         _assert_help(["translation-cache", command])
+
+
+def test_learn_subcommand_help() -> None:
+    for command in ["concepts", "concept", "map"]:
+        _assert_help(["learn", command])
 
 
 def test_translation_cli_defaults_use_gemini_flash() -> None:

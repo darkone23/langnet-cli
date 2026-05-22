@@ -29,6 +29,7 @@ function candidate(
 		foster_display: '',
 		display_summary: null,
 		ranking_reasons: [],
+		concept_ids: [],
 		...overrides
 	};
 }

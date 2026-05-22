@@ -187,3 +187,79 @@ def test_unresolved_resolution_explains_missing_metadata_without_guessing() -> N
     _assert_matches_schema(data)
     assert data["candidates"][0]["paradigm_request"] is None
     assert data["candidates"][0]["unresolved_reason"] == "missing_gender_or_declension"
+
+
+def test_candidate_can_carry_optional_learning_overlay_without_breaking_contract() -> None:
+    payload = {
+        "schema_version": "langnet.paradigm_resolution.v1",
+        "searched_form": "putraa.naam",
+        "normalized_form": "putrāṇām",
+        "language": "san",
+        "warnings": [],
+        "candidates": [
+            {
+                "lemma": "putra",
+                "entry_type": "root",
+                "part_of_speech": "noun",
+                "paradigm_kind": "declension",
+                "observed_form": "putrāṇām",
+                "slot_features": {
+                    "case": "genitive",
+                    "number": "plural",
+                    "gender": "masculine",
+                },
+                "foster_display": "Possessing Function; Group; Male",
+                "display_summary": "putrāṇām: Possessing Function; Group; Male",
+                "ranking_reasons": ["observed-form", "lemma", "case-number-gender"],
+                "concept_ids": [
+                    "case.genitive",
+                    "number.plural",
+                    "gender.masculine",
+                    "process.declension",
+                ],
+                "learning_overlay": {
+                    "schema_version": "langnet.learning_overlay.v1",
+                    "status": "mapped",
+                    "concept_ids": ["case.genitive"],
+                    "concepts": [
+                        {
+                            "id": "case.genitive",
+                            "kind": "case",
+                            "foster_gateway": "Possessing Function",
+                            "plain_english": (
+                                "Marks belonging, association, source, description, or relation."
+                            ),
+                            "traditional": {
+                                "en": "genitive",
+                                "grc": "γενική",
+                                "lat": "genetivus",
+                                "san": "ṣaṣṭhī vibhakti",
+                                "san_role": "sambandha",
+                            },
+                            "source_evidence": [
+                                {
+                                    "evidence_level": "reader_work",
+                                    "source_anchor_id": "grammar.source.panini.astadhyayi",
+                                    "work_id": "langnet:reader:sanskrit_dcs:dcs_413",
+                                    "canonical_text_id": ("urn:ctsv2:san:astadhyayi-vrddhir-adaic"),
+                                    "cts_work_urn": None,
+                                    "citation_path": None,
+                                    "canonical_address": ("urn:ctsv2:san:astadhyayi-vrddhir-adaic"),
+                                    "label": "Pāṇini, Aṣṭādhyāyī",
+                                }
+                            ],
+                        }
+                    ],
+                    "missing_evidence": ["reader_segment_links"],
+                },
+                "native_analyses": [],
+                "functional_analyses": [],
+                "paradigm_request": None,
+                "confidence": "high",
+                "provenance": ["heritage"],
+                "unresolved_reason": None,
+            }
+        ],
+    }
+
+    _assert_matches_schema(payload)

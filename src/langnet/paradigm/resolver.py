@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import cast
 
+from langnet.learning.concept_mapper import concept_ids_for_features
 from langnet.paradigm.extractors import (
     extract_greek_grammar_evidence,
     extract_latin_grammar_evidence,
@@ -163,6 +164,11 @@ def _candidate_from_evidence(
             foster_display,
         ),
         ranking_reasons=_record_string_list(record, "ranking_reasons"),
+        concept_ids=concept_ids_for_features(
+            slot_features,
+            part_of_speech=evidence.part_of_speech,
+            paradigm_kind=paradigm_kind,
+        ),
         native_analyses=native_analyses,
         functional_analyses=functional_analyses,
         paradigm_request=request,

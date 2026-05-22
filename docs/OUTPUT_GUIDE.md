@@ -91,6 +91,44 @@ The self-description schemas live in:
 - `docs/schemas/word_index.v1.schema.json`
 - `docs/schemas/word_index_sections.v1.schema.json`
 
+## `learn`
+
+`learn` is the CLI-first surface for the grammar learning overlay. It is
+endpoint-free: it reads the local concept registry and morphology-to-concept
+mapper without calling dictionary services or the web UI.
+
+```bash
+just cli learn concepts --output json
+just cli learn concepts --kind case --output json
+just cli learn concept case.genitive --output json
+just cli learn evidence-report --output json
+just cli learn map \
+  --pos noun \
+  --paradigm-kind declension \
+  --feature case=genitive \
+  --feature number=plural \
+  --feature gender=masculine \
+  --output json
+```
+
+The list/detail JSON uses schema version `langnet.grammar_concepts.v1`.
+Concept records include `source_basis` for readable provenance and `evidence`
+for structured grammar-source anchors. `reader_work` anchors support
+bibliography/source discovery; `reader_segment` anchors support exact teaching
+claims. A `missing_evidence` value of `reader_segment_links` means the concept
+is grounded in a source work but still needs exact passage-level verification.
+
+`learn evidence-report` summarizes the current registry readiness. A clean
+work-level baseline has work-level evidence for every exposed concept. The
+current segment-backed slice covers 23 of 24 exposed concepts with exact
+Greek, Latin, or Sanskrit reader passages. `process.declension` remains the
+known passage-level gap.
+
+Mapping output includes the input feature map, `concept_ids`, and the embedded
+concept records. Use this command to audit Foster gateway labels, traditional
+Greek/Latin/Sanskrit terms, grammar-source anchors, and process concepts before
+wiring the same contract into `encounter` or the web app.
+
 `word-of-day --output json` and `recommend-words --output json` return learner
 recommendation cards using schema version `langnet.word_of_day.v1`. The schema
 lives at `docs/schemas/word_of_day.v1.schema.json`.
@@ -567,11 +605,21 @@ New renderer-facing fields are additive:
   those handles with `word-index nearby` now, and with the planned unified
   wheel-neighborhood surface later;
 - `paradigm_resolution`: present only when `--include-paradigm-resolution` is
-  passed. This embeds a `langnet.paradigm_resolution.v1` payload for the searched
-  form, built from encounter morphology triples and resolver logic. It can
-  include native analyses, functional analyses, a lazy `paradigm_request`, and
-  `unresolved_reason` values. It does not fetch full paradigm tables; clients
-  should call `paradigm` only after the learner opens a forms/paradigm panel.
+  passed, or when `--include-learning` needs it as the carrier for candidate
+  learning overlays. This embeds a `langnet.paradigm_resolution.v1` payload for
+  the searched form, built from encounter morphology triples and resolver logic.
+  It can include native analyses, functional analyses, a lazy
+  `paradigm_request`, candidate `concept_ids`, and `unresolved_reason` values.
+  It does not fetch full paradigm tables; clients should call `paradigm` only
+  after the learner opens a forms/paradigm panel.
+- `paradigm_resolution.candidates[*].learning_overlay`: present when
+  `--include-learning` is passed. This embeds `langnet.learning_overlay.v1`
+  summaries for the candidate's `concept_ids`, including Foster gateway labels
+  and traditional Greek, Latin, and Sanskrit terms. The overlay deliberately
+  does not duplicate `slot_features`, `native_analyses`, confidence, or
+  provenance; those remain on the candidate as the evidence-bearing fields.
+  `missing_evidence` reports follow-up gaps such as
+  `structured_grammar_source_links`.
 - `actions` and `display.actions`: UI-ready lazy follow-up targets derived from
   the encounter context. Current action kinds are `view_paradigm`,
   `open_word_index_neighborhood`, and `inspect_source_entry`. These actions
@@ -592,6 +640,7 @@ Example:
 ```bash
 just cli encounter san putraa.naam heritage \
   --include-paradigm-resolution \
+  --include-learning \
   --output json
 ```
 

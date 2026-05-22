@@ -11,6 +11,7 @@ const resolution = normalizeParadigmResolution({
 			entry_type: 'variant',
 			part_of_speech: 'noun',
 			paradigm_kind: 'declension',
+			concept_ids: ['case.genitive', 'number.singular', 'process.declension'],
 			native_analyses: [
 				{
 					language: 'lat',
@@ -43,6 +44,11 @@ const resolution = normalizeParadigmResolution({
 
 assert.equal(resolution?.schema_version, 'langnet.paradigm_resolution.v1');
 assert.equal(resolution?.candidates[0]?.paradigm_request?.source, 'diogenes:inflect');
+assert.deepEqual(resolution?.candidates[0]?.concept_ids, [
+	'case.genitive',
+	'number.singular',
+	'process.declension'
+]);
 assert.deepEqual(resolution?.candidates[0]?.native_analyses[0]?.features, {
 	case: 'genitive',
 	number: 'singular'

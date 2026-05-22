@@ -1,0 +1,62 @@
+{
+  "schema_version": "langnet.learning_overlay.v1",
+  "status": "mapped",
+  "concept_ids": [
+    "case.genitive",
+    "number.plural",
+    "gender.masculine",
+    "process.declension"
+  ],
+  "concepts": [
+    {
+      "id": "case.genitive",
+      "source_anchor_ids": [
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.varro.de_lingua_latina",
+        "grammar.source.donatus.ars_minor",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.kasikavrtti",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.donatus.ars_minor"
+      ]
+    },
+    {
+      "id": "number.plural",
+      "source_anchor_ids": [
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.varro.de_lingua_latina",
+        "grammar.source.donatus.ars_minor",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.donatus.ars_minor"
+      ]
+    },
+    {
+      "id": "gender.masculine",
+      "source_anchor_ids": [
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.varro.de_lingua_latina",
+        "grammar.source.donatus.ars_minor",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.donatus.ars_minor"
+      ]
+    },
+    {
+      "id": "process.declension",
+      "source_anchor_ids": [
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.varro.de_lingua_latina",
+        "grammar.source.donatus.ars_minor",
+        "grammar.source.herodian.noun_inflection",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.kasikavrtti"
+      ]
+    }
+  ],
+  "missing_evidence": [
+    "reader_segment_links"
+  ]
+}

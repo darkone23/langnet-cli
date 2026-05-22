@@ -1,0 +1,125 @@
+{
+  "schema_version": "langnet.grammar_concepts.v1",
+  "input": {
+    "features": {
+      "case": "genitive",
+      "number": "plural",
+      "gender": "masculine"
+    },
+    "part_of_speech": "noun",
+    "paradigm_kind": "declension"
+  },
+  "concept_ids": [
+    "case.genitive",
+    "number.plural",
+    "gender.masculine",
+    "process.declension"
+  ],
+  "concepts": [
+    {
+      "id": "case.genitive",
+      "kind": "case",
+      "foster_gateway": "Possessing Function",
+      "traditional": {
+        "en": "genitive",
+        "grc": "γενική",
+        "lat": "genetivus",
+        "san": "ṣaṣṭhī vibhakti",
+        "san_role": "sambandha"
+      },
+      "source_anchor_ids": [
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.varro.de_lingua_latina",
+        "grammar.source.donatus.ars_minor",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.kasikavrtti",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.donatus.ars_minor"
+      ],
+      "skill_keys": [
+        "learn",
+        "read",
+        "understand",
+        "write"
+      ]
+    },
+    {
+      "id": "number.plural",
+      "kind": "number",
+      "foster_gateway": "Group",
+      "traditional": {
+        "en": "plural",
+        "grc": "πληθυντικός",
+        "lat": "pluralis",
+        "san": "bahuvacana"
+      },
+      "source_anchor_ids": [
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.varro.de_lingua_latina",
+        "grammar.source.donatus.ars_minor",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.donatus.ars_minor"
+      ],
+      "skill_keys": [
+        "learn",
+        "read",
+        "understand",
+        "write"
+      ]
+    },
+    {
+      "id": "gender.masculine",
+      "kind": "gender",
+      "foster_gateway": "Male",
+      "traditional": {
+        "en": "masculine",
+        "grc": "ἀρσενικόν",
+        "lat": "masculinum",
+        "san": "puṃliṅga"
+      },
+      "source_anchor_ids": [
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.varro.de_lingua_latina",
+        "grammar.source.donatus.ars_minor",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.donatus.ars_minor"
+      ],
+      "skill_keys": [
+        "learn",
+        "read",
+        "understand",
+        "write"
+      ]
+    },
+    {
+      "id": "process.declension",
+      "kind": "process",
+      "foster_gateway": "Form changes for noun jobs",
+      "traditional": {
+        "en": "declension",
+        "grc": "κλίσις",
+        "lat": "declinatio",
+        "san": "śabdarūpa / vibhakti",
+        "san_process": "subanta formation"
+      },
+      "source_anchor_ids": [
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.varro.de_lingua_latina",
+        "grammar.source.donatus.ars_minor",
+        "grammar.source.herodian.noun_inflection",
+        "grammar.source.panini.astadhyayi",
+        "grammar.source.kasikavrtti"
+      ],
+      "skill_keys": [
+        "learn",
+        "read",
+        "understand",
+        "write"
+      ]
+    }
+  ]
+}

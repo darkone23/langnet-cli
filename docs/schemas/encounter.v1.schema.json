@@ -63,7 +63,8 @@
         "include_cltk",
         "translation_mode",
         "translation_cache_writes",
-        "include_paradigm_resolution"
+        "include_paradigm_resolution",
+        "include_learning"
       ],
       "properties": {
         "command": { "type": "string" },
@@ -77,7 +78,8 @@
         "include_cltk": { "type": "boolean" },
         "translation_mode": { "type": "string" },
         "translation_cache_writes": { "type": "boolean" },
-        "include_paradigm_resolution": { "type": "boolean" }
+        "include_paradigm_resolution": { "type": "boolean" },
+        "include_learning": { "type": "boolean" }
       },
       "additionalProperties": true
     },
@@ -96,10 +98,95 @@
         "searched_form": { "type": "string" },
         "normalized_form": { "type": "string" },
         "language": { "enum": ["lat", "grc", "san"] },
-        "candidates": { "type": "array", "items": { "type": "object" } },
+        "candidates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/paradigmResolutionCandidate" }
+        },
         "warnings": { "type": "array", "items": { "type": "string" } }
       },
       "additionalProperties": true
+    },
+    "paradigmResolutionCandidate": {
+      "type": "object",
+      "properties": {
+        "concept_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "learning_overlay": { "$ref": "#/$defs/learningOverlay" }
+      },
+      "additionalProperties": true
+    },
+    "learningOverlay": {
+      "type": "object",
+      "required": ["schema_version", "status", "concept_ids", "concepts", "missing_evidence"],
+      "properties": {
+        "schema_version": { "const": "langnet.learning_overlay.v1" },
+        "status": { "enum": ["mapped", "unmapped"] },
+        "concept_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "concepts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/learningConcept" }
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "sourceEvidence": {
+      "type": "object",
+      "required": [
+        "evidence_level",
+        "source_anchor_id",
+        "work_id",
+        "canonical_text_id",
+        "cts_work_urn",
+        "citation_path",
+        "canonical_address",
+        "label"
+      ],
+      "properties": {
+        "evidence_level": { "enum": ["reader_work", "reader_segment"] },
+        "source_anchor_id": { "type": "string" },
+        "work_id": { "type": "string" },
+        "canonical_text_id": { "type": "string" },
+        "cts_work_urn": { "type": ["string", "null"] },
+        "citation_path": { "type": ["string", "null"] },
+        "canonical_address": { "type": ["string", "null"] },
+        "label": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "learningConcept": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "foster_gateway",
+        "plain_english",
+        "traditional",
+        "source_evidence"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "foster_gateway": { "type": "string" },
+        "plain_english": { "type": "string" },
+        "traditional": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "source_evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceEvidence" }
+        }
+      },
+      "additionalProperties": false
     },
     "display": {
       "type": "object",

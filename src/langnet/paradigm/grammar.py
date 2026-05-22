@@ -72,6 +72,7 @@ class ParadigmResolutionCandidate:
     foster_display: str = ""
     display_summary: str | None = None
     ranking_reasons: list[str] = field(default_factory=list)
+    concept_ids: list[str] = field(default_factory=list)
     native_analyses: list[NativeAnalysis] = field(default_factory=list)
     functional_analyses: list[FunctionalAnalysis] = field(default_factory=list)
     paradigm_request: ParadigmRequest | None = None

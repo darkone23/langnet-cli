@@ -24,6 +24,7 @@ from langnet.cli import (
     _encounter_compact_gloss,
     _encounter_component_candidates,
     _encounter_foster_display,
+    _encounter_learning_candidate_overlay,
     _encounter_lemma_compare_keys,
     _encounter_morphology_fallback_terms,
     _encounter_morphology_rows,
@@ -59,6 +60,26 @@ WORD_INDEX_FIXTURE_WINDOW_SIZE = 3
 LATIN_PUELLAE_ANALYSIS_COUNT = 3
 READER_SEARCH_INLINE_LIMIT = 3
 READER_SEARCH_CANDIDATE_COUNT = 2
+
+
+def _learning_overlay_golden_projection(overlay: dict[str, object]) -> dict[str, object]:
+    concepts = cast(list[dict[str, object]], overlay["concepts"])
+    return {
+        "schema_version": overlay["schema_version"],
+        "status": overlay["status"],
+        "concept_ids": overlay["concept_ids"],
+        "concepts": [
+            {
+                "id": concept["id"],
+                "source_anchor_ids": [
+                    evidence["source_anchor_id"]
+                    for evidence in cast(list[dict[str, object]], concept["source_evidence"])
+                ],
+            }
+            for concept in concepts
+        ],
+        "missing_evidence": overlay["missing_evidence"],
+    }
 
 
 def _claim_with_triples(
@@ -496,6 +517,7 @@ def test_encounter_json_includes_paradigm_resolution_when_requested() -> None:
                 "putraa.naam",
                 "heritage",
                 "--include-paradigm-resolution",
+                "--include-learning",
                 "--output",
                 "json",
                 "--translation-mode",
@@ -507,8 +529,17 @@ def test_encounter_json_includes_paradigm_resolution_when_requested() -> None:
     payload = json.loads(cli_result.output)
     _assert_matches_schema(payload, ENCOUNTER_SCHEMA_PATH)
     assert payload["request"]["include_paradigm_resolution"] is True
+    assert payload["request"]["include_learning"] is True
     assert payload["paradigm_resolution"]["schema_version"] == "langnet.paradigm_resolution.v1"
     candidate = payload["paradigm_resolution"]["candidates"][0]
+    overlay = candidate["learning_overlay"]
+    assert overlay["schema_version"] == "langnet.learning_overlay.v1"
+    assert overlay["concept_ids"] == [
+        "case.genitive",
+        "number.plural",
+        "gender.masculine",
+        "process.declension",
+    ]
     assert candidate["paradigm_request"]["source"] == "heritage:sktdeclin"
     actions = payload["actions"]
     display_actions = payload["display"]["actions"]
@@ -535,6 +566,99 @@ def test_encounter_json_includes_paradigm_resolution_when_requested() -> None:
             "json",
         ],
     }
+
+
+def test_encounter_learning_overlay_projects_concepts_from_candidate() -> None:
+    candidate = {
+        "lemma": "putra",
+        "entry_type": "root",
+        "part_of_speech": "noun",
+        "paradigm_kind": "declension",
+        "observed_form": "putrāṇām",
+        "slot_features": {
+            "case": "genitive",
+            "number": "plural",
+            "gender": "masculine",
+        },
+        "foster_display": "Possessing Function; Group; Male",
+        "display_summary": "putrāṇām: Possessing Function; Group; Male",
+        "ranking_reasons": ["observed-form", "lemma", "case-number-gender"],
+        "concept_ids": [
+            "case.genitive",
+            "number.plural",
+            "gender.masculine",
+            "process.declension",
+        ],
+        "native_analyses": [],
+        "functional_analyses": [],
+        "paradigm_request": None,
+        "confidence": "high",
+        "provenance": ["heritage"],
+        "unresolved_reason": None,
+    }
+
+    overlay = _encounter_learning_candidate_overlay(candidate)
+
+    assert overlay["schema_version"] == "langnet.learning_overlay.v1"
+    assert overlay["status"] == "mapped"
+    assert overlay["concept_ids"] == [
+        "case.genitive",
+        "number.plural",
+        "gender.masculine",
+        "process.declension",
+    ]
+    concepts = cast(list[dict[str, object]], overlay["concepts"])
+    concept = concepts[0]
+    assert concept["id"] == "case.genitive"
+    traditional = cast(dict[str, str], concept["traditional"])
+    assert traditional["san_role"] == "sambandha"
+    assert "source_basis" not in concept
+    assert "evidence" not in concept
+    source_evidence = cast(list[dict[str, object]], concept["source_evidence"])
+    assert source_evidence[0]["evidence_level"] == "reader_work"
+    assert {evidence["source_anchor_id"] for evidence in source_evidence} >= {
+        "grammar.source.dionysius_thrax.ars_grammatica",
+        "grammar.source.varro.de_lingua_latina",
+        "grammar.source.panini.astadhyayi",
+    }
+    assert overlay["missing_evidence"] == ["reader_segment_links"]
+
+
+def test_encounter_learning_overlay_matches_golden_fixture() -> None:
+    candidate = {
+        "lemma": "putra",
+        "entry_type": "root",
+        "part_of_speech": "noun",
+        "paradigm_kind": "declension",
+        "observed_form": "putrāṇām",
+        "slot_features": {
+            "case": "genitive",
+            "number": "plural",
+            "gender": "masculine",
+        },
+        "foster_display": "Possessing Function; Group; Male",
+        "display_summary": "putrāṇām: Possessing Function; Group; Male",
+        "ranking_reasons": ["observed-form", "lemma", "case-number-gender"],
+        "concept_ids": [
+            "case.genitive",
+            "number.plural",
+            "gender.masculine",
+            "process.declension",
+        ],
+        "native_analyses": [],
+        "functional_analyses": [],
+        "paradigm_request": None,
+        "confidence": "high",
+        "provenance": ["heritage"],
+        "unresolved_reason": None,
+    }
+    fixture_path = Path("tests/fixtures/learning/encounter_learning_overlay_putranam.json")
+
+    overlay = _encounter_learning_candidate_overlay(candidate)
+
+    assert _learning_overlay_golden_projection(overlay) == json.loads(
+        fixture_path.read_text(encoding="utf-8")
+    )
 
 
 def test_encounter_json_includes_reader_search_actions_when_requested() -> None:
@@ -2049,6 +2173,7 @@ def test_encounter_json_includes_public_contract_display_views() -> None:
         "translation_mode": "off",
         "translation_cache_writes": False,
         "include_paradigm_resolution": False,
+        "include_learning": False,
     }
     assert payload["display"]["header"] == {"forms": ["arma"], "source_keys": []}
     assert payload["display"]["analysis"] == [

@@ -39,6 +39,7 @@
         "foster_display",
         "display_summary",
         "ranking_reasons",
+        "concept_ids",
         "native_analyses",
         "functional_analyses",
         "paradigm_request",
@@ -64,6 +65,11 @@
           "type": "array",
           "items": { "type": "string" }
         },
+        "concept_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "learning_overlay": { "$ref": "#/$defs/learningOverlay" },
         "native_analyses": {
           "type": "array",
           "items": { "$ref": "#/$defs/nativeAnalysis" }
@@ -85,6 +91,77 @@
         },
         "unresolved_reason": {
           "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "learningOverlay": {
+      "type": "object",
+      "required": ["schema_version", "status", "concept_ids", "concepts", "missing_evidence"],
+      "properties": {
+        "schema_version": { "const": "langnet.learning_overlay.v1" },
+        "status": { "enum": ["mapped", "unmapped"] },
+        "concept_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "concepts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/learningConcept" }
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "sourceEvidence": {
+      "type": "object",
+      "required": [
+        "evidence_level",
+        "source_anchor_id",
+        "work_id",
+        "canonical_text_id",
+        "cts_work_urn",
+        "citation_path",
+        "canonical_address",
+        "label"
+      ],
+      "properties": {
+        "evidence_level": { "enum": ["reader_work", "reader_segment"] },
+        "source_anchor_id": { "type": "string" },
+        "work_id": { "type": "string" },
+        "canonical_text_id": { "type": "string" },
+        "cts_work_urn": { "type": ["string", "null"] },
+        "citation_path": { "type": ["string", "null"] },
+        "canonical_address": { "type": ["string", "null"] },
+        "label": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "learningConcept": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "foster_gateway",
+        "plain_english",
+        "traditional",
+        "source_evidence"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "foster_gateway": { "type": "string" },
+        "plain_english": { "type": "string" },
+        "traditional": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "source_evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceEvidence" }
         }
       },
       "additionalProperties": false

@@ -28,6 +28,8 @@ in
     pkgs.fzf
     pkgs.jq # for the chatbots
 
+    pkgs.poppler-utils
+
     # useful language servers
     pkgs.python3Packages.python-lsp-server
     pkgs.python3Packages.jedi-language-server
