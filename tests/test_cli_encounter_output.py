@@ -255,6 +255,43 @@ def test_encounter_paradigm_resolution_uses_sanskrit_morphology_features() -> No
     assert functional_analyses[0]["relation"] == "possession_or_association"
 
 
+def test_encounter_paradigm_resolution_splits_legacy_heritage_analysis_variants() -> None:
+    claim = _claim_with_triples(
+        tool="heritage",
+        subject="lex:deva",
+        triples=[
+            {
+                "subject": "form:deva",
+                "predicate": "has_morphology",
+                "object": {
+                    "lemma": "deva",
+                    "form": "deva",
+                    "analysis": "m. sg. voc. | n. sg. voc.",
+                },
+                "metadata": {"evidence": {"source_tool": "heritage"}},
+            }
+        ],
+    )
+
+    payload = _encounter_paradigm_resolution_payload("san", "deva", [asdict(claim)])
+
+    _assert_matches_schema(payload, Path("docs/schemas/paradigm_resolution.v1.schema.json"))
+    candidates = cast(list[dict[str, object]], payload["candidates"])
+    visible = [candidate for candidate in candidates if candidate["paradigm_request"]]
+    assert [
+        cast(dict[str, object], candidate["slot_features"])["gender"] for candidate in visible
+    ] == ["masculine", "neuter"]
+    request_options = [
+        cast(dict[str, object], candidate["paradigm_request"])["options"] for candidate in visible
+    ]
+    assert request_options == [{"gender": "Mas"}, {"gender": "Neu"}]
+    assert {candidate["confidence"] for candidate in visible} == {"medium"}
+    assert all(
+        "ambiguous-analysis" in cast(list[str], candidate["ranking_reasons"])
+        for candidate in visible
+    )
+
+
 def test_encounter_paradigm_resolution_carries_candidate_learner_fields() -> None:
     claim = _claim_with_triples(
         tool="heritage",
@@ -613,8 +650,13 @@ def test_encounter_learning_overlay_projects_concepts_from_candidate() -> None:
     foster_bridges = cast(list[dict[str, object]], concept["foster_bridges"])
     assert foster_bridges[0]["id"] == "of-possession"
     assert foster_bridges[0]["concept_ids"] == ["case.genitive"]
+    assert str(foster_bridges[0]["learner_action"]).startswith("Ask what relation")
     traditional = cast(dict[str, str], concept["traditional"])
     assert traditional["san_role"] == "sambandha"
+    native_gateways = cast(list[dict[str, object]], concept["native_gateways"])
+    assert native_gateways[0]["language"] == "grc"
+    assert native_gateways[0]["term"] == "γενική"
+    assert native_gateways[2]["role"] == "sambandha"
     assert "source_basis" not in concept
     assert "evidence" not in concept
     source_evidence = cast(list[dict[str, object]], concept["source_evidence"])

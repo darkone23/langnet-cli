@@ -164,14 +164,20 @@ does not call this endpoint when a stored MOTD card is already present. That
 keeps tab restore and browser tab discard from turning an already-rendered page
 into a fresh recommendation request.
 
+The server also persists successful MOTD payloads in
+`data/cache/web-motd-cache.json`. Remove that file when you need to force a fully
+cold MOTD run after a process restart.
+
 Refresh path, intentionally LLM-backed:
 
 ```sh
 just motd-refresh
 ```
 
-The refresh path may be slow. The web endpoint allows up to 120 seconds by
-default. The broader API timeout cap is 300 seconds.
+The refresh path keeps the previous card visible while the CLI prepares a
+replacement. The web endpoint defaults to a 12-second word-of-day budget and
+skips the second LLM card-finalization call; the broader API timeout cap remains
+300 seconds.
 
 ## Resume And Font Stability
 

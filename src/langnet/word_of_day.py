@@ -5,6 +5,7 @@ import random
 import re
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -674,7 +675,6 @@ def generate_word_of_day_payload(  # noqa: PLR0913
     started = time.monotonic()
     generated_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     avoided = _normalize_avoid_keys((*options.avoid, *tuple(exclude_terms)))
-    rng = random.Random(_rng_seed(options)) if _rng_seed(options) is not None else random.Random()
     warnings: list[dict[str, str]] = []
     items: list[dict[str, Any]] = []
     freshness_repeats = 0
@@ -683,21 +683,31 @@ def generate_word_of_day_payload(  # noqa: PLR0913
         "languages": {},
     }
 
-    for language in languages:
+    def run_language(
+        language: str,
+    ) -> tuple[str, list[dict[str, Any]], list[dict[str, str]], dict[str, Any]]:
         language_diagnostics: dict[str, Any] = {}
+        language_warnings: list[dict[str, str]] = []
         language_items = _generate_language_items(
             language=language,
             options=options,
-            rng=rng,
+            rng=_language_rng(options, language, len(languages)),
             started=started,
             avoided=avoided,
             probe_encounter=probe_encounter,
             bucket_gloss=bucket_gloss,
             bucket_learner_gloss=bucket_learner_gloss,
             candidate_pools=candidate_pools,
-            warnings=warnings,
+            warnings=language_warnings,
             diagnostics=language_diagnostics,
         )
+        return language, language_items, language_warnings, language_diagnostics
+
+    with ThreadPoolExecutor(max_workers=min(len(languages), len(SUPPORTED_LANGUAGES))) as pool:
+        results = list(pool.map(run_language, languages))
+
+    for language, language_items, language_warnings, language_diagnostics in results:
+        warnings.extend(language_warnings)
         diagnostics["languages"][language] = language_diagnostics
         freshness_repeats += sum(
             1
@@ -744,6 +754,15 @@ def generate_word_of_day_payload(  # noqa: PLR0913
         },
         "diagnostics": diagnostics,
     }
+
+
+def _language_rng(options: WordOfDayOptions, language: str, language_count: int) -> random.Random:
+    seed = _rng_seed(options)
+    if seed is None:
+        return random.Random()
+    if language_count == 1:
+        return random.Random(seed)
+    return random.Random(f"{seed}:{language}")
 
 
 def _generate_language_items(  # noqa: C901, PLR0913

@@ -322,6 +322,26 @@ def test_cdsl_display_text_converts_source_tokens_without_rewriting_english() ->
     assert "PadmaP." in cdsl.cdsl_text_to_iast_display("MBh. ; PadmaP. ; NārP.")
 
 
+def test_cdsl_display_text_converts_hyphenated_slp1_source_forms() -> None:
+    text = "tiN—anta n. ‘ending with tiN ’, an inflected verbal base."
+
+    display = cdsl.cdsl_text_to_iast_display(
+        text,
+        source_slp1="tiNanta",
+        display_iast="tiṅanta",
+    )
+
+    assert display == "tiṅ—anta n. ‘ending with tiṅ ’, an inflected verbal base."
+    assert (
+        cdsl.cdsl_learner_gloss(
+            text,
+            source_slp1="tiNanta",
+            display_iast="tiṅanta",
+        )
+        == "‘ending with tiṅ ’, an inflected verbal base."
+    )
+
+
 def test_cdsl_display_text_handles_citation_heavy_gloss_conservatively() -> None:
     text = (
         "mokza moksha, liberation; release from worldly existence; "

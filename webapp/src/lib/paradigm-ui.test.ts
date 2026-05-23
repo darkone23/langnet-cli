@@ -3,6 +3,7 @@ import type { ParadigmPayload } from './paradigm';
 import type { ParadigmResolutionCandidate } from './paradigm-resolution';
 import {
 	curateParadigmCandidates,
+	learnerDisplayForm,
 	paradigmPayloadHasForms,
 	paradigmSlotMatchesCandidate,
 	paradigmSlotGroups,
@@ -30,6 +31,7 @@ function candidate(
 		display_summary: null,
 		ranking_reasons: [],
 		concept_ids: [],
+		learning_overlay: null,
 		...overrides
 	};
 }
@@ -90,6 +92,75 @@ const fosterCandidates = [
 ];
 
 assert.equal(curateParadigmCandidates(fosterCandidates).visible[0].lemma, 'putra');
+
+const sambuddhiCandidates = [
+	candidate('sambuddhan', {
+		confidence: 'high',
+		observed_form: 'sambuddhan',
+		slot_features: { case: 'accusative', number: 'singular', gender: 'neuter' },
+		paradigm_request: {
+			source: 'heritage:sktdeclin',
+			language: 'san',
+			lemma: 'sambuddhan',
+			kind: 'declension',
+			options: { gender: 'Neu' }
+		},
+		unresolved_reason: null
+	}),
+	candidate('sambuddhi', {
+		confidence: 'high',
+		observed_form: 'sambuddhi',
+		slot_features: { case: 'accusative', number: 'singular', gender: 'neuter' },
+		paradigm_request: {
+			source: 'heritage:sktdeclin',
+			language: 'san',
+			lemma: 'sambuddhi',
+			kind: 'declension',
+			options: { gender: 'Neu' }
+		},
+		unresolved_reason: null
+	})
+];
+
+assert.equal(
+	curateParadigmCandidates(sambuddhiCandidates, 'sambuddhi').visible[0].lemma,
+	'sambuddhi'
+);
+
+const gamCandidates = [
+	candidate('ga_2', {
+		confidence: 'medium',
+		observed_form: 'ga_2',
+		slot_features: { case: 'accusative', number: 'singular', gender: 'neuter' },
+		ranking_reasons: ['observed-form', 'ambiguous-analysis', 'case-number-gender'],
+		paradigm_request: {
+			source: 'heritage:sktdeclin',
+			language: 'san',
+			lemma: 'ga_2',
+			kind: 'declension',
+			options: { gender: 'Neu' }
+		},
+		unresolved_reason: null
+	}),
+	candidate('gan', {
+		confidence: 'high',
+		observed_form: 'gan',
+		slot_features: { case: 'accusative', number: 'singular', gender: 'masculine' },
+		ranking_reasons: ['observed-form', 'case-number-gender'],
+		paradigm_request: {
+			source: 'heritage:sktdeclin',
+			language: 'san',
+			lemma: 'gan',
+			kind: 'declension',
+			options: { gender: 'Mas' }
+		},
+		unresolved_reason: null
+	})
+];
+
+assert.equal(curateParadigmCandidates(gamCandidates, 'ga_2').visible[0].lemma, 'gan');
+assert.equal(learnerDisplayForm('ga_2'), 'ga');
+assert.equal(learnerDisplayForm('ga_2: accusative singular'), 'ga: accusative singular');
 
 const unresolvedOnly = curateParadigmCandidates([
 	candidate('unknown-a'),

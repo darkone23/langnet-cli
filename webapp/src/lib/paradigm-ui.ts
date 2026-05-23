@@ -20,9 +20,12 @@ export type ParadigmSlotGroup = {
 const maxResolvedCandidates = 3;
 
 export function curateParadigmCandidates(
-	candidates: ParadigmResolutionCandidate[]
+	candidates: ParadigmResolutionCandidate[],
+	query = ''
 ): CuratedParadigmCandidates {
-	const deduped = dedupeCandidates(candidates).sort(compareCandidates);
+	const deduped = dedupeCandidates(candidates).sort((left, right) =>
+		compareCandidates(left, right, query)
+	);
 	const resolved = deduped.filter((candidate) => isResolvedCandidate(candidate));
 
 	if (resolved.length) {
@@ -103,6 +106,10 @@ export function sanskritParadigmLemmaFallbacks(lemma: string) {
 	return unique([lemma, asciiSanskritLemma(lemma)]).filter(Boolean);
 }
 
+export function learnerDisplayForm(value: string | null | undefined) {
+	return (value ?? '').replace(/_\d+\b/gu, '');
+}
+
 function dedupeCandidates(candidates: ParadigmResolutionCandidate[]) {
 	const seen = new Set<string>();
 	const deduped: ParadigmResolutionCandidate[] = [];
@@ -125,12 +132,18 @@ function dedupeCandidates(candidates: ParadigmResolutionCandidate[]) {
 	return deduped;
 }
 
-function compareCandidates(left: ParadigmResolutionCandidate, right: ParadigmResolutionCandidate) {
+function compareCandidates(
+	left: ParadigmResolutionCandidate,
+	right: ParadigmResolutionCandidate,
+	query: string
+) {
 	return (
 		Number(isResolvedCandidate(right)) - Number(isResolvedCandidate(left)) ||
 		determinedRank(right) - determinedRank(left) ||
-		Number(Boolean(right.observed_form)) - Number(Boolean(left.observed_form)) ||
 		confidenceRank(right.confidence) - confidenceRank(left.confidence) ||
+		Number(!isAmbiguousCandidate(right)) - Number(!isAmbiguousCandidate(left)) ||
+		exactObservedRank(right, query) - exactObservedRank(left, query) ||
+		Number(Boolean(right.observed_form)) - Number(Boolean(left.observed_form)) ||
 		right.native_analyses.length - left.native_analyses.length ||
 		left.lemma.localeCompare(right.lemma)
 	);
@@ -147,6 +160,10 @@ function confidenceRank(value: string) {
 	return 0;
 }
 
+function exactObservedRank(candidate: ParadigmResolutionCandidate, query: string) {
+	return query && candidate.observed_form === query ? 1 : 0;
+}
+
 function determinedRank(candidate: ParadigmResolutionCandidate) {
 	const reasons = new Set(candidate.ranking_reasons);
 	if (reasons.has('case-number-gender') || reasons.has('person-number-tense-voice-mood')) {
@@ -154,6 +171,10 @@ function determinedRank(candidate: ParadigmResolutionCandidate) {
 	}
 	if (Object.keys(candidate.slot_features ?? {}).length > 0) return 1;
 	return 0;
+}
+
+function isAmbiguousCandidate(candidate: ParadigmResolutionCandidate) {
+	return candidate.ranking_reasons.includes('ambiguous-analysis');
 }
 
 function paradigmSlotGroupLabel(block: ParadigmBlock, features: Record<string, unknown>) {

@@ -181,6 +181,7 @@ from langnet.word_index import (
     word_index_wheel_payload,
 )
 from langnet.word_of_day import (
+    _CANDIDATE_POOLS,
     WordCandidate,
     WordOfDayOptions,
     generate_word_of_day_payload,
@@ -221,7 +222,7 @@ LEARNING_OVERLAY_SCHEMA_VERSION = "langnet.learning_overlay.v1"
 DEFAULT_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND = 8.0
 DEFAULT_TRANSLATION_MIN_RATE_TOKENS = 24
 DEFAULT_TRANSLATION_MIN_RATE_SECONDS = 5.0
-DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-2.5-flash"
+DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-2.5-flash-lite"
 WORD_INDEX_CONTEXT_RADIUS = 1
 GRAMMAR_CONCEPTS_SCHEMA_VERSION = "langnet.grammar_concepts.v1"
 GRAMMAR_EVIDENCE_REPORT_SCHEMA_VERSION = "langnet.grammar_evidence_report.v1"
@@ -1608,6 +1609,7 @@ def _grammar_concept_payload(concept: GrammarConcept) -> dict[str, object]:
         for bridge in bridge_payloads
         if concept.id in cast(list[str], bridge["related_concept_ids"])
     ]
+    payload["native_gateways"] = _grammar_concept_native_gateways(concept)
     return payload
 
 
@@ -1622,6 +1624,7 @@ def _grammar_concept_compact_payload(concept: GrammarConcept) -> dict[str, objec
         "foster_gateway": concept.foster_gateway,
         "plain_english": concept.plain_english,
         "traditional": dict(concept.traditional),
+        "native_gateways": _grammar_concept_native_gateways(concept),
         "source_evidence_counts": _grammar_concept_source_evidence_counts(concept),
         "foster_bridge_ids": [
             str(bridge["id"])
@@ -1655,8 +1658,55 @@ def _compact_bridge_from_learning_payload(bridge: Mapping[str, object]) -> dict[
         "concept_ids": bridge.get("concept_ids") or [],
         "related_concept_ids": bridge.get("related_concept_ids") or [],
         "plain_english": bridge.get("plain_english") or "",
+        "learner_action": bridge.get("learner_action") or "",
+        "morphology_predicates": bridge.get("morphology_predicates") or [],
         "source_refs": bridge.get("source_refs") or [],
+        "summary_refs": bridge.get("summary_refs") or [],
     }
+
+
+def _grammar_concept_native_gateways(concept: GrammarConcept) -> list[dict[str, object]]:
+    gateways: list[dict[str, object]] = []
+    for language, label in (("grc", "Greek"), ("lat", "Latin"), ("san", "Sanskrit")):
+        term = concept.traditional.get(language)
+        if not term:
+            continue
+        role = _native_gateway_role(concept.traditional, language)
+        gateways.append(
+            {
+                "language": language,
+                "label": label,
+                "term": term,
+                "role": role,
+                "foster_gateway": concept.foster_gateway,
+                "explanation": _native_gateway_explanation(
+                    label=label,
+                    term=term,
+                    role=role,
+                    foster_gateway=concept.foster_gateway,
+                ),
+            }
+        )
+    return gateways
+
+
+def _native_gateway_role(traditional: Mapping[str, str], language: str) -> str:
+    if language == "san":
+        return traditional.get("san_role") or traditional.get("san_process") or ""
+    return ""
+
+
+def _native_gateway_explanation(
+    *,
+    label: str,
+    term: str,
+    role: str,
+    foster_gateway: str,
+) -> str:
+    role_text = f" ({role})" if role else ""
+    return (
+        f"{label} gateway: {term}{role_text}; LangNet uses {foster_gateway} as the learner gateway."
+    )
 
 
 def _foster_bridge_list_payload(
@@ -1759,6 +1809,7 @@ def _grammar_concept_learning_payload(concept: GrammarConcept) -> dict[str, obje
         "foster_gateway": concept.foster_gateway,
         "plain_english": concept.plain_english,
         "traditional": dict(concept.traditional),
+        "native_gateways": _grammar_concept_native_gateways(concept),
         "source_evidence": [asdict(evidence) for evidence in concept.evidence],
         "foster_bridges": [
             foster_bridge_learning_payload(bridge)
@@ -2105,8 +2156,7 @@ def _try_emit_learn_doctor_payload(payload: Mapping[str, object]) -> bool:
             if isinstance(check, Mapping):
                 check_map = cast(Mapping[str, object], check)
                 click.echo(
-                    f"- {check_map.get('status')} "
-                    f"{check_map.get('id')}: {check_map.get('message')}"
+                    f"- {check_map.get('status')} {check_map.get('id')}: {check_map.get('message')}"
                 )
     return True
 
@@ -5202,6 +5252,8 @@ def _word_of_day_user_prompt(prompt: Mapping[str, object]) -> str:
         "The mnemonic must be a brief scholarly memory note grounded in morphology, "
         "semantic range, etymology, or textual context. If no such note is safe, keep it "
         "plain and descriptive. "
+        "Use curated_seed_candidates as calibration examples for source-verifiable learner "
+        "words; do not treat them as the only allowed answers. "
         f"Request: {orjson.dumps(dict(prompt)).decode('utf-8')}"
     )
 
@@ -5351,6 +5403,11 @@ def _word_of_day_synthesize_candidates_direct(  # noqa: PLR0913
         "avoid": list(avoid_terms),
         "nonce": nonce or "",
         "rotation_key": rotation_key or "",
+        "curated_seed_candidates": _word_of_day_curated_prompt_seeds(
+            languages,
+            level=level,
+            per_language=min(per_language, 8),
+        ),
     }
     request_kwargs: dict[str, object] = {}
     if timeout_seconds is not None:
@@ -5365,6 +5422,38 @@ def _word_of_day_synthesize_candidates_direct(  # noqa: PLR0913
     )
     content = response.choices[0].message.content or ""
     return _word_of_day_parse_synthesized_candidates(content, languages=languages)
+
+
+def _word_of_day_curated_prompt_seeds(
+    languages: Sequence[str],
+    *,
+    level: str,
+    per_language: int,
+) -> dict[str, list[dict[str, str]]]:
+    seeds: dict[str, list[dict[str, str]]] = {}
+    for language in languages:
+        candidates = [
+            candidate
+            for candidate in _CANDIDATE_POOLS.get(language, ())
+            if _word_of_day_seed_matches_level(candidate, level)
+        ][:per_language]
+        seeds[language] = [
+            {
+                "query": candidate.query,
+                "difficulty": candidate.difficulty,
+                "summary_hint": candidate.summary_hint,
+            }
+            for candidate in candidates
+        ]
+    return seeds
+
+
+def _word_of_day_seed_matches_level(candidate: WordCandidate, level: str) -> bool:
+    if level == "deep":
+        return True
+    if level == "intermediate":
+        return candidate.difficulty in {"beginner", "intermediate"}
+    return candidate.difficulty == "beginner"
 
 
 def _word_of_day_finalize_payload_with_llm(
@@ -5589,9 +5678,10 @@ def _word_of_day_parse_synthesized_candidates(
         difficulty = str(item.get("difficulty") or "beginner").strip().lower()
         if difficulty not in {"beginner", "intermediate", "deep"}:
             difficulty = "beginner"
-        mnemonic = str(item.get("mnemonic") or "").strip()
+        raw_mnemonic = str(item.get("mnemonic") or "").strip()
+        mnemonic = ""
         summary = str(item.get("summary") or "").strip()
-        if _word_of_day_has_unsuitable_learner_text(summary, mnemonic):
+        if _word_of_day_has_unsuitable_learner_text(summary, raw_mnemonic):
             continue
         pools[language].append(WordCandidate(language, query, difficulty, mnemonic, summary))
     return {language: candidates for language, candidates in pools.items() if candidates}
@@ -5702,6 +5792,7 @@ def _word_of_day_probe_reduction(  # noqa: PLR0913
     translation_cache_db: str,
     translation_model: str,
 ):
+    dictionary = _word_of_day_probe_dictionary(dictionary, language)
     result = _execute_lookup_plan(
         language=language,
         text=text,
@@ -5763,6 +5854,18 @@ def _word_of_day_probe_reduction(  # noqa: PLR0913
     return reduction
 
 
+def _word_of_day_probe_dictionary(dictionary: str, language: str) -> str:
+    if dictionary != "motd-fast":
+        return dictionary
+    if language == "san":
+        return "cdsl"
+    if language == "grc":
+        return "diogenes"
+    if language == "lat":
+        return "whitakers"
+    return "all"
+
+
 def _emit_word_recommendations(  # noqa: PLR0913
     *,
     language: str,
@@ -5780,6 +5883,7 @@ def _emit_word_recommendations(  # noqa: PLR0913
     rotation_key: str | None,
     candidate_source: str,
     recommendation_model: str,
+    finalize_cards: bool,
     include_ambiguous: bool,
     require_clean_primary: bool,
     timeout_ms: int,
@@ -5829,7 +5933,7 @@ def _emit_word_recommendations(  # noqa: PLR0913
     options = WordOfDayOptions(
         count=count,
         level=level,
-        dictionary=dictionary,
+        dictionary="all" if dictionary == "motd-fast" else dictionary,
         reader_lang=reader_lang,
         translation_mode=translation_mode,
         max_source_chars=max_source_chars,
@@ -5875,7 +5979,7 @@ def _emit_word_recommendations(  # noqa: PLR0913
     )
     if synthesis_warnings:
         payload["warnings"] = [*synthesis_warnings, *payload["warnings"]]
-    if candidate_pools is not None and payload.get("items"):
+    if finalize_cards and candidate_pools is not None and payload.get("items"):
         try:
             payload = _word_of_day_finalize_payload_with_llm(
                 payload,
@@ -5979,6 +6083,12 @@ def _print_word_recommendations(payload: Mapping[str, object]) -> None:
     show_default=True,
     help="Model id used for LLM candidate synthesis.",
 )
+@click.option(
+    "--finalize-cards/--no-finalize-cards",
+    default=True,
+    show_default=True,
+    help="Use a second LLM call to polish verified learner cards.",
+)
 @click.option("--include-ambiguous", is_flag=True, help="Allow multiple-lexeme candidates.")
 @click.option(
     "--require-clean-primary/--allow-fallback-ambiguous",
@@ -6030,6 +6140,7 @@ def word_of_day(  # noqa: PLR0913
     rotation_key: str | None,
     candidate_source: str,
     recommendation_model: str,
+    finalize_cards: bool,
     include_ambiguous: bool,
     require_clean_primary: bool,
     timeout_ms: int,
@@ -6061,6 +6172,7 @@ def word_of_day(  # noqa: PLR0913
         rotation_key=rotation_key,
         candidate_source=candidate_source,
         recommendation_model=recommendation_model,
+        finalize_cards=finalize_cards,
         include_ambiguous=include_ambiguous,
         require_clean_primary=require_clean_primary,
         timeout_ms=timeout_ms,
@@ -7832,18 +7944,19 @@ def _direct_paradigm_records(
         if not isinstance(obj, Mapping):
             continue
         obj_map = cast(Mapping[str, object], obj)
-        features = _paradigm_features_from_morphology_object(obj_map)
         lemma = str(obj_map.get("lemma") or "").removeprefix("lex:")
         form = str(obj_map.get("form") or triple.get("subject") or text).removeprefix("form:")
-        record = _paradigm_record_from_features(
-            language=language,
-            normalized_form=form or text,
-            lemma=lemma or form or text,
-            features=features,
-            source=_paradigm_source_label(_encounter_triple_source_tool(triple, claim_tool)),
-        )
-        _copy_paradigm_string_fields(record, obj_map)
-        records.append(record)
+        for features in _paradigm_feature_variants_from_morphology_object(obj_map):
+            record = _paradigm_record_from_features(
+                language=language,
+                normalized_form=form or text,
+                lemma=lemma or form or text,
+                features=features,
+                source=_paradigm_source_label(_encounter_triple_source_tool(triple, claim_tool)),
+            )
+            _copy_paradigm_string_fields(record, obj_map)
+            record["observed_form"] = form or text
+            records.append(record)
     return records
 
 
@@ -7930,7 +8043,21 @@ def _graph_paradigm_records(  # noqa: C901
     return records
 
 
-def _paradigm_features_from_morphology_object(obj: Mapping[str, object]) -> dict[str, object]:
+def _paradigm_feature_variants_from_morphology_object(
+    obj: Mapping[str, object],
+) -> list[dict[str, object]]:
+    base_features = _paradigm_features_from_morphology_object(obj, include_analysis=False)
+    analysis = obj.get("analysis")
+    analysis_text = analysis if isinstance(analysis, str) else ""
+    variants = _paradigm_features_from_analysis_variants(analysis_text)
+    if not variants:
+        return [_paradigm_features_from_morphology_object(obj)]
+    return [{**base_features, **variant} for variant in variants]
+
+
+def _paradigm_features_from_morphology_object(
+    obj: Mapping[str, object], *, include_analysis: bool = True
+) -> dict[str, object]:
     features: dict[str, object] = {}
     raw_features = obj.get("features")
     if isinstance(raw_features, Mapping):
@@ -7938,7 +8065,7 @@ def _paradigm_features_from_morphology_object(obj: Mapping[str, object]) -> dict
             {
                 str(key): value
                 for key, value in raw_features.items()
-                if isinstance(key, str) and _is_paradigm_feature_value(value)
+                if isinstance(key, str) and value is not None and _is_paradigm_feature_value(value)
             }
         )
     for key in (*_PARADIGM_ANALYSIS_FEATURES, "pos", "part_of_speech", "present_class"):
@@ -7946,11 +8073,27 @@ def _paradigm_features_from_morphology_object(obj: Mapping[str, object]) -> dict
         if value is not None and _is_paradigm_feature_value(value):
             features.setdefault(key, value)
     analysis = obj.get("analysis")
-    if isinstance(analysis, str):
+    if include_analysis and isinstance(analysis, str):
         for key, value in _paradigm_features_from_analysis_text(analysis).items():
             if features.get(key) is None:
                 features[key] = value
     return features
+
+
+def _paradigm_features_from_analysis_variants(analysis: str) -> list[dict[str, object]]:
+    if "|" not in analysis:
+        return []
+    seen: set[str] = set()
+    variants: list[dict[str, object]] = []
+    for part in analysis.split("|"):
+        variant_text = part.strip()
+        if not variant_text or variant_text in seen:
+            continue
+        seen.add(variant_text)
+        features = _paradigm_features_from_analysis_text(variant_text)
+        if features:
+            variants.append(features)
+    return variants
 
 
 def _paradigm_features_from_analysis_text(analysis: str) -> dict[str, object]:  # noqa: C901, PLR0912

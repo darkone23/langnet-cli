@@ -177,6 +177,27 @@ _DONATUS_CASE_LIST_SEGMENT = GrammarConceptEvidence(
         "datiuus, accusatiuus, uocatiuus, ablatiuus"
     ),
 )
+_DONATUS_PARTICIPLE_DEFINITION_SEGMENT = GrammarConceptEvidence(
+    evidence_level="reader_segment",
+    source_anchor_id="grammar.source.donatus.ars_minor",
+    work_id="langnet:reader:digiliblt:dlt000157",
+    canonical_text_id="urn:ctsv2:lat:ars-minor-de-partibus-orationis",
+    citation_path="73",
+    canonical_address="urn:ctsv2:lat:ars-minor-de-partibus-orationis?ref=73",
+    label=("Aelius Donatus, Ars minor: participium ... partem capiens nominis, partem uerbi"),
+)
+_DONATUS_PARTICIPLE_ACCIDENTS_SEGMENT = GrammarConceptEvidence(
+    evidence_level="reader_segment",
+    source_anchor_id="grammar.source.donatus.ars_minor",
+    work_id="langnet:reader:digiliblt:dlt000157",
+    canonical_text_id="urn:ctsv2:lat:ars-minor-de-partibus-orationis",
+    citation_path="74",
+    canonical_address="urn:ctsv2:lat:ars-minor-de-partibus-orationis?ref=74",
+    label=(
+        "Aelius Donatus, Ars minor: participio sex accidunt, genera, casus, "
+        "tempora, significationes, numerus, figura"
+    ),
+)
 _DOSITHEUS_PRESENT_SEGMENT = GrammarConceptEvidence(
     evidence_level="reader_segment",
     source_anchor_id="grammar.source.dositheus.ars_grammatica",
@@ -346,6 +367,16 @@ _DIONYSIUS_CONJUGATION_SEGMENT = GrammarConceptEvidence(
     canonical_address="urn:ctsv2:grc:ars-grammatica-peri-grammatike-s?ref=1.1.53.6",
     label="Dionysius Thrax, Ars grammatica: Συζυγία ἐςτὶν ἀκόλουθος ῥημάτων κλίςις",
 )
+_DIONYSIUS_PARTICIPLE_SEGMENT = GrammarConceptEvidence(
+    evidence_level="reader_segment",
+    source_anchor_id="grammar.source.dionysius_thrax.ars_grammatica",
+    work_id="langnet:reader:tlg:tlg0063.001",
+    cts_work_urn="urn:cts:greekLit:tlg0063.tlg001",
+    canonical_text_id="urn:ctsv2:grc:ars-grammatica-peri-grammatike-s",
+    citation_path="1.1.23.1",
+    canonical_address="urn:ctsv2:grc:ars-grammatica-peri-grammatike-s?ref=1.1.23.1",
+    label="Dionysius Thrax, Ars grammatica: ὄνομα, ῥῆμα, μετοχή",
+)
 _APOLLONIUS_SYNTAX = GrammarConceptEvidence(
     evidence_level="reader_work",
     source_anchor_id="grammar.source.apollonius_dyscolus.syntax",
@@ -497,6 +528,15 @@ _PANINI_PASSIVE_SEGMENT = GrammarConceptEvidence(
     citation_path="551412",
     canonical_address="urn:ctsv2:san:astadhyayi-vrddhir-adaic?ref=551412",
     label="Pāṇini, Aṣṭādhyāyī: ciṇ bhāvakarmaṇoḥ",
+)
+_PANINI_KRT_SEGMENT = GrammarConceptEvidence(
+    evidence_level="reader_segment",
+    source_anchor_id="grammar.source.panini.astadhyayi",
+    work_id="langnet:reader:sanskrit_dcs:dcs_413",
+    canonical_text_id="urn:ctsv2:san:astadhyayi-vrddhir-adaic",
+    citation_path="551927",
+    canonical_address="urn:ctsv2:san:astadhyayi-vrddhir-adaic?ref=551927",
+    label="Pāṇini, Aṣṭādhyāyī: kartari kṛt",
 )
 _KASIKAVRTTI = GrammarConceptEvidence(
     evidence_level="reader_work",
@@ -658,6 +698,16 @@ _CONJUGATION_EVIDENCE = [
     _PRISCIAN_INSTITUTIONES,
     _PRISCIAN_CONJUGATION_SEGMENT,
 ]
+_PARTICIPLE_EVIDENCE = [
+    _DIONYSIUS_ARS_GRAMMATICA,
+    _DIONYSIUS_PARTICIPLE_SEGMENT,
+    _DONATUS_ARS_MINOR,
+    _DONATUS_PARTICIPLE_DEFINITION_SEGMENT,
+    _DONATUS_PARTICIPLE_ACCIDENTS_SEGMENT,
+    _PANINI_ASTADHYAYI,
+    _PANINI_KRT_SEGMENT,
+    _KASIKAVRTTI,
+]
 _GUNA_EVIDENCE = [
     _PANINI_ASTADHYAYI,
     _PANINI_GUNA_SEGMENT,
@@ -739,6 +789,12 @@ _PERSON_FIRST_SKILLS = {
     "understand": "Connect first person to who is speaking.",
     "learn": "Map Speaker to first-person terminology.",
     "write": "Choose first-person forms in controlled prompts.",
+}
+_PARTICIPLE_SKILLS = {
+    "read": "Recognize an action carried by a noun-like or adjective-like form.",
+    "understand": "Connect the form to both its verbal action and its noun-form job.",
+    "learn": "Map Action As Noun Form to participle, μετοχή, participium, and kṛdanta terms.",
+    "write": "Choose participial forms only after identifying both action meaning and agreement.",
 }
 
 _CONCEPTS = [
@@ -1176,6 +1232,33 @@ _CONCEPTS = [
             "learn": "Map Foster verb labels to traditional conjugation.",
             "write": "Choose verb endings in controlled prompts.",
         },
+    ),
+    GrammarConcept(
+        id="process.participle",
+        kind="process",
+        foster_gateway="Action As Noun Form",
+        plain_english=(
+            "Participles carry action like verbs while taking noun-style shape such as "
+            "case, gender, and number."
+        ),
+        traditional={
+            "en": "participle",
+            "grc": "μετοχή",
+            "lat": "participium",
+            "san": "kṛdanta / kṛt",
+            "san_process": "primary nominal derivative from a root",
+        },
+        applies_to=["participle", "verb", "adjective", "noun"],
+        processes=["process.declension", "process.conjugation"],
+        source_basis=[
+            "Dionysius Thrax, Ars grammatica",
+            "Donatus, Ars minor",
+            "Pāṇini, Aṣṭādhyāyī",
+            "Sanskrit kṛdanta grammatical tradition",
+        ],
+        evidence=_PARTICIPLE_EVIDENCE,
+        examples={"grc": "λύων", "lat": "legens", "san": "gacchan"},
+        skills=_PARTICIPLE_SKILLS,
     ),
     GrammarConcept(
         id="sound_change.vrddhi",

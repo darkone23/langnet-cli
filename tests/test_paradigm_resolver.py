@@ -67,6 +67,36 @@ def test_resolver_preserves_sanskrit_syncretic_case_ambiguity() -> None:
     }
 
 
+def test_resolver_prefers_exact_observed_sanskrit_form() -> None:
+    payload = resolve_paradigm_request(
+        "san",
+        "sambuddhi",
+        [
+            {
+                "normalized_form": "sambuddhan",
+                "observed_form": "sambuddhan",
+                "lemma": "sambuddhan",
+                "part_of_speech": "noun",
+                "gender": "neuter",
+                "source": "heritage:sktreader",
+                "analyses": [{"case": "accusative", "number": "singular"}],
+            },
+            {
+                "normalized_form": "sambuddhi",
+                "observed_form": "sambuddhi",
+                "lemma": "sambuddhi",
+                "part_of_speech": "noun",
+                "gender": "neuter",
+                "source": "heritage:sktreader",
+                "analyses": [{"case": "accusative", "number": "singular"}],
+            },
+        ],
+    )
+
+    assert payload.candidates[0].lemma == "sambuddhi"
+    assert payload.candidates[0].observed_form == "sambuddhi"
+
+
 def test_resolver_keeps_latin_puellae_ambiguous_under_one_lemma() -> None:
     payload = resolve_paradigm_request(
         "lat",

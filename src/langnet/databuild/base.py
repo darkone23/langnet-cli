@@ -68,12 +68,7 @@ class FosterOssaStats:
 
 
 BuildStats = (
-    CTSStats
-    | CdslStats
-    | LexiconStats
-    | ReaderCorpusStats
-    | FosterOssaStats
-    | BuildErrorStats
+    CTSStats | CdslStats | LexiconStats | ReaderCorpusStats | FosterOssaStats | BuildErrorStats
 )
 StatsType = TypeVar("StatsType", bound=BuildStats)
 

@@ -96,6 +96,27 @@ def test_sanskrit_plan_converts_heritage_velthuis_to_cdsl_slp1() -> None:
     assert all(c.params.get("lemma") == "SrAdDa" for c in cdsl_calls)
 
 
+def test_sanskrit_plan_converts_heritage_bare_f_to_cdsl_nasal() -> None:
+    normalized = NormalizedQuery(
+        original="tinanta",
+        language=LanguageHint.LANGUAGE_HINT_SAN,
+        candidates=[
+            CanonicalCandidate(
+                lemma="tiṅanta",
+                encodings={"velthuis": "tifanta", "iast": "tiṅanta"},
+                sources=["heritage_sktsearch"],
+            )
+        ],
+        normalizations=[],
+    )
+
+    plan = ToolPlanner().build(normalized)
+
+    cdsl_calls = [c for c in plan.tool_calls if c.tool == "fetch.cdsl"]
+    assert cdsl_calls
+    assert all(c.params.get("lemma") == "tiNanta" for c in cdsl_calls)
+
+
 def test_latin_plan_includes_parse_and_whitakers() -> None:
     planner = ToolPlanner(PlannerConfig(include_whitakers=True))
     plan = planner.build(_lat_normalized())

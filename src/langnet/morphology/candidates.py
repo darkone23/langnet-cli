@@ -304,4 +304,4 @@ def _is_strongly_determined(features: Mapping[str, Any]) -> bool:
 def _mapping_dict(value: object) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         return {}
-    return {str(key): item for key, item in value.items()}
+    return {str(key): item for key, item in value.items() if item is not None}

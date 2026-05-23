@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from typing import cast
 
 from langnet.learning.concept_mapper import concept_ids_for_features
@@ -40,7 +41,10 @@ def resolve_paradigm_request(
         for record in enriched_records
         for evidence in _extract_for_language(language, record)
     ]
-    candidates.sort(key=_candidate_sort_key)
+    candidates = _demote_ambiguous_candidate_sets(candidates)
+    candidates.sort(
+        key=lambda candidate: _candidate_sort_key(candidate, searched_form, normalized_form)
+    )
     if not candidates:
         candidates.append(
             ParadigmResolutionCandidate(
@@ -61,11 +65,79 @@ def resolve_paradigm_request(
     )
 
 
-def _candidate_sort_key(candidate: ParadigmResolutionCandidate) -> tuple[int, int]:
+def _demote_ambiguous_candidate_sets(
+    candidates: Sequence[ParadigmResolutionCandidate],
+) -> list[ParadigmResolutionCandidate]:
+    ambiguity_keys: set[tuple[object, ...]] = set()
+    grouped: dict[tuple[object, ...], set[tuple[tuple[str, FeatureValue], ...]]] = {}
+    for candidate in candidates:
+        if candidate.paradigm_request is None:
+            continue
+        key = _candidate_ambiguity_key(candidate)
+        grouped.setdefault(key, set()).add(_slot_feature_signature(candidate.slot_features))
+
+    for key, signatures in grouped.items():
+        if len(signatures) > 1:
+            ambiguity_keys.add(key)
+
+    if not ambiguity_keys:
+        return list(candidates)
+
+    demoted: list[ParadigmResolutionCandidate] = []
+    for candidate in candidates:
+        if _candidate_ambiguity_key(candidate) not in ambiguity_keys:
+            demoted.append(candidate)
+            continue
+        ranking_reasons = list(candidate.ranking_reasons)
+        if "ambiguous-analysis" not in ranking_reasons:
+            ranking_reasons.append("ambiguous-analysis")
+        demoted.append(
+            replace(
+                candidate,
+                confidence="medium" if candidate.confidence == "high" else candidate.confidence,
+                ranking_reasons=ranking_reasons,
+            )
+        )
+    return demoted
+
+
+def _candidate_ambiguity_key(candidate: ParadigmResolutionCandidate) -> tuple[object, ...]:
+    request_source = candidate.paradigm_request.source if candidate.paradigm_request else None
+    return (
+        candidate.lemma,
+        candidate.observed_form,
+        candidate.part_of_speech,
+        candidate.paradigm_kind,
+        request_source,
+    )
+
+
+def _slot_feature_signature(
+    features: Mapping[str, FeatureValue],
+) -> tuple[tuple[str, FeatureValue], ...]:
+    return tuple(
+        sorted(
+            (key, value)
+            for key, value in features.items()
+            if key in {"case", "number", "gender", "person", "tense", "voice", "mood"}
+        )
+    )
+
+
+def _candidate_sort_key(
+    candidate: ParadigmResolutionCandidate,
+    searched_form: str,
+    normalized_form: str,
+) -> tuple[int, int, int, int, str]:
     confidence_rank = {"high": 0, "medium": 1, "low": 2}
+    observed = candidate.observed_form or ""
+    exact_observed = 0 if observed in {searched_form, normalized_form} else 1
     return (
         0 if candidate.paradigm_request is not None else 1,
         confidence_rank.get(candidate.confidence, 2),
+        exact_observed,
+        -len(candidate.ranking_reasons),
+        candidate.lemma,
     )
 
 
@@ -126,6 +198,11 @@ def _extract_for_language(
 
 
 def _normalized_form(searched_form: str, records: Sequence[Mapping[str, object]]) -> str:
+    for record in records:
+        for key in ("normalized_form", "observed_form", "form"):
+            value = record.get(key)
+            if isinstance(value, str) and value == searched_form:
+                return value
     for record in records:
         value = record.get("normalized_form")
         if isinstance(value, str) and value:

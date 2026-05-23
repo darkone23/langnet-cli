@@ -860,6 +860,7 @@ class SanskritNormalizer(LanguageNormalizer):
 
     def _velthuis_to_slp1_basic(self, text: str) -> str:
         s_dot_placeholder = "\u0000"
+        heritage_n_placeholder = "\u0001"
         replacements = [
             ("aa", "A"),
             ("ii", "I"),
@@ -888,7 +889,10 @@ class SanskritNormalizer(LanguageNormalizer):
             ("'s", "S"),
         ]
         out = text.replace(".s", s_dot_placeholder)
+        # Heritage's dictionary anchors use bare `f` for ṅ; `.r` below still maps to SLP1 `f`.
+        out = out.replace("f", heritage_n_placeholder)
         for old, new in replacements:
             out = out.replace(old, new)
         out = out.replace("z", "S")
+        out = out.replace(heritage_n_placeholder, "N")
         return out.replace(s_dot_placeholder, "z")

@@ -88,6 +88,22 @@ def test_concept_mapper_maps_passive_voice() -> None:
     ]
 
 
+def test_concept_mapper_maps_participial_forms_to_bridge_process() -> None:
+    concept_ids = concept_ids_for_features(
+        {"case": "accusative", "number": "singular", "gender": "neuter"},
+        part_of_speech="participle",
+        paradigm_kind="declension",
+    )
+
+    assert concept_ids == [
+        "case.accusative",
+        "number.singular",
+        "gender.neuter",
+        "process.participle",
+        "process.declension",
+    ]
+
+
 def test_paradigm_resolution_candidate_carries_learning_concept_ids() -> None:
     payload = resolve_paradigm_request(
         "san",

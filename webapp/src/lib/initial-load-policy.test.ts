@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const pageSource = readFileSync('src/routes/+page.svelte', 'utf8');
+const learnPageSource = readFileSync('src/routes/learn/+page.svelte', 'utf8');
+const learnSource = readFileSync('src/lib/learn.ts', 'utf8');
 const motdSource = readFileSync('src/routes/api/motd/+server.ts', 'utf8');
 const wordIndexSource = readFileSync('src/routes/api/word-index/+server.ts', 'utf8');
 
@@ -47,6 +49,28 @@ assert.equal(
 	true,
 	'MOTD skeleton should reflect active loading, not an idle empty state'
 );
+assert.equal(
+	pageSource.includes('let motdLoading = $state(false);'),
+	true,
+	'MOTD loading should not start true before the initial API request is actually scheduled'
+);
+assert.equal(
+	pageSource.includes('if (motdStale && motdItems.length) void loadMotd(false);'),
+	true,
+	'stale local MOTD should remain visible while a refresh starts in the background'
+);
+assert.equal(
+	pageSource.includes('uiCopy.margin.refreshingPrevious'),
+	true,
+	'MOTD should display a stale/refreshing indicator while old cards stay visible'
+);
+assert.equal(
+	pageSource.includes("candidate_source: 'llm'") &&
+		pageSource.includes("timeout_ms: '12000'") &&
+		pageSource.includes("language: 'all'"),
+	true,
+	'MOTD page requests should use all-language LLM recommendations with a bounded 12s timeout'
+);
 
 assert.equal(
 	motdSource.includes('Learner folio is not cached yet'),
@@ -55,14 +79,81 @@ assert.equal(
 );
 assert.equal(
 	motdSource.includes('wordRecommendationsFromCli') &&
-		motdSource.includes('const generationCandidateSource = candidateSource'),
+		motdSource.includes('const requestedCandidateSource = url.searchParams.get') &&
+		motdSource.includes('motdDictionary(language)') &&
+		motdSource.includes("return 'motd-fast'") &&
+		motdSource.includes('includeAmbiguous: true') &&
+		motdSource.includes('finalizeCards: false'),
 	true,
-	'auto MOTD requests should be allowed to refresh through the CLI recommendation path'
+	'normal MOTD requests should use LLM candidate synthesis plus source-backed bounded probes'
 );
 assert.equal(
 	motdSource.includes('Using the previous word of the day; replacement could not be prepared'),
 	true,
 	'MOTD refresh failures should serve the previous cached result when possible'
+);
+assert.equal(
+	motdSource.includes('serveStaleWhileRefreshing') &&
+		motdSource.includes('void refreshMotdCacheInBackground'),
+	true,
+	'expired server MOTD cache should be returned immediately while refresh continues'
+);
+assert.equal(
+	motdSource.includes('web-motd-cache.json') &&
+		motdSource.includes('hydrateMotdDiskCache') &&
+		motdSource.includes('persistMotdDiskCache'),
+	true,
+	'MOTD should persist successful server results outside process memory'
+);
+assert.equal(
+	motdSource.includes("readInteger(url.searchParams.get('timeout_ms'), 12_000"),
+	true,
+	'MOTD API default timeout should allow the current LLM route while remaining bounded'
+);
+assert.equal(
+	pageSource.includes('gateway.language !== targetLanguage') &&
+		pageSource.includes('candidateLearningLanguage(candidate)'),
+	true,
+	'learning overlay native grammar terms should be scoped to the active lookup language'
+);
+assert.equal(
+	pageSource.includes('learnerDisplayForm') &&
+		pageSource.includes('learningGatewayTitle(learning)') &&
+		pageSource.includes('href="/learn"'),
+	true,
+	'dictionary form cards should be a small learning preview with a path into the Learn workflow'
+);
+assert.equal(
+	pageSource.includes('learningEvidenceGapLabels') ||
+		pageSource.includes('candidate.provenance.join'),
+	false,
+	'beginner-facing form cards should not expose raw evidence gaps or source provenance'
+);
+assert.equal(
+	learnPageSource.includes('Start here') &&
+		learnPageSource.includes('How Ancient Forms Work') &&
+		learnPageSource.includes('selectedScriptGuide') &&
+		learnPageSource.includes('Learn Forms') &&
+		learnPageSource.includes('Reader question') &&
+		learnPageSource.includes('Try A Source Word') &&
+		learnPageSource.includes('Source Tradition') &&
+		learnPageSource.includes('sourceReferenceHref'),
+	true,
+	'standalone Learn workflow should expose concept study, reader questions, source references, and source practice'
+);
+assert.equal(
+	learnSource.includes('Receiving Function') &&
+		learnSource.includes('learnStartCards') &&
+		learnSource.includes('learnScriptGuides') &&
+		learnSource.includes('What is a form?') &&
+		learnSource.includes('Devanagari and transliteration') &&
+		learnSource.includes('dvitīyā vibhakti') &&
+		learnSource.includes('genikē ptōsis') &&
+		learnSource.includes('accusativus') &&
+		learnSource.includes('langnet:reader:sanskrit_dcs:dcs_413') &&
+		learnSource.includes('551190'),
+	true,
+	'Learn workflow should map Foster gateways into Sanskrit, Greek, and Latin terms with source anchors'
 );
 
 assert.equal(

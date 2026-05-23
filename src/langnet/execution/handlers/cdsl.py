@@ -59,7 +59,7 @@ _ASCII_DIGRAPH_TO_SLP1 = {
 _VELTHUIS_MARKERS = frozenset({".", '"', "~"})
 _CDSL_SLP1_DISPLAY_MARKS = str.maketrans("", "", "/\\^")
 _CDSL_TOKEN_RE = re.compile(
-    r"(?P<prefix>[^A-Za-z°]*)(?P<body>[A-Za-z°/\\^]+)(?P<suffix>[^A-Za-z°]*)"
+    r"(?P<prefix>[^A-Za-z°]*)(?P<body>[A-Za-z°/\\^]+(?:[-–—][A-Za-z°/\\^]+)*)(?P<suffix>[^A-Za-z°]*)"
 )
 _CDSL_SLP1_MARKERS = set("AIUFXEOKGNCJYRWQTDPSMH")
 _MIN_MARKED_CDSL_TOKEN_LEN = 2
@@ -288,11 +288,12 @@ def _strip_cdsl_learner_noise(text: str, *, display_iast: str = "", source_slp1:
     first_match = re.match(r"^(\S+)\s+", cleaned)
     if first_match:
         first = first_match.group(1).strip(".,")
-        first_key = _clean_cdsl_slp1_for_display(first).casefold()
-        source_key = _clean_cdsl_slp1_for_display(source_slp1).casefold()
+        first_key = _cdsl_headword_compare_key(first)
+        source_key = _cdsl_headword_compare_key(source_slp1)
+        display_key = _cdsl_headword_compare_key(display_iast)
         if (
             display_iast
-            and first.casefold() == display_iast.casefold()
+            and first_key == display_key
             or source_key
             and first_key == source_key
             or _token_looks_like_cdsl_slp1(first)
@@ -305,6 +306,11 @@ def _strip_cdsl_learner_noise(text: str, *, display_iast: str = "", source_slp1:
     cleaned = re.sub(r"^,\s*", "", cleaned).strip()
     cleaned = _strip_cdsl_trailing_source_tail(cleaned)
     return cleaned.rstrip(" ,")
+
+
+def _cdsl_headword_compare_key(text: str) -> str:
+    clean = _clean_cdsl_slp1_for_display(text).casefold()
+    return re.sub(r"[-–—]", "", clean)
 
 
 def _strip_cdsl_grammar_prefix(text: str) -> str:

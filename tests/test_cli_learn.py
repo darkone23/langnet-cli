@@ -12,8 +12,9 @@ from langnet.learning.foster_bridge import load_foster_bridges
 
 FIXTURE_DIR = Path("tests/fixtures/learning")
 MIN_GENITIVE_WORK_EVIDENCE = 3
-SEGMENT_BACKED_CONCEPT_COUNT = 23
+SEGMENT_BACKED_CONCEPT_COUNT = 24
 GENITIVE_SEGMENT_EVIDENCE_COUNT = 3
+PARTICIPLE_SEGMENT_EVIDENCE_COUNT = 4
 
 
 def _fixture(name: str) -> dict[str, object]:
@@ -46,6 +47,7 @@ def test_learn_concepts_lists_registry_for_cli_exploration() -> None:
     ids = [concept["id"] for concept in payload["concepts"]]
     assert "case.genitive" in ids
     assert "process.declension" in ids
+    assert "process.participle" in ids
 
 
 def test_learn_concepts_compact_view_is_ui_friendly() -> None:
@@ -66,8 +68,46 @@ def test_learn_concepts_compact_view_is_ui_friendly() -> None:
         "concept_ids": ["case.genitive"],
         "related_concept_ids": [],
         "plain_english": "Foster/Ossa possession or relation maps to the genitive concept.",
+        "learner_action": (
+            "Ask what relation, possession, belonging, source, or description the form marks."
+        ),
+        "morphology_predicates": ["case=genitive"],
         "source_refs": ["page:69", "page:125", "page:140", "page:522", "page:618"],
+        "summary_refs": ["toc:1.6", "toc:1.22", "toc:1.25", "toc:4.30"],
     }
+    assert genitive["native_gateways"] == [
+        {
+            "language": "grc",
+            "label": "Greek",
+            "term": "γενική",
+            "role": "",
+            "foster_gateway": "Possessing Function",
+            "explanation": (
+                "Greek gateway: γενική; LangNet uses Possessing Function as the learner gateway."
+            ),
+        },
+        {
+            "language": "lat",
+            "label": "Latin",
+            "term": "genetivus",
+            "role": "",
+            "foster_gateway": "Possessing Function",
+            "explanation": (
+                "Latin gateway: genetivus; LangNet uses Possessing Function as the learner gateway."
+            ),
+        },
+        {
+            "language": "san",
+            "label": "Sanskrit",
+            "term": "ṣaṣṭhī vibhakti",
+            "role": "sambandha",
+            "foster_gateway": "Possessing Function",
+            "explanation": (
+                "Sanskrit gateway: ṣaṣṭhī vibhakti (sambandha); "
+                "LangNet uses Possessing Function as the learner gateway."
+            ),
+        },
+    ]
     assert "evidence" not in genitive
 
 
@@ -81,6 +121,17 @@ def test_learn_concept_shows_foster_and_native_traditional_terms() -> None:
     assert payload["concept"]["traditional"]["lat"] == "genetivus"
     assert payload["concept"]["traditional"]["san"] == "ṣaṣṭhī vibhakti"
     assert payload["concept"]["traditional"]["san_role"] == "sambandha"
+    assert payload["concept"]["native_gateways"][2] == {
+        "language": "san",
+        "label": "Sanskrit",
+        "term": "ṣaṣṭhī vibhakti",
+        "role": "sambandha",
+        "foster_gateway": "Possessing Function",
+        "explanation": (
+            "Sanskrit gateway: ṣaṣṭhī vibhakti (sambandha); "
+            "LangNet uses Possessing Function as the learner gateway."
+        ),
+    }
     assert "Sanskrit kāraka/vibhakti grammatical tradition" in payload["concept"]["source_basis"]
     foster_bridges = payload["concept"]["foster_bridges"]
     assert foster_bridges[0]["id"] == "of-possession"
@@ -136,6 +187,9 @@ def test_learn_evidence_report_summarizes_ready_and_remaining_evidence() -> None
     guna = next(item for item in payload["concepts"] if item["id"] == "sound_change.guna")
     assert guna["evidence_counts"]["reader_segment"] == 1
     assert guna["missing"] == []
+    participle = next(item for item in payload["concepts"] if item["id"] == "process.participle")
+    assert participle["evidence_counts"]["reader_segment"] == PARTICIPLE_SEGMENT_EVIDENCE_COUNT
+    assert participle["missing"] == []
 
 
 def test_learn_foster_bridge_lists_reviewed_foster_ossa_mappings() -> None:
@@ -403,6 +457,44 @@ def test_learn_map_reports_unmapped_and_ignored_features() -> None:
         "unmapped_features": [{"key": "voice", "value": "middle"}],
         "ignored_features": [{"key": "dialect", "value": "ionic"}],
     }
+
+
+def test_learn_map_projects_participial_forms_to_action_as_noun_form() -> None:
+    result = CliRunner().invoke(
+        main,
+        [
+            "learn",
+            "map",
+            "--pos",
+            "participle",
+            "--paradigm-kind",
+            "declension",
+            "--feature",
+            "case=accusative",
+            "--feature",
+            "number=singular",
+            "--feature",
+            "gender=neuter",
+            "--output",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["concept_ids"] == [
+        "case.accusative",
+        "number.singular",
+        "gender.neuter",
+        "process.participle",
+        "process.declension",
+    ]
+    participle = next(
+        concept for concept in payload["concepts"] if concept["id"] == "process.participle"
+    )
+    assert participle["foster_gateway"] == "Action As Noun Form"
+    assert participle["traditional"]["lat"] == "participium"
+    assert participle["traditional"]["san"] == "kṛdanta / kṛt"
 
 
 def test_learn_map_pretty_output_shows_mapping_diagnostics() -> None:

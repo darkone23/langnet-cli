@@ -72,6 +72,12 @@ def concept_ids_for_features(
 
     part_of_speech_key = _normalize_feature_value(part_of_speech)
     paradigm_kind_key = _normalize_feature_value(paradigm_kind)
+    if paradigm_kind_key in {"participle", "participial"} or part_of_speech_key in {
+        "participle",
+        "participial",
+        "part",
+    }:
+        concept_ids.append("process.participle")
     if paradigm_kind_key == "declension" or part_of_speech_key in {
         "noun",
         "adjective",

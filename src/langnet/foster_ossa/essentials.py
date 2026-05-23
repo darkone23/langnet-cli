@@ -45,8 +45,7 @@ def default_foster_essentials() -> list[FosterEssential]:
             source_refs=("page:69", "page:125", "page:140", "page:522", "page:618"),
             summary_refs=("toc:1.6", "toc:1.22", "toc:1.25", "toc:4.30"),
             learner_action=(
-                "Ask what relation, possession, belonging, source, or description "
-                "the form marks."
+                "Ask what relation, possession, belonging, source, or description the form marks."
             ),
             product_use="Show a possession/relation gateway beside genitive evidence.",
             morphology_predicates=("case=genitive",),

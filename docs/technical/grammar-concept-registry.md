@@ -113,9 +113,9 @@ Phase 1 should cover:
 - numbers: singular, dual, plural;
 - genders: masculine, feminine, neuter;
 - verb features: person, tense, mood, voice;
-- processes: declension, conjugation, inflection, stem, ending;
+- processes: declension, conjugation, participle, inflection, stem, ending;
 - source-grounded Greek, Latin, and Sanskrit anchors for the current core
-  concept slice. As of this pass, 23 of 24 exposed concepts have exact
+  concept slice. As of this pass, 24 of 25 exposed concepts have exact
   `reader_segment` evidence; `process.declension` intentionally remains
   work-level only until a clean passage-level definition is verified.
 
@@ -149,6 +149,8 @@ Examples:
 | `voice=middle` | `voice.middle` |
 | `paradigm_kind=declension` | `process.declension` |
 | `paradigm_kind=conjugation` | `process.conjugation` |
+| `part_of_speech=participle` | `process.participle` |
+| `paradigm_kind=participle` | `process.participle` |
 | verified guṇa source segment | `sound_change.guna` |
 | verified vṛddhi source segment | `sound_change.vrddhi` |
 | verified savarṇa source segment | `sound_relation.savarna` |

@@ -186,6 +186,7 @@
         "foster_gateway",
         "plain_english",
         "traditional",
+        "native_gateways",
         "source_evidence"
       ],
       "properties": {
@@ -196,6 +197,10 @@
         "traditional": {
           "type": "object",
           "additionalProperties": { "type": "string" }
+        },
+        "native_gateways": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/learningNativeGateway" }
         },
         "source_evidence": {
           "type": "array",
@@ -208,6 +213,19 @@
       },
       "additionalProperties": false
     },
+    "learningNativeGateway": {
+      "type": "object",
+      "required": ["language", "label", "term", "role", "foster_gateway", "explanation"],
+      "properties": {
+        "language": { "enum": ["grc", "lat", "san"] },
+        "label": { "type": "string" },
+        "term": { "type": "string" },
+        "role": { "type": "string" },
+        "foster_gateway": { "type": "string" },
+        "explanation": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
     "learningFosterBridge": {
       "type": "object",
       "required": [
@@ -217,6 +235,9 @@
         "concept_ids",
         "related_concept_ids",
         "plain_english",
+        "learner_action",
+        "product_use",
+        "morphology_predicates",
         "source_refs"
       ],
       "properties": {
@@ -235,7 +256,21 @@
           "items": { "type": "string" }
         },
         "plain_english": { "type": "string" },
+        "learner_action": { "type": "string" },
+        "product_use": { "type": "string" },
+        "morphology_predicates": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "source_refs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "summary_refs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "caveats": {
           "type": "array",
           "items": { "type": "string" }
         }

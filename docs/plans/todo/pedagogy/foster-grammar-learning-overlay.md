@@ -98,16 +98,17 @@
 
 **Files:**
 - Modify: `webapp/src/lib/paradigm-resolution.ts`
-- Create: `webapp/src/lib/grammar-learning.ts`
-- Create: `webapp/src/lib/grammar-learning.test.ts`
 - Modify: `webapp/src/routes/+page.svelte`
+- Modify: `webapp/src/app.css`
 - Modify: `webapp/docs/UI.md`
+- Modify: `webapp/docs/LEARNING_UI.md`
 
-- [ ] Normalize learning overlay fields from CLI/API payloads.
-- [ ] Add a compact "Learn this form" section under Forms.
-- [ ] Show Foster gateway, native morphology, traditional names, process rule, and examples.
-- [ ] Keep the panel collapsible or visually compact.
-- [ ] Verify with `cd webapp && just verify`.
+- [x] Normalize learning overlay fields from CLI/API payloads.
+- [x] Add a compact "Learn this form" section under Forms.
+- [x] Show Foster gateway, native morphology, traditional native gateway terms, and learner action.
+- [ ] Add source-backed examples and source-reference snippets.
+- [x] Keep the panel visually compact.
+- [x] Verify with `cd webapp && just verify`.
 
 ## Phase 5: Advanced Grammar Processes
 

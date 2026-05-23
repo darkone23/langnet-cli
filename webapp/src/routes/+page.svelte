@@ -49,16 +49,23 @@
 	import {
 		normalizeParadigmPayload,
 		paradigmRequestKey,
+		type ParadigmBlock,
 		type ParadigmPayload
 	} from '$lib/paradigm';
 	import {
 		curateParadigmCandidates,
+		learnerDisplayForm,
 		paradigmPayloadHasForms,
 		paradigmSlotMatchesCandidate,
 		paradigmSlotGroups,
 		paradigmUnavailableMessage
 	} from '$lib/paradigm-ui';
-	import type { ParadigmResolutionCandidate } from '$lib/paradigm-resolution';
+	import type {
+		LearningConcept,
+		LearningFosterBridge,
+		LearningNativeGateway,
+		ParadigmResolutionCandidate
+	} from '$lib/paradigm-resolution';
 	import {
 		isSingleWord,
 		languageModes,
@@ -120,7 +127,7 @@
 	const simulatedLookupDelayMs = 900;
 	const loadingSteps = uiCopy.search.loadingSteps;
 	const motdSkeletonRows = [0, 1, 2];
-	const motdStorageKey = 'orion-motd-cache:v3';
+	const motdStorageKey = 'orion-motd-cache:v4';
 	const deskStorageKey = 'orion-desk-state:v3';
 	const deskStorageTtlMs = 2 * 60 * 60 * 1000;
 	const wordIndexStorageKey = 'orion-word-index-earmarks:v1';
@@ -230,7 +237,7 @@
 	const initialMotd = readStoredMotd();
 	let motd: WordRecommendationResult | null = $state(initialMotd.result);
 	let motdStale = $state(initialMotd.stale);
-	let motdLoading = $state(!initialMotd.result);
+	let motdLoading = $state(false);
 	let motdRefreshing = $state(false);
 	let motdError = $state('');
 	let motdLinksLoad = $state(true);
@@ -314,7 +321,10 @@
 	);
 	let searchRomanization = $derived(romanizeSearchTerm(language, query));
 	let paradigmCandidateCuration = $derived(
-		curateParadigmCandidates(encounter?.paradigm_resolution?.candidates ?? [])
+		curateParadigmCandidates(
+			encounter?.paradigm_resolution?.candidates ?? [],
+			encounter?.paradigm_resolution?.normalized_form || encounter?.query || query
+		)
 	);
 	let paradigmCandidates = $derived(paradigmCandidateCuration.visible);
 	let hasParadigmCandidates = $derived(paradigmCandidates.length > 0);
@@ -353,6 +363,7 @@
 	$effect(() => {
 		if (!browser || !routeStateReady) return;
 		if (motdLoading || motdRefreshing || motdError) return;
+		if (motdStale && motdItems.length) void loadMotd(false);
 		if (!motdItems.length) void loadMotd(false);
 	});
 
@@ -557,10 +568,11 @@
 
 		try {
 			const params = new URLSearchParams({
+				language: 'all',
 				count: '1',
 				translation: 'cache',
-				candidate_source: refresh ? 'llm' : 'auto',
-				timeout_ms: '120000'
+				candidate_source: 'llm',
+				timeout_ms: '12000'
 			});
 			if (refresh || motdStale) {
 				params.set('refresh', '1');
@@ -763,6 +775,7 @@
 
 		try {
 			localStorage.removeItem(motdStorageKey);
+			localStorage.removeItem('orion-motd-cache:v3');
 			localStorage.removeItem('orion-motd-cache:v2');
 			localStorage.removeItem('orion-motd-cache:v1');
 		} catch {
@@ -1354,17 +1367,19 @@
 			candidate.paradigm_kind && candidate.paradigm_kind !== 'unknown'
 				? candidate.paradigm_kind
 				: 'form';
-		return `${candidate.lemma || encounter?.query || 'form'} ${kind}`;
+		const label = learnerDisplayForm(candidate.lemma || encounter?.query || 'form');
+		return `${label || 'form'} ${kind}`;
 	}
 
 	function paradigmCandidateSubtitle(candidate: ParadigmResolutionCandidate) {
 		return [
-			candidate.observed_form ? `form ${candidate.observed_form}` : '',
+			candidate.observed_form ? `form ${learnerDisplayForm(candidate.observed_form)}` : '',
 			candidate.part_of_speech && candidate.part_of_speech !== 'unknown'
 				? candidate.part_of_speech
 				: '',
 			candidate.entry_type && candidate.entry_type !== 'unknown' ? candidate.entry_type : '',
 			candidate.foster_display,
+			candidate.ranking_reasons.includes('ambiguous-analysis') ? 'ambiguous analysis' : '',
 			candidate.confidence ? `${candidate.confidence} confidence` : ''
 		]
 			.filter(Boolean)
@@ -1397,6 +1412,115 @@
 					.filter((label) => label && label !== 'unknown')
 			)
 		];
+	}
+
+	function learningConcepts(candidate: ParadigmResolutionCandidate) {
+		return candidate.learning_overlay?.concepts ?? [];
+	}
+
+	function learningPrimarySummary(candidate: ParadigmResolutionCandidate) {
+		const overlay = candidate.learning_overlay;
+		const caseConcept =
+			overlay?.concepts.find((concept) => concept.kind === 'case') ?? overlay?.concepts[0];
+		if (candidate.display_summary) return learnerDisplayForm(candidate.display_summary);
+		if (caseConcept?.plain_english) return caseConcept.plain_english;
+		return candidate.foster_display || '';
+	}
+
+	function learningGatewayTitle(concepts: LearningConcept[]) {
+		return learningPrimaryConcept(concepts)?.foster_gateway || '';
+	}
+
+	function learningPrimaryConcept(concepts: LearningConcept[]) {
+		const priority = ['case', 'person', 'tense', 'mood', 'voice', 'number', 'gender', 'process'];
+		return (
+			[...concepts].sort(
+				(left, right) =>
+					conceptPriority(left.kind, priority) - conceptPriority(right.kind, priority)
+			)[0] ?? null
+		);
+	}
+
+	function conceptPriority(kind: string, priority: string[]) {
+		const index = priority.indexOf(kind);
+		return index === -1 ? priority.length : index;
+	}
+
+	function learningNativeGateways(
+		concepts: LearningConcept[],
+		targetLanguage: LanguageMode = language
+	) {
+		const seen = new Set<string>();
+		const gateways: LearningNativeGateway[] = [];
+		const primaryConcept = learningPrimaryConcept(concepts);
+		for (const concept of primaryConcept ? [primaryConcept] : concepts) {
+			const nativeGateways = concept.native_gateways.length
+				? concept.native_gateways
+				: derivedNativeGateways(concept, targetLanguage);
+			for (const gateway of nativeGateways) {
+				if (gateway.language !== targetLanguage) continue;
+				if (!gateway.term) continue;
+				const key = `${gateway.language}:${gateway.term}:${gateway.role}`;
+				if (seen.has(key)) continue;
+				seen.add(key);
+				gateways.push(gateway);
+			}
+		}
+		return gateways.slice(0, 1);
+	}
+
+	function candidateLearningLanguage(candidate: ParadigmResolutionCandidate): LanguageMode {
+		return (
+			candidate.paradigm_request?.language ??
+			candidate.native_analyses.find((analysis) => analysis.language)?.language ??
+			encounter?.language ??
+			language
+		);
+	}
+
+	function derivedNativeGateways(
+		concept: LearningConcept,
+		targetLanguage: LanguageMode
+	): LearningNativeGateway[] {
+		const labels = {
+			grc: 'Greek',
+			lat: 'Latin',
+			san: 'Sanskrit'
+		} as const;
+		return [targetLanguage]
+			.map((language) => {
+				const term = concept.traditional[language] ?? '';
+				const role =
+					language === 'san'
+						? (concept.traditional.san_role ?? concept.traditional.san_process ?? '')
+						: '';
+				return {
+					language,
+					label: labels[language],
+					term,
+					role,
+					foster_gateway: concept.foster_gateway,
+					explanation: `${labels[language]} gateway: ${term}; LangNet uses ${concept.foster_gateway} as the learner gateway.`
+				};
+			})
+			.filter((gateway) => gateway.term);
+	}
+
+	function learningFosterBridges(concepts: LearningConcept[]) {
+		const primaryConcept = learningPrimaryConcept(concepts);
+		const byId = new Map<string, LearningFosterBridge>();
+		for (const concept of primaryConcept ? [primaryConcept] : concepts) {
+			for (const bridge of concept.foster_bridges) {
+				if (bridge.id) byId.set(bridge.id, bridge);
+			}
+		}
+		return [...byId.values()]
+			.sort(
+				(left, right) =>
+					Number(right.status !== 'aggregate_candidate') -
+					Number(left.status !== 'aggregate_candidate')
+			)
+			.slice(0, 1);
 	}
 
 	function paradigmFeatureLabel(value: string) {
@@ -1459,6 +1583,47 @@
 			.map(([key, value]) => `${paradigmFeatureLabel(key)} ${paradigmFeatureValue(value)}`.trim())
 			.filter(Boolean)
 			.join(' · ');
+	}
+
+	function paradigmTableLearningTitle(candidate: ParadigmResolutionCandidate) {
+		if (candidate.paradigm_kind === 'declension') return 'Reading a declension table';
+		if (candidate.paradigm_kind === 'conjugation') return 'Reading a conjugation table';
+		return 'Reading a form table';
+	}
+
+	function paradigmTableLearningSummary(
+		candidate: ParadigmResolutionCandidate,
+		block: ParadigmBlock
+	) {
+		const dimensionText = block.dimensions.map(paradigmFeatureLabel).join(', ');
+		if (candidate.paradigm_kind === 'declension') {
+			return `This table maps noun-form jobs. ${dimensionText || 'The listed features'} tell what role, count, and agreement shape a form can carry.`;
+		}
+		if (candidate.paradigm_kind === 'conjugation') {
+			return `This table maps verb-form jobs. ${dimensionText || 'The listed features'} tell who acts, when or how the action is framed, and how the action relates to its subject.`;
+		}
+		return `This table maps possible forms by ${dimensionText || 'their grammatical features'}.`;
+	}
+
+	function paradigmTableAxisNotes(block: ParadigmBlock) {
+		return block.dimensions.map((dimension) => ({
+			label: paradigmFeatureLabel(dimension),
+			note: paradigmDimensionNote(dimension)
+		}));
+	}
+
+	function paradigmDimensionNote(dimension: string) {
+		const notes: Record<string, string> = {
+			case: 'job in the expression',
+			number: 'one, two, or many',
+			gender: 'agreement class',
+			person: 'speaker, addressee, or other',
+			tense: 'time or verbal frame',
+			mood: 'mode of statement',
+			voice: 'action relation',
+			degree: 'comparison level'
+		};
+		return notes[dimension] ?? 'form feature';
 	}
 
 	function wordIndexDisplay(item: WordIndexItem) {
@@ -1675,7 +1840,8 @@
 	function isRecoverableMotdWarning(message: string) {
 		return (
 			/encounter returned no usable source-backed buckets/i.test(message) ||
-			/LLM card finalization unavailable/i.test(message)
+			/LLM card finalization unavailable/i.test(message) ||
+			/live LLM recommendations warm in the background/i.test(message)
 		);
 	}
 
@@ -3174,6 +3340,10 @@
 				<BookOpen size={15} />
 				Reader
 			</a>
+			<a class="btn btn-sm btn-ghost" href="/learn">
+				<Sparkles size={15} />
+				Learn
+			</a>
 
 			<label class="orion-topbar-control">
 				<span>{uiCopy.readerLayer.label}</span>
@@ -3445,6 +3615,11 @@
 						{#if motdError}
 							<div class="orion-motd-warning">
 								{motdError}
+							</div>
+						{/if}
+						{#if motdRefreshing}
+							<div class="orion-motd-warning">
+								{uiCopy.margin.refreshingPrevious}
 							</div>
 						{/if}
 						{#if motdVisibleWarnings.length}
@@ -3739,9 +3914,11 @@
 										Forms
 									</h3>
 									<p>
-										{encounter.paradigm_resolution?.searched_form}
-										{#if encounter.paradigm_resolution?.normalized_form && encounter.paradigm_resolution.normalized_form !== encounter.paradigm_resolution.searched_form}
-											<span> · {encounter.paradigm_resolution.normalized_form}</span>
+										{learnerDisplayForm(encounter.paradigm_resolution?.searched_form)}
+										{#if encounter.paradigm_resolution?.normalized_form && learnerDisplayForm(encounter.paradigm_resolution.normalized_form) !== learnerDisplayForm(encounter.paradigm_resolution.searched_form)}
+											<span>
+												· {learnerDisplayForm(encounter.paradigm_resolution.normalized_form)}
+											</span>
 										{/if}
 									</p>
 								</div>
@@ -3753,6 +3930,12 @@
 									{@const candidateKey = paradigmCandidateKey(candidate)}
 									{@const features = paradigmFeatureEntries(candidate)}
 									{@const relations = paradigmFunctionalLabels(candidate)}
+									{@const learning = learningConcepts(candidate)}
+									{@const nativeGateways = learningNativeGateways(
+										learning,
+										candidateLearningLanguage(candidate)
+									)}
+									{@const fosterBridges = learningFosterBridges(learning)}
 									{@const paradigm = paradigmPayloads[candidateKey]}
 									<article class="orion-paradigm-card">
 										<div class="orion-paradigm-card-head">
@@ -3792,10 +3975,42 @@
 											</div>
 										{/if}
 
-										{#if candidate.provenance.length}
-											<p class="orion-paradigm-source">
-												{candidate.provenance.join(' · ')}
-											</p>
+										{#if learning.length}
+											<section class="orion-learning-strip">
+												<div class="orion-learning-head">
+													<span>Learn this form</span>
+													<strong>{learningGatewayTitle(learning)}</strong>
+												</div>
+												{#if learningPrimarySummary(candidate)}
+													<p>{learningPrimarySummary(candidate)}</p>
+												{/if}
+												{#if nativeGateways.length}
+													<div class="orion-learning-chips">
+														{#each nativeGateways as gateway}
+															<span title={gateway.explanation}>
+																<b>{gateway.label}</b>
+																{gateway.term}
+																{#if gateway.role}<em>{gateway.role}</em>{/if}
+															</span>
+														{/each}
+													</div>
+												{/if}
+												{#if fosterBridges.length}
+													<div class="orion-learning-bridges">
+														{#each fosterBridges as bridge}
+															<span
+																class={bridge.status === 'aggregate_candidate'
+																	? 'orion-learning-bridge orion-learning-bridge-related'
+																	: 'orion-learning-bridge'}
+															>
+																<b>Try this</b>
+																{bridge.learner_action || bridge.plain_english}
+															</span>
+														{/each}
+													</div>
+												{/if}
+												<a class="orion-learning-open" href="/learn">Open the learning path</a>
+											</section>
 										{/if}
 
 										{#if paradigmErrors[candidateKey]}
@@ -3806,11 +4021,25 @@
 											<div class="orion-paradigm-tables">
 												{#each paradigm.paradigms as block}
 													{@const slotGroups = paradigmSlotGroups(block)}
+													{@const axisNotes = paradigmTableAxisNotes(block)}
 													<section class="orion-paradigm-table">
 														<div class="orion-paradigm-table-head">
 															<span>{block.label}</span>
 															<small>{block.dimensions.join(' · ')}</small>
 														</div>
+														<section class="orion-table-learning">
+															<div class="orion-table-learning-head">
+																<span>{paradigmTableLearningTitle(candidate)}</span>
+																<p>{paradigmTableLearningSummary(candidate, block)}</p>
+															</div>
+															{#if axisNotes.length}
+																<div class="orion-table-axis-notes">
+																	{#each axisNotes as axis}
+																		<span><b>{axis.label}</b>{axis.note}</span>
+																	{/each}
+																</div>
+															{/if}
+														</section>
 														<div class="orion-paradigm-slot-groups">
 															{#each slotGroups as group}
 																<section class="orion-paradigm-slot-group">
@@ -3846,7 +4075,7 @@
 								{/each}
 								{#if paradigmCandidateCuration.hiddenCount}
 									<p class="orion-paradigm-hidden-note">
-										{countLabel(paradigmCandidateCuration.hiddenCount, 'lower-confidence reading')}
+										{countLabel(paradigmCandidateCuration.hiddenCount, 'additional reading')}
 										held back from the first view.
 									</p>
 								{/if}

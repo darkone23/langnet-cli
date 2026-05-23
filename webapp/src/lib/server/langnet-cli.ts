@@ -98,21 +98,29 @@ export function resolveCliDirectory(
 }
 
 export async function wordRecommendationsFromCli({
+	language,
+	dictionary,
 	count,
 	level,
 	translationMode,
 	timeoutMs,
 	candidateSource,
+	includeAmbiguous,
+	finalizeCards,
 	fresh,
 	avoid,
 	nonce,
 	signal
 }: {
+	language: LanguageMode | 'all';
+	dictionary?: string;
 	count: number;
 	level: string;
 	translationMode: TranslationMode;
 	timeoutMs: number;
 	candidateSource: 'auto' | 'llm' | 'curated';
+	includeAmbiguous?: boolean;
+	finalizeCards?: boolean;
 	fresh: boolean;
 	avoid: string[];
 	nonce?: string;
@@ -121,11 +129,13 @@ export async function wordRecommendationsFromCli({
 	const args = [
 		'cli',
 		'word-of-day',
-		'all',
+		language,
 		'--count',
 		String(count),
 		'--level',
 		level,
+		'--dictionary',
+		dictionary ?? 'all',
 		'--translation-mode',
 		translationMode,
 		'--candidate-source',
@@ -137,10 +147,12 @@ export async function wordRecommendationsFromCli({
 	];
 
 	if (fresh) args.push('--fresh');
+	if (includeAmbiguous) args.push('--include-ambiguous');
+	if (finalizeCards === false) args.push('--no-finalize-cards');
 	if (avoid.length) args.push('--avoid', avoid.join(','));
 	if (nonce) args.push('--nonce', nonce);
 
-	const payload = await runJsonCommand(args, timeoutMs, { signal, queued: false });
+	const payload = await runJsonCommand(args, timeoutMs + 8_000, { signal, queued: false });
 
 	return mapWordRecommendationPayload(payload);
 }
@@ -163,7 +175,8 @@ export async function encounterWordFromCli(request: CliRequest): Promise<Encount
 		String(request.maxBuckets),
 		'--max-gloss-chars',
 		String(request.maxGlossChars),
-		'--include-paradigm-resolution'
+		'--include-paradigm-resolution',
+		'--include-learning'
 	];
 	const payload = await runJsonCommand(args, request.timeoutMs, { queued: false });
 

@@ -14,6 +14,66 @@ export type FunctionalParadigmAnalysis = {
 	confidence: string;
 };
 
+export type LearningSourceEvidence = {
+	evidence_level: string;
+	source_anchor_id: string;
+	work_id: string;
+	canonical_text_id: string;
+	cts_work_urn: string | null;
+	citation_path: string | null;
+	canonical_address: string | null;
+	label: string;
+};
+
+export type LearningFosterBridge = {
+	id: string;
+	status: string;
+	foster_terms: string[];
+	concept_ids: string[];
+	related_concept_ids: string[];
+	plain_english: string;
+	learner_action: string;
+	product_use: string;
+	morphology_predicates: string[];
+	source_refs: string[];
+	summary_refs: string[];
+	caveats: string[];
+};
+
+export type LearningNativeGateway = {
+	language: LanguageMode;
+	label: string;
+	term: string;
+	role: string;
+	foster_gateway: string;
+	explanation: string;
+};
+
+export type LearningConcept = {
+	id: string;
+	kind: string;
+	foster_gateway: string;
+	plain_english: string;
+	traditional: Record<string, string>;
+	native_gateways: LearningNativeGateway[];
+	source_evidence: LearningSourceEvidence[];
+	foster_bridges: LearningFosterBridge[];
+};
+
+export type LearningEvidenceGap = {
+	concept_id: string;
+	missing: string[];
+};
+
+export type LearningOverlay = {
+	schema_version: string;
+	status: string;
+	concept_ids: string[];
+	concepts: LearningConcept[];
+	missing_evidence: string[];
+	evidence_gaps: LearningEvidenceGap[];
+};
+
 export type ParadigmRequest = {
 	source: string;
 	language: LanguageMode;
@@ -39,6 +99,7 @@ export type ParadigmResolutionCandidate = {
 	confidence: string;
 	provenance: string[];
 	unresolved_reason: string | null;
+	learning_overlay: LearningOverlay | null;
 };
 
 export type ParadigmResolutionPayload = {
@@ -88,7 +149,81 @@ function normalizeCandidate(candidate: JsonRecord): ParadigmResolutionCandidate 
 		paradigm_request: request,
 		confidence: stringValue(candidate.confidence),
 		provenance: arrayOfStrings(candidate.provenance),
-		unresolved_reason: stringValue(candidate.unresolved_reason) || null
+		unresolved_reason: stringValue(candidate.unresolved_reason) || null,
+		learning_overlay: normalizeLearningOverlay(candidate.learning_overlay)
+	};
+}
+
+function normalizeLearningOverlay(value: unknown): LearningOverlay | null {
+	if (!isRecord(value)) return null;
+	return {
+		schema_version: stringValue(value.schema_version) || 'langnet.learning_overlay.v1',
+		status: stringValue(value.status),
+		concept_ids: arrayOfStrings(value.concept_ids),
+		concepts: arrayOfRecords(value.concepts).map(normalizeLearningConcept),
+		missing_evidence: arrayOfStrings(value.missing_evidence),
+		evidence_gaps: arrayOfRecords(value.evidence_gaps).map(normalizeLearningEvidenceGap)
+	};
+}
+
+function normalizeLearningConcept(concept: JsonRecord): LearningConcept {
+	return {
+		id: stringValue(concept.id),
+		kind: stringValue(concept.kind),
+		foster_gateway: stringValue(concept.foster_gateway),
+		plain_english: stringValue(concept.plain_english),
+		traditional: stringRecord(concept.traditional),
+		native_gateways: arrayOfRecords(concept.native_gateways).map(normalizeLearningNativeGateway),
+		source_evidence: arrayOfRecords(concept.source_evidence).map(normalizeLearningSourceEvidence),
+		foster_bridges: arrayOfRecords(concept.foster_bridges).map(normalizeLearningFosterBridge)
+	};
+}
+
+function normalizeLearningNativeGateway(gateway: JsonRecord): LearningNativeGateway {
+	return {
+		language: normalizeLanguage(stringValue(gateway.language)),
+		label: stringValue(gateway.label),
+		term: stringValue(gateway.term),
+		role: stringValue(gateway.role),
+		foster_gateway: stringValue(gateway.foster_gateway),
+		explanation: stringValue(gateway.explanation)
+	};
+}
+
+function normalizeLearningSourceEvidence(evidence: JsonRecord): LearningSourceEvidence {
+	return {
+		evidence_level: stringValue(evidence.evidence_level),
+		source_anchor_id: stringValue(evidence.source_anchor_id),
+		work_id: stringValue(evidence.work_id),
+		canonical_text_id: stringValue(evidence.canonical_text_id),
+		cts_work_urn: stringValue(evidence.cts_work_urn) || null,
+		citation_path: stringValue(evidence.citation_path) || null,
+		canonical_address: stringValue(evidence.canonical_address) || null,
+		label: stringValue(evidence.label)
+	};
+}
+
+function normalizeLearningFosterBridge(bridge: JsonRecord): LearningFosterBridge {
+	return {
+		id: stringValue(bridge.id),
+		status: stringValue(bridge.status),
+		foster_terms: arrayOfStrings(bridge.foster_terms),
+		concept_ids: arrayOfStrings(bridge.concept_ids),
+		related_concept_ids: arrayOfStrings(bridge.related_concept_ids),
+		plain_english: stringValue(bridge.plain_english),
+		learner_action: stringValue(bridge.learner_action),
+		product_use: stringValue(bridge.product_use),
+		morphology_predicates: arrayOfStrings(bridge.morphology_predicates),
+		source_refs: arrayOfStrings(bridge.source_refs),
+		summary_refs: arrayOfStrings(bridge.summary_refs),
+		caveats: arrayOfStrings(bridge.caveats)
+	};
+}
+
+function normalizeLearningEvidenceGap(gap: JsonRecord): LearningEvidenceGap {
+	return {
+		concept_id: stringValue(gap.concept_id),
+		missing: arrayOfStrings(gap.missing)
 	};
 }
 
@@ -125,6 +260,14 @@ function featureRecord(value: unknown) {
 		Object.entries(value).filter((entry): entry is [string, ParadigmFeatureValue] =>
 			isFeatureValue(entry[1])
 		)
+	);
+}
+
+function stringRecord(value: unknown) {
+	if (!isRecord(value)) return {};
+
+	return Object.fromEntries(
+		Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
 	);
 }
 

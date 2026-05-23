@@ -236,6 +236,41 @@ def test_candidate_can_carry_optional_learning_overlay_without_breaking_contract
                                 "san": "ṣaṣṭhī vibhakti",
                                 "san_role": "sambandha",
                             },
+                            "native_gateways": [
+                                {
+                                    "language": "grc",
+                                    "label": "Greek",
+                                    "term": "γενική",
+                                    "role": "",
+                                    "foster_gateway": "Possessing Function",
+                                    "explanation": (
+                                        "Greek gateway: γενική; LangNet uses "
+                                        "Possessing Function as the learner gateway."
+                                    ),
+                                },
+                                {
+                                    "language": "lat",
+                                    "label": "Latin",
+                                    "term": "genetivus",
+                                    "role": "",
+                                    "foster_gateway": "Possessing Function",
+                                    "explanation": (
+                                        "Latin gateway: genetivus; LangNet uses "
+                                        "Possessing Function as the learner gateway."
+                                    ),
+                                },
+                                {
+                                    "language": "san",
+                                    "label": "Sanskrit",
+                                    "term": "ṣaṣṭhī vibhakti",
+                                    "role": "sambandha",
+                                    "foster_gateway": "Possessing Function",
+                                    "explanation": (
+                                        "Sanskrit gateway: ṣaṣṭhī vibhakti (sambandha); "
+                                        "LangNet uses Possessing Function as the learner gateway."
+                                    ),
+                                },
+                            ],
                             "source_evidence": [
                                 {
                                     "evidence_level": "reader_work",

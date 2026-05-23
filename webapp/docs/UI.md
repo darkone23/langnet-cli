@@ -1,8 +1,19 @@
 # UI Notes
 
-The interface is a reader surface for word encounters, not an analytics
+The interface has three related workflows:
+
+- Dictionary: one-word source encounters and morphology.
+- Reader: source-text discovery and passage reading.
+- Learn: Foster-first grammar study mapped into Sanskrit, Greek, and Latin terms.
+
+The dictionary surface is a reader surface for word encounters, not an analytics
 dashboard. It should keep the dictionary entry central while still exposing where
 the evidence came from.
+
+For the Foster-first grammar learning experience, use
+[`LEARNING_UI.md`](LEARNING_UI.md) as the UI north-star document. This file keeps
+the general page and component rules; the learning doc narrows those rules into
+the "Learn this form" integration.
 
 ## Current Principles
 
@@ -126,17 +137,50 @@ Current behavior:
 - Sanskrit passage text prefers upstream display Devanagari where available and
   keeps transliteration in the source/detail area.
 
+## Learn Workflow
+
+The `/learn` route is the standalone grammar-learning surface. It is not another
+dictionary result list and not a passage reader. It starts from a Foster gateway
+such as Receiving Function, asks the learner-facing reading question, then maps
+that function into the active language's traditional terms.
+
+Current behavior:
+
+- A Start Here section introduces forms, cases, language-specific packaging, and
+  Foster gateway questions before the learner sees the concept explorer.
+- The active language also shows a compact script primer: Devanagari and
+  transliteration for Sanskrit, Greek alphabet rows for Greek, and Latin letters
+  plus macron/ending cues for Latin.
+- Language tabs select Sanskrit, Greek, or Latin grammar terms.
+- Concept buttons select the current Foster gateway.
+- The lesson body shows one reader question, one active-language native gateway
+  set, and one table cue.
+- Source-tradition links open the Reader Desk at checked source passages when a
+  segment is available.
+- Practice links open the dictionary encounter flow with `load=yes` so the
+  learner can move from concept study into source-backed forms.
+- Inline dictionary form cards should remain compact previews and link to
+  `/learn` for the broader learning path.
+
+Design rule: raw provenance, evidence gaps, and source homograph suffixes are
+not first-view teaching material. Keep them available in source-backed layers,
+but keep the beginner view focused on the form's job, the native grammar name,
+and the next question to ask while reading.
+
 ## Marginal Word
 
 The Marginal word panel is backed by `/api/motd`.
 
-Normal page load is cache-friendly. If a valid MOTD payload exists in browser
-`localStorage`, the panel renders it immediately and does not automatically call
-`/api/motd`. Stale payloads remain on screen until the learner asks for refresh,
-so returning to a tab does not blank or churn the page. If no valid local payload
-exists, the panel shows solid control placeholders and three result-shaped
-skeleton cards while `/api/motd` loads. Built-in starter words should not
-masquerade as daily recommendations.
+Normal page load is cache-friendly. If a fresh MOTD payload exists in browser
+`localStorage`, the panel renders it immediately. Stale payloads also remain on
+screen, but the panel shows the refreshing treatment while requesting a
+replacement in the background. If no valid local payload exists, the panel shows
+solid control placeholders and three result-shaped skeleton cards while
+`/api/motd` loads. The request asks the LLM for one candidate in each supported
+language. Curated learner words are used only as prompt calibration seeds; each
+card still comes from a language-specific CLI source probe. Built-in starter
+words should not masquerade as daily
+recommendations.
 
 Refresh is deliberately different. Clicking Refresh keeps the current cards on
 screen, disables the small controls, and applies a subtle moving gloss animation
@@ -144,6 +188,11 @@ while the backend asks the CLI for LLM-generated fresh candidates. This avoids a
 blanking flash while preserving the user's request for real randomness. Refresh
 sends the current visible MOTD keys as avoid hints so a browser with a stored
 folio can still discourage repeats after a server restart.
+
+The form-learning overlay keeps Foster terms as the cross-language bridge, but
+native grammar chips are scoped to the active lookup language. A Greek lookup
+should show Greek traditional terms, not Sanskrit grammar terms, unless a future
+explicit comparison view asks for the full crosswalk.
 
 The `load=yes` / `prefill` toggle controls whether MOTD links immediately run the
 word lookup or only fill the search form. Active MOTD links are marked when the
@@ -260,10 +309,17 @@ Rules:
 - Do not call a table loaded unless the source returns at least one form.
 - Group large tables by useful grammatical dimensions such as number for
   declensions or mood / tense / voice for conjugations.
+- Begin loaded tables with a compact table-reading gateway that explains the
+  active dimensions in learner terms.
 - Highlight forms that match the current encounter when table data is loaded.
 - Treat unresolved candidates as quiet evidence, not as errors.
 - Keep grammar close to the encounter. Do not turn the page into a conjugation
   dashboard.
+
+The learning overlay belongs in this same area. It should add a compact "Learn
+this form" layer sourced from `encounter --include-learning`, with Foster
+gateway labels, traditional terms, learner actions, and evidence caveats. Keep
+full details expandable so dictionary evidence remains the main reading surface.
 
 ## Result Group Anatomy
 

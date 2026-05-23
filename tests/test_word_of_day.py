@@ -33,6 +33,7 @@ GREEK_MOTD_BATCH_COUNT = 5
 GREEK_MOTD_MIN_BEGINNER_CANDIDATES = 50
 GREEK_MOTD_MIN_CURATED_CANDIDATES = 365
 SUBPROCESS_TIMEOUT_TEST_MAX_SECONDS = 2
+WORD_OF_DAY_PARALLEL_PROBE_MAX_SECONDS = 0.45
 WORD_OF_DAY_SCHEMA_PATH = Path("docs/schemas/word_of_day.v1.schema.json")
 
 
@@ -168,6 +169,35 @@ def test_word_recommendations_seeded_output_is_reproducible() -> None:
     assert first["items"] == second["items"]
 
 
+def test_word_recommendations_probe_languages_concurrently_in_stable_order() -> None:
+    seen: list[str] = []
+
+    def slow_probe(language: str, query: str) -> ReductionResult:
+        time.sleep(0.2)
+        seen.append(language)
+        return _fake_reduction(language, query)
+
+    started = time.monotonic()
+    payload = generate_word_of_day_payload(
+        languages=["san", "grc", "lat"],
+        options=_options(seed="parallel-languages"),
+        probe_encounter=slow_probe,
+        bucket_gloss=lambda bucket: bucket.display_gloss,
+        bucket_learner_gloss=lambda bucket: bucket.display_gloss,
+        exclude_terms=[],
+        candidate_pools={
+            "san": [WordCandidate("san", "agni", "beginner")],
+            "grc": [WordCandidate("grc", "logos", "beginner")],
+            "lat": [WordCandidate("lat", "amo", "beginner")],
+        },
+    )
+    elapsed = time.monotonic() - started
+
+    assert elapsed < WORD_OF_DAY_PARALLEL_PROBE_MAX_SECONDS
+    assert [item["language"] for item in payload["items"]] == ["san", "grc", "lat"]
+    assert sorted(seen) == ["grc", "lat", "san"]
+
+
 def test_word_of_day_cli_returns_structured_json() -> None:
     runner = CliRunner()
     with patch("langnet.cli._word_of_day_probe_reduction") as probe:
@@ -228,6 +258,17 @@ def test_recommend_words_alias_uses_same_json_contract() -> None:
     _assert_matches_word_of_day_schema(payload)
     assert payload["request"]["languages"] == ["lat"]
     assert len(payload["items"]) == RECOMMEND_WORDS_COUNT
+
+
+def test_word_of_day_cli_defaults_to_fast_recommendation_model() -> None:
+    result = CliRunner().invoke(main, ["word-of-day", "--help"])
+
+    assert result.exit_code == 0, result.output
+    recommendation_help = result.output.split("--recommendation-model", maxsplit=1)[1].split(
+        "--include-ambiguous", maxsplit=1
+    )[0]
+    assert "openai:google/gemini-2.5-flash-lite" in recommendation_help
+    assert "openai:deepseek/deepseek-v4-flash" not in recommendation_help
 
 
 def test_word_of_day_probe_translation_mode_never_populates() -> None:
@@ -517,6 +558,38 @@ def test_word_of_day_can_use_llm_synthesized_candidates() -> None:
     assert payload["items"][0]["query"] == "mare"
     assert payload["items"][0]["summary"] == "single word"
     finalize.assert_called_once()
+
+
+def test_word_of_day_can_skip_llm_card_finalization_for_web_budget() -> None:
+    runner = CliRunner()
+    with (
+        patch("langnet.cli._word_of_day_synthesize_candidates") as synthesize,
+        patch("langnet.cli._word_of_day_finalize_payload_with_llm") as finalize,
+        patch("langnet.cli._word_of_day_probe_reduction") as probe,
+    ):
+        synthesize.return_value = {
+            "lat": [WordCandidate("lat", "mare", summary_hint="single word")]
+        }
+        probe.side_effect = lambda **kwargs: _fake_reduction(kwargs["language"], kwargs["text"])
+        result = runner.invoke(
+            main,
+            [
+                "word-of-day",
+                "lat",
+                "--candidate-source",
+                "llm",
+                "--no-finalize-cards",
+                "--output",
+                "json",
+            ],
+        )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    _assert_matches_word_of_day_schema(payload)
+    assert payload["generator"]["candidate_source"] == "llm"
+    assert payload["items"][0]["query"] == "mare"
+    finalize.assert_not_called()
 
 
 def test_word_of_day_auto_falls_back_when_llm_synthesis_times_out() -> None:

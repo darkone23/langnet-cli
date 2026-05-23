@@ -24,7 +24,9 @@ Start here:
 - `docs/READER_DATA_BUILD.md` - reader data build and index workflow.
 - `docs/READER_WEB_CONTRACT.md` - reader/web integration contract.
 - `webapp/README.md` - webapp setup and operational notes.
-- `webapp/docs/` - webapp-specific backend, UI, operations, and regression notes.
+- `webapp/docs/UI.md` - current web UI layout and visual rules.
+- `webapp/docs/LEARNING_UI.md` - Foster-first "Learn this form" UI north star.
+- `webapp/docs/` - webapp-specific backend, operations, and regression notes.
 
 ## Developer References
 

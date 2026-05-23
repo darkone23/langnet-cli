@@ -53,6 +53,7 @@ Exact morphology facts map to stable grammar concepts:
 - `voice=passive` -> `voice.passive`
 - `part_of_speech=noun` plus `paradigm_kind=declension` -> `process.declension`
 - `part_of_speech=verb` plus person/number/tense/mood/voice -> `process.conjugation`
+- `part_of_speech=participle` or a participial stem/kṛdanta parse -> `process.participle`
 - future Sanskrit sandhi evidence -> `process.sandhi`
 - future compound evidence -> `process.compound`
 
@@ -64,8 +65,10 @@ The teaching layer presents:
 
 - Foster gateway label;
 - traditional English label;
-- Greek, Latin, and Sanskrit grammar names where known;
+- `native_gateways` rows that connect Greek, Latin, and Sanskrit grammar names
+  to the Foster learner gateway;
 - plain-language explanation;
+- Foster/Ossa learner action when a reviewed bridge exists;
 - structured grammar-source evidence, beginning with work-level reader anchors;
 - source-backed examples;
 - reading guidance;
@@ -84,6 +87,22 @@ For Greek `λόγου`, the overlay should be able to present:
 - Sanskrit comparison: ṣaṣṭhī vibhakti
 - process: declension
 - rule: nouns decline for case, number, and gender
+
+## First-Encounter Learning Goals
+
+The Learn surface should not assume that a reader already knows what a case,
+declension, or participle is. Before concept-level exploration, it should give a
+plain entry path:
+
+- explain that a **form** is the visible word shape on the page;
+- show that a small ending can carry a sentence job;
+- introduce **case** as a noun-form job before naming individual cases;
+- explain that Sanskrit, Greek, and Latin package inherited functions
+  differently;
+- make Foster labels gateway questions rather than replacement terminology;
+- provide a compact script primer for each language: Devanagari and
+  transliteration for Sanskrit, Greek alphabet rows for Greek, and Latin letter,
+  macron, and ending cues for Latin.
 
 ## Annotation-Inspired Reading Goals
 
@@ -169,19 +188,20 @@ labels.
 
 Use `--view compact` for UI planning and server integration. The compact view
 keeps stable concept IDs, Foster gateways, traditional terms, source-evidence
-counts, bridge IDs, bridge summaries, learner actions, product-use notes,
-morphology predicates, source refs, and source-action hints while omitting full
-evidence arrays. Full JSON remains the audit/debug view.
+counts, native gateway rows, bridge IDs, bridge summaries, learner actions,
+product-use notes, morphology predicates, source refs, and source-action hints
+while omitting full evidence arrays. Full JSON remains the audit/debug view.
 
 Use `learn evidence-report` as the stabilization gate before expanding into
 segment-level grammar-source research or web UI wiring. It should show every
 exposed concept with work-level evidence. Concepts without exact passage
 citations should list `reader_segment_links` as the expected remaining gap.
-The current segment-backed slice covers 23 of 24 exposed concepts with exact
+The current segment-backed slice covers 24 of 25 exposed concepts with exact
 Greek, Latin, or Sanskrit reader passages. `process.declension` remains the
 known gap because the available local lines are not yet strong enough to carry
 a precise teaching claim. Sanskrit sound-change examples include
-`sound_change.guna`, `sound_change.vrddhi`, and `sound_relation.savarna`.
+`sound_change.guna`, `sound_change.vrddhi`, and `sound_relation.savarna`; the
+cross-tradition action-as-noun bridge is `process.participle`.
 
 Use `learn doctor` as the didactic readiness gate before UI wiring. It combines
 concept evidence coverage, Foster essentials coverage, Foster source-reference
@@ -199,7 +219,10 @@ just cli reader work langnet:reader:sanskrit_dcs:dcs_413 --output json
 just cli reader contents langnet:reader:sanskrit_dcs:dcs_413 --limit 12 --output json
 just cli reader show langnet:reader:sanskrit_dcs:dcs_413 --segment 550729 --output json
 just cli reader show langnet:reader:sanskrit_dcs:dcs_413 --segment 551238 --output json
+just cli reader show langnet:reader:sanskrit_dcs:dcs_413 --segment 551927 --output json
+just cli reader show langnet:reader:tlg:tlg0063.001 --segment 1.1.23.1 --output json
 just cli reader show langnet:reader:tlg:tlg0063.001 --segment 1.1.31.7 --output json
+just cli reader show langnet:reader:digiliblt:dlt000157 --segment 73 --output json
 just cli reader show langnet:reader:digiliblt:dlt000157 --segment 76 --output json
 ```
 
@@ -230,17 +253,24 @@ external research grounding.
 
 ### Web
 
-The web app should add a compact "Learn this form" panel near Forms:
+The web app has two learning surfaces:
 
-- Foster label as the gateway;
-- native morphology;
-- traditional names;
-- one short rule;
-- examples across languages when helpful;
-- source/evidence link.
+- `/learn`: standalone Foster-first workflow for concept study, active-language
+  native grammar terms, reader questions, table cues, and source-backed practice
+  links.
+- Dictionary Forms: compact "Learn this form" preview beside resolved morphology.
 
-This should not become a textbook page. It should help a reader understand the
-form in front of them, then offer deeper links.
+The inline preview should show:
+
+- one Foster label as the gateway;
+- one active-language native grammar gateway;
+- one short learner action from the reviewed Foster bridge;
+- a link into `/learn` for the broader path.
+
+The inline preview should not become a textbook page. Raw provenance, evidence
+gaps, cross-language comparison rows, and source homograph suffixes belong behind
+source-backed detail or the standalone learning workflow, not in the beginner
+first view.
 
 ## Design Rules
 

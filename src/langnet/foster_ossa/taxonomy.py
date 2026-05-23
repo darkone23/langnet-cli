@@ -98,9 +98,7 @@ def audit_foster_taxonomy(
 
 def render_taxonomy_audit_markdown(audit: dict[str, Any]) -> str:
     raw_summary = audit.get("summary")
-    summary = (
-        cast(Mapping[str, object], raw_summary) if isinstance(raw_summary, Mapping) else {}
-    )
+    summary = cast(Mapping[str, object], raw_summary) if isinstance(raw_summary, Mapping) else {}
     lines = [
         "# Foster Ossa Taxonomy Audit",
         "",

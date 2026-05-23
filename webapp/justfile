@@ -108,12 +108,12 @@ api lang="lat" word="nexus" dictionary="gaffiot" translation="cache":
         --data-urlencode "timeout_ms={{timeout_ms}}"
 
 # Probe the web MOTD endpoint. Requires `just dev` in another shell.
-motd candidate_source="auto":
-    curl -sS "http://127.0.0.1:{{port}}/api/motd?count=1&translation=cache&candidate_source={{candidate_source}}&timeout_ms=120000"
+motd candidate_source="llm" language="all":
+    curl -sS "http://127.0.0.1:{{port}}/api/motd?language={{language}}&count=1&translation=cache&candidate_source={{candidate_source}}&timeout_ms=12000"
 
 # Probe the web MOTD refresh path. Requires `just dev` in another shell.
 motd-refresh candidate_source="llm" avoid="":
-    curl -sS "http://127.0.0.1:{{port}}/api/motd?count=1&translation=cache&candidate_source={{candidate_source}}&timeout_ms=120000&refresh=1&avoid={{avoid}}"
+    curl -sS "http://127.0.0.1:{{port}}/api/motd?count=1&translation=cache&candidate_source={{candidate_source}}&timeout_ms=12000&refresh=1&avoid={{avoid}}"
 
 # Summarize a live web API response. Requires `just dev` in another shell.
 api-summary lang="lat" word="nexus" dictionary="gaffiot" translation="cache":

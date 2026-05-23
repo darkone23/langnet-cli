@@ -126,7 +126,7 @@ is grounded in a source work but still needs exact passage-level verification.
 
 `learn evidence-report` summarizes the current registry readiness. A clean
 work-level baseline has work-level evidence for every exposed concept. The
-current segment-backed slice covers 23 of 24 exposed concepts with exact
+current segment-backed slice covers 24 of 25 exposed concepts with exact
 Greek, Latin, or Sanskrit reader passages. `process.declension` remains the
 known passage-level gap.
 
@@ -142,10 +142,10 @@ consumer starting from `case.genitive` can discover the Foster/Ossa
 
 Use `--view compact` when planning web/server integration. Compact concept and
 map payloads keep stable IDs, Foster gateways, traditional terms, evidence
-counts, bridge IDs, and compact bridge summaries without returning every source
-evidence record. Compact bridge payloads add learner actions, product-use notes,
-morphology predicates, caveats, source refs, summary refs, and source-action
-hints. Full JSON remains the review/audit projection.
+counts, native gateway rows, bridge IDs, and compact bridge summaries without
+returning every source evidence record. Compact bridge payloads add learner
+actions, product-use notes, morphology predicates, caveats, source refs, summary
+refs, and source-action hints. Full JSON remains the review/audit projection.
 
 Mapping output includes the normalized input feature map, `concept_ids`, the
 embedded concept records, and `diagnostics`. Diagnostics list grammar features
@@ -801,13 +801,18 @@ New renderer-facing fields are additive:
   the searched form, built from encounter morphology triples and resolver logic.
   It can include native analyses, functional analyses, a lazy
   `paradigm_request`, candidate `concept_ids`, and `unresolved_reason` values.
+  Sanskrit Heritage alternates are preserved as separate fetchable candidates
+  when possible; candidates marked with `ambiguous-analysis` should be shown as
+  alternate readings rather than single high-certainty facts.
   It does not fetch full paradigm tables; clients should call `paradigm` only
   after the learner opens a forms/paradigm panel.
 - `paradigm_resolution.candidates[*].learning_overlay`: present when
   `--include-learning` is passed. This embeds `langnet.learning_overlay.v1`
   summaries for the candidate's `concept_ids`, including Foster gateway labels
-  traditional Greek, Latin, and Sanskrit terms, and compact `foster_bridges`
-  when a concept has reviewed Foster/Ossa mappings. The overlay deliberately
+  traditional Greek, Latin, and Sanskrit terms, `native_gateways` rows, and
+  compact `foster_bridges` when a concept has reviewed Foster/Ossa mappings.
+  Bridge records include learner actions, product-use notes, morphology
+  predicates, source refs, summary refs, and caveats. The overlay deliberately
   does not duplicate `slot_features`, `native_analyses`, confidence, or
   provenance; those remain on the candidate as the evidence-bearing fields.
   `missing_evidence` reports follow-up gaps such as `reader_segment_links`.

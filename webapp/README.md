@@ -85,9 +85,13 @@ Important paths:
 - `src/routes/reader/+page.svelte`: read-only Reader Desk for browsing cataloged
   works, opening contents, reading exact segments, and sending selected words
   back into the dictionary encounter flow.
+- `src/routes/learn/+page.svelte`: standalone Foster-first learning workflow for
+  morphology concepts, native grammar terms, and source-backed practice links.
 - `src/app.css`: Tailwind v4, DaisyUI theme tokens, and project-specific reader
   styling.
 - `src/lib/reader.ts`: shared reader catalog, work, and segment types.
+- `src/lib/learn.ts`: reusable learning concept map for Foster gateways,
+  Sanskrit/Greek/Latin terms, reader questions, and practice words.
 - `src/lib/headword-display.ts`: script-aware display model for Sanskrit, Greek,
   and Latin result titles.
 - `src/lib/word-index.ts`: native index response model, section lookup targets,
@@ -116,6 +120,15 @@ Important paths:
 - `vite.config.ts`: Vite host, port, and allowed host settings.
 - `svelte.config.js`: Bun adapter and Svelte runes configuration.
 - `justfile`: development, verification, and API probe recipes.
+
+Web design docs:
+
+- `docs/UI.md`: current page layout, reader principles, result grouping, Forms,
+  and visual direction.
+- `docs/LEARNING_UI.md`: Foster-first "Learn this form" north star and first
+  integration slice.
+- `docs/BACKEND.md`: SvelteKit API adapter contracts.
+- `docs/REGRESSION_CASES.md`: live CLI/API cases that should keep working.
 
 ## Live Backend
 
@@ -186,10 +199,15 @@ MOTD endpoint:
 GET /api/motd
 ```
 
-Normal page load uses `candidate_source=auto` and cache-friendly translation.
-The browser also stores successful MOTD payloads in `localStorage` using the
-returned TTL, so a recent MOTD can render immediately while the page still asks
-the endpoint for a current cache-friendly recommendation.
+Normal page load requests all three supported languages, uses `candidate_source=llm`, and
+keeps translation cache-friendly. The API asks the LLM for candidate words, then
+builds a source-backed card through the CLI using a language-appropriate fast
+verification source instead of probing every dictionary on first paint. The web
+route skips the second LLM card-finalization call for reliability and uses a
+bounded 12-second budget for the live LLM path. The browser
+also stores successful MOTD payloads in `localStorage` using the returned TTL, so
+a recent MOTD can render immediately while the page still asks the endpoint for a
+current cache-friendly recommendation.
 
 The Refresh button is intentionally different: it requests `candidate_source=llm`
 with `refresh=1`, so the API asks the CLI for fresh LLM-generated candidates with
@@ -199,8 +217,8 @@ server's normal MOTD cache slot so a successful refresh sticks.
 Examples:
 
 ```sh
-curl 'http://127.0.0.1:43210/api/motd?count=1&translation=cache&candidate_source=auto'
-curl 'http://127.0.0.1:43210/api/motd?count=1&translation=cache&candidate_source=llm&refresh=1'
+curl 'http://127.0.0.1:43210/api/motd?language=all&count=1&translation=cache&candidate_source=llm&timeout_ms=12000'
+curl 'http://127.0.0.1:43210/api/motd?language=all&count=1&translation=cache&candidate_source=llm&refresh=1&timeout_ms=12000'
 ```
 
 Word index endpoint:

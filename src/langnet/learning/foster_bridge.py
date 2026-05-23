@@ -78,7 +78,12 @@ def foster_bridge_learning_payload(bridge: FosterBridge) -> dict[str, object]:
         "concept_ids": list(bridge.concept_ids),
         "related_concept_ids": list(bridge.related_concept_ids),
         "plain_english": bridge.plain_english,
+        "learner_action": bridge.learner_action,
+        "product_use": bridge.product_use,
+        "morphology_predicates": list(bridge.morphology_predicates),
         "source_refs": list(bridge.source_refs),
+        "summary_refs": list(bridge.summary_refs),
+        "caveats": list(bridge.caveats),
     }
 
 

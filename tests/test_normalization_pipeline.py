@@ -177,6 +177,13 @@ class _DhimataHeritage(_FakeHeritage):
         return []
 
 
+class _TinantaHeritage(_FakeHeritage):
+    def fetch_all_matches(self, query: str) -> list[HeritageMatch]:
+        if query == "tinanta":
+            return [HeritageMatch(canonical="tifanta", display="tiṅanta", entry_url="")]
+        return []
+
+
 def test_sanskrit_normalizer_enrichment_prefers_heritage() -> None:
     steps: list[NormalizationStep] = []
     normalizer = SanskritNormalizer(heritage_client=_FakeHeritage())
@@ -349,6 +356,16 @@ def test_sanskrit_normalizer_retries_reader_ascii_long_vowels_for_dhimata() -> N
     assert any(
         step.operation == "heritage_retry_variant" and step.input == "dhīmatā" for step in steps
     )
+
+
+def test_sanskrit_normalizer_converts_heritage_bare_f_to_cdsl_nasal() -> None:
+    normalizer = SanskritNormalizer(heritage_client=_TinantaHeritage())
+
+    candidates = normalizer.canonical_candidates("tinanta", [])
+
+    assert candidates[0].lemma == "tiṅanta"
+    assert candidates[0].encodings["velthuis"] == "tifanta"
+    assert normalizer._velthuis_to_slp1_basic("tifanta") == "tiNanta"  # noqa: SLF001
 
 
 def test_sanskrit_normalizer_handles_harvard_kyoto_retroflex_markers() -> None:

@@ -343,8 +343,12 @@ cd ..
 just cli word-of-day all \
   --count 1 \
   --level beginner \
+  --dictionary motd-fast \
   --translation-mode cache \
-  --candidate-source auto \
+  --candidate-source llm \
+  --include-ambiguous \
+  --no-finalize-cards \
+  --timeout-ms 12000 \
   --output json
 ```
 
@@ -355,17 +359,29 @@ cd ..
 just cli word-of-day all \
   --count 1 \
   --level beginner \
+  --dictionary motd-fast \
   --translation-mode cache \
   --candidate-source llm \
+  --include-ambiguous \
+  --no-finalize-cards \
   --fresh \
   --avoid <recent-keys> \
   --nonce <random-value> \
+  --timeout-ms 12000 \
   --output json
 ```
 
-The distinction is intentional. Normal load should be cache-friendly and stable.
-Refresh should hit the LLM path so the learner can receive a genuinely fresh set
-of words.
+The distinction is intentional. Normal load should be LLM-driven, cache-friendly,
+stable, and bounded for first paint. The web route passes the current UI language
+and uses the `motd-fast` dictionary profile so each language probes one fast
+verification source: `cdsl` for Sanskrit, `diogenes` for Greek, and `whitakers`
+for Latin. Curated candidates are included in the LLM prompt as calibration
+seeds, not static user-facing cards. The web route skips the second LLM
+card-finalization call; source evidence still builds the card after the LLM
+chooses candidate words. The route uses a bounded 20-second budget because the
+previous OpenRouter model exceeded 20 seconds in local testing. The CLI
+recommendation model defaults to `openai:google/gemini-2.5-flash-lite` for this
+path because it returned the same all-language shape in about 8 seconds locally.
 
 The server keeps a small in-memory recent-key list for avoid hints. Cache misses
 and refresh requests forward recent keys to the CLI so the web layer does not
@@ -373,6 +389,19 @@ reinforce the same Sanskrit/Greek/Latin set indefinitely. Normal MOTD responses
 are cached according to `suggested_ttl_seconds`; refresh responses also update
 the normal cache slot so a successful manual refresh sticks for later normal
 loads.
+
+Successful server MOTD payloads are also persisted to
+`data/cache/web-motd-cache.json`. This is the backend cache used by incognito
+windows and process restarts; browser `localStorage` is only a client-side
+prefill. The disk cache keeps stale-but-usable cards for a bounded window so
+`/api/motd` can render immediately while a replacement warms in the background.
+The generated MOTD payload is not currently stored in DuckDB. Dictionary and
+translation lookups may use existing DuckDB-backed caches underneath the CLI, but
+the web MOTD card cache itself is a small JSON file.
+
+If the server has an expired MOTD cache entry, `/api/motd` returns that previous
+entry immediately with a refresh warning and starts a background replacement.
+This avoids making learners wait on the LLM path just to see a card.
 
 The browser also stores successful MOTD payloads in `localStorage` with the same
 TTL cap used by the server. On a later page load, valid local MOTD data is read
@@ -447,3 +476,20 @@ The UI treats zero-form paradigm payloads as unavailable tables even when the CL
 returns a structurally valid `langnet.paradigm.v1` payload. That protects the
 learner from seeing `Table loaded` when the source only returned a warning such
 as `heritage_declension_table_not_found`.
+
+## Learning Overlay
+
+The Foster-first learning UI is specified in
+[`LEARNING_UI.md`](LEARNING_UI.md). The web adapter should request the same
+didactic contract that the CLI exposes for local audit:
+
+```txt
+langnet-cli encounter <language> <query> <tool-filter> \
+  --include-paradigm-resolution \
+  --include-learning \
+  --output json
+```
+
+Current adapter status: `/api/search` requests both
+`--include-paradigm-resolution` and `--include-learning`; candidate
+`learning_overlay` data is preserved for the "Learn this form" UI slice.

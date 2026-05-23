@@ -9,6 +9,7 @@ def test_grammar_concept_registry_loads_core_gateway_concepts() -> None:
     assert "case.genitive" in concepts
     assert "process.declension" in concepts
     assert "process.conjugation" in concepts
+    assert "process.participle" in concepts
 
 
 def test_all_current_concepts_have_buttoned_up_learner_fields() -> None:
@@ -157,6 +158,7 @@ def test_core_greek_concepts_have_verified_dionysius_segments() -> None:
         "person.first": ("1.1.51.4", "πρῶτον"),
         "tense.present": ("1.1.53.1", "ἐνεςτώς"),
         "process.conjugation": ("1.1.53.6", "Συζυγία"),
+        "process.participle": ("1.1.23.1", "μετοχή"),
     }
 
     for concept_id, (citation_path, label_fragment) in expected.items():
@@ -187,6 +189,7 @@ def test_core_latin_concepts_have_verified_school_grammar_segments() -> None:
         "person.first": ("grammar.source.donatus.ars_maior", "112", "prima"),
         "tense.present": ("grammar.source.dositheus.ars_grammatica", "35", "praesens"),
         "process.conjugation": ("grammar.source.priscian.institutiones", "1743", "coniugatio"),
+        "process.participle": ("grammar.source.donatus.ars_minor", "73", "participium"),
     }
 
     for concept_id, (source_anchor_id, citation_path, label_fragment) in expected.items():
@@ -246,8 +249,37 @@ def test_passive_voice_concept_has_greek_and_latin_segments() -> None:
 def test_process_concepts_teach_decline_conjugate_rule() -> None:
     declension = get_grammar_concept("process.declension")
     conjugation = get_grammar_concept("process.conjugation")
+    participle = get_grammar_concept("process.participle")
 
     assert "decline" in declension.plain_english
     assert "conjugate" in conjugation.plain_english
+    assert "action" in participle.plain_english
     assert "noun" in declension.applies_to
     assert "verb" in conjugation.applies_to
+    assert "participle" in participle.applies_to
+
+
+def test_participle_concept_has_cross_tradition_reader_segments() -> None:
+    concept = get_grammar_concept("process.participle")
+    evidence_by_source = {
+        evidence.source_anchor_id: evidence
+        for evidence in concept.evidence
+        if evidence.evidence_level == "reader_segment"
+    }
+
+    assert concept.foster_gateway == "Action As Noun Form"
+    assert concept.traditional["grc"] == "μετοχή"
+    assert concept.traditional["lat"] == "participium"
+    assert concept.traditional["san"] == "kṛdanta / kṛt"
+
+    panini = evidence_by_source["grammar.source.panini.astadhyayi"]
+    assert panini.citation_path == "551927"
+    assert "kartari kṛt" in panini.label
+
+    dionysius = evidence_by_source["grammar.source.dionysius_thrax.ars_grammatica"]
+    assert dionysius.citation_path == "1.1.23.1"
+    assert "μετοχή" in dionysius.label
+
+    donatus = evidence_by_source["grammar.source.donatus.ars_minor"]
+    assert donatus.citation_path == "74"
+    assert "participio sex accidunt" in donatus.label
