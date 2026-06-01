@@ -5,7 +5,7 @@ separate.
 
 1. **Research-backed curated metadata** records facts or claims we can cite:
    display corrections, aliases, attribution claims, contained-work boundaries,
-   work maps, search concepts, and source metadata.
+   work maps, citation maps, search concepts, and source metadata.
 2. **Generated discovery metadata** records interpretive catalog judgments:
    discovery group, tags, popularity scores, popularity tiers, author bios, and
    short classification notes.
@@ -27,6 +27,7 @@ discovery metadata.
 | Curated aliases | Alternate titles, abbreviations, and search-facing names | `data/curated/reader_aliases` | reader build |
 | Curated contained works | Embedded works with source-backed identity and citation ranges | `data/curated/reader_contained_works` then `contained_works` | reader build |
 | Curated work maps | Table-of-contents and citation-range structure | `data/curated/reader_work_maps` | reader build |
+| Curated citation maps | Source/work-specific mappings from scholarly or dictionary citation conventions to local machine citation shapes | `data/curated/reader_citation_maps` then `citation_maps` | reader build, `reader sync-citation-maps`, `reader citation-maps` |
 | Curated search concepts | Query expansions and concept labels | `data/curated/reader_search` | `reader search-index build` |
 | Generated work classifications | Discovery group, tags, popularity, category, period, and notes | CSV under `data/generated/reader_classifications`, then `work_classifications` | `reader classification-export`, `reader classify-works`, `reader sync-classifications` |
 | Generated author classifications | Author bio, historicity, period, region, prominence | CSV under `data/generated/reader_classifications`, then author classification tables | `reader author-classification-export`, `reader classify-authors`, `reader sync-author-classifications` |
@@ -155,8 +156,10 @@ Use this path for a Firecrawl-backed metadata batch.
 3. **Write the narrowest curated record.**
    Use display overlays for display fields, attribution YAML for responsibility
    claims, aliases for alternate names, contained works for embedded works,
-   work maps for citation structures, and source metadata for source-backed
-   context that should inform classification without mutating display fields.
+   work maps for work table-of-contents structures, citation maps for
+   source-specific scholarly-reference quirks, and source metadata for
+   source-backed context that should inform classification without mutating
+   display fields.
 
 4. **Review and sync curated records.**
    ```bash

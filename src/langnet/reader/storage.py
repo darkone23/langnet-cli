@@ -22,6 +22,7 @@ from langnet.reader.author_index import (
     normalize_section_key,
 )
 from langnet.reader.author_normalization import normalize_reader_author
+from langnet.reader.citation_references import normalize_citation_reference
 from langnet.reader.ctsv2 import ctsv2_segment_address, parse_ctsv2_resource
 from langnet.reader.discovery_taxonomy import (
     DISCOVERY_GROUPS,
@@ -32,6 +33,8 @@ from langnet.reader.models import (
     ReaderAlias,
     ReaderAuthorClassification,
     ReaderBookArtifact,
+    ReaderCitationMap,
+    ReaderCitationReference,
     ReaderContainedWork,
     ReaderEdition,
     ReaderMetadataAttribution,
@@ -268,6 +271,36 @@ CREATE TABLE IF NOT EXISTS work_map_nodes (
     evidence_retrieved_at VARCHAR
 );
 
+CREATE TABLE IF NOT EXISTS citation_maps (
+    citation_map_id VARCHAR NOT NULL,
+    source_id VARCHAR NOT NULL,
+    work_id VARCHAR NOT NULL,
+    source_pattern VARCHAR NOT NULL,
+    machine_pattern VARCHAR NOT NULL,
+    projection_rule VARCHAR NOT NULL,
+    example_source_reference VARCHAR NOT NULL,
+    example_machine_citation VARCHAR NOT NULL,
+    status VARCHAR NOT NULL,
+    confidence VARCHAR NOT NULL,
+    note TEXT NOT NULL,
+    source_file VARCHAR NOT NULL,
+    evidence_source_type VARCHAR NOT NULL,
+    evidence_citation TEXT NOT NULL,
+    evidence_label TEXT NOT NULL,
+    evidence_retrieved_at VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS citation_references (
+    work_id VARCHAR NOT NULL,
+    segment_id VARCHAR NOT NULL,
+    citation_path VARCHAR NOT NULL,
+    citation_ref VARCHAR NOT NULL,
+    normalized_ref VARCHAR NOT NULL,
+    source_kind VARCHAR NOT NULL,
+    source_path VARCHAR NOT NULL,
+    sort_key INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS work_classifications (
     work_id VARCHAR PRIMARY KEY,
     category VARCHAR NOT NULL,
@@ -340,6 +373,9 @@ CREATE INDEX IF NOT EXISTS metadata_attributions_agent_idx
 CREATE INDEX IF NOT EXISTS contained_works_parent_idx ON contained_works(parent_work_id);
 CREATE INDEX IF NOT EXISTS contained_works_language_idx ON contained_works(language);
 CREATE INDEX IF NOT EXISTS work_map_nodes_work_idx ON work_map_nodes(work_id);
+CREATE INDEX IF NOT EXISTS citation_maps_work_idx ON citation_maps(work_id, source_id);
+CREATE INDEX IF NOT EXISTS citation_references_ref_idx ON citation_references(normalized_ref);
+CREATE INDEX IF NOT EXISTS citation_references_work_idx ON citation_references(work_id);
 CREATE INDEX IF NOT EXISTS work_classifications_work_idx ON work_classifications(work_id);
 CREATE INDEX IF NOT EXISTS work_classification_tags_tag_idx
     ON work_classification_tags(tag_id, work_id);
@@ -373,6 +409,17 @@ CREATE INDEX IF NOT EXISTS segments_sort_idx ON segments(sort_key);
 CREATE INDEX IF NOT EXISTS addresses_segment_idx ON addresses(segment_id);
 """
 CTS_WORK_TAIL_PARTS = 2
+GRANULAR_CITATION_MIN_PARTS = 3
+ROMAN_CITATION_VALUES = {
+    "i": 1,
+    "v": 5,
+    "x": 10,
+    "l": 50,
+    "c": 100,
+    "d": 500,
+    "m": 1000,
+}
+ROMAN_CITATION_RE = re.compile(r"[ivxlcdm]+", re.IGNORECASE)
 
 
 def _connect_write(path: Path) -> duckdb.DuckDBPyConnection:
@@ -662,6 +709,12 @@ def delete_reader_works(catalog_path: Path, work_ids: Iterable[str]) -> None:
             )
             conn.execute(
                 """
+                DELETE FROM citation_references
+                WHERE work_id IN (SELECT work_id FROM delete_work_ids)
+                """
+            )
+            conn.execute(
+                """
                 DELETE FROM work_classification_tags
                 WHERE work_id IN (SELECT work_id FROM delete_work_ids)
                 """
@@ -806,6 +859,80 @@ def register_segment_rows(
                 )
                 conn.unregister("address_rows")
             conn.execute(BOOK_INDEX_SQL)
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+
+
+def register_citation_references(
+    catalog_path: Path,
+    references: Iterable[ReaderCitationReference],
+    *,
+    replace: bool = True,
+    replace_work_ids: Iterable[str] | None = None,
+) -> None:
+    replacement_work_ids = set(replace_work_ids or ())
+    rows = [
+        (
+            reference.work_id,
+            reference.segment_id,
+            reference.citation_path,
+            reference.citation_ref,
+            normalize_citation_reference(reference.citation_ref),
+            reference.source_kind,
+            reference.source_path,
+            reference.sort_key,
+        )
+        for reference in references
+    ]
+    create_catalog_db(catalog_path)
+    with _connect_write(catalog_path) as conn:
+        conn.execute("BEGIN TRANSACTION")
+        try:
+            if replace:
+                conn.execute("DELETE FROM citation_references")
+            else:
+                work_ids = sorted({row[0] for row in rows} | replacement_work_ids)
+                if work_ids:
+                    work_frame = pl.DataFrame({"work_id": work_ids}, schema={"work_id": pl.Utf8})
+                    conn.register("citation_reference_work_ids", work_frame)
+                    conn.execute(
+                        """
+                        DELETE FROM citation_references
+                        WHERE work_id IN (SELECT work_id FROM citation_reference_work_ids)
+                        """
+                    )
+                    conn.unregister("citation_reference_work_ids")
+            if rows:
+                frame = pl.DataFrame(
+                    rows,
+                    schema={
+                        "work_id": pl.Utf8,
+                        "segment_id": pl.Utf8,
+                        "citation_path": pl.Utf8,
+                        "citation_ref": pl.Utf8,
+                        "normalized_ref": pl.Utf8,
+                        "source_kind": pl.Utf8,
+                        "source_path": pl.Utf8,
+                        "sort_key": pl.Int64,
+                    },
+                    orient="row",
+                )
+                conn.register("citation_reference_rows", frame)
+                conn.execute(
+                    """
+                    INSERT INTO citation_references (
+                        work_id, segment_id, citation_path, citation_ref, normalized_ref,
+                        source_kind, source_path, sort_key
+                    )
+                    SELECT
+                        work_id, segment_id, citation_path, citation_ref, normalized_ref,
+                        source_kind, source_path, sort_key
+                    FROM citation_reference_rows
+                    """
+                )
+                conn.unregister("citation_reference_rows")
             conn.execute("COMMIT")
         except Exception:
             conn.execute("ROLLBACK")
@@ -1269,6 +1396,80 @@ def register_work_map_nodes(
                 """
             )
             conn.unregister("work_map_node_rows")
+
+
+def register_citation_maps(
+    catalog_path: Path,
+    maps: Iterable[ReaderCitationMap],
+) -> None:
+    create_catalog_db(catalog_path)
+    rows = [
+        (
+            citation_map.citation_map_id,
+            citation_map.source_id,
+            citation_map.work_id,
+            citation_map.source_pattern,
+            citation_map.machine_pattern,
+            citation_map.projection_rule,
+            citation_map.example_source_reference,
+            citation_map.example_machine_citation,
+            citation_map.status,
+            citation_map.confidence,
+            citation_map.note,
+            citation_map.source_file,
+            evidence.source_type,
+            evidence.citation,
+            evidence.label,
+            evidence.retrieved_at,
+        )
+        for citation_map in maps
+        for evidence in citation_map.evidence
+    ]
+    with _connect_write(catalog_path) as conn:
+        conn.execute("DELETE FROM citation_maps")
+        if rows:
+            frame = pl.DataFrame(
+                rows,
+                schema={
+                    "citation_map_id": pl.Utf8,
+                    "source_id": pl.Utf8,
+                    "work_id": pl.Utf8,
+                    "source_pattern": pl.Utf8,
+                    "machine_pattern": pl.Utf8,
+                    "projection_rule": pl.Utf8,
+                    "example_source_reference": pl.Utf8,
+                    "example_machine_citation": pl.Utf8,
+                    "status": pl.Utf8,
+                    "confidence": pl.Utf8,
+                    "note": pl.Utf8,
+                    "source_file": pl.Utf8,
+                    "evidence_source_type": pl.Utf8,
+                    "evidence_citation": pl.Utf8,
+                    "evidence_label": pl.Utf8,
+                    "evidence_retrieved_at": pl.Utf8,
+                },
+                orient="row",
+            )
+            conn.register("citation_map_rows", frame)
+            conn.execute(
+                """
+                INSERT INTO citation_maps (
+                    citation_map_id, source_id, work_id, source_pattern,
+                    machine_pattern, projection_rule, example_source_reference,
+                    example_machine_citation, status, confidence, note, source_file,
+                    evidence_source_type, evidence_citation, evidence_label,
+                    evidence_retrieved_at
+                )
+                SELECT
+                    citation_map_id, source_id, work_id, source_pattern,
+                    machine_pattern, projection_rule, example_source_reference,
+                    example_machine_citation, status, confidence, note, source_file,
+                    evidence_source_type, evidence_citation, evidence_label,
+                    evidence_retrieved_at
+                FROM citation_map_rows
+                """
+            )
+            conn.unregister("citation_map_rows")
 
 
 def register_work_classifications(
@@ -2402,14 +2603,90 @@ def _address_lookup_candidates(catalog_path: Path, address: str) -> list[str]:
     if resource is not None and resource.ref:
         resolved_work_id = resolve_work_ref(catalog_path, resource.text_id)
         if resolved_work_id:
-            candidates.append(f"{resolved_work_id}:{resource.ref}")
+            candidates.extend(
+                f"{resolved_work_id}:{citation_path}"
+                for citation_path in _citation_path_lookup_candidates(
+                    catalog_path,
+                    resolved_work_id,
+                    resource.ref,
+                )
+            )
     parts = _segment_address_parts(address)
     if parts is not None:
         work_ref, citation_path = parts
         resolved_work_id = resolve_work_ref(catalog_path, work_ref)
         if resolved_work_id:
-            candidates.append(f"{resolved_work_id}:{citation_path}")
+            candidates.extend(
+                f"{resolved_work_id}:{candidate_path}"
+                for candidate_path in _citation_path_lookup_candidates(
+                    catalog_path,
+                    resolved_work_id,
+                    citation_path,
+                )
+            )
     return list(dict.fromkeys(candidates))
+
+
+def _citation_path_lookup_candidates(
+    catalog_path: Path,
+    work_id: str,
+    citation_path: str,
+) -> list[str]:
+    parts = [part.strip() for part in citation_path.split(".") if part.strip()]
+    candidates = [citation_path]
+    normalized_parts = [_numeric_citation_part(part) for part in parts]
+    if (
+        len(parts) >= GRANULAR_CITATION_MIN_PARTS
+        and all(normalized_parts)
+        and _work_accepts_drop_middle_citation_projection(catalog_path, work_id)
+    ):
+        candidates.append(f"{normalized_parts[0]}.{normalized_parts[-1]}")
+    return list(dict.fromkeys(candidates))
+
+
+def _work_accepts_drop_middle_citation_projection(catalog_path: Path, work_id: str) -> bool:
+    if not catalog_path.exists():
+        return False
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "citation_maps"):
+            return False
+        row = conn.execute(
+            """
+            SELECT 1
+            FROM citation_maps
+            WHERE work_id = ?
+              AND status = 'accepted'
+              AND projection_rule = 'drop_middle_numeric_part'
+              AND source_pattern = 'book.chapter.section'
+              AND machine_pattern = 'book.section'
+            LIMIT 1
+            """,
+            [work_id],
+        ).fetchone()
+    return row is not None
+
+
+def _numeric_citation_part(part: str) -> str | None:
+    value = part.strip()
+    if value.isdigit():
+        return value
+    normalized = value.casefold()
+    if not ROMAN_CITATION_RE.fullmatch(normalized):
+        return None
+    return str(_roman_citation_to_int(normalized))
+
+
+def _roman_citation_to_int(value: str) -> int:
+    total = 0
+    previous = 0
+    for character in reversed(value):
+        current = ROMAN_CITATION_VALUES[character]
+        if current < previous:
+            total -= current
+        else:
+            total += current
+            previous = current
+    return total
 
 
 def _address_work_id_from_artifacts(address: str, artifacts: list[dict[str, Any]]) -> str | None:
@@ -2519,6 +2796,44 @@ def lookup_segment_by_address(catalog_path: Path, address: str) -> dict[str, Any
         segment["address"] = address
     _attach_segment_canonical_address(catalog_path, segment)
     return segment
+
+
+def lookup_segments_by_citation_reference(
+    catalog_path: Path,
+    citation_ref: str,
+) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    normalized_ref = normalize_citation_reference(citation_ref)
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "citation_references"):
+            return []
+        rows = _dict_rows(
+            conn,
+            """
+            SELECT work_id, segment_id, citation_path, citation_ref, normalized_ref,
+                   source_kind, source_path, sort_key
+            FROM citation_references
+            WHERE normalized_ref = ?
+            ORDER BY sort_key, work_id, segment_id
+            """,
+            [normalized_ref],
+        )
+    segments: list[dict[str, Any]] = []
+    seen_segment_ids: set[str] = set()
+    for row in rows:
+        segment_id = str(row["segment_id"])
+        if segment_id in seen_segment_ids:
+            continue
+        seen_segment_ids.add(segment_id)
+        segment = lookup_segment_by_address(
+            catalog_path, f"{row['work_id']}:{row['citation_path']}"
+        )
+        if segment is None:
+            continue
+        segment["citation_reference"] = row
+        segments.append(segment)
+    return segments
 
 
 def lookup_alias(
@@ -5092,6 +5407,58 @@ def work_map_for_work(catalog_path: Path, work_ref: str) -> list[dict[str, Any]]
             candidates,
         )
     return [_decorate_work_map_node(catalog_path, row) for row in rows]
+
+
+def citation_maps_for_work(
+    catalog_path: Path,
+    work_ref: str,
+    *,
+    source_id: str | None = None,
+) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    work = get_work(catalog_path, work_ref)
+    candidates = [work_ref]
+    if work:
+        for value in (
+            work.get("work_id"),
+            work.get("cts_work_urn"),
+            work.get("parent_work_id"),
+        ):
+            if value:
+                candidates.append(str(value))
+    resolved = resolve_work_ref(catalog_path, work_ref)
+    if resolved:
+        candidates.append(resolved)
+    candidates = list(dict.fromkeys(candidates))
+    placeholders = ", ".join("?" for _ in candidates)
+    where = [f"work_id IN ({placeholders})"]
+    params: list[object] = [*candidates]
+    if source_id:
+        where.append("source_id = ?")
+        params.append(source_id)
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "citation_maps"):
+            return []
+        rows = _dict_rows(
+            conn,
+            f"""
+            SELECT
+                citation_map_id, source_id, work_id, source_pattern, machine_pattern,
+                projection_rule, example_source_reference, example_machine_citation,
+                status, confidence, note, source_file,
+                count(*) AS evidence_count
+            FROM citation_maps
+            WHERE {" AND ".join(where)}
+            GROUP BY
+                citation_map_id, source_id, work_id, source_pattern, machine_pattern,
+                projection_rule, example_source_reference, example_machine_citation,
+                status, confidence, note, source_file
+            ORDER BY source_id, work_id, citation_map_id
+            """,
+            params,
+        )
+    return rows
 
 
 def _decorate_work_map_node(catalog_path: Path, row: dict[str, Any]) -> dict[str, Any]:

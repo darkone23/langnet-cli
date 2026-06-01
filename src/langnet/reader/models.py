@@ -210,6 +210,23 @@ class ReaderWorkMapNode:
 
 
 @dataclass(frozen=True)
+class ReaderCitationMap:
+    citation_map_id: str
+    source_id: str
+    work_id: str
+    source_pattern: str
+    machine_pattern: str
+    projection_rule: str
+    example_source_reference: str
+    example_machine_citation: str
+    status: str
+    confidence: str
+    note: str
+    source_file: str = ""
+    evidence: tuple[ReaderMetadataOverlayEvidence, ...] = ()
+
+
+@dataclass(frozen=True)
 class ReaderWorkClassification:
     work_id: str
     category: str
@@ -253,6 +270,17 @@ class ReaderSegmentAddress:
     address: str
     address_kind: str
     citation_path: str
+
+
+@dataclass(frozen=True)
+class ReaderCitationReference:
+    work_id: str
+    segment_id: str
+    citation_path: str
+    citation_ref: str
+    source_kind: str
+    source_path: str
+    sort_key: int
 
 
 @dataclass(frozen=True)

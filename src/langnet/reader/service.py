@@ -9,6 +9,7 @@ from langnet.reader.author_classification import (
     author_historicity_status_allowed_values,
     load_author_classifications,
 )
+from langnet.reader.citation_map import load_citation_maps
 from langnet.reader.classification import load_work_classifications
 from langnet.reader.discovery_taxonomy import (
     discovery_group_allowed_values,
@@ -35,6 +36,7 @@ from langnet.reader.source_enrichment import (
 )
 from langnet.reader.storage import (
     apply_metadata_overlays_to_catalog,
+    citation_maps_for_work,
     get_work,
     list_alias_conflicts,
     list_aliases,
@@ -53,10 +55,12 @@ from langnet.reader.storage import (
     list_works,
     lookup_segment_by_address,
     lookup_segment_by_work_and_citation,
+    lookup_segments_by_citation_reference,
     prune_stale_work_classifications,
     reader_discovery_coverage,
     reader_summary,
     register_author_classifications,
+    register_citation_maps,
     register_metadata_attributions,
     register_metadata_overlays,
     register_source_metadata,
@@ -73,7 +77,17 @@ from langnet.reader.work_map import accepted_work_map_nodes, load_work_map_nodes
 READER_SCHEMA_VERSION = "langnet.reader.v1"
 _DOTTED_CITATION_RE = re.compile(r"[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)+")
 _CITATION_LABEL_RE = re.compile(r"\b(?:book|bk|line|ln|l)\.?\b", re.IGNORECASE)
-_CITATION_PART_RE = re.compile(r"[0-9]+[A-Za-z]?")
+_CITATION_PART_RE = re.compile(r"[0-9]+[A-Za-z]?|[ivxlcdm]+", re.IGNORECASE)
+_ROMAN_CITATION_RE = re.compile(r"[ivxlcdm]+", re.IGNORECASE)
+_ROMAN_CITATION_VALUES = {
+    "i": 1,
+    "v": 5,
+    "x": 10,
+    "l": 50,
+    "c": 100,
+    "d": 500,
+    "m": 1000,
+}
 MIN_CITATION_PARTS = 2
 
 
@@ -747,6 +761,32 @@ class ReaderService:
             work_ref=work_ref,
         )
 
+    def citation_maps_payload(
+        self,
+        work_ref: str,
+        *,
+        source_id: str | None = None,
+    ) -> dict[str, Any]:
+        return self._payload(
+            "citation-maps",
+            citation_maps_for_work(self.catalog_path, work_ref, source_id=source_id),
+            work_ref=work_ref,
+            source_id=source_id,
+        )
+
+    def sync_citation_maps_payload(self, citation_map_dir: Path) -> dict[str, Any]:
+        maps = load_citation_maps(citation_map_dir)
+        register_citation_maps(self.catalog_path, maps)
+        return {
+            "schema_version": READER_SCHEMA_VERSION,
+            "mode": "sync-citation-maps",
+            "catalog_path": str(self.catalog_path),
+            "summary": {
+                "citation_map_dir": str(citation_map_dir),
+                "synced_count": len(maps),
+            },
+        }
+
     def sync_work_maps_payload(self, work_map_dir: Path) -> dict[str, Any]:
         nodes = accepted_work_map_nodes(load_work_map_nodes(work_map_dir))
         register_work_map_nodes(self.catalog_path, nodes)
@@ -907,22 +947,43 @@ class ReaderService:
     def resolve_address(self, address: str) -> dict[str, Any]:
         resolved_address = address
         segment = None
-        if " " in address.strip():
+        segments: list[dict[str, Any]] = []
+        address_text = address.strip()
+        spaced_reference = " " in address_text
+        if spaced_reference:
             work_ref, citation_path = self._split_reference(address.strip())
             citation_path = _normalize_citation_path(citation_path)
             work_id = resolve_work_ref(self.catalog_path, work_ref)
             if work_id and citation_path:
                 resolved_address = f"{work_id}:{citation_path.strip()}"
                 segment = lookup_segment_by_address(self.catalog_path, resolved_address)
-        if segment is None and resolved_address == address:
+            else:
+                segments = lookup_segments_by_citation_reference(self.catalog_path, address)
+                if segments:
+                    segment = segments[0]
+        if (
+            segment is None
+            and not segments
+            and resolved_address == address
+            and not spaced_reference
+        ):
             segment = lookup_segment_by_address(self.catalog_path, address)
+        if segment is not None:
+            if not segments:
+                segments = [segment]
+        else:
+            segments = lookup_segments_by_citation_reference(self.catalog_path, address)
+            if segments:
+                segment = segments[0]
         return {
             "schema_version": READER_SCHEMA_VERSION,
             "mode": "resolve-address",
             "catalog_path": str(self.catalog_path),
             "address": address,
             "resolved_address": resolved_address,
+            "resolution_status": "resolved" if segment is not None else "not_found",
             "segment": segment,
+            "segments": segments,
         }
 
     def _split_reference(self, address: str) -> tuple[str, str]:
@@ -1105,8 +1166,28 @@ def _normalize_citation_path(citation_path: str) -> str:
     unlabeled = _CITATION_LABEL_RE.sub(" ", citation)
     parts = _CITATION_PART_RE.findall(unlabeled)
     if len(parts) >= MIN_CITATION_PARTS:
-        return ".".join(parts)
+        return ".".join(_normalize_citation_part(part) for part in parts)
     return citation
+
+
+def _normalize_citation_part(part: str) -> str:
+    value = part.strip()
+    if _ROMAN_CITATION_RE.fullmatch(value):
+        return str(_roman_citation_to_int(value))
+    return value
+
+
+def _roman_citation_to_int(value: str) -> int:
+    total = 0
+    previous = 0
+    for char in reversed(value.casefold()):
+        current = _ROMAN_CITATION_VALUES[char]
+        if current < previous:
+            total -= current
+        else:
+            total += current
+            previous = current
+    return total
 
 
 def _cursor_offset(cursor: str | None) -> int:

@@ -1,0 +1,8 @@
+aliases:
+  - alias: "Lucr."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi0550.phi001"
+    display: "Lucretius, De Rerum Natura"
+    sources: ["lewis-short", "gaffiot", "manual"]
+

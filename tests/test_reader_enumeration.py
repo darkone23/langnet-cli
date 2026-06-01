@@ -7,7 +7,27 @@ from unittest import mock
 
 from langnet.reader import service as reader_service_module
 from langnet.reader.builder import ReaderBuildConfig, ReaderBuilder
+from langnet.reader.models import (
+    ReaderAlias,
+    ReaderBookArtifact,
+    ReaderCitationMap,
+    ReaderCitationReference,
+    ReaderEdition,
+    ReaderMetadataOverlayEvidence,
+    ReaderSegment,
+    ReaderSegmentAddress,
+    ReaderWork,
+)
 from langnet.reader.service import ReaderService
+from langnet.reader.storage import (
+    create_book_db,
+    create_catalog_db,
+    register_aliases,
+    register_book,
+    register_citation_maps,
+    register_citation_references,
+    register_segment_rows,
+)
 
 FIXTURES = Path("tests/fixtures/reader")
 FIXTURE_WORK_COUNT = 2
@@ -88,6 +108,443 @@ def test_reader_service_resolves_alias_before_segment_lookup() -> None:
         assert resolved["resolved_address"] == "urn:cts:greekLit:tlg0012.tlg002:3.74"
         assert lookup_calls
         assert lookup_calls[0] == "urn:cts:greekLit:tlg0012.tlg002:3.74"
+
+
+def test_reader_service_resolve_address_returns_all_citation_reference_segments() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "mahabharata.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="langnet:reader:sanskrit_dcs:dcs_154",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Mahābhārata",
+            author="Unknown",
+            author_id=None,
+            source_id="dcs_154",
+        )
+        edition = ReaderEdition(
+            edition_id=f"{work.work_id}:edition",
+            work_id=work.work_id,
+            label="DCS CoNLL-U",
+            language="san",
+            source_path=root / "bhg-9.conllu",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="mahabharata-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=2,
+                token_count=8,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:231276",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="sentence",
+                    citation_path="231276",
+                    text="rājavidyā rājaguhyaṃ pavitramidamuttamam",
+                    normalized_text="rājavidyā rājaguhyaṃ pavitramidamuttamam",
+                    sort_key=1,
+                ),
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:231277",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="sentence",
+                    citation_path="231277",
+                    text="pratyakṣāvagamaṃ dharmyaṃ susukhaṃ kartumavyayam",
+                    normalized_text="pratyakṣāvagamaṃ dharmyaṃ susukhaṃ kartumavyayam",
+                    sort_key=2,
+                ),
+            ],
+            addresses=[
+                ReaderSegmentAddress(
+                    segment_id=f"{work.work_id}:231276",
+                    address=f"{work.work_id}:231276",
+                    address_kind="langnet",
+                    citation_path="231276",
+                ),
+                ReaderSegmentAddress(
+                    segment_id=f"{work.work_id}:231277",
+                    address=f"{work.work_id}:231277",
+                    address_kind="langnet",
+                    citation_path="231277",
+                ),
+            ],
+        )
+        register_citation_references(
+            catalog_path,
+            [
+                ReaderCitationReference(
+                    work_id=work.work_id,
+                    segment_id=f"{work.work_id}:231276",
+                    citation_path="231276",
+                    citation_ref="BhG 9.2",
+                    source_kind="dcs_native",
+                    source_path="bhg-9.conllu",
+                    sort_key=1,
+                ),
+                ReaderCitationReference(
+                    work_id=work.work_id,
+                    segment_id=f"{work.work_id}:231277",
+                    citation_path="231277",
+                    citation_ref="BhG 9.2",
+                    source_kind="dcs_native",
+                    source_path="bhg-9.conllu",
+                    sort_key=2,
+                ),
+            ],
+        )
+
+        lookup_calls: list[str] = []
+        original_lookup = reader_service_module.lookup_segment_by_address
+
+        def tracking_lookup(catalog_path: Path, address: str) -> dict[str, object] | None:
+            lookup_calls.append(address)
+            return original_lookup(catalog_path, address)
+
+        with mock.patch.object(
+            reader_service_module,
+            "lookup_segment_by_address",
+            side_effect=tracking_lookup,
+        ):
+            resolved = ReaderService(catalog_path).resolve_address("BhG 9.2")
+
+    assert resolved["resolution_status"] == "resolved"
+    assert resolved["segment"]["citation_path"] == "231276"
+    assert [segment["citation_path"] for segment in resolved["segments"]] == ["231276", "231277"]
+    assert "BhG 9.2" not in lookup_calls
+
+
+def test_reader_builder_registers_dcs_citation_references_for_resolution() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        sanskrit_dir = root / "sanskrit"
+        sanskrit_dir.mkdir()
+        (sanskrit_dir / "bhg-9.conllu").write_text(
+            """## text: Mahābhārata
+## text_id: 154
+## chapter: MBh, 6, BhaGī 9
+## chapter_id: 7697
+# text = rājavidyā rājaguhyaṃ pavitramidamuttamam
+# sent_id = 231276
+# sent_counter = 2
+# sent_subcounter = 1
+1	rājavidyā	rājavidyā	NOUN	_	_	_	_	_	_
+
+# text = pratyakṣāvagamaṃ dharmyaṃ susukhaṃ kartumavyayam
+# sent_id = 231277
+# sent_counter = 2
+# sent_subcounter = 2
+1	pratyakṣāvagamaṃ	pratyakṣāvagama	NOUN	_	_	_	_	_	_
+""",
+            encoding="utf-8",
+        )
+        result = ReaderBuilder(
+            ReaderBuildConfig(
+                sanskrit_dir=sanskrit_dir,
+                output_root=root / "build" / "reader",
+                alias_dir=None,
+                metadata_overlay_dir=None,
+                metadata_attribution_dir=None,
+                contained_work_dir=None,
+                work_map_dir=None,
+            )
+        ).build()
+
+        resolved = ReaderService(result.output_path).resolve_address("BhG 9.2")
+
+    assert resolved["resolution_status"] == "resolved"
+    assert [segment["citation_path"] for segment in resolved["segments"]] == ["231276", "231277"]
+
+
+def test_reader_service_resolves_latin_compact_dictionary_reference_with_alias() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "lucretius.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="urn:cts:latinLit:phi0550.phi001",
+            collection_id="perseus",
+            language="lat",
+            title="De Rerum Natura",
+            author="Lucretius",
+            author_id="urn:cts:latinLit:phi0550",
+            source_id="phi0550.phi001",
+            cts_work_urn="urn:cts:latinLit:phi0550.phi001",
+        )
+        edition = ReaderEdition(
+            edition_id="urn:cts:latinLit:phi0550.phi001.perseus-lat1",
+            work_id=work.work_id,
+            label="Perseus Latin edition",
+            language="lat",
+            source_path=root / "lucretius.xml",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="lucretius-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=1,
+                token_count=8,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:2.391",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="line",
+                    citation_path="2.391",
+                    text="et quamvis subito per colum vina videmus",
+                    normalized_text="et quamvis subito per colum vina videmus",
+                    sort_key=2391,
+                )
+            ],
+            addresses=[
+                ReaderSegmentAddress(
+                    segment_id=f"{work.work_id}:2.391",
+                    address=f"{work.work_id}:2.391",
+                    address_kind="cts",
+                    citation_path="2.391",
+                )
+            ],
+        )
+        register_aliases(
+            catalog_path,
+            [
+                ReaderAlias(
+                    alias="Lucr.",
+                    language="lat",
+                    kind="work_abbreviation",
+                    target=work.work_id,
+                    display="Lucretius, De Rerum Natura",
+                    source_file="fixture",
+                )
+            ],
+        )
+
+        resolved = ReaderService(catalog_path).resolve_address("Lucr. 2, 391")
+
+    assert resolved["resolved_address"] == "urn:cts:latinLit:phi0550.phi001:2.391"
+    assert resolved["resolution_status"] == "resolved"
+    assert resolved["segment"]["text"] == "et quamvis subito per colum vina videmus"
+    assert [segment["citation_path"] for segment in resolved["segments"]] == ["2.391"]
+
+
+def test_reader_service_resolves_dictionary_cts_address_to_less_granular_segment() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "cicero-inv.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="urn:cts:latinLit:phi0474.phi036",
+            collection_id="perseus",
+            language="lat",
+            title="De Inventione",
+            author="Marcus Tullius Cicero",
+            author_id="urn:cts:latinLit:phi0474",
+            source_id="phi0474.phi036",
+            cts_work_urn="urn:cts:latinLit:phi0474.phi036",
+        )
+        edition = ReaderEdition(
+            edition_id="urn:cts:latinLit:phi0474.phi036.perseus-lat1",
+            work_id=work.work_id,
+            label="Perseus Latin edition",
+            language="lat",
+            source_path=root / "cicero-inv.xml",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="cicero-inv-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=2,
+                token_count=24,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:2.148",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="section",
+                    citation_path="2.148",
+                    text="paterfamilias uti super familia pecuniaque sua legassit",
+                    normalized_text="paterfamilias uti super familia pecuniaque sua legassit",
+                    sort_key=2148,
+                ),
+            ],
+            addresses=[
+                ReaderSegmentAddress(
+                    segment_id=f"{work.work_id}:2.148",
+                    address=f"{work.work_id}:2.148",
+                    address_kind="cts",
+                    citation_path="2.148",
+                ),
+            ],
+        )
+        register_citation_maps(
+            catalog_path,
+            [
+                ReaderCitationMap(
+                    citation_map_id="lewis-short-de-inventione-book-chapter-section",
+                    source_id="lewis_short",
+                    work_id=work.work_id,
+                    source_pattern="book.chapter.section",
+                    machine_pattern="book.section",
+                    projection_rule="drop_middle_numeric_part",
+                    example_source_reference="Cic. Inv. 2, 50, 148",
+                    example_machine_citation="2.148",
+                    status="accepted",
+                    confidence="high",
+                    note="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+
+        granular = ReaderService(catalog_path).resolve_address(
+            "urn:cts:latinLit:phi0474.phi036:2.50.148"
+        )
+        roman = ReaderService(catalog_path).resolve_address(
+            "urn:cts:latinLit:phi0474.phi036:ii.l.cxlviii"
+        )
+
+    assert granular["resolution_status"] == "resolved"
+    assert granular["segment"]["citation_path"] == "2.148"
+    assert granular["segment"]["stored_address"] == "urn:cts:latinLit:phi0474.phi036:2.148"
+    assert granular["segment"]["address"] == "urn:cts:latinLit:phi0474.phi036:2.50.148"
+    assert roman["resolution_status"] == "resolved"
+    assert roman["segment"]["citation_path"] == "2.148"
+    assert roman["segment"]["address"] == "urn:cts:latinLit:phi0474.phi036:ii.l.cxlviii"
+
+
+def test_reader_service_resolves_roman_numeral_alias_reference() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "chup.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="langnet:reader:sanskrit_texts:translations_ChUp-Olivelle",
+            collection_id="sanskrit_texts",
+            language="san",
+            title="Chāndogyopaniṣad",
+            author="Unknown",
+            author_id=None,
+            source_id="translations_ChUp-Olivelle",
+        )
+        edition = ReaderEdition(
+            edition_id=f"{work.work_id}:edition",
+            work_id=work.work_id,
+            label="plain text",
+            language="san",
+            source_path=root / "ChUp-Olivelle.txt",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="chup-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=1,
+                token_count=8,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:2.7.1",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="line",
+                    citation_path="2.7.1",
+                    text="that is the beginning of Chāndogya 2.7.1",
+                    normalized_text="that is the beginning of chāndogya 2.7.1",
+                    sort_key=2071,
+                )
+            ],
+            addresses=[
+                ReaderSegmentAddress(
+                    segment_id=f"{work.work_id}:2.7.1",
+                    address=f"{work.work_id}:2.7.1",
+                    address_kind="langnet",
+                    citation_path="2.7.1",
+                )
+            ],
+        )
+        register_aliases(
+            catalog_path,
+            [
+                ReaderAlias(
+                    alias="ChUp.",
+                    language="san",
+                    kind="work_abbreviation",
+                    target=work.work_id,
+                    display="Chāndogyopaniṣad",
+                    source_file="fixture",
+                )
+            ],
+        )
+
+        resolved = ReaderService(catalog_path).resolve_address("ChUp. ii, 7, i")
+
+    assert resolved["resolution_status"] == "resolved"
+    assert resolved["resolved_address"] == f"{work.work_id}:2.7.1"
+    assert resolved["segment"]["citation_path"] == "2.7.1"
 
 
 def test_reader_service_show_resolves_friendly_address_before_segment_lookup() -> None:

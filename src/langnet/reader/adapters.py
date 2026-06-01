@@ -6,11 +6,13 @@ import re
 import unicodedata
 import xml.etree.ElementTree as ET
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
+from langnet.reader.citation_references import dcs_native_citation_references
 from langnet.reader.models import (
+    ReaderCitationReference,
     ReaderEdition,
     ReaderSegment,
     ReaderSegmentAddress,
@@ -46,6 +48,7 @@ XML_INVALID_CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 SANSKRIT_NUMBERED_SAMPLE_LINES = 500
 SANSKRIT_NUMBERED_MIN_SAMPLE_MATCHES = 3
 SANSKRIT_NUMBERED_LINE_RE = re.compile(r"^(?P<code>\d{8})\s+(?P<text>.+)$")
+SANSKRIT_DOTTED_REFERENCE_LINE_RE = re.compile(r"^(?P<reference>\d+(?:\.\d+){1,5}[A-Za-z]?)\s+.+$")
 GRETIL_AUTHOR_RE = re.compile(r"(?:^|_)sa_(?P<author>[^-_.]+)-")
 GRETIL_WORK_RE = re.compile(r"(?:^|_)sa_(?P<body>[^.]+)$")
 LEGACY_ENGLISH_WORDS = frozenset(
@@ -183,6 +186,7 @@ class ParsedBook:
     edition: ReaderEdition
     segments: list[ReaderSegment]
     addresses: list[ReaderSegmentAddress]
+    citation_references: list[ReaderCitationReference] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -214,6 +218,7 @@ class _ReaderSegmentRow:
     citation_path: str
     text: str
     source_text: str | None = None
+    citation_refs: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -501,10 +506,7 @@ def parse_sanskrit_plain_text(
         source_path=path,
     )
     lines = _sanskrit_plain_reader_lines(text.splitlines())
-    return _parsed_reader_book(
-        seed,
-        [(index, "line", text) for index, text in _numbered_nonempty(lines)],
-    )
+    return _parsed_reader_book_with_citations(seed, _sanskrit_plain_rows(lines))
 
 
 def parse_sanskrit_plain_text_group(
@@ -581,6 +583,24 @@ def _sanskrit_plain_reader_lines(lines: list[str]) -> list[str]:
         if not raw_line.strip().lstrip("\ufeff").startswith("#")
         if (normalized := _normalize_text(raw_line.lstrip("\ufeff")))
     ]
+
+
+def _sanskrit_plain_rows(lines: list[str]) -> list[_ReaderSegmentRow]:
+    seen: set[str] = set()
+    rows: list[_ReaderSegmentRow] = []
+    for line_index, text in _numbered_nonempty(lines):
+        citation_path = str(line_index)
+        if match := SANSKRIT_DOTTED_REFERENCE_LINE_RE.match(text):
+            citation_path = match.group("reference")
+        rows.append(
+            _ReaderSegmentRow(
+                sort_key=line_index,
+                segment_kind="line",
+                citation_path=_unique_plain_citation_path(citation_path, seen=seen),
+                text=text,
+            )
+        )
+    return rows
 
 
 def _sanskrit_group_header_metadata(paths: list[Path]) -> dict[str, str]:
@@ -779,6 +799,8 @@ def parse_dcs_conllu_group(paths: Iterable[Path]) -> ParsedBook:
                     segment_kind=row.segment_kind,
                     citation_path=citation_path,
                     text=row.text,
+                    source_text=row.source_text,
+                    citation_refs=row.citation_refs,
                 )
             )
     return _parsed_reader_book_with_citations(seed, rows)
@@ -786,14 +808,19 @@ def parse_dcs_conllu_group(paths: Iterable[Path]) -> ParsedBook:
 
 def _dcs_conllu_rows(text: str, *, offset: int = 0) -> list[_ReaderSegmentRow]:
     rows: list[_ReaderSegmentRow] = []
+    metadata = _dcs_metadata(text)
+    chapter = metadata.get("chapter", "")
     for block in re.split(r"\n\s*\n", text):
         sentence_text = ""
         sent_id = ""
+        sent_counter = ""
         for line in block.splitlines():
             if line.startswith("# text ="):
                 sentence_text = _normalize_text(line.split("=", 1)[1])
             elif line.startswith("# sent_id ="):
                 sent_id = _normalize_text(line.split("=", 1)[1])
+            elif line.startswith("# sent_counter ="):
+                sent_counter = _normalize_text(line.split("=", 1)[1])
         if sentence_text:
             citation_path = sent_id or str(len(rows) + 1)
             rows.append(
@@ -802,6 +829,10 @@ def _dcs_conllu_rows(text: str, *, offset: int = 0) -> list[_ReaderSegmentRow]:
                     segment_kind="sentence",
                     citation_path=citation_path,
                     text=sentence_text,
+                    citation_refs=dcs_native_citation_references(
+                        chapter=chapter,
+                        sent_counter=sent_counter,
+                    ),
                 )
             )
     return rows
@@ -1259,6 +1290,7 @@ def _parsed_reader_book_with_citations(
     )
     segments: list[ReaderSegment] = []
     addresses: list[ReaderSegmentAddress] = []
+    citation_references: list[ReaderCitationReference] = []
     for row in rows:
         segment_id = f"{work_id}:{row.citation_path}"
         segments.append(
@@ -1282,7 +1314,25 @@ def _parsed_reader_book_with_citations(
                 citation_path=row.citation_path,
             )
         )
-    return ParsedBook(work=work, edition=edition, segments=segments, addresses=addresses)
+        for citation_ref in row.citation_refs:
+            citation_references.append(
+                ReaderCitationReference(
+                    work_id=work_id,
+                    segment_id=segment_id,
+                    citation_path=row.citation_path,
+                    citation_ref=citation_ref,
+                    source_kind="dcs_native",
+                    source_path=str(seed.source_path),
+                    sort_key=row.sort_key,
+                )
+            )
+    return ParsedBook(
+        work=work,
+        edition=edition,
+        segments=segments,
+        addresses=addresses,
+        citation_references=citation_references,
+    )
 
 
 LEGACY_BLOCK_SIZE = 8192

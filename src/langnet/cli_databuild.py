@@ -158,6 +158,7 @@ class BuildReaderConfig:
     metadata_attribution_dir: str | None
     contained_work_dir: str | None
     work_map_dir: str | None
+    citation_map_dir: str | None
     output_root: str | None
     limit: int | None
     wipe: bool
@@ -401,6 +402,9 @@ def _build_reader_impl(config: BuildReaderConfig) -> None:
             Path(config.contained_work_dir).expanduser() if config.contained_work_dir else None
         ),
         work_map_dir=Path(config.work_map_dir).expanduser() if config.work_map_dir else None,
+        citation_map_dir=(
+            Path(config.citation_map_dir).expanduser() if config.citation_map_dir else None
+        ),
         output_root=Path(config.output_root).expanduser() if config.output_root else None,
         limit=config.limit,
         wipe_existing=config.wipe,
@@ -1503,6 +1507,13 @@ def _motd_pool_log(*, json_output: bool, message: str) -> None:
     help="Curated reader work-map/table-of-contents directory.",
 )
 @click.option(
+    "--citation-map-dir",
+    type=click.Path(),
+    default="data/curated/reader_citation_maps",
+    show_default=True,
+    help="Curated reader source-specific citation-map directory.",
+)
+@click.option(
     "--output-root",
     type=click.Path(),
     help="Output reader root (defaults to data/build/reader).",
@@ -1537,6 +1548,7 @@ def build_reader(  # noqa: PLR0913
     metadata_attribution_dir: str | None,
     contained_work_dir: str | None,
     work_map_dir: str | None,
+    citation_map_dir: str | None,
     output_root: str | None,
     limit: int | None,
     source_paths: tuple[str, ...],
@@ -1558,6 +1570,7 @@ def build_reader(  # noqa: PLR0913
             metadata_attribution_dir=metadata_attribution_dir,
             contained_work_dir=contained_work_dir,
             work_map_dir=work_map_dir,
+            citation_map_dir=citation_map_dir,
             output_root=output_root,
             limit=limit,
             source_paths=source_paths,

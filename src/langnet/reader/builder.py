@@ -37,6 +37,7 @@ from langnet.reader.author_normalization import (
     canonical_author_from_html_index_item,
     normalize_reader_author,
 )
+from langnet.reader.citation_map import load_citation_maps
 from langnet.reader.contained_work import load_contained_works
 from langnet.reader.ctsv2 import ctsv2_text_id
 from langnet.reader.legacy_metadata import (
@@ -50,6 +51,7 @@ from langnet.reader.metadata_overlay import accepted_metadata_overlays, load_met
 from langnet.reader.models import (
     ReaderAlias,
     ReaderBookArtifact,
+    ReaderCitationReference,
     ReaderSegment,
     ReaderSegmentAddress,
     ReaderSourceFile,
@@ -67,6 +69,8 @@ from langnet.reader.storage import (
     delete_reader_works,
     register_aliases,
     register_books,
+    register_citation_maps,
+    register_citation_references,
     register_contained_works,
     register_metadata_attributions,
     register_metadata_overlays,
@@ -98,6 +102,7 @@ class ReaderBuildConfig:
     metadata_attribution_dir: Path | None = Path("data/curated/reader_attributions")
     contained_work_dir: Path | None = Path("data/curated/reader_contained_works")
     work_map_dir: Path | None = Path("data/curated/reader_work_maps")
+    citation_map_dir: Path | None = Path("data/curated/reader_citation_maps")
     output_root: Path | None = None
     cts_index_path: Path | None = Path("data/build/cts_urn.duckdb")
     limit: int | None = None
@@ -128,10 +133,13 @@ class _PendingBookWrite:
     sources: list[_ParsedSource]
     segments: list[ReaderSegment]
     addresses: list[ReaderSegmentAddress]
+    citation_references: list[ReaderCitationReference]
 
     @classmethod
     def start(cls, book_path: Path) -> _PendingBookWrite:
-        return cls(book_path=book_path, sources=[], segments=[], addresses=[])
+        return cls(
+            book_path=book_path, sources=[], segments=[], addresses=[], citation_references=[]
+        )
 
     def append(self, source: _ParsedSource) -> None:
         work_id = source.parsed.work.work_id
@@ -145,9 +153,13 @@ class _PendingBookWrite:
                 for address in self.addresses
                 if not address.segment_id.startswith(f"{work_id}:")
             ]
+            self.citation_references = [
+                reference for reference in self.citation_references if reference.work_id != work_id
+            ]
         self.sources.append(source)
         self.segments.extend(source.parsed.segments)
         self.addresses.extend(source.parsed.addresses)
+        self.citation_references.extend(source.parsed.citation_references)
 
 
 class ReaderBuilder:
@@ -176,6 +188,11 @@ class ReaderBuilder:
         self._work_map_nodes = (
             load_work_map_nodes(config.work_map_dir) if config.work_map_dir is not None else []
         )
+        self._citation_maps = (
+            load_citation_maps(config.citation_map_dir)
+            if config.citation_map_dir is not None
+            else []
+        )
         self._accepted_metadata_overlays = accepted_metadata_overlays(self._metadata_overlays)
         self._selected_source_paths = {
             path.expanduser().resolve() for path in self.config.source_paths
@@ -188,13 +205,7 @@ class ReaderBuilder:
             create_catalog_db(self.catalog_path)
 
             aliases = load_aliases(self.config.alias_dir) if self.config.alias_dir else []
-            register_metadata_overlays(self.catalog_path, self._metadata_overlays)
-            register_metadata_attributions(self.catalog_path, self._metadata_attributions)
-            register_contained_works(self.catalog_path, self._contained_works)
-            register_work_map_nodes(
-                self.catalog_path,
-                accepted_work_map_nodes(self._work_map_nodes),
-            )
+            self._register_curated_metadata()
             self._register_legacy_source_metadata()
             self._register_digiliblt_source_metadata()
             self._register_sanskrit_source_metadata()
@@ -205,6 +216,7 @@ class ReaderBuilder:
             segment_count = 0
             parsed_sources = 0
             book_registrations: list[ReaderBookRegistration] = []
+            citation_references: list[ReaderCitationReference] = []
             pending_book: _PendingBookWrite | None = None
             for raw_source in self._iter_sources():
                 source = self._apply_metadata_overlays(
@@ -218,6 +230,7 @@ class ReaderBuilder:
                     artifact_count, segment_count = self._flush_pending_book(
                         pending_book,
                         book_registrations,
+                        citation_references,
                         artifact_count=artifact_count,
                         segment_count=segment_count,
                     )
@@ -236,6 +249,7 @@ class ReaderBuilder:
                 artifact_count, segment_count = self._flush_pending_book(
                     pending_book,
                     book_registrations,
+                    citation_references,
                     artifact_count=artifact_count,
                     segment_count=segment_count,
                 )
@@ -260,11 +274,10 @@ class ReaderBuilder:
                 self.catalog_path,
                 _work_relations_for_contained_works(self._contained_works),
             )
-            registered_aliases = _aliases_for_registrations(aliases, surviving_registrations)
-            register_aliases(
-                self.catalog_path,
-                registered_aliases,
-                replace=not self.config.source_paths,
+            alias_count = self._register_aliases_and_citation_references(
+                aliases,
+                surviving_registrations,
+                citation_references,
             )
             self._register_source_errors()
             catalog_work_count, catalog_artifact_count, catalog_segment_count = (
@@ -276,7 +289,7 @@ class ReaderBuilder:
                 artifact_count=catalog_artifact_count,
                 work_count=catalog_work_count,
                 segment_count=catalog_segment_count,
-                alias_count=len(registered_aliases),
+                alias_count=alias_count,
                 source_error_count=len(self.source_errors),
             )
             return BuildResult(
@@ -293,10 +306,21 @@ class ReaderBuilder:
                 message=str(exc),
             )
 
+    def _register_curated_metadata(self) -> None:
+        register_metadata_overlays(self.catalog_path, self._metadata_overlays)
+        register_metadata_attributions(self.catalog_path, self._metadata_attributions)
+        register_contained_works(self.catalog_path, self._contained_works)
+        register_work_map_nodes(
+            self.catalog_path,
+            accepted_work_map_nodes(self._work_map_nodes),
+        )
+        register_citation_maps(self.catalog_path, self._citation_maps)
+
     def _flush_pending_book(
         self,
         pending_book: _PendingBookWrite,
         book_registrations: list[ReaderBookRegistration],
+        citation_references: list[ReaderCitationReference],
         *,
         artifact_count: int,
         segment_count: int,
@@ -317,7 +341,33 @@ class ReaderBuilder:
             )
             artifact_count += 1
             segment_count += len(source.parsed.segments)
+        citation_references.extend(pending_book.citation_references)
         return artifact_count, segment_count
+
+    def _register_aliases_and_citation_references(
+        self,
+        aliases: list[ReaderAlias],
+        surviving_registrations: list[ReaderBookRegistration],
+        citation_references: list[ReaderCitationReference],
+    ) -> int:
+        registered_aliases = _aliases_for_registrations(aliases, surviving_registrations)
+        register_aliases(
+            self.catalog_path,
+            registered_aliases,
+            replace=not self.config.source_paths,
+        )
+        surviving_work_ids = {registration.work.work_id for registration in surviving_registrations}
+        register_citation_references(
+            self.catalog_path,
+            [
+                reference
+                for reference in citation_references
+                if reference.work_id in surviving_work_ids
+            ],
+            replace=not self.config.source_paths,
+            replace_work_ids=surviving_work_ids,
+        )
+        return len(registered_aliases)
 
     def _delete_superseded_sanskrit_json_works(
         self,
@@ -861,6 +911,7 @@ class ReaderBuilder:
             edition=source.parsed.edition,
             segments=source.parsed.segments,
             addresses=source.parsed.addresses,
+            citation_references=source.parsed.citation_references,
         )
         return _ParsedSource(parsed=parsed, adapter=source.adapter)
 
@@ -874,6 +925,7 @@ class ReaderBuilder:
             edition=source.parsed.edition,
             segments=source.parsed.segments,
             addresses=source.parsed.addresses,
+            citation_references=source.parsed.citation_references,
         )
         return _ParsedSource(parsed=parsed, adapter=source.adapter)
 
@@ -902,6 +954,7 @@ class ReaderBuilder:
                 edition=edition,
                 segments=source.parsed.segments,
                 addresses=source.parsed.addresses,
+                citation_references=source.parsed.citation_references,
             ),
             adapter=source.adapter,
         )
@@ -921,6 +974,7 @@ class ReaderBuilder:
                 edition=source.parsed.edition,
                 segments=source.parsed.segments,
                 addresses=source.parsed.addresses,
+                citation_references=source.parsed.citation_references,
             ),
             adapter=source.adapter,
         )

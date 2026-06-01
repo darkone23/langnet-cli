@@ -13,6 +13,7 @@
 - `curated/reader_attributions/`: evidence-backed attribution claims that remain queryable without necessarily changing display author.
 - `curated/reader_contained_works/`: accepted contained-work definitions, such as embedded works inside larger corpora.
 - `curated/reader_work_maps/`: curated table-of-contents/work-map data.
+- `curated/reader_citation_maps/`: source/work-specific maps from softer scholarly or dictionary citation conventions to local machine citation shapes.
 - `generated/reader_classifications/`: generated-but-reviewed CSV inputs for restoring reader shelves, popular lists, discovery facets, and author prominence after catalog rebuilds.
 
 Environment override: set `LANGNET_DATA_DIR` to change the root `data/` location; `build/` and `cache/` are created beneath it.

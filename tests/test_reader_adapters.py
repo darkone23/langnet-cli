@@ -359,6 +359,32 @@ def test_parse_sanskrit_plain_text_builds_retrievable_lines() -> None:
     assert result.segments[0].citation_path == "1"
 
 
+def test_parse_sanskrit_plain_text_uses_visible_dotted_references() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / "ChUp-Olivelle.txt"
+        path.write_text(
+            "\n".join(
+                [
+                    "@text=Chāndogyopaniṣad",
+                    "1.1.1 OM-one should venerate the High Chant as this syllable.",
+                    "1.1.2 The essence of these beings here is the earth.",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        result = parse_sanskrit_plain_text(
+            path,
+            collection_id="sanskrit_texts",
+            language="san",
+        )
+
+    assert [segment.citation_path for segment in result.segments] == ["1", "1.1.1", "1.1.2"]
+    assert result.segments[1].text == (
+        "1.1.1 OM-one should venerate the High Chant as this syllable."
+    )
+
+
 def test_parse_sanskrit_plain_text_derives_gretil_author_from_filename() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         path = Path(tmpdir) / "sa_kAlidAsa-raghuvaMza.txt"
@@ -595,6 +621,59 @@ def test_parse_dcs_conllu_builds_sentence_segments_with_sent_ids() -> None:
     assert result.addresses[0].address == (f"{result.work.work_id}:478852")
 
 
+def test_parse_dcs_conllu_builds_native_counter_citation_references() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / "astadhyayi.conllu"
+        path.write_text(
+            """## text: Aṣṭādhyāyī
+## text_id: 413
+## chapter: Aṣṭādhyāyī, 2, 2
+## chapter_id: 8876
+# text = na nirdhāraṇe
+# sent_id = 551160
+# sent_counter = 10
+1	na	na	PART	_	_	_	_	_	_
+2	nirdhāraṇe	nirdhāraṇa	NOUN	_	_	_	_	_	_
+""",
+            encoding="utf-8",
+        )
+
+        result = parse_dcs_conllu(path)
+
+    assert result.citation_references
+    assert {reference.citation_ref for reference in result.citation_references} >= {
+        "Aṣṭādhyāyī 2.2.10",
+        "Aṣṭ 2.2.10",
+        "Pāṇ. 2.2.10",
+    }
+    assert result.citation_references[0].segment_id == f"{result.work.work_id}:551160"
+
+
+def test_parse_dcs_conllu_builds_chandogya_native_reference_aliases() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / "chandogya.conllu"
+        path.write_text(
+            """## text: Chāndogyopaniṣad
+## text_id: 365
+## chapter: ChU, 2, 7
+## chapter_id: 5876
+# text = vāg eva ṛk
+# sent_id = 100
+# sent_counter = 1
+1	vāk	vāc	NOUN	_	_	_	_	_	_
+""",
+            encoding="utf-8",
+        )
+
+        result = parse_dcs_conllu(path)
+
+    assert {reference.citation_ref for reference in result.citation_references} >= {
+        "ChU 2.7.1",
+        "ChUp 2.7.1",
+        "ChUp. 2.7.1",
+    }
+
+
 def test_parse_dcs_conllu_group_builds_one_work_from_many_files() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
@@ -630,6 +709,41 @@ def test_parse_dcs_conllu_group_builds_one_work_from_many_files() -> None:
     assert result.segments[0].citation_path == "101"
     assert result.segments[1].citation_path == "102"
     assert result.segments[1].text == "second sentence"
+
+
+def test_parse_dcs_conllu_group_builds_multi_segment_bhagavadgita_references() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        path = root / "bhg-9.conllu"
+        path.write_text(
+            """## text: Mahābhārata
+## text_id: 154
+## chapter: MBh, 6, BhaGī 9
+## chapter_id: 7697
+# text = rājavidyā rājaguhyaṃ pavitramidamuttamam
+# sent_id = 231276
+# sent_counter = 2
+# sent_subcounter = 1
+1	rājavidyā	rājavidyā	NOUN	_	_	_	_	_	_
+
+# text = pratyakṣāvagamaṃ dharmyaṃ susukhaṃ kartumavyayam
+# sent_id = 231277
+# sent_counter = 2
+# sent_subcounter = 2
+1	pratyakṣāvagamaṃ	pratyakṣāvagama	NOUN	_	_	_	_	_	_
+""",
+            encoding="utf-8",
+        )
+
+        result = parse_dcs_conllu_group([path])
+
+    bhg_refs = [
+        reference for reference in result.citation_references if reference.citation_ref == "BhG 9.2"
+    ]
+    assert [reference.segment_id for reference in bhg_refs] == [
+        f"{result.work.work_id}:231276",
+        f"{result.work.work_id}:231277",
+    ]
 
 
 def test_parse_dcs_conllu_group_disambiguates_duplicate_sentence_ids() -> None:

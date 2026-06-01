@@ -13,6 +13,8 @@ from langnet.reader.models import (
     ReaderAuthorClassification,
     ReaderBookArtifact,
     ReaderBookPathParts,
+    ReaderCitationMap,
+    ReaderCitationReference,
     ReaderContainedWork,
     ReaderEdition,
     ReaderMetadataAttribution,
@@ -42,6 +44,7 @@ from langnet.reader.storage import (
     lookup_artifact_for_address,
     lookup_segment_by_address,
     lookup_segment_by_work_and_citation,
+    lookup_segments_by_citation_reference,
     prune_stale_work_classifications,
     reader_discovery_coverage,
     reader_summary,
@@ -49,6 +52,8 @@ from langnet.reader.storage import (
     register_author_classifications,
     register_book,
     register_books,
+    register_citation_maps,
+    register_citation_references,
     register_contained_works,
     register_metadata_attributions,
     register_segment_rows,
@@ -306,6 +311,104 @@ def test_ctsv2_missing_segment_does_not_scan_unrelated_books() -> None:
 
     assert segment is None
     assert has_address.call_count == 1
+
+
+def test_granular_projection_requires_accepted_citation_map() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "fixture.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="urn:cts:latinLit:phi9999.phi001",
+            collection_id="fixture",
+            language="lat",
+            title="Fixture",
+            author="Unknown",
+            author_id=None,
+            source_id="phi9999.phi001",
+            cts_work_urn="urn:cts:latinLit:phi9999.phi001",
+        )
+        edition = ReaderEdition(
+            edition_id=f"{work.work_id}:edition",
+            work_id=work.work_id,
+            label="Fixture",
+            language="lat",
+            source_path=root / "fixture.xml",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="fixture-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=1,
+                token_count=3,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:2.1",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="section",
+                    citation_path="2.1",
+                    text="A real 2.1 segment",
+                    normalized_text="a real 2.1 segment",
+                    sort_key=201,
+                )
+            ],
+            addresses=[
+                ReaderSegmentAddress(
+                    segment_id=f"{work.work_id}:2.1",
+                    address=f"{work.work_id}:2.1",
+                    address_kind="cts",
+                    citation_path="2.1",
+                )
+            ],
+        )
+
+        without_map = lookup_segment_by_address(catalog_path, f"{work.work_id}:2.7.1")
+        register_citation_maps(
+            catalog_path,
+            [
+                ReaderCitationMap(
+                    citation_map_id="fixture-drop-middle",
+                    source_id="fixture_dictionary",
+                    work_id=work.work_id,
+                    source_pattern="book.chapter.section",
+                    machine_pattern="book.section",
+                    projection_rule="drop_middle_numeric_part",
+                    example_source_reference="Fixture 2, 7, 1",
+                    example_machine_citation="2.1",
+                    status="accepted",
+                    confidence="high",
+                    note="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+        with_map = lookup_segment_by_address(catalog_path, f"{work.work_id}:2.7.1")
+
+    assert without_map is None
+    assert with_map is not None
+    assert with_map["citation_path"] == "2.1"
+    assert with_map["stored_address"] == f"{work.work_id}:2.1"
 
 
 def test_reader_paths_are_under_build_reader() -> None:
@@ -2683,6 +2786,184 @@ def test_catalog_routes_address_to_book_db() -> None:
                 "attributed_author_names": [],
             }
         ]
+
+
+def test_citation_references_resolve_one_reference_to_multiple_segments() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "mahabharata.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+
+        work = ReaderWork(
+            work_id="langnet:reader:sanskrit_dcs:dcs_154",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Mahābhārata",
+            author="Unknown",
+            author_id=None,
+            source_id="dcs_154",
+        )
+        edition = ReaderEdition(
+            edition_id=f"{work.work_id}:edition",
+            work_id=work.work_id,
+            label="DCS CoNLL-U",
+            language="san",
+            source_path=root / "bhg-9.conllu",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="mahabharata-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=2,
+                token_count=8,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:231276",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="sentence",
+                    citation_path="231276",
+                    text="rājavidyā rājaguhyaṃ pavitramidamuttamam",
+                    normalized_text="rājavidyā rājaguhyaṃ pavitramidamuttamam",
+                    sort_key=1,
+                ),
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:231277",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="sentence",
+                    citation_path="231277",
+                    text="pratyakṣāvagamaṃ dharmyaṃ susukhaṃ kartumavyayam",
+                    normalized_text="pratyakṣāvagamaṃ dharmyaṃ susukhaṃ kartumavyayam",
+                    sort_key=2,
+                ),
+            ],
+            addresses=[
+                ReaderSegmentAddress(
+                    segment_id=f"{work.work_id}:231276",
+                    address=f"{work.work_id}:231276",
+                    address_kind="langnet",
+                    citation_path="231276",
+                ),
+                ReaderSegmentAddress(
+                    segment_id=f"{work.work_id}:231277",
+                    address=f"{work.work_id}:231277",
+                    address_kind="langnet",
+                    citation_path="231277",
+                ),
+            ],
+        )
+        register_citation_references(
+            catalog_path,
+            [
+                ReaderCitationReference(
+                    work_id=work.work_id,
+                    segment_id=f"{work.work_id}:231276",
+                    citation_path="231276",
+                    citation_ref="BhG 9.2",
+                    source_kind="dcs_native",
+                    source_path="bhg-9.conllu",
+                    sort_key=1,
+                ),
+                ReaderCitationReference(
+                    work_id=work.work_id,
+                    segment_id=f"{work.work_id}:231277",
+                    citation_path="231277",
+                    citation_ref="BhG 9.2",
+                    source_kind="dcs_native",
+                    source_path="bhg-9.conllu",
+                    sort_key=2,
+                ),
+            ],
+        )
+
+        segments = lookup_segments_by_citation_reference(catalog_path, "BhG 9.2")
+
+    assert [segment["citation_path"] for segment in segments] == ["231276", "231277"]
+    assert segments[0]["citation_reference"]["citation_ref"] == "BhG 9.2"
+
+
+def test_citation_reference_lookup_handles_older_catalog_without_table() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        catalog_path = Path(tmpdir) / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        with duckdb.connect(str(catalog_path), read_only=False) as conn:
+            conn.execute("DROP TABLE citation_references")
+
+        segments = lookup_segments_by_citation_reference(catalog_path, "BhG 9.2")
+
+    assert segments == []
+
+
+def test_partial_citation_reference_registration_clears_rebuilt_work_without_new_refs() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "mahabharata.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work_id = "langnet:reader:sanskrit_dcs:dcs_154"
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work_id}:231276",
+                    work_id=work_id,
+                    edition_id=f"{work_id}:edition",
+                    segment_kind="sentence",
+                    citation_path="231276",
+                    text="rājavidyā rājaguhyaṃ pavitramidamuttamam",
+                    normalized_text="rājavidyā rājaguhyaṃ pavitramidamuttamam",
+                    sort_key=1,
+                )
+            ],
+            addresses=[
+                ReaderSegmentAddress(
+                    segment_id=f"{work_id}:231276",
+                    address=f"{work_id}:231276",
+                    address_kind="langnet",
+                    citation_path="231276",
+                )
+            ],
+        )
+        register_citation_references(
+            catalog_path,
+            [
+                ReaderCitationReference(
+                    work_id=work_id,
+                    segment_id=f"{work_id}:231276",
+                    citation_path="231276",
+                    citation_ref="BhG 9.2",
+                    source_kind="dcs_native",
+                    source_path="bhg-9.conllu",
+                    sort_key=1,
+                )
+            ],
+        )
+
+        register_citation_references(
+            catalog_path,
+            [],
+            replace=False,
+            replace_work_ids=[work_id],
+        )
+        rows = lookup_segments_by_citation_reference(catalog_path, "BhG 9.2")
+
+    assert rows == []
 
 
 def test_contained_work_lists_and_reads_parent_segments() -> None:

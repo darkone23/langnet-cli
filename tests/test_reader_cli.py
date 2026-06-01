@@ -221,6 +221,8 @@ def test_reader_cli_help_surface() -> None:
         ["reader"],
         ["reader", "works"],
         ["reader", "map"],
+        ["reader", "citation-maps"],
+        ["reader", "sync-citation-maps"],
         ["reader", "sync-work-maps"],
         ["reader", "sync-classifications"],
         ["reader", "sync-author-classifications"],
@@ -624,6 +626,65 @@ work_maps:
     assert json.loads(sync.output)["summary"]["synced_count"] == 1
     assert work_map.exit_code == 0, work_map.output
     assert json.loads(work_map.output)["items"][0]["label"] == "Book 1"
+
+
+def test_reader_citation_maps_pretty_output_is_visible() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        citation_map_dir = root / "citation_maps"
+        citation_map_dir.mkdir()
+        create_catalog_db(catalog_path)
+        (citation_map_dir / "fixture.yaml").write_text(
+            """
+citation_maps:
+  - citation_map_id: "lewis-short-de-inventione-book-chapter-section"
+    source_id: "lewis_short"
+    work_id: "urn:cts:latinLit:phi0474.phi036"
+    source_pattern: "book.chapter.section"
+    machine_pattern: "book.section"
+    projection_rule: "drop_middle_numeric_part"
+    example_source_reference: "Cic. Inv. 2, 50, 148"
+    example_machine_citation: "2.148"
+    status: "accepted"
+    confidence: "high"
+    note: "fixture"
+    evidence:
+      - source_type: "fixture"
+        citation: "fixture"
+        label: "fixture"
+""".lstrip(),
+            encoding="utf-8",
+        )
+        runner = CliRunner()
+
+        sync = runner.invoke(
+            main,
+            [
+                "reader",
+                "--catalog",
+                str(catalog_path),
+                "sync-citation-maps",
+                "--citation-map-dir",
+                str(citation_map_dir),
+            ],
+        )
+        citation_maps = runner.invoke(
+            main,
+            [
+                "reader",
+                "--catalog",
+                str(catalog_path),
+                "citation-maps",
+                "urn:cts:latinLit:phi0474.phi036",
+            ],
+        )
+
+    assert sync.exit_code == 0, sync.output
+    assert "synced_count: 1" in sync.output
+    assert citation_maps.exit_code == 0, citation_maps.output
+    assert "lewis_short" in citation_maps.output
+    assert "drop_middle_numeric_part" in citation_maps.output
 
 
 def test_reader_cli_syncs_generated_classifications_and_lists_popular_works() -> None:

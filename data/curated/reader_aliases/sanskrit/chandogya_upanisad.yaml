@@ -1,0 +1,21 @@
+aliases:
+  - alias: "ChU"
+    language: "san"
+    kind: "work_abbreviation"
+    target: "langnet:reader:sanskrit_dcs:dcs_365"
+    display: "Chāndogyopaniṣad"
+    sources: ["mw", "dcs", "manual"]
+
+  - alias: "ChUp"
+    language: "san"
+    kind: "work_abbreviation"
+    target: "langnet:reader:sanskrit_dcs:dcs_365"
+    display: "Chāndogyopaniṣad"
+    sources: ["mw", "dcs", "manual"]
+
+  - alias: "ChUp."
+    language: "san"
+    kind: "work_abbreviation"
+    target: "langnet:reader:sanskrit_dcs:dcs_365"
+    display: "Chāndogyopaniṣad"
+    sources: ["mw", "dcs", "manual"]

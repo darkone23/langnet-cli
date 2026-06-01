@@ -2531,7 +2531,7 @@ def _emit_reader_payload(payload: Mapping[str, object], output: str) -> None:
         _emit_reader_item(mode, cast(Mapping[str, object], item))
 
 
-def _emit_reader_single_payload(  # noqa: C901, PLR0911
+def _emit_reader_single_payload(  # noqa: C901, PLR0911, PLR0912
     mode: str, payload: Mapping[str, object]
 ) -> bool:
     if mode == "show":
@@ -2551,6 +2551,13 @@ def _emit_reader_single_payload(  # noqa: C901, PLR0911
             click.echo(str(segment.get("text", "")))
         return True
     if mode == "summary":
+        summary_value = payload.get("summary")
+        if isinstance(summary_value, Mapping):
+            summary = cast(Mapping[str, object], summary_value)
+            for key, value in sorted(summary.items()):
+                click.echo(f"{key}: {value}")
+        return True
+    if mode.startswith("sync-"):
         summary_value = payload.get("summary")
         if isinstance(summary_value, Mapping):
             summary = cast(Mapping[str, object], summary_value)
@@ -2634,6 +2641,13 @@ def _emit_reader_item(mode: str, item: Mapping[str, object]) -> None:  # noqa: C
             f"{item.get('ordinal')}  {item.get('kind')}  {item.get('label')}  "
             f"{item.get('start_citation')}..{item.get('end_citation')}  "
             f"words={item.get('word_count')}"
+        )
+    elif mode == "citation-maps":
+        click.echo(
+            f"{item.get('source_id')}  {item.get('status')}  {item.get('work_id')}  "
+            f"{item.get('source_pattern')} -> {item.get('machine_pattern')}  "
+            f"{item.get('projection_rule')}  {item.get('example_source_reference')} => "
+            f"{item.get('example_machine_citation')}"
         )
     elif mode == "aliases":
         click.echo(f"{item.get('language')}  {item.get('alias')} -> {item.get('target')}")
@@ -3999,6 +4013,60 @@ def reader_work(ctx: click.Context, work_ref: str, output: str) -> None:
 def reader_map(ctx: click.Context, work_ref: str, output: str) -> None:
     """Show a table-of-contents style map for one reader work."""
     _emit_reader_payload(_reader_service_from_context(ctx).map_payload(work_ref), output)
+
+
+@reader_cli.command("citation-maps")
+@click.argument("work_ref")
+@click.option(
+    "--source-id",
+    default=None,
+    help="Filter citation maps to one dictionary/source convention.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_citation_maps(
+    ctx: click.Context,
+    work_ref: str,
+    source_id: str | None,
+    output: str,
+) -> None:
+    """Show source-specific scholarly-to-machine citation maps for one reader work."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).citation_maps_payload(work_ref, source_id=source_id),
+        output,
+    )
+
+
+@reader_cli.command("sync-citation-maps")
+@click.option(
+    "--citation-map-dir",
+    type=click.Path(),
+    default="data/curated/reader_citation_maps",
+    show_default=True,
+    help="Curated reader citation-map directory.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_sync_citation_maps(ctx: click.Context, citation_map_dir: str, output: str) -> None:
+    """Sync curated source-specific citation maps into the reader catalog."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).sync_citation_maps_payload(
+            Path(citation_map_dir).expanduser()
+        ),
+        output,
+    )
 
 
 @reader_cli.command("sync-work-maps")
