@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 import logging
+import multiprocessing
+import queue as queue_module
+import time
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
+from typing import Any
 
 import click
+import orjson
 from returns.result import Failure, Success
+
+from langnet.word_of_day import WordCandidate
 
 
 def _ensure_logging(level: int = logging.INFO) -> None:
@@ -887,6 +895,539 @@ def build_foster_ossa(
         force=force,
     )
     _build_foster_ossa_impl(config)
+
+
+@databuild.command("motd-pool")
+@click.option(
+    "--profile",
+    "build_profile",
+    type=click.Choice(["prod", "smoke"]),
+    default="prod",
+    show_default=True,
+    help=(
+        "Build profile. prod uses OpenRouter/LLM candidate synthesis by default; "
+        "smoke uses the deterministic curated inventory for quick local checks."
+    ),
+)
+@click.option(
+    "--candidate-json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help=(
+        "LLM-curated candidate JSON with items[]. Each item should include language, query, "
+        "difficulty, didactic_score, and didactic_rationale."
+    ),
+)
+@click.option(
+    "--candidate-source",
+    type=click.Choice(["auto", "candidate-json", "curated", "llm"]),
+    default=None,
+    help=(
+        "Override candidate source. Defaults from --profile: prod => llm, smoke => curated. "
+        "auto uses LLM synthesis when available and falls back to curated inventories; "
+        "candidate-json uses a reviewed LLM-curated JSON file."
+    ),
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(path_type=Path),
+    help="Output DuckDB path (defaults to data/build/motd_pool.duckdb).",
+)
+@click.option(
+    "--per-language",
+    default=None,
+    type=click.IntRange(1),
+    help=(
+        "Cards to validate and store per language. Defaults from --profile: prod => 30, smoke => 3."
+    ),
+)
+@click.option(
+    "--level",
+    type=click.Choice(["beginner", "intermediate", "deep"]),
+    default="beginner",
+    show_default=True,
+)
+@click.option("--dictionary", default="motd-fast", show_default=True)
+@click.option("--timeout-ms", default=1200000, type=click.IntRange(1), show_default=True)
+@click.option(
+    "--probe-timeout-ms",
+    default=12000,
+    type=click.IntRange(1000),
+    show_default=True,
+    help="Maximum time for one dictionary validation probe before rejecting that candidate.",
+)
+@click.option(
+    "--recommendation-model",
+    default="openai:google/gemini-2.5-flash",
+    show_default=True,
+    help="Model id used when --candidate-source llm is selected.",
+)
+@click.option("--nonce", default=None, help="Optional entropy for LLM candidate synthesis.")
+@click.option(
+    "--wipe/--no-wipe",
+    default=True,
+    show_default=True,
+    help="Delete existing rows before inserting generated cards.",
+)
+@click.option(
+    "--output-json/--text",
+    "json_output",
+    default=False,
+    show_default=True,
+    help="Emit machine-readable build summary.",
+)
+def build_motd_pool(  # noqa: C901, PLR0912, PLR0913, PLR0915
+    build_profile: str,
+    candidate_json: Path | None,
+    candidate_source: str | None,
+    output: Path | None,
+    per_language: int | None,
+    level: str,
+    dictionary: str,
+    timeout_ms: int,
+    probe_timeout_ms: int,
+    recommendation_model: str,
+    nonce: str | None,
+    wipe: bool,
+    json_output: bool,
+) -> None:
+    """Build the precomputed word-of-day pool from curated, LLM, or JSON candidates."""
+    from langnet.cli import (  # noqa: PLC0415
+        _encounter_bucket_gloss,
+        _encounter_bucket_learner_gloss,
+        _word_of_day_candidate_pools,
+    )
+    from langnet.motd_pool import (  # noqa: PLC0415
+        MotdCandidateMetadata,
+        MotdCandidateSet,
+        build_motd_pool,
+        cards_from_word_of_day_payload,
+        default_motd_pool_path,
+        load_motd_candidate_json,
+        validate_motd_pool,
+    )
+    from langnet.word_of_day import (  # noqa: PLC0415
+        SUPPORTED_LANGUAGES,
+        WordOfDayOptions,
+        generate_word_of_day_payload,
+    )
+
+    started = time.monotonic()
+    languages = list(SUPPORTED_LANGUAGES)
+    resolved_candidate_source = candidate_source or _motd_pool_profile_candidate_source(
+        build_profile
+    )
+    resolved_per_language = per_language or _motd_pool_profile_per_language(build_profile)
+    candidate_request_count = _motd_pool_candidate_request_count(
+        build_profile=build_profile,
+        candidate_source=resolved_candidate_source,
+        per_language=resolved_per_language,
+    )
+    output_path = output or default_motd_pool_path()
+    candidate_set: MotdCandidateSet | None = None
+    warnings: list[object] = []
+    _motd_pool_log(
+        json_output=json_output,
+        message=(
+            "MOTD pool build starting: "
+            f"profile={build_profile}, candidate_source={resolved_candidate_source}, "
+            f"per_language={resolved_per_language}, "
+            f"candidate_request_count={candidate_request_count}, "
+            f"level={level}, dictionary={dictionary}, probe_timeout_ms={probe_timeout_ms}, "
+            f"output={output_path}"
+        ),
+    )
+    if resolved_candidate_source == "candidate-json":
+        if candidate_json is None:
+            raise click.UsageError(
+                "--candidate-json is required for --candidate-source candidate-json."
+            )
+        _motd_pool_log(json_output=json_output, message=f"Loading candidate JSON: {candidate_json}")
+        candidate_set = load_motd_candidate_json(candidate_json)
+        candidate_pools = candidate_set.pools
+        candidate_metadata = candidate_set.metadata
+        source_ref = str(candidate_json)
+        _motd_pool_log(
+            json_output=json_output,
+            message=(
+                "Loaded candidate JSON pools: "
+                + ", ".join(
+                    f"{language}={len(items)}" for language, items in candidate_pools.items()
+                )
+            ),
+        )
+    elif resolved_candidate_source in {"auto", "llm"}:
+        synthesis_warnings: list[dict[str, str]] = []
+        pools: dict[str, list[WordCandidate]] = {}
+        seen_candidates: set[str] = set()
+        batch_count = _motd_pool_candidate_batch_count(
+            build_profile=build_profile,
+            candidate_source=resolved_candidate_source,
+            per_language=resolved_per_language,
+        )
+        max_batches = _motd_pool_candidate_max_batches(
+            build_profile=build_profile,
+            candidate_source=resolved_candidate_source,
+            per_language=resolved_per_language,
+        )
+        for batch_index in range(max_batches):
+            if _motd_pool_pools_are_full(
+                pools,
+                languages=languages,
+                target_per_language=candidate_request_count,
+            ):
+                break
+            batch_nonce = _motd_pool_batch_nonce(nonce, batch_index)
+            _motd_pool_log(
+                json_output=json_output,
+                message=(
+                    "Requesting OpenRouter candidate synthesis batch "
+                    f"{batch_index + 1}/{max_batches}: model={recommendation_model}, "
+                    f"source={resolved_candidate_source}, request_count={batch_count}"
+                ),
+            )
+            try:
+                batch_pools = _word_of_day_candidate_pools(
+                    languages=languages,
+                    count=batch_count,
+                    level=level,
+                    avoid_terms=sorted(seen_candidates),
+                    nonce=batch_nonce,
+                    rotation_key=f"motd-pool-build:{batch_index}",
+                    candidate_source=resolved_candidate_source,
+                    recommendation_model=recommendation_model,
+                    started=started,
+                    timeout_ms=timeout_ms,
+                    warnings=synthesis_warnings,
+                )
+            except Exception as exc:
+                warning = {
+                    "language": "",
+                    "query": "",
+                    "message": (
+                        f"LLM candidate synthesis batch {batch_index + 1} failed; "
+                        f"continuing with prior batches. {type(exc).__name__}: {exc}"
+                    ),
+                }
+                synthesis_warnings.append(warning)
+                _motd_pool_log(json_output=json_output, message=warning["message"])
+                continue
+            if not batch_pools:
+                break
+            added = _motd_pool_merge_candidate_pools(
+                pools,
+                batch_pools,
+                seen_candidates=seen_candidates,
+            )
+            _motd_pool_log(
+                json_output=json_output,
+                message=(
+                    f"Synthesized batch {batch_index + 1}: added={added}, "
+                    + ", ".join(
+                        f"{language}={len(pools.get(language, []))}" for language in languages
+                    )
+                ),
+            )
+        warnings.extend(synthesis_warnings)
+        candidate_pools = pools or None
+        if not candidate_pools and resolved_candidate_source == "llm":
+            raise click.ClickException("LLM candidate synthesis returned no usable candidates.")
+        metadata_pools = pools or {}
+        if pools:
+            _motd_pool_log(
+                json_output=json_output,
+                message=(
+                    "Synthesized candidate pools: "
+                    + ", ".join(f"{language}={len(items)}" for language, items in pools.items())
+                ),
+            )
+        else:
+            _motd_pool_log(
+                json_output=json_output,
+                message="No LLM candidate pools returned; generator will use curated fallback.",
+            )
+        candidate_metadata = {
+            f"{candidate.language}:{candidate.query}".lower(): MotdCandidateMetadata(
+                language=candidate.language,
+                query=candidate.query,
+                didactic_score=candidate.didactic_score,
+                didactic_rationale=candidate.didactic_rationale,
+                source_ref=f"llm:{recommendation_model}",
+            )
+            for language_candidates in metadata_pools.values()
+            for candidate in language_candidates
+        }
+        source_ref = f"llm:{recommendation_model}"
+    else:
+        _motd_pool_log(
+            json_output=json_output,
+            message="Using deterministic curated candidate inventory.",
+        )
+        candidate_pools = None
+        candidate_metadata = {}
+        source_ref = "curated"
+
+    cards = []
+    for language in languages:
+        remaining_timeout = max(1, timeout_ms - int((time.monotonic() - started) * 1000))
+        _motd_pool_log(
+            json_output=json_output,
+            message=(
+                f"Validating {language} cards: target={resolved_per_language}, "
+                f"remaining_timeout_ms={remaining_timeout}"
+            ),
+        )
+        options = WordOfDayOptions(
+            count=resolved_per_language,
+            level=level,
+            dictionary="all" if dictionary == "motd-fast" else dictionary,
+            reader_lang="en",
+            translation_mode="cache",
+            max_source_chars=140,
+            include_ambiguous=True,
+            require_clean_primary=False,
+            timeout_ms=remaining_timeout,
+            seed=f"motd-pool:{language}:{level}",
+            fresh=False,
+            candidate_source=resolved_candidate_source,
+        )
+
+        def probe(probe_language: str, query: str):
+            return _motd_pool_probe_reduction_with_timeout(
+                language=probe_language,
+                text=query,
+                dictionary=dictionary,
+                normalize=True,
+                diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                diogenes_parse_endpoint=None,
+                heritage_base="http://localhost:48080",
+                db_path=None,
+                no_cache=False,
+                include_cltk=False,
+                translation_mode="cache",
+                translation_cache_db="data/cache/langnet.duckdb",
+                translation_model="openai:gpt-4o-mini",
+                timeout_seconds=probe_timeout_ms / 1000,
+            )
+
+        payload = generate_word_of_day_payload(
+            languages=[language],
+            options=options,
+            probe_encounter=probe,
+            bucket_gloss=_encounter_bucket_gloss,
+            bucket_learner_gloss=lambda bucket: _encounter_bucket_learner_gloss(
+                bucket,
+                max_chars=80,
+            ),
+            candidate_pools=candidate_pools,
+        )
+        payload_warnings = payload.get("warnings") or []
+        warnings.extend(payload_warnings)
+        language_cards = cards_from_word_of_day_payload(
+            payload,
+            candidate_metadata=candidate_metadata,
+            source=(
+                "llm-curated-json"
+                if isinstance(candidate_set, MotdCandidateSet)
+                else resolved_candidate_source
+            )
+            if resolved_candidate_source == "candidate-json"
+            else resolved_candidate_source,
+            source_ref=source_ref,
+            level=level,
+        )
+        cards.extend(language_cards)
+        _motd_pool_log(
+            json_output=json_output,
+            message=(
+                f"Validated {language}: accepted={len(language_cards)}, "
+                f"warnings={len(payload_warnings)}"
+            ),
+        )
+
+    _motd_pool_log(
+        json_output=json_output,
+        message=f"Writing {len(cards)} cards to {output_path} (wipe={wipe}).",
+    )
+    build_summary = build_motd_pool(output_path, cards, replace=wipe)
+    validation = validate_motd_pool(output_path, per_language=resolved_per_language)
+    issues = validation.get("issues")
+    if not isinstance(issues, list):
+        issues = []
+    summary = {
+        "schema_version": "langnet.motd_pool.build.v1",
+        "output": str(output_path),
+        "profile": build_profile,
+        "candidate_source": resolved_candidate_source,
+        "requested_per_language": resolved_per_language,
+        "candidate_request_count": candidate_request_count,
+        "inserted": build_summary.get("inserted"),
+        "language_counts": validation.get("language_counts"),
+        "ok": validation.get("ok"),
+        "issues": issues,
+        "warnings": warnings[:25],
+    }
+    _motd_pool_log(
+        json_output=json_output,
+        message=(
+            f"Validation complete: ok={summary['ok']}, "
+            f"language_counts={summary['language_counts']}, issues={len(issues)}"
+        ),
+    )
+    if json_output:
+        click.echo(orjson.dumps(summary, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    click.echo(f"profile: {summary['profile']}")
+    click.echo(f"output: {output_path}")
+    click.echo(f"candidate_source: {summary['candidate_source']}")
+    click.echo(f"requested_per_language: {summary['requested_per_language']}")
+    click.echo(f"candidate_request_count: {summary['candidate_request_count']}")
+    click.echo(f"inserted: {summary['inserted']}")
+    click.echo(f"language_counts: {summary['language_counts']}")
+    click.echo(f"ok: {summary['ok']}")
+    for issue in issues:
+        if isinstance(issue, dict):
+            click.echo(f"- {issue.get('code')}: {issue.get('message')}")
+
+
+def _motd_pool_profile_candidate_source(build_profile: str) -> str:
+    return "curated" if build_profile == "smoke" else "llm"
+
+
+def _motd_pool_profile_per_language(build_profile: str) -> int:
+    return 3 if build_profile == "smoke" else 30
+
+
+def _motd_pool_candidate_request_count(
+    *,
+    build_profile: str,
+    candidate_source: str,
+    per_language: int,
+) -> int:
+    if build_profile == "prod" and candidate_source in {"auto", "llm"}:
+        return per_language * 4
+    return per_language
+
+
+def _motd_pool_candidate_batch_count(
+    *,
+    build_profile: str,
+    candidate_source: str,
+    per_language: int,
+) -> int:
+    if build_profile == "prod" and candidate_source in {"auto", "llm"}:
+        return min(per_language, 10)
+    return per_language
+
+
+def _motd_pool_candidate_max_batches(
+    *,
+    build_profile: str,
+    candidate_source: str,
+    per_language: int,
+) -> int:
+    if build_profile == "prod" and candidate_source in {"auto", "llm"}:
+        candidate_request_count = _motd_pool_candidate_request_count(
+            build_profile=build_profile,
+            candidate_source=candidate_source,
+            per_language=per_language,
+        )
+        batch_count = _motd_pool_candidate_batch_count(
+            build_profile=build_profile,
+            candidate_source=candidate_source,
+            per_language=per_language,
+        )
+        return max(1, (candidate_request_count + batch_count - 1) // batch_count)
+    return 1
+
+
+def _motd_pool_pools_are_full(
+    pools: Mapping[str, Sequence[WordCandidate]],
+    *,
+    languages: Sequence[str],
+    target_per_language: int,
+) -> bool:
+    return all(len(pools.get(language, ())) >= target_per_language for language in languages)
+
+
+def _motd_pool_batch_nonce(nonce: str | None, batch_index: int) -> str:
+    prefix = nonce or "motd-pool-prod"
+    return f"{prefix}:batch-{batch_index + 1}"
+
+
+def _motd_pool_merge_candidate_pools(
+    target: dict[str, list[WordCandidate]],
+    source: Mapping[str, Sequence[WordCandidate]],
+    *,
+    seen_candidates: set[str],
+) -> int:
+    added = 0
+    for language, candidates in source.items():
+        language_items = target.setdefault(language, [])
+        for candidate in candidates:
+            key = _motd_pool_candidate_key(candidate)
+            if not key or key in seen_candidates:
+                continue
+            seen_candidates.add(key)
+            language_items.append(candidate)
+            added += 1
+    return added
+
+
+def _motd_pool_candidate_key(candidate: WordCandidate) -> str:
+    language = str(getattr(candidate, "language", "") or "").lower()
+    query = str(getattr(candidate, "query", "") or "").lower()
+    if not language or not query:
+        return ""
+    return f"{language}:{query}"
+
+
+def _motd_pool_probe_reduction_with_timeout(
+    *,
+    timeout_seconds: float,
+    **kwargs: Any,
+) -> object:
+    ctx = multiprocessing.get_context("fork")
+    result_queue = ctx.Queue(maxsize=1)
+    process = ctx.Process(
+        target=_motd_pool_probe_worker,
+        args=(dict(kwargs), result_queue),
+    )
+    process.start()
+    process.join(timeout_seconds)
+    if process.is_alive():
+        process.terminate()
+        process.join(1)
+        if process.is_alive():
+            process.kill()
+            process.join(1)
+        language = kwargs.get("language")
+        text = kwargs.get("text")
+        raise TimeoutError(
+            f"dictionary probe timed out after {timeout_seconds:.1f}s for {language}:{text}"
+        )
+    try:
+        status, payload = result_queue.get_nowait()
+    except queue_module.Empty as exc:
+        raise click.ClickException(
+            f"dictionary probe exited without a response (exit code {process.exitcode})."
+        ) from exc
+    if status == "ok":
+        return payload
+    raise click.ClickException(str(payload))
+
+
+def _motd_pool_probe_worker(kwargs: dict[str, Any], result_queue) -> None:
+    try:
+        from langnet.cli import _word_of_day_probe_reduction  # noqa: PLC0415
+
+        result_queue.put(("ok", _word_of_day_probe_reduction(**kwargs)))
+    except Exception as exc:  # noqa: BLE001
+        result_queue.put(("error", f"{type(exc).__name__}: {exc}"))
+
+
+def _motd_pool_log(*, json_output: bool, message: str) -> None:
+    click.echo(f"[motd-pool] {message}", err=json_output)
 
 
 @databuild.command("reader")

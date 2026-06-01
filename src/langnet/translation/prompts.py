@@ -5,8 +5,10 @@ BASE_SYSTEM = (
     "Translate all ordinary French prose into English by substituting English for the "
     "French span. Preserve original casing, original punctuation, source-language "
     "tokens, abbreviations, sense numbering, separators, spacing, and layout. Work as "
-    "a meticulous, conservative, source-faithful dictionary translator. Use only "
-    "meanings present in the source entry."
+    "a meticulous, conservative, source-faithful dictionary translator. Never collapse "
+    "a dictionary entry to the headword when French explanations are present. Return "
+    "only the translated dictionary entry text, with no commentary, no Markdown, and "
+    "no JSON. Use only meanings present in the source entry."
 )
 
 SANSKRIT_HINTS = [
@@ -21,10 +23,25 @@ SANSKRIT_HINTS = [
         "(parens), and structural markers. Preserve original casing and preserve "
         "original punctuation."
     ),
+    (
+        "Long DICO entries often contain derived compounds and bibliographic subentries. "
+        "Translate each subentry in place; do not summarize, omit, reorder, or split the "
+        "response into separate cards."
+    ),
     "Use only meanings present in the source entry. Keep abbreviations compact.",
+    (
+        "Render compact DICO labels and bibliography phrases into compact English: "
+        "dés. => desid.; désir de connaissance => desire for knowledge; "
+        "exégèse => exegesis; œuvre => work; dû à => by; "
+        "on l'appelle aussi => it is also called."
+    ),
     "Keep cross-language synonym examples prefixed with ; fr. as synonym clusters.",
     "Render French prose in English while retaining explicit synonym-cluster labels.",
-    ("If input is single sanskrit term return it unmodified. Return only the source term."),
+    (
+        "If the entire input is just an isolated Sanskrit token with no French prose, "
+        "copy that token unchanged. If any French definition, label, or explanation is "
+        "present, translate it into English and keep the Sanskrit token as context."
+    ),
     "example word definition: apacasi cuisine rituelle. => apacasi ritual cooking.",
     "example synonym cluster: lat. lupus; fr. loup. => lat. lupus; fr. loup.",
     (
@@ -47,15 +64,22 @@ LATIN_HINTS = [
         "punctuation. Keep abbreviations compact and unchanged."
     ),
     (
+        "Gaffiot entries often begin with inflectional headers such as principal parts, "
+        "case endings, or gender labels. Keep those headers in place while translating "
+        "the French definitions and example translations that follow."
+    ),
+    (
         "Translate French explanations and French translations of cited Latin. Keep Latin "
         "citations intact. Retain bibliographic citations that distinguish senses, "
         "registers, constructions, or examples."
     ),
     (
-        "If input is single latin term or letter return it unmodified. "
-        "Return only the source term or letter."
+        "If the entire input is just an isolated Latin term or letter with no French "
+        "prose, copy it unchanged. If any French definition, label, or explanation is "
+        "present, translate it into English and keep the Latin token as context."
     ),
     "Render French prose in English.",
+    "Render compact French alternatives inside forms: ou => or.",
     (
         "French text is sometimes surrounded formatting or intermixed with latin citations, "
         "you may have to hunt for french phrases needing translating."
@@ -77,6 +101,10 @@ GREEK_BAILLY_HINTS = [
         "Preserve layout, Greek headwords, Greek examples, Latin abbreviations, author "
         "abbreviations, sense numbering, and structural markers. Preserve original "
         "casing and preserve original punctuation."
+    ),
+    (
+        "Bailly entries are translated as source blocks when structure is available. "
+        "Preserve every requested block path and do not merge or drop numbered senses."
     ),
     (
         "Copy Greek text, Latin citations, author abbreviations, work abbreviations, "

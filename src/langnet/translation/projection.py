@@ -30,17 +30,14 @@ from langnet.translation.structured import (
 
 _DICO_SOURCE_RE = re.compile(r"#(?P<entry>[^:]+):(?P<occurrence>\d+)$")
 STRUCTURED_TRANSLATION_MAX_ATTEMPTS = 3
+UNSTRUCTURED_SEGMENT_BATCH_MAX_CHARS = 900
+UNSTRUCTURED_SEGMENT_BATCH_MAX_SEGMENTS = 8
+UNSTRUCTURED_SEGMENTED_MIN_CHARS = 360
 STRUCTURED_TRANSLATION_REPAIR_HINT = (
     "The previous Bailly translation response failed validation. Retry from the same source "
     "blocks, return only the requested JSON object, preserve every requested block path, "
     "and translate all ordinary French prose into English. Do not echo French labels or "
     "definitions unless they are source-language tokens that must be preserved."
-)
-UNSTRUCTURED_TRANSLATION_REPAIR_HINT_TEMPLATE = (
-    "The previous {source_label} translation response failed validation. Retry from the "
-    "same source text and return only concise English. Translate ordinary French "
-    "dictionary prose into English. Do not echo French labels or definitions unless they "
-    "are source-language tokens that must be preserved."
 )
 
 
@@ -275,19 +272,20 @@ def _translation_projections(
     return projections
 
 
-def populate_missing_translations(
+def populate_missing_translations(  # noqa: PLR0913
     *,
     claims: Sequence[Mapping[str, Any]],
     language: str,
     model: str,
     cache: TranslationCache,
     translate: Callable[[TranslationProjection], str],
+    raise_on_error: bool = True,
 ) -> int:
     """Translate French glosses that are missing from the cache."""
     written = 0
     for projection in _translation_projections(claims=claims, language=language, model=model):
         existing = cache.get(projection.key)
-        if existing is not None and existing.status == "ok" and existing.translated_text:
+        if _is_usable_translation_record(projection, existing):
             continue
 
         start = time.perf_counter()
@@ -304,7 +302,9 @@ def populate_missing_translations(
                     duration_ms=duration_ms,
                 )
             )
-            raise
+            if raise_on_error:
+                raise
+            continue
 
         duration_ms = int((time.perf_counter() - start) * 1000)
         if not translated_text:
@@ -330,11 +330,36 @@ def populate_missing_translations(
     return written
 
 
+def _is_usable_translation_record(
+    projection: TranslationProjection,
+    record: TranslationRecord | None,
+) -> bool:
+    return (
+        record is not None
+        and record.status == "ok"
+        and bool(record.translated_text)
+        and _cached_translation_validation_error(projection, record) is None
+    )
+
+
+def _cached_translation_validation_error(
+    projection: TranslationProjection,
+    record: TranslationRecord,
+) -> str | None:
+    if record.status != "ok" or not record.translated_text:
+        return None
+    if requires_structured_translation(projection):
+        return None
+    return None
+
+
 def _translate_projection(
     projection: TranslationProjection,
     translate: Callable[[TranslationProjection], str],
 ) -> str:
     if not requires_structured_translation(projection):
+        if _should_segment_unstructured_projection(projection):
+            return _translate_segmented_unstructured_projection(projection, translate)
         return _translate_unstructured_projection_with_retries(projection, translate)
 
     batches = structured_translation_source_batches(projection.source_blocks)
@@ -354,34 +379,68 @@ def _translate_projection(
     return merge_cached_translation_texts(translated_batches)
 
 
+def _should_segment_unstructured_projection(projection: TranslationProjection) -> bool:
+    if projection.source.source_lexicon not in {"dico", "gaffiot"}:
+        return False
+    if len(projection.source_text) < UNSTRUCTURED_SEGMENTED_MIN_CHARS:
+        return False
+    return len(_translation_source_segment_texts(projection.source_segments)) > 1
+
+
+def _translate_segmented_unstructured_projection(
+    projection: TranslationProjection,
+    translate: Callable[[TranslationProjection], str],
+) -> str:
+    translated_batches: list[str] = []
+    for batch in _unstructured_translation_segment_batches(projection.source_segments):
+        batch_text = "\n".join(batch)
+        batch_projection = replace(projection, source_text=batch_text)
+        translated_batches.append(
+            _translate_unstructured_projection_with_retries(batch_projection, translate)
+        )
+    return "\n".join(text for text in translated_batches if text.strip()).strip()
+
+
+def _unstructured_translation_segment_batches(
+    source_segments: Sequence[Mapping[str, Any]],
+) -> list[list[str]]:
+    batches: list[list[str]] = []
+    current: list[str] = []
+    current_chars = 0
+    for text in _translation_source_segment_texts(source_segments):
+        projected_chars = current_chars + len(text)
+        if current and (
+            len(current) >= UNSTRUCTURED_SEGMENT_BATCH_MAX_SEGMENTS
+            or projected_chars > UNSTRUCTURED_SEGMENT_BATCH_MAX_CHARS
+        ):
+            batches.append(current)
+            current = []
+            current_chars = 0
+        current.append(text)
+        current_chars += len(text)
+    if current:
+        batches.append(current)
+    return batches
+
+
+def _translation_source_segment_texts(
+    source_segments: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    texts: list[str] = []
+    for segment in source_segments:
+        raw_text = segment.get("raw_text")
+        display = segment.get("display_text")
+        text = raw_text if isinstance(raw_text, str) and raw_text.strip() else display
+        if isinstance(text, str) and text.strip():
+            texts.append(text.strip())
+    return texts
+
+
 def _translate_unstructured_projection_with_retries(
     projection: TranslationProjection,
     translate: Callable[[TranslationProjection], str],
 ) -> str:
-    last_error: Exception | None = None
-    source_label = _translation_source_label(projection)
-    for attempt in range(STRUCTURED_TRANSLATION_MAX_ATTEMPTS):
-        try:
-            active_projection = (
-                projection
-                if attempt == 0
-                else replace(
-                    projection,
-                    hint=(
-                        f"{projection.hint}\n\n"
-                        f"{UNSTRUCTURED_TRANSLATION_REPAIR_HINT_TEMPLATE.format(source_label=source_label)}\n"
-                        f"Validation failure to repair: {last_error}"
-                    ),
-                )
-            )
-            return normalize_translation_response(
-                active_projection,
-                translate(active_projection),
-            )
-        except (StructuredTranslationError, ValueError) as exc:
-            last_error = exc
-    assert last_error is not None
-    raise last_error
+    return normalize_translation_response(projection, translate(projection))
 
 
 def _translate_structured_projection_with_retries(
@@ -412,12 +471,6 @@ def _translate_structured_projection_with_retries(
     raise last_error
 
 
-def _translation_source_label(projection: TranslationProjection) -> str:
-    if projection.source.source_lexicon == "dico":
-        return "DICO"
-    return projection.source.source_lexicon.capitalize()
-
-
 def translation_cache_status_counts(
     *,
     claims: Sequence[Mapping[str, Any]],
@@ -433,7 +486,10 @@ def translation_cache_status_counts(
         if record is None:
             counts["missing"] += 1
         elif record.status == "ok" and record.translated_text:
-            counts["hits"] += 1
+            if _cached_translation_validation_error(projection, record):
+                counts["errors"] += 1
+            else:
+                counts["hits"] += 1
         elif record.status == "empty":
             counts["empty"] += 1
         else:
@@ -604,11 +660,30 @@ def project_cached_translations(
             if projection is None or projection.key.translation_id in existing_ids:
                 continue
             record = cache.get(projection.key)
-            if record is None or record.status != "ok" or not record.translated_text:
+            validation_error = (
+                _cached_translation_validation_error(projection, record)
+                if record is not None
+                else None
+            )
+            if (
+                record is None
+                or record.status != "ok"
+                or not record.translated_text
+                or validation_error
+            ):
+                state_record = record
+                if validation_error and record is not None:
+                    state_record = TranslationRecord(
+                        key=record.key,
+                        translated_text=None,
+                        status="error",
+                        error=validation_error,
+                        duration_ms=record.duration_ms,
+                    )
                 _annotate_source_translation_state(
                     triples=mutable_triples,
                     projection=projection,
-                    record=record,
+                    record=state_record,
                     model=model,
                 )
                 continue

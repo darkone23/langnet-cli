@@ -202,6 +202,10 @@ export type ReaderSearchQueryCandidate = {
 	kind: string;
 	field: string;
 	rank: number;
+	concept_id?: string;
+	concept_label?: string;
+	explanation?: string;
+	source_file?: string;
 };
 
 export type ReaderSearchContextLine = {

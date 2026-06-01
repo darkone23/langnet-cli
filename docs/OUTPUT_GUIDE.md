@@ -203,6 +203,23 @@ and the first validation rejections. This makes it clear whether a card came
 from LLM synthesis or curated fallback and how much candidate validation was
 discarded before the final card list was produced.
 
+For the web learner folio, the preferred runtime path is the precomputed MOTD
+pool. Runtime sampling does not call the LLM or re-probe dictionaries:
+
+```bash
+just cli motd-pool sample --language all --count 3 --output json
+just cli motd-pool validate --per-language 30 --output json
+```
+
+Build the production pool with `just cli-databuild motd-pool`. The default
+`--profile prod` uses OpenRouter-backed LLM candidate synthesis, validates 30
+cards per language through the normal source-backed word-of-day pipeline, and
+writes `data/build/motd_pool.duckdb`. For a quick local deterministic build,
+use `just cli-databuild motd-pool --profile smoke`. For a larger reviewed pool,
+provide LLM-curated candidate JSON with `items[]` entries containing `language`,
+`query`, `difficulty`, `summary` or `summary_hint`, `didactic_score`, and
+`didactic_rationale`, then run with `--candidate-source candidate-json`.
+
 ## `paradigm` And `paradigm-resolve`
 
 `paradigm` fetches source-backed inflection tables. It is a table tool, not a

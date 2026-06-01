@@ -52,6 +52,7 @@
 		type ReaderNavigationTarget,
 		type ReaderRouteState,
 		type ReaderSearchMode,
+		type ReaderSearchQueryCandidate,
 		type ReaderSearchResponse,
 		type ReaderSearchResult,
 		type ReaderSegment,
@@ -108,6 +109,7 @@
 	let textQuery = $state('');
 	let textSearchMode = $state<ReaderSearchMode>('fuzzy');
 	let textSearchResults = $state<ReaderSearchResult[]>([]);
+	let textSearchQueryCandidates = $state<ReaderSearchQueryCandidate[]>([]);
 	let readerView = $state<ReaderIndexView>('choose');
 	let facets = $state<ReaderFacet[]>([]);
 	let discoveryShelves = $state<ReaderDiscoveryShelf[]>([]);
@@ -479,6 +481,7 @@
 		textQuery = '';
 		textSearchMode = 'fuzzy';
 		textSearchResults = [];
+		textSearchQueryCandidates = [];
 		readerView = 'choose';
 		discoveryGroup = '';
 		discoveryTag = '';
@@ -861,6 +864,7 @@
 		const query = textQuery.trim();
 		if (!query) {
 			textSearchResults = [];
+			textSearchQueryCandidates = [];
 			textSearchNextCursor = null;
 			textSearchPrevCursor = null;
 			textSearchCursorParam = null;
@@ -888,6 +892,7 @@
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader text search failed.');
 			textSearchResults = data.items;
+			textSearchQueryCandidates = data.request.query_candidates ?? [];
 			textSearchNextCursor = data.pagination?.next_cursor ?? null;
 			textSearchPrevCursor = data.pagination?.prev_cursor ?? null;
 			textSearchCursorParam = cursor ?? null;
@@ -1382,12 +1387,26 @@
 		textQuery = '';
 		textSearchMode = 'fuzzy';
 		textSearchResults = [];
+		textSearchQueryCandidates = [];
 		textSearchNextCursor = null;
 		textSearchPrevCursor = null;
 		textSearchCursorParam = null;
 		textSearchError = '';
 		textSearchElapsedSeconds = 0;
 		updateReaderUrl({}, 'push');
+	}
+
+	function visibleTextSearchCandidates(candidates: ReaderSearchQueryCandidate[]) {
+		return candidates
+			.filter((candidate) => candidate.query && candidate.kind !== 'input')
+			.slice(0, 8);
+	}
+
+	function textSearchCandidateLabel(candidate: ReaderSearchQueryCandidate) {
+		if (candidate.kind === 'concept_alias' && candidate.concept_label) {
+			return `${candidate.concept_label}: ${candidate.query}`;
+		}
+		return candidate.query;
 	}
 
 	function startReaderLoadingTimer(kind: ReaderLoadingKey) {
@@ -2368,6 +2387,17 @@
 											: `${textSearchMode} search`}</span
 									>
 								</div>
+								{#if visibleTextSearchCandidates(textSearchQueryCandidates).length}
+									<div class="orion-reader-work-meta">
+										{#each visibleTextSearchCandidates(textSearchQueryCandidates) as candidate}
+											<small title={candidate.explanation || candidate.kind}
+												>{candidate.kind.replace(/_/g, ' ')} · {textSearchCandidateLabel(
+													candidate
+												)}</small
+											>
+										{/each}
+									</div>
+								{/if}
 								<div class="orion-reader-work-list orion-reader-work-list-discovery">
 									{#each textSearchResults as result}
 										<article class="orion-reader-work-row">

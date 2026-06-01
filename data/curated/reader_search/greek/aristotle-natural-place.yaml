@@ -1,0 +1,20 @@
+concepts:
+  - id: "aristotle-natural-place"
+    language: "grc"
+    labels:
+      - "proper place"
+      - "natural place"
+      - "own place"
+      - "oikos topos"
+      - "oikeios topos"
+    source_queries:
+      - "οἰκεῖος τόπος"
+      - "οἰκεῖον τόπον"
+      - "οἰκείῳ τόπῳ"
+      - "οἰκείοις τόποις"
+      - "οἰκείοι τόποι"
+    explanation: >
+      οἰκεῖος is related to οἶκος and can mean one's own, fitting,
+      appropriate, or proper. In Aristotle's physical works, searches around
+      οἰκεῖος plus τόπος help locate passages on the proper or natural place
+      of bodies.

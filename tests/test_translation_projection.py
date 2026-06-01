@@ -28,6 +28,7 @@ from langnet.translation.structured import structured_translation_user_content
 TRANSLATION_DURATION_MS = 7
 ORIGINAL_TRIPLE_COUNT = 2
 EXPECTED_RETRY_CALL_COUNT = 2
+EXPECTED_DICO_SEGMENT_BATCH_LIMIT = 900
 FIXTURE_PATH = Path("tests/fixtures/translation_cache_golden_rows.json")
 
 
@@ -357,6 +358,23 @@ def _claim_from_fixture_row(row: Mapping[str, Any]) -> Mapping[str, Any]:
     }
 
 
+def test_translation_prompts_do_not_allow_headword_only_collapse() -> None:
+    prompt_text = "\n".join(
+        [
+            BASE_SYSTEM,
+            *default_hints_for_language("san"),
+            *default_hints_for_language("lat"),
+        ]
+    )
+
+    assert "only the source term" not in prompt_text
+    assert "Never collapse" in prompt_text
+    assert "If any French definition, label, or explanation is present" in prompt_text
+    assert "Return only the translated dictionary entry text" in prompt_text
+    assert "no Markdown" in prompt_text
+    assert "no JSON" in prompt_text
+
+
 def test_cached_gaffiot_translation_projects_as_english_gloss() -> None:
     conn = duckdb.connect(database=":memory:")
     cache = TranslationCache(conn)
@@ -584,6 +602,576 @@ def test_bailly_translation_population_requires_matching_block_paths() -> None:
         model="test:model",
         cache=cache,
     ) == {"total": 1, "hits": 0, "missing": 0, "errors": 1, "empty": 0}
+
+
+def test_dico_translation_population_preserves_headword_only_model_output() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _claim_from_fixture_row(
+        {
+            "source_lexicon": "dico",
+            "entry_id": "vibhakti",
+            "occurrence": 0,
+            "headword_norm": "vibhakti",
+            "source_ref": "dico:60.html#vibhakti:0",
+            "source_text": (
+                "vibhakti [act. vibhaj ] f. séparation, distinction ; classification | "
+                "gram. désinence, flexion nominale ou verbale"
+            ),
+        }
+    )
+    written = populate_missing_translations(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: "vibhakti",
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"] == "vibhakti"
+
+
+def test_dico_translation_preserves_model_output_without_phrase_repair() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    source_text = (
+        "mīmāṃsā [act. dés. man ] f. désir de connaissance ; investigation, examen | "
+        "interprétation, exégèse ; casuistique | phil. np. de la doctrine philosophique "
+        "Mīmāṃsā ; cf. pūrvamīmāṃsā , uttaramīmāṃsā . "
+        "mīmāṃsānukramaṇī [ anukramaṇī ] f. lit. np. de la Mīmāṃsānukramaṇī , "
+        "œuvre de Maṇḍana Miśra . "
+        "mīmāṃsānyāya [ nyāya ] iic. phil. dialectique de l'exégèse du rituel védique. "
+        "mīmāṃsānyāyaprakāśa [ prakāśa ] m. lit. np. de l'exégèse védique "
+        "Mīmāṃsānyāyaprakāśa d' Āpadeva ; on l'appelle aussi l' Āpadevī . "
+        "mīmāṃsāsūtra [ sūtra ] n. pl. lit. np. du Mīmāṃsāsūtra , "
+        "recueil d'aphorismes condensant la doctrine pūrvamīmāṃsā ; "
+        "il est postérieur au 4 e siècle ant., mais attribué à Jaimini ; "
+        "mīmāṃsāsūtrabhāṣya [ bhāṣya ] n. lit. np. du Mīmāṃsāsūtrabhāṣya , "
+        "commentaire du Mīmāṃsāsūtra dû à Śabarasvāmī ; il fut commenté par Kumārila ."
+    )
+    claim = _claim_from_fixture_row(
+        {
+            "source_lexicon": "dico",
+            "entry_id": "miimaa.msaa",
+            "occurrence": 0,
+            "headword_norm": "miimaa.msaa",
+            "source_ref": "dico:45.html#miimaa.msaa:0",
+            "source_text": source_text,
+        }
+    )
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: source_text,
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"] == source_text
+    assert "translation_review" not in translated["metadata"]
+    assert translation_cache_status_counts(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+    ) == {"total": 1, "hits": 1, "missing": 0, "errors": 0, "empty": 0}
+
+
+def test_gaffiot_translation_population_preserves_first_model_output() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _claim_from_fixture_row(
+        {
+            "source_lexicon": "gaffiot",
+            "entry_id": "gaffiot_22739",
+            "occurrence": 2,
+            "headword_norm": "edo",
+            "source_ref": "gaffiot:gaffiot_22739",
+            "source_text": "dĭdī, dĭtum, ĕre, tr., faire sortir : animam Cic. Sest. 83",
+        }
+    )
+    written = populate_missing_translations(
+        claims=[claim],
+        language="lat",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: "faire sortir",
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="lat",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"] == "faire sortir"
+
+
+def test_gaffiot_translation_population_preserves_common_kept_french_phrase() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _claim_from_fixture_row(
+        {
+            "source_lexicon": "gaffiot",
+            "entry_id": "gaffiot_22739",
+            "occurrence": 2,
+            "headword_norm": "edo",
+            "source_ref": "gaffiot:gaffiot_22739",
+            "source_text": "dĭdī, dĭtum, ĕre, tr., faire sortir",
+        }
+    )
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="lat",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: "faire sortir",
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="lat",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"] == "faire sortir"
+
+
+def test_gaffiot_translation_population_preserves_model_text_without_phrase_repair() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    source_text = (
+        "impf. subj. ederem ou ēssem, tr., manger : Cic. Nat. 2, 7 ; "
+        "dîner en payant chacun son écot || multi modi salis simul edendi sunt "
+        "Cic. Læl. 67, il faut manger force boisseaux de sel ensemble "
+        "[pour être de vieux amis]; pugnos edet Pl. Amph. 309, "
+        "il tâtera de mes poings [il sera rossé] || [fig.] ronger, consumer : "
+        "Virg. G. 1, 151 ; si quid est animum Hor. Ep. 1, 2, 39, "
+        "si quelque souci te ronge l'âme || edi sermonem tuum Pl. Aul. 537, "
+        "j'ai dévoré tes paroles."
+    )
+    claim = _claim_from_fixture_row(
+        {
+            "source_lexicon": "gaffiot",
+            "entry_id": "gaffiot_22739",
+            "occurrence": 2,
+            "headword_norm": "edo",
+            "source_ref": "gaffiot:gaffiot_22739",
+            "source_text": source_text,
+        }
+    )
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="lat",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: source_text,
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="lat",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"] == source_text
+
+
+def test_gaffiot_translation_population_preserves_ok_cache_without_heuristic_review() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    model = "test:model"
+    row = {
+        "source_lexicon": "gaffiot",
+        "entry_id": "gaffiot_22738",
+        "occurrence": 1,
+        "headword_norm": "edo",
+        "source_ref": "gaffiot:gaffiot_22738",
+        "source_text": "manger : dîner en payant chacun son écot",
+    }
+    claim = _claim_from_fixture_row(row)
+    key = _key_from_fixture_row(row, model, "lat")
+    cache.upsert(
+        TranslationRecord(
+            key=key,
+            translated_text="manger : dîner en payant chacun son écot",
+            status="ok",
+            duration_ms=TRANSLATION_DURATION_MS,
+        )
+    )
+
+    before = translation_cache_status_counts(
+        claims=[claim],
+        language="lat",
+        model=model,
+        cache=cache,
+    )
+    written = populate_missing_translations(
+        claims=[claim],
+        language="lat",
+        model=model,
+        cache=cache,
+        translate=lambda _projection: "to eat: to dine with each person paying their share",
+    )
+    after = translation_cache_status_counts(
+        claims=[claim],
+        language="lat",
+        model=model,
+        cache=cache,
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="lat",
+        model=model,
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+
+    assert before == {"total": 1, "hits": 1, "missing": 0, "errors": 0, "empty": 0}
+    assert written == 0
+    assert after == {"total": 1, "hits": 1, "missing": 0, "errors": 0, "empty": 0}
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+    assert translated["object"] == "manger : dîner en payant chacun son écot"
+    assert "translation_review" not in translated["metadata"]
+
+
+def test_dico_translation_does_not_attach_heuristic_review() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    model = "test:model"
+    row = {
+        "source_lexicon": "dico",
+        "entry_id": "dharma",
+        "occurrence": 0,
+        "headword_norm": "dharma",
+        "source_ref": "dico:34.html#dharma:0",
+        "source_text": "loi, devoir",
+    }
+    claim = _claim_from_fixture_row(row)
+    key = _key_from_fixture_row(row, model, "san")
+    cache.upsert(
+        TranslationRecord(
+            key=key,
+            translated_text="non-intrinsic designations; ṣaḍdarśana; dharma",
+            status="ok",
+            duration_ms=TRANSLATION_DURATION_MS,
+        )
+    )
+
+    projected = project_cached_translations(
+        claims=[claim],
+        language="san",
+        model=model,
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert "translation_review" not in translated["metadata"]
+
+
+def test_dico_translation_population_batches_long_source_segments() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _claim_from_fixture_row(
+        {
+            "source_lexicon": "dico",
+            "entry_id": "vibhakti",
+            "occurrence": 0,
+            "headword_norm": "vibhakti",
+            "source_ref": "dico:60.html#vibhakti:0",
+            "source_text": (
+                "vibhakti [act. vibhaj ] f. séparation, distinction ; classification | "
+                "gram. désinence, flexion nominale ou verbale ; on distingue le cas où "
+                "la flexion est gouvernée par le rôle [ kāraka ] verbal du cas où elle "
+                "gouvernée par la co-occurrence d'un autre mot [ upapada ]. "
+                "avibhaktikanirdeśaḥ gram. utilisation de mots non fléchis. "
+                "vibhaktipratirūpaka [ pratirūpaka ] a. m. n. gram. de même forme "
+                "qu'un mot fléchi ; se dit notamment d'indéclinables [ avyaya_2 ] "
+                "comme asti ."
+            ),
+        }
+    )
+    gloss = cast(dict[str, Any], cast(dict[str, Any], claim["value"])["triples"][1])
+    gloss["metadata"]["source_segments"] = [
+        {
+            "index": 0,
+            "raw_text": "vibhakti [act. vibhaj ] f. séparation, distinction",
+        },
+        {
+            "index": 1,
+            "raw_text": "classification | gram. désinence, flexion nominale ou verbale",
+        },
+        {
+            "index": 2,
+            "raw_text": (
+                "on distingue le cas où la flexion est gouvernée par le rôle [ kāraka ] "
+                "verbal du cas où elle gouvernée par la co-occurrence d'un autre mot "
+                "[ upapada ]."
+            ),
+        },
+        {
+            "index": 3,
+            "raw_text": "avibhaktikanirdeśaḥ gram. utilisation de mots non fléchis.",
+        },
+        {
+            "index": 4,
+            "raw_text": (
+                "vibhaktipratirūpaka [ pratirūpaka ] a. m. n. gram. de même forme "
+                "qu'un mot fléchi ; se dit notamment d'indéclinables [ avyaya_2 ] "
+                "comme asti ."
+            ),
+        },
+    ]
+    seen_source_texts: list[str] = []
+
+    def translate(projection: object) -> str:
+        source_text = str(getattr(projection, "source_text"))
+        seen_source_texts.append(source_text)
+        translations: list[str] = []
+        if "séparation" in source_text:
+            translations.append(
+                "vibhakti [act. vibhaj ] f. separation, distinction\n"
+                "classification | gram. desinence, nominal or verbal inflection"
+            )
+        if "on distingue" in source_text:
+            translations.append(
+                "we distinguish the case where the inflection is governed by the verbal "
+                "role [ kāraka ] from the case where it is governed by the co-occurrence "
+                "of another word [ upapada ]."
+            )
+        if "avibhaktikanirdeśaḥ" in source_text:
+            translations.append(
+                "avibhaktikanirdeśaḥ gram. use of uninflected words.\n"
+                "vibhaktipratirūpaka [ pratirūpaka ] a. m. n. gram. of the same form "
+                "as an inflected word; said notably of indeclinables [ avyaya_2 ] such as asti ."
+            )
+        return "\n".join(translations)
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+        translate=translate,
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert len(seen_source_texts) == 1
+    assert all(len(text) < EXPECTED_DICO_SEGMENT_BATCH_LIMIT for text in seen_source_texts)
+    assert "nominal or verbal inflection" in translated["object"]
+    assert "use of uninflected words" in translated["object"]
+    assert "indeclinables [ avyaya_2 ]" in translated["object"]
+
+
+def test_gaffiot_segmented_translation_passes_through_latin_citation_batches() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    source_text = (
+        "Cic. Nat. 2, 7 ; Ter. Eun. 540 ; Pl. Amph. 309. "
+        "manger : dîner en payant chacun son écot ; "
+        "il faut manger force boisseaux de sel ensemble [pour être de vieux amis]. "
+        "Pl., Ov. ; ēssētur ; Varro L. 5, 106 ; Hor. Epo. 3, 3 ; S. 2, 8, 90. "
+        "Cic. Læl. 67 ; Virg. G. 1, 151 ; En. 5, 683 ; Hor. Ep. 1, 2, 39 ; "
+        "edi sermonem tuum Pl. Aul. 537 ; subj. arch. edim, īs, it, etc."
+    )
+    claim = _claim_from_fixture_row(
+        {
+            "source_lexicon": "gaffiot",
+            "entry_id": "gaffiot_22738",
+            "occurrence": 1,
+            "headword_norm": "edo",
+            "source_ref": "gaffiot:gaffiot_22738",
+            "source_text": source_text,
+        }
+    )
+    gloss = cast(dict[str, Any], cast(dict[str, Any], claim["value"])["triples"][1])
+    gloss["metadata"]["source_segments"] = [
+        {"index": 0, "raw_text": "Cic. Nat. 2, 7"},
+        {"index": 1, "raw_text": "Ter. Eun. 540"},
+        {"index": 2, "raw_text": "Pl. Amph. 309"},
+        {"index": 3, "raw_text": "manger : dîner en payant chacun son écot"},
+        {
+            "index": 4,
+            "raw_text": (
+                "il faut manger force boisseaux de sel ensemble [pour être de vieux amis]"
+            ),
+        },
+        {"index": 5, "raw_text": "Pl., Ov."},
+        {"index": 6, "raw_text": "ēssētur"},
+        {"index": 7, "raw_text": "Varro L. 5, 106"},
+        {"index": 8, "raw_text": "Hor. Epo. 3, 3"},
+        {"index": 9, "raw_text": "S. 2, 8, 90."},
+    ]
+    seen_source_texts: list[str] = []
+
+    def translate(projection: object) -> str:
+        source = str(getattr(projection, "source_text"))
+        seen_source_texts.append(source)
+        translated = source
+        translated = translated.replace(
+            "manger : dîner en payant chacun son écot",
+            "to eat: to dine with each person paying their share",
+        )
+        translated = translated.replace(
+            "il faut manger force boisseaux de sel ensemble [pour être de vieux amis]",
+            "one must eat many bushels of salt together [to be old friends]",
+        )
+        return translated
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="lat",
+        model="test:model",
+        cache=cache,
+        translate=translate,
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="lat",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert len(seen_source_texts) >= 1
+    assert any("dîner" in source for source in seen_source_texts)
+    assert any("Hor. Epo. 3, 3" in source for source in seen_source_texts)
+    assert "Cic. Nat. 2, 7" in translated["object"]
+    assert "each person paying their share" in translated["object"]
+    assert "ēssētur" in translated["object"]
+
+
+def test_dico_translation_population_preserves_headword_only_response() -> None:
+    conn = duckdb.connect(database=":memory:")
+    cache = TranslationCache(conn)
+    claim = _dico_claim()
+
+    written = populate_missing_translations(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+        translate=lambda _projection: "dharma",
+    )
+    projected = project_cached_translations(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+    )
+    value = cast(Mapping[str, Any], projected[0]["value"])
+    triples = cast(list[dict[str, Any]], value["triples"])
+    translated = next(
+        triple
+        for triple in triples
+        if triple.get("predicate") == "gloss"
+        and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+
+    assert written == 1
+    assert translated["object"] == "dharma"
+    assert "translation_review" not in translated["metadata"]
+    assert translation_cache_status_counts(
+        claims=[claim],
+        language="san",
+        model="test:model",
+        cache=cache,
+    ) == {"total": 1, "hits": 1, "missing": 0, "errors": 0, "empty": 0}
 
 
 def test_bailly_structured_translation_repairs_single_echoed_path_typo_by_position() -> None:
@@ -1503,6 +2091,9 @@ def test_greek_translation_hints_are_bailly_specific_and_citation_averse() -> No
     assert "preserve layout" in hint
     assert "meticulous" in hint
     assert "source-faithful" in hint
+    assert "source blocks" in hint
+    assert "preserve every requested block path" in hint
+    assert "do not merge or drop numbered senses" in hint
     assert "particul. => in particular" in hint
     assert "p. suite => by extension" in hint
     assert "en gén. => in general" in hint
@@ -1526,6 +2117,9 @@ def test_latin_translation_hints_are_gaffiot_specific_and_source_faithful() -> N
     assert "use only meanings present in the source entry" in hint
     assert "meticulous" in hint
     assert "source-faithful" in hint
+    assert "inflectional headers" in hint
+    assert "principal parts" in hint
+    assert "example translations" in hint
 
 
 def test_sanskrit_translation_hints_are_dico_specific_and_source_faithful() -> None:
@@ -1541,6 +2135,8 @@ def test_sanskrit_translation_hints_are_dico_specific_and_source_faithful() -> N
     assert "meticulous" in hint
     assert "source-faithful" in hint
     assert "sanskrit tokens" in hint
+    assert "derived compounds" in hint
+    assert "do not summarize, omit, reorder, or split" in hint
 
 
 def test_projection_leaves_claims_unchanged_without_cache_hit() -> None:

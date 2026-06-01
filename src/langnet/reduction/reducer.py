@@ -38,6 +38,66 @@ def bucket_exact_glosses(witnesses: Sequence[WitnessSenseUnit], language: str) -
     return buckets
 
 
+def merge_translated_source_buckets(buckets: Sequence[SenseBucket]) -> list[SenseBucket]:
+    """Attach translated source witnesses to the translated bucket and hide duplicates.
+
+    Translation projection deliberately keeps the original source witness so the
+    UI can still expose source text beside Reader English. Without this merge,
+    exact-gloss reduction emits a second French-only bucket for the same sense.
+    """
+    translated_by_source_sense: dict[str, SenseBucket] = {}
+    for bucket in buckets:
+        for witness in bucket.witnesses:
+            if not _is_translation_witness(witness):
+                continue
+            derived_from_sense = _string_evidence(witness, "derived_from_sense")
+            if derived_from_sense:
+                translated_by_source_sense[derived_from_sense] = bucket
+
+    if not translated_by_source_sense:
+        return list(buckets)
+
+    merged: list[SenseBucket] = []
+    for bucket in buckets:
+        if any(_is_translation_witness(witness) for witness in bucket.witnesses):
+            merged.append(bucket)
+            continue
+
+        target_buckets = [
+            translated_by_source_sense.get(witness.sense_anchor) for witness in bucket.witnesses
+        ]
+        if (
+            target_buckets
+            and all(target_buckets)
+            and len({id(target) for target in target_buckets}) == 1
+        ):
+            target = target_buckets[0]
+            assert target is not None
+            target.witnesses.extend(bucket.witnesses)
+            target.confidence_label = "multi-witness"
+            target.notes = [
+                *[note for note in target.notes if note != "provisional"],
+                "source witness merged behind translation",
+            ]
+            continue
+
+        merged.append(bucket)
+    return merged
+
+
+def _is_translation_witness(witness: WitnessSenseUnit) -> bool:
+    return (
+        witness.source_tool == "translation"
+        or witness.evidence.get("source_tool") == "translation"
+        or bool(witness.evidence.get("translation_id"))
+    )
+
+
+def _string_evidence(witness: WitnessSenseUnit, key: str) -> str:
+    value = witness.evidence.get(key)
+    return value if isinstance(value, str) else ""
+
+
 def reduce_claims(
     *,
     query: str,
@@ -45,7 +105,7 @@ def reduce_claims(
     claims: Sequence[Mapping[str, Any]],
 ) -> ReductionResult:
     witnesses = extract_witness_sense_units(claims)
-    buckets = bucket_exact_glosses(witnesses, language)
+    buckets = merge_translated_source_buckets(bucket_exact_glosses(witnesses, language))
     lexeme_anchors = sorted({witness.lexeme_anchor for witness in witnesses})
     warnings: list[str] = []
     if not witnesses:

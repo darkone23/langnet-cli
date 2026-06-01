@@ -33,6 +33,8 @@ class WordCandidate:
     difficulty: str = "beginner"
     mnemonic: str = ""
     summary_hint: str = ""
+    didactic_score: int = 50
+    didactic_rationale: str = ""
 
 
 @dataclass(frozen=True)
@@ -597,15 +599,33 @@ _GRC_DEEP_QUERIES = (
 
 _CANDIDATE_POOLS: dict[str, tuple[WordCandidate, ...]] = {
     "san": (
-        WordCandidate("san", "agni", "beginner", "Agni is a frequent doorway into Vedic diction."),
         WordCandidate(
-            "san", "dharma", "beginner", "Dharma is worth revisiting because its range is broad."
+            "san",
+            "agni",
+            "beginner",
+            "Agni is a frequent doorway into Vedic diction.",
+            summary_hint="fire; sacrificial fire",
         ),
         WordCandidate(
-            "san", "deva", "beginner", "Connect deva with divine or bright beings in context."
+            "san",
+            "dharma",
+            "beginner",
+            "Dharma is worth revisiting because its range is broad.",
+            summary_hint="law; duty; righteousness",
         ),
         WordCandidate(
-            "san", "yoga", "beginner", "Yoga is a compact form with a wide semantic history."
+            "san",
+            "deva",
+            "beginner",
+            "Connect deva with divine or bright beings in context.",
+            summary_hint="god; divine being",
+        ),
+        WordCandidate(
+            "san",
+            "yoga",
+            "beginner",
+            "Yoga is a compact form with a wide semantic history.",
+            summary_hint="union; discipline; method",
         ),
         WordCandidate(
             "san",
@@ -944,7 +964,10 @@ def build_word_of_day_item(
     canonical = _canonical_term_payload(
         candidate.language, candidate.query, primary_lexeme, witnesses
     )
-    has_multiple_lexemes = len(lexeme_anchors) > 1
+    if candidate.language == "san":
+        display = canonical["transliteration"] or candidate.query or display
+    lexeme_family_count = _lexeme_family_count(candidate.language, lexeme_anchors)
+    has_multiple_lexemes = lexeme_family_count > 1
     confidence = _confidence_label(
         has_multiple_lexemes, source_basis, getattr(bucket, "confidence_label", "")
     )
@@ -960,15 +983,15 @@ def build_word_of_day_item(
         "lexeme_anchors": lexeme_anchors,
         "summary": summary,
         "learner_note": _learner_note(
-            candidate.query, canonical["name"], primary_lexeme, lexeme_anchors
+            candidate.query, canonical["name"], primary_lexeme, has_multiple_lexemes
         ),
         "mnemonic": candidate.mnemonic,
         "difficulty": candidate.difficulty,
         "confidence": confidence,
         "ambiguity": {
             "has_multiple_lexemes": has_multiple_lexemes,
-            "lexeme_count": len(lexeme_anchors),
-            "note": _ambiguity_note(lexeme_anchors),
+            "lexeme_count": lexeme_family_count,
+            "note": _ambiguity_note(lexeme_anchors) if has_multiple_lexemes else "",
         },
         "recommended_request": {
             "language": candidate.language,
@@ -1024,6 +1047,22 @@ def _candidate_key(candidate: WordCandidate) -> str:
 
 def _candidate_repeat_key(candidate: WordCandidate, avoided: set[str]) -> int:
     return 1 if _candidate_key(candidate) in avoided or candidate.query.lower() in avoided else 0
+
+
+def _lexeme_family_count(language: str, lexeme_anchors: Sequence[str]) -> int:
+    family_keys = {
+        _lexeme_family_key(language, anchor)
+        for anchor in lexeme_anchors
+        if _lexeme_family_key(language, anchor)
+    }
+    return len(family_keys)
+
+
+def _lexeme_family_key(language: str, lexeme_anchor: str) -> str:
+    key = str(lexeme_anchor).removeprefix("lex:").split("#", 1)[0].lower().strip()
+    if language == "san":
+        key = key.removesuffix("ḥ").removesuffix("h")
+    return key
 
 
 def _candidate_paradigm_priority(candidate: WordCandidate) -> int:
@@ -1113,6 +1152,12 @@ def _bucket_gloss_quality_order(bucket: Any) -> int:
         return 3
     if normalized.startswith(("=", "(also) =", "also) =", "cf.", "see ")):
         return 3
+    if re.match(
+        r"^(?:(?:[ivxlcdm]+|\d+)\.\s*)?"
+        r"(?:in\s+)?(?:concrete|abstract|proper|figurative|metaphorical)\s+sense\b",
+        normalized,
+    ):
+        return 2
     if len(_support_tokens(normalized)) <= 1 and any(char in normalized for char in "=;:,"):
         return 2
     return 0
@@ -1197,13 +1242,14 @@ def _support_tokens(text: str) -> set[str]:
         "specific",
         "general",
     }
-    return {token for token in re.findall(r"[A-Za-z]{4,}", text.lower()) if token not in stopwords}
+    return {token for token in re.findall(r"[A-Za-z]{3,}", text.lower()) if token not in stopwords}
 
 
 def _clean_recommendation_summary(summary: str) -> str:
     summary = summary.strip()
     if summary.startswith("("):
         summary = summary[1:].strip()
+    summary = _strip_structural_gloss_prefix(summary)
     for prefix in ("pl. ", "sg. "):
         if summary.lower().startswith(prefix):
             summary = summary[len(prefix) :].strip()
@@ -1215,6 +1261,16 @@ def _clean_recommendation_summary(summary: str) -> str:
     if _looks_like_reference_fragment(summary):
         return ""
     return summary
+
+
+def _strip_structural_gloss_prefix(summary: str) -> str:
+    return re.sub(
+        r"^(?:(?:[ivxlcdm]+|\d+)\.\s*)?"
+        r"(?:in\s+)?(?:concrete|abstract|proper|figurative|metaphorical)\s+sense,?\s*",
+        "",
+        summary,
+        flags=re.IGNORECASE,
+    ).strip()
 
 
 def _strip_reference_tail(summary: str) -> str:
@@ -1606,9 +1662,9 @@ def _learner_note(
     query: str,
     display: str,
     primary_lexeme: str,
-    lexeme_anchors: Sequence[str],
+    has_multiple_lexemes: bool,
 ) -> str:
-    if len(lexeme_anchors) > 1:
+    if has_multiple_lexemes:
         return (
             "Useful for learners because it shows a primary entry while exposing related "
             "lexical neighborhoods."

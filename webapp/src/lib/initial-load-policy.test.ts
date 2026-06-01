@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const pageSource = readFileSync('src/routes/+page.svelte', 'utf8');
+const compactPageSource = pageSource.replace(/\s+/g, ' ');
 const learnPageSource = readFileSync('src/routes/learn/+page.svelte', 'utf8');
 const learnSource = readFileSync('src/lib/learn.ts', 'utf8');
 const motdSource = readFileSync('src/routes/api/motd/+server.ts', 'utf8');
@@ -23,16 +24,33 @@ assert.equal(
 	'empty MOTD responses should be treated as errors instead of visible empty content'
 );
 assert.equal(
-	pageSource.includes("const deskStorageKey = 'orion-desk-state:v3';") &&
-		pageSource.includes('version: 3'),
+	pageSource.includes("const deskStorageKey = 'orion-desk-state:v5';") &&
+		pageSource.includes('version: 5') &&
+		pageSource.includes("sessionStorage.removeItem('orion-desk-state:v4');") &&
+		pageSource.includes("sessionStorage.removeItem('orion-desk-state:v3');"),
 	true,
-	'desk session storage version should invalidate stale pre-translation state'
+	'desk session storage version should invalidate stale pre-translation/source-layer state'
 );
 assert.equal(
 	pageSource.includes('encounterNeedsFreshReaderLayer(stored.encounter)') &&
-		pageSource.includes('hasMissingSourceReaderTranslations(result)'),
+		pageSource.includes('hasMissingSourceReaderTranslations(result)') &&
+		pageSource.includes('hasStaleTranslatedSourceLayer(result)'),
 	true,
 	'stored encounters with incomplete reader translations should not bypass a fresh lookup'
+);
+assert.equal(
+	pageSource.includes("params.set('source_layer_version', '3');"),
+	true,
+	'CLI search requests should bust server response cache after translated source-layer contract changes'
+);
+assert.equal(
+	compactPageSource.includes('sectionSegments(bucket, textLayers') &&
+		compactPageSource.includes('groupLayerIsSource(group, textLayers)') &&
+		compactPageSource.includes('readerEntryLabel(group, textLayers)') &&
+		compactPageSource.includes('componentMeaningSegments( meaning, textLayers') &&
+		compactPageSource.includes('componentLayerIsSource(component, textLayers)'),
+	true,
+	'reader source/English layer toggles should expose textLayers as a direct Svelte template dependency'
 );
 assert.equal(
 	pageSource.includes('!query.trim() && !currentWordIndex && !wordIndexEarmarks.length'),
@@ -65,11 +83,11 @@ assert.equal(
 	'MOTD should display a stale/refreshing indicator while old cards stay visible'
 );
 assert.equal(
-	pageSource.includes("candidate_source: 'llm'") &&
-		pageSource.includes("timeout_ms: '12000'") &&
+	pageSource.includes("candidate_source: 'pool'") &&
+		pageSource.includes("timeout_ms: '3000'") &&
 		pageSource.includes("language: 'all'"),
 	true,
-	'MOTD page requests should use all-language LLM recommendations with a bounded 12s timeout'
+	'MOTD page requests should use all-language precomputed pool recommendations with a tight timeout'
 );
 
 assert.equal(
@@ -78,14 +96,14 @@ assert.equal(
 	'auto MOTD requests should no longer return an empty cache-only placeholder'
 );
 assert.equal(
-	motdSource.includes('wordRecommendationsFromCli') &&
+	motdSource.includes('wordRecommendationsFromMotdPool') &&
 		motdSource.includes('const requestedCandidateSource = url.searchParams.get') &&
+		motdSource.includes("candidateSource === 'pool'") &&
+		motdSource.includes('samplePoolMotd') &&
 		motdSource.includes('motdDictionary(language)') &&
-		motdSource.includes("return 'motd-fast'") &&
-		motdSource.includes('includeAmbiguous: true') &&
-		motdSource.includes('finalizeCards: false'),
+		motdSource.includes('Precomputed learner pool returned no cards'),
 	true,
-	'normal MOTD requests should use LLM candidate synthesis plus source-backed bounded probes'
+	'normal MOTD requests should sample the precomputed learner pool instead of running live LLM work'
 );
 assert.equal(
 	motdSource.includes('Using the previous word of the day; replacement could not be prepared'),
@@ -106,9 +124,9 @@ assert.equal(
 	'MOTD should persist successful server results outside process memory'
 );
 assert.equal(
-	motdSource.includes("readInteger(url.searchParams.get('timeout_ms'), 12_000"),
+	motdSource.includes("readInteger(url.searchParams.get('timeout_ms'), 3_000"),
 	true,
-	'MOTD API default timeout should allow the current LLM route while remaining bounded'
+	'MOTD API default timeout should be tight because normal requests are local pool samples'
 );
 assert.equal(
 	pageSource.includes('gateway.language !== targetLanguage') &&

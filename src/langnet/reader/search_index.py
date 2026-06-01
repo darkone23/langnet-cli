@@ -4,6 +4,7 @@ import re
 import shutil
 from collections import Counter
 from datetime import UTC, datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,7 @@ import polars as pl
 
 from langnet.normalizer.greek_transliterator import transliterate_variants
 from langnet.normalizer.utils import contains_greek, unique
+from langnet.reader.search_concepts import ReaderSearchConcept, load_search_concepts
 from langnet.reader.search_normalization import (
     NORMALIZER_VERSION,
     normalize_query_for_search,
@@ -32,6 +34,7 @@ replace=true
 """
 LANCE_DATASET_SUFFIX = ".lance"
 LANCE_SEARCH_FIELDS = {"search_text", "search_text_folded", "token_text", "display_text"}
+READER_SEARCH_CONCEPT_ROOT = Path("data/curated/reader_search")
 TOKEN_RE = re.compile(r"\S+")
 SEARCH_INDEX_POLARS_SCHEMA = {
     "search_id": pl.String,
@@ -582,25 +585,92 @@ def _lance_fts_search(  # noqa: PLR0913
         tag=tag,
     )
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-    overfetch = max(limit + offset, limit * 5, 50)
-    rows = _dict_rows(
+    prefilter = bool(conditions)
+    rows = _lance_fts_rows(
         conn,
-        f"""
-        SELECT s.*, s._score AS score
-        FROM lance_fts(
-            {_sql_literal(dataset_path)},
-            {_sql_literal(search_field)},
-            ?,
-            k = ?,
-            prefilter = false
-        ) s
-        {where}
-        ORDER BY s._score DESC, s.language, s.title, s.sort_key
-        LIMIT ? OFFSET ?
-        """,
-        [search_query, overfetch, *params, limit, offset],
+        dataset_path,
+        search_field,
+        search_query,
+        where=where,
+        params=params,
+        k=max(limit + offset, limit * 5, 50),
+        limit=limit,
+        offset=offset,
+        prefilter=prefilter,
     )
+    if prefilter and not rows:
+        rows = _lance_fts_rows(
+            conn,
+            dataset_path,
+            search_field,
+            search_query,
+            where=where,
+            params=params,
+            k=_dataset_row_count(conn, dataset_path),
+            limit=limit,
+            offset=offset,
+            prefilter=False,
+        )
     return [_result_item(row) for row in rows]
+
+
+def _lance_fts_rows(  # noqa: PLR0913
+    conn: duckdb.DuckDBPyConnection,
+    dataset_path: Path,
+    search_field: str,
+    search_query: str,
+    *,
+    where: str,
+    params: list[object],
+    k: int,
+    limit: int,
+    offset: int,
+    prefilter: bool,
+) -> list[dict[str, Any]]:
+    try:
+        return _dict_rows(
+            conn,
+            f"""
+            SELECT s.*, s._score AS score
+            FROM lance_fts(
+                {_sql_literal(dataset_path)},
+                {_sql_literal(search_field)},
+                ?,
+                k = ?,
+                prefilter = {str(prefilter).lower()}
+            ) s
+            {where}
+            ORDER BY s._score DESC, s.language, s.title, s.sort_key
+            LIMIT ? OFFSET ?
+            """,
+            [search_query, k, *params, limit, offset],
+        )
+    except duckdb.Error:
+        if prefilter:
+            return _lance_fts_rows(
+                conn,
+                dataset_path,
+                search_field,
+                search_query,
+                where=where,
+                params=params,
+                k=_dataset_row_count(conn, dataset_path),
+                limit=limit,
+                offset=offset,
+                prefilter=False,
+            )
+        raise
+
+
+def _dataset_row_count(conn: duckdb.DuckDBPyConnection, dataset_path: Path) -> int:
+    row = conn.execute(
+        f"""
+        SELECT count(*)
+        FROM {_sql_literal(dataset_path)}
+        """
+    ).fetchone()
+    assert row is not None
+    return int(row[0])
 
 
 def _fuzzy_lance_search(  # noqa: PLR0913
@@ -672,38 +742,46 @@ def _reader_search_query_candidates(
 ) -> list[dict[str, Any]]:
     search_field = _search_field(field)
     normalized = normalize_query_for_search(language, query)
-    raw_candidates: list[tuple[str, str, str]] = [
-        (_candidate_query(normalized, search_field), "input", search_field)
+    raw_candidates: list[dict[str, Any]] = [
+        {
+            "query": _candidate_query(normalized, search_field),
+            "kind": "input",
+            "field": search_field,
+        }
     ]
     if mode == "fuzzy":
         raw_candidates.extend(
-            (variant, "normalized_surface", "search_text_folded")
+            {
+                "query": variant,
+                "kind": "normalized_surface",
+                "field": "search_text_folded",
+            }
             for variant in normalized.query_variants
         )
         if language == "grc" and not contains_greek(query):
             raw_candidates.extend(
-                (
-                    normalize_query_for_search(language, variant.search_key).search_text_folded,
-                    "transliteration_expansion",
-                    "search_text_folded",
-                )
+                {
+                    "query": normalize_query_for_search(
+                        language, variant.search_key
+                    ).search_text_folded,
+                    "kind": "transliteration_expansion",
+                    "field": "search_text_folded",
+                }
                 for variant in transliterate_variants(query)
                 if variant.search_key
             )
-    candidates: list[dict[str, Any]] = []
-    for rank, (candidate_query, kind, candidate_field) in enumerate(
-        _unique_candidate_tuples(raw_candidates)
-    ):
+        raw_candidates.extend(_concept_alias_query_candidates(language, query))
+    candidates = []
+    for rank, raw_candidate in enumerate(_unique_candidate_dicts(raw_candidates)):
+        candidate_query = str(raw_candidate.get("query") or "")
         if not candidate_query:
             continue
-        candidates.append(
-            {
-                "query": candidate_query,
-                "kind": kind,
-                "field": candidate_field,
-                "rank": rank,
-            }
-        )
+        candidate = dict(raw_candidate)
+        candidate["query"] = candidate_query
+        candidate["kind"] = str(raw_candidate.get("kind") or "input")
+        candidate["field"] = str(raw_candidate.get("field") or search_field)
+        candidate["rank"] = rank
+        candidates.append(candidate)
     return candidates
 
 
@@ -715,16 +793,73 @@ def _candidate_query(normalized: Any, search_field: str) -> str:
     return str(normalized.search_text_folded)
 
 
-def _unique_candidate_tuples(candidates: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]:
-    keys = unique([f"{query}\0{field}" for query, _kind, field in candidates if query])
-    ordered: list[tuple[str, str, str]] = []
+def _concept_alias_query_candidates(language: str, query: str) -> list[dict[str, Any]]:
+    query_key = normalize_query_for_search(language, query).search_text_folded
+    candidates: list[dict[str, Any]] = []
+    for concept in _search_concepts_for_language(language):
+        label_keys = {
+            normalize_query_for_search(language, label).search_text_folded
+            for label in concept.labels
+        }
+        if query_key not in label_keys:
+            continue
+        for source_query in concept.source_queries:
+            candidate_query = normalize_query_for_search(language, source_query).search_text_folded
+            if not candidate_query:
+                continue
+            candidates.append(
+                {
+                    "query": candidate_query,
+                    "kind": "concept_alias",
+                    "field": "search_text_folded",
+                    "concept_id": concept.concept_id,
+                    "concept_label": concept.labels[0],
+                    "explanation": concept.explanation,
+                    "source_file": concept.source_file,
+                }
+            )
+    return candidates
+
+
+@lru_cache(maxsize=1)
+def _search_concepts() -> tuple[ReaderSearchConcept, ...]:
+    return tuple(load_search_concepts(READER_SEARCH_CONCEPT_ROOT))
+
+
+def _search_concepts_for_language(language: str) -> tuple[ReaderSearchConcept, ...]:
+    return tuple(concept for concept in _search_concepts() if concept.language == language)
+
+
+def _unique_candidate_dicts(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    keys = unique(
+        [
+            f"{candidate.get('query')}\0{candidate.get('field')}"
+            for candidate in candidates
+            if candidate.get("query")
+        ]
+    )
+    ordered: list[dict[str, Any]] = []
     for key in keys:
         query, field = key.split("\0", 1)
-        for candidate_query, kind, candidate_field in candidates:
-            if candidate_query == query and candidate_field == field:
-                ordered.append((candidate_query, kind, candidate_field))
-                break
+        matches = [
+            candidate
+            for candidate in candidates
+            if candidate.get("query") == query and candidate.get("field") == field
+        ]
+        if matches:
+            ordered.append(max(matches, key=_candidate_kind_priority))
     return ordered
+
+
+def _candidate_kind_priority(candidate: dict[str, Any]) -> int:
+    kind = str(candidate.get("kind") or "")
+    if kind == "concept_alias":
+        return 3
+    if kind == "inflection_variant":
+        return 2
+    if kind == "transliteration_expansion":
+        return 1
+    return 0
 
 
 def _search_filters(  # noqa: PLR0913

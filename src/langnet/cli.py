@@ -222,7 +222,7 @@ LEARNING_OVERLAY_SCHEMA_VERSION = "langnet.learning_overlay.v1"
 DEFAULT_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND = 8.0
 DEFAULT_TRANSLATION_MIN_RATE_TOKENS = 24
 DEFAULT_TRANSLATION_MIN_RATE_SECONDS = 5.0
-DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-2.5-flash-lite"
+DEFAULT_RECOMMENDATION_MODEL = "openai:google/gemini-2.5-flash"
 WORD_INDEX_CONTEXT_RADIUS = 1
 GRAMMAR_CONCEPTS_SCHEMA_VERSION = "langnet.grammar_concepts.v1"
 GRAMMAR_EVIDENCE_REPORT_SCHEMA_VERSION = "langnet.grammar_evidence_report.v1"
@@ -5248,12 +5248,21 @@ def _word_of_day_user_prompt(prompt: Mapping[str, object]) -> str:
         "Return JSON shaped as "
         '{"items":[{"language":"lat|grc|san","query":"...",'
         '"summary":"3-10 word English learner gloss",'
-        '"difficulty":"beginner|intermediate|deep","mnemonic":"..."}]}. '
+        '"difficulty":"beginner|intermediate|deep","mnemonic":"...",'
+        '"didactic_score":0-100,"didactic_rationale":"..."}]}. '
         "The mnemonic must be a brief scholarly memory note grounded in morphology, "
         "semantic range, etymology, or textual context. If no such note is safe, keep it "
         "plain and descriptive. "
+        "Use didactic_score to rank the word's teaching value for classical-language "
+        "readers: frequency, morphological clarity, semantic range, textual usefulness, "
+        "and connection to core grammar should beat novelty. Use didactic_rationale for "
+        "one concise evidence-minded reason; do not invent citations. "
         "Use curated_seed_candidates as calibration examples for source-verifiable learner "
         "words; do not treat them as the only allowed answers. "
+        "Use dictionary headword or citation forms, not inflected surface forms. For "
+        "Sanskrit prefer lexical stems such as deva, agni, dharma, yoga rather than "
+        "conjugated or declined forms. For Greek and Latin prefer standard dictionary "
+        "lemmas that LSJ/Whitaker-style tools can verify. "
         f"Request: {orjson.dumps(dict(prompt)).decode('utf-8')}"
     )
 
@@ -5681,10 +5690,37 @@ def _word_of_day_parse_synthesized_candidates(
         raw_mnemonic = str(item.get("mnemonic") or "").strip()
         mnemonic = ""
         summary = str(item.get("summary") or "").strip()
+        didactic_score = _word_of_day_didactic_score(item.get("didactic_score"))
+        didactic_rationale = str(item.get("didactic_rationale") or "").strip()
         if _word_of_day_has_unsuitable_learner_text(summary, raw_mnemonic):
             continue
-        pools[language].append(WordCandidate(language, query, difficulty, mnemonic, summary))
+        pools[language].append(
+            WordCandidate(
+                language,
+                query,
+                difficulty,
+                mnemonic,
+                summary,
+                didactic_score,
+                didactic_rationale,
+            )
+        )
     return {language: candidates for language, candidates in pools.items() if candidates}
+
+
+def _word_of_day_didactic_score(value: object) -> int:
+    if isinstance(value, bool):
+        return 50
+    if isinstance(value, int):
+        score = value
+    elif isinstance(value, str):
+        try:
+            score = int(value)
+        except ValueError:
+            return 50
+    else:
+        return 50
+    return min(100, max(0, score))
 
 
 _UNSUITABLE_LEARNER_TEXT_PATTERNS = (
@@ -6190,6 +6226,128 @@ def word_of_day(  # noqa: PLR0913
 
 
 main.add_command(word_of_day, "recommend-words")
+
+
+@main.group("motd-pool", invoke_without_command=True)
+@click.pass_context
+def motd_pool_cli(ctx: click.Context) -> None:
+    """Serve and inspect precomputed word-of-day pools."""
+    if ctx.invoked_subcommand is None:
+        _emit_motd_pool_sample(
+            db_path=None,
+            language="all",
+            count=1,
+            level="beginner",
+            seed=None,
+            avoid=None,
+            output="text",
+        )
+
+
+def _emit_motd_pool_sample(  # noqa: PLR0913
+    *,
+    db_path: Path | None,
+    language: str,
+    count: int,
+    level: str,
+    seed: str | None,
+    avoid: str | None,
+    output: str,
+) -> None:
+    from langnet.motd_pool import default_motd_pool_path, sample_motd_pool  # noqa: PLC0415
+
+    payload = sample_motd_pool(
+        db_path or default_motd_pool_path(),
+        language=language,
+        count=count,
+        level=level,
+        seed=seed,
+        avoid=tuple(_word_of_day_terms_from_json(avoid) if avoid else ()),
+    )
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    _print_word_recommendations(payload)
+
+
+@motd_pool_cli.command("sample")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="MOTD pool DuckDB path. Defaults to data/build/motd_pool.duckdb.",
+)
+@click.option(
+    "--language",
+    type=click.Choice(["all", "san", "grc", "lat"]),
+    default="all",
+    show_default=True,
+)
+@click.option("--count", default=1, type=click.IntRange(1, 10), show_default=True)
+@click.option(
+    "--level",
+    type=click.Choice(["beginner", "intermediate", "deep"]),
+    default="beginner",
+    show_default=True,
+)
+@click.option("--seed", default=None, help="Deterministic selection seed.")
+@click.option("--avoid", default=None, help="Comma-separated language:query keys or query terms.")
+@click.option(
+    "--output",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    show_default=True,
+)
+def motd_pool_sample(  # noqa: PLR0913
+    db_path: Path | None,
+    language: str,
+    count: int,
+    level: str,
+    seed: str | None,
+    avoid: str | None,
+    output: str,
+) -> None:
+    """Sample precomputed learner cards without live LLM or encounter probing."""
+    _emit_motd_pool_sample(
+        db_path=db_path,
+        language=language,
+        count=count,
+        level=level,
+        seed=seed,
+        avoid=avoid,
+        output=output,
+    )
+
+
+@motd_pool_cli.command("validate")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="MOTD pool DuckDB path. Defaults to data/build/motd_pool.duckdb.",
+)
+@click.option("--per-language", default=1461, type=click.IntRange(1), show_default=True)
+@click.option(
+    "--output",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    show_default=True,
+)
+def motd_pool_validate(db_path: Path | None, per_language: int, output: str) -> None:
+    """Validate precomputed MOTD pool coverage and duplicate keys."""
+    from langnet.motd_pool import default_motd_pool_path, validate_motd_pool  # noqa: PLC0415
+
+    payload = validate_motd_pool(db_path or default_motd_pool_path(), per_language=per_language)
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    status = "ok" if payload.get("ok") else "not ok"
+    click.echo(f"MOTD pool {status}: {payload.get('db_path')}")
+    click.echo(f"Counts: {payload.get('language_counts')}")
+    for issue in cast(Sequence[Mapping[str, object]], payload.get("issues") or []):
+        click.echo(f"- {issue.get('code')}: {issue.get('message')}")
 
 
 def _doctor_check(  # noqa: PLR0913
@@ -10649,7 +10807,7 @@ def _record_translation_retry_rejection(  # noqa: PLR0913
     )
 
 
-def _translation_cache_clear_payload(  # noqa: C901, PLR0913
+def _translation_cache_clear_payload(  # noqa: C901, PLR0912, PLR0913
     cache_path: Path,
     *,
     translation_id: str | None = None,
@@ -10706,55 +10864,61 @@ def _translation_cache_clear_payload(  # noqa: C901, PLR0913
                     "before": before,
                     "after": before,
                 }
+            conn.execute("BEGIN TRANSACTION")
             where_clauses: list[str] = []
             params: list[object] = []
-            if translation_id:
-                where_clauses.append("translation_id = ?")
-                params.append(translation_id)
-            if source_lexicon:
-                where_clauses.append("source_lexicon = ?")
-                params.append(source_lexicon)
-            if status:
-                where_clauses.append("status = ?")
-                params.append(status)
-            if headword:
-                where_clauses.append("headword_norm = ?")
-                params.append(headword)
-            if entry_id:
-                where_clauses.append("entry_id = ?")
-                params.append(entry_id)
-            if occurrence is not None:
-                where_clauses.append("occurrence = ?")
-                params.append(occurrence)
-            if source_text_hash:
-                where_clauses.append("source_text_hash = ?")
-                params.append(source_text_hash)
-            where_sql = f" WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-            row = conn.execute(
-                f"SELECT COUNT(*) FROM entry_translations{where_sql}",
-                params,
-            ).fetchone()
-            deleted = int(row[0]) if row is not None else 0
-            conn.execute(f"DELETE FROM entry_translations{where_sql}", params)
-            if retry_reason and deleted:
-                _record_translation_retry_rejection(
-                    conn,
-                    translation_id=translation_id,
-                    source_lexicon=source_lexicon,
-                    entry_id=entry_id,
-                    occurrence=occurrence,
-                    source_text_hash=source_text_hash,
-                    headword=headword,
-                    retry_reason=retry_reason,
-                )
-                retry_generation = _translation_retry_generation(
-                    conn,
-                    source_lexicon=source_lexicon,
-                    entry_id=entry_id,
-                    occurrence=occurrence,
-                    source_text_hash=source_text_hash,
-                    translation_id=translation_id,
-                )
+            try:
+                if translation_id:
+                    where_clauses.append("translation_id = ?")
+                    params.append(translation_id)
+                if source_lexicon:
+                    where_clauses.append("source_lexicon = ?")
+                    params.append(source_lexicon)
+                if status:
+                    where_clauses.append("status = ?")
+                    params.append(status)
+                if headword:
+                    where_clauses.append("headword_norm = ?")
+                    params.append(headword)
+                if entry_id:
+                    where_clauses.append("entry_id = ?")
+                    params.append(entry_id)
+                if occurrence is not None:
+                    where_clauses.append("occurrence = ?")
+                    params.append(occurrence)
+                if source_text_hash:
+                    where_clauses.append("source_text_hash = ?")
+                    params.append(source_text_hash)
+                where_sql = f" WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+                row = conn.execute(
+                    f"SELECT COUNT(*) FROM entry_translations{where_sql}",
+                    params,
+                ).fetchone()
+                deleted = int(row[0]) if row is not None else 0
+                conn.execute(f"DELETE FROM entry_translations{where_sql}", params)
+                if retry_reason and deleted:
+                    _record_translation_retry_rejection(
+                        conn,
+                        translation_id=translation_id,
+                        source_lexicon=source_lexicon,
+                        entry_id=entry_id,
+                        occurrence=occurrence,
+                        source_text_hash=source_text_hash,
+                        headword=headword,
+                        retry_reason=retry_reason,
+                    )
+                    retry_generation = _translation_retry_generation(
+                        conn,
+                        source_lexicon=source_lexicon,
+                        entry_id=entry_id,
+                        occurrence=occurrence,
+                        source_text_hash=source_text_hash,
+                        translation_id=translation_id,
+                    )
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
     else:
         deleted = 0
         retry_generation = 0

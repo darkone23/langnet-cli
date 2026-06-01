@@ -200,6 +200,34 @@ class TranslationCache:
         ).fetchone()
         if compatible_ok is not None:
             return compatible_ok
+        same_source_ok = self.conn.execute(
+            f"""
+            SELECT {columns}
+            FROM entry_translations
+            WHERE source_lexicon = ?
+              AND entry_id = ?
+              AND occurrence = ?
+              AND source_text_hash = ?
+              AND source_lang = ?
+              AND target_lang = ?
+              AND model = ?
+              AND status = 'ok'
+              AND translated_text IS NOT NULL
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+            """,
+            [
+                key.source_lexicon,
+                key.entry_id,
+                key.occurrence,
+                key.source_text_hash,
+                key.source_lang,
+                key.target_lang,
+                key.model,
+            ],
+        ).fetchone()
+        if same_source_ok is not None:
+            return same_source_ok
         return self.conn.execute(
             f"""
             SELECT {columns}

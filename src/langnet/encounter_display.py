@@ -271,6 +271,8 @@ def entry_summary_payload(witness: object) -> dict[str, object]:
         "dictionary": _entry_dictionary(evidence, source_entry, source_tool),
         "raw_blob_ref": _string_value(evidence.get("raw_blob_ref")),
         "source_encoding": _string_value(evidence.get("source_encoding")),
+        "source_layer_text": _source_layer_text(witness, evidence),
+        "reader_layer_text": _reader_layer_text(witness, evidence),
         "source_entry": _source_entry_payload(source_entry),
         "source_detail_summary": source_detail_summary_payload(
             summarize_source_details([evidence])
@@ -579,6 +581,27 @@ def _source_entry_payload(source_entry: Mapping[str, object]) -> dict[str, objec
         payload["source_text_chars"] = len(re.sub(r"\s+", " ", source_text).strip())
         payload["has_source_text"] = True
     return payload
+
+
+def _source_layer_text(witness: object, evidence: Mapping[str, object]) -> str:
+    source_entry = _mapping_value(evidence.get("source_entry"))
+    if (
+        _witness_source_tool(witness) == "translation"
+        or evidence.get("source_tool") == "translation"
+        or bool(evidence.get("translation_id"))
+    ):
+        return _string_value(source_entry.get("source_text"))
+    return (
+        _string_value(source_entry.get("source_text"))
+        or _string_value(evidence.get("display_gloss"))
+        or _string_value(getattr(witness, "gloss", ""))
+    )
+
+
+def _reader_layer_text(witness: object, evidence: Mapping[str, object]) -> str:
+    return _string_value(evidence.get("display_gloss")) or _string_value(
+        getattr(witness, "gloss", "")
+    )
 
 
 def _translation_payload(witness: object, evidence: Mapping[str, object]) -> dict[str, object]:

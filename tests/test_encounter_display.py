@@ -135,6 +135,8 @@ def test_build_display_payload_includes_json_ready_views() -> None:
             "dictionary": "dico",
             "raw_blob_ref": "",
             "source_encoding": "",
+            "source_layer_text": "loi; devoir; cf. dharma",
+            "reader_layer_text": "",
             "source_entry": {
                 "dict": "dico",
                 "entry_id": "dharma",

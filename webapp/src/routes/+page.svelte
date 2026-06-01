@@ -127,8 +127,8 @@
 	const simulatedLookupDelayMs = 900;
 	const loadingSteps = uiCopy.search.loadingSteps;
 	const motdSkeletonRows = [0, 1, 2];
-	const motdStorageKey = 'orion-motd-cache:v4';
-	const deskStorageKey = 'orion-desk-state:v3';
+	const motdStorageKey = 'orion-motd-cache:v5';
+	const deskStorageKey = 'orion-desk-state:v5';
 	const deskStorageTtlMs = 2 * 60 * 60 * 1000;
 	const wordIndexStorageKey = 'orion-word-index-earmarks:v1';
 	const wordIndexRadius = 5;
@@ -159,7 +159,7 @@
 	};
 
 	type StoredDeskState = {
-		version: 3;
+		version: 5;
 		expiresAt: number;
 		routeKey: string;
 		language: LanguageMode;
@@ -380,6 +380,7 @@
 			params.set('translation', translationOverride);
 			params.set('max_buckets', '54321');
 			params.set('max_gloss_chars', '54321');
+			params.set('source_layer_version', '3');
 		}
 
 		if (isAllLookupSelected) {
@@ -571,8 +572,8 @@
 				language: 'all',
 				count: '1',
 				translation: 'cache',
-				candidate_source: 'llm',
-				timeout_ms: '12000'
+				candidate_source: 'pool',
+				timeout_ms: '3000'
 			});
 			if (refresh || motdStale) {
 				params.set('refresh', '1');
@@ -712,7 +713,7 @@
 			if (!raw) return null;
 
 			const stored = JSON.parse(raw) as Partial<StoredDeskState>;
-			if (stored.version !== 3 || !stored.expiresAt || stored.expiresAt <= Date.now()) {
+			if (stored.version !== 5 || !stored.expiresAt || stored.expiresAt <= Date.now()) {
 				sessionStorage.removeItem(deskStorageKey);
 				return null;
 			}
@@ -733,7 +734,7 @@
 		}
 
 		const stored: StoredDeskState = {
-			version: 3,
+			version: 5,
 			expiresAt: Date.now() + deskStorageTtlMs,
 			routeKey: currentRouteKey(),
 			language,
@@ -763,6 +764,8 @@
 
 		try {
 			sessionStorage.removeItem(deskStorageKey);
+			sessionStorage.removeItem('orion-desk-state:v4');
+			sessionStorage.removeItem('orion-desk-state:v3');
 			sessionStorage.removeItem('orion-desk-state:v2');
 			sessionStorage.removeItem('orion-desk-state:v1');
 		} catch {
@@ -775,6 +778,7 @@
 
 		try {
 			localStorage.removeItem(motdStorageKey);
+			localStorage.removeItem('orion-motd-cache:v4');
 			localStorage.removeItem('orion-motd-cache:v3');
 			localStorage.removeItem('orion-motd-cache:v2');
 			localStorage.removeItem('orion-motd-cache:v1');
@@ -860,7 +864,25 @@
 			return true;
 		}
 
-		return hasMissingSourceReaderTranslations(result);
+		return hasMissingSourceReaderTranslations(result) || hasStaleTranslatedSourceLayer(result);
+	}
+
+	function hasStaleTranslatedSourceLayer(result: EncounterResult) {
+		return result.buckets.some((bucket) => {
+			const translation = bucket.translation;
+			if (!translation?.available) return false;
+			if (translation.source_lang !== 'fr') return false;
+			if (!isTranslatedSourceTool(translation.source_tool)) return false;
+			return sourceLayerLooksLikeReaderEnglish(translation.source_text, translation.target_text);
+		});
+	}
+
+	function sourceLayerLooksLikeReaderEnglish(sourceText: string, targetText: string) {
+		const source = sourceText.replace(/\s+/g, ' ').trim().toLowerCase();
+		const target = targetText.replace(/\s+/g, ' ').trim().toLowerCase();
+		if (!source || !target) return true;
+		if (source === target) return true;
+		return source.length > 80 && target.length > 80 && source.slice(0, 80) === target.slice(0, 80);
 	}
 
 	function encounterMatchesStoredRoute(storedEncounter: EncounterResult | null | undefined) {
@@ -1841,6 +1863,9 @@
 		return (
 			/encounter returned no usable source-backed buckets/i.test(message) ||
 			/LLM card finalization unavailable/i.test(message) ||
+			/Precomputed learner pool fell back to curated words/i.test(message) ||
+			/Precomputed learner pool returned no cards/i.test(message) ||
+			/MOTD pool database does not exist/i.test(message) ||
 			/live LLM recommendations warm in the background/i.test(message)
 		);
 	}
@@ -2647,10 +2672,13 @@
 		return segments.length ? segments : [uiCopy.errors.noGloss];
 	}
 
-	function activeGloss(bucket: EncounterBucket) {
+	function activeGloss(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
 		const text =
 			bucket.translation &&
-			(!bucket.translation.available || textLayers[bucket.bucket_id] === 'source')
+			(!bucket.translation.available || layerState[bucket.bucket_id] === 'source')
 				? bucket.translation.source_text
 				: (bucket.translation?.target_text ?? bucket.display_gloss);
 
@@ -2662,35 +2690,52 @@
 		return value.replace(/_\d+\b/g, '');
 	}
 
-	function activeGlossSegments(bucket: EncounterBucket) {
-		return glossSegments(activeGloss(bucket));
+	function activeGlossSegments(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
+		return glossSegments(activeGloss(bucket, layerState));
 	}
 
-	function sectionText(bucket: EncounterBucket) {
-		if (expandedSections[sectionExpansionKey(bucket)] && sectionHasSourceDetail(bucket)) {
+	function sectionText(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers,
+		expansionState: Record<string, boolean> = expandedSections
+	) {
+		if (expansionState[sectionExpansionKey(bucket)] && sectionHasSourceDetail(bucket, layerState)) {
 			return sourceDetailText(bucket);
 		}
 
-		if (shouldCollapseReaderSection(bucket) && !expandedSections[sectionExpansionKey(bucket)]) {
-			return truncateText(activeGloss(bucket), sectionPreviewLength(bucket));
+		if (
+			shouldCollapseReaderSection(bucket, layerState) &&
+			!expansionState[sectionExpansionKey(bucket)]
+		) {
+			return truncateText(activeGloss(bucket, layerState), sectionPreviewLength(bucket));
 		}
 
-		return activeGloss(bucket);
+		return activeGloss(bucket, layerState);
 	}
 
-	function sectionSegments(bucket: EncounterBucket) {
-		return glossSegments(sectionText(bucket));
+	function sectionSegments(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers,
+		expansionState: Record<string, boolean> = expandedSections
+	) {
+		return glossSegments(sectionText(bucket, layerState, expansionState));
 	}
 
-	function sectionHasSourceDetail(bucket: EncounterBucket) {
+	function sectionHasSourceDetail(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
 		if (bucket.translation?.available && isTranslatedSourceTool(bucket.translation.source_tool)) {
 			return false;
 		}
 
 		const detail = sourceDetailText(bucket);
 		if (!detail) return false;
-		if (detail.length <= activeGloss(bucket).length + 24) return false;
-		return isSectionTruncated(bucket);
+		if (detail.length <= activeGloss(bucket, layerState).length + 24) return false;
+		return isSectionTruncated(bucket, layerState);
 	}
 
 	function sourceDetailText(bucket: EncounterBucket) {
@@ -2703,32 +2748,50 @@
 		);
 	}
 
-	function isSectionTruncated(bucket: EncounterBucket) {
-		return /(?:…|\.\.\.)\s*$/u.test(activeGloss(bucket).trim());
+	function isSectionTruncated(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
+		return /(?:…|\.\.\.)\s*$/u.test(activeGloss(bucket, layerState).trim());
 	}
 
-	function sectionIsClippedWithoutDetail(bucket: EncounterBucket) {
-		return isSectionTruncated(bucket) && !sectionHasSourceDetail(bucket);
+	function sectionIsClippedWithoutDetail(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
+		return isSectionTruncated(bucket, layerState) && !sectionHasSourceDetail(bucket, layerState);
 	}
 
-	function sectionShowsReturnedEndingNote(bucket: EncounterBucket) {
+	function sectionShowsReturnedEndingNote(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers,
+		expansionState: Record<string, boolean> = expandedSections
+	) {
 		return (
-			sectionIsClippedWithoutDetail(bucket) &&
-			(!sectionCanToggle(bucket) || expandedSections[sectionExpansionKey(bucket)])
+			sectionIsClippedWithoutDetail(bucket, layerState) &&
+			(!sectionCanToggle(bucket, layerState) || expansionState[sectionExpansionKey(bucket)])
 		);
 	}
 
-	function sectionCanToggle(bucket: EncounterBucket) {
-		return sectionHasSourceDetail(bucket) || shouldCollapseReaderSection(bucket);
+	function sectionCanToggle(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
+		return (
+			sectionHasSourceDetail(bucket, layerState) || shouldCollapseReaderSection(bucket, layerState)
+		);
 	}
 
-	function shouldCollapseReaderSection(bucket: EncounterBucket) {
+	function shouldCollapseReaderSection(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
 		const tool = primaryTool(bucket);
-		const text = activeGloss(bucket);
-		const segments = activeGlossSegments(bucket);
+		const text = activeGloss(bucket, layerState);
+		const segments = activeGlossSegments(bucket, layerState);
 
 		if (isOutlinedDictionaryTool(tool)) {
-			if (isCompactOutlineHeading(bucket)) return false;
+			if (isCompactOutlineHeading(bucket, layerState)) return false;
 			return text.length > sectionPreviewLength(bucket) || segments.length > 1;
 		}
 
@@ -2745,9 +2808,15 @@
 		return 260;
 	}
 
-	function sectionToggleLabel(bucket: EncounterBucket) {
-		if (expandedSections[sectionExpansionKey(bucket)]) return uiCopy.readerText.closePassage;
-		return sectionHasSourceDetail(bucket) ? uiCopy.passage.openSource : uiCopy.passage.openFull;
+	function sectionToggleLabel(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers,
+		expansionState: Record<string, boolean> = expandedSections
+	) {
+		if (expansionState[sectionExpansionKey(bucket)]) return uiCopy.readerText.closePassage;
+		return sectionHasSourceDetail(bucket, layerState)
+			? uiCopy.passage.openSource
+			: uiCopy.passage.openFull;
 	}
 
 	function toggleSectionExpansion(bucket: EncounterBucket) {
@@ -2817,14 +2886,21 @@
 		return `${role}${terms ? `; lookup terms: ${terms}` : ''}`;
 	}
 
-	function componentMeaningSegments(meaning: EncounterComponentMeaning) {
-		return glossSegments(componentMeaningText(meaning));
+	function componentMeaningSegments(
+		meaning: EncounterComponentMeaning,
+		layerState: Record<string, 'reader' | 'source'> = textLayers,
+		expansionState: Record<string, boolean> = expandedSections
+	) {
+		return glossSegments(componentMeaningText(meaning, layerState, expansionState));
 	}
 
-	function componentMeaningActiveGloss(meaning: EncounterComponentMeaning) {
+	function componentMeaningActiveGloss(
+		meaning: EncounterComponentMeaning,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
 		const key = componentMeaningKey(meaning);
 		const text =
-			meaning.translation && (!meaning.translation.available || textLayers[key] === 'source')
+			meaning.translation && (!meaning.translation.available || layerState[key] === 'source')
 				? meaning.translation.source_text
 				: (meaning.translation?.target_text ?? meaning.display_gloss);
 		return postProcessComponentText(meaning, text);
@@ -2836,15 +2912,22 @@
 		return value.replace(/_\d+\b/g, '');
 	}
 
-	function componentMeaningText(meaning: EncounterComponentMeaning) {
-		const text = componentMeaningActiveGloss(meaning);
-		if (expandedSections[componentMeaningKey(meaning)]) return text;
-		if (componentMeaningCanToggle(meaning)) return truncateText(text, 420);
+	function componentMeaningText(
+		meaning: EncounterComponentMeaning,
+		layerState: Record<string, 'reader' | 'source'> = textLayers,
+		expansionState: Record<string, boolean> = expandedSections
+	) {
+		const text = componentMeaningActiveGloss(meaning, layerState);
+		if (expansionState[componentMeaningKey(meaning)]) return text;
+		if (componentMeaningCanToggle(meaning, layerState)) return truncateText(text, 420);
 		return text;
 	}
 
-	function componentMeaningCanToggle(meaning: EncounterComponentMeaning) {
-		const text = componentMeaningActiveGloss(meaning);
+	function componentMeaningCanToggle(
+		meaning: EncounterComponentMeaning,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
+		const text = componentMeaningActiveGloss(meaning, layerState);
 		return text.length > 420 || glossSegments(text).length > 3;
 	}
 
@@ -2852,8 +2935,11 @@
 		return `component:${meaning.bucket_id}:${meaning.source_refs[0] ?? ''}`;
 	}
 
-	function componentMeaningToggleLabel(meaning: EncounterComponentMeaning) {
-		return expandedSections[componentMeaningKey(meaning)]
+	function componentMeaningToggleLabel(
+		meaning: EncounterComponentMeaning,
+		expansionState: Record<string, boolean> = expandedSections
+	) {
+		return expansionState[componentMeaningKey(meaning)]
 			? uiCopy.passage.closeComponent
 			: uiCopy.passage.openComponent;
 	}
@@ -2894,9 +2980,12 @@
 		return componentHasTranslationToggle(component) && componentHasReaderTranslation(component);
 	}
 
-	function componentLayerIsSource(component: EncounterComponent) {
+	function componentLayerIsSource(
+		component: EncounterComponent,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
 		return component.evidence.meanings.some(
-			(meaning) => textLayers[componentMeaningKey(meaning)] === 'source'
+			(meaning) => layerState[componentMeaningKey(meaning)] === 'source'
 		);
 	}
 
@@ -2978,7 +3067,10 @@
 		return sourceOutlineDepth(primarySourceRef(bucket));
 	}
 
-	function readerSectionClass(bucket: EncounterBucket) {
+	function readerSectionClass(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
 		const tool = primaryTool(bucket);
 		const classes = ['orion-reader-section', `orion-reader-section-${tool}`];
 
@@ -2986,10 +3078,10 @@
 			classes.push('orion-reader-section-outline');
 
 			if (sourceRefDepth(bucket) === 0) classes.push('orion-reader-section-root');
-			if (sourceRefDepth(bucket) === 0 && isCompactOutlineHeading(bucket)) {
+			if (sourceRefDepth(bucket) === 0 && isCompactOutlineHeading(bucket, layerState)) {
 				classes.push('orion-reader-section-root-compact');
 			}
-			if (isOutlineHeading(bucket)) classes.push('orion-reader-section-heading');
+			if (isOutlineHeading(bucket, layerState)) classes.push('orion-reader-section-heading');
 		}
 
 		return classes.join(' ');
@@ -3005,21 +3097,33 @@
 		return `--orion-indent: ${indent}rem; --orion-rule-width: ${ruleWidth}rem; --orion-section-font: ${fontSize}rem;`;
 	}
 
-	function isOutlineHeading(bucket: EncounterBucket) {
-		return isOutlinedDictionaryHeading(primaryTool(bucket), activeGloss(bucket));
+	function isOutlineHeading(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
+		return isOutlinedDictionaryHeading(primaryTool(bucket), activeGloss(bucket, layerState));
 	}
 
-	function isCompactOutlineHeading(bucket: EncounterBucket) {
+	function isCompactOutlineHeading(
+		bucket: EncounterBucket,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
 		if (!isOutlinedDictionaryTool(primaryTool(bucket))) return false;
-		return isCompactOutlinedDictionaryText(activeGloss(bucket));
+		return isCompactOutlinedDictionaryText(activeGloss(bucket, layerState));
 	}
 
-	function groupLead(group: BucketGroup) {
+	function groupLead(
+		group: BucketGroup,
+		layerState: Record<string, 'reader' | 'source'> = textLayers,
+		expansionState: Record<string, boolean> = expandedSections
+	) {
 		const root = group.buckets.find((bucket) => sourceRefDepth(bucket) === 0) ?? group.buckets[0];
 		if (!root) return '';
-		const firstSegment = activeGlossSegments(root)[0] ?? activeGloss(root);
+		const firstSegment = activeGlossSegments(root, layerState)[0] ?? activeGloss(root, layerState);
 		const lead = truncateText(firstSegment, 220);
-		const firstRenderedSegment = sectionSegments(root)[0] ?? sectionText(root);
+		const firstRenderedSegment =
+			sectionSegments(root, layerState, expansionState)[0] ??
+			sectionText(root, layerState, expansionState);
 
 		if (
 			firstSegment.replace(/\s+/g, ' ').trim().length <= 220 &&
@@ -3116,15 +3220,21 @@
 		};
 	}
 
-	function groupLayerIsSource(group: BucketGroup) {
-		return group.buckets.some((bucket) => textLayers[bucket.bucket_id] === 'source');
+	function groupLayerIsSource(
+		group: BucketGroup,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
+		return group.buckets.some((bucket) => layerState[bucket.bucket_id] === 'source');
 	}
 
-	function readerEntryLabel(group: BucketGroup) {
+	function readerEntryLabel(
+		group: BucketGroup,
+		layerState: Record<string, 'reader' | 'source'> = textLayers
+	) {
 		if (!group.buckets.length) return uiCopy.readerText.label;
 		if (groupHasTranslationToggle(group)) {
 			const bucket = group.buckets.find((candidate) => candidate.translation) ?? group.buckets[0];
-			return groupLayerIsSource(group) || !groupHasReaderTranslation(group)
+			return groupLayerIsSource(group, layerState) || !groupHasReaderTranslation(group)
 				? sourceLayerLabel(bucket)
 				: readerLayerLabel(bucket);
 		}
@@ -3764,7 +3874,7 @@
 												<div class="orion-layer-switch join">
 													<button
 														type="button"
-														class={componentLayerIsSource(component)
+														class={componentLayerIsSource(component, textLayers)
 															? 'btn btn-xs join-item'
 															: 'btn btn-xs join-item btn-secondary'}
 														onclick={() => setComponentTextLayer(component, 'reader')}
@@ -3773,7 +3883,7 @@
 													</button>
 													<button
 														type="button"
-														class={componentLayerIsSource(component)
+														class={componentLayerIsSource(component, textLayers)
 															? 'btn btn-xs join-item btn-secondary'
 															: 'btn btn-xs join-item'}
 														onclick={() => setComponentTextLayer(component, 'source')}
@@ -3782,8 +3892,14 @@
 													</button>
 												</div>
 												{#if translationModelLabel(componentTranslationModel(component))}
-													<div class="text-base-content/50 text-[0.68rem] leading-none">
-														EN by {translationModelLabel(componentTranslationModel(component))}
+													<div
+														class="text-base-content/50 flex items-center gap-1 text-[0.68rem] leading-none"
+													>
+														<span
+															>EN by {translationModelLabel(
+																componentTranslationModel(component)
+															)}</span
+														>
 													</div>
 												{/if}
 											</div>
@@ -3807,7 +3923,11 @@
 									<div class={`orion-entry-reader ${toolStyle[componentTool].accent}`}>
 										<div class="orion-reader-sections">
 											{#each component.evidence.meanings as meaning}
-												{@const segments = componentMeaningSegments(meaning)}
+												{@const segments = componentMeaningSegments(
+													meaning,
+													textLayers,
+													expandedSections
+												)}
 												<section
 													class={`orion-reader-section orion-reader-section-${componentTool} orion-component-meaning`}
 												>
@@ -3820,12 +3940,15 @@
 															{#each segments as gloss, segmentIndex}
 																<p>
 																	{gloss}
-																	{#if segmentIndex === segments.length - 1 && componentMeaningCanToggle(meaning)}
+																	{#if segmentIndex === segments.length - 1 && componentMeaningCanToggle(meaning, textLayers)}
 																		<button
 																			type="button"
 																			class="orion-section-detail-toggle"
-																			aria-label={componentMeaningToggleLabel(meaning)}
-																			title={componentMeaningToggleLabel(meaning)}
+																			aria-label={componentMeaningToggleLabel(
+																				meaning,
+																				expandedSections
+																			)}
+																			title={componentMeaningToggleLabel(meaning, expandedSections)}
 																			onclick={() => toggleComponentMeaning(meaning)}
 																		>
 																			<ChevronDown
@@ -4146,8 +4269,10 @@
 												{/each}
 											</div>
 										{/if}
-										{#if groupLead(group)}
-											<p class="orion-entry-lead">{groupLead(group)}</p>
+										{#if groupLead(group, textLayers, expandedSections)}
+											<p class="orion-entry-lead">
+												{groupLead(group, textLayers, expandedSections)}
+											</p>
 										{/if}
 									</div>
 									<p class="orion-entry-source-line">
@@ -4168,7 +4293,7 @@
 												<ToolIcon size={14} />
 											</span>
 										{/each}
-										<span>{readerEntryLabel(group)}</span>
+										<span>{readerEntryLabel(group, textLayers)}</span>
 										<span>{countLabel(group.buckets.length, 'section')}</span>
 										<span>{countLabel(groupWitnesses(group).length, 'source entry')}</span>
 									</div>
@@ -4178,7 +4303,7 @@
 											<div class="orion-layer-switch join">
 												<button
 													type="button"
-													class={groupLayerIsSource(group)
+													class={groupLayerIsSource(group, textLayers)
 														? 'btn btn-xs join-item'
 														: 'btn btn-xs join-item btn-secondary'}
 													onclick={() => setGroupTextLayer(group, 'reader')}
@@ -4187,7 +4312,8 @@
 												</button>
 												<button
 													type="button"
-													class={groupLayerIsSource(group) || !groupHasReaderTranslation(group)
+													class={groupLayerIsSource(group, textLayers) ||
+													!groupHasReaderTranslation(group)
 														? 'btn btn-xs join-item btn-secondary'
 														: 'btn btn-xs join-item'}
 													onclick={() => setGroupTextLayer(group, 'source')}
@@ -4195,11 +4321,13 @@
 													{groupSourceLayerLabel(group)}
 												</button>
 											</div>
-											{#if translationModelLabel(groupTranslationModel(group))}
+											{#if translationModelLabel(groupTranslationModel(group)) || retryableGroupTranslation(group)}
 												<div
 													class="text-base-content/50 flex items-center gap-1 text-[0.68rem] leading-none"
 												>
-													<span>EN by {translationModelLabel(groupTranslationModel(group))}</span>
+													{#if translationModelLabel(groupTranslationModel(group))}
+														<span>EN by {translationModelLabel(groupTranslationModel(group))}</span>
+													{/if}
 													{#if retryableGroupTranslation(group)}
 														<button
 															type="button"
@@ -4252,11 +4380,11 @@
 							<article class={`orion-entry-reader ${toolStyle[group.toolId].accent}`}>
 								<div class="orion-reader-sections">
 									{#each visibleGroupBuckets(group) as bucket}
-										{@const segments = sectionSegments(bucket)}
+										{@const segments = sectionSegments(bucket, textLayers, expandedSections)}
 										{@const hasTreeChildren = sectionHasTreeChildren(group, bucket)}
 										<section
 											id={sectionId(group, bucket)}
-											class={readerSectionClass(bucket)}
+											class={readerSectionClass(bucket, textLayers)}
 											style={readerSectionStyle(bucket)}
 										>
 											<div class="orion-reader-marker">
@@ -4283,12 +4411,16 @@
 													<p>
 														{gloss}
 														{#if segmentIndex === segments.length - 1}
-															{#if sectionCanToggle(bucket)}
+															{#if sectionCanToggle(bucket, textLayers)}
 																<button
 																	type="button"
 																	class="orion-section-detail-toggle"
-																	aria-label={sectionToggleLabel(bucket)}
-																	title={sectionToggleLabel(bucket)}
+																	aria-label={sectionToggleLabel(
+																		bucket,
+																		textLayers,
+																		expandedSections
+																	)}
+																	title={sectionToggleLabel(bucket, textLayers, expandedSections)}
 																	onclick={() => toggleSectionExpansion(bucket)}
 																>
 																	<ChevronDown
@@ -4299,7 +4431,7 @@
 																	/>
 																</button>
 															{/if}
-															{#if sectionShowsReturnedEndingNote(bucket)}
+															{#if sectionShowsReturnedEndingNote(bucket, textLayers, expandedSections)}
 																<span class="orion-section-detail-note"
 																	>{uiCopy.results.returnedEnding}</span
 																>

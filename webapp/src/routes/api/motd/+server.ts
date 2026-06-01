@@ -1,12 +1,16 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { motdItemKeys, motdTtlMs } from '$lib/motd-cache';
-import { resolveCliDirectory, wordRecommendationsFromCli } from '$lib/server/langnet-cli';
+import {
+	resolveCliDirectory,
+	wordRecommendationsFromCli,
+	wordRecommendationsFromMotdPool
+} from '$lib/server/langnet-cli';
 import { payloadResponse } from '$lib/server/msgpack-response';
 import type { LanguageMode, TranslationMode, WordRecommendationResult } from '$lib/search-data';
 
 const translationModes = new Set(['off', 'cache', 'populate', 'auto', 'do-it-all']);
-const candidateSources = new Set(['auto', 'llm', 'curated']);
+const candidateSources = new Set(['pool', 'auto', 'llm', 'curated']);
 const languages = new Set(['san', 'grc', 'lat', 'all']);
 const levels = new Set(['beginner', 'intermediate', 'deep']);
 const cache = new Map<string, { expiresAt: number; result: WordRecommendationResult }>();
@@ -15,12 +19,13 @@ const recentKeys: string[] = [];
 const maxRecentKeys = 24;
 const motdDiskCachePath = path.join(resolveCliDirectory(), 'data', 'cache', 'web-motd-cache.json');
 const maxPersistedStaleMs = 7 * 24 * 60 * 60 * 1000;
+const motdCacheVersion = 2;
 let hydrateDiskCachePromise: Promise<void> | null = null;
 let persistDiskCachePromise: Promise<void> = Promise.resolve();
-type CandidateSource = 'auto' | 'llm' | 'curated';
+type CandidateSource = 'pool' | 'auto' | 'llm' | 'curated';
 type MotdLanguage = LanguageMode | 'all';
 type PersistedMotdCache = {
-	version: 1;
+	version: typeof motdCacheVersion;
 	savedAt: string;
 	entries: Record<string, { expiresAt: number; result: WordRecommendationResult }>;
 };
@@ -39,13 +44,13 @@ export async function GET({ url, request }) {
 	const translationMode = translationModes.has(requestedTranslationMode)
 		? (requestedTranslationMode as TranslationMode)
 		: ('cache' as const);
-	const timeoutMs = readInteger(url.searchParams.get('timeout_ms'), 12_000, 5_000, 30_000);
+	const timeoutMs = readInteger(url.searchParams.get('timeout_ms'), 3_000, 1_000, 30_000);
 	const shouldRefresh =
 		url.searchParams.get('refresh') === '1' || url.searchParams.get('refresh') === 'yes';
-	const requestedCandidateSource = url.searchParams.get('candidate_source') ?? 'llm';
+	const requestedCandidateSource = url.searchParams.get('candidate_source') ?? 'pool';
 	const candidateSource = candidateSources.has(requestedCandidateSource)
 		? (requestedCandidateSource as CandidateSource)
-		: 'llm';
+		: 'pool';
 	const generationCandidateSource = candidateSource;
 	const dictionary = motdDictionary(language);
 	const explicitAvoid = readList(url.searchParams.get('avoid'));
@@ -59,11 +64,11 @@ export async function GET({ url, request }) {
 		language,
 		level,
 		translationMode,
-		candidateSource: 'auto',
+		candidateSource: 'pool',
 		avoid: []
 	});
 	const cacheKey =
-		candidateSource === 'auto' && !explicitAvoid.length
+		candidateSource === 'pool' && !explicitAvoid.length
 			? currentCacheKey
 			: motdCacheKey({
 					count,
@@ -95,6 +100,74 @@ export async function GET({ url, request }) {
 			nonce: nonce || `web-motd-stale-refresh-${Date.now()}-${Math.random().toString(36).slice(2)}`
 		});
 		return respond(serveStaleWhileRefreshing(cached.result));
+	}
+
+	if (generationCandidateSource === 'pool') {
+		try {
+			const result = await samplePoolMotd({
+				cacheKey,
+				currentCacheKey,
+				count,
+				language,
+				level,
+				timeoutMs,
+				avoid: shouldRefresh || cached ? avoid : explicitAvoid,
+				seed: nonce || motdPoolSeed(language, level),
+				signal: request.signal
+			});
+			return respond(result);
+		} catch (error) {
+			if (cached?.result && !isRecoverablePoolMiss(error)) {
+				return respond({
+					...cached.result,
+					warnings: [
+						{
+							message: `Using the previous word of the day; pool sample could not be prepared: ${error instanceof Error ? error.message : 'Pool sampling failed.'}`
+						},
+						...cached.result.warnings
+					]
+				});
+			}
+			try {
+				const fallback = await wordRecommendationsFromCli({
+					language,
+					dictionary,
+					count,
+					level,
+					translationMode,
+					timeoutMs: Math.min(timeoutMs, 10_000),
+					candidateSource: 'curated',
+					includeAmbiguous: true,
+					finalizeCards: false,
+					fresh: false,
+					avoid: explicitAvoid,
+					signal: request.signal
+				});
+				fallback.warnings = [
+					{
+						message: `Precomputed learner pool fell back to curated words: ${error instanceof Error ? error.message : 'Pool sampling failed.'}`
+					},
+					...fallback.warnings
+				];
+				rememberRecentKeys(motdItemKeys(fallback));
+				const ttlMs = fallback.items.length ? motdTtlMs(fallback.suggested_ttl_seconds) : 60_000;
+				cacheMotdResult(cacheKey, currentCacheKey, 'pool', Date.now() + ttlMs, fallback);
+				return respond(fallback);
+			} catch {
+				// Fall through to the structured 502 below.
+			}
+			return respond(
+				{
+					schema_version: 'langnet.word_of_day.v1',
+					generated_at: new Date().toISOString(),
+					suggested_ttl_seconds: 300,
+					items: [],
+					warnings: [],
+					error: error instanceof Error ? error.message : 'Pool sampling failed.'
+				} satisfies WordRecommendationResult,
+				{ status: 502 }
+			);
+		}
 	}
 
 	if (!shouldRefresh && generationCandidateSource === 'llm') {
@@ -223,6 +296,47 @@ export async function GET({ url, request }) {
 	}
 }
 
+async function samplePoolMotd({
+	cacheKey,
+	currentCacheKey,
+	count,
+	language,
+	level,
+	timeoutMs,
+	avoid,
+	seed,
+	signal
+}: {
+	cacheKey: string;
+	currentCacheKey: string;
+	count: number;
+	language: MotdLanguage;
+	level: string;
+	timeoutMs: number;
+	avoid: string[];
+	seed: string;
+	signal?: AbortSignal;
+}) {
+	const result = await wordRecommendationsFromMotdPool({
+		language,
+		count: poolRequestCount(language, count),
+		level,
+		timeoutMs,
+		seed,
+		avoid,
+		signal
+	});
+	if (!result.items.length) {
+		const warning =
+			result.warnings[0]?.message || result.exhaustion?.reason || 'MOTD pool returned no cards.';
+		throw new Error(`Precomputed learner pool returned no cards: ${warning}`);
+	}
+	rememberRecentKeys(motdItemKeys(result));
+	const ttlMs = result.items.length ? motdTtlMs(result.suggested_ttl_seconds) : 60_000;
+	cacheMotdResult(cacheKey, currentCacheKey, 'pool', Date.now() + ttlMs, result);
+	return result;
+}
+
 async function refreshMotdCacheInBackground({
 	cacheKey,
 	currentCacheKey,
@@ -251,20 +365,30 @@ async function refreshMotdCacheInBackground({
 	if (refreshingCacheKeys.has(cacheKey)) return;
 	refreshingCacheKeys.add(cacheKey);
 	try {
-		const result = await wordRecommendationsFromCli({
-			language,
-			dictionary,
-			count,
-			level,
-			translationMode,
-			timeoutMs,
-			candidateSource,
-			includeAmbiguous: true,
-			finalizeCards: false,
-			fresh: true,
-			avoid,
-			nonce
-		});
+		const result =
+			candidateSource === 'pool'
+				? await wordRecommendationsFromMotdPool({
+						language,
+						count: poolRequestCount(language, count),
+						level,
+						timeoutMs,
+						seed: nonce,
+						avoid
+					})
+				: await wordRecommendationsFromCli({
+						language,
+						dictionary,
+						count,
+						level,
+						translationMode,
+						timeoutMs,
+						candidateSource,
+						includeAmbiguous: true,
+						finalizeCards: false,
+						fresh: true,
+						avoid,
+						nonce
+					});
 		rememberRecentKeys(motdItemKeys(result));
 		const ttlMs = result.items.length ? motdTtlMs(result.suggested_ttl_seconds) : 60_000;
 		cacheMotdResult(cacheKey, currentCacheKey, candidateSource, Date.now() + ttlMs, result);
@@ -314,7 +438,8 @@ async function hydrateMotdDiskCacheOnce() {
 	try {
 		const raw = await readFile(motdDiskCachePath, 'utf8');
 		const parsed = JSON.parse(raw) as Partial<PersistedMotdCache>;
-		if (parsed.version !== 1 || !parsed.entries || typeof parsed.entries !== 'object') return;
+		if (parsed.version !== motdCacheVersion || !parsed.entries || typeof parsed.entries !== 'object')
+			return;
 		const oldestUsableExpiry = Date.now() - maxPersistedStaleMs;
 		for (const [key, entry] of Object.entries(parsed.entries)) {
 			if (
@@ -350,7 +475,7 @@ function persistMotdDiskCache() {
 				)
 			);
 			const payload: PersistedMotdCache = {
-				version: 1,
+				version: motdCacheVersion,
 				savedAt: new Date().toISOString(),
 				entries
 			};
@@ -365,6 +490,11 @@ function persistMotdDiskCache() {
 			);
 		});
 	return persistDiskCachePromise;
+}
+
+function isRecoverablePoolMiss(error: unknown) {
+	const message = error instanceof Error ? error.message : String(error ?? '');
+	return /MOTD pool database does not exist|Precomputed learner pool returned no cards/i.test(message);
 }
 
 function motdCacheKey({
@@ -383,6 +513,7 @@ function motdCacheKey({
 	avoid: string[];
 }) {
 	return JSON.stringify({
+		version: motdCacheVersion,
 		count,
 		language,
 		level,
@@ -397,6 +528,14 @@ function motdDictionary(language: MotdLanguage) {
 	if (language === 'grc') return 'diogenes';
 	if (language === 'lat') return 'whitakers';
 	return 'motd-fast';
+}
+
+function motdPoolSeed(language: MotdLanguage, level: string) {
+	return `web-motd-pool:${new Date().toISOString().slice(0, 10)}:${language}:${level}`;
+}
+
+function poolRequestCount(language: MotdLanguage, count: number) {
+	return language === 'all' ? count * 3 : count;
 }
 
 function readInteger(value: string | null, fallback: number, min: number, max: number) {

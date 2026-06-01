@@ -504,6 +504,8 @@
         "dictionary": { "type": "string" },
         "raw_blob_ref": { "type": "string" },
         "source_encoding": { "type": "string" },
+        "source_layer_text": { "type": "string" },
+        "reader_layer_text": { "type": "string" },
         "source_entry": { "type": "object" },
         "source_detail_summary": { "$ref": "#/$defs/sourceDetailSummary" },
         "translation": { "$ref": "#/$defs/translationSummary" }

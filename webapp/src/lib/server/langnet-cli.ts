@@ -106,6 +106,7 @@ export async function wordRecommendationsFromCli({
 	timeoutMs,
 	candidateSource,
 	includeAmbiguous,
+	requireCleanPrimary,
 	finalizeCards,
 	fresh,
 	avoid,
@@ -120,6 +121,7 @@ export async function wordRecommendationsFromCli({
 	timeoutMs: number;
 	candidateSource: 'auto' | 'llm' | 'curated';
 	includeAmbiguous?: boolean;
+	requireCleanPrimary?: boolean;
 	finalizeCards?: boolean;
 	fresh: boolean;
 	avoid: string[];
@@ -148,11 +150,51 @@ export async function wordRecommendationsFromCli({
 
 	if (fresh) args.push('--fresh');
 	if (includeAmbiguous) args.push('--include-ambiguous');
+	if (requireCleanPrimary) args.push('--require-clean-primary');
 	if (finalizeCards === false) args.push('--no-finalize-cards');
 	if (avoid.length) args.push('--avoid', avoid.join(','));
 	if (nonce) args.push('--nonce', nonce);
 
 	const payload = await runJsonCommand(args, timeoutMs + 8_000, { signal, queued: false });
+
+	return mapWordRecommendationPayload(payload);
+}
+
+export async function wordRecommendationsFromMotdPool({
+	language,
+	count,
+	level,
+	timeoutMs,
+	seed,
+	avoid,
+	signal
+}: {
+	language: LanguageMode | 'all';
+	count: number;
+	level: string;
+	timeoutMs: number;
+	seed?: string;
+	avoid: string[];
+	signal?: AbortSignal;
+}): Promise<WordRecommendationResult> {
+	const args = [
+		'cli',
+		'motd-pool',
+		'sample',
+		'--language',
+		language,
+		'--count',
+		String(count),
+		'--level',
+		level,
+		'--output',
+		'json'
+	];
+
+	if (seed) args.push('--seed', seed);
+	if (avoid.length) args.push('--avoid', avoid.join(','));
+
+	const payload = await runJsonCommand(args, timeoutMs, { signal, queued: false });
 
 	return mapWordRecommendationPayload(payload);
 }
@@ -1197,7 +1239,7 @@ function mapCliBucket({
 	});
 	const sourceText = postProcessDictionaryText(
 		firstSourceTool,
-		firstSourceText(rawWitnesses) || stringValue(meaning.evidence_gloss)
+		sourceTextFromCli(meaning, rawBucket, rawWitnesses)
 	);
 	const readerText = postProcessDictionaryText(
 		firstSourceTool,
@@ -1211,7 +1253,11 @@ function mapCliBucket({
 	);
 	const firstSourceLang = sourceLangs.find((lang) => lang !== 'en') ?? sourceLangs[0] ?? language;
 	const translation = translationEntry
-		? translationFromEntry(translationEntry, sourceText, displayText)
+		? translationFromEntry(
+				translationEntry,
+				translatedSourceTextFromEntries(translationEntry, entries, rawWitnesses) || sourceText,
+				displayText
+			)
 		: sourceLangs.some((lang) => lang && lang !== 'en') && sourceText
 			? {
 					available: false,
@@ -1357,6 +1403,80 @@ function translationFromEntry(entry: JsonObject, sourceText: string, readerText:
 	};
 }
 
+function translatedSourceTextFromEntries(
+	translationEntry: JsonObject,
+	entries: JsonObject[],
+	rawWitnesses: JsonObject[]
+) {
+	const translation = objectValue(translationEntry.translation);
+	const sourceTool = sourceToolFromEntry(translationEntry);
+	const sourceRef = stringValue(translationEntry.source_ref);
+	const derivedSense = stringValue(translation?.derived_from_sense);
+	const sourceWitness =
+		findSourceWitness(rawWitnesses, sourceTool, sourceRef, derivedSense) ??
+		findSourceWitness(rawWitnesses, sourceTool, sourceRef, '');
+	const witnessText = rawWitnessSourceText(sourceWitness);
+	if (witnessText) return witnessText;
+
+	const sourceEntry =
+		entries.find((entry) => {
+			if (entry === translationEntry) return false;
+			if (sourceToolFromEntry(entry) !== sourceTool) return false;
+			if (derivedSense && stringValue(entry.sense_anchor) === derivedSense) return true;
+			return sourceRef && stringValue(entry.source_ref) === sourceRef;
+		}) ??
+		entries.find(
+			(entry) => entry !== translationEntry && sourceToolFromEntry(entry) === sourceTool
+		);
+
+	return sourceEntryText(sourceEntry, { includeSummary: true });
+}
+
+function findSourceWitness(
+	rawWitnesses: JsonObject[],
+	sourceTool: ToolId,
+	sourceRef: string,
+	derivedSense: string
+) {
+	return rawWitnesses.find((witness) => {
+		const evidence = objectValue(witness.evidence);
+		const witnessTool = normalizeToolId(
+			stringValue(evidence?.source_tool) || stringValue(witness.source_tool)
+		);
+		if (witnessTool !== sourceTool) return false;
+		if (derivedSense && stringValue(witness.sense_anchor) === derivedSense) return true;
+		const witnessSourceRef = stringValue(evidence?.source_ref) || stringValue(witness.source_ref);
+		return Boolean(sourceRef && witnessSourceRef === sourceRef);
+	});
+}
+
+function rawWitnessSourceText(witness: JsonObject | undefined) {
+	const evidence = objectValue(witness?.evidence);
+	const sourceEntry = objectValue(evidence?.source_entry);
+	return (
+		stringValue(evidence?.display_gloss) ||
+		stringValue(witness?.gloss) ||
+		stringValue(sourceEntry?.source_text)
+	);
+}
+
+function sourceEntryText(
+	entry: JsonObject | undefined,
+	{ includeSummary }: { includeSummary: boolean }
+) {
+	const sourceLayerText = stringValue(entry?.source_layer_text);
+	if (sourceLayerText) return sourceLayerText;
+
+	const sourceEntry = objectValue(entry?.source_entry);
+	const sourceText =
+		stringValue(sourceEntry?.display_gloss) || stringValue(sourceEntry?.source_text);
+	if (sourceText) return sourceText;
+
+	if (!includeSummary) return '';
+	const sourceSummary = objectValue(entry?.source_detail_summary);
+	return stringValue(sourceSummary?.text);
+}
+
 function translationRetryMetadataFromEntry(entry: JsonObject | undefined) {
 	const translation = objectValue(entry?.translation);
 	const sourceEntry = objectValue(entry?.source_entry);
@@ -1372,6 +1492,7 @@ function translationRetryMetadataFromEntry(entry: JsonObject | undefined) {
 		stringValue(sourceEntry?.entry_id) || parsedRef.entryId || stringValue(entry?.headword);
 	const occurrence =
 		numberValue(sourceEntry?.occurrence) ||
+		numberValue(sourceEntry?.variant_num) ||
 		(parsedRef.occurrence === undefined ? undefined : parsedRef.occurrence);
 	const headwordNorm =
 		stringValue(sourceEntry?.headword_norm) ||
@@ -1384,7 +1505,8 @@ function translationRetryMetadataFromEntry(entry: JsonObject | undefined) {
 		entry_id: entryId || undefined,
 		occurrence,
 		headword_norm: normalizeComparableText(headwordNorm) || undefined,
-		source_text_hash: stringValue(translation?.source_text_hash) || undefined
+		source_text_hash: stringValue(translation?.source_text_hash) || undefined,
+		model: stringValue(translation?.model) || undefined
 	};
 }
 
@@ -1584,6 +1706,26 @@ function firstSourceText(rawWitnesses: JsonObject[]) {
 	}
 
 	return '';
+}
+
+function sourceTextFromCli(
+	meaning: JsonObject,
+	rawBucket: JsonObject | undefined,
+	rawWitnesses: JsonObject[]
+) {
+	const evidenceGloss = stringValue(meaning.evidence_gloss);
+	if (evidenceGloss) return evidenceGloss;
+
+	const sourceSummary = objectValue(meaning.source_detail_summary);
+	const summaryText = stringValue(sourceSummary?.text);
+	if (summaryText) return summaryText;
+
+	const rawDisplay = stringValue(rawBucket?.display_gloss);
+	if (rawDisplay && rawDisplay.length <= 1600) return rawDisplay;
+
+	const rawSource = firstSourceText(rawWitnesses);
+	if (rawSource && rawSource.length <= 1600) return rawSource;
+	return rawSource ? `${rawSource.slice(0, 1599).trim()}...` : '';
 }
 
 function postProcessDictionaryText(tool: ToolId | undefined, value: string) {

@@ -62,6 +62,7 @@ just cli encounter san dharma dico
 
 just cli word-of-day san --output json
 just cli recommend-words lat --count 3
+just cli motd-pool sample --language all --count 3 --output json
 
 just cli reader-eval --limit 3 --translation-mode cache
 ```
@@ -79,6 +80,7 @@ just cli reader-eval --limit 3 --translation-mode cache
 | `encounter` | Current learner-facing MVP: reduced meaning buckets plus source-backed analysis. |
 | `word-of-day` | Recommend learner words with terse glosses, learner notes, and verified encounter summaries when available. |
 | `recommend-words` | Alias-style recommendation command for requesting several learner word cards on demand. |
+| `motd-pool` | Sample or validate the precomputed learner folio pool without runtime LLM calls. |
 | `reader-eval` | Run reader-oriented fixture checks against live encounter reductions. |
 | `translation-warm` | Explicitly warm DICO/Gaffiot translation cache rows from a word list. |
 | `databuild` | Build local data/indexes. |

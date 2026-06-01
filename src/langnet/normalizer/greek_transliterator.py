@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,8 @@ from lark import Lark, Transformer  # type: ignore[import]
 GREEK_LOWER_A = 0x0370
 GREEK_UPPER_END = 0x03FF
 PAIR_LEN = 2
+MULTI_TOKEN_TRANSLITERATION_VARIANT_LIMIT = 16
+ROMANIZED_TOKEN_RE = re.compile(r"[a-zēêōô]+", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -218,6 +221,10 @@ def transliterate_variants(text: str) -> list[GreekTransliteration]:
     Produce strict transliteration plus a small set of loose variants
     (omega/eta expansions) for better recall when macrons are omitted.
     """
+    multi_token_variants = _multi_token_transliteration_variants(text)
+    if multi_token_variants:
+        return multi_token_variants
+
     exact = EXACT_TRANSLITERATIONS.get(text.strip().lower())
     if exact is not None:
         return [exact]
@@ -240,6 +247,51 @@ def transliterate_variants(text: str) -> list[GreekTransliteration]:
 
     ordered_keys = list(dict.fromkeys(prioritized + list(variants.keys())))
     return [variants[k] for k in ordered_keys if k in variants]
+
+
+def _multi_token_transliteration_variants(text: str) -> list[GreekTransliteration]:
+    tokens = ROMANIZED_TOKEN_RE.findall(text)
+    if len(tokens) <= 1:
+        return []
+
+    token_variants = [transliterate_variants(token) for token in tokens]
+    if any(not variants for variants in token_variants):
+        return []
+
+    combined: dict[str, GreekTransliteration] = {}
+
+    def append_combinations(
+        prefix_keys: list[str],
+        prefix_betas: list[str],
+        prefix_displays: list[str],
+        remaining: list[list[GreekTransliteration]],
+    ) -> None:
+        if len(combined) >= MULTI_TOKEN_TRANSLITERATION_VARIANT_LIMIT:
+            return
+        if not remaining:
+            search_key = " ".join(prefix_keys)
+            combined.setdefault(
+                search_key,
+                GreekTransliteration(
+                    search_key=search_key,
+                    betacode=" ".join(prefix_betas),
+                    display=" ".join(prefix_displays),
+                ),
+            )
+            return
+        current, *tail = remaining
+        for variant in current:
+            if len(combined) >= MULTI_TOKEN_TRANSLITERATION_VARIANT_LIMIT:
+                break
+            append_combinations(
+                [*prefix_keys, variant.search_key],
+                [*prefix_betas, variant.betacode],
+                [*prefix_displays, variant.display or variant.search_key],
+                tail,
+            )
+
+    append_combinations([], [], [], token_variants)
+    return list(combined.values())
 
 
 def _prioritized_eta_variants(raw_text: str, base_key: str) -> list[str]:

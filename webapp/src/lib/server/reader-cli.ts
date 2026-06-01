@@ -784,7 +784,11 @@ function mapReaderSearchCandidate(item: JsonObject) {
 		query: stringValue(item.query),
 		kind: stringValue(item.kind),
 		field: stringValue(item.field),
-		rank: numberValue(item.rank)
+		rank: numberValue(item.rank),
+		concept_id: optionalString(item.concept_id),
+		concept_label: optionalString(item.concept_label),
+		explanation: optionalString(item.explanation),
+		source_file: optionalString(item.source_file)
 	};
 }
 
@@ -918,4 +922,9 @@ function booleanValue(value: JsonValue | undefined) {
 function nullableString(value: JsonValue | undefined) {
 	const parsed = stringValue(value);
 	return parsed || null;
+}
+
+function optionalString(value: JsonValue | undefined) {
+	const parsed = stringValue(value);
+	return parsed || undefined;
 }

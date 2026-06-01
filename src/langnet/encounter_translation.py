@@ -84,6 +84,7 @@ def apply_translation_cache(  # noqa: PLR0913
             model=model,
             cache=cache,
             translate=translate,
+            raise_on_error=False,
         )
     after = translation_cache_status_counts(
         claims=claims,

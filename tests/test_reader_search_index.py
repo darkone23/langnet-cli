@@ -278,6 +278,135 @@ def test_search_reader_segments_fuzzy_expands_greek_transliteration() -> None:
         assert andra["items"][0]["matched_query"] == "ανδρα"
 
 
+def test_search_reader_segments_fuzzy_preserves_greek_transliteration_token_boundaries() -> None:
+    payload = inspect_reader_search_query("grc", "oikeios topos", mode="fuzzy", field="auto")
+    queries = [candidate["query"] for candidate in payload["candidates"]]
+
+    assert "οικειοσ τοποσ" in queries
+    assert "οικειοστοποσ" not in queries
+
+
+def test_search_reader_segments_keeps_concept_metadata_when_candidates_overlap() -> None:
+    payload = inspect_reader_search_query("grc", "oikeios topos", mode="fuzzy", field="auto")
+    candidate = next(
+        candidate for candidate in payload["candidates"] if candidate["query"] == "οικειοσ τοποσ"
+    )
+
+    assert candidate["kind"] == "concept_alias"
+    assert candidate["concept_id"] == "aristotle-natural-place"
+    assert candidate["concept_label"] == "proper place"
+
+
+def test_search_reader_segments_work_filter_recalls_deep_common_term_hits() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = _write_search_fixture(root)
+        _register_fixture_work(
+            root,
+            catalog_path,
+            work_id="grc.distractor",
+            collection_id="greek_fixture",
+            language="grc",
+            title="A Greek Distractor",
+            author="Greek Author",
+            source_id="grc-distractor",
+            segments=[
+                (
+                    f"grc-distractor-{idx}",
+                    str(idx),
+                    f"τόπος distractor {idx}",
+                    f"τοπος distractor {idx}",
+                    idx,
+                )
+                for idx in range(1, 70)
+            ],
+        )
+        _register_fixture_work(
+            root,
+            catalog_path,
+            work_id="aristotle.physics",
+            collection_id="greek_fixture",
+            language="grc",
+            title="Z Aristotle Physics",
+            author="Aristotle",
+            source_id="grc-aristotle-physics",
+            segments=[
+                (
+                    "aristotle-physics-4-5",
+                    "4.5",
+                    "ἐν τῷ οἰκείῳ τόπῳ",
+                    "εν τω οικειω τοπω",
+                    1,
+                )
+            ],
+        )
+        index_path = root / "reader-search.lance"
+        build_reader_search_index(catalog_path, index_path, language="grc", replace=True)
+
+        payload = search_reader_segments(
+            catalog_path,
+            index_path,
+            "τόπῳ",
+            language="grc",
+            work_id="aristotle.physics",
+            mode="fuzzy",
+            limit=5,
+        )
+
+        assert payload["items"]
+        assert payload["items"][0]["work_id"] == "aristotle.physics"
+        assert payload["items"][0]["citation_path"] == "4.5"
+
+
+def test_search_reader_segments_fuzzy_expands_curated_concept_aliases() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = _write_search_fixture(root)
+        _register_fixture_work(
+            root,
+            catalog_path,
+            work_id="aristotle.physics",
+            collection_id="greek_fixture",
+            language="grc",
+            title="Aristotle Physics",
+            author="Aristotle",
+            source_id="grc-aristotle-physics",
+            segments=[
+                (
+                    "aristotle-physics-4-5",
+                    "4.5",
+                    "καὶ μένει δὴ φύσει πᾶν ἐν τῷ οἰκείῳ τόπῳ",
+                    "και μενει δη φυσει παν εν τω οικειω τοπω",
+                    1,
+                )
+            ],
+        )
+        index_path = root / "reader-search.lance"
+        build_reader_search_index(catalog_path, index_path, language="grc", replace=True)
+
+        payload = search_reader_segments(
+            catalog_path,
+            index_path,
+            "proper place",
+            language="grc",
+            work_id="aristotle.physics",
+            mode="fuzzy",
+            limit=5,
+        )
+        candidates = payload["request"]["query_candidates"]
+
+        assert any(
+            candidate["kind"] == "concept_alias"
+            and candidate["concept_id"] == "aristotle-natural-place"
+            and candidate["query"] == "οικειωι τοπωι"
+            for candidate in candidates
+        )
+        assert payload["items"]
+        assert payload["items"][0]["citation_path"] == "4.5"
+        assert payload["items"][0]["match_type"] == "concept_alias"
+        assert payload["items"][0]["matched_query"] == "οικειωι τοπωι"
+
+
 def test_inspect_reader_search_query_reports_fuzzy_candidates() -> None:
     payload = inspect_reader_search_query("grc", "logos", mode="fuzzy", field="auto")
     sanskrit = inspect_reader_search_query("san", "sankara", mode="fuzzy", field="auto")

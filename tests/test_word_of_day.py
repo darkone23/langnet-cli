@@ -28,6 +28,8 @@ from langnet.word_of_day import (
     generate_word_of_day_payload,
 )
 
+EXPECTED_SYNTHESIZED_DIDACTIC_SCORE = 96
+
 RECOMMEND_WORDS_COUNT = 2
 GREEK_MOTD_BATCH_COUNT = 5
 GREEK_MOTD_MIN_BEGINNER_CANDIDATES = 50
@@ -267,7 +269,7 @@ def test_word_of_day_cli_defaults_to_fast_recommendation_model() -> None:
     recommendation_help = result.output.split("--recommendation-model", maxsplit=1)[1].split(
         "--include-ambiguous", maxsplit=1
     )[0]
-    assert "openai:google/gemini-2.5-flash-lite" in recommendation_help
+    assert "openai:google/gemini-2.5-flash" in recommendation_help
     assert "openai:deepseek/deepseek-v4-flash" not in recommendation_help
 
 
@@ -803,6 +805,10 @@ def test_word_of_day_parser_filters_unsuitable_llm_mnemonics() -> None:
                 "summary": "word; account; reason",
                 "difficulty": "beginner",
                 "mnemonic": "A central term for speech, reckoning, and rational account.",
+                "didactic_score": EXPECTED_SYNTHESIZED_DIDACTIC_SCORE,
+                "didactic_rationale": (
+                    "High teaching value from semantic range and core textual use."
+                ),
             },
         ]
     }
@@ -813,6 +819,8 @@ def test_word_of_day_parser_filters_unsuitable_llm_mnemonics() -> None:
 
     assert set(pools) == {"grc"}
     assert pools["grc"][0].query == "logos"
+    assert pools["grc"][0].didactic_score == EXPECTED_SYNTHESIZED_DIDACTIC_SCORE
+    assert "semantic range" in pools["grc"][0].didactic_rationale
 
 
 def test_word_of_day_uses_llm_summary_only_when_supported_by_source() -> None:
@@ -871,6 +879,58 @@ def test_word_of_day_prefers_bucket_that_supports_curated_summary_hint() -> None
     assert item is not None
     assert item["summary"] == "tongue; language"
     assert item["source_basis"][0]["evidence"] == "tongue; language; speech"
+
+
+def test_word_of_day_supports_three_letter_core_gloss_hints() -> None:
+    reduction = _fake_reduction_with_buckets(
+        "grc",
+        "chara",
+        [
+            "II. in concrete sense, a joy, of persons",
+            "joy, delight, first in Sapph.",
+        ],
+    )
+    item = build_word_of_day_item(
+        candidate=WordCandidate("grc", "chara", summary_hint="joy"),
+        reduction=reduction,
+        options=_options(),
+        bucket_gloss=lambda bucket: bucket.display_gloss,
+        bucket_learner_gloss=lambda bucket: bucket.display_gloss,
+    )
+
+    assert item is not None
+    assert item["summary"] == "joy"
+    assert item["source_basis"][0]["evidence"] == "joy, delight, first in Sapph."
+
+
+def test_word_of_day_strips_structural_sense_prefix_from_summary() -> None:
+    reduction = _fake_reduction("grc", "chara", display_gloss="II. in concrete sense, a joy")
+    item = build_word_of_day_item(
+        candidate=WordCandidate("grc", "chara"),
+        reduction=reduction,
+        options=_options(),
+        bucket_gloss=lambda bucket: bucket.display_gloss,
+        bucket_learner_gloss=lambda bucket: bucket.display_gloss,
+    )
+
+    assert item is not None
+    assert item["summary"] == "a joy"
+
+
+def test_word_of_day_collapses_sanskrit_visarga_anchor_variants_for_ambiguity() -> None:
+    reduction = _fake_reduction("san", "agni", display_gloss="fire; sacrificial fire")
+    reduction.lexeme_anchors = ["lex:agni", "lex:agnih"]
+
+    item = build_word_of_day_item(
+        candidate=WordCandidate("san", "agni", summary_hint="fire"),
+        reduction=reduction,
+        options=_options(),
+        bucket_gloss=lambda bucket: bucket.display_gloss,
+        bucket_learner_gloss=lambda bucket: bucket.display_gloss,
+    )
+
+    assert item is not None
+    assert item["ambiguity"] == {"has_multiple_lexemes": False, "lexeme_count": 1, "note": ""}
 
 
 def test_word_of_day_projects_sanskrit_devanagari_canonical_name() -> None:

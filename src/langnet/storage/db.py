@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -9,6 +10,8 @@ import duckdb
 from filelock import FileLock
 
 DEFAULT_DUCKDB_LOCK_TIMEOUT_SECONDS = 30.0
+DEFAULT_DUCKDB_CONNECT_RETRY_SECONDS = 2.0
+DEFAULT_DUCKDB_CONNECT_RETRY_INTERVAL_SECONDS = 0.05
 
 
 def _duckdb_lock_timeout_seconds() -> float:
@@ -19,6 +22,47 @@ def _duckdb_lock_timeout_seconds() -> float:
         return max(0.0, float(raw))
     except ValueError:
         return DEFAULT_DUCKDB_LOCK_TIMEOUT_SECONDS
+
+
+def _duckdb_connect_retry_seconds() -> float:
+    raw = os.getenv("LANGNET_DUCKDB_CONNECT_RETRY_SECONDS")
+    if not raw:
+        return DEFAULT_DUCKDB_CONNECT_RETRY_SECONDS
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return DEFAULT_DUCKDB_CONNECT_RETRY_SECONDS
+
+
+def _duckdb_connect_retry_interval_seconds() -> float:
+    raw = os.getenv("LANGNET_DUCKDB_CONNECT_RETRY_INTERVAL_SECONDS")
+    if not raw:
+        return DEFAULT_DUCKDB_CONNECT_RETRY_INTERVAL_SECONDS
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return DEFAULT_DUCKDB_CONNECT_RETRY_INTERVAL_SECONDS
+
+
+def _duckdb_connect_with_retry(
+    *,
+    database: str,
+    read_only: bool,
+) -> duckdb.DuckDBPyConnection:
+    deadline = time.monotonic() + _duckdb_connect_retry_seconds()
+    interval = _duckdb_connect_retry_interval_seconds()
+    while True:
+        try:
+            return duckdb.connect(database=database, read_only=read_only)
+        except duckdb.Error as exc:
+            if not _is_duckdb_lock_error(exc) or time.monotonic() >= deadline:
+                raise
+            time.sleep(interval)
+
+
+def _is_duckdb_lock_error(exc: duckdb.Error) -> bool:
+    message = str(exc).casefold()
+    return "conflicting lock" in message or "could not set lock" in message
 
 
 @contextlib.contextmanager
@@ -48,19 +92,22 @@ def connect_duckdb(
     if not allow_create and not path_obj.exists():
         raise FileNotFoundError(f"DuckDB path does not exist: {path_obj}")
 
-    lock_ctx = contextlib.nullcontext()
+    lock_handle: FileLock | None = None
     if lock and not read_only:
-        lock_ctx = FileLock(
-            f"{path_obj}.lock",
-            timeout=_duckdb_lock_timeout_seconds(),
-        )
+        lock_handle = FileLock(f"{path_obj}.lock")
 
-    with lock_ctx:
-        conn = duckdb.connect(database=db_uri, read_only=read_only)
+    if lock_handle is not None:
+        timeout = _duckdb_lock_timeout_seconds()
+        lock_handle.acquire(timeout=timeout, blocking=timeout > 0)
+    try:
+        conn = _duckdb_connect_with_retry(database=db_uri, read_only=read_only)
         try:
             yield conn
         finally:
             conn.close()
+    finally:
+        if lock_handle is not None and lock_handle.is_locked:
+            lock_handle.release()
 
 
 @contextlib.contextmanager

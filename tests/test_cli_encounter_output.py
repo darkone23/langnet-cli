@@ -2264,6 +2264,8 @@ def test_encounter_json_includes_public_contract_display_views() -> None:
             "dictionary": "gaffiot",
             "raw_blob_ref": "tei_xml",
             "source_encoding": "",
+            "source_layer_text": "weapons; arms; cf. armum",
+            "reader_layer_text": "weapons; arms",
             "source_entry": {
                 "dict": "gaffiot",
                 "entry_id": "gaffiot_123",
@@ -4160,14 +4162,10 @@ def test_encounter_latin_translation_cache_snapshot() -> None:
         "\n"
         "Meanings\n"
         "1. wolf\n"
-        "   sources: translation; witnesses: 1; confidence: single-witness\n"
+        "   sources: gaffiot, translation; witnesses: 2; confidence: multi-witness\n"
         "   refs: gaffiot:gaffiot_38776\n"
         "   translated from: gaffiot\n"
-        "   source language: en\n"
-        "2. loup\n"
-        "   sources: gaffiot; witnesses: 1; confidence: single-witness\n"
-        "   refs: gaffiot:gaffiot_38776\n"
-        "   source language: fr\n"
+        "   source language: en, fr\n"
     )
 
 
@@ -4567,14 +4565,10 @@ def test_encounter_sanskrit_dico_translation_cache_snapshot() -> None:
         "\n"
         "Meanings\n"
         "1. law, duty, virtue\n"
-        "   sources: translation; witnesses: 1; confidence: single-witness\n"
+        "   sources: dico, translation; witnesses: 2; confidence: multi-witness\n"
         "   refs: dico:34.html#dharma:0\n"
         "   translated from: dico\n"
-        "   source language: en\n"
-        "2. loi, devoir, vertu\n"
-        "   sources: dico; witnesses: 1; confidence: single-witness\n"
-        "   refs: dico:34.html#dharma:0\n"
-        "   source language: fr\n"
+        "   source language: en, fr\n"
     )
 
 

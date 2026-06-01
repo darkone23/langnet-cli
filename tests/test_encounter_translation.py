@@ -200,6 +200,47 @@ def test_apply_translation_cache_populates_missing_projection() -> None:
     assert any(triple["object"] == translated_text for triple in triples)
 
 
+def test_apply_translation_cache_preserves_model_output_without_heuristic_review() -> None:
+    source_text = "loi; devoir"
+    model = "test-model"
+    claim = _dico_claim(source_text)
+    with duckdb.connect(database=":memory:") as conn:
+        cache = TranslationCache(conn)
+        diagnostics = encounter_translation_diagnostics(
+            mode="auto",
+            cache_path=Path("translations.duckdb"),
+            model=model,
+            populate=True,
+        )
+
+        projected = apply_translation_cache(
+            claims=[claim],
+            language="san",
+            model=model,
+            cache=cache,
+            populate=True,
+            translate=lambda _projection: "dharma",
+            diagnostics=diagnostics,
+            context="unit",
+        )
+        record = cache.get(_translation_key(source_text=source_text, model=model))
+
+    assert diagnostics["before"] == {"total": 1, "hits": 0, "missing": 1, "errors": 0, "empty": 0}
+    assert diagnostics["after"] == {"total": 1, "hits": 1, "missing": 0, "errors": 0, "empty": 0}
+    assert diagnostics["written"] == 1
+    assert record is not None
+    assert record.status == "ok"
+    assert record.translated_text == "dharma"
+    triples = projected[0]["value"]["triples"]  # type: ignore[index]
+    translated_gloss = next(
+        triple
+        for triple in triples
+        if triple["predicate"] == "gloss" and triple.get("metadata", {}).get("source_lang") == "en"
+    )
+    assert translated_gloss["object"] == "dharma"
+    assert "translation_review" not in translated_gloss["metadata"]
+
+
 def test_translation_cache_cli_status_and_clear_removes_translation_rows() -> None:
     source_text = "loi; devoir"
     model = "test-model"
@@ -585,6 +626,38 @@ def test_path_translation_cache_reads_without_waiting_for_writer_file_lock() -> 
             record = cast(TranslationRecord | None, cache.get(key))
 
     assert record is not None
+    assert record.translated_text == "law; duty"
+
+
+def test_translation_cache_reuses_same_source_text_when_prompt_hash_changes() -> None:
+    source_text = "loi; devoir"
+    model = "test-model"
+    current_key = _translation_key(source_text=source_text, model=model)
+    stale_prompt_key = build_translation_key(
+        source_lexicon="dico",
+        entry_id="dharma",
+        occurrence=0,
+        headword_norm="dharma",
+        source_text=source_text,
+        model=model,
+        prompt="previous prompt",
+        hint="\n".join(default_hints_for_language("san")),
+    )
+    with duckdb.connect(database=":memory:") as conn:
+        cache = TranslationCache(conn)
+        cache.upsert(
+            TranslationRecord(
+                key=stale_prompt_key,
+                translated_text="law; duty",
+                status="ok",
+                duration_ms=5,
+            )
+        )
+
+        record = cache.get(current_key)
+
+    assert record is not None
+    assert record.key.translation_id == stale_prompt_key.translation_id
     assert record.translated_text == "law; duty"
 
 
