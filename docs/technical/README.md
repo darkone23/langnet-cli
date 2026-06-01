@@ -9,6 +9,9 @@ translation cache.
 
 - `ARCHITECTURE.md` — current CLI/runtime architecture, SvelteKit adapter
   routes, storage boundary, and implemented/future surfaces.
+- `reader-full-text-search.md` — current derived Lance reader search index,
+  build lifecycle, normalization, fuzzy candidates, concept aliases, and the
+  morphology-search boundary.
 - `backend/README.md` — backend and local data-source map for Diogenes,
   Whitaker's Words, CDSL, DICO, Gaffiot, Bailly, Lewis 1890, CTS indexes,
   reader stores, word-index stores, and the translation cache.

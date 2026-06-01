@@ -4,6 +4,10 @@ The reader product target is one unified, source-agnostic catalog. A reader or
 web client should be able to ask "what books do we have?" without knowing
 whether a text came from PHI, TLG, Perseus, digilibLT, or Sanskrit/DCS.
 
+For Firecrawl-backed research batches and the distinction between curated facts
+and generated classification/popularity CSVs, see
+`docs/READER_METADATA_ENRICHMENT_LOOP.md`.
+
 The split catalogs under `examples/debug/` are audit artifacts. Keep them when
 debugging an importer or validating a source family, but do not treat them as
 the product catalog.
@@ -100,12 +104,25 @@ checks, but parser and importer behavior is baked into the generated book DBs.
 
 ## Restore Generated Discovery Metadata
 
-Generated work and author classifications are catalog metadata used by
+Generated work and author classifications are tracked generated inputs under
+`data/generated/reader_classifications`. They are catalog metadata used by
 `reader shelves`, `reader popular`, discovery facets, and prominence-sorted
 author views. A full `cli-databuild reader` rebuild creates the base catalog
 and book artifacts, but it does not regenerate LLM classification CSVs. Restore
 the current generated metadata layer before declaring shelves or discovery
 surfaces ready.
+
+The current base restore set is documented in
+`data/generated/reader_classifications/2026-05-17/manifest.json`, with
+incremental stronger-model audit layers such as
+`data/generated/reader_classifications/2026-06-01/manifest.json` applied before
+reviewed audit corrections.
+
+For the current catalog, use the wrapper:
+
+```bash
+just reader-restore-generated-metadata data/build/reader/catalog.duckdb
+```
 
 Use replace mode for the first full-language file, then `--merge` for the
 remaining language files and small correction layers:
@@ -114,31 +131,35 @@ remaining language files and small correction layers:
 export CATALOG=data/build/reader/catalog.duckdb
 
 just cli reader --catalog $CATALOG sync-classifications \
-  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/greek-generated-discovery-b50.csv \
+  --classification-csv data/generated/reader_classifications/2026-05-17/discovery/greek-generated-discovery-b50.csv \
   --output json
 just cli reader --catalog $CATALOG sync-classifications \
-  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/latin-generated-discovery-b50.csv \
+  --classification-csv data/generated/reader_classifications/2026-05-17/discovery/latin-generated-discovery-b50.csv \
   --merge \
   --output json
 just cli reader --catalog $CATALOG sync-classifications \
-  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/sanskrit-generated-discovery.csv \
+  --classification-csv data/generated/reader_classifications/2026-05-17/discovery/sanskrit-generated-discovery.csv \
   --merge \
   --output json
 just cli reader --catalog $CATALOG sync-classifications \
-  --classification-csv examples/debug/reader-full-classification-2026-05-16/discovery/audit-corrections-2026-05-17.csv \
+  --classification-csv data/generated/reader_classifications/2026-06-01/discovery/sanskrit-pro-audit-generated.csv \
+  --merge \
+  --output json
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv data/generated/reader_classifications/2026-05-17/discovery/audit-corrections-2026-05-17.csv \
   --merge \
   --output json
 just cli reader --catalog $CATALOG prune-stale-classifications --output json
 
 just cli reader --catalog $CATALOG sync-author-classifications \
-  --classification-csv examples/debug/reader-full-classification-2026-05-16/authors/full/grc-author-full-generated-v2-b10.csv \
+  --classification-csv data/generated/reader_classifications/2026-05-17/authors/full/grc-author-full-generated-v2-b10.csv \
   --output json
 just cli reader --catalog $CATALOG sync-author-classifications \
-  --classification-csv examples/debug/reader-full-classification-2026-05-16/authors/full/lat-author-full-generated-v2.csv \
+  --classification-csv data/generated/reader_classifications/2026-05-17/authors/full/lat-author-full-generated-v2.csv \
   --merge \
   --output json
 just cli reader --catalog $CATALOG sync-author-classifications \
-  --classification-csv examples/debug/reader-full-classification-2026-05-16/authors/full/san-author-full-generated-merged-b10.csv \
+  --classification-csv data/generated/reader_classifications/2026-05-17/authors/full/san-author-full-generated-merged-b10.csv \
   --merge \
   --output json
 ```
@@ -268,7 +289,14 @@ citation `1` is the first reading line, not a GRETIL header line.
 ## Rebuild The Search Index
 
 The Lance search index is derived cache data. Rebuild it after every catalog
-rebuild.
+rebuild. For the implementation-facing details on row shape, normalization,
+query expansion, and the current morphology-search boundary, see
+`docs/technical/reader-full-text-search.md`.
+
+`data/build/reader/search.lance` is the large reader full-text search artifact.
+It powers `reader search`, reader web search, and optional encounter inline
+corpus hits. It does not contain the canonical reader corpus; it is rebuilt from
+`data/build/reader/catalog.duckdb` plus `data/build/reader/books/`.
 
 ```bash
 export CATALOG=data/build/reader/catalog.duckdb
@@ -286,6 +314,10 @@ just cli reader --catalog $CATALOG search-index validate \
 
 For language-scoped debugging, add `--language grc`, `--language lat`, or
 `--language san` to the build command.
+
+Create a new search index when the catalog or book artifacts change, when search
+normalization/schema versions change, when validation fails, or after deleting
+`search.lance` to reclaim disk. Use `--replace` for the normal refresh path.
 
 ## Validate And Smoke Test
 

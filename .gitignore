@@ -9,6 +9,8 @@ data/*
 !data/curated/
 !data/curated/reader_aliases/
 !data/curated/reader_aliases/**
+!data/generated/
+!data/generated/**
 *.db
 *.sqlite
 *.sqlite3

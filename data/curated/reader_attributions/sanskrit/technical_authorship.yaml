@@ -1,0 +1,14 @@
+attributions:
+  - collection_id: "sanskrit_dcs"
+    match_field: "source_id"
+    match_value: "dcs_375"
+    relation_type: "traditional_author"
+    agent: "Sadāśiva"
+    status: "accepted"
+    confidence: "medium"
+    note: "Recorded as a traditional/deity attribution for Dhanurveda based on the DCS colophon wording, not as a settled historical display author."
+    evidence:
+      - source_type: "web_source"
+        citation: "http://sanskrit-linguistics.org/dcs/index.php?contents=fundstellen&IDWord=40729&IDText=375"
+        label: "DCS occurrence page shows the Dhanurveda colophon with śrīmatsadāśivaprokto."
+        retrieved_at: "2026-06-01"

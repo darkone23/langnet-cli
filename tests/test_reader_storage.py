@@ -2795,6 +2795,11 @@ def test_contained_work_lists_and_reads_parent_segments() -> None:
                             citation="fixture",
                             label="fixture",
                         ),
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture-2",
+                            label="fixture 2",
+                        ),
                     ),
                 )
             ],
@@ -2825,6 +2830,108 @@ def test_contained_work_lists_and_reads_parent_segments() -> None:
     assert shown["text"] == "dharmakṣetre"
     vyasa = next(item for item in authors if item["display_name"] == "Vyāsa")
     assert vyasa["word_count"] == CONTAINED_BHG_FIXTURE_WORD_COUNT, vyasa
+
+
+def test_contained_work_classifications_drive_popular_groups_and_shelves() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="langnet:reader:sanskrit_dcs:dcs_154",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Mahābhārata",
+            author="Vyāsa",
+            author_id=None,
+            source_id="dcs_154",
+        )
+        register_contained_works(
+            catalog_path,
+            [
+                ReaderContainedWork(
+                    contained_work_id="langnet:reader:contained:sanskrit:bhagavadgita",
+                    parent_work_id="langnet:reader:sanskrit_dcs:dcs_154",
+                    collection_id="contained",
+                    language="san",
+                    title="Bhagavadgītā",
+                    author="Vyāsa",
+                    source_id="dcs_154:bhagavadgita",
+                    cts_work_urn="urn:cts:sanskritLit:mbh.bhg",
+                    start_citation="start",
+                    end_citation="end",
+                    status="accepted",
+                    confidence="medium",
+                    note="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture-2",
+                            label="fixture 2",
+                        ),
+                    ),
+                )
+            ],
+        )
+        register_work_classifications(
+            catalog_path,
+            [
+                ReaderWorkClassification(
+                    work_id="langnet:reader:contained:sanskrit:bhagavadgita",
+                    category="Religious Text",
+                    period="Epic",
+                    date_range="5th-3rd century BCE",
+                    authorship_status="traditional",
+                    popularity_score=98,
+                    popularity_tier="canonical",
+                    scope="Vedanta",
+                    scope_popularity_score=98,
+                    scope_popularity_tier="canonical",
+                    confidence="high",
+                    note="Contained work fixture",
+                    generator_models="test",
+                    generator_run_id="run",
+                    source_file="fixture.csv",
+                    discovery_group_id="religion",
+                    discovery_tags="vedanta|religion",
+                    global_popularity_score=98,
+                    global_popularity_tier="canonical",
+                    group_popularity_score=98,
+                    group_popularity_tier="canonical",
+                )
+            ],
+        )
+
+        religion_works = list_works(
+            catalog_path,
+            language="san",
+            classification_group="religion",
+            sort="group-popularity",
+        )
+        groups = list_discovery_group_summaries(catalog_path, language="san")
+        tags = list_discovery_tag_summaries(catalog_path, language="san")
+        shelves = list_discovery_shelves(
+            catalog_path,
+            language="san",
+            sample_limit=3,
+        )
+
+    assert [work["title"] for work in religion_works] == ["Bhagavadgītā"]
+    assert religion_works[0]["work_kind"] == "contained"
+    assert religion_works[0]["classification_discovery_group_id"] == "religion"
+    religion_group = next(group for group in groups if group["id"] == "religion")
+    assert religion_group["work_count"] == 1
+    vedanta_tag = next(tag for tag in tags if tag["id"] == "vedanta")
+    assert vedanta_tag["work_count"] == 1
+    religion_shelf = next(shelf for shelf in shelves if shelf["id"] == "religion")
+    assert [work["title"] for work in religion_shelf["sample_works"]] == ["Bhagavadgītā"]
 
 
 def test_author_index_merges_duplicate_generated_selectors() -> None:

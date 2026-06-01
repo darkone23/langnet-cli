@@ -22,6 +22,9 @@ Start here:
 - `docs/READER_CLI_BEGINNER_GUIDE.md` - discover, enumerate, and read locally indexed texts.
 - `docs/READER_CORPUS_STATUS.md` - reader corpus status and validation checkpoints.
 - `docs/READER_DATA_BUILD.md` - reader data build and index workflow.
+- `docs/technical/reader-full-text-search.md` - derived Lance reader full-text
+  search index, build lifecycle, query expansion, and morphology boundary.
+- `docs/READER_METADATA_ENRICHMENT_LOOP.md` - Firecrawl-backed curated metadata and generated discovery metadata workflow.
 - `docs/READER_WEB_CONTRACT.md` - reader/web integration contract.
 - `webapp/README.md` - webapp setup and operational notes.
 - `webapp/docs/UI.md` - current web UI layout and visual rules.

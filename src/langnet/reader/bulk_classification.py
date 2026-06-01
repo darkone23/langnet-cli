@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import random
+from collections import defaultdict, deque
 from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -60,7 +61,28 @@ GENERATED_CLASSIFICATION_FIELDS = [
     "classification_generator_models",
     "classification_generator_run_id",
 ]
+SLIM_GENERATED_CLASSIFICATION_FIELDS = [
+    "classification_discovery_group_id",
+    "classification_discovery_tags",
+    "classification_global_popularity_score",
+    "classification_global_popularity_tier",
+    "classification_group_popularity_score",
+    "classification_group_popularity_tier",
+    "classification_period",
+    "classification_date_range",
+    "classification_authorship_status",
+    "classification_confidence",
+    "classification_notes",
+]
+CLASSIFICATION_OUTPUT_PROFILES = {
+    "slim": SLIM_GENERATED_CLASSIFICATION_FIELDS,
+    "full": GENERATED_CLASSIFICATION_FIELDS,
+}
 CLASSIFICATION_OUTPUT_FIELDS = CLASSIFICATION_INPUT_FIELDS + GENERATED_CLASSIFICATION_FIELDS
+DEFAULT_CLASSIFICATION_ESCALATION_MIN_GLOBAL_SCORE = 90
+DEFAULT_CLASSIFICATION_ESCALATION_MIN_GROUP_SCORE = 90
+DEFAULT_CLASSIFICATION_ESCALATION_TIERS = ("canonical",)
+DEFAULT_CLASSIFICATION_ESCALATION_CONFIDENCES = ("low",)
 CLASSIFICATION_FIELD_ALIASES = {
     "classification_discovery_group_id": ("discovery_group_id", "group_id", "group"),
     "classification_discovery_tags": ("discovery_tags", "tags"),
@@ -319,6 +341,7 @@ POPULARITY_RUBRIC = [
         "meaning": "Rarely read, fragmentary, marginal, or minimally attested.",
     },
 ]
+DEFAULT_CLASSIFICATION_SHUFFLE_SEED = "langnet-reader-classification-v1"
 GENERIC_FRAGMENT_TITLE_MARKERS = (
     "fragment",
     "fragments",
@@ -381,6 +404,17 @@ class _ResponseCacheConfig(Protocol):
 
 
 @dataclass(frozen=True)
+class ClassificationEscalationConfig:
+    input_csv: Path
+    output_csv: Path
+    min_global_score: int = DEFAULT_CLASSIFICATION_ESCALATION_MIN_GLOBAL_SCORE
+    min_group_score: int = DEFAULT_CLASSIFICATION_ESCALATION_MIN_GROUP_SCORE
+    include_tiers: Sequence[str] = DEFAULT_CLASSIFICATION_ESCALATION_TIERS
+    include_confidences: Sequence[str] = DEFAULT_CLASSIFICATION_ESCALATION_CONFIDENCES
+    limit: int | None = None
+
+
+@dataclass(frozen=True)
 class ClassificationRunConfig:
     input_csv: Path
     output_csv: Path
@@ -388,7 +422,9 @@ class ClassificationRunConfig:
     run_id: str
     batch_size: int
     raw_response_dir: Path | None = None
-    shuffle_seed: str | None = None
+    shuffle_seed: str | None = DEFAULT_CLASSIFICATION_SHUFFLE_SEED
+    output_profile: str = "slim"
+    batch_order: str = "stratified"
     concurrency: int = 1
 
 
@@ -401,13 +437,84 @@ def load_classification_input_rows(input_csv: Path) -> list[dict[str, str]]:
         ]
 
 
+def export_classification_escalation_csv(
+    *,
+    config: ClassificationEscalationConfig,
+) -> dict[str, Any]:
+    rows = load_classification_input_rows(config.input_csv)
+    selected_rows, reason_counts = select_classification_escalation_rows(
+        rows,
+        config=config,
+    )
+    write_generated_classification_csv(config.output_csv, selected_rows)
+    return {
+        "input_count": len(rows),
+        "selected_count": len(selected_rows),
+        "output_csv": str(config.output_csv),
+        "min_global_score": config.min_global_score,
+        "min_group_score": config.min_group_score,
+        "include_tiers": list(config.include_tiers),
+        "include_confidences": list(config.include_confidences),
+        "limit": config.limit,
+        "reason_counts": reason_counts,
+    }
+
+
+def select_classification_escalation_rows(
+    rows: Sequence[dict[str, str]],
+    *,
+    config: ClassificationEscalationConfig | None = None,
+) -> tuple[list[dict[str, str]], dict[str, int]]:
+    resolved_config = config or ClassificationEscalationConfig(
+        input_csv=Path(),
+        output_csv=Path(),
+    )
+    include_tier_set = {
+        tier.strip().casefold() for tier in resolved_config.include_tiers if tier.strip()
+    }
+    include_confidence_set = {
+        confidence.strip().casefold()
+        for confidence in resolved_config.include_confidences
+        if confidence.strip()
+    }
+    selected: list[tuple[int, int, dict[str, str], list[str]]] = []
+    seen_work_ids: set[str] = set()
+    reason_counts: dict[str, int] = {}
+    for index, row in enumerate(rows):
+        work_id = str(row.get("work_id") or "").strip()
+        if not work_id or work_id in seen_work_ids:
+            continue
+        reasons, priority = _classification_escalation_reasons(
+            row,
+            min_global_score=resolved_config.min_global_score,
+            min_group_score=resolved_config.min_group_score,
+            include_tiers=include_tier_set,
+            include_confidences=include_confidence_set,
+        )
+        if not reasons:
+            continue
+        seen_work_ids.add(work_id)
+        for reason in reasons:
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        selected.append((priority, index, dict(row), reasons))
+    selected.sort(key=lambda item: (-item[0], item[1]))
+    selected_rows = [row for _, _, row, _ in selected]
+    if resolved_config.limit is not None:
+        selected_rows = selected_rows[: resolved_config.limit]
+    return selected_rows, reason_counts
+
+
 def classify_work_csv(
     *,
     config: ClassificationRunConfig,
     classify: ClassifierCallback,
 ) -> dict[str, Any]:
     input_rows = load_classification_input_rows(config.input_csv)
-    batch_input_rows = _batch_ordered_rows(input_rows, config.shuffle_seed)
+    batch_input_rows = _batch_ordered_rows(
+        input_rows,
+        config.shuffle_seed,
+        batch_order=config.batch_order,
+    )
     generated_by_work_id: dict[str, dict[str, str]] = {}
     generated_without_work_id: list[dict[str, str]] = []
     batches = _batches(batch_input_rows, config.batch_size)
@@ -429,6 +536,7 @@ def classify_work_csv(
             model=config.model,
             run_id=config.run_id,
             batch_index=batch_index,
+            output_profile=config.output_profile,
         )
         response_rows = _response_rows_from_cache_or_model(
             config=config,
@@ -491,6 +599,8 @@ def classify_work_csv(
         "generated_count": _generated_metadata_count(generated_rows),
         "batch_count": batch_count,
         "shuffle_seed": config.shuffle_seed,
+        "batch_order": config.batch_order,
+        "output_profile": config.output_profile,
         "output_csv": str(config.output_csv),
         "model": config.model,
         "run_id": config.run_id,
@@ -504,8 +614,10 @@ def classification_batch_payload(
     model: str,
     run_id: str,
     batch_index: int,
+    output_profile: str = "slim",
 ) -> dict[str, Any]:
     languages = _payload_languages(rows)
+    output_fields = _classification_output_fields_for_profile(output_profile)
     return {
         "schema_version": "langnet.reader.work_classification.request.v1",
         "task": "Generate scholarly reader work metadata for classical literature.",
@@ -515,6 +627,10 @@ def classification_batch_payload(
             "Return exactly one generated metadata row for every input work_id.",
             "Copy each input work_id exactly into its generated row.",
             "Use the exact output field names.",
+            (
+                "For slim output, return only the requested output_fields; "
+                "compatibility fields are intentionally omitted and derived locally."
+            ),
             (
                 "Use generated scholarly judgment. Treat output as final generated "
                 "metadata for direct catalog import."
@@ -573,6 +689,11 @@ def classification_batch_payload(
             ),
             "Use source_id and work_id for row matching and edition awareness.",
             "Use source_metadata_summary as source-backed catalog evidence.",
+            (
+                "If classifier_context.prior_generated_classification is present, "
+                "treat it only as prior generated metadata to audit or improve, "
+                "not as source evidence."
+            ),
             "Synthesize final labels from the whole row.",
             (
                 "Write classification_notes around title, author, tradition, genre, "
@@ -634,7 +755,7 @@ def classification_batch_payload(
             if language in LANGUAGE_CLASSIFICATION_GUIDANCE
         },
         "popularity_rubric": POPULARITY_RUBRIC,
-        "output_fields": GENERATED_CLASSIFICATION_FIELDS,
+        "output_fields": output_fields,
         "model": model,
         "run_id": run_id,
         "batch_index": batch_index,
@@ -646,6 +767,15 @@ def classification_batch_payload(
             for row in rows
         ],
     }
+
+
+def _classification_output_fields_for_profile(output_profile: str) -> list[str]:
+    try:
+        return list(CLASSIFICATION_OUTPUT_PROFILES[output_profile])
+    except KeyError as exc:
+        allowed = ", ".join(sorted(CLASSIFICATION_OUTPUT_PROFILES))
+        message = f"unknown classification output profile: {output_profile}; use {allowed}"
+        raise ValueError(message) from exc
 
 
 def _payload_languages(rows: Sequence[Mapping[str, str]]) -> list[str]:
@@ -675,12 +805,91 @@ def _classifier_context(row: Mapping[str, str]) -> dict[str, Any]:
         if title_specificity == "generic_fragmentary"
         else "Title appears specific enough for ordinary work-level classification."
     )
-    return {
+    context = {
         "title_specificity": title_specificity,
         "disambiguation_fields": disambiguation_fields,
         "source_metadata_summary": str(row.get("source_metadata_summary") or "").strip(),
         "note": note,
     }
+    prior_generated_classification = _prior_generated_classification_context(row)
+    if prior_generated_classification:
+        context["prior_generated_classification"] = prior_generated_classification
+    return context
+
+
+def _prior_generated_classification_context(row: Mapping[str, str]) -> dict[str, str]:
+    prior = {
+        field: str(row.get(field) or "").strip()
+        for field in GENERATED_CLASSIFICATION_FIELDS
+        if field not in {"classification_generator_models", "classification_generator_run_id"}
+        and str(row.get(field) or "").strip()
+    }
+    if prior:
+        prior["metadata_status"] = "prior_generated_metadata_not_source_evidence"
+    return prior
+
+
+def _classification_escalation_reasons(
+    row: Mapping[str, str],
+    *,
+    min_global_score: int,
+    min_group_score: int,
+    include_tiers: set[str],
+    include_confidences: set[str],
+) -> tuple[list[str], int]:
+    reasons: list[str] = []
+    global_score = _classification_score(
+        row,
+        "classification_global_popularity_score",
+        "classification_popularity_score",
+    )
+    group_score = _classification_score(
+        row,
+        "classification_group_popularity_score",
+        "classification_scope_popularity_score",
+    )
+    global_tier = _classification_text(
+        row,
+        "classification_global_popularity_tier",
+        "classification_popularity_tier",
+    )
+    group_tier = _classification_text(
+        row,
+        "classification_group_popularity_tier",
+        "classification_scope_popularity_tier",
+    )
+    confidence = _classification_text(row, "classification_confidence")
+    if global_score >= min_global_score:
+        reasons.append("global_score")
+    if group_score >= min_group_score:
+        reasons.append("group_score")
+    if global_tier in include_tiers:
+        reasons.append("global_tier")
+    if group_tier in include_tiers:
+        reasons.append("group_tier")
+    if confidence in include_confidences:
+        reasons.append("confidence")
+    return reasons, max(global_score, group_score)
+
+
+def _classification_score(row: Mapping[str, str], *fields: str) -> int:
+    for field in fields:
+        raw_value = str(row.get(field) or "").strip()
+        if not raw_value:
+            continue
+        try:
+            return int(float(raw_value))
+        except ValueError:
+            continue
+    return 0
+
+
+def _classification_text(row: Mapping[str, str], *fields: str) -> str:
+    for field in fields:
+        value = str(row.get(field) or "").strip().casefold()
+        if value:
+            return value
+    return ""
 
 
 def _title_specificity(title: str) -> str:
@@ -709,11 +918,49 @@ def _generic_fragment_marker_matches(title_key: str, title_terms: set[str], mark
 def _batch_ordered_rows(
     rows: Sequence[dict[str, str]],
     shuffle_seed: str | None,
+    *,
+    batch_order: str = "input",
 ) -> list[dict[str, str]]:
-    ordered_rows = list(rows)
-    if shuffle_seed:
-        random.Random(shuffle_seed).shuffle(ordered_rows)
+    if batch_order == "input":
+        return list(rows)
+    if batch_order == "shuffle":
+        ordered_rows = list(rows)
+        if shuffle_seed:
+            random.Random(shuffle_seed).shuffle(ordered_rows)
+        return ordered_rows
+    if batch_order != "stratified":
+        raise ValueError("batch_order must be one of: input, shuffle, stratified")
+
+    buckets: dict[tuple[str, ...], deque[dict[str, str]]] = defaultdict(deque)
+    for row in rows:
+        buckets[_classification_batch_cluster_key(row)].append(row)
+
+    rng = random.Random(shuffle_seed or "")
+    bucket_keys = list(buckets)
+    rng.shuffle(bucket_keys)
+    for key in bucket_keys:
+        bucket_rows = list(buckets[key])
+        rng.shuffle(bucket_rows)
+        buckets[key] = deque(bucket_rows)
+
+    ordered_rows: list[dict[str, str]] = []
+    active_keys = deque(bucket_keys)
+    while active_keys:
+        key = active_keys.popleft()
+        bucket = buckets[key]
+        ordered_rows.append(bucket.popleft())
+        if bucket:
+            active_keys.append(key)
     return ordered_rows
+
+
+def _classification_batch_cluster_key(row: Mapping[str, str]) -> tuple[str, ...]:
+    language = str(row.get("language") or "").strip().casefold()
+    work_kind = str(row.get("work_kind") or "").strip().casefold()
+    author_key = str(row.get("author_id") or row.get("author") or "").strip().casefold()
+    source_id = str(row.get("source_id") or "").strip().casefold()
+    source_bucket = source_id.split(":", 1)[0].split("_", 1)[0]
+    return (language, work_kind, author_key, source_bucket)
 
 
 def write_generated_classification_csv(output_csv: Path, rows: Sequence[Mapping[str, str]]) -> None:

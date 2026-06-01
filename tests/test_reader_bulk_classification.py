@@ -8,13 +8,18 @@ from pathlib import Path
 from typing import Any
 
 from langnet.reader.bulk_classification import (
+    DEFAULT_CLASSIFICATION_SHUFFLE_SEED,
+    ClassificationEscalationConfig,
     ClassificationRunConfig,
     classification_batch_payload,
     classify_work_csv,
+    export_classification_escalation_csv,
     load_classification_input_rows,
+    select_classification_escalation_rows,
 )
 
 CANONICAL_POPULARITY_SCORE = 100
+ESCALATION_SELECTED_COUNT = 1
 PARTIAL_BATCH_SPLIT_THRESHOLD = 2
 FOUR_WORK_COUNT = 4
 RETRIED_BATCH_COUNT = 3
@@ -69,7 +74,9 @@ def test_classify_work_csv_writes_generated_rows_from_model_json() -> None:
         "input_count": 1,
         "generated_count": 1,
         "batch_count": 1,
-        "shuffle_seed": None,
+        "shuffle_seed": DEFAULT_CLASSIFICATION_SHUFFLE_SEED,
+        "batch_order": "stratified",
+        "output_profile": "slim",
         "output_csv": str(output_csv),
         "model": "openai:test-model",
         "run_id": "run-test",
@@ -269,8 +276,8 @@ def test_classification_batch_payload_includes_language_specific_label_guidance(
         "Tantra",
         "Stotra",
     ]
-    assert "classification_scope" in payload["output_fields"]
-    assert "classification_scope_popularity_score" in payload["output_fields"]
+    assert "classification_scope" not in payload["output_fields"]
+    assert "classification_scope_popularity_score" not in payload["output_fields"]
     assert "classification_discovery_group_id" in payload["output_fields"]
     assert "classification_discovery_tags" in payload["output_fields"]
     assert payload["allowed_values"]["classification_discovery_group_id"][0]["id"] == "epic"
@@ -282,6 +289,177 @@ def test_classification_batch_payload_includes_language_specific_label_guidance(
         tag["id"] == "ayurveda" and tag["description"]
         for tag in payload["allowed_values"]["classification_discovery_tags"]
     )
+
+
+def test_classification_batch_payload_full_profile_includes_compatibility_fields() -> None:
+    payload = classification_batch_payload(
+        rows=[
+            {"work_id": "work-lat", "language": "lat", "title": "De apibus"},
+        ],
+        model="openai:test-model",
+        run_id="run-test",
+        batch_index=1,
+        output_profile="full",
+    )
+
+    assert "classification_scope" in payload["output_fields"]
+    assert "classification_scope_popularity_score" in payload["output_fields"]
+    assert "classification_generator_models" in payload["output_fields"]
+
+
+def test_classification_batch_payload_marks_prior_generated_metadata_as_non_evidence() -> None:
+    payload = classification_batch_payload(
+        rows=[
+            {
+                "work_id": "bhg",
+                "language": "san",
+                "title": "Bhagavadgītā",
+                "classification_discovery_group_id": "religion",
+                "classification_global_popularity_score": "98",
+                "classification_confidence": "high",
+                "classification_notes": "Prior Flash pass.",
+            },
+        ],
+        model="openai:test-model",
+        run_id="run-test",
+        batch_index=1,
+    )
+
+    guidance_text = " ".join(payload["instructions"])
+    prior = payload["rows"][0]["classifier_context"]["prior_generated_classification"]
+
+    assert prior["metadata_status"] == "prior_generated_metadata_not_source_evidence"
+    assert prior["classification_discovery_group_id"] == "religion"
+    assert "not as source evidence" in guidance_text
+
+
+def test_classify_work_csv_slim_profile_derives_compatibility_fields() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        input_csv = root / "classification-export.csv"
+        output_csv = root / "generated-classifications.csv"
+        input_csv.write_text(
+            "\n".join(
+                [
+                    "work_id,language,title,author",
+                    "bhg,san,Bhagavadgītā,Vyāsa",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        def classify(payload: dict[str, Any]) -> str:
+            assert "classification_scope" not in payload["output_fields"]
+            return (
+                '{"rows":[{'
+                '"work_id":"bhg",'
+                '"classification_discovery_group_id":"religion",'
+                '"classification_discovery_tags":["vedanta","itihasa"],'
+                '"classification_global_popularity_score":98,'
+                '"classification_global_popularity_tier":"canonical",'
+                '"classification_group_popularity_score":98,'
+                '"classification_group_popularity_tier":"canonical",'
+                '"classification_period":"Epic",'
+                '"classification_authorship_status":"traditional",'
+                '"classification_confidence":"high",'
+                '"classification_notes":"Generated slim discovery metadata."'
+                "}]}"
+            )
+
+        classify_work_csv(
+            config=ClassificationRunConfig(
+                input_csv=input_csv,
+                output_csv=output_csv,
+                model="openai:test-model",
+                run_id="run-test",
+                batch_size=10,
+            ),
+            classify=classify,
+        )
+        rows = list(csv.DictReader(output_csv.open("r", encoding="utf-8", newline="")))
+
+    assert rows[0]["classification_discovery_group_id"] == "religion"
+    assert rows[0]["classification_discovery_tags"] == "vedanta|itihasa"
+    assert rows[0]["classification_category"] == "Religion"
+    assert rows[0]["classification_scope"] == "Other Sanskrit Literature"
+    assert rows[0]["classification_popularity_score"] == "98"
+    assert rows[0]["classification_scope_popularity_score"] == "98"
+
+
+def test_select_classification_escalation_rows_prioritizes_popular_and_low_confidence() -> None:
+    rows = [
+        {
+            "work_id": "minor",
+            "classification_global_popularity_score": "20",
+            "classification_group_popularity_score": "25",
+            "classification_confidence": "high",
+        },
+        {
+            "work_id": "canonical",
+            "classification_global_popularity_score": "97",
+            "classification_global_popularity_tier": "canonical",
+            "classification_confidence": "high",
+        },
+        {
+            "work_id": "group-leader",
+            "classification_global_popularity_score": "45",
+            "classification_group_popularity_score": "93",
+            "classification_confidence": "medium",
+        },
+        {
+            "work_id": "uncertain",
+            "classification_global_popularity_score": "8",
+            "classification_group_popularity_score": "12",
+            "classification_confidence": "low",
+        },
+    ]
+
+    selected_rows, reason_counts = select_classification_escalation_rows(rows)
+
+    assert [row["work_id"] for row in selected_rows] == [
+        "canonical",
+        "group-leader",
+        "uncertain",
+    ]
+    assert reason_counts == {
+        "global_score": 1,
+        "global_tier": 1,
+        "group_score": 1,
+        "confidence": 1,
+    }
+
+
+def test_export_classification_escalation_csv_writes_priority_queue() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        input_csv = root / "generated.csv"
+        output_csv = root / "pro-audit-input.csv"
+        input_csv.write_text(
+            "\n".join(
+                [
+                    "work_id,language,title,classification_global_popularity_score,"
+                    "classification_global_popularity_tier,classification_confidence",
+                    "minor,grc,Minor,15,specialist,high",
+                    "iliad,grc,Iliad,100,canonical,high",
+                    "fragment,grc,Fragmenta,5,obscure,low",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        summary = export_classification_escalation_csv(
+            config=ClassificationEscalationConfig(
+                input_csv=input_csv,
+                output_csv=output_csv,
+                limit=ESCALATION_SELECTED_COUNT,
+            ),
+        )
+        rows = list(csv.DictReader(output_csv.open("r", encoding="utf-8", newline="")))
+
+    assert summary["selected_count"] == 1
+    assert summary["reason_counts"]["global_score"] == 1
+    assert rows[0]["work_id"] == "iliad"
+    assert "classification_generator_models" in rows[0]
 
 
 def test_classification_batch_payload_notes_guidance_uses_standalone_scholarly_prose() -> None:
@@ -1057,6 +1235,76 @@ def test_classify_work_csv_shuffle_seed_spreads_catalog_order_batches() -> None:
         output_rows = list(csv.DictReader(output_csv.open("r", encoding="utf-8", newline="")))
 
     assert batch_work_ids[0] != ["plato-1", "plato-2", "plato-3", "plato-4"]
+    assert [row["work_id"] for row in output_rows] == [
+        "plato-1",
+        "plato-2",
+        "plato-3",
+        "plato-4",
+        "homer-1",
+        "homer-2",
+        "aristotle-1",
+        "aristotle-2",
+    ]
+
+
+def test_classify_work_csv_stratified_batch_order_interleaves_author_clusters() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        input_csv = root / "classification-export.csv"
+        output_csv = root / "generated-classifications.csv"
+        input_csv.write_text(
+            "\n".join(
+                [
+                    "work_id,language,title,author",
+                    "plato-1,grc,Dialog 1,Plato",
+                    "plato-2,grc,Dialog 2,Plato",
+                    "plato-3,grc,Dialog 3,Plato",
+                    "plato-4,grc,Dialog 4,Plato",
+                    "homer-1,grc,Iliad,Homer",
+                    "homer-2,grc,Odyssey,Homer",
+                    "aristotle-1,grc,Categories,Aristotle",
+                    "aristotle-2,grc,Metaphysics,Aristotle",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        batch_authors: list[list[str]] = []
+
+        def classify(payload: dict[str, Any]) -> str:
+            rows = payload["rows"]
+            assert isinstance(rows, list)
+            batch_authors.append([str(row["author"]) for row in rows])
+            return (
+                '{"rows":['
+                + ",".join(
+                    "{"
+                    f'"work_id":"{row["work_id"]}",'
+                    '"classification_discovery_group_id":"philosophy",'
+                    '"classification_global_popularity_score":25,'
+                    '"classification_global_popularity_tier":"specialist",'
+                    '"classification_group_popularity_score":50,'
+                    '"classification_group_popularity_tier":"common",'
+                    '"classification_notes":"Generated note for this work."'
+                    "}"
+                    for row in rows
+                )
+                + "]}"
+            )
+
+        classify_work_csv(
+            config=ClassificationRunConfig(
+                input_csv=input_csv,
+                output_csv=output_csv,
+                model="openai:test-model",
+                run_id="run-test",
+                batch_size=4,
+            ),
+            classify=classify,
+        )
+        output_rows = list(csv.DictReader(output_csv.open("r", encoding="utf-8", newline="")))
+
+    assert batch_authors[0] != ["Plato", "Plato", "Plato", "Plato"]
+    assert len(set(batch_authors[0])) > 1
     assert [row["work_id"] for row in output_rows] == [
         "plato-1",
         "plato-2",

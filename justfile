@@ -62,6 +62,18 @@ test *args:
 test-fast:
     bash ./.justscripts/run-dev-tool nose2 -s tests --config tests/nose2.cfg
 
+# Restore tracked generated reader metadata into a rebuilt reader catalog.
+reader-restore-generated-metadata catalog="data/build/reader/catalog.duckdb":
+    just cli reader --catalog "{{catalog}}" sync-classifications --classification-csv data/generated/reader_classifications/2026-05-17/discovery/greek-generated-discovery-b50.csv --output json
+    just cli reader --catalog "{{catalog}}" sync-classifications --classification-csv data/generated/reader_classifications/2026-05-17/discovery/latin-generated-discovery-b50.csv --merge --output json
+    just cli reader --catalog "{{catalog}}" sync-classifications --classification-csv data/generated/reader_classifications/2026-05-17/discovery/sanskrit-generated-discovery.csv --merge --output json
+    just cli reader --catalog "{{catalog}}" sync-classifications --classification-csv data/generated/reader_classifications/2026-06-01/discovery/sanskrit-pro-audit-generated.csv --merge --output json
+    just cli reader --catalog "{{catalog}}" sync-classifications --classification-csv data/generated/reader_classifications/2026-05-17/discovery/audit-corrections-2026-05-17.csv --merge --output json
+    just cli reader --catalog "{{catalog}}" prune-stale-classifications --output json
+    just cli reader --catalog "{{catalog}}" sync-author-classifications --classification-csv data/generated/reader_classifications/2026-05-17/authors/full/grc-author-full-generated-v2-b10.csv --output json
+    just cli reader --catalog "{{catalog}}" sync-author-classifications --classification-csv data/generated/reader_classifications/2026-05-17/authors/full/lat-author-full-generated-v2.csv --merge --output json
+    just cli reader --catalog "{{catalog}}" sync-author-classifications --classification-csv data/generated/reader_classifications/2026-05-17/authors/full/san-author-full-generated-merged-b10.csv --merge --output json
+
 # Run performance benchmarks only
 benchmark:
     bash ./.justscripts/run-dev-tool python -m unittest tests.benchmarks.test_performance -v

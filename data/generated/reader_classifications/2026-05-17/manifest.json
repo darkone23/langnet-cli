@@ -1,0 +1,68 @@
+{
+  "schema_version": "langnet.reader.generated_classifications_manifest.v1",
+  "run_id": "reader-classifier-20260517",
+  "status": "canonical",
+  "description": "Generated reader work and author classification inputs used to restore discovery shelves, popular lists, facets, and author prominence after a reader catalog rebuild.",
+  "data_policy": {
+    "metadata_status": "generated",
+    "evidence_status": "not_source_evidence",
+    "curated_evidence_root": "data/curated",
+    "notes": "These CSVs are generated interpretation. Use curated reader metadata, attribution, contained-work, work-map, alias, search, or source metadata records for source-backed claims."
+  },
+  "future_generation_policy": {
+    "work_output_profile": "slim",
+    "work_batch_order": "stratified",
+    "work_shuffle_seed": "langnet-reader-classification-v1",
+    "broad_work_model": "openai:deepseek/deepseek-v4-flash",
+    "audit_work_model": "openai:deepseek/deepseek-v4-pro",
+    "notes": "For subsequent generated work-classification runs, request the smaller slim output profile and deterministically interleave catalog clusters before batching. Use the Flash model for broad coverage and the Pro model for the escalation audit queue. Existing canonical CSVs in this run remain restore inputs."
+  },
+  "restore_order": [
+    {
+      "kind": "work_classifications",
+      "path": "data/generated/reader_classifications/2026-05-17/discovery/greek-generated-discovery-b50.csv",
+      "sync_mode": "replace"
+    },
+    {
+      "kind": "work_classifications",
+      "path": "data/generated/reader_classifications/2026-05-17/discovery/latin-generated-discovery-b50.csv",
+      "sync_mode": "merge"
+    },
+    {
+      "kind": "work_classifications",
+      "path": "data/generated/reader_classifications/2026-05-17/discovery/sanskrit-generated-discovery.csv",
+      "sync_mode": "merge"
+    },
+    {
+      "kind": "work_classifications",
+      "path": "data/generated/reader_classifications/2026-05-17/discovery/audit-corrections-2026-05-17.csv",
+      "sync_mode": "merge",
+      "notes": "Reviewed generated-metadata overrides. Includes the Bhagavadgita religion-shelf correction while preserving epic and itihasa tags."
+    },
+    {
+      "kind": "prune_stale_work_classifications",
+      "path": null,
+      "sync_mode": "apply"
+    },
+    {
+      "kind": "author_classifications",
+      "path": "data/generated/reader_classifications/2026-05-17/authors/full/grc-author-full-generated-v2-b10.csv",
+      "sync_mode": "replace"
+    },
+    {
+      "kind": "author_classifications",
+      "path": "data/generated/reader_classifications/2026-05-17/authors/full/lat-author-full-generated-v2.csv",
+      "sync_mode": "merge"
+    },
+    {
+      "kind": "author_classifications",
+      "path": "data/generated/reader_classifications/2026-05-17/authors/full/san-author-full-generated-merged-b10.csv",
+      "sync_mode": "merge"
+    }
+  ],
+  "verification": [
+    "just cli reader --catalog data/build/reader/catalog.duckdb shelves --language san --sample-limit 10 --output json",
+    "just cli reader --catalog data/build/reader/catalog.duckdb popular --language san --group religion --limit 20 --output json",
+    "just cli reader --catalog data/build/reader/catalog.duckdb search-index validate --index data/build/reader/search.lance --output json"
+  ]
+}

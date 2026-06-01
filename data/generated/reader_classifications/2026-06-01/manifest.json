@@ -1,0 +1,41 @@
+{
+  "schema_version": "langnet.reader.generated_classifications_manifest.v1",
+  "run_id": "reader-classifier-20260601-san-pro-audit",
+  "status": "incremental",
+  "description": "Bounded Sanskrit stronger-model audit pass over high-impact generated work classifications selected from the 2026-05-17 Sanskrit discovery CSV.",
+  "data_policy": {
+    "metadata_status": "generated",
+    "evidence_status": "not_source_evidence",
+    "curated_evidence_root": "data/curated",
+    "notes": "These CSVs are generated interpretation. Apply reviewed audit corrections after this layer so explicit review decisions remain last in restore order."
+  },
+  "generation_policy": {
+    "queue_source": "data/generated/reader_classifications/2026-05-17/discovery/sanskrit-generated-discovery.csv",
+    "queue_path": "data/generated/reader_classifications/2026-06-01/discovery/sanskrit-pro-audit-input.csv",
+    "queue_limit": 5,
+    "broad_work_model": "openai:deepseek/deepseek-v4-flash",
+    "audit_work_model": "openai:deepseek/deepseek-v4-pro",
+    "work_output_profile": "slim",
+    "work_batch_order": "stratified",
+    "work_shuffle_seed": "langnet-reader-classification-v1"
+  },
+  "restore_order": [
+    {
+      "kind": "work_classifications",
+      "path": "data/generated/reader_classifications/2026-06-01/discovery/sanskrit-pro-audit-generated.csv",
+      "sync_mode": "merge",
+      "notes": "Apply after the broad Sanskrit generated discovery CSV and before reviewed audit corrections."
+    },
+    {
+      "kind": "work_classifications",
+      "path": "data/generated/reader_classifications/2026-05-17/discovery/audit-corrections-2026-05-17.csv",
+      "sync_mode": "merge",
+      "notes": "Reviewed corrections remain last; this preserves the Bhagavadgita religion-shelf correction."
+    }
+  ],
+  "verification": [
+    "just cli reader --catalog data/build/reader/catalog.duckdb popular --language san --group religion --limit 5 --output json",
+    "just cli reader --catalog data/build/reader/catalog.duckdb popular --language san --limit 10 --output json",
+    "just cli reader --catalog data/build/reader/catalog.duckdb shelves --language san --sample-limit 10 --output json"
+  ]
+}

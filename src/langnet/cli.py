@@ -130,8 +130,19 @@ from langnet.reader.author_classification import (
 )
 from langnet.reader.bulk_classification import (
     CLASSIFICATION_OUTPUT_FIELDS,
+    DEFAULT_CLASSIFICATION_ESCALATION_CONFIDENCES,
+    DEFAULT_CLASSIFICATION_ESCALATION_MIN_GLOBAL_SCORE,
+    DEFAULT_CLASSIFICATION_ESCALATION_MIN_GROUP_SCORE,
+    DEFAULT_CLASSIFICATION_ESCALATION_TIERS,
+    DEFAULT_CLASSIFICATION_SHUFFLE_SEED,
+    ClassificationEscalationConfig,
     ClassificationRunConfig,
     classify_work_csv,
+    export_classification_escalation_csv,
+)
+from langnet.reader.research_needs import (
+    ResearchNeedsConfig,
+    export_research_needs_csv,
 )
 from langnet.reader.search_index import search_reader_segments
 from langnet.reader_eval import (
@@ -210,6 +221,7 @@ TRANSLATION_CACHE_SCHEMA_VERSION = "langnet.translation_cache.v1"
 DOCTOR_SCHEMA_VERSION = "langnet.doctor.v1"
 DEFAULT_TRANSLATION_MODEL = "openai:google/gemini-2.5-flash"
 DEFAULT_CLASSIFICATION_MODEL = "openai:deepseek/deepseek-v4-flash"
+DEFAULT_CLASSIFICATION_AUDIT_MODEL = "openai:deepseek/deepseek-v4-pro"
 DEFAULT_CLASSIFICATION_BATCH_SIZE = 25
 DEFAULT_CLASSIFICATION_TIMEOUT_SECONDS = 120.0
 DEFAULT_CLASSIFICATION_MAX_ATTEMPTS = 3
@@ -3000,6 +3012,180 @@ def reader_classification_export(
     click.echo(str(output_path))
 
 
+@reader_cli.command("classification-escalation-export")
+@click.option(
+    "--input-csv",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Generated classification CSV from a broad classifier pass.",
+)
+@click.option(
+    "--path",
+    "output_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Priority audit input CSV to write.",
+)
+@click.option(
+    "--min-global-score",
+    default=DEFAULT_CLASSIFICATION_ESCALATION_MIN_GLOBAL_SCORE,
+    show_default=True,
+    type=click.IntRange(0, 100),
+    help="Escalate rows at or above this language-corpus popularity score.",
+)
+@click.option(
+    "--min-group-score",
+    default=DEFAULT_CLASSIFICATION_ESCALATION_MIN_GROUP_SCORE,
+    show_default=True,
+    type=click.IntRange(0, 100),
+    help="Escalate rows at or above this within-group popularity score.",
+)
+@click.option(
+    "--include-tier",
+    "include_tiers",
+    multiple=True,
+    default=DEFAULT_CLASSIFICATION_ESCALATION_TIERS,
+    show_default=True,
+    type=click.Choice(["canonical", "major", "common", "specialist", "obscure"]),
+    help="Escalate rows with this global or group tier. May be repeated.",
+)
+@click.option(
+    "--include-confidence",
+    "include_confidences",
+    multiple=True,
+    default=DEFAULT_CLASSIFICATION_ESCALATION_CONFIDENCES,
+    show_default=True,
+    type=click.Choice(["high", "medium", "low"]),
+    help="Escalate rows with this confidence. May be repeated.",
+)
+@click.option("--limit", default=None, type=click.IntRange(1, 100000), help="Maximum rows.")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_classification_escalation_export(  # noqa: PLR0913
+    input_csv: Path,
+    output_path: Path,
+    min_global_score: int,
+    min_group_score: int,
+    include_tiers: tuple[str, ...],
+    include_confidences: tuple[str, ...],
+    limit: int | None,
+    output: str,
+) -> None:
+    """Export high-priority generated classifications for stronger-model audit."""
+    summary = export_classification_escalation_csv(
+        config=ClassificationEscalationConfig(
+            input_csv=input_csv.expanduser(),
+            output_csv=output_path.expanduser(),
+            min_global_score=min_global_score,
+            min_group_score=min_group_score,
+            include_tiers=include_tiers,
+            include_confidences=include_confidences,
+            limit=limit,
+        ),
+    )
+    summary["recommended_audit_model"] = DEFAULT_CLASSIFICATION_AUDIT_MODEL
+    payload = {
+        "schema_version": "langnet.reader.v1",
+        "mode": "classification-escalation-export",
+        "summary": summary,
+    }
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    click.echo(
+        f"Selected {summary['selected_count']} of {summary['input_count']} "
+        f"classification row(s): {summary['output_csv']}"
+    )
+
+
+@reader_cli.command("research-needs-export")
+@click.option(
+    "--classification-csv",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Generated work classification CSV to inspect for research gaps.",
+)
+@click.option(
+    "--path",
+    "output_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Research-needs queue CSV to write.",
+)
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--limit", default=None, type=click.IntRange(1, 100000), help="Maximum rows.")
+@click.option(
+    "--per-need-type-limit",
+    default=5,
+    show_default=True,
+    type=click.IntRange(1, 100000),
+    help="Maximum rows per research need type before applying the overall limit.",
+)
+@click.option(
+    "--include-covered",
+    is_flag=True,
+    help="Include needs already covered by accepted curated metadata with lower priority.",
+)
+@click.option(
+    "--include-unresolved",
+    is_flag=True,
+    help=(
+        "Include generated rows that do not resolve in the current catalog as "
+        "catalog identity maintenance items."
+    ),
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_research_needs_export(  # noqa: PLR0913
+    ctx: click.Context,
+    classification_csv: Path,
+    output_path: Path,
+    language: str | None,
+    limit: int | None,
+    per_need_type_limit: int,
+    include_covered: bool,
+    include_unresolved: bool,
+    output: str,
+) -> None:
+    """Export generated-classification rows that need source-backed research."""
+    catalog_path = _reader_service_from_context(ctx).catalog_path
+    summary = export_research_needs_csv(
+        config=ResearchNeedsConfig(
+            catalog_path=catalog_path,
+            classification_csv=classification_csv.expanduser(),
+            output_csv=output_path.expanduser(),
+            language=language,
+            limit=limit,
+            per_need_type_limit=per_need_type_limit,
+            include_covered=include_covered,
+            include_unresolved=include_unresolved,
+        )
+    )
+    payload = {
+        "schema_version": "langnet.reader.v1",
+        "mode": "research-needs-export",
+        "catalog_path": str(catalog_path),
+        "summary": summary,
+    }
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    click.echo(
+        f"Selected {summary['research_need_count']} research need row(s): {summary['output_csv']}"
+    )
+
+
 @reader_cli.command("author-classification-export")
 @click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
 @click.option("--limit", default=None, type=click.IntRange(1, 100000), help="Maximum rows.")
@@ -3128,11 +3314,25 @@ def reader_author_classification_export(
 )
 @click.option(
     "--shuffle-seed",
-    default=None,
+    default=DEFAULT_CLASSIFICATION_SHUFFLE_SEED,
+    show_default=True,
     help=(
-        "Optional deterministic seed for shuffling rows before batching. "
-        "The output CSV keeps input order."
+        "Deterministic seed for shuffling rows before batching. The output CSV keeps input order."
     ),
+)
+@click.option(
+    "--batch-order",
+    type=click.Choice(["stratified", "shuffle", "input"]),
+    default="stratified",
+    show_default=True,
+    help="Prompt row ordering before batching.",
+)
+@click.option(
+    "--output-profile",
+    type=click.Choice(["slim", "full"]),
+    default="slim",
+    show_default=True,
+    help="Generated metadata fields requested from the model.",
 )
 @click.option(
     "--output",
@@ -3152,6 +3352,8 @@ def reader_classify_works(  # noqa: PLR0913
     concurrency: int,
     raw_response_dir: Path | None,
     shuffle_seed: str | None,
+    batch_order: str,
+    output_profile: str,
     output: str,
 ) -> None:
     """Generate classifier-filled reader work metadata CSV with a model."""
@@ -3165,6 +3367,8 @@ def reader_classify_works(  # noqa: PLR0913
             batch_size=batch_size,
             raw_response_dir=raw_response_dir.expanduser() if raw_response_dir else None,
             shuffle_seed=shuffle_seed,
+            batch_order=batch_order,
+            output_profile=output_profile,
             concurrency=concurrency,
         ),
         classify=_openrouter_work_classifier_callback(

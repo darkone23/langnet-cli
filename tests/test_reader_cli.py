@@ -14,6 +14,7 @@ from langnet.reader.models import (
     ReaderAlias,
     ReaderBookArtifact,
     ReaderEdition,
+    ReaderMetadataAttribution,
     ReaderMetadataOverlayEvidence,
     ReaderSegment,
     ReaderSegmentAddress,
@@ -27,6 +28,7 @@ from langnet.reader.storage import (
     list_source_metadata,
     register_aliases,
     register_book,
+    register_metadata_attributions,
     register_segment_rows,
     register_source_metadata,
     register_work_map_nodes,
@@ -38,6 +40,8 @@ RETRY_TEST_ATTEMPTS = 2
 CANONICAL_POPULARITY_SCORE = 100
 PERSEUS_GRAMMAR_METADATA_COUNT = 7
 AUTHOR_CLASSIFICATION_FIXTURE_COUNT = 2
+CLASSIFICATION_ESCALATION_FIXTURE_COUNT = 2
+DEFAULT_RESEARCH_NEED_TYPE_LIMIT = 5
 ODYSSEY_FIXTURE_SEGMENT_COUNT = 2
 LEGACY_LANGUAGE_REPAIR_EXPECTED_COUNT = 5
 VULGATE_METADATA_OVERLAY_EXPECTED_COUNT = 2
@@ -227,6 +231,8 @@ def test_reader_cli_help_surface() -> None:
         ["reader", "facets"],
         ["reader", "author-facets"],
         ["reader", "author-classification-export"],
+        ["reader", "classification-escalation-export"],
+        ["reader", "research-needs-export"],
         ["reader", "classify-authors"],
         ["reader", "contents"],
         ["reader", "show"],
@@ -2035,6 +2041,145 @@ def test_reader_cli_classify_works_writes_generated_csv() -> None:
     assert "classification_category" in rows[0]
     assert "epic" in rows[1]
     assert "run-test" in rows[1]
+
+
+def test_reader_cli_classification_escalation_export_selects_priority_rows() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        input_csv = root / "generated-classifications.csv"
+        output_csv = root / "pro-audit-input.csv"
+        input_csv.write_text(
+            "\n".join(
+                [
+                    "work_id,language,title,classification_global_popularity_score,"
+                    "classification_group_popularity_score,classification_confidence",
+                    "minor,grc,Minor Work,12,20,high",
+                    "iliad,grc,Iliad,100,100,high",
+                    "uncertain,grc,Fragmenta,2,4,low",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "reader",
+                "classification-escalation-export",
+                "--input-csv",
+                str(input_csv),
+                "--path",
+                str(output_csv),
+                "--output",
+                "json",
+            ],
+        )
+        payload = json.loads(result.output)
+        rows = list(csv.DictReader(output_csv.open("r", encoding="utf-8", newline="")))
+
+    assert result.exit_code == 0, result.output
+    assert payload["summary"]["selected_count"] == CLASSIFICATION_ESCALATION_FIXTURE_COUNT
+    assert payload["summary"]["reason_counts"] == {
+        "global_score": 1,
+        "group_score": 1,
+        "confidence": 1,
+    }
+    assert payload["summary"]["recommended_audit_model"] == "openai:deepseek/deepseek-v4-pro"
+    assert [row["work_id"] for row in rows] == ["iliad", "uncertain"]
+
+
+def test_reader_cli_research_needs_export_uses_catalog_coverage() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="work-needs-research",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Needsresearchśāstra",
+            author="Unknown",
+            author_id=None,
+            source_id="dcs_needs",
+        )
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="work-covered",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Coveredśāstra",
+            author="Unknown",
+            author_id=None,
+            source_id="dcs_covered",
+        )
+        register_metadata_attributions(
+            catalog_path,
+            [
+                ReaderMetadataAttribution(
+                    collection_id="sanskrit_dcs",
+                    match_field="source_id",
+                    match_value="dcs_covered",
+                    relation_type="traditional_author",
+                    agent="Coveredācārya",
+                    status="accepted",
+                    confidence="high",
+                    note="Accepted fixture attribution.",
+                    source_file="fixture.yaml",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+        classification_csv = root / "generated.csv"
+        output_csv = root / "research-needs.csv"
+        classification_csv.write_text(
+            "\n".join(
+                [
+                    "work_id,language,title,author,source_id,"
+                    "classification_authorship_status,"
+                    "classification_global_popularity_score,"
+                    "classification_confidence,classification_notes",
+                    "work-needs-research,san,Needsresearchśāstra,Unknown,dcs_needs,"
+                    "traditional,90,medium,Traditionally attributed to Needācārya.",
+                    "work-covered,san,Coveredśāstra,Unknown,dcs_covered,"
+                    "traditional,90,medium,Traditionally attributed to Coveredācārya.",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "reader",
+                "--catalog",
+                str(catalog_path),
+                "research-needs-export",
+                "--classification-csv",
+                str(classification_csv),
+                "--path",
+                str(output_csv),
+                "--output",
+                "json",
+            ],
+        )
+        payload = json.loads(result.output)
+        rows = list(csv.DictReader(output_csv.open("r", encoding="utf-8", newline="")))
+
+    assert result.exit_code == 0, result.output
+    assert payload["summary"]["research_need_count"] == 1
+    assert payload["summary"]["per_need_type_limit"] == DEFAULT_RESEARCH_NEED_TYPE_LIMIT
+    assert rows[0]["work_id"] == "work-needs-research"
+    assert rows[0]["research_need_type"] == "attribution_needed"
+    assert rows[0]["recommended_layer"] == "data/curated/reader_attributions"
 
 
 def test_reader_cli_sync_source_enrichment_imports_perseus_catalog_results() -> None:

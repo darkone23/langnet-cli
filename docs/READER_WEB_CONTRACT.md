@@ -316,15 +316,40 @@ just cli reader classify-works \
   --output-csv examples/debug/reader-generated-classifications.csv \
   --model openai:deepseek/deepseek-v4-flash \
   --batch-size 25 \
+  --output-profile slim \
+  --batch-order stratified \
   --concurrency 4 \
   --timeout-seconds 120 \
   --max-attempts 3 \
   --raw-response-dir examples/debug/reader-classifier-raw \
-  --shuffle-seed reader-classifier-2026-05-15 \
+  --shuffle-seed langnet-reader-classification-v1 \
+  --output json
+
+just cli reader classification-escalation-export \
+  --input-csv examples/debug/reader-generated-classifications.csv \
+  --path examples/debug/reader-pro-audit-input.csv \
+  --output json
+
+export PRO_CLASSIFICATION_MODEL="openai:deepseek/deepseek-v4-pro"
+just cli reader classify-works \
+  --input-csv examples/debug/reader-pro-audit-input.csv \
+  --output-csv examples/debug/reader-pro-audit-generated.csv \
+  --model "$PRO_CLASSIFICATION_MODEL" \
+  --run-id reader-classifier-pro-audit \
+  --batch-size 25 \
+  --output-profile slim \
+  --batch-order stratified \
+  --raw-response-dir examples/debug/reader-pro-audit-raw \
+  --shuffle-seed langnet-reader-classification-v1 \
   --output json
 
 just cli reader --catalog $CATALOG sync-classifications \
   --classification-csv examples/debug/reader-generated-classifications.csv \
+  --output json
+
+just cli reader --catalog $CATALOG sync-classifications \
+  --classification-csv examples/debug/reader-pro-audit-generated.csv \
+  --merge \
   --output json
 
 # For a shared catalog, such as Latin and Greek in the same DuckDB file,
@@ -367,21 +392,39 @@ blank enrichment columns for bulk classification, including
 `classification_scope_popularity_score`, and `classification_notes`.
 
 `classify-works` sends exported rows to the configured OpenRouter/aisuite model
-in batches and writes generated classification rows. The default batch size is
-25, with one model batch in flight by default, three attempts, and a
-120-second timeout per provider call. Use `--concurrency N` for provider-bound
-bulk jobs; `4` has worked well for Latin, and `8` is reasonable for larger
-resumable runs when the provider is stable. If a batch
+in batches and writes generated classification rows. The default request asks
+for the `slim` generated output profile: discovery group, tags, popularity,
+period, authorship status, confidence, and notes. Compatibility fields such as
+legacy category, scope, and legacy popularity columns are derived locally and
+still written to the output CSV. The default batch size is 25, with one model
+batch in flight by default, three attempts, and a 120-second timeout per
+provider call. Use `--concurrency N` for provider-bound bulk jobs; `4` has
+worked well for Latin, and `8` is reasonable for larger resumable runs when the
+provider is stable. If a batch
 returns incomplete generated metadata, including rows without
 `classification_notes`, the classifier retries that batch by splitting it into
 smaller batches, so large corpus runs can keep useful throughput without
 requiring one model call per work. When `--raw-response-dir` is set, completed
 `batch-XXXX.json` responses are reused on rerun, which makes interrupted
-provider runs resumable. When `--shuffle-seed` is set, rows are shuffled
-deterministically before batching and written back in input CSV order. This
-spreads catalog-order clusters, such as many works by one author, across model
-requests while preserving stable output files. This output is generated
-metadata, not candidate metadata: `sync-classifications` imports it directly
+provider runs resumable. By default, `--batch-order stratified` uses the fixed
+`--shuffle-seed langnet-reader-classification-v1` to round-robin deterministic
+author/source clusters before batching and writes rows back in input CSV order.
+This spreads catalog-order clusters, such as many works by one author, across
+model requests while preserving stable output files. Use `--output-profile full`
+only when intentionally asking the model to produce the compatibility columns
+too.
+
+`classification-escalation-export` turns a broad generated CSV into a bounded
+priority queue for a stronger-model audit pass. By default it selects rows with
+canonical/high global popularity, high within-group popularity, or low
+confidence. The stronger pass can use the same `classify-works` command with a
+slower model, then `sync-classifications --merge` overwrites only the audited
+rows. Existing generated fields are passed to the classifier as prior generated
+metadata, not source evidence, so the audit pass can revise them without
+confusing them with Firecrawl-backed or curated facts.
+
+This output is generated metadata, not candidate metadata:
+`sync-classifications` imports it directly
 into the reader catalog while preserving `classification_generator_models` and
 `classification_generator_run_id` provenance. By default, sync replaces the
 catalog's generated classification table. Pass `--merge` to replace only the

@@ -1415,11 +1415,20 @@ def register_work_classifications(
 
 def _catalog_work_classification_id_map(catalog_path: Path) -> dict[str, str]:
     with _connect_read(catalog_path) as conn:
+        contained_union = ""
+        if _table_exists(conn, "contained_works"):
+            contained_union = """
+                UNION ALL
+                SELECT contained_work_id AS work_id, source_id, cts_work_urn
+                FROM contained_works
+                WHERE status = 'accepted'
+            """
         rows = _dict_rows(
             conn,
-            """
+            f"""
             SELECT work_id, source_id, cts_work_urn
             FROM works
+            {contained_union}
             """,
         )
     candidates: dict[str, set[str]] = {}
@@ -3378,7 +3387,7 @@ def _raw_author_rows(
         if _table_exists(conn, "contained_works"):
             contained_union = """
                 UNION ALL
-                SELECT
+                SELECT DISTINCT
                     contained_work_id AS work_id,
                     title,
                     author,
@@ -3827,6 +3836,7 @@ def list_discovery_group_summaries(
         columns = _table_columns(conn, "work_classifications")
         if "discovery_group_id" not in columns:
             return []
+        contained_union = _contained_discovery_work_rows_union(conn)
         conditions = ["coalesce(wc.discovery_group_id, '') <> ''"]
         params: list[object] = []
         if language:
@@ -3835,6 +3845,11 @@ def list_discovery_group_summaries(
         rows = _dict_rows(
             conn,
             f"""
+            WITH discovery_work_rows AS (
+                SELECT work_id, author_id, author, language
+                FROM works
+                {contained_union}
+            )
             SELECT
                 wc.discovery_group_id AS id,
                 COUNT(DISTINCT w.work_id) AS work_count,
@@ -3848,7 +3863,7 @@ def list_discovery_group_summaries(
                     END
                 ) AS author_count,
                 MAX(wc.group_popularity_score) AS max_group_popularity_score
-            FROM works w
+            FROM discovery_work_rows w
             JOIN work_classifications wc ON wc.work_id = w.work_id
             WHERE {" AND ".join(conditions)}
             GROUP BY wc.discovery_group_id
@@ -3856,6 +3871,21 @@ def list_discovery_group_summaries(
             params,
         )
     return _merge_discovery_counts(rows, DISCOVERY_GROUPS)
+
+
+def _contained_discovery_work_rows_union(conn: Any) -> str:
+    if not _table_exists(conn, "contained_works"):
+        return ""
+    return """
+        UNION ALL
+        SELECT DISTINCT
+            contained_work_id AS work_id,
+            NULL::VARCHAR AS author_id,
+            author,
+            language
+        FROM contained_works
+        WHERE status = 'accepted'
+    """
 
 
 def list_discovery_tag_summaries(
@@ -3871,6 +3901,7 @@ def list_discovery_tag_summaries(
         columns = _table_columns(conn, "work_classifications")
         if "discovery_tags" not in columns:
             return []
+        contained_union = _contained_discovery_work_rows_union(conn)
         conditions = ["coalesce(wc.discovery_tags, '') <> ''"]
         params: list[object] = []
         if language:
@@ -3879,13 +3910,18 @@ def list_discovery_tag_summaries(
         rows = _dict_rows(
             conn,
             f"""
+            WITH discovery_work_rows AS (
+                SELECT work_id, author_id, author, language
+                FROM works
+                {contained_union}
+            )
             SELECT
                 w.work_id,
                 w.author_id,
                 w.author,
                 wc.discovery_tags,
                 wc.group_popularity_score
-            FROM works w
+            FROM discovery_work_rows w
             JOIN work_classifications wc ON wc.work_id = w.work_id
             WHERE {" AND ".join(conditions)}
             """,
@@ -4010,6 +4046,20 @@ def _discovery_shelf_sample_works(
         columns = _table_columns(conn, "work_classifications")
         if "discovery_group_id" not in columns:
             return {}
+        contained_union = ""
+        if _table_exists(conn, "contained_works"):
+            contained_union = """
+                UNION ALL
+                SELECT DISTINCT
+                    contained_work_id AS work_id,
+                    title,
+                    author,
+                    language,
+                    source_id,
+                    collection_id
+                FROM contained_works
+                WHERE status = 'accepted'
+            """
         group_frame = pl.DataFrame(
             [(group_id,) for group_id in group_ids],
             schema={"group_id": pl.Utf8},
@@ -4019,7 +4069,7 @@ def _discovery_shelf_sample_works(
         try:
             rows = _dict_rows(
                 conn,
-                """
+                f"""
                 WITH ranked AS (
                     SELECT
                         wc.discovery_group_id AS shelf_group_id,
@@ -4043,7 +4093,11 @@ def _discovery_shelf_sample_works(
                                 w.title,
                                 w.work_id
                         ) AS shelf_rank
-                    FROM works w
+                    FROM (
+                        SELECT work_id, title, author, language, source_id, collection_id
+                        FROM works
+                        {contained_union}
+                    ) w
                     JOIN work_classifications wc ON wc.work_id = w.work_id
                     JOIN shelf_group_ids s ON s.group_id = wc.discovery_group_id
                     WHERE (? IS NULL OR w.language = ?)
