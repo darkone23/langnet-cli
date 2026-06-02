@@ -438,7 +438,11 @@ async function hydrateMotdDiskCacheOnce() {
 	try {
 		const raw = await readFile(motdDiskCachePath, 'utf8');
 		const parsed = JSON.parse(raw) as Partial<PersistedMotdCache>;
-		if (parsed.version !== motdCacheVersion || !parsed.entries || typeof parsed.entries !== 'object')
+		if (
+			parsed.version !== motdCacheVersion ||
+			!parsed.entries ||
+			typeof parsed.entries !== 'object'
+		)
 			return;
 		const oldestUsableExpiry = Date.now() - maxPersistedStaleMs;
 		for (const [key, entry] of Object.entries(parsed.entries)) {
@@ -494,7 +498,9 @@ function persistMotdDiskCache() {
 
 function isRecoverablePoolMiss(error: unknown) {
 	const message = error instanceof Error ? error.message : String(error ?? '');
-	return /MOTD pool database does not exist|Precomputed learner pool returned no cards/i.test(message);
+	return /MOTD pool database does not exist|Precomputed learner pool returned no cards/i.test(
+		message
+	);
 }
 
 function motdCacheKey({

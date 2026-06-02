@@ -493,6 +493,7 @@ def _parse_diogenes_html(html: str) -> DiogenesParsedResult:
 def _extract_lemmas_from_chunks(chunks: Sequence[DiogenesChunk]) -> list[str]:
     """Extract lemmas from parsed Diogenes chunks."""
     lemmas: list[str] = []
+    skip_fuzzy_definitions = _has_no_match_header(chunks)
     for chunk in chunks:
         if not isinstance(chunk, Mapping):
             continue
@@ -511,7 +512,9 @@ def _extract_lemmas_from_chunks(chunks: Sequence[DiogenesChunk]) -> list[str]:
                             strip_accents(s).lower() for s in stems if isinstance(s, str)
                         ]
                         lemmas.extend(normalized_stems)
-        elif chunk_type in {"DiogenesMatchingReference", "DiogenesFuzzyReference"}:
+        elif chunk_type == "DiogenesMatchingReference" or (
+            chunk_type == "DiogenesFuzzyReference" and not skip_fuzzy_definitions
+        ):
             definitions = chunk.get("definitions", {})
             if isinstance(definitions, Mapping):
                 term = definitions.get("term")
@@ -796,6 +799,7 @@ def _build_triples(
     if not isinstance(chunks, Sequence):
         return triples
 
+    skip_fuzzy_definitions = _has_no_match_header(chunks)
     for chunk in chunks:
         if not isinstance(chunk, Mapping):
             continue
@@ -810,10 +814,10 @@ def _build_triples(
                     morph_typed, default_lex, base_evidence
                 )
                 triples.extend(perseus_triples)
-        elif include_definitions and chunk_type in {
-            "DiogenesMatchingReference",
-            "DiogenesFuzzyReference",
-        }:
+        elif include_definitions and (
+            chunk_type == "DiogenesMatchingReference"
+            or (chunk_type == "DiogenesFuzzyReference" and not skip_fuzzy_definitions)
+        ):
             definitions = chunk_dict.get("definitions")
             if isinstance(definitions, Mapping):
                 defs_typed = cast(Mapping[str, object], definitions)
@@ -829,6 +833,13 @@ def _build_triples(
                 )
 
     return triples
+
+
+def _has_no_match_header(chunks: Sequence[object]) -> bool:
+    return any(
+        isinstance(chunk, Mapping) and chunk.get("chunk_type") == "NoMatchFoundHeader"
+        for chunk in chunks
+    )
 
 
 @versioned("v1")

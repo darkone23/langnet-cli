@@ -104,6 +104,40 @@ def test_diogenes_surface_morphology_triples_can_exclude_definitions() -> None:
     assert not any(t["predicate"] == "has_sense" for t in triples)
 
 
+def test_diogenes_no_match_fuzzy_reference_does_not_become_definition_evidence() -> None:
+    base_evidence = {"source_tool": "diogenes", "call_id": "c1", "claim_id": "cl1"}
+    parsed = {
+        "chunks": [
+            {"chunk_type": "NoMatchFoundHeader"},
+            {
+                "chunk_type": "DiogenesFuzzyReference",
+                "reference_id": "45070726",
+                "definitions": {
+                    "term": "ἥσθημα",
+                    "blocks": [{"entry": "= ἡδονή, Eup. 131.", "entryid": "00:00"}],
+                },
+            },
+        ]
+    }
+
+    triples = dio_handlers._build_triples(parsed, ["Ἠσαίᾳ"], base_evidence)
+
+    assert not any(t["predicate"] == "has_sense" for t in triples)
+    assert not any(t["predicate"] == "gloss" for t in triples)
+
+
+def test_diogenes_no_match_fuzzy_reference_does_not_become_lemma() -> None:
+    chunks = [
+        {"chunk_type": "NoMatchFoundHeader"},
+        {
+            "chunk_type": "DiogenesFuzzyReference",
+            "definitions": {"term": "ἥσθημα", "blocks": []},
+        },
+    ]
+
+    assert dio_handlers._extract_lemmas_from_chunks(chunks) == []
+
+
 def test_cltk_normalizes_greek_tokens() -> None:
     assert cltk_handlers._normalize_token("λόγος") == "logos"
     assert cltk_handlers._normalize_token("λόγος") == "logos"

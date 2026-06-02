@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { componentGlossFromCli } from '$lib/component-gloss';
+import type { EncounterBriefingFlow, EncounterBriefingRequest } from '$lib/encounter-briefing';
 import { normalizeParadigmPayload, type ParadigmPayload } from '$lib/paradigm';
 import { normalizeParadigmResolution } from '$lib/paradigm-resolution';
 import {
@@ -74,6 +75,7 @@ let cliQueue: Promise<void> = Promise.resolve();
 type CliCommandOptions = {
 	signal?: AbortSignal;
 	queued?: boolean;
+	stdin?: string;
 };
 
 export function buildCliEnvironment(baseEnv: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
@@ -225,6 +227,60 @@ export async function encounterWordFromCli(request: CliRequest): Promise<Encount
 	return mapCliPayload(payload, request, toolFilter);
 }
 
+export async function encounterBriefingFromCli(
+	request: EncounterBriefingRequest
+): Promise<EncounterBriefingFlow> {
+	const toolFilter = cliToolFilter(request.language, request.dictionaries);
+	const encounterArgs = [
+		'cli',
+		'encounter',
+		request.language,
+		request.query,
+		toolFilter,
+		'--translation-mode',
+		request.translationMode,
+		'--cache-policy',
+		'read-only',
+		'--output',
+		'json',
+		'--max-buckets',
+		String(request.maxBuckets),
+		'--max-gloss-chars',
+		String(request.maxGlossChars),
+		'--include-paradigm-resolution',
+		'--include-learning'
+	];
+	const encounterPayload = await runJsonCommand(encounterArgs, request.timeoutMs, {
+		queued: false
+	});
+	const briefingArgs = [
+		'cli',
+		'encounter-briefing',
+		'--input-json',
+		'-',
+		'--model',
+		request.model,
+		'--cache-policy',
+		request.cachePolicy,
+		'--max-meanings',
+		String(request.maxMeanings),
+		'--max-reader-usages',
+		String(request.maxReaderUsages),
+		'--max-source-refs',
+		String(request.maxSourceRefs)
+	];
+
+	if (request.generate) briefingArgs.push('--generate');
+	else briefingArgs.push('--cache-only');
+
+	const payload = await runJsonCommand(briefingArgs, request.timeoutMs, {
+		queued: true,
+		stdin: JSON.stringify(encounterPayload)
+	});
+
+	return mapEncounterBriefingPayload(payload);
+}
+
 export async function clearTranslationCacheFromCli(
 	request: TranslationRetryRequest
 ): Promise<JsonObject> {
@@ -349,9 +405,13 @@ function runJsonCommandUnlocked(
 
 		const child = spawn('just', args, {
 			cwd: cliDirectory,
-			stdio: ['ignore', 'pipe', 'pipe'],
+			stdio: [options.stdin === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
 			env: buildCliEnvironment()
 		});
+		if (!child.stdout || !child.stderr) {
+			reject(new Error('langnet-cli process streams were unavailable.'));
+			return;
+		}
 		const chunks: Buffer[] = [];
 		const errorChunks: Buffer[] = [];
 		let settled = false;
@@ -375,6 +435,10 @@ function runJsonCommandUnlocked(
 		timer = setTimeout(() => {
 			rejectAndKill(new Error(`langnet-cli timed out after ${Math.round(timeoutMs / 1000)}s`));
 		}, timeoutMs);
+
+		if (options.stdin !== undefined) {
+			child.stdin?.end(options.stdin);
+		}
 
 		child.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
 		child.stderr.on('data', (chunk: Buffer) => errorChunks.push(chunk));
@@ -538,6 +602,92 @@ export function mapCliPayload(
 			translation_cache_writes: booleanValue(payloadRequest?.translation_cache_writes)
 		},
 		backend: 'cli'
+	};
+}
+
+export function mapEncounterBriefingPayload(payload: JsonObject): EncounterBriefingFlow {
+	const generation = objectValue(payload.generation);
+	const digest = objectValue(payload.digest);
+	const draftOutput = mapEncounterBriefingSummary(objectValue(payload.draft_output));
+	const finalOutput = mapEncounterBriefingSummary(objectValue(payload.final_output));
+	const modelOutput = mapEncounterBriefingSummary(objectValue(payload.model_output));
+
+	return {
+		schema_version: stringValue(payload.schema_version),
+		...(digest
+			? {
+					digest: {
+						query: stringValue(digest.query),
+						language: normalizeLanguage(stringValue(digest.language)),
+						forms: arrayOfStrings(digest.forms)
+					}
+				}
+			: {}),
+		generation: {
+			status: stringValue(generation?.status),
+			cached_status: stringValue(generation?.cached_status) || undefined,
+			model: stringValue(generation?.model) || undefined,
+			prompt_version: stringValue(generation?.prompt_version) || undefined,
+			validation_issue_count: numberValue(generation?.validation_issue_count) || undefined,
+			validation_issues: arrayOfObjects(generation?.validation_issues).map((issue) => ({
+				code: stringValue(issue.code),
+				path: stringValue(issue.path),
+				message: stringValue(issue.message)
+			}))
+		},
+		...(draftOutput ? { draft_output: draftOutput } : {}),
+		...(finalOutput ? { final_output: finalOutput } : {}),
+		...(modelOutput ? { model_output: modelOutput } : {}),
+		error: stringValue(payload.error) || undefined
+	};
+}
+
+function mapEncounterBriefingSummary(summary: JsonObject | undefined) {
+	if (!summary) return undefined;
+
+	return {
+		schema_version: stringValue(summary.schema_version),
+		short: stringValue(summary.short),
+		forms: arrayOfStrings(summary.forms),
+		meanings: arrayOfObjects(summary.meanings).map((meaning) => ({
+			summary: stringValue(meaning.summary),
+			source_glosses: arrayOfStrings(meaning.source_glosses),
+			source_gloss_language: stringValue(meaning.source_gloss_language),
+			translation_status: stringValue(meaning.translation_status),
+			sources: arrayOfStrings(meaning.sources),
+			translation_sources: arrayOfStrings(meaning.translation_sources),
+			confidence: stringValue(meaning.confidence) || undefined,
+			source_refs: arrayOfStrings(meaning.source_refs)
+		})),
+		grammar_functions: arrayOfObjects(summary.grammar_functions).map((item) => ({
+			summary: stringValue(item.summary),
+			form: stringValue(item.form),
+			lemma: stringValue(item.lemma),
+			analysis: stringValue(item.analysis),
+			foster_display: stringValue(item.foster_display),
+			source: stringValue(item.source)
+		})),
+		word_decomposition: arrayOfObjects(summary.word_decomposition).map((item) => ({
+			form: stringValue(item.form),
+			lemma: stringValue(item.lemma),
+			analysis: stringValue(item.analysis),
+			source: stringValue(item.source),
+			note: stringValue(item.note)
+		})),
+		reader_usages: arrayOfObjects(summary.reader_usages).map((item) => ({
+			label: stringValue(item.label),
+			snippet: stringValue(item.snippet),
+			note: stringValue(item.note)
+		})),
+		phrase_pairs: arrayOfObjects(summary.phrase_pairs).map((item) => ({
+			phrase: stringValue(item.phrase),
+			gloss: stringValue(item.gloss),
+			source: stringValue(item.source),
+			source_ref: stringValue(item.source_ref),
+			note: stringValue(item.note)
+		})),
+		dictionary_sources: arrayOfStrings(summary.dictionary_sources),
+		caveats: arrayOfStrings(summary.caveats)
 	};
 }
 

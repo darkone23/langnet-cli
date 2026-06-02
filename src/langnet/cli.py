@@ -12229,6 +12229,280 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
         raise
 
 
+def _encounter_briefing_options(fn):
+    fn = click.option(
+        "--cache-only",
+        is_flag=True,
+        help="Read the generated briefing cache and return a draft fallback on miss.",
+    )(fn)
+    fn = click.option(
+        "--cache-policy",
+        type=click.Choice(["read-write", "read-only", "off"]),
+        default="read-write",
+        show_default=True,
+        help="Cache policy for --generate.",
+    )(fn)
+    fn = click.option(
+        "--briefing-cache-dir",
+        type=click.Path(path_type=Path),
+        default=Path("data/cache/encounter-briefings"),
+        show_default=True,
+        help="Directory for generated encounter briefing cache entries.",
+    )(fn)
+    fn = click.option(
+        "--generate",
+        is_flag=True,
+        help="Call the configured OpenRouter/aisuite model and validate the response.",
+    )(fn)
+    fn = click.option(
+        "--model-response-json",
+        default="",
+        help="Apply a saved model response string, or '@path' to read one from disk.",
+    )(fn)
+    fn = click.option(
+        "--output",
+        type=click.Choice(["json", "prompt"]),
+        default="json",
+        show_default=True,
+    )(fn)
+    fn = click.option(
+        "--model",
+        default="openai:qwen/qwen3.7-max",
+        show_default=True,
+        help="Target OpenRouter/aisuite model for later briefing generation.",
+    )(fn)
+    fn = click.option(
+        "--max-source-refs",
+        default=12,
+        show_default=True,
+        type=click.IntRange(0, 50),
+    )(fn)
+    fn = click.option(
+        "--max-reader-usages", default=4, show_default=True, type=click.IntRange(0, 20)
+    )(fn)
+    fn = click.option("--max-meanings", default=6, show_default=True, type=click.IntRange(1, 20))(
+        fn
+    )
+    return click.option(
+        "--input-json",
+        "input_json",
+        type=str,
+        required=True,
+        help="Saved `encounter --output json` payload, or '-' to read from stdin.",
+    )(fn)
+
+
+@main.command("encounter-briefing")
+@_encounter_briefing_options
+def encounter_briefing(  # noqa: PLR0913
+    input_json: str,
+    max_meanings: int,
+    max_reader_usages: int,
+    max_source_refs: int,
+    model: str,
+    output: str,
+    model_response_json: str,
+    generate: bool,
+    briefing_cache_dir: Path,
+    cache_policy: str,
+    cache_only: bool,
+) -> None:
+    """Build or generate a cached learner briefing for an encounter payload."""
+    _encounter_briefing_command(
+        input_json=input_json,
+        max_meanings=max_meanings,
+        max_reader_usages=max_reader_usages,
+        max_source_refs=max_source_refs,
+        model=model,
+        output=output,
+        model_response_json=model_response_json,
+        generate=generate,
+        briefing_cache_dir=briefing_cache_dir,
+        cache_policy=cache_policy,
+        cache_only=cache_only,
+    )
+
+
+@main.command("encounter-briefing-spike", hidden=True)
+@_encounter_briefing_options
+def encounter_briefing_spike(  # noqa: PLR0913
+    input_json: str,
+    max_meanings: int,
+    max_reader_usages: int,
+    max_source_refs: int,
+    model: str,
+    output: str,
+    model_response_json: str,
+    generate: bool,
+    briefing_cache_dir: Path,
+    cache_policy: str,
+    cache_only: bool,
+) -> None:
+    """Prototype the cached LLM briefing input/output flow for an encounter payload."""
+    _encounter_briefing_command(
+        input_json=input_json,
+        max_meanings=max_meanings,
+        max_reader_usages=max_reader_usages,
+        max_source_refs=max_source_refs,
+        model=model,
+        output=output,
+        model_response_json=model_response_json,
+        generate=generate,
+        briefing_cache_dir=briefing_cache_dir,
+        cache_policy=cache_policy,
+        cache_only=cache_only,
+    )
+
+
+def _encounter_briefing_command(  # noqa: C901, PLR0913
+    *,
+    input_json: str,
+    max_meanings: int,
+    max_reader_usages: int,
+    max_source_refs: int,
+    model: str,
+    output: str,
+    model_response_json: str,
+    generate: bool,
+    briefing_cache_dir: Path,
+    cache_policy: str,
+    cache_only: bool,
+) -> None:
+    from langnet.encounter_briefing import (  # noqa: PLC0415
+        apply_briefing_model_response,
+        briefing_cache_key,
+        build_encounter_briefing_flow,
+        load_cached_briefing_flow,
+        store_cached_briefing_flow,
+    )
+
+    raw_payload = sys.stdin.buffer.read() if input_json == "-" else Path(input_json).read_bytes()
+    payload = cast(Mapping[str, object], orjson.loads(raw_payload))
+    flow = build_encounter_briefing_flow(
+        payload,
+        model=model,
+        max_meanings=max_meanings,
+        max_reader_usages=max_reader_usages,
+        max_source_refs=max_source_refs,
+    )
+    if output == "prompt":
+        prompt = cast(Mapping[str, object], flow["prompt"])
+        click.echo(str(prompt["system"]))
+        click.echo("\n---\n")
+        click.echo(str(prompt["user"]))
+        return
+    if cache_only and (model_response_json or generate):
+        raise click.ClickException("Use --cache-only without --model-response-json or --generate.")
+    if model_response_json and generate:
+        raise click.ClickException("Use either --model-response-json or --generate, not both.")
+    if cache_only:
+        cached = load_cached_briefing_flow(briefing_cache_dir, flow)
+        if cached is not None:
+            click.echo(orjson.dumps(cached, option=orjson.OPT_INDENT_2).decode("utf-8"))
+            return
+        flow = dict(flow)
+        generation = dict(cast(Mapping[str, object], flow["generation"]))
+        generation["status"] = "cache_miss"
+        generation["cache_key"] = briefing_cache_key(flow)
+        flow["generation"] = generation
+        flow["final_output"] = flow.get("draft_output")
+        click.echo(orjson.dumps(flow, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    if generate:
+        if cache_policy != "off":
+            cached = load_cached_briefing_flow(briefing_cache_dir, flow)
+            if cached is not None:
+                click.echo(orjson.dumps(cached, option=orjson.OPT_INDENT_2).decode("utf-8"))
+                return
+        response_text = _encounter_briefing_generate_response(flow, model=model)
+        flow = apply_briefing_model_response(flow, response_text)
+        if cache_policy == "read-write":
+            store_cached_briefing_flow(briefing_cache_dir, flow)
+    elif model_response_json:
+        response_text = (
+            Path(model_response_json[1:]).read_text()
+            if model_response_json.startswith("@")
+            else model_response_json
+        )
+        flow = apply_briefing_model_response(flow, response_text)
+        if cache_policy == "read-write":
+            store_cached_briefing_flow(briefing_cache_dir, flow)
+    click.echo(orjson.dumps(flow, option=orjson.OPT_INDENT_2).decode("utf-8"))
+
+
+def _encounter_briefing_generate_response(flow: Mapping[str, object], *, model: str) -> str:
+    import dotenv  # noqa: PLC0415
+
+    dotenv.load_dotenv()
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise click.ClickException("Set OPENAI_API_KEY before using --generate.")
+    api_base = os.getenv(
+        "OPENAI_API_BASE",
+        os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1"),
+    )
+    os.environ["OPENAI_BASE_URL"] = api_base
+    try:
+        import aisuite as ai  # noqa: PLC0415
+    except ImportError as exc:
+        raise click.ClickException("aisuite is required for --generate.") from exc
+
+    prompt = cast(Mapping[str, object], flow["prompt"])
+    client = ai.Client({"api_key": api_key})
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": str(prompt["system"])},
+            {"role": "user", "content": str(prompt["user"])},
+        ],
+        temperature=0.2,
+    )
+    return str(response.choices[0].message.content or "")
+
+
+@main.command("encounter-briefing-batch-spike")
+@click.option(
+    "--input-jsonl",
+    "input_jsonl",
+    type=str,
+    required=True,
+    help="Saved encounter JSONL payloads, or '-' to read from stdin.",
+)
+@click.option("--max-meanings", default=6, show_default=True, type=click.IntRange(1, 20))
+@click.option("--max-reader-usages", default=4, show_default=True, type=click.IntRange(0, 20))
+@click.option("--max-source-refs", default=12, show_default=True, type=click.IntRange(0, 50))
+@click.option(
+    "--model",
+    default="openai:qwen/qwen3.7-max",
+    show_default=True,
+    help="Target OpenRouter/aisuite model for later briefing generation.",
+)
+def encounter_briefing_batch_spike(  # noqa: PLR0913
+    input_jsonl: str,
+    max_meanings: int,
+    max_reader_usages: int,
+    max_source_refs: int,
+    model: str,
+) -> None:
+    """Prototype a no-spend quality report over saved encounter payloads."""
+    from langnet.encounter_briefing import build_encounter_briefing_batch  # noqa: PLC0415
+
+    raw_payloads = sys.stdin.buffer.read() if input_jsonl == "-" else Path(input_jsonl).read_bytes()
+    payloads = [
+        cast(Mapping[str, object], orjson.loads(line))
+        for line in raw_payloads.splitlines()
+        if line.strip()
+    ]
+    batch = build_encounter_briefing_batch(
+        payloads,
+        model=model,
+        max_meanings=max_meanings,
+        max_reader_usages=max_reader_usages,
+        max_source_refs=max_source_refs,
+    )
+    click.echo(orjson.dumps(batch, option=orjson.OPT_INDENT_2).decode("utf-8"))
+
+
 def _reader_eval_translation_claims(
     *,
     claims: list[Mapping[str, object]],
