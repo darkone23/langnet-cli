@@ -40,6 +40,7 @@ from langnet.reader.author_normalization import (
 from langnet.reader.citation_map import load_citation_maps
 from langnet.reader.contained_work import load_contained_works
 from langnet.reader.ctsv2 import ctsv2_text_id
+from langnet.reader.division_metadata import accepted_division_metadata, load_division_metadata
 from langnet.reader.legacy_metadata import (
     legacy_source_files,
     legacy_source_metadata,
@@ -72,6 +73,7 @@ from langnet.reader.storage import (
     register_citation_maps,
     register_citation_references,
     register_contained_works,
+    register_division_metadata,
     register_metadata_attributions,
     register_metadata_overlays,
     register_segment_rows,
@@ -102,6 +104,7 @@ class ReaderBuildConfig:
     metadata_attribution_dir: Path | None = Path("data/curated/reader_attributions")
     contained_work_dir: Path | None = Path("data/curated/reader_contained_works")
     work_map_dir: Path | None = Path("data/curated/reader_work_maps")
+    division_metadata_dir: Path | None = Path("data/curated/reader_division_metadata")
     citation_map_dir: Path | None = Path("data/curated/reader_citation_maps")
     output_root: Path | None = None
     cts_index_path: Path | None = Path("data/build/cts_urn.duckdb")
@@ -187,6 +190,11 @@ class ReaderBuilder:
         )
         self._work_map_nodes = (
             load_work_map_nodes(config.work_map_dir) if config.work_map_dir is not None else []
+        )
+        self._division_metadata = (
+            load_division_metadata(config.division_metadata_dir)
+            if config.division_metadata_dir is not None
+            else []
         )
         self._citation_maps = (
             load_citation_maps(config.citation_map_dir)
@@ -313,6 +321,10 @@ class ReaderBuilder:
         register_work_map_nodes(
             self.catalog_path,
             accepted_work_map_nodes(self._work_map_nodes),
+        )
+        register_division_metadata(
+            self.catalog_path,
+            accepted_division_metadata(self._division_metadata),
         )
         register_citation_maps(self.catalog_path, self._citation_maps)
 

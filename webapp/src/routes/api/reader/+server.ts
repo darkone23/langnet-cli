@@ -19,9 +19,11 @@ import {
 	readerSearch,
 	readerShow,
 	readerShelves,
+	readerStructure,
 	readerSummary,
 	readerTags,
 	readerWork,
+	readerWorkDossier,
 	readerWorks
 } from '$lib/server/reader-cli';
 
@@ -40,7 +42,9 @@ const validModes = new Set([
 	'author-sections',
 	'authors',
 	'work',
+	'about',
 	'works',
+	'structure',
 	'contents',
 	'show',
 	'resolve-address'
@@ -162,6 +166,12 @@ export async function GET({ url, request }) {
 				return respond({ error: 'Reader work lookup requires a work parameter.' }, { status: 400 });
 			return cachedRespond(await readerWork({ catalogId, language, work, options }));
 		}
+		if (mode === 'about') {
+			const work = (url.searchParams.get('work') ?? url.searchParams.get('ref') ?? '').trim();
+			if (!work)
+				return respond({ error: 'Reader work dossier requires a work parameter.' }, { status: 400 });
+			return cachedRespond(await readerWorkDossier({ catalogId, language, work, options }));
+		}
 		if (mode === 'works') {
 			return cachedRespond(
 				await readerWorks({
@@ -182,6 +192,12 @@ export async function GET({ url, request }) {
 					options
 				})
 			);
+		}
+		if (mode === 'structure') {
+			const work = (url.searchParams.get('work') ?? '').trim();
+			if (!work)
+				return respond({ error: 'Reader structure requires a work parameter.' }, { status: 400 });
+			return cachedRespond(await readerStructure({ catalogId, language, work, options }));
 		}
 		if (mode === 'contents') {
 			const work = (url.searchParams.get('work') ?? '').trim();

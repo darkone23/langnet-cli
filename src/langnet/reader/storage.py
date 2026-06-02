@@ -36,6 +36,7 @@ from langnet.reader.models import (
     ReaderCitationMap,
     ReaderCitationReference,
     ReaderContainedWork,
+    ReaderDivisionMetadata,
     ReaderEdition,
     ReaderMetadataAttribution,
     ReaderMetadataOverlay,
@@ -271,6 +272,24 @@ CREATE TABLE IF NOT EXISTS work_map_nodes (
     evidence_retrieved_at VARCHAR
 );
 
+CREATE TABLE IF NOT EXISTS division_metadata (
+    work_id VARCHAR NOT NULL,
+    node_id VARCHAR NOT NULL,
+    summary TEXT NOT NULL,
+    short_label TEXT NOT NULL,
+    traditional_reference VARCHAR NOT NULL,
+    status VARCHAR NOT NULL,
+    confidence VARCHAR NOT NULL,
+    generator_model VARCHAR NOT NULL,
+    review_status VARCHAR NOT NULL,
+    note TEXT NOT NULL,
+    source_file VARCHAR NOT NULL,
+    evidence_source_type VARCHAR NOT NULL,
+    evidence_citation TEXT NOT NULL,
+    evidence_label TEXT NOT NULL,
+    evidence_retrieved_at VARCHAR
+);
+
 CREATE TABLE IF NOT EXISTS citation_maps (
     citation_map_id VARCHAR NOT NULL,
     source_id VARCHAR NOT NULL,
@@ -373,6 +392,7 @@ CREATE INDEX IF NOT EXISTS metadata_attributions_agent_idx
 CREATE INDEX IF NOT EXISTS contained_works_parent_idx ON contained_works(parent_work_id);
 CREATE INDEX IF NOT EXISTS contained_works_language_idx ON contained_works(language);
 CREATE INDEX IF NOT EXISTS work_map_nodes_work_idx ON work_map_nodes(work_id);
+CREATE INDEX IF NOT EXISTS division_metadata_work_idx ON division_metadata(work_id, node_id);
 CREATE INDEX IF NOT EXISTS citation_maps_work_idx ON citation_maps(work_id, source_id);
 CREATE INDEX IF NOT EXISTS citation_references_ref_idx ON citation_references(normalized_ref);
 CREATE INDEX IF NOT EXISTS citation_references_work_idx ON citation_references(work_id);
@@ -1396,6 +1416,85 @@ def register_work_map_nodes(
                 """
             )
             conn.unregister("work_map_node_rows")
+
+
+def register_division_metadata(
+    catalog_path: Path,
+    rows: Iterable[ReaderDivisionMetadata],
+    *,
+    replace: bool = True,
+) -> None:
+    create_catalog_db(catalog_path)
+    row_values = [
+        (
+            row.work_id,
+            row.node_id,
+            row.summary,
+            row.short_label,
+            row.traditional_reference,
+            row.status,
+            row.confidence,
+            row.generator_model,
+            row.review_status,
+            row.note,
+            row.source_file,
+            evidence.source_type,
+            evidence.citation,
+            evidence.label,
+            evidence.retrieved_at,
+        )
+        for row in rows
+        for evidence in row.evidence
+    ]
+    with _connect_write(catalog_path) as conn:
+        conn.execute("BEGIN TRANSACTION")
+        try:
+            if replace:
+                conn.execute("DELETE FROM division_metadata")
+            if row_values:
+                frame = pl.DataFrame(
+                    row_values,
+                    schema={
+                        "work_id": pl.Utf8,
+                        "node_id": pl.Utf8,
+                        "summary": pl.Utf8,
+                        "short_label": pl.Utf8,
+                        "traditional_reference": pl.Utf8,
+                        "status": pl.Utf8,
+                        "confidence": pl.Utf8,
+                        "generator_model": pl.Utf8,
+                        "review_status": pl.Utf8,
+                        "note": pl.Utf8,
+                        "source_file": pl.Utf8,
+                        "evidence_source_type": pl.Utf8,
+                        "evidence_citation": pl.Utf8,
+                        "evidence_label": pl.Utf8,
+                        "evidence_retrieved_at": pl.Utf8,
+                    },
+                    orient="row",
+                )
+                conn.register("division_metadata_rows", frame)
+                conn.execute(
+                    """
+                    INSERT INTO division_metadata (
+                        work_id, node_id, summary, short_label, traditional_reference,
+                        status, confidence, generator_model, review_status, note,
+                        source_file, evidence_source_type, evidence_citation,
+                        evidence_label, evidence_retrieved_at
+                    )
+                    SELECT
+                        work_id, node_id, summary, short_label, traditional_reference,
+                        status, confidence, generator_model, review_status, note,
+                        source_file, evidence_source_type, evidence_citation,
+                        evidence_label, evidence_retrieved_at
+                    FROM division_metadata_rows
+                    """
+                )
+                conn.unregister("division_metadata_rows")
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
 
 
 def register_citation_maps(
@@ -5409,6 +5508,177 @@ def work_map_for_work(catalog_path: Path, work_ref: str) -> list[dict[str, Any]]
     return [_decorate_work_map_node(catalog_path, row) for row in rows]
 
 
+def division_metadata_for_work(catalog_path: Path, work_ref: str) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    work = get_work(catalog_path, work_ref)
+    candidates = [work_ref]
+    if work:
+        for value in (
+            work.get("work_id"),
+            work.get("cts_work_urn"),
+            work.get("parent_work_id"),
+        ):
+            if value:
+                candidates.append(str(value))
+    resolved = resolve_work_ref(catalog_path, work_ref)
+    if resolved:
+        candidates.append(resolved)
+    candidates = list(dict.fromkeys(candidates))
+    placeholders = ", ".join("?" for _ in candidates)
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "division_metadata"):
+            return []
+        return _dict_rows(
+            conn,
+            f"""
+            SELECT
+                work_id, node_id, summary, short_label, traditional_reference,
+                status, confidence, generator_model, review_status, note, source_file,
+                count(*) AS evidence_count
+            FROM division_metadata
+            WHERE work_id IN ({placeholders})
+              AND status = 'accepted'
+            GROUP BY
+                work_id, node_id, summary, short_label, traditional_reference,
+                status, confidence, generator_model, review_status, note, source_file
+            ORDER BY work_id, node_id
+            """,
+            candidates,
+        )
+
+
+def structure_for_work(catalog_path: Path, work_ref: str) -> list[dict[str, Any]]:
+    nodes = work_map_for_work(catalog_path, work_ref)
+    metadata = {
+        (str(row["work_id"]), str(row["node_id"])): row
+        for row in division_metadata_for_work(catalog_path, work_ref)
+    }
+    items: list[dict[str, Any]] = []
+    for node in nodes:
+        meta = metadata.get((str(node["work_id"]), str(node["node_id"])), {})
+        items.append(
+            {
+                **node,
+                "object_type": str(node.get("kind") or "division"),
+                "summary": meta.get("summary"),
+                "short_label": meta.get("short_label"),
+                "traditional_reference": meta.get("traditional_reference"),
+                "division_metadata_status": meta.get("status"),
+                "division_review_status": meta.get("review_status"),
+                "division_confidence": meta.get("confidence"),
+                "division_evidence_count": meta.get("evidence_count"),
+                "provenance_chips": _structure_provenance_chips(node, meta),
+            }
+        )
+    return items
+
+
+def current_divisions_for_segment(
+    catalog_path: Path,
+    work_ref: str,
+    citation_path: str,
+) -> list[dict[str, Any]]:
+    items = structure_for_work(catalog_path, work_ref)
+    current_sort = _citation_sort_value(citation_path)
+    matches = [
+        item
+        for item in items
+        if _citation_sort_value(str(item.get("start_citation") or "")) <= current_sort
+        <= _citation_sort_value(str(item.get("end_citation") or ""))
+    ]
+    return sorted(
+        matches,
+        key=lambda item: (int(item.get("level") or 0), int(item.get("ordinal") or 0)),
+    )
+
+
+def resolve_structure_reference(
+    catalog_path: Path,
+    address: str,
+    *,
+    work_ref: str | None = None,
+    citation_ref: str | None = None,
+) -> dict[str, Any] | None:
+    if not catalog_path.exists():
+        return None
+    reference = citation_ref or address
+    if work_ref:
+        resolved_work = resolve_work_ref(catalog_path, work_ref)
+        if resolved_work:
+            return _match_structure_reference(
+                structure_for_work(catalog_path, resolved_work),
+                reference,
+            )
+    return _match_global_traditional_reference(catalog_path, address)
+
+
+def _match_global_traditional_reference(
+    catalog_path: Path,
+    address: str,
+) -> dict[str, Any] | None:
+    address_key = _structure_reference_key(address)
+    if not address_key:
+        return None
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        if not _table_exists(conn, "division_metadata"):
+            return None
+        rows = _dict_rows(
+            conn,
+            """
+            SELECT DISTINCT work_id, node_id, traditional_reference
+            FROM division_metadata
+            WHERE status = 'accepted'
+              AND traditional_reference IS NOT NULL
+            ORDER BY work_id, node_id
+            """,
+        )
+    for row in rows:
+        if _structure_reference_key(str(row.get("traditional_reference") or "")) != address_key:
+            continue
+        for item in structure_for_work(catalog_path, str(row["work_id"])):
+            if str(item.get("node_id") or "") == str(row["node_id"]):
+                return item
+    return None
+
+
+def _match_structure_reference(
+    items: list[dict[str, Any]],
+    reference: str,
+) -> dict[str, Any] | None:
+    reference_key = _structure_reference_key(reference)
+    if not reference_key:
+        return None
+    for item in items:
+        if reference_key in _structure_reference_keys_for_item(item):
+            return item
+    return None
+
+
+def _structure_reference_keys_for_item(item: Mapping[str, Any]) -> set[str]:
+    keys = {
+        _structure_reference_key(str(item.get("traditional_reference") or "")),
+        _structure_reference_key(str(item.get("label") or "")),
+        _structure_reference_key(str(item.get("short_label") or "")),
+        _structure_reference_key(str(item.get("start_citation") or "")),
+    }
+    kind = str(item.get("kind") or "").strip().lower()
+    ordinal = item.get("ordinal")
+    if kind and ordinal is not None:
+        ordinal_text = str(ordinal)
+        keys.add(_structure_reference_key(f"{kind} {ordinal_text}"))
+        keys.add(_structure_reference_key(ordinal_text))
+        if kind == "book":
+            keys.add(_structure_reference_key(f"bk {ordinal_text}"))
+        elif kind == "chapter":
+            keys.add(_structure_reference_key(f"ch {ordinal_text}"))
+    return {key for key in keys if key}
+
+
+def _structure_reference_key(value: str) -> str:
+    return re.sub(r"[\s._,;:]+", " ", value.casefold()).strip()
+
+
 def citation_maps_for_work(
     catalog_path: Path,
     work_ref: str,
@@ -5459,6 +5729,33 @@ def citation_maps_for_work(
             params,
         )
     return rows
+
+
+def _citation_sort_value(value: str) -> tuple[int, ...]:
+    parts = re.findall(r"\d+", value)
+    return tuple(int(part) for part in parts) if parts else (0,)
+
+
+def _structure_provenance_chips(
+    node: Mapping[str, Any],
+    meta: Mapping[str, Any],
+) -> list[str]:
+    chips: list[str] = []
+    provenance = str(node.get("provenance") or "")
+    if provenance == "curated":
+        chips.append("Curated")
+    elif provenance == "native":
+        chips.append("Source")
+    elif provenance == "inferred":
+        chips.append("Inferred")
+    review_status = str(meta.get("review_status") or "")
+    if review_status == "reviewed":
+        chips.append("Reviewed")
+    elif review_status == "llm_draft":
+        chips.append("LLM draft")
+    elif review_status == "needs_review":
+        chips.append("Needs review")
+    return chips
 
 
 def _decorate_work_map_node(catalog_path: Path, row: dict[str, Any]) -> dict[str, Any]:

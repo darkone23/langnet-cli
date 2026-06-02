@@ -12,11 +12,13 @@ from langnet.reader.models import (
     ReaderBookArtifact,
     ReaderCitationMap,
     ReaderCitationReference,
+    ReaderDivisionMetadata,
     ReaderEdition,
     ReaderMetadataOverlayEvidence,
     ReaderSegment,
     ReaderSegmentAddress,
     ReaderWork,
+    ReaderWorkMapNode,
 )
 from langnet.reader.service import ReaderService
 from langnet.reader.storage import (
@@ -26,7 +28,9 @@ from langnet.reader.storage import (
     register_book,
     register_citation_maps,
     register_citation_references,
+    register_division_metadata,
     register_segment_rows,
+    register_work_map_nodes,
 )
 
 FIXTURES = Path("tests/fixtures/reader")
@@ -86,6 +90,531 @@ def test_reader_service_enumerates_and_resolves_alias_addresses() -> None:
         assert friendly["resolved_address"] == "urn:cts:greekLit:tlg0012.tlg002:1.8"
         assert friendly["segment"]["text"] == "νήπιοι, οἳ κατὰ βοῦς Ὑπερίονος Ἠελίοιο"
         assert friendly_show["segment"]["citation_path"] == "1.8"
+
+
+def test_reader_service_structure_payload_merges_map_and_division_metadata() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "bhagavadgita.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="urn:cts:sanskritLit:mbh.bhg",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Bhagavadgītā",
+            author="Vyāsa",
+            author_id=None,
+            source_id="mbh.bhg",
+            canonical_text_id="urn:ctsv2:san:bhagavadgita-dhrtarastra-uvaca",
+        )
+        edition = ReaderEdition(
+            edition_id=f"{work.work_id}:edition",
+            work_id=work.work_id,
+            label="DCS CoNLL-U",
+            language="san",
+            source_path=root / "bhg-9.conllu",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="bhg-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=2,
+                token_count=8,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:231273",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="sentence",
+                    citation_path="231273",
+                    text="rājavidyā rājaguhyaṃ pavitramidamuttamam",
+                    normalized_text="rajavidya rajaguhyam pavitramidamuttamam",
+                    sort_key=1,
+                ),
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:231341",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="sentence",
+                    citation_path="231341",
+                    text="iti guhyatamaṃ śāstram",
+                    normalized_text="iti guhyatamam sastram",
+                    sort_key=2,
+                ),
+            ],
+            addresses=[],
+        )
+        register_work_map_nodes(
+            catalog_path,
+            [
+                ReaderWorkMapNode(
+                    work_id=work.work_id,
+                    node_id="bhg-09",
+                    parent_node_id=None,
+                    level=1,
+                    kind="chapter",
+                    label="Rāja Vidyā Rāja Guhya Yoga",
+                    native_label="राजविद्याराजगुह्ययोग",
+                    ordinal=9,
+                    start_citation="231273",
+                    end_citation="231341",
+                    provenance="curated",
+                    confidence="high",
+                    status="accepted",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+        register_division_metadata(
+            catalog_path,
+            [
+                ReaderDivisionMetadata(
+                    work_id=work.work_id,
+                    node_id="bhg-09",
+                    summary="A reviewed chapter note.",
+                    short_label="Royal knowledge",
+                    traditional_reference="BhG 9",
+                    status="accepted",
+                    confidence="high",
+                    generator_model="",
+                    review_status="reviewed",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+
+        service = ReaderService(catalog_path)
+        payload = service.structure_payload(work.work_id)
+        shown = service.show_work_segment(work.work_id, "231273")
+
+    assert payload["mode"] == "structure"
+    assert payload["summary"]["node_count"] == 1
+    item = payload["items"][0]
+    assert item["node_id"] == "bhg-09"
+    assert item["object_type"] == "chapter"
+    assert item["summary"] == "A reviewed chapter note."
+    assert item["short_label"] == "Royal knowledge"
+    assert item["traditional_reference"] == "BhG 9"
+    assert item["provenance_chips"] == ["Curated", "Reviewed"]
+    assert shown["current_divisions"][0]["node_id"] == "bhg-09"
+
+
+def test_reader_service_work_dossier_summarizes_structure_and_bios() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "bhagavadgita.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="urn:cts:sanskritLit:mbh.bhg",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Bhagavadgītā",
+            author="Vyāsa",
+            author_id=None,
+            source_id="mbh.bhg",
+        )
+        edition = ReaderEdition(
+            edition_id=f"{work.work_id}:edition",
+            work_id=work.work_id,
+            label="DCS CoNLL-U",
+            language="san",
+            source_path=root / "bhg-9.conllu",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="bhg-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=2,
+                token_count=8,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:231273",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="sentence",
+                    citation_path="231273",
+                    text="idaṃ tu te guhyatamaṃ pravakṣyāmyanasūyave",
+                    normalized_text="idam tu te guhyatamam pravaksyamy anasuyave",
+                    sort_key=1,
+                ),
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:231341",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="sentence",
+                    citation_path="231341",
+                    text="iti guhyatamaṃ śāstram",
+                    normalized_text="iti guhyatamam sastram",
+                    sort_key=2,
+                ),
+            ],
+            addresses=[],
+        )
+        register_work_map_nodes(
+            catalog_path,
+            [
+                ReaderWorkMapNode(
+                    work_id=work.work_id,
+                    node_id="bhg-09",
+                    parent_node_id=None,
+                    level=1,
+                    kind="chapter",
+                    label="Rāja Vidyā Rāja Guhya Yoga",
+                    native_label="राजविद्याराजगुह्ययोग",
+                    ordinal=9,
+                    start_citation="231273",
+                    end_citation="231341",
+                    provenance="curated",
+                    confidence="high",
+                    status="accepted",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                ),
+                ReaderWorkMapNode(
+                    work_id=work.work_id,
+                    node_id="bhg-10",
+                    parent_node_id=None,
+                    level=1,
+                    kind="chapter",
+                    label="Vibhūti Yoga",
+                    native_label="विभूतियोग",
+                    ordinal=10,
+                    start_citation="231342",
+                    end_citation="231418",
+                    provenance="curated",
+                    confidence="high",
+                    status="accepted",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                ),
+            ],
+        )
+        register_division_metadata(
+            catalog_path,
+            [
+                ReaderDivisionMetadata(
+                    work_id=work.work_id,
+                    node_id="bhg-09",
+                    summary="Chapter 9 presents royal knowledge and royal secret.",
+                    short_label="Royal knowledge",
+                    traditional_reference="BhG 9",
+                    status="accepted",
+                    confidence="high",
+                    generator_model="",
+                    review_status="reviewed",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+
+        dossier = ReaderService(catalog_path).work_dossier_payload(work.work_id)
+
+    assert dossier["mode"] == "work-dossier"
+    assert dossier["work"]["title"] == "Bhagavadgītā"
+    assert dossier["summary"]["top_level_count"] == 2
+    assert dossier["summary"]["top_level_kind"] == "chapter"
+    assert dossier["summary"]["structure_label"] == "2 chapters"
+    assert dossier["summary"]["division_bio_count"] == 1
+    assert [item["label"] for item in dossier["headings"]] == [
+        "Rāja Vidyā Rāja Guhya Yoga",
+        "Vibhūti Yoga",
+    ]
+    assert dossier["division_bios"][0]["traditional_reference"] == "BhG 9"
+    assert dossier["provenance_chips"] == ["Curated", "Reviewed"]
+
+
+def test_reader_service_resolves_division_metadata_traditional_reference() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "bhagavadgita.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="urn:cts:sanskritLit:mbh.bhg",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Bhagavadgītā",
+            author="Vyāsa",
+            author_id=None,
+            source_id="mbh.bhg",
+        )
+        edition = ReaderEdition(
+            edition_id=f"{work.work_id}:edition",
+            work_id=work.work_id,
+            label="DCS CoNLL-U",
+            language="san",
+            source_path=root / "bhg-9.conllu",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="bhg-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=1,
+                token_count=8,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:231273",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="sentence",
+                    citation_path="231273",
+                    text="idaṃ tu te guhyatamaṃ pravakṣyāmyanasūyave",
+                    normalized_text="idam tu te guhyatamam pravaksyamy anasuyave",
+                    sort_key=1,
+                )
+            ],
+            addresses=[],
+        )
+        register_work_map_nodes(
+            catalog_path,
+            [
+                ReaderWorkMapNode(
+                    work_id=work.work_id,
+                    node_id="bhg-09",
+                    parent_node_id=None,
+                    level=1,
+                    kind="chapter",
+                    label="Rāja Vidyā Rāja Guhya Yoga",
+                    native_label="राजविद्याराजगुह्ययोग",
+                    ordinal=9,
+                    start_citation="231273",
+                    end_citation="231341",
+                    provenance="curated",
+                    confidence="high",
+                    status="accepted",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+        register_division_metadata(
+            catalog_path,
+            [
+                ReaderDivisionMetadata(
+                    work_id=work.work_id,
+                    node_id="bhg-09",
+                    summary="A reviewed chapter note.",
+                    short_label="Royal knowledge",
+                    traditional_reference="BhG 9",
+                    status="accepted",
+                    confidence="high",
+                    generator_model="",
+                    review_status="reviewed",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+
+        resolved = ReaderService(catalog_path).resolve_address("BhG 9")
+
+    assert resolved["resolution_status"] == "resolved"
+    assert resolved["resolution_kind"] == "structure"
+    assert resolved["resolved_address"] == f"{work.work_id}:231273"
+    assert resolved["segment"]["citation_path"] == "231273"
+    assert resolved["structure_node"]["node_id"] == "bhg-09"
+    assert resolved["current_divisions"][0]["traditional_reference"] == "BhG 9"
+
+
+def test_reader_service_resolves_alias_plus_book_ordinal_to_structure_node() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "books" / "republic.duckdb"
+        create_catalog_db(catalog_path)
+        create_book_db(book_path)
+        work = ReaderWork(
+            work_id="urn:cts:greekLit:tlg0059.tlg030",
+            collection_id="perseus",
+            language="grc",
+            title="Republic",
+            author="Plato",
+            author_id=None,
+            source_id="tlg0059.tlg030",
+        )
+        edition = ReaderEdition(
+            edition_id=f"{work.work_id}:edition",
+            work_id=work.work_id,
+            label="Greek",
+            language="grc",
+            source_path=root / "republic.xml",
+        )
+        register_book(
+            catalog_path,
+            work,
+            edition,
+            ReaderBookArtifact(
+                artifact_id="republic-artifact",
+                work_id=work.work_id,
+                edition_id=edition.edition_id,
+                artifact_path=book_path,
+                source_path=edition.source_path,
+                adapter="fixture",
+                source_hash="hash",
+                segment_count=1,
+                token_count=6,
+            ),
+        )
+        register_segment_rows(
+            book_path,
+            segments=[
+                ReaderSegment(
+                    segment_id=f"{work.work_id}:595a",
+                    work_id=work.work_id,
+                    edition_id=edition.edition_id,
+                    segment_kind="section",
+                    citation_path="595a",
+                    text="Τὰ μὲν δὴ περὶ θεοὺς",
+                    normalized_text="ta men de peri theous",
+                    sort_key=1,
+                )
+            ],
+            addresses=[],
+        )
+        register_aliases(
+            catalog_path,
+            [
+                ReaderAlias(
+                    alias="Republic",
+                    language="grc",
+                    kind="work",
+                    target=work.work_id,
+                    display="Plato, Republic",
+                    source_file="fixture",
+                    sources=("fixture",),
+                )
+            ],
+        )
+        register_work_map_nodes(
+            catalog_path,
+            [
+                ReaderWorkMapNode(
+                    work_id=work.work_id,
+                    node_id="republic-10",
+                    parent_node_id=None,
+                    level=1,
+                    kind="book",
+                    label="Book 10",
+                    native_label=None,
+                    ordinal=10,
+                    start_citation="595a",
+                    end_citation="621d",
+                    provenance="curated",
+                    confidence="high",
+                    status="accepted",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+
+        resolved = ReaderService(catalog_path).resolve_address("Republic Book 10")
+
+    assert resolved["resolution_status"] == "resolved"
+    assert resolved["resolution_kind"] == "structure"
+    assert resolved["resolved_address"] == f"{work.work_id}:595a"
+    assert resolved["segment"]["text"] == "Τὰ μὲν δὴ περὶ θεοὺς"
+    assert resolved["structure_node"]["label"] == "Book 10"
 
 
 def test_reader_service_resolves_alias_before_segment_lookup() -> None:

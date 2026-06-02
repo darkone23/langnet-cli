@@ -66,10 +66,10 @@ The current web adapter exposes:
 
 Current `/api/reader` modes are `catalogs`, `summary`, `collections`,
 `aliases`, `facets`, `groups`, `tags`, `author-facets`, `shelves`, `search`,
-`author-sections`, `authors`, `work`, `works`, `contents`, `show`, and
-`resolve-address`. The endpoint accepts `language`; legacy `lang` is still read
-by the adapter for compatibility, but new route state and examples should use
-`language`.
+`author-sections`, `authors`, `work`, `works`, `contents`, `structure`,
+`about`, `show`, and `resolve-address`. The endpoint accepts `language`;
+legacy `lang` is still read by the adapter for compatibility, but new route
+state and examples should use `language`.
 
 ## Works
 
@@ -633,6 +633,7 @@ Stable fields:
 - `items[].language`
 - `items[].display`
 - `items[].available_layers`
+- `items[].current_divisions`
 - `window.anchor`
 - `window.before_count`
 - `window.after_count`
@@ -641,6 +642,9 @@ Stable fields:
 - `pagination.limit`
 
 `text` remains the stored source text. Display layers are additive.
+`current_divisions` is a list of structure nodes that contain the segment,
+ordered from outer to inner division. It is intended for marginal orientation,
+not for replacing the full Canon Table payload.
 
 ## Work Map
 
@@ -674,12 +678,115 @@ native or curated structure data. Curated nodes are imported from
 `data/curated/reader_work_maps/`; inferred nodes, when added later, must be
 marked with `provenance = "inferred"` and an explicit confidence value.
 
+## Structure
+
+```bash
+just cli reader --catalog $CATALOG structure <work-ref> --output json
+```
+
+`reader structure` is the UI-ready Canon Table contract. It uses work-map nodes
+as the citation-range backbone and merges accepted division metadata overlays,
+such as chapter bios or traditional-reference labels, by `work_id` and
+`node_id`.
+
+Stable fields:
+
+- `summary.node_count`
+- `summary.top_level_count`
+- `summary.kinds`
+- `summary.has_division_metadata`
+- `items[].work_id`
+- `items[].node_id`
+- `items[].parent_node_id`
+- `items[].level`
+- `items[].kind`
+- `items[].object_type`
+- `items[].label`
+- `items[].native_label`
+- `items[].ordinal`
+- `items[].start_citation`
+- `items[].end_citation`
+- `items[].provenance`
+- `items[].confidence`
+- `items[].status`
+- `items[].note`
+- `items[].source_file`
+- `items[].canonical_text_id`
+- `items[].canonical_address`
+- `items[].summary`
+- `items[].short_label`
+- `items[].traditional_reference`
+- `items[].division_metadata_status`
+- `items[].division_review_status`
+- `items[].division_confidence`
+- `items[].division_evidence_count`
+- `items[].provenance_chips`
+- `items[].word_count`
+- `items[].word_count_method`
+
+`object_type` is the learner-facing Orion object class used by the reader UI,
+for example `Chapter`, `Book`, or `Passage`. `provenance_chips` is already
+flattened for badge rendering and may include labels such as `Curated`,
+`Source`, `Reviewed`, or `Needs evidence`.
+
+`resolve-address` also uses accepted structure metadata. Exact segment
+addresses and citation-reference rows remain dominant, but if those do not
+resolve, the service may resolve:
+
+- an exact accepted `traditional_reference`, such as `BhG 9`;
+- a work-qualified division label or ordinal, such as `Republic Book 10`, once
+  `Republic` resolves through the work id, CTS URN, or alias layer.
+
+Structure resolutions return `resolution_kind = "structure"`, the matched
+`structure_node`, and `current_divisions`, then open the node's
+`start_citation`.
+
+```mermaid
+flowchart LR
+    WorkMap["Curated work-map nodes"] --> Structure["reader structure payload"]
+    DivisionMetadata["Accepted division metadata"] --> Structure
+    Structure --> Desk["Reader Work Desk Canon Table"]
+    Structure --> Marginalia["Current division marginalia"]
+    Structure --> Apparatus["Mobile Apparatus Sheet"]
+```
+
+## Work Dossier
+
+```bash
+just cli reader --catalog $CATALOG about <work-ref> --output json
+```
+
+`reader about` is the deterministic Work Dossier payload for prompts such as
+"tell me about this book." It does not generate prose at read time. It gathers
+the work record, accepted structure headings, reviewed division bios, structure
+counts, and flattened provenance chips.
+
+Stable fields:
+
+- `work`
+- `summary.structure_count`
+- `summary.top_level_count`
+- `summary.top_level_kind`
+- `summary.structure_label`
+- `summary.division_bio_count`
+- `summary.has_division_metadata`
+- `headings[]`: top-level `reader structure` nodes
+- `division_bios[]`: structure nodes with reviewed or accepted summary text
+- `provenance_chips[]`
+
+The web adapter exposes this through `/api/reader?mode=about&work=<work-ref>`.
+The Reader Work Desk uses it for the `About this work` panel: chapter count,
+headings, and the first reviewed division note.
+
 Operator sync command for applying updated research curation to an existing
 catalog without a full corpus rebuild:
 
 ```bash
 just cli reader --catalog $CATALOG sync-work-maps \
   --work-map-dir data/curated/reader_work_maps --output json
+
+just cli reader --catalog $CATALOG sync-division-metadata \
+  --division-metadata-dir data/curated/reader_division_metadata --output json
 ```
 
 Sanskrit segment display fields:
@@ -706,6 +813,8 @@ Stable fields:
 - `segment.canonical_text_id`: preferred LangNet CTSv2 logical text id when
   available;
 - `segment.canonical_address`: preferred CTSv2 resource address when available;
+- `current_divisions`: same outer-to-inner structure context as
+  `segment.current_divisions`;
 - `navigation.previous.citation_path`
 - `navigation.previous.address`
 - `navigation.next.citation_path`
@@ -724,7 +833,12 @@ Stable fields:
 
 - `address`
 - `resolved_address`
+- `resolution_status`
+- `resolution_kind`
 - `segment`
+- `segments`
+- `structure_node`
+- `current_divisions`
 
 Friendly shorthand is useful when aliases exist, but canonical `work_id`,
 `cts_work_urn`, `contents`, and exact `show` calls are the primary web contract.

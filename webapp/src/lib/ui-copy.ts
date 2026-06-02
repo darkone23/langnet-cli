@@ -92,6 +92,57 @@ const resources = {
 				studyWord: 'Study word',
 				empty: 'Click a word in the passage to prepare a lookup.'
 			},
+			orionObjects: {
+				word: 'Word',
+				work: 'Work',
+				author: 'Author',
+				chapter: 'Chapter',
+				passage: 'Passage',
+				dossier: 'Dossier',
+				leaf: 'Leaf',
+				marginalium: 'Marginalia',
+				canonTable: 'Canon Table',
+				oracle: 'Oracle',
+				wheel: 'Wheel'
+			},
+			provenance: {
+				curated: 'Curated',
+				source: 'Source',
+				generated: 'LLM draft',
+				reviewed: 'Reviewed',
+				needsEvidence: 'Needs evidence',
+				needsReview: 'Needs review'
+			},
+			async: {
+				loading: 'Loading',
+				refreshing: 'Refreshing',
+				researching: 'Researching',
+				seconds: '{{seconds}}s'
+			},
+			readerStructure: {
+				title: 'Structure',
+				empty: 'No accepted structure map yet.',
+				loading: 'Loading structure',
+				open: 'Open',
+				study: 'Study division',
+				evidence: 'Evidence',
+				current: 'Current division'
+			},
+			workDossier: {
+				title: 'About this work',
+				loading: 'Loading work dossier',
+				empty: 'No work dossier is available yet.',
+				headings: 'Headings',
+				divisionBios: 'Division notes',
+				opening: 'Opening structure'
+			},
+			apparatus: {
+				structure: 'Structure',
+				word: 'Word',
+				oracle: 'Oracle',
+				evidence: 'Evidence',
+				close: 'Close apparatus'
+			},
 			translator: {
 				alert: 'Cached entries are open. Some source entries are still awaiting English.',
 				title: 'This source entry is awaiting English.',
@@ -312,6 +363,49 @@ export const uiCopy = {
 		generatingNotice: text('encounterBriefing.generatingNotice'),
 		studyWord: text('encounterBriefing.studyWord'),
 		empty: text('encounterBriefing.empty')
+	},
+	orionObjects: {
+		word: text('orionObjects.word'),
+		work: text('orionObjects.work'),
+		author: text('orionObjects.author'),
+		chapter: text('orionObjects.chapter'),
+		passage: text('orionObjects.passage'),
+		dossier: text('orionObjects.dossier'),
+		leaf: text('orionObjects.leaf'),
+		marginalium: text('orionObjects.marginalium'),
+		canonTable: text('orionObjects.canonTable'),
+		oracle: text('orionObjects.oracle'),
+		wheel: text('orionObjects.wheel')
+	},
+	provenance: {
+		curated: text('provenance.curated'),
+		source: text('provenance.source'),
+		generated: text('provenance.generated'),
+		reviewed: text('provenance.reviewed'),
+		needsEvidence: text('provenance.needsEvidence'),
+		needsReview: text('provenance.needsReview')
+	},
+	async: {
+		loading: text('async.loading'),
+		refreshing: text('async.refreshing'),
+		researching: text('async.researching'),
+		seconds: (seconds: number) => text('async.seconds', { seconds })
+	},
+	readerStructure: {
+		title: text('readerStructure.title'),
+		empty: text('readerStructure.empty'),
+		loading: text('readerStructure.loading'),
+		open: text('readerStructure.open'),
+		study: text('readerStructure.study'),
+		evidence: text('readerStructure.evidence'),
+		current: text('readerStructure.current')
+	},
+	apparatus: {
+		structure: text('apparatus.structure'),
+		word: text('apparatus.word'),
+		oracle: text('apparatus.oracle'),
+		evidence: text('apparatus.evidence'),
+		close: text('apparatus.close')
 	},
 	translator: {
 		alert: text('translator.alert'),

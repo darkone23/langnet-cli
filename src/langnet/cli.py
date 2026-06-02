@@ -2546,11 +2546,43 @@ def _emit_reader_single_payload(  # noqa: C901, PLR0911, PLR0912
         click.echo(str(segment.get("text", "")))
         return True
     if mode == "resolve-address":
-        click.echo(f"{payload.get('address')} -> {payload.get('resolved_address')}")
+        suffix = ""
+        if payload.get("resolution_kind"):
+            suffix = f" [{payload.get('resolution_kind')}]"
+        click.echo(f"{payload.get('address')} -> {payload.get('resolved_address')}{suffix}")
+        structure_node_value = payload.get("structure_node")
+        if isinstance(structure_node_value, Mapping):
+            structure_node = cast(Mapping[str, object], structure_node_value)
+            label = structure_node.get("traditional_reference") or structure_node.get("label")
+            click.echo(f"Structure: {label}")
         segment_value = payload.get("segment")
         if isinstance(segment_value, Mapping):
             segment = cast(Mapping[str, object], segment_value)
             click.echo(str(segment.get("text", "")))
+        return True
+    if mode == "work-dossier":
+        work_value = payload.get("work")
+        summary_value = payload.get("summary")
+        if isinstance(work_value, Mapping):
+            work = cast(Mapping[str, object], work_value)
+            click.echo(str(work.get("title") or work.get("work_id") or "Work"))
+            if work.get("author"):
+                click.echo(f"Author: {work.get('author')}")
+        if isinstance(summary_value, Mapping):
+            summary = cast(Mapping[str, object], summary_value)
+            if summary.get("structure_label"):
+                click.echo(f"Structure: {summary.get('structure_label')}")
+            if summary.get("division_bio_count"):
+                click.echo(f"Reviewed division bios: {summary.get('division_bio_count')}")
+        headings_value = payload.get("headings")
+        if isinstance(headings_value, Sequence) and headings_value:
+            click.echo("Headings:")
+            for item in headings_value:
+                if not isinstance(item, Mapping):
+                    continue
+                heading = cast(Mapping[str, object], item)
+                label = heading.get("traditional_reference") or heading.get("label")
+                click.echo(f"- {label}")
         return True
     if mode == "summary":
         summary_value = payload.get("summary")
@@ -2643,6 +2675,13 @@ def _emit_reader_item(mode: str, item: Mapping[str, object]) -> None:  # noqa: C
             f"{item.get('ordinal')}  {item.get('kind')}  {item.get('label')}  "
             f"{item.get('start_citation')}..{item.get('end_citation')}  "
             f"words={item.get('word_count')}"
+        )
+    elif mode == "structure":
+        label = item.get("short_label") or item.get("label")
+        reference = item.get("traditional_reference") or item.get("start_citation")
+        click.echo(
+            f"{item.get('ordinal')}  {item.get('kind')}  {label}  "
+            f"{reference}  {item.get('start_citation')}..{item.get('end_citation')}"
         )
     elif mode == "citation-maps":
         click.echo(
@@ -4002,6 +4041,21 @@ def reader_work(ctx: click.Context, work_ref: str, output: str) -> None:
     _emit_reader_payload(_reader_service_from_context(ctx).work_payload(work_ref), output)
 
 
+@reader_cli.command("about")
+@click.argument("work_ref")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_about(ctx: click.Context, work_ref: str, output: str) -> None:
+    """Show a work dossier with structure headings and reviewed division bios."""
+    _emit_reader_payload(_reader_service_from_context(ctx).work_dossier_payload(work_ref), output)
+
+
 @reader_cli.command("map")
 @click.argument("work_ref")
 @click.option(
@@ -4015,6 +4069,21 @@ def reader_work(ctx: click.Context, work_ref: str, output: str) -> None:
 def reader_map(ctx: click.Context, work_ref: str, output: str) -> None:
     """Show a table-of-contents style map for one reader work."""
     _emit_reader_payload(_reader_service_from_context(ctx).map_payload(work_ref), output)
+
+
+@reader_cli.command("structure")
+@click.argument("work_ref")
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_structure(ctx: click.Context, work_ref: str, output: str) -> None:
+    """Show UI-ready traditional structure for one reader work."""
+    _emit_reader_payload(_reader_service_from_context(ctx).structure_payload(work_ref), output)
 
 
 @reader_cli.command("citation-maps")
@@ -4091,6 +4160,36 @@ def reader_sync_work_maps(ctx: click.Context, work_map_dir: str, output: str) ->
     """Sync curated work-map/table-of-contents metadata into the reader catalog."""
     _emit_reader_payload(
         _reader_service_from_context(ctx).sync_work_maps_payload(Path(work_map_dir).expanduser()),
+        output,
+    )
+
+
+@reader_cli.command("sync-division-metadata")
+@click.option(
+    "--division-metadata-dir",
+    type=click.Path(),
+    default="data/curated/reader_division_metadata",
+    show_default=True,
+    help="Curated reader division metadata directory.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_sync_division_metadata(
+    ctx: click.Context,
+    division_metadata_dir: str,
+    output: str,
+) -> None:
+    """Sync curated chapter/book/division metadata into the reader catalog."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).sync_division_metadata_payload(
+            Path(division_metadata_dir).expanduser()
+        ),
         output,
     )
 

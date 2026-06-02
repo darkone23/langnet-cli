@@ -106,6 +106,74 @@ export type ReaderAuthor = {
 	canonical_author_kind?: string | null;
 };
 
+export type ReaderStructureNode = {
+	work_id: string;
+	node_id: string;
+	parent_node_id?: string | null;
+	level: number;
+	kind: string;
+	object_type: string;
+	label: string;
+	native_label?: string | null;
+	ordinal: number;
+	start_citation: string;
+	end_citation: string;
+	provenance: string;
+	confidence: string;
+	status: string;
+	note?: string;
+	source_file?: string;
+	canonical_text_id?: string | null;
+	canonical_address?: string | null;
+	summary?: string | null;
+	short_label?: string | null;
+	traditional_reference?: string | null;
+	division_metadata_status?: string | null;
+	division_review_status?: string | null;
+	division_confidence?: string | null;
+	division_evidence_count?: number | null;
+	provenance_chips?: string[];
+	word_count?: number;
+	word_count_method?: string;
+};
+
+export type ReaderStructureResponse = {
+	schema_version: string;
+	mode: 'structure';
+	catalog_path: string;
+	request: {
+		work_ref: string;
+	};
+	summary: {
+		node_count: number;
+		top_level_count: number;
+		kinds: string[];
+		has_division_metadata: boolean;
+	};
+	items: ReaderStructureNode[];
+};
+
+export type ReaderWorkDossierResponse = {
+	schema_version: string;
+	mode: 'work-dossier';
+	catalog_path: string;
+	request: {
+		work_ref: string;
+	};
+	work: ReaderWork | null;
+	summary: {
+		structure_count: number;
+		top_level_count: number;
+		top_level_kind: string;
+		structure_label: string;
+		division_bio_count: number;
+		has_division_metadata: boolean;
+	};
+	headings: ReaderStructureNode[];
+	division_bios: ReaderStructureNode[];
+	provenance_chips?: string[];
+};
+
 export type ReaderSegment = {
 	segment_id: string;
 	work_id: string;
@@ -126,6 +194,7 @@ export type ReaderSegment = {
 	transliteration?: string;
 	native_script?: string;
 	available_layers?: string[];
+	current_divisions?: ReaderStructureNode[];
 	display?: {
 		primary?: string;
 		transliteration?: string;
@@ -176,7 +245,12 @@ export type ReaderShowResponse = {
 	work_ref?: string;
 	citation_path?: string;
 	resolved_address?: string;
+	resolution_status?: 'resolved' | 'not_found';
+	resolution_kind?: 'segment' | 'citation_reference' | 'structure' | 'not_found';
 	segment: ReaderSegment | null;
+	segments?: ReaderSegment[];
+	structure_node?: ReaderStructureNode | null;
+	current_divisions?: ReaderStructureNode[];
 	navigation?: {
 		previous: ReaderNavigationTarget | null;
 		next: ReaderNavigationTarget | null;

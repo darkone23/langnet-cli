@@ -2,8 +2,29 @@
 
 ## Status
 
-Active design handoff. The detailed design spec is
+Active implementation handoff. The detailed design spec is
 `docs/superpowers/specs/2026-06-02-orion-reader-structure-design.md`.
+
+Implemented slices:
+
+- Orion UI vocabulary, Object Card, provenance chips, Canon Table, Work Desk,
+  and mobile Apparatus Sheet foundations.
+- `reader structure` and `/api/reader?mode=structure`.
+- Division metadata overlay storage, sync, builder integration, and a reviewed
+  Bhagavadgītā chapter 9 fixture.
+- Structure-aware `resolve-address`, including exact `traditional_reference`
+  lookups such as `BhG 9` and work-qualified labels such as `Republic Book 10`.
+- `reader about` and `/api/reader?mode=about` Work Dossier payloads for
+  deterministic "tell me about this book" summaries.
+
+Remaining high-value slices:
+
+- More curated aliases and work maps for Greek/Latin canonical examples such as
+  Plato's Republic.
+- A richer dossier route or drawer for full author/work/chapter biography and
+  evidence inspection.
+- Generated, review-gated work and chapter bios after source-backed evidence
+  coverage expands.
 
 ## Goal
 
@@ -59,5 +80,6 @@ feature slice is the traditional-division layer:
 
 ## Immediate Next Step
 
-Review and approve the design spec. After approval, create a detailed
-implementation plan with small, test-driven tasks.
+Continue expanding Work Dossier and structure-address coverage from
+source-backed curated data. Keep `reader about`, `reader structure`, and
+`resolve-address` as the backend contracts for the UI overhaul.

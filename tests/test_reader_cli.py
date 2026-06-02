@@ -13,6 +13,7 @@ from langnet.cli import _call_work_classifier_with_retries, main
 from langnet.reader.models import (
     ReaderAlias,
     ReaderBookArtifact,
+    ReaderDivisionMetadata,
     ReaderEdition,
     ReaderMetadataAttribution,
     ReaderMetadataOverlayEvidence,
@@ -28,6 +29,7 @@ from langnet.reader.storage import (
     list_source_metadata,
     register_aliases,
     register_book,
+    register_division_metadata,
     register_metadata_attributions,
     register_segment_rows,
     register_source_metadata,
@@ -221,9 +223,12 @@ def test_reader_cli_help_surface() -> None:
         ["reader"],
         ["reader", "works"],
         ["reader", "map"],
+        ["reader", "structure"],
+        ["reader", "about"],
         ["reader", "citation-maps"],
         ["reader", "sync-citation-maps"],
         ["reader", "sync-work-maps"],
+        ["reader", "sync-division-metadata"],
         ["reader", "sync-classifications"],
         ["reader", "sync-author-classifications"],
         ["reader", "sync-metadata-attributions"],
@@ -247,6 +252,114 @@ def test_reader_cli_help_surface() -> None:
     for args in commands:
         result = CliRunner().invoke(main, [*args, "--help"])
         assert result.exit_code == 0, result.output
+
+
+def test_reader_cli_structure_returns_ui_ready_nodes() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:sanskritLit:mbh.bhg",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Bhagavadgītā",
+            author="Vyāsa",
+            author_id=None,
+            source_id="mbh.bhg",
+        )
+        register_work_map_nodes(
+            catalog_path,
+            [
+                ReaderWorkMapNode(
+                    work_id="urn:cts:sanskritLit:mbh.bhg",
+                    node_id="bhg-09",
+                    parent_node_id=None,
+                    level=1,
+                    kind="chapter",
+                    label="Rāja Vidyā Rāja Guhya Yoga",
+                    native_label="राजविद्याराजगुह्ययोग",
+                    ordinal=9,
+                    start_citation="231273",
+                    end_citation="231341",
+                    provenance="curated",
+                    confidence="high",
+                    status="accepted",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+        register_division_metadata(
+            catalog_path,
+            [
+                ReaderDivisionMetadata(
+                    work_id="urn:cts:sanskritLit:mbh.bhg",
+                    node_id="bhg-09",
+                    summary="A reviewed chapter note.",
+                    short_label="Royal knowledge",
+                    traditional_reference="BhG 9",
+                    status="accepted",
+                    confidence="high",
+                    generator_model="",
+                    review_status="reviewed",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "reader",
+                "--catalog",
+                str(catalog_path),
+                "structure",
+                "urn:cts:sanskritLit:mbh.bhg",
+                "--output",
+                "json",
+            ],
+        )
+        about = CliRunner().invoke(
+            main,
+            [
+                "reader",
+                "--catalog",
+                str(catalog_path),
+                "about",
+                "urn:cts:sanskritLit:mbh.bhg",
+                "--output",
+                "json",
+            ],
+        )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["mode"] == "structure"
+    assert payload["summary"]["node_count"] == 1
+    assert payload["items"][0]["traditional_reference"] == "BhG 9"
+    assert about.exit_code == 0, about.output
+    about_payload = json.loads(about.output)
+    assert about_payload["mode"] == "work-dossier"
+    assert about_payload["summary"]["structure_label"] == "1 chapter"
+    assert about_payload["division_bios"][0]["traditional_reference"] == "BhG 9"
 
 
 def test_reader_cli_lists_works_and_retrieves_segment_json() -> None:  # noqa: PLR0915
@@ -626,6 +739,54 @@ work_maps:
     assert json.loads(sync.output)["summary"]["synced_count"] == 1
     assert work_map.exit_code == 0, work_map.output
     assert json.loads(work_map.output)["items"][0]["label"] == "Book 1"
+
+
+def test_reader_cli_sync_division_metadata() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        metadata_root = root / "division_metadata"
+        metadata_root.mkdir()
+        create_catalog_db(catalog_path)
+        (metadata_root / "fixture.yaml").write_text(
+            """
+division_metadata:
+  - work_id: "urn:cts:sanskritLit:mbh.bhg"
+    node_id: "bhg-09"
+    summary: "A reviewed chapter note."
+    short_label: "Royal knowledge"
+    traditional_reference: "BhG 9"
+    status: "accepted"
+    confidence: "high"
+    generator_model: ""
+    review_status: "reviewed"
+    note: "fixture"
+    evidence:
+      - source_type: "fixture"
+        citation: "fixture"
+        label: "fixture"
+""".lstrip(),
+            encoding="utf-8",
+        )
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "reader",
+                "--catalog",
+                str(catalog_path),
+                "sync-division-metadata",
+                "--division-metadata-dir",
+                str(metadata_root),
+                "--output",
+                "json",
+            ],
+        )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["mode"] == "sync-division-metadata"
+    assert payload["summary"]["synced_count"] == 1
 
 
 def test_reader_citation_maps_pretty_output_is_visible() -> None:

@@ -39,6 +39,87 @@ the "Learn this form" integration.
 - Slow translation modes should not hide cached dictionary results while waiting
   for cache population or generation.
 
+## Project Orion Design System
+
+Project Orion should feel compute-native while preserving the dignity of source
+texts, words, authors, and traditions. The working design lineage is Umberto
+Eco, Albertus Magnus, Ramon Llull, Giordano Bruno, Eusebius, Comenius,
+Cornelius Agrippa, Paracelsus, and Burton's *Anatomy of Melancholy*: mnemonic,
+scholarly, didactic, and reverential, but still practical as an app.
+
+Use the localization layer for all visible names and repeated UI labels. This
+lets the product speak in the tone of a little reference book without scattering
+hard-coded copy through routes.
+
+Orion object classes:
+
+- `Word`: a lookup term, lemma, form, or dictionary headword.
+- `Work`: a text in the catalog.
+- `Author`: a historical, traditional, anonymous, or uncertain agent.
+- `Chapter`: a traditional or source-backed division inside a work.
+- `Passage`: the currently displayed citation range or segment.
+- `Leaf`: the central reading page.
+- `Dossier`: an author, work, or chapter biography surface.
+- `Marginalia`: compact context beside the leaf.
+- `Canon Table`: a structure view for books, chapters, and divisions.
+- `Oracle`: an async consultation surface such as generated explanation,
+  encounter briefing, or research-backed enrichment.
+- `Wheel`: an index-neighborhood view, currently lexical and intended to grow
+  toward semantic neighborhoods.
+
+The reader has two layers:
+
+- Outer book: library shelves, author indices, work discovery, and catalog
+  navigation.
+- Inner book: the selected Work Desk, Leaf, Canon Table, Marginalia, Word help,
+  evidence, and mobile Apparatus Sheet.
+
+```mermaid
+flowchart LR
+    Library["Outer book Library and author indices"] --> Desk["Work Desk"]
+    Desk --> Leaf["Leaf passage text"]
+    Desk --> Canon["Canon Table structure"]
+    Leaf --> Marginalia["Marginalia"]
+    Leaf --> Oracle["Oracle word and passage help"]
+    Canon --> Apparatus["Mobile Apparatus Sheet"]
+    Marginalia --> Apparatus
+    Oracle --> Apparatus
+```
+
+Component rules:
+
+- Object Cards identify first-class things: Work, Author, Chapter, Word,
+  Passage. They may show a small kind label, a strong title, one compact
+  subtitle, and provenance chips.
+- Canon Tables organize structural ranges and traditional references. They are
+  flatter than a dense tree by default, with indentation enough to scan levels
+  and details available inline.
+- Work Dossiers answer "tell me about this book" without pretending to be a
+  live chat response. They summarize the work record, structure count, headings,
+  reviewed division notes, and provenance chips from deterministic reader
+  metadata.
+- Marginalia should orient the reader without becoming a second page. Use it
+  for current division, word help entry points, source address, and evidence.
+- The mobile Apparatus Sheet replaces fixed desktop marginalia. It should
+  expose shallow tabs for Structure, Word, Oracle, and Evidence.
+- Provenance chips should be visible wherever generated or curated data affects
+  learner interpretation. Use `Curated`, `Source`, `Reviewed`, `LLM draft`,
+  `Needs evidence`, and `Needs review`.
+- Use one async indicator per pending operation. When adding new content, show
+  skeletons. When replacing existing content, keep the existing surface visible
+  and use a pulsing badge or small spinner. Any operation likely to take visible
+  time should show elapsed seconds.
+
+```mermaid
+stateDiagram-v2
+    idle --> loading_new: add new content
+    idle --> refreshing: replace existing content
+    loading_new --> rendered: skeleton resolves
+    refreshing --> rendered: pulsing badge resolves
+    loading_new --> failed: request error
+    refreshing --> failed: request error
+```
+
 ## Page Layout
 
 The page uses a two-column layout on large screens:
@@ -131,6 +212,10 @@ Current behavior:
   as upstream cursors remain valid.
 - The Book TOC panel shows the current page-local contents window, not a global
   library search.
+- The Work Desk shows a Work Dossier when structure metadata exists. For a work
+  such as the Bhagavadgītā this can say that the work has eighteen chapters,
+  list the chapter headings, and surface reviewed chapter notes such as `BhG 9`
+  without invoking an LLM at read time.
 - The central leaf renders one page at a time, where a page is a bounded chunk of
   source segments from `contents`. Exact citation opens use `show` to resolve the
   target and then render the surrounding chunk as the page.

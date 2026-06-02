@@ -16,6 +16,7 @@ from langnet.reader.models import (
     ReaderCitationMap,
     ReaderCitationReference,
     ReaderContainedWork,
+    ReaderDivisionMetadata,
     ReaderEdition,
     ReaderMetadataAttribution,
     ReaderMetadataOverlayEvidence,
@@ -31,6 +32,8 @@ from langnet.reader.storage import (
     _book_has_address,
     create_book_db,
     create_catalog_db,
+    current_divisions_for_segment,
+    division_metadata_for_work,
     list_author_index,
     list_collections,
     list_discovery_group_summaries,
@@ -55,6 +58,7 @@ from langnet.reader.storage import (
     register_citation_maps,
     register_citation_references,
     register_contained_works,
+    register_division_metadata,
     register_metadata_attributions,
     register_segment_rows,
     register_source_metadata,
@@ -3366,6 +3370,111 @@ def test_work_map_for_work_returns_curated_nodes_with_range_word_counts() -> Non
     assert payload[0]["word_count_method"] == "whitespace_tokens"
     assert payload[0]["provenance"] == "curated"
     assert payload[0]["confidence"] == "high"
+
+
+def test_register_division_metadata_and_query_by_work() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        catalog_path = Path(tmpdir) / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        register_division_metadata(
+            catalog_path,
+            [
+                ReaderDivisionMetadata(
+                    work_id="urn:cts:sanskritLit:mbh.bhg",
+                    node_id="bhg-09",
+                    summary="A reviewed chapter note.",
+                    short_label="Royal knowledge",
+                    traditional_reference="BhG 9",
+                    status="accepted",
+                    confidence="high",
+                    generator_model="",
+                    review_status="reviewed",
+                    note="fixture",
+                    source_file="fixture.yaml",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+
+        rows = division_metadata_for_work(catalog_path, "urn:cts:sanskritLit:mbh.bhg")
+
+    assert len(rows) == 1
+    assert rows[0]["node_id"] == "bhg-09"
+    assert rows[0]["summary"] == "A reviewed chapter note."
+    assert rows[0]["traditional_reference"] == "BhG 9"
+    assert rows[0]["evidence_count"] == 1
+
+
+def test_division_metadata_for_work_handles_old_catalog_without_table() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        catalog_path = Path(tmpdir) / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        with duckdb.connect(str(catalog_path)) as conn:
+            conn.execute("DROP TABLE division_metadata")
+
+        rows = division_metadata_for_work(catalog_path, "missing")
+
+    assert rows == []
+
+
+def test_current_divisions_for_segment_finds_covering_work_map_node() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:sanskritLit:mbh.bhg",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Bhagavadgītā",
+            author="Vyāsa",
+            author_id=None,
+            source_id="mbh.bhg",
+        )
+        register_work_map_nodes(
+            catalog_path,
+            [
+                ReaderWorkMapNode(
+                    work_id="urn:cts:sanskritLit:mbh.bhg",
+                    node_id="bhg-09",
+                    parent_node_id=None,
+                    level=1,
+                    kind="chapter",
+                    label="Rāja Vidyā Rāja Guhya Yoga",
+                    native_label=None,
+                    ordinal=9,
+                    start_citation="231273",
+                    end_citation="231341",
+                    provenance="curated",
+                    confidence="high",
+                    status="accepted",
+                    note="fixture",
+                    source_file="fixture",
+                    evidence=(
+                        ReaderMetadataOverlayEvidence(
+                            source_type="fixture",
+                            citation="fixture",
+                            label="fixture",
+                        ),
+                    ),
+                )
+            ],
+        )
+
+        rows = current_divisions_for_segment(
+            catalog_path,
+            "urn:cts:sanskritLit:mbh.bhg",
+            "231276",
+        )
+
+    assert [row["node_id"] for row in rows] == ["bhg-09"]
 
 
 def test_duplicate_author_audit_reports_display_collisions_not_many_works() -> None:

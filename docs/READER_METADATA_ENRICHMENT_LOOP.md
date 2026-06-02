@@ -5,7 +5,8 @@ separate.
 
 1. **Research-backed curated metadata** records facts or claims we can cite:
    display corrections, aliases, attribution claims, contained-work boundaries,
-   work maps, citation maps, search concepts, and source metadata.
+   work maps, division metadata, citation maps, search concepts, and source
+   metadata.
 2. **Generated discovery metadata** records interpretive catalog judgments:
    discovery group, tags, popularity scores, popularity tiers, author bios, and
    short classification notes.
@@ -27,6 +28,7 @@ discovery metadata.
 | Curated aliases | Alternate titles, abbreviations, and search-facing names | `data/curated/reader_aliases` | reader build |
 | Curated contained works | Embedded works with source-backed identity and citation ranges | `data/curated/reader_contained_works` then `contained_works` | reader build |
 | Curated work maps | Table-of-contents and citation-range structure | `data/curated/reader_work_maps` | reader build |
+| Curated division metadata | Reviewed chapter, book, or division bios layered over work-map nodes | `data/curated/reader_division_metadata` then `division_metadata` | reader build, `reader sync-division-metadata`, `reader structure` |
 | Curated citation maps | Source/work-specific mappings from scholarly or dictionary citation conventions to local machine citation shapes | `data/curated/reader_citation_maps` then `citation_maps` | reader build, `reader sync-citation-maps`, `reader citation-maps` |
 | Curated search concepts | Query expansions and concept labels | `data/curated/reader_search` | `reader search-index build` |
 | Generated work classifications | Discovery group, tags, popularity, category, period, and notes | CSV under `data/generated/reader_classifications`, then `work_classifications` | `reader classification-export`, `reader classify-works`, `reader sync-classifications` |
@@ -39,6 +41,8 @@ discovery metadata.
   or citation boundaries.
 - Do not put Firecrawl scratch paths into curated YAML. Cite the original URL or
   stable source identifier.
+- Do not write division metadata without a matching work-map node. The work map
+  is the structural range fact; division metadata is the interpretive overlay.
 - Do not promote an attribution into display metadata unless the display claim is
   clear. Use an attribution claim when traditions compete or certainty is lower.
 - Do not let generated author bios imply uncited authorship facts. Generated bios
@@ -105,7 +109,8 @@ The layer boundary is the main invariant:
 flowchart LR
     Research["Firecrawl research and local source inspection"] --> Curated["Research backed curated metadata"]
     Source["Imported source metadata"] --> Curated
-    Curated --> Catalog["Reader catalog DuckDB"]
+    Curated --> WorkMap["Work maps and division metadata"]
+    WorkMap --> Catalog["Reader catalog DuckDB"]
     Catalog --> Export["Classification export CSV"]
     Export --> Generated["Generated discovery metadata CSV"]
     Generated --> Sync["Sync classifications"]
@@ -156,7 +161,8 @@ Use this path for a Firecrawl-backed metadata batch.
 3. **Write the narrowest curated record.**
    Use display overlays for display fields, attribution YAML for responsibility
    claims, aliases for alternate names, contained works for embedded works,
-   work maps for work table-of-contents structures, citation maps for
+   work maps for work table-of-contents structures, division metadata for
+   reviewed chapter or book bios layered over those maps, citation maps for
    source-specific scholarly-reference quirks, and source metadata for
    source-backed context that should inform classification without mutating
    display fields.
@@ -168,6 +174,7 @@ Use this path for a Firecrawl-backed metadata batch.
      --reviewer rule
    just cli reader --catalog "$CATALOG" sync-metadata-overlays --output json
    just cli reader --catalog "$CATALOG" sync-metadata-attributions --output json
+   just cli reader --catalog "$CATALOG" sync-division-metadata --output json
    ```
 
 5. **Regenerate or restore generated discovery metadata when needed.**
@@ -274,6 +281,27 @@ The Bhagavadgītā case crosses both layers.
   Therefore a catalog can contain the Bhagavadgītā and still omit it from the
   Religion shelf if generated classifications were not synced, did not resolve
   contained-work IDs, or classified the work under another primary group.
+
+## Example: Bhagavadgītā Chapter 9 Canon Table
+
+Chapter metadata uses the same boundary. The work-map node `bhg-09` states the
+chapter range. A division metadata record may add the reviewed short label,
+traditional reference, summary, confidence, review status, and evidence count.
+The reader UI renders that combined payload as a Canon Table row and a current
+division marginalium. The same accepted metadata also feeds the Work Dossier
+payload, so "tell me about this book" can report structure counts, headings,
+and reviewed chapter notes without generating prose at read time.
+
+```mermaid
+flowchart TD
+    SourceText["Durable source text witness"] --> DivisionYaml["Division metadata YAML"]
+    WorkMapYaml["Work map YAML node bhg-09"] --> StructureSync["Sync division metadata"]
+    DivisionYaml --> StructureSync
+    StructureSync --> Catalog["Reader catalog DuckDB"]
+    Catalog --> StructurePayload["reader structure"]
+    StructurePayload --> CanonTable["Canon Table row"]
+    StructurePayload --> Marginalium["Current chapter marginalium"]
+```
 
 ## Verification Expectations
 

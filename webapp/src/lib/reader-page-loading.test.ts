@@ -5,6 +5,89 @@ const readerPageSource = readFileSync(
 	new URL('../routes/reader/+page.svelte', import.meta.url),
 	'utf8'
 );
+const readerCssSource = readFileSync(new URL('../app.css', import.meta.url), 'utf8');
+
+for (const primitiveSourceToken of [
+	'orionObjectCard',
+	'provenanceChips',
+	'orion-reader-loading-strip',
+	'readerLoadingElapsedSeconds'
+]) {
+	assert.ok(
+		readerPageSource.includes(primitiveSourceToken),
+		`reader page should expose Orion primitive source token: ${primitiveSourceToken}`
+	);
+}
+
+for (const primitiveCssToken of [
+	'.orion-object-card',
+	'.orion-reader-provenance-chip',
+	'.orion-reader-apparatus-sheet'
+]) {
+	assert.ok(
+		readerCssSource.includes(primitiveCssToken),
+		`reader CSS should define Orion primitive style: ${primitiveCssToken}`
+	);
+}
+
+for (const workDeskSourceToken of [
+	'orion-reader-work-desk',
+	'orion-reader-leaf',
+	'orion-reader-apparatus-tabs',
+	"activeApparatusPanel = 'structure'",
+	'orion-reader-apparatus-sheet open'
+]) {
+	assert.ok(
+		readerPageSource.includes(workDeskSourceToken),
+		`reader page should expose Work Desk apparatus token: ${workDeskSourceToken}`
+	);
+}
+
+for (const workDeskCssToken of ['.orion-reader-work-desk', '@media (max-width: 48rem)']) {
+	assert.ok(
+		readerCssSource.includes(workDeskCssToken),
+		`reader CSS should define Work Desk responsive style: ${workDeskCssToken}`
+	);
+}
+
+for (const structureSourceToken of [
+	'let structure = $state<ReaderStructureNode[]>([])',
+	"mode: 'structure'",
+	'await loadStructure(readerWorkRef(selectedWork))',
+	'orion-reader-canon-table',
+	'orion-reader-provenance-chip',
+	"readerLoadingElapsed('structure')"
+]) {
+	assert.ok(
+		readerPageSource.includes(structureSourceToken),
+		`reader page should expose structure UI token: ${structureSourceToken}`
+	);
+}
+
+for (const structureCssToken of ['.orion-reader-canon-table', '.orion-reader-apparatus-sheet']) {
+	assert.ok(
+		readerCssSource.includes(structureCssToken),
+		`reader CSS should expose structure UI style: ${structureCssToken}`
+	);
+}
+
+for (const dossierSourceToken of [
+	'let workDossier = $state<ReaderWorkDossierResponse | null>(null)',
+	'loadWorkDossier',
+	"mode: 'about'",
+	'orion-reader-work-dossier',
+	'uiCopy.workDossier.title'
+]) {
+	assert.ok(
+		readerPageSource.includes(dossierSourceToken),
+		`reader page should expose Work Dossier token: ${dossierSourceToken}`
+	);
+}
+
+assert.ok(
+	readerCssSource.includes('.orion-reader-work-dossier'),
+	'reader CSS should define Work Dossier style'
+);
 
 const loadAuthorSectionsMatch = readerPageSource.match(
 	/async function loadAuthorSections[\s\S]*?\n\t}\n\n\tasync function loadAuthors/

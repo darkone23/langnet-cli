@@ -9,6 +9,8 @@ import type {
 	ReaderSearchMode,
 	ReaderSearchResponse,
 	ReaderShelvesResponse,
+	ReaderStructureResponse,
+	ReaderWorkDossierResponse,
 	ReaderWorksResponse
 } from '$lib/reader';
 import {
@@ -365,6 +367,31 @@ export async function readerWork({
 	};
 }
 
+export async function readerWorkDossier({
+	catalogId,
+	language,
+	work,
+	options = {}
+}: {
+	catalogId: string | null;
+	language?: LanguageMode;
+	work: string;
+	options?: ReaderCliOptions;
+}): Promise<ReaderWorkDossierResponse & { catalog: ReaderCatalog }> {
+	const catalog = await resolveReaderCatalog(catalogId, language, options);
+	const rawPayload = await runReaderJsonCommand(catalog, ['about', work, '--output', 'json'], options);
+	return {
+		...(withCatalog(rawPayload, catalog) as ReaderWorkDossierResponse & {
+			catalog: ReaderCatalog;
+		}),
+		headings: arrayOfObjects(rawPayload.headings) as ReaderWorkDossierResponse['headings'],
+		division_bios: arrayOfObjects(
+			rawPayload.division_bios
+		) as ReaderWorkDossierResponse['division_bios'],
+		provenance_chips: arrayOfStrings(rawPayload.provenance_chips)
+	};
+}
+
 export async function readerAuthors({
 	catalogId,
 	language,
@@ -447,6 +474,29 @@ export async function readerContents({
 	if (charBudget) args.push('--char-budget', String(charBudget));
 	args.push('--output', 'json');
 	return withCatalog(await runReaderJsonCommand(catalog, args, options), catalog);
+}
+
+export async function readerStructure({
+	catalogId,
+	language,
+	work,
+	options = {}
+}: {
+	catalogId: string | null;
+	language?: LanguageMode;
+	work: string;
+	options?: ReaderCliOptions;
+}): Promise<ReaderStructureResponse & { catalog: ReaderCatalog }> {
+	const catalog = await resolveReaderCatalog(catalogId, language, options);
+	const rawPayload = await runReaderJsonCommand(
+		catalog,
+		['structure', work, '--output', 'json'],
+		options
+	);
+	return {
+		...(withCatalog(rawPayload, catalog) as ReaderStructureResponse & { catalog: ReaderCatalog }),
+		items: arrayOfObjects(rawPayload.items) as ReaderStructureResponse['items']
+	};
 }
 
 export async function readerShow({

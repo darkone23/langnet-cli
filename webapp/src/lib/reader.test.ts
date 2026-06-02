@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert';
-import type { ReaderCatalog } from './reader';
+import { readFileSync } from 'node:fs';
+import type { ReaderCatalog, ReaderStructureResponse, ReaderWorkDossierResponse } from './reader';
 import {
 	buildReaderTokenParts,
 	cleanReaderToken,
@@ -31,6 +32,12 @@ import {
 	resolveReaderCatalogChoice
 } from './reader';
 
+const readerSource = readFileSync(new URL('./reader.ts', import.meta.url), 'utf8');
+
+assert.ok(readerSource.includes('export type ReaderStructureNode'));
+assert.ok(readerSource.includes('export type ReaderStructureResponse'));
+assert.ok(readerSource.includes('export type ReaderWorkDossierResponse'));
+
 assert.equal(cleanReaderToken('λόγος;'), 'λόγος');
 assert.equal(cleanReaderToken('“nox”'), 'nox');
 assert.equal(cleanReaderToken('येनाक्षरसमाम्नायमधिगम्य'), 'येनाक्षरसमाम्नायमधिगम्य');
@@ -41,6 +48,78 @@ assert.equal(readerLanguageLabel('lat'), 'Latin');
 assert.equal(readerLoadingStatusLabel('Searching texts', 0), 'Searching texts');
 assert.equal(readerLoadingStatusLabel('Searching texts', 4), 'Searching texts... 4s');
 assert.equal(readerLoadingStatusLabel('Searching texts', 65), 'Searching texts... 1m 5s');
+
+const structurePayload: ReaderStructureResponse = {
+	schema_version: 'langnet.reader.v1',
+	mode: 'structure',
+	catalog_path: 'catalog.duckdb',
+	request: { work_ref: 'urn:cts:sanskritLit:mbh.bhg' },
+	summary: {
+		node_count: 1,
+		top_level_count: 1,
+		kinds: ['chapter'],
+		has_division_metadata: true
+	},
+	items: [
+		{
+			work_id: 'urn:cts:sanskritLit:mbh.bhg',
+			node_id: 'bhg-09',
+			parent_node_id: null,
+			level: 1,
+			kind: 'chapter',
+			object_type: 'chapter',
+			label: 'Rāja Vidyā Rāja Guhya Yoga',
+			native_label: 'राजविद्याराजगुह्ययोग',
+			ordinal: 9,
+			start_citation: '231273',
+			end_citation: '231341',
+			provenance: 'curated',
+			confidence: 'high',
+			status: 'accepted',
+			note: 'fixture',
+			source_file: 'fixture',
+			summary: 'A reviewed chapter note.',
+			short_label: 'Royal knowledge',
+			traditional_reference: 'BhG 9',
+			provenance_chips: ['Curated', 'Reviewed'],
+			word_count: 10,
+			word_count_method: 'whitespace_tokens'
+		}
+	]
+};
+
+assert.equal(structurePayload.items[0].traditional_reference, 'BhG 9');
+
+const dossierPayload: ReaderWorkDossierResponse = {
+	schema_version: 'langnet.reader.v1',
+	mode: 'work-dossier',
+	catalog_path: 'catalog.duckdb',
+	request: { work_ref: 'urn:cts:sanskritLit:mbh.bhg' },
+	work: {
+		work_id: 'urn:cts:sanskritLit:mbh.bhg',
+		collection_id: 'sanskrit_dcs',
+		language: 'san',
+		title: 'Bhagavadgītā',
+		author: 'Vyāsa',
+		author_id: null,
+		source_id: 'mbh.bhg',
+		cts_work_urn: 'urn:cts:sanskritLit:mbh.bhg'
+	},
+	summary: {
+		structure_count: 1,
+		top_level_count: 1,
+		top_level_kind: 'chapter',
+		structure_label: '1 chapter',
+		division_bio_count: 1,
+		has_division_metadata: true
+	},
+	headings: structurePayload.items,
+	division_bios: structurePayload.items,
+	provenance_chips: ['Curated', 'Reviewed']
+};
+
+assert.equal(dossierPayload.summary.structure_label, '1 chapter');
+assert.equal(dossierPayload.division_bios[0].traditional_reference, 'BhG 9');
 
 const readerCatalogFixture: ReaderCatalog[] = [
 	{

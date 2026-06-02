@@ -49,6 +49,7 @@ Curated repo data should be included in normal builds:
 - attribution claims: `data/curated/reader_attributions`
 - contained works: `data/curated/reader_contained_works`
 - work maps/table-of-contents data: `data/curated/reader_work_maps`
+- division metadata/chapter bios: `data/curated/reader_division_metadata`
 - citation maps: `data/curated/reader_citation_maps`
 
 The curated directories have CLI defaults, but pass them explicitly in handoff
@@ -71,6 +72,7 @@ just cli-databuild reader \
   --alias-dir data/curated/reader_aliases \
   --contained-work-dir data/curated/reader_contained_works \
   --work-map-dir data/curated/reader_work_maps \
+  --division-metadata-dir data/curated/reader_division_metadata \
   --citation-map-dir data/curated/reader_citation_maps \
   --progress-every 100
 ```
@@ -92,6 +94,7 @@ just cli-databuild reader \
   --alias-dir data/curated/reader_aliases \
   --contained-work-dir data/curated/reader_contained_works \
   --work-map-dir data/curated/reader_work_maps \
+  --division-metadata-dir data/curated/reader_division_metadata \
   --citation-map-dir data/curated/reader_citation_maps \
   --progress-every 100 \
   --output-root examples/debug/reader_full_curated_current
@@ -101,9 +104,33 @@ If a source root is unavailable, omit that flag and document the omission in
 the build notes. The resulting catalog is still valid for the included sources,
 but it is not the full product target.
 
-After parser, importer, overlay, contained-work, work-map, or citation-map changes, rebuild
-the catalog. Applying selected overlay sync commands can be useful for quick
-checks, but parser and importer behavior is baked into the generated book DBs.
+After parser, importer, overlay, contained-work, work-map, division-metadata, or
+citation-map changes, rebuild the catalog. Applying selected overlay sync
+commands can be useful for quick checks, but parser and importer behavior is
+baked into the generated book DBs.
+
+Division metadata is the source-backed overlay for chapter bios and traditional
+division labels. It is keyed by `work_id` plus `node_id`, so the matching
+work-map node must already exist. Quick sync is useful after editing reviewed
+chapter metadata:
+
+```bash
+export CATALOG=data/build/reader/catalog.duckdb
+
+just cli reader --catalog $CATALOG sync-division-metadata \
+  --division-metadata-dir data/curated/reader_division_metadata \
+  --output json
+
+just cli reader --catalog $CATALOG structure \
+  urn:cts:sanskritLit:mbh.bhg \
+  --output json
+
+just cli reader --catalog $CATALOG about \
+  urn:cts:sanskritLit:mbh.bhg \
+  --output json
+
+just cli reader --catalog $CATALOG resolve-address "BhG 9" --output json
+```
 
 ## Restore Generated Discovery Metadata
 
@@ -337,6 +364,8 @@ just cli reader --catalog $CATALOG shelves --language san --limit 12 --sample-li
 just cli reader --catalog $CATALOG shelves --language grc --limit 12 --sample-limit 2 --output json
 just cli reader --catalog $CATALOG shelves --language lat --limit 12 --sample-limit 2 --output json
 just cli reader --catalog $CATALOG contents urn:cts:greekLit:tlg0012.tlg002 --limit 5
+just cli reader --catalog $CATALOG about urn:cts:sanskritLit:mbh.bhg --output json
+just cli reader --catalog $CATALOG resolve-address "BhG 9" --output json
 just cli reader --catalog $CATALOG search-index validate \
   --index $SEARCH_INDEX \
   --output json

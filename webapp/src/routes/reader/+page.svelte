@@ -70,7 +70,10 @@
 		type ReaderShowResponse,
 		type ReaderTokenPart,
 		type ReaderWork,
+		type ReaderWorkDossierResponse,
 		type ReaderWorkResponse,
+		type ReaderStructureNode,
+		type ReaderStructureResponse,
 		type ReaderWorksResponse
 	} from '$lib/reader';
 	import { romanizeSearchTerm } from '$lib/search-romanization';
@@ -79,7 +82,15 @@
 
 	type ReaderHistoryMode = 'push' | 'replace' | 'none';
 	type ReaderIndexView = 'choose' | NonNullable<ReaderRouteState['readerView']>;
-	type ReaderLoadingKey = 'shelves' | 'library' | 'authors' | 'textSearch' | 'contents' | 'segment';
+	type ReaderLoadingKey =
+		| 'shelves'
+		| 'library'
+		| 'authors'
+		| 'textSearch'
+		| 'contents'
+		| 'segment'
+		| 'dossier'
+		| 'structure';
 
 	const readerIndexStorageKey = 'orion-reader-index-state:v6';
 	const readerIndexStorageTtlMs = 2 * 60 * 60 * 1000;
@@ -137,6 +148,8 @@
 	let selectedAuthor = $state<ReaderAuthor | null>(null);
 	let selectedWork = $state<ReaderWork | null>(null);
 	let contents = $state<ReaderSegment[]>([]);
+	let structure = $state<ReaderStructureNode[]>([]);
+	let workDossier = $state<ReaderWorkDossierResponse | null>(null);
 	let selectedSegment = $state<ReaderSegment | null>(null);
 	let pageSegments = $state<ReaderSegment[]>([]);
 	let navigation = $state<{
@@ -150,9 +163,12 @@
 	let selectedWordBriefingLoading = $state(false);
 	let selectedWordBriefingGenerating = $state(false);
 	let selectedWordBriefingError = $state('');
+	let activeApparatusPanel = $state<'structure' | 'word' | 'oracle' | 'evidence' | ''>('');
 	let shelvesLoading = $state(false);
 	let libraryLoading = $state(false);
 	let contentsLoading = $state(false);
+	let structureLoading = $state(false);
+	let dossierLoading = $state(false);
 	let segmentLoading = $state(false);
 	let libraryError = $state('');
 	let authorsLoading = $state(false);
@@ -162,10 +178,14 @@
 	let authorsLoadingElapsedSeconds = $state(0);
 	let textSearchElapsedSeconds = $state(0);
 	let contentsLoadingElapsedSeconds = $state(0);
+	let structureLoadingElapsedSeconds = $state(0);
+	let dossierLoadingElapsedSeconds = $state(0);
 	let segmentLoadingElapsedSeconds = $state(0);
 	let authorsError = $state('');
 	let textSearchError = $state('');
 	let contentsError = $state('');
+	let structureError = $state('');
+	let dossierError = $state('');
 	let segmentError = $state('');
 	let totalFiltered = $state(0);
 	let worksNextCursor = $state<string | null>(null);
@@ -352,6 +372,8 @@
 			selectedWork = null;
 			selectedSegment = null;
 			contents = [];
+			structure = [];
+			workDossier = null;
 			pageSegments = [];
 			navigation = { previous: null, next: null };
 			pageNextCursor = null;
@@ -369,6 +391,8 @@
 		}
 		if (route.work) {
 			await ensureSelectedWork(route.work);
+			await loadStructure(route.work);
+			await loadWorkDossier(route.work);
 			await loadContentsPage(route.work, route.contentsCursor ?? null, historyMode);
 			return;
 		}
@@ -996,6 +1020,8 @@
 		selectedSegment = null;
 		pageSegments = [];
 		contents = [];
+		structure = [];
+		workDossier = null;
 		navigation = { previous: null, next: null };
 		pageNextCursor = null;
 		pagePrevCursor = null;
@@ -1014,10 +1040,69 @@
 		selectedSegment = null;
 		selectedWord = '';
 		contents = [];
+		structure = [];
+		workDossier = null;
 		contentsError = '';
+		structureError = '';
+		dossierError = '';
 		contentsCursorParam = null;
 		pageCursorParam = null;
+		await loadStructure(readerWorkRef(work));
+		await loadWorkDossier(readerWorkRef(work));
 		await loadContentsPage(readerWorkRef(work), null, 'push');
+	}
+
+	async function loadStructure(work: string) {
+		if (!work || !catalogId) return;
+		structureLoading = true;
+		structureError = '';
+		startReaderLoadingTimer('structure');
+		try {
+			const params = new URLSearchParams({
+				mode: 'structure',
+				catalog: catalogId,
+				language,
+				work,
+				timeout_ms: '120000'
+			});
+			const { response, data } = await fetchReaderApi<ReaderStructureResponse>(
+				`/api/reader?${params.toString()}`
+			);
+			if (!response.ok) throw new Error(data.error || 'Reader structure failed.');
+			structure = data.items ?? [];
+		} catch (error) {
+			structureError = error instanceof Error ? error.message : 'Reader structure failed.';
+		} finally {
+			structureLoading = false;
+			stopReaderLoadingTimer('structure');
+		}
+	}
+
+	async function loadWorkDossier(work: string) {
+		if (!work || !catalogId) return;
+		dossierLoading = true;
+		dossierError = '';
+		startReaderLoadingTimer('dossier');
+		try {
+			const params = new URLSearchParams({
+				mode: 'about',
+				catalog: catalogId,
+				language,
+				work,
+				timeout_ms: '120000'
+			});
+			const { response, data } = await fetchReaderApi<ReaderWorkDossierResponse>(
+				`/api/reader?${params.toString()}`
+			);
+			if (!response.ok) throw new Error(data.error || 'Reader work dossier failed.');
+			workDossier = data;
+		} catch (error) {
+			dossierError =
+				error instanceof Error ? error.message : 'Reader work dossier failed.';
+		} finally {
+			dossierLoading = false;
+			stopReaderLoadingTimer('dossier');
+		}
 	}
 
 	async function loadContentsPage(
@@ -1073,6 +1158,12 @@
 		selectedWord = '';
 		try {
 			await ensureSelectedWork(work);
+			if (selectedWork && !structure.some((node) => node.work_id === selectedWork?.work_id)) {
+				await loadStructure(readerWorkRef(selectedWork));
+			}
+			if (selectedWork && workDossier?.work?.work_id !== selectedWork.work_id) {
+				await loadWorkDossier(readerWorkRef(selectedWork));
+			}
 			const params = new URLSearchParams({
 				mode: 'show',
 				catalog: catalogId,
@@ -1175,14 +1266,26 @@
 				`/api/reader?${params.toString()}`
 			);
 			if (!response.ok) throw new Error(data.error || 'Reference lookup failed.');
-			selectedSegment = data.segment;
+			selectedSegment = data.segment
+				? {
+						...data.segment,
+						current_divisions: data.current_divisions ?? data.segment.current_divisions
+					}
+				: null;
 			navigation = data.navigation ?? { previous: null, next: null };
 			if (data.segment) {
-				await ensureSelectedWork(data.segment.work_id);
-				await loadPageWindow(data.segment.work_id, data.segment.citation_path);
+				const resolvedWork = data.structure_node?.work_id || data.segment.work_id;
+				await ensureSelectedWork(resolvedWork);
+				if (data.structure_node && !structure.some((node) => node.work_id === resolvedWork)) {
+					await loadStructure(resolvedWork);
+				}
+				if (selectedWork && workDossier?.work?.work_id !== selectedWork.work_id) {
+					await loadWorkDossier(readerWorkRef(selectedWork));
+				}
+				await loadPageWindow(resolvedWork, data.segment.citation_path);
 				contentsCursorParam = null;
 				pageCursorParam = null;
-				syncUrl(data.segment.work_id, data.segment.citation_path, historyMode);
+				syncUrl(resolvedWork, data.segment.citation_path, historyMode);
 			}
 		} catch (error) {
 			segmentError = error instanceof Error ? error.message : 'Reference lookup failed.';
@@ -1527,6 +1630,8 @@
 		else if (kind === 'authors') authorsLoadingElapsedSeconds = seconds;
 		else if (kind === 'textSearch') textSearchElapsedSeconds = seconds;
 		else if (kind === 'contents') contentsLoadingElapsedSeconds = seconds;
+		else if (kind === 'structure') structureLoadingElapsedSeconds = seconds;
+		else if (kind === 'dossier') dossierLoadingElapsedSeconds = seconds;
 		else segmentLoadingElapsedSeconds = seconds;
 	}
 
@@ -1536,7 +1641,13 @@
 		if (kind === 'authors') return authorsLoadingElapsedSeconds;
 		if (kind === 'textSearch') return textSearchElapsedSeconds;
 		if (kind === 'contents') return contentsLoadingElapsedSeconds;
+		if (kind === 'structure') return structureLoadingElapsedSeconds;
+		if (kind === 'dossier') return dossierLoadingElapsedSeconds;
 		return segmentLoadingElapsedSeconds;
+	}
+
+	function readerLoadingElapsed(kind: ReaderLoadingKey) {
+		return readerLoadingElapsedSeconds(kind);
 	}
 
 	function readerLoadingStatus(label: string, kind: ReaderLoadingKey) {
@@ -1999,6 +2110,61 @@
 	</div>
 {/snippet}
 
+{#snippet provenanceChips(chips: string[] | undefined)}
+	{#if chips?.length}
+		<div class="orion-reader-provenance-row" aria-label="Provenance">
+			{#each chips as chip}
+				<span class="orion-reader-provenance-chip">{chip}</span>
+			{/each}
+		</div>
+	{/if}
+{/snippet}
+
+{#snippet orionObjectCard(kind: string, title: string, subtitle = '', chips: string[] = [])}
+	<article class="orion-object-card">
+		<span>{kind}</span>
+		<strong>{title}</strong>
+		{#if subtitle}
+			<small>{subtitle}</small>
+		{/if}
+		{@render provenanceChips(chips)}
+	</article>
+{/snippet}
+
+{#snippet canonTable(items: ReaderStructureNode[])}
+	<div class="orion-reader-canon-table">
+		{#each items as item}
+			<article
+				class="orion-reader-division-card"
+				style={`--division-depth: ${Math.max(0, item.level - 1)}`}
+			>
+				<div>
+					<span>{item.kind}</span>
+					<strong>{item.short_label || item.label}</strong>
+					{#if item.native_label}
+						<small>{item.native_label}</small>
+					{/if}
+				</div>
+				<div>
+					<span>{item.traditional_reference || item.start_citation}</span>
+					<small>{item.start_citation}..{item.end_citation}</small>
+				</div>
+				{#if item.summary}
+					<p>{item.summary}</p>
+				{/if}
+				{@render provenanceChips(item.provenance_chips)}
+				<button
+					type="button"
+					class="btn btn-xs"
+					onclick={() => showSegment(item.work_id, item.start_citation, 'push')}
+				>
+					{uiCopy.readerStructure.open}
+				</button>
+			</article>
+		{/each}
+	</div>
+{/snippet}
+
 {#snippet readerErrorPanel(title: string, message: string, retryLabel: string, retry: () => void)}
 	<div class="orion-reader-state-panel orion-reader-state-error" role="alert">
 		<strong>{title}</strong>
@@ -2142,6 +2308,63 @@
 					{/if}
 				</div>
 			</div>
+
+			{#if selectedWork}
+				<section class="orion-reader-work-desk" aria-label="Reader work desk">
+					{@render orionObjectCard(
+						uiCopy.orionObjects.work,
+						selectedWorkTitleLabel(),
+						selectedWorkContributorLine() || selectedWorkDiscriminator(),
+						selectedWork.classification_confidence ? [selectedWork.classification_confidence] : []
+					)}
+					<div class="orion-reader-work-dossier">
+						<div>
+							<span>{uiCopy.orionObjects.dossier}</span>
+							<strong>{uiCopy.workDossier.title}</strong>
+							{#if workDossier?.summary.structure_label}
+								<small>{workDossier.summary.structure_label}</small>
+							{/if}
+						</div>
+						{@render provenanceChips(workDossier?.provenance_chips)}
+						{#if dossierLoading && !workDossier}
+							{@render readerLoadingStrip(uiCopy.workDossier.loading, 'dossier')}
+						{:else if dossierError}
+							{@render readerErrorPanel(
+								'Work dossier failed to load',
+								dossierError,
+								'Load dossier again',
+								() => selectedWork && void loadWorkDossier(readerWorkRef(selectedWork))
+							)}
+						{:else if workDossier}
+							{#if workDossier.headings.length}
+								<div class="orion-reader-work-dossier-headings">
+									<span>{uiCopy.workDossier.headings}</span>
+									{#each workDossier.headings.slice(0, 8) as heading}
+										<button
+											type="button"
+											onclick={() => showSegment(heading.work_id, heading.start_citation, 'push')}
+										>
+											{heading.traditional_reference || heading.label}
+										</button>
+									{/each}
+								</div>
+							{/if}
+							{#if workDossier.division_bios.length}
+								<div class="orion-reader-work-dossier-bio">
+									<span>{uiCopy.workDossier.divisionBios}</span>
+									<strong>
+										{workDossier.division_bios[0].traditional_reference ||
+											workDossier.division_bios[0].label}
+									</strong>
+									<p>{workDossier.division_bios[0].summary}</p>
+								</div>
+							{/if}
+						{:else}
+							<p>{uiCopy.workDossier.empty}</p>
+						{/if}
+					</div>
+				</section>
+			{/if}
 
 			<article class="orion-reader-desk-passage orion-manuscript-panel">
 				<div class="orion-reader-desk-head">
@@ -2944,12 +3167,35 @@
 			<section class="orion-manuscript-panel p-4">
 				<div class="mb-3 flex items-start justify-between gap-3">
 					<div>
-						<h2 class="font-serif text-lg font-semibold">Book contents</h2>
+						<h2 class="font-serif text-lg font-semibold">{uiCopy.readerStructure.title}</h2>
 					</div>
 					<ScrollText class="text-base-content/45 mt-1" size={18} />
 				</div>
+				{#if structureLoading && !structure.length}
+					{@render readerSkeletonRows(uiCopy.readerStructure.loading, 'structure', 'contents', 4)}
+				{:else if structureError}
+					{@render readerErrorPanel(
+						'Structure failed to load',
+						structureError,
+						'Load structure again',
+						() => selectedWork && void loadStructure(readerWorkRef(selectedWork))
+					)}
+				{:else if structure.length}
+					{#if structureLoading}
+						<span class="sr-only">{readerLoadingElapsed('structure')}</span>
+						{@render readerLoadingStrip(uiCopy.readerStructure.loading, 'structure')}
+					{/if}
+					{@render canonTable(structure)}
+				{:else if selectedWork}
+					<p class="text-base-content/55 text-sm">{uiCopy.readerStructure.empty}</p>
+				{:else}
+					<p class="text-base-content/55 text-sm">No book selected.</p>
+				{/if}
+
 				{#if contentsLoading}
-					{@render readerSkeletonRows('Loading contents', 'contents', 'contents', 4)}
+					<div class="mt-4">
+						{@render readerSkeletonRows('Loading contents', 'contents', 'contents', 4)}
+					</div>
 				{:else if contentsError}
 					{@render readerErrorPanel(
 						'Contents failed to load',
@@ -2958,20 +3204,21 @@
 						retryContentsLoad
 					)}
 				{:else if contents.length && selectedWork}
-					<div class="orion-reader-contents-list">
-						{#each contents as segment}
-							<button
-								type="button"
-								class:active={segmentIsActive(segment)}
-								onclick={() => showSelectedWorkSegment(segment)}
-							>
-								<span>{segment.citation_path}</span>
-								<small>{readerSegmentDisplayText(segment)}</small>
-							</button>
-						{/each}
-					</div>
-				{:else}
-					<p class="text-base-content/55 text-sm">No book selected.</p>
+					<details class="orion-reader-page-segments mt-4">
+						<summary>Page segments</summary>
+						<div class="orion-reader-contents-list">
+							{#each contents as segment}
+								<button
+									type="button"
+									class:active={segmentIsActive(segment)}
+									onclick={() => showSelectedWorkSegment(segment)}
+								>
+									<span>{segment.citation_path}</span>
+									<small>{readerSegmentDisplayText(segment)}</small>
+								</button>
+							{/each}
+						</div>
+					</details>
 				{/if}
 			</section>
 
@@ -3082,4 +3329,54 @@
 			</section>
 		</aside>
 	</div>
+
+	{#if selectedWork || selectedSegment || selectedWord}
+		<nav class="orion-reader-apparatus-tabs" aria-label="Reader apparatus">
+			<button type="button" onclick={() => (activeApparatusPanel = 'structure')}>
+				<ScrollText size={15} />
+				<span>{uiCopy.apparatus.structure}</span>
+			</button>
+			<button type="button" onclick={() => (activeApparatusPanel = 'word')}>
+				<BookOpen size={15} />
+				<span>{uiCopy.apparatus.word}</span>
+			</button>
+			<button type="button" onclick={() => (activeApparatusPanel = 'oracle')}>
+				<Sparkles size={15} />
+				<span>{uiCopy.apparatus.oracle}</span>
+			</button>
+			<button type="button" onclick={() => (activeApparatusPanel = 'evidence')}>
+				<Database size={15} />
+				<span>{uiCopy.apparatus.evidence}</span>
+			</button>
+		</nav>
+	{/if}
+
+	{#if activeApparatusPanel}
+		<section class="orion-reader-apparatus-sheet open" aria-label="Reader apparatus sheet">
+			<div class="orion-reader-apparatus-sheet-head">
+				<strong>{activeApparatusPanel}</strong>
+				<button type="button" class="btn btn-xs" onclick={() => (activeApparatusPanel = '')}>
+					{uiCopy.apparatus.close}
+				</button>
+			</div>
+			{#if activeApparatusPanel === 'structure'}
+				{#if structure.length}
+					{@render canonTable(structure)}
+				{:else}
+					<p>{uiCopy.readerStructure.empty}</p>
+				{/if}
+			{:else if activeApparatusPanel === 'word'}
+				<p>{selectedWord || uiCopy.encounterBriefing.empty}</p>
+			{:else if activeApparatusPanel === 'oracle'}
+				<p>{selectedWordBriefingOutput?.short || uiCopy.encounterBriefing.empty}</p>
+			{:else}
+				<p>
+					{selectedSegment?.canonical_address ||
+						selectedSegment?.address ||
+						selectedWork?.canonical_address ||
+						''}
+				</p>
+			{/if}
+		</section>
+	{/if}
 </main>

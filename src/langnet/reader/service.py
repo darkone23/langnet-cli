@@ -15,6 +15,10 @@ from langnet.reader.discovery_taxonomy import (
     discovery_group_allowed_values,
     discovery_tag_allowed_values,
 )
+from langnet.reader.division_metadata import (
+    accepted_division_metadata,
+    load_division_metadata,
+)
 from langnet.reader.display import decorate_segment_display
 from langnet.reader.metadata_attribution import load_metadata_attributions
 from langnet.reader.metadata_overlay import load_metadata_overlays
@@ -37,6 +41,7 @@ from langnet.reader.source_enrichment import (
 from langnet.reader.storage import (
     apply_metadata_overlays_to_catalog,
     citation_maps_for_work,
+    current_divisions_for_segment,
     get_work,
     list_alias_conflicts,
     list_aliases,
@@ -61,14 +66,17 @@ from langnet.reader.storage import (
     reader_summary,
     register_author_classifications,
     register_citation_maps,
+    register_division_metadata,
     register_metadata_attributions,
     register_metadata_overlays,
     register_source_metadata,
     register_work_classifications,
     register_work_map_nodes,
     repair_work_languages,
+    resolve_structure_reference,
     resolve_work_ref,
     segment_navigation,
+    structure_for_work,
     work_map_for_work,
 )
 from langnet.reader.validation import validate_reader_catalog
@@ -667,6 +675,12 @@ class ReaderService:
             anchor=around,
             limit=limit,
         )
+        for item in items:
+            item["current_divisions"] = current_divisions_for_segment(
+                self.catalog_path,
+                str(item.get("work_id") or work_id),
+                str(item.get("citation_path") or ""),
+            )
         has_more = around is None and source_count > len(items)
         return self._payload(
             "contents",
@@ -714,6 +728,15 @@ class ReaderService:
             "address": address,
             "resolved_address": resolved_address,
             "segment": _decorate_segment(self.catalog_path, segment),
+            "current_divisions": (
+                current_divisions_for_segment(
+                    self.catalog_path,
+                    str(segment.get("work_id") or ""),
+                    str(segment.get("citation_path") or ""),
+                )
+                if segment
+                else []
+            ),
             "navigation": segment_navigation(self.catalog_path, segment) if segment else None,
         }
 
@@ -730,6 +753,15 @@ class ReaderService:
             "work_ref": work_ref,
             "citation_path": citation_path,
             "segment": _decorate_segment(self.catalog_path, segment),
+            "current_divisions": (
+                current_divisions_for_segment(
+                    self.catalog_path,
+                    str(segment.get("work_id") or work_ref),
+                    str(segment.get("citation_path") or citation_path),
+                )
+                if segment
+                else []
+            ),
             "navigation": segment_navigation(self.catalog_path, segment) if segment else None,
         }
 
@@ -760,6 +792,44 @@ class ReaderService:
             work_map_for_work(self.catalog_path, work_ref),
             work_ref=work_ref,
         )
+
+    def structure_payload(self, work_ref: str) -> dict[str, Any]:
+        items = structure_for_work(self.catalog_path, work_ref)
+        top_level = [item for item in items if int(item.get("level") or 0) == 1]
+        kinds = sorted({str(item.get("kind") or "") for item in items if item.get("kind")})
+        payload = self._payload("structure", items, work_ref=work_ref)
+        payload["summary"] = {
+            "node_count": len(items),
+            "top_level_count": len(top_level),
+            "kinds": kinds,
+            "has_division_metadata": any(item.get("summary") for item in items),
+        }
+        return payload
+
+    def work_dossier_payload(self, work_ref: str) -> dict[str, Any]:
+        work = get_work(self.catalog_path, work_ref)
+        items = structure_for_work(self.catalog_path, work_ref)
+        top_level = [item for item in items if int(item.get("level") or 0) == 1]
+        division_bios = [item for item in items if item.get("summary")]
+        top_level_kind = _dominant_structure_kind(top_level)
+        return {
+            "schema_version": READER_SCHEMA_VERSION,
+            "mode": "work-dossier",
+            "catalog_path": str(self.catalog_path),
+            "request": {"work_ref": work_ref},
+            "work": work,
+            "summary": {
+                "structure_count": len(items),
+                "top_level_count": len(top_level),
+                "top_level_kind": top_level_kind,
+                "structure_label": _structure_count_label(len(top_level), top_level_kind),
+                "division_bio_count": len(division_bios),
+                "has_division_metadata": bool(division_bios),
+            },
+            "headings": top_level,
+            "division_bios": division_bios,
+            "provenance_chips": _merge_provenance_chips(items),
+        }
 
     def citation_maps_payload(
         self,
@@ -797,6 +867,19 @@ class ReaderService:
             "summary": {
                 "work_map_dir": str(work_map_dir),
                 "synced_count": len(nodes),
+            },
+        }
+
+    def sync_division_metadata_payload(self, division_metadata_dir: Path) -> dict[str, Any]:
+        rows = accepted_division_metadata(load_division_metadata(division_metadata_dir))
+        register_division_metadata(self.catalog_path, rows)
+        return {
+            "schema_version": READER_SCHEMA_VERSION,
+            "mode": "sync-division-metadata",
+            "catalog_path": str(self.catalog_path),
+            "summary": {
+                "division_metadata_dir": str(division_metadata_dir),
+                "synced_count": len(rows),
             },
         }
 
@@ -948,19 +1031,29 @@ class ReaderService:
         resolved_address = address
         segment = None
         segments: list[dict[str, Any]] = []
+        structure_node: dict[str, Any] | None = None
+        current_divisions: list[dict[str, Any]] = []
+        resolution_kind = "not_found"
         address_text = address.strip()
         spaced_reference = " " in address_text
+        split_work_ref: str | None = None
+        split_citation_path: str | None = None
         if spaced_reference:
             work_ref, citation_path = self._split_reference(address.strip())
             citation_path = _normalize_citation_path(citation_path)
+            split_work_ref = work_ref
+            split_citation_path = citation_path
             work_id = resolve_work_ref(self.catalog_path, work_ref)
             if work_id and citation_path:
                 resolved_address = f"{work_id}:{citation_path.strip()}"
                 segment = lookup_segment_by_address(self.catalog_path, resolved_address)
+                if segment is not None:
+                    resolution_kind = "segment"
             else:
                 segments = lookup_segments_by_citation_reference(self.catalog_path, address)
                 if segments:
                     segment = segments[0]
+                    resolution_kind = "citation_reference"
         if (
             segment is None
             and not segments
@@ -968,6 +1061,8 @@ class ReaderService:
             and not spaced_reference
         ):
             segment = lookup_segment_by_address(self.catalog_path, address)
+            if segment is not None:
+                resolution_kind = "segment"
         if segment is not None:
             if not segments:
                 segments = [segment]
@@ -975,6 +1070,31 @@ class ReaderService:
             segments = lookup_segments_by_citation_reference(self.catalog_path, address)
             if segments:
                 segment = segments[0]
+                resolution_kind = "citation_reference"
+        if segment is None:
+            structure_node = resolve_structure_reference(
+                self.catalog_path,
+                address,
+                work_ref=split_work_ref,
+                citation_ref=split_citation_path,
+            )
+            if structure_node is not None:
+                resolved_address = (
+                    f"{structure_node['work_id']}:{structure_node['start_citation']}"
+                )
+                segment = lookup_segment_by_work_and_citation(
+                    self.catalog_path,
+                    str(structure_node["work_id"]),
+                    str(structure_node["start_citation"]),
+                )
+                if segment is not None:
+                    segments = [segment]
+                    current_divisions = current_divisions_for_segment(
+                        self.catalog_path,
+                        str(segment["work_id"]),
+                        str(segment["citation_path"]),
+                    )
+                    resolution_kind = "structure"
         return {
             "schema_version": READER_SCHEMA_VERSION,
             "mode": "resolve-address",
@@ -982,8 +1102,11 @@ class ReaderService:
             "address": address,
             "resolved_address": resolved_address,
             "resolution_status": "resolved" if segment is not None else "not_found",
+            "resolution_kind": resolution_kind,
             "segment": segment,
             "segments": segments,
+            "structure_node": structure_node,
+            "current_divisions": current_divisions,
         }
 
     def _split_reference(self, address: str) -> tuple[str, str]:
@@ -1308,6 +1431,33 @@ def _segment_reader_text_length(item: dict[str, Any]) -> int:
         if primary:
             return len(str(primary))
     return len(str(item.get("text") or ""))
+
+
+def _dominant_structure_kind(items: list[dict[str, Any]]) -> str:
+    counts: dict[str, int] = {}
+    for item in items:
+        kind = str(item.get("kind") or "division")
+        counts[kind] = counts.get(kind, 0) + 1
+    if not counts:
+        return "division"
+    return sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))[0][0]
+
+
+def _structure_count_label(count: int, kind: str) -> str:
+    label = kind or "division"
+    if count != 1:
+        label = f"{label}s"
+    return f"{count} {label}"
+
+
+def _merge_provenance_chips(items: list[dict[str, Any]]) -> list[str]:
+    chips: list[str] = []
+    for item in items:
+        for chip in item.get("provenance_chips") or []:
+            chip_text = str(chip)
+            if chip_text and chip_text not in chips:
+                chips.append(chip_text)
+    return chips
 
 
 def _decorate_segment(catalog_path: Path, segment: dict[str, Any] | None) -> dict[str, Any] | None:

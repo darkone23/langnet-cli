@@ -210,6 +210,22 @@ class ReaderWorkMapNode:
 
 
 @dataclass(frozen=True)
+class ReaderDivisionMetadata:
+    work_id: str
+    node_id: str
+    summary: str
+    short_label: str
+    traditional_reference: str
+    status: str
+    confidence: str
+    generator_model: str
+    review_status: str
+    note: str
+    source_file: str = ""
+    evidence: tuple[ReaderMetadataOverlayEvidence, ...] = ()
+
+
+@dataclass(frozen=True)
 class ReaderCitationMap:
     citation_map_id: str
     source_id: str
