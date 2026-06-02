@@ -20,6 +20,7 @@ Feature areas should be subdirectories such as `infra`, `skt`, `pedagogy`,
 Only these plans are active after the 2026-05 documentation overhaul:
 
 - `docs/plans/active/infra/reader-source-backed-enrichment.md`
+- `docs/plans/active/infra/reader-traditional-structure-overhaul.md`
 - `docs/plans/active/pedagogy/learner-encounter-roadmap.md`
 - `docs/plans/active/pedagogy/real-input-fuzzing-roadmap.md`
 - `docs/plans/active/skt/cdsl-entry-grammar-plan.md`

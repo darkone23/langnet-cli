@@ -12614,6 +12614,64 @@ def encounter_briefing_batch_spike(  # noqa: PLR0913
     click.echo(orjson.dumps(batch, option=orjson.OPT_INDENT_2).decode("utf-8"))
 
 
+@main.command("encounter-briefing-model-benchmark")
+@click.option(
+    "--input-jsonl",
+    "input_jsonl",
+    type=str,
+    required=True,
+    help="Saved encounter JSONL payloads, or '-' to read from stdin.",
+)
+@click.option(
+    "--model",
+    "models",
+    multiple=True,
+    default=("openai:qwen/qwen3.6-flash", "openai:qwen/qwen3.7-max"),
+    show_default=True,
+    help="OpenRouter/aisuite model to benchmark. Repeat to compare models.",
+)
+@click.option("--max-meanings", default=6, show_default=True, type=click.IntRange(1, 20))
+@click.option("--max-reader-usages", default=4, show_default=True, type=click.IntRange(0, 20))
+@click.option("--max-source-refs", default=12, show_default=True, type=click.IntRange(0, 50))
+@click.option(
+    "--include-raw-response",
+    is_flag=True,
+    help="Include raw model text in each benchmark item.",
+)
+def encounter_briefing_model_benchmark(  # noqa: PLR0913
+    input_jsonl: str,
+    models: tuple[str, ...],
+    max_meanings: int,
+    max_reader_usages: int,
+    max_source_refs: int,
+    include_raw_response: bool,
+) -> None:
+    """Run a spendful generated briefing benchmark over saved encounter payloads."""
+    from langnet.encounter_briefing import (  # noqa: PLC0415
+        run_encounter_briefing_model_benchmark,
+    )
+
+    raw_payloads = sys.stdin.buffer.read() if input_jsonl == "-" else Path(input_jsonl).read_bytes()
+    payloads = [
+        cast(Mapping[str, object], orjson.loads(line))
+        for line in raw_payloads.splitlines()
+        if line.strip()
+    ]
+    benchmark = run_encounter_briefing_model_benchmark(
+        payloads,
+        models=models,
+        generate_response=lambda flow, model: _encounter_briefing_generate_response(
+            flow, model=model
+        ),
+        clock=time.perf_counter,
+        max_meanings=max_meanings,
+        max_reader_usages=max_reader_usages,
+        max_source_refs=max_source_refs,
+        include_raw_response=include_raw_response,
+    )
+    click.echo(orjson.dumps(benchmark, option=orjson.OPT_INDENT_2).decode("utf-8"))
+
+
 def _reader_eval_translation_claims(
     *,
     claims: list[Mapping[str, object]],

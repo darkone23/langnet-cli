@@ -4,13 +4,14 @@ import hashlib
 import json
 import re
 import unicodedata
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
 BRIEFING_FLOW_SCHEMA_VERSION = "langnet.encounter_briefing.flow.v1"
 BRIEFING_BATCH_SCHEMA_VERSION = "langnet.encounter_briefing.batch.v1"
+BRIEFING_MODEL_BENCHMARK_SCHEMA_VERSION = "langnet.encounter_briefing.model_benchmark.v1"
 BRIEFING_SUMMARY_SCHEMA_VERSION = "langnet.encounter_briefing.summary.v1"
 BRIEFING_PROMPT_VERSION = "encounter-briefing-v1"
 DEFAULT_ENCOUNTER_BRIEFING_MODEL = "openai:qwen/qwen3.7-max"
@@ -142,6 +143,73 @@ def build_encounter_briefing_batch(
     }
 
 
+def run_encounter_briefing_model_benchmark(  # noqa: PLR0913
+    encounter_payloads: Sequence[Mapping[str, Any]],
+    *,
+    models: Sequence[str],
+    generate_response: Callable[[Mapping[str, Any], str], str],
+    clock: Callable[[], float],
+    max_meanings: int = 6,
+    max_reader_usages: int = 4,
+    max_source_refs: int = 12,
+    include_raw_response: bool = False,
+) -> dict[str, Any]:
+    """Run generated briefing validation for each model over the same encounter payloads."""
+    items: list[dict[str, Any]] = []
+    for payload_index, payload in enumerate(encounter_payloads):
+        for model in models:
+            flow = build_encounter_briefing_flow(
+                payload,
+                model=model,
+                max_meanings=max_meanings,
+                max_reader_usages=max_reader_usages,
+                max_source_refs=max_source_refs,
+            )
+            digest = _mapping(flow.get("digest"))
+            started = clock()
+            try:
+                response_text = generate_response(flow, model)
+                elapsed_ms = round((clock() - started) * 1000)
+                completed = apply_briefing_model_response(flow, response_text)
+                generation = _mapping(completed.get("generation"))
+                final_output = _mapping(completed.get("final_output"))
+                item = {
+                    "payload_index": payload_index,
+                    "model": model,
+                    "query": _string(digest.get("query")),
+                    "language": _string(digest.get("language")),
+                    "status": _string(generation.get("status")),
+                    "elapsed_ms": elapsed_ms,
+                    "validation_issue_count": _int(generation.get("validation_issue_count")),
+                    "validation_issues": _mapping_list(generation.get("validation_issues")),
+                    "final_short": _string(final_output.get("short")),
+                }
+                if include_raw_response:
+                    item["raw_response"] = response_text
+                items.append(item)
+            except Exception as exc:  # noqa: BLE001 - benchmark reports per-model failures.
+                elapsed_ms = round((clock() - started) * 1000)
+                items.append(
+                    {
+                        "payload_index": payload_index,
+                        "model": model,
+                        "query": _string(digest.get("query")),
+                        "language": _string(digest.get("language")),
+                        "status": "error",
+                        "elapsed_ms": elapsed_ms,
+                        "validation_issue_count": 0,
+                        "validation_issues": [],
+                        "final_short": "",
+                        "error": repr(exc),
+                    }
+                )
+    return {
+        "schema_version": BRIEFING_MODEL_BENCHMARK_SCHEMA_VERSION,
+        "summary": _model_benchmark_summary(items),
+        "items": items,
+    }
+
+
 def apply_briefing_model_response(
     flow: Mapping[str, Any],
     response_text: str,
@@ -161,6 +229,7 @@ def apply_briefing_model_response(
         output["final_output"] = flow.get("draft_output")
         return output
 
+    parsed = _normalize_briefing_summary(parsed)
     digest = _mapping(flow.get("digest"))
     issues = validate_briefing_summary(parsed, digest)
     generation["validation_issues"] = issues
@@ -302,9 +371,9 @@ def briefing_prompt(digest: Mapping[str, Any]) -> dict[str, str]:
             "translation_status, sources, translation_sources, and source_refs. "
             "Use phrase_pairs for source-backed example phrases; gloss may be empty when the "
             "digest only has an untranslated phrase. Use dictionary_sources from "
-            "digest.meanings[].sources "
-            "and digest.morphology[].source; do not derive dictionary names from source_ref "
-            "prefixes unless that source id is also present in those fields."
+            "digest.meanings[].sources, digest.morphology[].source, and "
+            "digest.word_decomposition[].source; do not derive dictionary names from "
+            "source_ref prefixes unless that source id is also present in those fields."
         ),
     }
 
@@ -373,6 +442,7 @@ def briefing_output_contract() -> dict[str, Any]:
 def deterministic_briefing_summary(digest: Mapping[str, Any]) -> dict[str, Any]:
     meanings = [_summary_meaning(item) for item in _mapping_list(digest.get("meanings"))]
     morphology = _mapping_list(digest.get("morphology"))
+    word_decomposition = _mapping_list(digest.get("word_decomposition"))
     reader_usages = [
         {
             "label": _string(item.get("label")),
@@ -386,6 +456,16 @@ def deterministic_briefing_summary(digest: Mapping[str, Any]) -> dict[str, Any]:
             source
             for meaning in _mapping_list(digest.get("meanings"))
             for source in _string_list(meaning.get("sources"))
+        }
+        | {
+            _string(item.get("source"))
+            for item in morphology
+            if _string(item.get("source"))
+        }
+        | {
+            _string(item.get("source"))
+            for item in word_decomposition
+            if _string(item.get("source"))
         }
     )
     caveats = []
@@ -420,7 +500,7 @@ def deterministic_briefing_summary(digest: Mapping[str, Any]) -> dict[str, Any]:
                 "source": _string(item.get("source")),
                 "note": "Possible decomposition or alternate segment from the analyzer.",
             }
-            for item in _mapping_list(digest.get("word_decomposition"))
+            for item in word_decomposition
         ],
         "reader_usages": reader_usages,
         "phrase_pairs": [
@@ -483,6 +563,8 @@ def _draft_summary_gloss(gloss: str) -> str:
 
 def _draft_summary_part(part: str) -> str:
     text = re.sub(r"^\s*[IVXLCDM]+\.\s*", "", part.strip(), flags=re.IGNORECASE)
+    text = re.sub(r"^\s*=\s*(?:\d+\.\s*)?", "", text)
+    text = re.sub(r"\bfor\s+\d+\.\s+", "for ", text, flags=re.IGNORECASE)
     if _GREEK_RE.match(text) and "," not in text:
         return ""
     text = _strip_greek_example_tail(text)
@@ -571,6 +653,38 @@ def _batch_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _model_benchmark_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    by_model: dict[str, dict[str, Any]] = {}
+    for item in items:
+        model = _string(item.get("model")) or "unknown"
+        status = _string(item.get("status")) or "unknown"
+        row = by_model.setdefault(
+            model,
+            {
+                "total": 0,
+                "accepted": 0,
+                "rejected": 0,
+                "invalid_json": 0,
+                "error": 0,
+                "other": 0,
+                "elapsed_ms_total": 0,
+            },
+        )
+        row["total"] += 1
+        row["elapsed_ms_total"] += _int(item.get("elapsed_ms"))
+        if status in {"accepted", "rejected", "invalid_json", "error"}:
+            row[status] += 1
+        else:
+            row["other"] += 1
+    for row in by_model.values():
+        total = max(1, _int(row.get("total")))
+        row["avg_elapsed_ms"] = round(_int(row.pop("elapsed_ms_total")) / total)
+    return {
+        "total_items": len(items),
+        "by_model": dict(sorted(by_model.items())),
+    }
+
+
 def _parse_model_response_json(response_text: str) -> Mapping[str, Any] | None:
     text = response_text.strip()
     if text.startswith("```"):
@@ -582,6 +696,14 @@ def _parse_model_response_json(response_text: str) -> Mapping[str, Any] | None:
     if not isinstance(payload, Mapping):
         return None
     return cast(Mapping[str, Any], payload)
+
+
+def _normalize_briefing_summary(summary: Mapping[str, Any]) -> dict[str, Any]:
+    normalized = dict(summary)
+    caveats = normalized.get("caveats")
+    if isinstance(caveats, str):
+        normalized["caveats"] = [caveats] if caveats.strip() else []
+    return normalized
 
 
 def _strip_markdown_json_fence(text: str) -> str:
@@ -599,6 +721,7 @@ class _BriefingValidationContext:
     meaning_glosses: set[str]
     meaning_sources: set[str]
     morphology_sources: set[str]
+    decomposition_sources: set[str]
     sources: set[str]
     source_refs: set[str]
     grammar: set[tuple[str, str, str]]
@@ -701,6 +824,11 @@ def _briefing_validation_context(digest: Mapping[str, Any]) -> _BriefingValidati
     morphology_sources = {
         _string(item.get("source")) for item in morphology_rows if _string(item.get("source"))
     }
+    decomposition_sources = {
+        _string(item.get("source"))
+        for item in decomposition_rows
+        if _string(item.get("source"))
+    }
     source_refs = set(_string_list(digest.get("source_refs")))
     source_refs.update(
         ref for item in meaning_rows for ref in _string_list(item.get("source_refs"))
@@ -712,7 +840,8 @@ def _briefing_validation_context(digest: Mapping[str, Any]) -> _BriefingValidati
         meaning_glosses={_string(item.get("gloss")) for item in meaning_rows},
         meaning_sources=meaning_sources,
         morphology_sources=morphology_sources,
-        sources=meaning_sources | morphology_sources,
+        decomposition_sources=decomposition_sources,
+        sources=meaning_sources | morphology_sources | decomposition_sources,
         source_refs=source_refs,
         grammar={
             (

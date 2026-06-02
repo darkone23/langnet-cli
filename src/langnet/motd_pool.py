@@ -264,16 +264,32 @@ def restore_motd_pool_snapshot(
     if not isinstance(raw_cards, Sequence) or isinstance(raw_cards, (str, bytes)):
         raise ValueError("MOTD pool snapshot must contain cards[].")
     cards: list[MotdPoolCard] = []
-    for raw_card in raw_cards:
+    declared_count = int(payload.get("card_count") or len(raw_cards))
+    if declared_count != len(raw_cards):
+        raise ValueError(
+            f"MOTD pool snapshot card_count={declared_count} does not match "
+            f"cards length {len(raw_cards)}."
+        )
+    for index, raw_card in enumerate(raw_cards):
         if not isinstance(raw_card, Mapping):
-            continue
+            raise ValueError(f"MOTD pool snapshot cards[{index}] must be an object.")
         item = raw_card.get("item")
         if not isinstance(item, Mapping):
-            continue
+            raise ValueError(f"MOTD pool snapshot cards[{index}].item must be an object.")
         language = str(raw_card.get("language") or item.get("language") or "").strip()
         query = str(raw_card.get("query") or item.get("query") or "").strip()
         if language not in SUPPORTED_MOTD_POOL_LANGUAGES or not query:
-            continue
+            raise ValueError(
+                f"MOTD pool snapshot cards[{index}] has invalid language/query: "
+                f"{language!r}/{query!r}."
+            )
+        card_key = str(raw_card.get("card_key") or "").strip()
+        expected_key = f"{language}:{query}"
+        if card_key and card_key != expected_key:
+            raise ValueError(
+                f"MOTD pool snapshot cards[{index}] card_key={card_key!r} "
+                f"does not match {expected_key!r}."
+            )
         cards.append(
             MotdPoolCard(
                 language=language,

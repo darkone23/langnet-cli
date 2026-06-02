@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import unittest.mock
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -14,6 +15,7 @@ from langnet.encounter_briefing import (
     build_encounter_briefing_batch,
     build_encounter_briefing_flow,
     load_cached_briefing_flow,
+    run_encounter_briefing_model_benchmark,
     store_cached_briefing_flow,
     validate_briefing_summary,
 )
@@ -503,6 +505,139 @@ def test_encounter_briefing_batch_spike_cli_reads_jsonl_payloads() -> None:
     assert batch["summary"]["flag_counts"]["translation_derived"] == 1
 
 
+def test_run_encounter_briefing_model_benchmark_records_status_and_latency() -> None:
+    expected_item_count = 2
+    expected_fast_elapsed_ms = 250
+    payloads = [
+        {
+            "query": "arma",
+            "language": "lat",
+            "display": {
+                "header": {"forms": ["arma"]},
+                "meanings": [
+                    {
+                        "display_gloss": "weapons; arms",
+                        "sources": ["whitaker"],
+                        "source_refs": ["whitakers:4768"],
+                    }
+                ],
+            },
+        }
+    ]
+    responses = {
+        "openai:test-fast": json.dumps(
+            {
+                "schema_version": BRIEFING_SUMMARY_SCHEMA_VERSION,
+                "short": "arma: arms or weapons.",
+                "forms": ["arma"],
+                "meanings": [
+                    {
+                        "summary": "arms or weapons",
+                        "source_glosses": ["weapons; arms"],
+                        "source_gloss_language": "en",
+                        "translation_status": "english-or-unknown",
+                        "sources": ["whitaker"],
+                        "translation_sources": [],
+                        "source_refs": ["whitakers:4768"],
+                    }
+                ],
+                "grammar_functions": [],
+                "word_decomposition": [],
+                "reader_usages": [],
+                "phrase_pairs": [],
+                "dictionary_sources": ["whitaker"],
+                "caveats": [],
+            }
+        ),
+        "openai:test-bad": "not json",
+    }
+    times = iter([10.0, 10.25, 20.0, 21.0])
+
+    benchmark = run_encounter_briefing_model_benchmark(
+        payloads,
+        models=["openai:test-fast", "openai:test-bad"],
+        generate_response=lambda flow, model: responses[model],
+        clock=lambda: next(times),
+    )
+
+    assert benchmark["schema_version"] == "langnet.encounter_briefing.model_benchmark.v1"
+    assert benchmark["summary"]["total_items"] == expected_item_count
+    assert benchmark["summary"]["by_model"]["openai:test-fast"]["accepted"] == 1
+    assert (
+        benchmark["summary"]["by_model"]["openai:test-fast"]["avg_elapsed_ms"]
+        == expected_fast_elapsed_ms
+    )
+    assert benchmark["summary"]["by_model"]["openai:test-bad"]["invalid_json"] == 1
+    assert benchmark["items"][0]["status"] == "accepted"
+    assert benchmark["items"][0]["final_short"] == "arma: arms or weapons."
+    assert benchmark["items"][1]["status"] == "invalid_json"
+    assert "raw_response" not in benchmark["items"][0]
+
+
+def test_encounter_briefing_model_benchmark_cli_reads_jsonl_payloads() -> None:
+    payload = {
+        "query": "arma",
+        "language": "lat",
+        "display": {
+            "header": {"forms": ["arma"]},
+            "meanings": [
+                {
+                    "display_gloss": "weapons; arms",
+                    "sources": ["whitaker"],
+                    "source_refs": ["whitakers:4768"],
+                }
+            ],
+        },
+    }
+    response = json.dumps(
+        {
+            "schema_version": BRIEFING_SUMMARY_SCHEMA_VERSION,
+            "short": "arma: arms or weapons.",
+            "forms": ["arma"],
+            "meanings": [
+                {
+                    "summary": "arms or weapons",
+                    "source_glosses": ["weapons; arms"],
+                    "source_gloss_language": "en",
+                    "translation_status": "english-or-unknown",
+                    "sources": ["whitaker"],
+                    "translation_sources": [],
+                    "source_refs": ["whitakers:4768"],
+                }
+            ],
+            "grammar_functions": [],
+            "word_decomposition": [],
+            "reader_usages": [],
+            "phrase_pairs": [],
+            "dictionary_sources": ["whitaker"],
+            "caveats": [],
+        }
+    )
+
+    with unittest.mock.patch("langnet.cli._encounter_briefing_generate_response") as generate:
+        def generate_response(flow, *, model):
+            assert model == "openai:test-fast"
+            return response
+
+        generate.side_effect = generate_response
+        result = CliRunner().invoke(
+            main,
+            [
+                "encounter-briefing-model-benchmark",
+                "--input-jsonl",
+                "-",
+                "--model",
+                "openai:test-fast",
+            ],
+            input=json.dumps(payload),
+        )
+
+    assert result.exit_code == 0, result.output
+    benchmark = json.loads(result.output)
+    assert benchmark["summary"]["by_model"]["openai:test-fast"]["accepted"] == 1
+    assert benchmark["items"][0]["final_short"] == "arma: arms or weapons."
+
+
 def test_encounter_briefing_digest_cleans_anchor_suffix_forms() -> None:
     flow = build_encounter_briefing_flow(
         {
@@ -927,6 +1062,142 @@ def test_apply_briefing_model_response_accepts_valid_grounded_summary() -> None:
     assert completed["generation"]["status"] == "accepted"
     assert completed["final_output"]["short"] == "arma: arms, weapons, or equipment."
     assert completed["model_output"]["meanings"][0]["summary"] == "arms or weapons"
+
+
+def test_apply_briefing_model_response_accepts_decomposition_dictionary_source() -> None:
+    flow = build_encounter_briefing_flow(
+        {
+            "query": "राजा",
+            "language": "san",
+            "display": {
+                "header": {"forms": ["rāja", "rajaḥ", "raaja"]},
+                "analysis": [
+                    {
+                        "form": "rājan",
+                        "lemma": "rājan",
+                        "analysis": "m. sg. nom.",
+                        "source": "heritage",
+                    }
+                ],
+                "meanings": [
+                    {
+                        "display_gloss": "= 1. rājan, a king, sovereign",
+                        "sources": ["cdsl"],
+                        "source_refs": ["mw:176248.0"],
+                    },
+                    {
+                        "display_gloss": (
+                            "rāja iic. rājan . rājaka [ -ka ] m. roitelet. "
+                            "rājakartṛ [ kartṛ ] m. soc. organisateur du sacre d'un roi."
+                        ),
+                        "sources": ["dico"],
+                        "source_refs": ["dico:54.html#raaja:0"],
+                        "source_langs": ["fr"],
+                    },
+                ],
+            },
+        }
+    )
+    response_text = json.dumps(
+        {
+            "schema_version": BRIEFING_SUMMARY_SCHEMA_VERSION,
+            "short": "A king or sovereign, with related compound forms.",
+            "forms": ["rāja", "rajaḥ", "raaja"],
+            "meanings": [
+                {
+                    "summary": "A king or sovereign.",
+                    "source_glosses": ["= 1. rājan, a king, sovereign"],
+                    "source_gloss_language": "en",
+                    "translation_status": "english-or-unknown",
+                    "sources": ["cdsl"],
+                    "translation_sources": [],
+                    "source_refs": ["mw:176248.0"],
+                },
+                {
+                    "summary": "A French entry with derived royal compounds.",
+                    "source_glosses": [
+                        "rāja iic. rājan . rājaka [ -ka ] m. roitelet. "
+                        "rājakartṛ [ kartṛ ] m. soc. organisateur du sacre d'un roi."
+                    ],
+                    "source_gloss_language": "fr",
+                    "translation_status": "source-language",
+                    "sources": ["dico"],
+                    "translation_sources": [],
+                    "source_refs": ["dico:54.html#raaja:0"],
+                },
+            ],
+            "grammar_functions": [],
+            "word_decomposition": [
+                {
+                    "form": "rājan",
+                    "lemma": "rājan",
+                    "analysis": "m. sg. nom.",
+                    "source": "heritage",
+                    "note": "Possible nominative singular analysis.",
+                }
+            ],
+            "reader_usages": [],
+            "phrase_pairs": [],
+            "dictionary_sources": ["cdsl", "dico", "heritage"],
+            "caveats": [],
+        }
+    )
+
+    assert flow["draft_output"]["dictionary_sources"] == ["cdsl", "dico", "heritage"]
+    assert flow["draft_output"]["meanings"][0]["summary"] == "rājan, a king, sovereign"
+
+    completed = apply_briefing_model_response(flow, response_text)
+
+    assert completed["generation"]["status"] == "accepted"
+    assert completed["final_output"]["short"] == "A king or sovereign, with related compound forms."
+
+
+def test_apply_briefing_model_response_normalizes_scalar_caveat() -> None:
+    flow = build_encounter_briefing_flow(
+        {
+            "query": "arma",
+            "language": "lat",
+            "display": {
+                "header": {"forms": ["arma"]},
+                "meanings": [
+                    {
+                        "display_gloss": "weapons; arms",
+                        "sources": ["whitaker"],
+                        "source_refs": ["whitakers:4768"],
+                    }
+                ],
+            },
+        }
+    )
+    response_text = json.dumps(
+        {
+            "schema_version": BRIEFING_SUMMARY_SCHEMA_VERSION,
+            "short": "arma: arms or weapons.",
+            "forms": ["arma"],
+            "meanings": [
+                {
+                    "summary": "arms or weapons",
+                    "source_glosses": ["weapons; arms"],
+                    "source_gloss_language": "en",
+                    "translation_status": "english-or-unknown",
+                    "sources": ["whitaker"],
+                    "translation_sources": [],
+                    "source_refs": ["whitakers:4768"],
+                }
+            ],
+            "grammar_functions": [],
+            "word_decomposition": [],
+            "reader_usages": [],
+            "phrase_pairs": [],
+            "dictionary_sources": ["whitaker"],
+            "caveats": "Single-witness dictionary evidence.",
+        }
+    )
+
+    completed = apply_briefing_model_response(flow, response_text)
+
+    assert completed["generation"]["status"] == "accepted"
+    assert completed["final_output"]["caveats"] == ["Single-witness dictionary evidence."]
 
 
 def test_apply_briefing_model_response_rejects_unsupported_summary() -> None:

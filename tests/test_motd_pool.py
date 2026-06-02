@@ -230,6 +230,36 @@ class MotdPoolTest(unittest.TestCase):
             self.assertEqual(restore_payload["restored"], EXPECTED_ALL_LANGUAGE_MOTD_COUNT)
             self.assertEqual({item["query"] for item in sample["items"]}, {"agni", "logos", "amo"})
 
+    def test_restore_snapshot_rejects_mismatched_card_key(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            snapshot_path = temp_path / "motd_pool_snapshot.json"
+            snapshot_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "langnet.motd_pool.snapshot.v1",
+                        "card_count": 1,
+                        "cards": [
+                            {
+                                "card_key": "lat:amo",
+                                "language": "lat",
+                                "query": "rex",
+                                "level": "beginner",
+                                "didactic_score": 80,
+                                "didactic_rationale": "fixture",
+                                "item": {"language": "lat", "query": "rex"},
+                                "source": "fixture",
+                                "source_ref": "fixture",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "card_key"):
+                restore_motd_pool_snapshot(snapshot_path, temp_path / "restored.duckdb")
+
     def test_snapshot_cli_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
