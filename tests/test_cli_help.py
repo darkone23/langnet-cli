@@ -167,6 +167,7 @@ def test_databuild_subcommand_help() -> None:
         "dico",
         "bailly",
         "lewis-1890",
+        "strongs-greek",
         "diogenes-index",
         "whitakers-index",
         "reader",

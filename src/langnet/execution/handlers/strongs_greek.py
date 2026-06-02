@@ -10,9 +10,9 @@ import orjson
 from query_spec import ToolCallSpec
 
 from langnet.clients.base import RawResponseEffect
-from langnet.databuild.lewis_1890 import (
-    lookup_lewis_1890_entries_by_headword,
-    normalize_lewis_1890_headword,
+from langnet.databuild.strongs_greek import (
+    lookup_strongs_greek_entries_by_headword,
+    normalize_strongs_greek_key,
 )
 from langnet.execution import predicates
 from langnet.execution.effects import (
@@ -22,7 +22,6 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
-from langnet.execution.handlers.candidate_filters import close_fallback_candidates
 from langnet.execution.handlers.local_raw import local_raw_response_id
 from langnet.execution.source_text import (
     display_text,
@@ -48,35 +47,29 @@ def _dedupe_candidates(candidates: list[str]) -> list[str]:
     return ordered
 
 
-class Lewis1890FetchClient:
-    """DuckDB-backed fetcher for local Lewis 1890 entries."""
+class StrongsGreekFetchClient:
+    """DuckDB-backed fetcher for local Strong's Greek entries."""
 
     def __init__(self, db_path: Path | None = None) -> None:
-        self.tool = "fetch.lewis_1890"
+        self.tool = "fetch.strongs_greek"
         self.db_path = db_path
 
     def execute(
         self, call_id: str, endpoint: str, params: Mapping[str, str] | None = None
     ) -> RawResponseEffect:
         params = params or {}
-        headword = params.get("headword") or ""
-        lemma_candidates = close_fallback_candidates(
-            headword,
-            _split_candidate_param(params.get("lemma_candidates")),
-            normalize=normalize_lewis_1890_headword,
-        )
         candidates = _dedupe_candidates(
             [
-                headword,
+                params.get("headword") or "",
                 params.get("lemma") or "",
                 params.get("q") or "",
-                *lemma_candidates,
+                *_split_candidate_param(params.get("lemma_candidates")),
             ]
         )
         start = time.perf_counter()
-        entries = lookup_lewis_1890_entries_by_headword(candidates, self.db_path)
+        entries = lookup_strongs_greek_entries_by_headword(candidates, self.db_path)
         duration_ms = int((time.perf_counter() - start) * 1000)
-        matched = entries[0].get("headword_norm") if entries else None
+        matched = entries[0].get("matched_alias_display") if entries else None
         body = orjson.dumps(
             {"headwords": candidates, "matched_headword": matched, "entries": entries}
         )
@@ -93,38 +86,42 @@ class Lewis1890FetchClient:
         )
 
 
-def lewis_1890_entry_triples(entry: Mapping[str, object]) -> list[dict[str, object]]:
-    """Project a resolved Lewis 1890 entry into evidence-bearing triples."""
-    headword = str(
-        entry.get("headword_norm")
-        or normalize_lewis_1890_headword(str(entry.get("headword_raw") or ""))
-    )
-    entry_id = str(entry.get("entry_id") or f"lewis-1890:{headword}")
-    source_key = str(entry.get("source_key") or headword)
-    gloss = entry.get("plain_text")
-    gloss = gloss if isinstance(gloss, str) else ""
+def strongs_greek_entry_triples(entry: Mapping[str, object]) -> list[dict[str, object]]:
+    """Project a resolved Strong's Greek entry into evidence-bearing triples."""
+    lemma = str(entry.get("lemma_unicode") or "")
+    lemma_norm = normalize_strongs_greek_key(lemma)
+    strongs_number = str(entry.get("strongs_number") or "")
+    entry_id = str(entry.get("entry_id") or f"strongs-greek:{strongs_number}")
+    gloss = str(entry.get("display_gloss") or entry.get("definition") or "")
     display_gloss = display_text(gloss)
-    lex_anchor = f"lex:{headword}"
-    source_ref = f"lewis_1890:{source_key}"
+    lex_anchor = f"lex:{lemma_norm}" if lemma_norm else entry_id
+    source_ref = f"strongs_greek:{strongs_number}" if strongs_number else entry_id
     digest_material = f"{source_ref}:{gloss}"
     digest = hashlib.sha256(digest_material.encode("utf-8")).hexdigest()[:8]
     sense_anchor = f"sense:{lex_anchor}#{digest}"
     evidence = trim_empty(
         {
-            "source_tool": "lewis_1890",
+            "source_tool": "strongs_greek",
             "source_ref": source_ref,
-            "raw_blob_ref": "cltk_lewis_yaml",
+            "raw_blob_ref": "strongs_greek_xml",
             "entry_hash": entry.get("entry_hash"),
         }
     )
     source_entry = trim_empty(
         {
-            "dict": "lewis_1890",
+            "dict": "strongs_greek",
             "source_ref": source_ref,
             "entry_id": entry_id,
-            "headword_raw": entry.get("headword_raw"),
-            "headword_norm": headword,
-            "source_key": source_key,
+            "strongs_number": strongs_number,
+            "lemma_unicode": lemma,
+            "lemma_beta": entry.get("lemma_beta"),
+            "lemma_translit": entry.get("lemma_translit"),
+            "pronunciation": entry.get("pronunciation"),
+            "matched_alias_display": entry.get("matched_alias_display"),
+            "matched_alias_kind": entry.get("matched_alias_kind"),
+            "derivation": entry.get("derivation"),
+            "definition": entry.get("definition"),
+            "kjv_definition": entry.get("kjv_definition"),
             "source_text": gloss,
         }
     )
@@ -133,7 +130,6 @@ def lewis_1890_entry_triples(entry: Mapping[str, object]) -> list[dict[str, obje
         segment_type="definition_segment",
         labels=["definition"],
     )
-    learner_gloss = display_gloss
     learner_segments = learner_segments_from_text(gloss)
     return [
         {
@@ -152,7 +148,7 @@ def lewis_1890_entry_triples(entry: Mapping[str, object]) -> list[dict[str, obje
                     "source_lang": "en",
                     "source_ref": source_ref,
                     "display_gloss": display_gloss,
-                    "learner_gloss": learner_gloss,
+                    "learner_gloss": display_gloss,
                     "learner_segments": learner_segments,
                     "source_entry": source_entry,
                     "source_segments": source_segments,
@@ -162,25 +158,21 @@ def lewis_1890_entry_triples(entry: Mapping[str, object]) -> list[dict[str, obje
     ]
 
 
-def extract_lewis_1890_json(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect:
-    """Extract local Lewis 1890 lookup JSON."""
+def extract_strongs_greek_json(call: ToolCallSpec, raw: RawResponseEffect) -> ExtractionEffect:
+    """Extract local Strong's Greek lookup JSON."""
     payload: dict[str, object] = {"entries": []}
     canonical = None
     try:
         loaded = orjson.loads(raw.body)
         if isinstance(loaded, dict):
             payload = loaded
-            matched = loaded.get("matched_headword")
-            if isinstance(matched, str) and matched:
-                canonical = normalize_lewis_1890_headword(matched)
-            if canonical is None:
-                canonical = _canonical_from_entries(loaded.get("entries"))
+            canonical = _canonical_from_entries(loaded.get("entries"))
             if canonical is None:
                 headwords = loaded.get("headwords")
                 if isinstance(headwords, list):
                     canonical = next(
                         (
-                            normalize_lewis_1890_headword(headword)
+                            normalize_strongs_greek_key(headword)
                             for headword in headwords
                             if isinstance(headword, str) and headword
                         ),
@@ -189,19 +181,21 @@ def extract_lewis_1890_json(call: ToolCallSpec, raw: RawResponseEffect) -> Extra
     except Exception:
         payload = {"entries": []}
     return ExtractionEffect(
-        extraction_id=stable_effect_id("lewis-1890-ext", call.call_id, raw.response_id),
+        extraction_id=stable_effect_id("strongs-greek-ext", call.call_id, raw.response_id),
         tool=call.tool,
         call_id=call.call_id,
         source_call_id=call.params.get("source_call_id", ""),
         response_id=raw.response_id,
-        kind="lewis_1890.entries",
+        kind="strongs_greek.entries",
         canonical=canonical,
         payload=payload,
     )
 
 
-def derive_lewis_1890_entries(call: ToolCallSpec, extraction: ExtractionEffect) -> DerivationEffect:
-    """Derive normalized Lewis 1890 entries from extraction payload."""
+def derive_strongs_greek_entries(
+    call: ToolCallSpec, extraction: ExtractionEffect
+) -> DerivationEffect:
+    """Derive normalized Strong's Greek entries from extraction payload."""
     prov = [
         ProvenanceLink(
             stage="extract",
@@ -216,20 +210,20 @@ def derive_lewis_1890_entries(call: ToolCallSpec, extraction: ExtractionEffect) 
         else {"entries": []}
     )
     return DerivationEffect(
-        derivation_id=stable_effect_id("lewis-1890-der", call.call_id, extraction.extraction_id),
+        derivation_id=stable_effect_id("strongs-greek-der", call.call_id, extraction.extraction_id),
         tool=call.tool,
         call_id=call.call_id,
         source_call_id=call.params.get("source_call_id", ""),
         extraction_id=extraction.extraction_id,
-        kind="lewis_1890.entries",
+        kind="strongs_greek.entries",
         canonical=extraction.canonical,
         payload=payload,
         provenance_chain=prov,
     )
 
 
-def claim_lewis_1890_entries(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect:
-    """Produce source-backed Lewis 1890 dictionary claims."""
+def claim_strongs_greek_entries(call: ToolCallSpec, derivation: DerivationEffect) -> ClaimEffect:
+    """Produce source-backed Strong's Greek dictionary claims."""
     prov = derivation.provenance_chain[:] if derivation.provenance_chain else []
     prov.append(
         ProvenanceLink(
@@ -239,7 +233,7 @@ def claim_lewis_1890_entries(call: ToolCallSpec, derivation: DerivationEffect) -
             metadata={"extraction_id": derivation.extraction_id},
         )
     )
-    claim_id = stable_effect_id("lewis-1890-clm", call.call_id, derivation.derivation_id)
+    claim_id = stable_effect_id("strongs-greek-clm", call.call_id, derivation.derivation_id)
     payload = (
         cast(Mapping[str, object], derivation.payload)
         if isinstance(derivation.payload, Mapping)
@@ -250,7 +244,7 @@ def claim_lewis_1890_entries(call: ToolCallSpec, derivation: DerivationEffect) -
     if isinstance(entries, list):
         for entry in entries:
             if isinstance(entry, Mapping):
-                triples.extend(lewis_1890_entry_triples(cast(Mapping[str, object], entry)))
+                triples.extend(strongs_greek_entry_triples(cast(Mapping[str, object], entry)))
     canonical = derivation.canonical or _canonical_from_entries(entries)
     value = dict(payload)
     value["triples"] = triples
@@ -274,10 +268,7 @@ def _canonical_from_entries(entries: object) -> str | None:
         if not isinstance(entry, Mapping):
             continue
         typed_entry = cast(Mapping[str, object], entry)
-        headword_norm = typed_entry.get("headword_norm")
-        if isinstance(headword_norm, str) and headword_norm.strip():
-            return normalize_lewis_1890_headword(headword_norm)
-        headword_raw = typed_entry.get("headword_raw")
-        if isinstance(headword_raw, str) and headword_raw.strip():
-            return normalize_lewis_1890_headword(headword_raw)
+        lemma = typed_entry.get("lemma_unicode")
+        if isinstance(lemma, str) and lemma.strip():
+            return normalize_strongs_greek_key(lemma)
     return None

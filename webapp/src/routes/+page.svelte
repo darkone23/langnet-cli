@@ -100,6 +100,7 @@
 		wordIndexBrowseItems,
 		wordIndexDisplayOrderLabel,
 		wordIndexItemEntryCount,
+		wordIndexItemLookupTarget,
 		wordIndexSectionLookupTarget
 	} from '$lib/word-index';
 	import type {
@@ -116,6 +117,7 @@
 		dico: { accent: 'border-l-success', badge: 'badge-success' },
 		diogenes: { accent: 'border-l-info', badge: 'badge-info' },
 		bailly: { accent: 'border-l-success', badge: 'badge-success' },
+		strongs_greek: { accent: 'border-l-warning', badge: 'badge-warning' },
 		cts_index: { accent: 'border-l-accent', badge: 'badge-accent' },
 		spacy: { accent: 'border-l-neutral', badge: 'badge-neutral' },
 		cltk: { accent: 'border-l-success', badge: 'badge-success' },
@@ -1307,14 +1309,18 @@
 	}
 
 	function wordIndexHref(item: WordIndexItem, includeLoad = false) {
-		const targetLanguage = item.encounter.language;
+		const target = wordIndexItemLookupTarget(item);
 		const params = new URLSearchParams({
-			lang: targetLanguage,
-			q: item.encounter.q || item.lookup || item.canonical_key,
+			lang: target.language,
+			q: target.query,
 			translation: translationMode,
 			theme
 		});
-		appendCurrentDictionaryParams(params, targetLanguage);
+		const validTools = new Set(toolsForLanguage(target.language).map(({ id }) => id));
+		params.set(
+			'dictionary',
+			validTools.has(target.dictionary as ToolId) ? target.dictionary : 'all'
+		);
 		if (includeLoad) params.set('load', 'yes');
 		return `/?${params.toString()}`;
 	}
@@ -1336,21 +1342,6 @@
 			validTools.has(target.dictionary as ToolId) ? target.dictionary : 'all'
 		);
 		return `/?${params.toString()}`;
-	}
-
-	function appendCurrentDictionaryParams(params: URLSearchParams, targetLanguage: LanguageMode) {
-		const validTools = new Set(toolsForLanguage(targetLanguage).map(({ id }) => id));
-		const toolsToCarry =
-			targetLanguage === language ? lookupTools.filter((tool) => validTools.has(tool)) : [];
-		const carriesAll =
-			toolsToCarry.length === 0 || toolsToCarry.length === toolsForLanguage(targetLanguage).length;
-
-		if (carriesAll) {
-			params.set('dictionary', 'all');
-			return;
-		}
-
-		for (const tool of toolsToCarry) params.append('dictionary', tool);
 	}
 
 	function handleWordIndexNavigation(event: MouseEvent, item: WordIndexItem) {
@@ -3265,6 +3256,7 @@
 			dico: { Icon: Fish, name: 'Sanskrit source with reader English' },
 			diogenes: { Icon: Bird, name: 'Greek and Latin dictionary entries' },
 			bailly: { Icon: BookOpen, name: 'Bailly source entries' },
+			strongs_greek: { Icon: BookmarkCheck, name: "Strong's Greek source entries" },
 			cts_index: { Icon: Squirrel, name: 'Citation index' },
 			spacy: { Icon: Bug, name: 'Grammar probe' },
 			cltk: { Icon: Cat, name: 'Supplemental lexicon' },

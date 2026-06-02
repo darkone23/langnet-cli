@@ -41,6 +41,7 @@ def _fixture_paths(tmp_path: Path) -> WordIndexPaths:
     gaffiot = tmp_path / "lex_gaffiot.duckdb"
     lewis_1890 = tmp_path / "lex_lewis_1890.duckdb"
     bailly = tmp_path / "lex_bailly.duckdb"
+    strongs_greek = tmp_path / "lex_strongs_greek.duckdb"
     whitakers = tmp_path / "lex_whitakers.duckdb"
     diogenes_lat = tmp_path / "lex_diogenes_lat.duckdb"
     diogenes_grc = tmp_path / "lex_diogenes_grc.duckdb"
@@ -50,6 +51,7 @@ def _fixture_paths(tmp_path: Path) -> WordIndexPaths:
     _write_gaffiot_fixture(gaffiot)
     _write_lewis_1890_fixture(lewis_1890)
     _write_bailly_fixture(bailly)
+    _write_strongs_greek_fixture(strongs_greek)
     _write_whitakers_fixture(whitakers)
     _write_diogenes_fixture(diogenes_lat, "lat")
     _write_diogenes_fixture(diogenes_grc, "grc")
@@ -60,6 +62,7 @@ def _fixture_paths(tmp_path: Path) -> WordIndexPaths:
         gaffiot=gaffiot,
         lewis_1890=lewis_1890,
         bailly=bailly,
+        strongs_greek=strongs_greek,
         whitakers=whitakers,
         diogenes_lat=diogenes_lat,
         diogenes_grc=diogenes_grc,
@@ -117,6 +120,7 @@ def _write_dico_fixture(path: Path) -> None:
                 ("pura.na", 0, "पुरण", "puraṇa", "pura.na", "41"),
                 ("puraa.na", 0, "पुराण", "purāṇa", "puraa.na", "41"),
                 ("praa.na", 0, "प्राण", "prāṇa", "praa.na", "45"),
+                ("m.rta", 0, "मृत", "mṛta", "m.rta", "48"),
                 ("satvara", 0, "सत्वर", "satvara", "satvara", "51"),
                 ("satya", 0, "सत्य", "satya", "satya", "52"),
                 ("shatya", 0, "शत्य", "śatya", "shatya", "53"),
@@ -187,6 +191,83 @@ def _write_bailly_fixture(path: Path) -> None:
                 ("bailly-p543-c1-0001", "γίγνομαι", "gignomai", 543, 545),
                 ("bailly-p1200-c1-0001", "λόγος", "logos", 1200, 1200),
                 ("bailly-p1300-c1-0001", "νόμος", "nomos", 1300, 1300),
+            ],
+        )
+
+
+def _write_strongs_greek_fixture(path: Path) -> None:
+    with duckdb.connect(str(path)) as conn:
+        conn.execute(
+            """
+            CREATE TABLE entries (
+              entry_id VARCHAR, strongs_number VARCHAR, strongs_int INTEGER,
+              lemma_unicode VARCHAR, lemma_beta VARCHAR, lemma_translit VARCHAR,
+              pronunciation VARCHAR, derivation TEXT, definition TEXT,
+              kjv_definition TEXT, display_gloss TEXT, entry_hash VARCHAR,
+              source_path VARCHAR, updated_at TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE aliases (
+              alias_key VARCHAR, alias_display VARCHAR, alias_kind VARCHAR,
+              entry_id VARCHAR, strongs_number VARCHAR, rank INTEGER
+            )
+            """
+        )
+        conn.executemany(
+            "INSERT INTO entries VALUES (?, ?, ?, ?, ?, ?, '', '', ?, ?, ?, ?, '', NULL)",
+            [
+                (
+                    "strongs-greek:G32",
+                    "G32",
+                    32,
+                    "ἄγγελος",
+                    "*A)/GGELOS",
+                    "ángelos",
+                    "a messenger",
+                    "angel, messenger.",
+                    "a messenger; KJV: angel, messenger.",
+                    "h32",
+                ),
+                (
+                    "strongs-greek:G2268",
+                    "G2268",
+                    2268,
+                    "Ἡσαΐας",
+                    "*(HSAI/+AS",
+                    "Hēsaḯas",
+                    "Hesaias (i.e. Jeshajah), an Israelite",
+                    "Esaias.",
+                    "Hesaias (i.e. Jeshajah), an Israelite; KJV: Esaias.",
+                    "h2268",
+                ),
+                (
+                    "strongs-greek:G3056",
+                    "G3056",
+                    3056,
+                    "λόγος",
+                    "LO/GOS",
+                    "lógos",
+                    "something said",
+                    "Word.",
+                    "something said; KJV: Word.",
+                    "h3056",
+                ),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO aliases VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                ("αγγελοσ", "ἄγγελος", "lemma", "strongs-greek:G32", "G32", 0),
+                ("angelos", "ángelos", "transliteration", "strongs-greek:G32", "G32", 2),
+                ("ησαιασ", "Ἡσαΐας", "lemma", "strongs-greek:G2268", "G2268", 0),
+                ("ησαια", "Ἡσαΐᾳ", "generated_form", "strongs-greek:G2268", "G2268", 1),
+                ("hesaias", "Hēsaḯas", "transliteration", "strongs-greek:G2268", "G2268", 2),
+                ("g2268", "G2268", "strongs_number", "strongs-greek:G2268", "G2268", 0),
+                ("λογοσ", "λόγος", "lemma", "strongs-greek:G3056", "G3056", 0),
+                ("logos", "lógos", "transliteration", "strongs-greek:G3056", "G3056", 2),
             ],
         )
 
@@ -270,7 +351,14 @@ def test_word_index_sources_report_local_statuses() -> None:
         ("lat", "diogenes", "lewis_short"),
         ("grc", "diogenes", "lsj"),
         ("grc", "bailly", "bailly"),
+        ("grc", "strongs_greek", "strongs_greek"),
     }
+    strongs_status = next(
+        source
+        for source in available
+        if source["language"] == "grc" and source["source"] == "strongs_greek"
+    )
+    assert strongs_status["dictionary_genre"] == "religious"
 
 
 def test_word_index_list_reads_lewis_1890_source() -> None:
@@ -314,6 +402,34 @@ def test_word_index_neighborhood_reads_bailly_source() -> None:
     assert anchor["canonical_key"] == "logos"
 
 
+def test_word_index_neighborhood_reads_strongs_greek_source_for_inflected_bible_name() -> None:
+    with TemporaryDirectory() as tmpdir:
+        payload = word_index_neighborhood_payload(
+            "grc",
+            "Ἠσαίᾳ",
+            source="strongs_greek",
+            radius=1,
+            paths=_fixture_paths(Path(tmpdir)),
+        )
+
+    _assert_matches_word_index_schema(payload)
+    assert payload["warnings"] == []
+    neighborhood = cast(dict[str, object], payload["neighborhood"])
+    anchor = cast(dict[str, object], neighborhood["anchor"])
+    assert anchor["source"] == "strongs_greek"
+    assert anchor["dictionary"] == "strongs_greek"
+    assert anchor["canonical_key"] == "ησαιασ"
+    assert anchor["source_ref"] == "strongs_greek:G2268"
+    assert anchor["encounter"] == {
+        "language": "grc",
+        "q": "Ἡσαΐας",
+        "dictionary": "strongs_greek",
+    }
+    metadata = cast(dict[str, object], anchor["metadata"])
+    assert metadata["matched_alias_kind"] == "generated_form"
+    assert metadata["dictionary_genre"] == "religious"
+
+
 def test_word_index_wheel_includes_lewis_1890_and_bailly_sources() -> None:
     with TemporaryDirectory() as tmpdir:
         paths = _fixture_paths(Path(tmpdir))
@@ -338,6 +454,7 @@ def test_word_index_wheel_includes_lewis_1890_and_bailly_sources() -> None:
     }
     assert "lewis_1890" in lat_sources
     assert "bailly" in grc_sources
+    assert "strongs_greek" in grc_sources
 
 
 def test_word_index_list_projects_canonical_display() -> None:
@@ -604,6 +721,163 @@ def test_word_index_neighborhood_source_all_returns_integrated_lexeme_layer() ->
         ("dico", "dico"),
     }
     assert all(entry["source_display"] for entry in source_entries)
+
+
+def test_word_index_integrated_anchor_prefers_exact_source_anchor_over_prefix_neighbor() -> None:
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        paths = WordIndexPaths(
+            cdsl_mw=tmp_path / "cdsl_mw.duckdb",
+            cdsl_ap90=tmp_path / "cdsl_ap90.duckdb",
+            dico=tmp_path / "lex_dico.duckdb",
+            gaffiot=tmp_path / "lex_gaffiot.duckdb",
+            diogenes_lat=tmp_path / "lex_diogenes_lat.duckdb",
+            diogenes_grc=tmp_path / "lex_diogenes_grc.duckdb",
+        )
+        _write_cdsl_fixture(paths.cdsl_mw, "MW", [("jYa", 1.0), ("jYAna", 2.0)])
+        _write_cdsl_fixture(paths.cdsl_ap90, "AP90", [("jYa", 1.0), ("jYAna", 2.0)])
+        _write_dico_fixture(paths.dico)
+        _write_gaffiot_fixture(paths.gaffiot)
+        _write_diogenes_fixture(paths.diogenes_lat, "lat")
+        _write_diogenes_fixture(paths.diogenes_grc, "grc")
+
+        payload = word_index_neighborhood_payload(
+            "san",
+            "jñāna",
+            source="all",
+            radius=2,
+            paths=paths,
+        )
+
+    _assert_matches_word_index_schema(payload)
+    neighborhood = cast(dict[str, object], payload["neighborhood"])
+    anchor = cast(dict[str, object], neighborhood["anchor"])
+    groups = cast(list[dict[str, object]], neighborhood["groups"])
+
+    assert neighborhood["anchor_status"] == "exact"
+    assert anchor["canonical_key"] == "jnaana"
+    assert anchor["lookup"] == "jñāna"
+    assert any(
+        group["anchor_status"] == "exact"
+        and cast(dict[str, object], group["anchor"])["canonical_key"] == "jnaana"
+        for group in groups
+    )
+
+
+def test_word_index_neighborhood_resolves_motd_sanskrit_ascii_lemmas() -> None:
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        paths = WordIndexPaths(
+            cdsl_mw=tmp_path / "cdsl_mw.duckdb",
+            cdsl_ap90=tmp_path / "cdsl_ap90.duckdb",
+            dico=tmp_path / "lex_dico.duckdb",
+            gaffiot=tmp_path / "lex_gaffiot.duckdb",
+            diogenes_lat=tmp_path / "lex_diogenes_lat.duckdb",
+            diogenes_grc=tmp_path / "lex_diogenes_grc.duckdb",
+        )
+        _write_cdsl_fixture(
+            paths.cdsl_mw,
+            "MW",
+            [("darSana", 1.0), ("hasta", 2.0), ("kara", 3.0), ("kaR", 4.0)],
+        )
+        _write_cdsl_fixture(paths.cdsl_ap90, "AP90", [("darSana", 1.0), ("hasta", 2.0)])
+        _write_dico_fixture(paths.dico)
+        _write_gaffiot_fixture(paths.gaffiot)
+        _write_diogenes_fixture(paths.diogenes_lat, "lat")
+        _write_diogenes_fixture(paths.diogenes_grc, "grc")
+
+        darshan = word_index_neighborhood_payload(
+            "san", "darshan", source="all", radius=1, paths=paths
+        )
+        hast = word_index_neighborhood_payload("san", "hast", source="all", radius=1, paths=paths)
+        kar = word_index_neighborhood_payload("san", "kar", source="all", radius=1, paths=paths)
+
+    for payload in (darshan, hast, kar):
+        _assert_matches_word_index_schema(payload)
+
+    darshan_anchor = cast(
+        dict[str, object], cast(dict[str, object], darshan["neighborhood"])["anchor"]
+    )
+    hast_anchor = cast(
+        dict[str, object], cast(dict[str, object], hast["neighborhood"])["anchor"]
+    )
+    kar_anchor = cast(
+        dict[str, object], cast(dict[str, object], kar["neighborhood"])["anchor"]
+    )
+    assert darshan_anchor["canonical_key"] == "darshana"
+    assert darshan_anchor["lookup"] == "darśana"
+    assert hast_anchor["canonical_key"] == "hasta"
+    assert hast_anchor["lookup"] == "hasta"
+    assert kar_anchor["canonical_key"] == "kara"
+    assert kar_anchor["lookup"] == "kara"
+
+
+def test_word_index_neighborhood_resolves_accented_sanskrit_final_s_to_lemma() -> None:
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        paths = WordIndexPaths(
+            cdsl_mw=tmp_path / "cdsl_mw.duckdb",
+            cdsl_ap90=tmp_path / "cdsl_ap90.duckdb",
+            dico=tmp_path / "lex_dico.duckdb",
+            gaffiot=tmp_path / "lex_gaffiot.duckdb",
+            diogenes_lat=tmp_path / "lex_diogenes_lat.duckdb",
+            diogenes_grc=tmp_path / "lex_diogenes_grc.duckdb",
+        )
+        _write_cdsl_fixture(paths.cdsl_mw, "MW", [("mfta", 1.0)])
+        _write_cdsl_fixture(paths.cdsl_ap90, "AP90", [("mfta", 1.0)])
+        _write_dico_fixture(paths.dico)
+        _write_gaffiot_fixture(paths.gaffiot)
+        _write_diogenes_fixture(paths.diogenes_lat, "lat")
+        _write_diogenes_fixture(paths.diogenes_grc, "grc")
+
+        payload = word_index_neighborhood_payload(
+            "san",
+            "mṛtás",
+            source="all",
+            radius=1,
+            paths=paths,
+        )
+        unmarked = word_index_neighborhood_payload(
+            "san",
+            "mrtas",
+            source="all",
+            radius=1,
+            paths=paths,
+        )
+
+    _assert_matches_word_index_schema(payload)
+    neighborhood = cast(dict[str, object], payload["neighborhood"])
+    assert neighborhood["anchor"] is not None
+    groups = cast(list[dict[str, object]], neighborhood["groups"])
+    dico_anchor = next(
+        cast(dict[str, object], group["anchor"])
+        for group in groups
+        if group["source"] == "dico" and group["anchor_status"] == "exact"
+    )
+    assert dico_anchor["lookup"] == "mṛta"
+    assert dico_anchor["canonical_key"] == "mrta"
+    assert dico_anchor["source_name"] == "m.rta"
+    assert unmarked["neighborhood"] is None
+
+
+def test_word_index_neighborhood_resolves_greek_xi_romanization() -> None:
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        paths = _fixture_paths(tmp_path)
+        _write_diogenes_rows(
+            paths.diogenes_grc,
+            [
+                ("grc", "lsj", 10, "νύξ", "νυξ", "nuc", "nuc", None, None),
+            ],
+        )
+
+        payload = word_index_neighborhood_payload("grc", "nux", source="all", radius=1, paths=paths)
+
+    _assert_matches_word_index_schema(payload)
+    neighborhood = cast(dict[str, object], payload["neighborhood"])
+    anchor = cast(dict[str, object], neighborhood["anchor"])
+    assert anchor["canonical_key"] == "nuc"
+    assert anchor["lookup"] == "nuc"
 
 
 def test_word_index_neighborhood_source_all_uses_integrated_sanskrit_order() -> None:

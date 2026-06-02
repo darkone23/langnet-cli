@@ -18,6 +18,7 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
+from langnet.execution.handlers.candidate_filters import close_fallback_candidates
 from langnet.execution.handlers.local_raw import local_raw_response_id
 from langnet.execution.source_text import (
     compact_source_gloss,
@@ -188,11 +189,17 @@ class GaffiotFetchClient:
         self, call_id: str, endpoint: str, params: Mapping[str, str] | None = None
     ) -> RawResponseEffect:
         params = params or {}
+        headword = params.get("headword") or ""
+        lemma_candidates = close_fallback_candidates(
+            headword,
+            _split_candidate_param(params.get("lemma_candidates")),
+            normalize=normalize_gaffiot_headword,
+        )
         candidates = [
-            params.get("headword") or "",
+            headword,
             params.get("lemma") or "",
             params.get("q") or "",
-            *_split_candidate_param(params.get("lemma_candidates")),
+            *lemma_candidates,
         ]
         start = time.perf_counter()
         entries = lookup_gaffiot_entries_by_headword(candidates, self.db_path)

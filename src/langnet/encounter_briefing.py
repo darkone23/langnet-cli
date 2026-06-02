@@ -949,7 +949,11 @@ def _display_meanings(display: Mapping[str, Any]) -> list[dict[str, Any]]:
         source_summary = _mapping(item.get("source_detail_summary"))
         refs = [
             *_string_list(item.get("source_refs")),
-            *_string_list(source_summary.get("source_refs")),
+            *[
+                ref
+                for ref in _string_list(source_summary.get("source_refs"))
+                if _is_source_detail_ref(ref)
+            ],
         ]
         meanings.append(
             {
@@ -967,6 +971,17 @@ def _display_meanings(display: Mapping[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return meanings
+
+
+def _is_source_detail_ref(value: str) -> bool:
+    stripped = value.strip()
+    if not stripped:
+        return False
+    if ":" in stripped or any(char.isdigit() for char in stripped):
+        return True
+    if re.fullmatch(r"[ivxlcdm]+\.?", stripped, flags=re.IGNORECASE):
+        return False
+    return bool(re.search(r"\S+\.\s+[ivxlcdm]+\b", stripped, flags=re.IGNORECASE))
 
 
 def _bucket_meanings(payload: Mapping[str, Any]) -> list[dict[str, Any]]:

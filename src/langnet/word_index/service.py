@@ -19,10 +19,12 @@ from langnet.databuild.paths import (
     default_diogenes_path,
     default_gaffiot_path,
     default_lewis_1890_path,
+    default_strongs_greek_path,
     default_whitakers_path,
 )
+from langnet.databuild.strongs_greek import normalize_strongs_greek_key
 from langnet.execution.handlers.bailly import normalize_bailly_headword
-from langnet.execution.handlers.cdsl import _slp1_to_iast, _to_slp1
+from langnet.execution.handlers.cdsl import _slp1_to_iast, _strip_sanskrit_pitch_accents, _to_slp1
 from langnet.execution.handlers.dico import normalize_dico_headword
 from langnet.execution.handlers.gaffiot import normalize_gaffiot_headword
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
@@ -33,7 +35,15 @@ WORD_INDEX_SCHEMA_VERSION = "langnet.word_index.v1"
 WORD_INDEX_SECTIONS_SCHEMA_VERSION = "langnet.word_index_sections.v1"
 WordIndexLanguage = Literal["lat", "grc", "san", "all"]
 WordIndexSource = Literal[
-    "all", "cdsl", "dico", "gaffiot", "lewis_1890", "whitakers", "diogenes", "bailly"
+    "all",
+    "cdsl",
+    "dico",
+    "gaffiot",
+    "lewis_1890",
+    "whitakers",
+    "diogenes",
+    "bailly",
+    "strongs_greek",
 ]
 WordIndexMerge = Literal["auto", "none", "lexeme"]
 WordIndexHomographs = Literal["grouped", "raw"]
@@ -45,10 +55,13 @@ _SOURCE_ORDER = {
     "whitakers": 4,
     "diogenes": 5,
     "bailly": 6,
+    "strongs_greek": 7,
 }
 _LANGUAGE_ORDER = {"san": 0, "grc": 1, "lat": 2}
 NON_ASCII_CODEPOINT_MIN = 128
 ANCHOR_HYDRATION_LIMIT = 2000
+SANSKRIT_FINAL_A_MIN_LENGTH = 3
+_SANSKRIT_FINAL_S_STEM_MARKERS = frozenset("āīūṛṝḷḹṅñṇśṣṃṁḥ.fFxX")
 _SANSKRIT_SECTION_SOURCE_PREFIXES = frozenset(
     {
         "a",
@@ -117,6 +130,7 @@ class WordIndexPaths:
     diogenes_grc: Path
     lewis_1890: Path = Path("__missing_word_index_lewis_1890.duckdb__")
     bailly: Path = Path("__missing_word_index_bailly.duckdb__")
+    strongs_greek: Path = Path("__missing_word_index_strongs_greek.duckdb__")
     whitakers: Path = Path("__missing_word_index_whitakers.duckdb__")
 
     @classmethod
@@ -130,6 +144,7 @@ class WordIndexPaths:
             diogenes_lat=default_diogenes_path("lat"),
             diogenes_grc=default_diogenes_path("grc"),
             bailly=default_bailly_path(),
+            strongs_greek=default_strongs_greek_path(),
             whitakers=default_whitakers_path(),
         )
 
@@ -149,6 +164,7 @@ def word_index_sources_payload(
         _whitakers_status(paths, languages),
         *_diogenes_statuses(paths, languages),
         _bailly_status(paths, languages),
+        _strongs_greek_status(paths, languages),
     ]
     sources = [source for source in sources if source is not None]
     return {
@@ -380,7 +396,7 @@ def word_index_neighborhood_payload(  # noqa: PLR0913
     }
 
 
-def _source_neighborhoods(  # noqa: PLR0913
+def _source_neighborhoods(  # noqa: C901, PLR0913
     *,
     source_id: str,
     languages: Sequence[LanguageCode],
@@ -449,6 +465,12 @@ def _source_neighborhoods(  # noqa: PLR0913
     elif source_id == "bailly" and "grc" in languages:
         neighborhoods.extend(
             _neighborhood_bailly(paths.bailly, query=query, radius=radius, warnings=warnings)
+        )
+    elif source_id == "strongs_greek" and "grc" in languages:
+        neighborhoods.extend(
+            _neighborhood_strongs_greek(
+                paths.strongs_greek, query=query, radius=radius, warnings=warnings
+            )
         )
     return neighborhoods
 
@@ -547,6 +569,10 @@ def _collect_wheel_items(  # noqa: C901, PLR0913
                 )
         elif source_id == "bailly" and "grc" in languages:
             items.extend(_wheel_bailly(paths.bailly, seed=seed, limit=limit, warnings=warnings))
+        elif source_id == "strongs_greek" and "grc" in languages:
+            items.extend(
+                _wheel_strongs_greek(paths.strongs_greek, seed=seed, limit=limit, warnings=warnings)
+            )
     return items
 
 
@@ -852,6 +878,7 @@ def _sources_for_request(source: str, languages: Sequence[LanguageCode]) -> list
             sources.append("diogenes")
         if "grc" in languages:
             sources.append("bailly")
+            sources.append("strongs_greek")
         return list(dict.fromkeys(sources))
     if normalized not in _SOURCE_ORDER:
         supported = "|".join(["all", *_SOURCE_ORDER])
@@ -924,6 +951,12 @@ def _collect_items(  # noqa: C901, PLR0913
                 )
         elif source_id == "bailly" and "grc" in languages:
             items.extend(_list_bailly(paths.bailly, prefix=prefix, limit=limit, warnings=warnings))
+        elif source_id == "strongs_greek" and "grc" in languages:
+            items.extend(
+                _list_strongs_greek(
+                    paths.strongs_greek, prefix=prefix, limit=limit, warnings=warnings
+                )
+            )
     items.sort(key=_item_order_key)
     return items
 
@@ -1058,6 +1091,19 @@ def _browse_groups(  # noqa: C901, PLR0913
                     dictionary="bailly",
                     prefix=prefix,
                     items=_list_bailly(paths.bailly, prefix=prefix, limit=limit, warnings=warnings),
+                    homographs=homographs,
+                )
+            )
+        elif source_id == "strongs_greek" and language == "grc":
+            groups.append(
+                _browse_group(
+                    language=language,
+                    source="strongs_greek",
+                    dictionary="strongs_greek",
+                    prefix=prefix,
+                    items=_list_strongs_greek(
+                        paths.strongs_greek, prefix=prefix, limit=limit, warnings=warnings
+                    ),
                     homographs=homographs,
                 )
             )
@@ -2217,6 +2263,155 @@ def _wheel_bailly(
     return [_bailly_item(row) for row in rows]
 
 
+def _list_strongs_greek(
+    path: Path,
+    *,
+    prefix: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "strongs_greek", path)
+        return []
+    params: list[object] = []
+    where = "WHERE a.alias_kind = 'lemma'"
+    if prefix:
+        norm = normalize_strongs_greek_key(prefix)
+        where = "WHERE a.alias_key LIKE ?"
+        params.append(f"{norm}%")
+    sql = f"""
+        WITH ranked AS (
+            SELECT
+                e.entry_id, e.strongs_number, e.strongs_int, e.lemma_unicode,
+                e.lemma_translit, e.display_gloss, e.entry_hash,
+                a.alias_key, a.alias_display, a.alias_kind, a.rank,
+                row_number() OVER (
+                    PARTITION BY e.entry_id
+                    ORDER BY a.rank, a.alias_key
+                ) AS rn
+            FROM entries e
+            JOIN aliases a ON a.entry_id = e.entry_id
+            {where}
+        )
+        SELECT entry_id, strongs_number, strongs_int, lemma_unicode, lemma_translit,
+               display_gloss, entry_hash, alias_key, alias_display, alias_kind, rank
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY strongs_int
+    """
+    if limit > 0:
+        sql += " LIMIT ?"
+        params.append(limit)
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(sql, params).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "strongs_greek", path, exc)
+        return []
+    return [_strongs_greek_item(row) for row in rows]
+
+
+def _neighborhood_strongs_greek(
+    path: Path,
+    *,
+    query: str,
+    radius: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "strongs_greek", path)
+        return []
+    keys = _query_keys(query)
+    if not keys:
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            anchor_rows = conn.execute(
+                f"""
+                SELECT
+                    e.entry_id, e.strongs_number, e.strongs_int, e.lemma_unicode,
+                    e.lemma_translit, e.display_gloss, e.entry_hash,
+                    a.alias_key, a.alias_display, a.alias_kind, a.rank
+                FROM aliases a
+                JOIN entries e ON e.entry_id = a.entry_id
+                WHERE a.alias_key IN ({_placeholders(keys)})
+                ORDER BY a.rank, e.strongs_int
+                LIMIT 50
+                """,
+                keys,
+            ).fetchall()
+            anchor = _best_anchor([_strongs_greek_item(row) for row in anchor_rows], query)
+            if anchor is None:
+                return []
+            metadata = cast(Mapping[str, object], anchor.get("metadata") or {})
+            strongs_int = _as_int(metadata.get("strongs_int"))
+            before_rows = conn.execute(
+                """
+                SELECT
+                    e.entry_id, e.strongs_number, e.strongs_int, e.lemma_unicode,
+                    e.lemma_translit, e.display_gloss, e.entry_hash,
+                    a.alias_key, a.alias_display, a.alias_kind, a.rank
+                FROM entries e
+                JOIN aliases a ON a.entry_id = e.entry_id AND a.alias_kind = 'lemma'
+                WHERE e.strongs_int < ?
+                ORDER BY e.strongs_int DESC
+                LIMIT ?
+                """,
+                [strongs_int, radius],
+            ).fetchall()
+            after_rows = conn.execute(
+                """
+                SELECT
+                    e.entry_id, e.strongs_number, e.strongs_int, e.lemma_unicode,
+                    e.lemma_translit, e.display_gloss, e.entry_hash,
+                    a.alias_key, a.alias_display, a.alias_kind, a.rank
+                FROM entries e
+                JOIN aliases a ON a.entry_id = e.entry_id AND a.alias_kind = 'lemma'
+                WHERE e.strongs_int > ?
+                ORDER BY e.strongs_int
+                LIMIT ?
+                """,
+                [strongs_int, radius],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "strongs_greek", path, exc)
+        return []
+    before = [_strongs_greek_item(row) for row in reversed(before_rows)]
+    after = [_strongs_greek_item(row) for row in after_rows]
+    return [_neighborhood(anchor, before=before, after=after, radius=radius, query=query)]
+
+
+def _wheel_strongs_greek(
+    path: Path,
+    *,
+    seed: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "strongs_greek", path)
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    e.entry_id, e.strongs_number, e.strongs_int, e.lemma_unicode,
+                    e.lemma_translit, e.display_gloss, e.entry_hash,
+                    a.alias_key, a.alias_display, a.alias_kind, a.rank
+                FROM entries e
+                JOIN aliases a ON a.entry_id = e.entry_id AND a.alias_kind = 'lemma'
+                ORDER BY hash(CAST(e.strongs_int AS VARCHAR) || ?), e.strongs_int
+                LIMIT ?
+                """,
+                [seed, limit],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "strongs_greek", path, exc)
+        return []
+    return [_strongs_greek_item(row) for row in rows]
+
+
 def _cdsl_item(dictionary: str, row: Sequence[object]) -> dict[str, object]:
     key = str(row[0] or "")
     key_normalized = str(row[1] or key)
@@ -2421,6 +2616,51 @@ def _bailly_item(row: Sequence[object]) -> dict[str, object]:
             "lemma_norm": lemma_norm,
             "page_start": page_start,
             "page_end": page_end,
+        },
+    )
+
+
+def _strongs_greek_item(row: Sequence[object]) -> dict[str, object]:
+    entry_id = str(row[0] or "")
+    strongs_number = str(row[1] or "")
+    strongs_int = _as_int(row[2])
+    lemma_unicode = str(row[3] or "")
+    lemma_translit = str(row[4] or "")
+    display_gloss = str(row[5] or "")
+    entry_hash = str(row[6] or "")
+    alias_key = str(row[7] or "")
+    alias_display = str(row[8] or "")
+    alias_kind = str(row[9] or "")
+    alias_rank = _as_int(row[10])
+    lemma_norm = normalize_strongs_greek_key(lemma_unicode)
+    display = lemma_unicode or alias_display or strongs_number
+    return _item(
+        language="grc",
+        source="strongs_greek",
+        dictionary="strongs_greek",
+        canonical_name=display,
+        canonical_key=lemma_norm,
+        source_name=lemma_unicode or display,
+        lookup=lemma_unicode or alias_display or lemma_norm,
+        display_primary=display,
+        transliteration=lemma_translit or alias_key,
+        source_key=alias_display or strongs_number,
+        sort_key=lemma_norm,
+        source_order_key=_order_key(strongs_int),
+        source_ref=f"strongs_greek:{strongs_number}",
+        extra={
+            "entry_id": entry_id,
+            "strongs_number": strongs_number,
+            "strongs_int": strongs_int,
+            "lemma_norm": lemma_norm,
+            "lemma_translit": lemma_translit,
+            "display_gloss": display_gloss,
+            "entry_hash": entry_hash,
+            "matched_alias_key": alias_key,
+            "matched_alias_display": alias_display,
+            "matched_alias_kind": alias_kind,
+            "matched_alias_rank": alias_rank,
+            "dictionary_genre": "religious",
         },
     )
 
@@ -2942,6 +3182,8 @@ def _display_key(row: Mapping[str, object]) -> str:
 
 def _id_component(value: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "-", (value or "").strip().lower())
+    if not normalized.strip("-"):
+        normalized = _greek_ascii_key(value)
     return normalized.strip("-") or "unknown"
 
 
@@ -3000,6 +3242,17 @@ def _bailly_status(
     if "grc" not in languages:
         return None
     return _duckdb_status("bailly", "grc", "bailly", paths.bailly, "entries")
+
+
+def _strongs_greek_status(
+    paths: WordIndexPaths,
+    languages: Sequence[LanguageCode],
+) -> dict[str, object] | None:
+    if "grc" not in languages:
+        return None
+    status = _duckdb_status("strongs_greek", "grc", "strongs_greek", paths.strongs_greek, "entries")
+    status["dictionary_genre"] = "religious"
+    return status
 
 
 def _diogenes_statuses(
@@ -3582,7 +3835,9 @@ def _integrated_language_native_neighborhood(  # noqa: PLR0913
     )
     cards = _wheel_lexeme_cards(rows)
     cards.sort(key=_language_native_card_order_key)
-    anchor_card = _best_anchor(cards, query)
+    anchor_card = _integrated_exact_source_anchor_card(cards, neighborhoods, query) or _best_anchor(
+        cards, query
+    )
     anchor_lexeme_id = str(anchor_card.get("lexeme_id") or "") if anchor_card else ""
     anchor_status = "exact" if anchor_card and _is_exact_anchor(anchor_card, query) else "nearest"
     if anchor_card is None:
@@ -3627,6 +3882,30 @@ def _integrated_language_native_neighborhood(  # noqa: PLR0913
             "lexeme_count": len(selected),
         },
     }
+
+
+def _integrated_exact_source_anchor_card(
+    cards: Sequence[dict[str, object]],
+    neighborhoods: Sequence[dict[str, object]],
+    query: str,
+) -> dict[str, object] | None:
+    exact_source_anchors = [
+        dict(cast(Mapping[str, object], anchor))
+        for neighborhood in neighborhoods
+        if str(neighborhood.get("anchor_status") or "") == "exact"
+        if isinstance((anchor := neighborhood.get("anchor")), Mapping)
+    ]
+    exact_anchor = _best_anchor(exact_source_anchors, query)
+    if exact_anchor is None:
+        return None
+
+    exact_lexeme_id = str(exact_anchor.get("lexeme_id") or "")
+    if not exact_lexeme_id:
+        return None
+    return next(
+        (card for card in cards if str(card.get("lexeme_id") or "") == exact_lexeme_id),
+        None,
+    )
 
 
 def _integrated_candidate_rows(  # noqa: PLR0913
@@ -4004,6 +4283,8 @@ def _exact_canonical_query_keys(
     _query_keys: set[str],
 ) -> set[str]:
     keys = {query_norm, query_plain}
+    keys.update(_sanskrit_final_a_variants(query_norm))
+    keys.update(_sanskrit_final_s_variants(query_norm))
     keys.update(_greek_latinized_query_keys(query_norm))
     if _contains_non_ascii(query_norm):
         keys.update(_native_canonical_keys(query_norm))
@@ -4066,6 +4347,9 @@ def _match_keys(*values: str) -> set[str]:
         keys.add(normalize_dico_headword(normalized))
         keys.add(_plain_index_key(normalized))
         keys.add(normalize_gaffiot_headword(normalized))
+        strongs_key = normalize_strongs_greek_key(normalized)
+        if strongs_key:
+            keys.add(strongs_key)
         with suppress(Exception):
             velthuis = to_heritage_velthuis(normalized).lower()
             if velthuis and velthuis != normalized:
@@ -4085,10 +4369,49 @@ def _match_keys(*values: str) -> set[str]:
 
 def _query_keys(query: str) -> list[str]:
     keys = set(_match_keys(query))
+    pitchless = _strip_sanskrit_pitch_accents(query)
+    if pitchless and pitchless != query:
+        keys.update(_match_keys(pitchless))
     keys.update(_plain_index_key(key) for key in list(keys))
     keys.update(_expanded_query_keys(query))
     keys.update(_sanskrit_plain_slp1_keys(query))
+    for final_s_variant in _sanskrit_final_s_variants(query):
+        keys.update(_match_keys(final_s_variant))
+        keys.update(_sanskrit_plain_slp1_keys(final_s_variant))
+        keys.update(_sanskrit_final_a_variants(final_s_variant))
+    for final_a_variant in _sanskrit_final_a_variants(query):
+        keys.update(_match_keys(final_a_variant))
+        keys.update(_sanskrit_plain_slp1_keys(final_a_variant))
     return sorted(key for key in keys if key)
+
+
+def _sanskrit_final_a_variants(query: str) -> set[str]:
+    plain = _plain_index_key(query)
+    if not plain or not plain.isascii() or not plain.isalpha():
+        return set()
+    if len(plain) < SANSKRIT_FINAL_A_MIN_LENGTH or plain.endswith(("a", "i", "u", "e", "o")):
+        return set()
+    return {f"{plain}a"}
+
+
+def _sanskrit_final_s_variants(query: str) -> set[str]:
+    if not _has_sanskrit_final_s_stem_signal(_strip_sanskrit_pitch_accents(query)):
+        return set()
+    values = {_strip_sanskrit_pitch_accents(query), _plain_index_key(query)}
+    variants: set[str] = set()
+    for value in values:
+        plain = _plain_index_key(value)
+        if plain.isascii() and plain.isalpha() and plain.endswith("s"):
+            variants.add(plain[:-1])
+    return variants
+
+
+def _has_sanskrit_final_s_stem_signal(value: str) -> bool:
+    stripped = (value or "").strip()
+    if not stripped.lower().endswith("s"):
+        return False
+    stem = stripped[:-1]
+    return bool(stem) and any(char in _SANSKRIT_FINAL_S_STEM_MARKERS for char in stem)
 
 
 def _sanskrit_section_source_prefix(query: str) -> str | None:
@@ -4272,15 +4595,19 @@ def _greek_latinized_query_keys(value: str) -> set[str]:
     if not normalized or not normalized.isascii():
         return set()
     keys = {normalized}
-    transliterated = normalized
-    for source, target in (
-        ("rh", "r"),
-        ("ph", "f"),
-        ("ch", "x"),
-    ):
-        transliterated = transliterated.replace(source, target)
-    transliterated = transliterated.replace("y", "u")
-    keys.add(transliterated)
+    base_forms = {normalized, normalized.replace("y", "u")}
+    for base in base_forms:
+        keys.add(base)
+        keys.add(base.replace("x", "c"))
+        transliterated = base
+        for source, target in (
+            ("rh", "r"),
+            ("th", "q"),
+            ("ph", "f"),
+            ("ch", "x"),
+        ):
+            transliterated = transliterated.replace(source, target)
+        keys.add(transliterated)
     return {key for key in keys if key}
 
 

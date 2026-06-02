@@ -32,6 +32,12 @@ def test_catalog_lists_greek_bailly_filter() -> None:
     assert "bailly" in filters
 
 
+def test_catalog_lists_greek_strongs_greek_filter() -> None:
+    filters = {entry.tool_filter for entry in catalog_entries("grc")}
+
+    assert "strongs_greek" in filters
+
+
 def test_catalog_lists_latin_lewis_1890_filter() -> None:
     filters = {entry.tool_filter for entry in catalog_entries("lat")}
 
@@ -68,6 +74,20 @@ def test_tools_json_output_lists_greek_bailly() -> None:
     assert "claim.bailly.entries" in bailly["plan_tools"]
 
 
+def test_tools_json_output_lists_greek_strongs_greek() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["tools", "grc", "--output", "json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    _assert_matches_schema(payload, TOOL_SCHEMA_PATH)
+    strongs = next(tool for tool in payload["tools"] if tool["tool_filter"] == "strongs_greek")
+    assert strongs["accepted_filter"] == "strongs_greek"
+    assert strongs["dictionary_genre"] == "religious"
+    assert strongs["translation_capable"] is False
+    assert "claim.strongs_greek.entries" in strongs["plan_tools"]
+
+
 def test_tools_json_output_lists_latin_lewis_1890() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["tools", "lat", "--output", "json"])
@@ -94,6 +114,7 @@ def test_tools_json_output_can_list_all_languages() -> None:
         "dico",
         "gaffiot",
         "lewis_1890",
+        "strongs_greek",
         "cdsl",
     }
 

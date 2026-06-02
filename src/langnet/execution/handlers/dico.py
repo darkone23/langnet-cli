@@ -34,6 +34,7 @@ from langnet.normalizer.utils import strip_accents
 from langnet.storage.db import connect_duckdb_ro
 
 _DICO_URL_RE = re.compile(r"/DICO/(?P<page>[^/#?]+)\.html#(?P<entry>[^?]+)")
+_SANSKRIT_FINAL_S_STEM_MARKERS = frozenset("āīūṛṝḷḹṅñṇśṣṃṁḥ.fFxX")
 
 
 def normalize_dico_headword(raw: str) -> str:
@@ -62,10 +63,27 @@ def expand_dico_headword_candidates(headwords: list[str]) -> list[str]:
             continue
         _add(headword)
         _add(_strip_dico_anchor_variant(headword))
+        for stem in _sanskrit_final_s_stems(headword):
+            _add(stem)
         with contextlib.suppress(Exception):
             _add(to_heritage_velthuis(headword))
             _add(_strip_dico_anchor_variant(to_heritage_velthuis(headword)))
+            for stem in _sanskrit_final_s_stems(to_heritage_velthuis(headword)):
+                _add(stem)
     return candidates
+
+
+def _sanskrit_final_s_stems(value: str) -> list[str]:
+    stripped = (value or "").strip()
+    if not stripped.lower().endswith("s") or not _has_sanskrit_final_s_stem_signal(stripped):
+        return []
+    stem = stripped[:-1]
+    return [stem] if stem else []
+
+
+def _has_sanskrit_final_s_stem_signal(value: str) -> bool:
+    stem = value[:-1]
+    return bool(stem) and any(char in _SANSKRIT_FINAL_S_STEM_MARKERS for char in stem)
 
 
 def extract_dico_refs_from_claims(claims) -> list[tuple[str, str]]:

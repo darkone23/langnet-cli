@@ -10,6 +10,7 @@ export type ToolId =
 	| 'dico'
 	| 'diogenes'
 	| 'bailly'
+	| 'strongs_greek'
 	| 'cts_index'
 	| 'spacy'
 	| 'cltk'
@@ -26,6 +27,7 @@ export type ToolMeta = {
 	shortLabel: string;
 	kind: string;
 	description: string;
+	dictionaryGenre?: 'lexicographic' | 'religious';
 };
 
 export type EncounterBucket = {
@@ -316,7 +318,17 @@ export const tools: ToolMeta[] = [
 		label: 'Bailly',
 		shortLabel: 'Bailly',
 		kind: 'dictionary',
-		description: 'Greek-French dictionary entries with reader English when available.'
+		description: 'Greek-French dictionary entries with reader English when available.',
+		dictionaryGenre: 'lexicographic'
+	},
+	{
+		id: 'strongs_greek',
+		language: 'grc',
+		label: "Strong's Greek",
+		shortLabel: "Strong's",
+		kind: 'dictionary',
+		description: 'Greek-English biblical dictionary entries for names and New Testament terms.',
+		dictionaryGenre: 'religious'
 	},
 	{
 		id: 'cts_index',

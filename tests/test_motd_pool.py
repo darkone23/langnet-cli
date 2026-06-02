@@ -13,8 +13,10 @@ from langnet.motd_pool import (
     MotdPoolCard,
     build_motd_pool,
     cards_from_word_of_day_payload,
+    export_motd_pool_snapshot,
     load_motd_candidate_json,
     motd_candidate_set_from_items,
+    restore_motd_pool_snapshot,
     sample_motd_pool,
     validate_motd_pool,
 )
@@ -207,6 +209,71 @@ class MotdPoolTest(unittest.TestCase):
             self.assertEqual(payload["schema_version"], "langnet.word_of_day.v1")
             self.assertEqual(len(payload["items"]), EXPECTED_ALL_LANGUAGE_MOTD_COUNT)
             self.assertEqual({item["language"] for item in payload["items"]}, {"grc", "lat", "san"})
+
+    def test_exports_and_restores_reviewed_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            db_path = temp_path / "motd_pool.duckdb"
+            snapshot_path = temp_path / "motd_pool_snapshot.json"
+            restored_path = temp_path / "restored.duckdb"
+            build_motd_pool(
+                db_path,
+                [_card("san", "agni"), _card("grc", "logos"), _card("lat", "amo")],
+                replace=True,
+            )
+
+            export_payload = export_motd_pool_snapshot(db_path, snapshot_path)
+            restore_payload = restore_motd_pool_snapshot(snapshot_path, restored_path)
+            sample = sample_motd_pool(restored_path, language="all", count=3, seed="daily")
+
+            self.assertEqual(export_payload["card_count"], EXPECTED_ALL_LANGUAGE_MOTD_COUNT)
+            self.assertEqual(restore_payload["restored"], EXPECTED_ALL_LANGUAGE_MOTD_COUNT)
+            self.assertEqual({item["query"] for item in sample["items"]}, {"agni", "logos", "amo"})
+
+    def test_snapshot_cli_round_trip(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            db_path = temp_path / "motd_pool.duckdb"
+            snapshot_path = temp_path / "motd_pool_snapshot.json"
+            restored_path = temp_path / "restored.duckdb"
+            build_motd_pool(
+                db_path,
+                [_card("san", "agni"), _card("grc", "logos"), _card("lat", "amo")],
+                replace=True,
+            )
+
+            export_result = CliRunner().invoke(
+                main,
+                [
+                    "motd-pool",
+                    "export",
+                    "--db",
+                    str(db_path),
+                    "--path",
+                    str(snapshot_path),
+                    "--output",
+                    "json",
+                ],
+            )
+            restore_result = CliRunner().invoke(
+                main,
+                [
+                    "motd-pool",
+                    "restore",
+                    "--path",
+                    str(snapshot_path),
+                    "--db",
+                    str(restored_path),
+                    "--output",
+                    "json",
+                ],
+            )
+
+            self.assertEqual(export_result.exit_code, 0, export_result.output)
+            self.assertEqual(restore_result.exit_code, 0, restore_result.output)
+            self.assertEqual(json.loads(export_result.output)["card_count"], 3)
+            self.assertEqual(json.loads(restore_result.output)["restored"], 3)
+            self.assertTrue(validate_motd_pool(restored_path, per_language=1)["ok"])
 
     def test_sample_missing_pool_returns_empty_contract_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

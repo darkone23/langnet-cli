@@ -15,6 +15,7 @@
 - `curated/reader_work_maps/`: curated table-of-contents/work-map data.
 - `curated/reader_citation_maps/`: source/work-specific maps from softer scholarly or dictionary citation conventions to local machine citation shapes.
 - `generated/reader_classifications/`: generated-but-reviewed CSV inputs for restoring reader shelves, popular lists, discovery facets, and author prominence after catalog rebuilds.
+- `generated/motd_pool/`: generated-but-reviewed word-of-day pool JSON snapshots for restoring the ignored `build/motd_pool.duckdb` runtime artifact.
 
 Environment override: set `LANGNET_DATA_DIR` to change the root `data/` location; `build/` and `cache/` are created beneath it.
 
@@ -28,6 +29,7 @@ Suggested commands:
 - `just cli reader show <address>` → retrieve one segment by CTS URN or registered address.
 - `just cli reader resolve-address "Od. 3.74"` → resolve an alias/citation address and retrieve the segment when indexed.
 - `just cli reader validate` → validate the reader catalog and per-book artifacts.
+- `just cli motd-pool restore --path data/generated/motd_pool/2026-06-02/motd-pool-reviewed.json --output json` → restore the reviewed word-of-day pool into `data/build/motd_pool.duckdb`.
 - `just clean-cache` → removes `data/cache/` contents.
 
 Reader handoff docs:

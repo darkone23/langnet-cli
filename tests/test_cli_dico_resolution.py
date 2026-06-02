@@ -210,6 +210,10 @@ def test_dico_fetch_client_uses_content_addressed_response_ids() -> None:
 
 def test_expand_dico_headword_candidates_adds_velthuis() -> None:
     assert "k.r.s.na" in expand_dico_headword_candidates(["kṛṣṇa"])
+    candidates = expand_dico_headword_candidates(["mṛtás"])
+    assert "mrta" in candidates
+    assert "m.rta" in candidates
+    assert "mrta" not in expand_dico_headword_candidates(["mrtas"])
 
 
 def test_expand_dico_headword_candidates_adds_base_anchor() -> None:

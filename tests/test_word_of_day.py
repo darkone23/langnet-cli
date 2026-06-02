@@ -881,6 +881,48 @@ def test_word_of_day_prefers_bucket_that_supports_curated_summary_hint() -> None
     assert item["source_basis"][0]["evidence"] == "tongue; language; speech"
 
 
+def test_word_of_day_source_basis_prefers_witnesses_with_source_refs() -> None:
+    reduction = _fake_reduction("lat", "eo", display_gloss="go; walk")
+    bucket = reduction.buckets[0]
+    bucket.witnesses[0].source_tool = "whitaker"
+    bucket.witnesses[0].evidence = {
+        "source_tool": "whitaker",
+        "source_entry": {"source_text": "go; walk"},
+    }
+    bucket.witnesses.append(
+        WitnessSenseUnit(
+            wsu_id="wsu:lat:eo:lewis",
+            lexeme_anchor="lex:eo#verb",
+            sense_anchor="sense:lex:eo#verb#1",
+            gloss="to go, walk",
+            normalized_gloss="go; walk",
+            source_tool="lewis_1890",
+            claim_id="claim-lewis-eo",
+            source_triple_subject="lex:eo#verb",
+            evidence={
+                "source_tool": "lewis_1890",
+                "source_ref": "lewis_1890:eo1",
+                "source_entry": {
+                    "source_ref": "lewis_1890:eo1",
+                    "source_text": "to go, walk",
+                },
+            },
+        )
+    )
+
+    item = build_word_of_day_item(
+        candidate=WordCandidate("lat", "eo"),
+        reduction=reduction,
+        options=_options(),
+        bucket_gloss=lambda candidate_bucket: candidate_bucket.display_gloss,
+        bucket_learner_gloss=lambda candidate_bucket: candidate_bucket.display_gloss,
+    )
+
+    assert item is not None
+    assert item["source_basis"][0]["tool"] == "lewis_1890"
+    assert item["source_basis"][0]["source_ref"] == "lewis_1890:eo1"
+
+
 def test_word_of_day_supports_three_letter_core_gloss_hints() -> None:
     reduction = _fake_reduction_with_buckets(
         "grc",

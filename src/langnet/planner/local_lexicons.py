@@ -1,8 +1,19 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from query_spec import PlanDependency, ToolCallSpec, ToolStage
 
+from langnet.databuild.paths import default_strongs_greek_path
 from langnet.planner.calls import make_call, opts
+
+
+def _local_index_signature(path: Path) -> str:
+    try:
+        stat = path.stat()
+    except FileNotFoundError:
+        return "missing"
+    return f"{stat.st_size}:{stat.st_mtime_ns}"
 
 
 def append_dico_calls(
@@ -360,5 +371,99 @@ def append_bailly_calls(
             from_call_id=bailly_derive_id,
             to_call_id=bailly_claim_id,
             rationale="Produce local Bailly source gloss claims",
+        )
+    )
+
+
+def append_strongs_greek_calls(
+    calls: list[ToolCallSpec],
+    deps: list[PlanDependency],
+    *,
+    headword: str,
+    lemma: str,
+    lemma_candidates: list[str] | None = None,
+) -> None:
+    """Append the staged local Strong's Greek source-gloss pipeline."""
+    fetch_id = "strongs-greek-1"
+    params = {
+        "headword": headword,
+        "lemma": lemma,
+        "index_signature": _local_index_signature(default_strongs_greek_path()),
+    }
+    if lemma_candidates:
+        params["lemma_candidates"] = ";".join(lemma_candidates)
+    calls.append(
+        make_call(
+            tool="fetch.strongs_greek",
+            call_id=fetch_id,
+            endpoint="duckdb://strongs_greek",
+            params=params,
+            opts=opts(expected="json", priority=7, optional=True, stage=ToolStage.TOOL_STAGE_FETCH),
+        )
+    )
+    extract_id = "strongs-greek-extract-1"
+    calls.append(
+        make_call(
+            tool="extract.strongs_greek.json",
+            call_id=extract_id,
+            endpoint="internal://strongs_greek/json_extract",
+            params={"source_call_id": fetch_id},
+            opts=opts(
+                expected="extraction",
+                priority=8,
+                optional=True,
+                stage=ToolStage.TOOL_STAGE_EXTRACT,
+            ),
+        )
+    )
+    deps.append(
+        PlanDependency(
+            from_call_id=fetch_id,
+            to_call_id=extract_id,
+            rationale="Extract local Strong's Greek JSON after fetch",
+        )
+    )
+    derive_id = "strongs-greek-derive-1"
+    calls.append(
+        make_call(
+            tool="derive.strongs_greek.entries",
+            call_id=derive_id,
+            endpoint="internal://strongs_greek/entry_derive",
+            params={"source_call_id": extract_id},
+            opts=opts(
+                expected="derivation",
+                priority=9,
+                optional=True,
+                stage=ToolStage.TOOL_STAGE_DERIVE,
+            ),
+        )
+    )
+    deps.append(
+        PlanDependency(
+            from_call_id=extract_id,
+            to_call_id=derive_id,
+            rationale="Derive local Strong's Greek entries",
+        )
+    )
+    claim_id = "claim-strongs-greek-1"
+    calls.append(
+        make_call(
+            tool="claim.strongs_greek.entries",
+            call_id=claim_id,
+            endpoint="internal://claim/strongs_greek_entries",
+            params={"source_call_id": derive_id},
+            opts=opts(
+                expected="claim",
+                priority=10,
+                optional=True,
+                stage=ToolStage.TOOL_STAGE_CLAIM,
+            ),
+        )
+    )
+    deps.append(
+        PlanDependency(
+            from_call_id=derive_id,
+            to_call_id=claim_id,
+            rationale="Produce local Strong's Greek source gloss claims",
         )
     )

@@ -1592,7 +1592,7 @@ def _source_basis(
     max_source_chars: int,
 ) -> list[dict[str, Any]]:
     basis: list[dict[str, Any]] = []
-    for witness in witnesses[:3]:
+    for witness in _source_basis_witnesses(witnesses):
         evidence = getattr(witness, "evidence", {}) or {}
         if not isinstance(evidence, Mapping):
             evidence = {}
@@ -1621,6 +1621,29 @@ def _source_basis(
             }
         )
     return basis
+
+
+def _source_basis_witnesses(witnesses: Sequence[Any]) -> list[Any]:
+    ranked = sorted(
+        enumerate(witnesses),
+        key=lambda item: (not _witness_source_ref(item[1]), item[0]),
+    )
+    return [witness for _, witness in ranked[:3]]
+
+
+def _witness_source_ref(witness: Any) -> str:
+    evidence = getattr(witness, "evidence", {}) or {}
+    if not isinstance(evidence, Mapping):
+        return ""
+    source_entry = evidence.get("source_entry")
+    if isinstance(source_entry, Mapping):
+        source_ref = source_entry.get("source_ref")
+        if isinstance(source_ref, str) and source_ref.strip():
+            return source_ref.strip()
+    source_ref = evidence.get("source_ref")
+    if isinstance(source_ref, str) and source_ref.strip():
+        return source_ref.strip()
+    return ""
 
 
 def bucket_gloss_from_witness(bucket_gloss: BucketGloss, witness: Any) -> str:

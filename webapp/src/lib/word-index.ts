@@ -221,6 +221,12 @@ export type WordIndexSectionLookupTarget = {
 	dictionary: string;
 };
 
+export type WordIndexItemLookupTarget = {
+	language: LanguageMode;
+	query: string;
+	dictionary: ToolRequest;
+};
+
 export function wordIndexDisplayOrderLabel(
 	response: WordIndexResponse | WordIndexSectionsResponse | null,
 	fallback = 'Nearby lexeme order'
@@ -276,6 +282,25 @@ export function wordIndexSectionLookupTarget(
 		language: anchor.language,
 		query: query.trim(),
 		dictionary: anchor.source || 'all'
+	};
+}
+
+export function wordIndexItemLookupTarget(item: WordIndexItem): WordIndexItemLookupTarget {
+	const query =
+		item.encounter.q ||
+		item.lookup ||
+		item.display.source_key ||
+		item.canonical_name ||
+		item.canonical_key;
+	const dictionary =
+		item.encounter.dictionary && item.encounter.dictionary !== 'all'
+			? item.encounter.dictionary
+			: item.dictionary || item.source || 'all';
+
+	return {
+		language: item.encounter.language || item.language,
+		query: query.trim(),
+		dictionary: dictionary as ToolRequest
 	};
 }
 

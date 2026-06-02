@@ -6,6 +6,7 @@ import {
 	wordIndexBrowseGroups,
 	wordIndexDisplayOrderLabel,
 	wordIndexItemEntryCount,
+	wordIndexItemLookupTarget,
 	wordIndexSectionLookupTarget,
 	wordIndexSectionForItem,
 	type WordIndexResponse,
@@ -596,4 +597,32 @@ assert.equal(
 		}
 	)?.label,
 	'Θ'
+);
+
+assert.deepEqual(
+	wordIndexItemLookupTarget(
+		wordIndexItem({
+			language: 'grc',
+			source: 'strongs_greek',
+			dictionary: 'strongs_greek',
+			canonical_name: 'Ἡσαΐας',
+			canonical_key: 'ησαιασ',
+			lookup: 'Ἡσαΐας',
+			display: {
+				primary: 'Ἡσαΐας',
+				transliteration: 'Hēsaḯas',
+				source_key: 'Ἡσαΐας'
+			},
+			encounter: {
+				language: 'grc',
+				q: 'Ἡσαΐας',
+				dictionary: 'strongs_greek'
+			}
+		})
+	),
+	{
+		language: 'grc',
+		query: 'Ἡσαΐας',
+		dictionary: 'strongs_greek'
+	}
 );

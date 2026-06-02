@@ -19,6 +19,7 @@ class ToolCatalogEntry:
     default_enabled: bool = True
     translation_capable: bool = False
     dictionaries: tuple[str, ...] = ()
+    dictionary_genre: str = ""
     notes: str = ""
 
 
@@ -52,6 +53,7 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
             "derive.diogenes.morph",
             "claim.diogenes.morph",
         ),
+        dictionary_genre="lexicographic",
         notes="Local Diogenes service; may require a running Diogenes endpoint.",
     ),
     ToolCatalogEntry(
@@ -94,6 +96,7 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
             "derive.gaffiot.entries",
             "claim.gaffiot.entries",
         ),
+        dictionary_genre="lexicographic",
         translation_capable=True,
         notes="French source entries can be projected through the translation cache.",
     ),
@@ -109,6 +112,7 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
             "derive.lewis_1890.entries",
             "claim.lewis_1890.entries",
         ),
+        dictionary_genre="lexicographic",
         translation_capable=False,
         notes="CLTK source for Charlton T. Lewis, An Elementary Latin Dictionary (1890).",
     ),
@@ -126,6 +130,7 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
             "claim.diogenes.morph",
             "claim.diogenes.citation",
         ),
+        dictionary_genre="lexicographic",
         notes="Local Diogenes service; may require a running Diogenes endpoint.",
     ),
     ToolCatalogEntry(
@@ -140,8 +145,25 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
             "derive.bailly.entries",
             "claim.bailly.entries",
         ),
+        dictionary_genre="lexicographic",
         translation_capable=True,
         notes="French source entries can be projected through the translation cache.",
+    ),
+    ToolCatalogEntry(
+        language="grc",
+        tool_filter="strongs_greek",
+        label="Strong's Greek",
+        role="Greek-English biblical dictionary entries",
+        source_tools=("strongs_greek",),
+        plan_tools=(
+            "fetch.strongs_greek",
+            "extract.strongs_greek.json",
+            "derive.strongs_greek.entries",
+            "claim.strongs_greek.entries",
+        ),
+        dictionary_genre="religious",
+        translation_capable=False,
+        notes="English source entries for biblical Greek terms; built from MorphGNT Strong's XML.",
     ),
     ToolCatalogEntry(
         language="grc",
@@ -210,6 +232,7 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
             "claim.cdsl.sense",
         ),
         dictionaries=("mw", "ap90"),
+        dictionary_genre="lexicographic",
         notes="Currently plans MW and AP90 dictionary rows.",
     ),
     ToolCatalogEntry(
@@ -224,6 +247,7 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
             "derive.dico.entries",
             "claim.dico.entries",
         ),
+        dictionary_genre="lexicographic",
         translation_capable=True,
         notes="French source entries can be projected through the translation cache.",
     ),

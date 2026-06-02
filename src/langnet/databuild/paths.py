@@ -108,6 +108,13 @@ def default_lewis_1890_path() -> Path:
     return build_dir() / "lex_lewis_1890.duckdb"
 
 
+def default_strongs_greek_path() -> Path:
+    """
+    Default output path for the Strong's Greek English index.
+    """
+    return build_dir() / "lex_strongs_greek.duckdb"
+
+
 def default_foster_ossa_path() -> Path:
     """
     Default output path for the local Foster Ossa extraction index.

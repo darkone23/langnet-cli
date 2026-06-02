@@ -190,6 +190,46 @@ def test_bailly_fallback_match_sets_claim_subject_to_resolved_entry() -> None:
     assert claim.subject == "lex:agelaios"
 
 
+def test_bailly_fetch_skips_distant_greek_fallback_candidates() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "lex_bailly.duckdb"
+        with duckdb.connect(str(db_path)) as conn:
+            apply_bailly_schema(conn)
+            insert_pdf_structural_entry(
+                conn,
+                {
+                    "entry_id": "bailly-p1119-c1-0011",
+                    "lemma": "ἥσθημα",
+                    "lemma_norm": "hs1qhma",
+                    "source": {
+                        "kind": "pdf",
+                        "page_start": 1119,
+                        "page_end": 1119,
+                    },
+                    "raw_text": "ἥσθημα, ατος (τὸ) joy",
+                    "blocks": [
+                        {"path": "00", "marker": "head", "text": "ἥσθημα, ατος (τὸ)"},
+                        {"path": "01", "marker": "I", "text": "joy"},
+                    ],
+                },
+            )
+
+        raw = BaillyFetchClient(db_path=db_path).execute(
+            "bailly-fetch-isaiah",
+            "duckdb://bailly",
+            params={
+                "headword": "Ἡσαΐας",
+                "lemma": "ἡσαίας",
+                "lemma_candidates": "ἡσαίας;ἠσαίας;ἡσαΐας;νησαίας;ησθημα",
+            },
+        )
+
+    payload = orjson.loads(raw.body)
+
+    assert payload["matched_headword"] is None
+    assert payload["entries"] == []
+
+
 def test_bailly_entry_without_id_gets_stable_generated_source_ref() -> None:
     triples = bailly_entry_triples(
         {

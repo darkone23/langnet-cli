@@ -245,9 +245,11 @@ WORD_INDEX_SOURCES = {
     "dico",
     "gaffiot",
     "lewis_1890",
+    "strongs_greek",
     "whitakers",
     "diogenes",
     "bailly",
+    "strongs_greek",
 }
 
 
@@ -6622,6 +6624,86 @@ def motd_pool_validate(db_path: Path | None, per_language: int, output: str) -> 
         click.echo(f"- {issue.get('code')}: {issue.get('message')}")
 
 
+@motd_pool_cli.command("export")
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="MOTD pool DuckDB path. Defaults to data/build/motd_pool.duckdb.",
+)
+@click.option(
+    "--path",
+    "snapshot_path",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Tracked generated JSON snapshot path.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    show_default=True,
+)
+def motd_pool_export(db_path: Path | None, snapshot_path: Path, output: str) -> None:
+    """Export the current MOTD pool DuckDB into a reviewed JSON snapshot."""
+    from langnet.motd_pool import (  # noqa: PLC0415
+        default_motd_pool_path,
+        export_motd_pool_snapshot,
+    )
+
+    payload = export_motd_pool_snapshot(db_path or default_motd_pool_path(), snapshot_path)
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    click.echo(f"Exported {payload['card_count']} MOTD cards to {payload['snapshot_path']}")
+
+
+@motd_pool_cli.command("restore")
+@click.option(
+    "--path",
+    "snapshot_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Reviewed generated JSON snapshot path.",
+)
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="MOTD pool DuckDB path. Defaults to data/build/motd_pool.duckdb.",
+)
+@click.option("--replace/--no-replace", default=True, show_default=True)
+@click.option(
+    "--output",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    show_default=True,
+)
+def motd_pool_restore(
+    snapshot_path: Path,
+    db_path: Path | None,
+    replace: bool,
+    output: str,
+) -> None:
+    """Restore a reviewed MOTD pool JSON snapshot into a DuckDB pool."""
+    from langnet.motd_pool import (  # noqa: PLC0415
+        default_motd_pool_path,
+        restore_motd_pool_snapshot,
+    )
+
+    payload = restore_motd_pool_snapshot(
+        snapshot_path,
+        db_path or default_motd_pool_path(),
+        replace=replace,
+    )
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    click.echo(f"Restored {payload['restored']} MOTD cards to {payload['db_path']}")
+
+
 def _doctor_check(  # noqa: PLR0913
     checks: list[dict[str, object]],
     *,
@@ -7361,6 +7443,20 @@ def _create_lewis_1890_client(tool: str, use_stubs: bool) -> ToolClient | None:
     return None
 
 
+def _create_strongs_greek_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a local Strong's Greek client, with stub fallback."""
+    try:
+        from langnet.execution.handlers.strongs_greek import (  # noqa: PLC0415
+            StrongsGreekFetchClient,
+        )
+
+        return StrongsGreekFetchClient()
+    except Exception:
+        if use_stubs:
+            return StubToolClient(tool)
+    return None
+
+
 def _get_client_factory(tool: str, use_stubs: bool):
     """Get the factory function for creating a client for the given tool."""
     http_tools = {"fetch.diogenes", "fetch.heritage"}
@@ -7375,6 +7471,7 @@ def _get_client_factory(tool: str, use_stubs: bool):
         "fetch.gaffiot": lambda: _create_gaffiot_client(tool, use_stubs),
         "fetch.bailly": lambda: _create_bailly_client(tool, use_stubs),
         "fetch.lewis_1890": lambda: _create_lewis_1890_client(tool, use_stubs),
+        "fetch.strongs_greek": lambda: _create_strongs_greek_client(tool, use_stubs),
     }
 
     if tool in http_tools:
@@ -8073,6 +8170,8 @@ def _encounter_bucket_learner_gloss(
 
     learner_gloss = witness.evidence.get("learner_gloss")
     if isinstance(learner_gloss, str) and learner_gloss:
+        if _encounter_witness_source_tool(witness) == "strongs_greek":
+            return _shorten(learner_gloss, max_chars)
         return _encounter_compact_gloss(learner_gloss, max_chars=max_chars)
 
     translated_segments = witness.evidence.get("translated_segments")
@@ -8081,6 +8180,18 @@ def _encounter_bucket_learner_gloss(
         return _encounter_compact_gloss(segment_gloss, max_chars=max_chars)
 
     return _encounter_compact_gloss(_encounter_bucket_gloss(bucket), max_chars=max_chars)
+
+
+def _encounter_witness_source_tool(witness) -> str:
+    source_tool = getattr(witness, "source_tool", "")
+    if isinstance(source_tool, str) and source_tool:
+        return source_tool
+    evidence = getattr(witness, "evidence", {})
+    if isinstance(evidence, Mapping):
+        evidence_source = evidence.get("source_tool")
+        if isinstance(evidence_source, str):
+            return evidence_source
+    return ""
 
 
 def _encounter_string_sequence(value: object) -> list[str]:

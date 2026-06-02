@@ -8,5 +8,12 @@ assert.ok(encounterWord('', 'lat', ['all']).source_tools.includes('lewis_1890'))
 
 const greekTools = toolsForLanguage('grc').map(({ id }) => id);
 assert.ok(greekTools.includes('bailly'));
+assert.ok(greekTools.includes('strongs_greek'));
+assert.equal(
+	toolsForLanguage('grc').find(({ id }) => id === 'strongs_greek')?.dictionaryGenre,
+	'religious'
+);
 assert.deepEqual(resolveToolRequests('grc', ['bailly']), ['bailly']);
+assert.deepEqual(resolveToolRequests('grc', ['strongs_greek']), ['strongs_greek']);
 assert.ok(encounterWord('', 'grc', ['all']).source_tools.includes('bailly'));
+assert.ok(encounterWord('', 'grc', ['all']).source_tools.includes('strongs_greek'));

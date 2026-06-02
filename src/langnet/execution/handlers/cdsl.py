@@ -58,6 +58,8 @@ _ASCII_DIGRAPH_TO_SLP1 = {
 }
 _VELTHUIS_MARKERS = frozenset({".", '"', "~"})
 _CDSL_SLP1_DISPLAY_MARKS = str.maketrans("", "", "/\\^")
+_SANSKRIT_PITCH_ACCENTS = frozenset({"\u0300", "\u0301"})
+_SANSKRIT_FINAL_S_STEM_MARKERS = frozenset("āīūṛṝḷḹṅñṇśṣṃṁḥ.fFxX")
 _CDSL_TOKEN_RE = re.compile(
     r"(?P<prefix>[^A-Za-z°]*)(?P<body>[A-Za-z°/\\^]+(?:[-–—][A-Za-z°/\\^]+)*)(?P<suffix>[^A-Za-z°]*)"
 )
@@ -186,6 +188,21 @@ def _ascii_iast_to_slp1_basic(text: str) -> str:
         out.append(_IAST_TO_SLP1.get(ch, ch))
         i += 1
     return "".join(out)
+
+
+def _strip_sanskrit_pitch_accents(text: str) -> str:
+    normalized = unicodedata.normalize("NFD", text or "")
+    out: list[str] = []
+    base = ""
+    for char in normalized:
+        if unicodedata.category(char).startswith("M"):
+            if char in _SANSKRIT_PITCH_ACCENTS and base.lower() in {"a", "i", "u", "e", "o"}:
+                continue
+            out.append(char)
+            continue
+        base = char
+        out.append(char)
+    return unicodedata.normalize("NFC", "".join(out))
 
 
 def _clean_cdsl_slp1_for_display(text: str) -> str:
@@ -471,6 +488,7 @@ def _to_slp1(text: str) -> str:
     """
     Convert learner/planner Sanskrit input to SLP1 for CDSL lookup.
     """
+    text = _strip_sanskrit_pitch_accents(text)
     if _looks_like_slp1(text):
         return text
     if any(ch in _IAST_MARKS for ch in text):
@@ -582,7 +600,9 @@ def _candidate_keys(lemma: str) -> list[str]:
     if not raw:
         return []
     base = raw.split("_", 1)[0]
-    seeds = {raw, base}
+    seeds = {raw, base, _strip_sanskrit_pitch_accents(raw), _strip_sanskrit_pitch_accents(base)}
+    seeds.update(_sanskrit_final_s_stems(raw))
+    seeds.update(_sanskrit_final_s_stems(base))
     variants: set[str] = set()
     for seed in seeds:
         variants.add(seed)
@@ -615,7 +635,16 @@ def _preferred_slp1_keys(lemma: str) -> list[str]:
         return []
 
     preferred: list[str] = []
-    for seed in [raw, raw.split("_", 1)[0]]:
+    base = raw.split("_", 1)[0]
+    seeds = [
+        raw,
+        base,
+        _strip_sanskrit_pitch_accents(raw),
+        _strip_sanskrit_pitch_accents(base),
+        *_sanskrit_final_s_stems(raw),
+        *_sanskrit_final_s_stems(base),
+    ]
+    for seed in seeds:
         slp1 = _to_slp1(seed)
         if slp1 and slp1 not in preferred:
             preferred.append(slp1)
@@ -629,6 +658,19 @@ def _preferred_slp1_keys(lemma: str) -> list[str]:
             if variant not in preferred:
                 preferred.append(variant)
     return preferred
+
+
+def _sanskrit_final_s_stems(value: str) -> list[str]:
+    stripped = _strip_sanskrit_pitch_accents((value or "").strip())
+    if not stripped.lower().endswith("s") or not _has_sanskrit_final_s_stem_signal(stripped):
+        return []
+    stem = stripped[:-1]
+    return [stem] if stem else []
+
+
+def _has_sanskrit_final_s_stem_signal(value: str) -> bool:
+    stem = value[:-1]
+    return bool(stem) and any(char in _SANSKRIT_FINAL_S_STEM_MARKERS for char in stem)
 
 
 def _match_rank(entry: Mapping[str, object], lemma: str) -> int:

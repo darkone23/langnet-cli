@@ -13,6 +13,7 @@ from langnet.execution.handlers import gaffiot as gaffiot_handlers
 from langnet.execution.handlers import heritage as heritage_handlers
 from langnet.execution.handlers import lewis_1890 as lewis_1890_handlers
 from langnet.execution.handlers import spacy as spacy_handlers
+from langnet.execution.handlers import strongs_greek as strongs_greek_handlers
 from langnet.execution.handlers import whitakers as whitakers_handlers
 
 
@@ -67,6 +68,10 @@ def default_registry(use_stubs: bool = False) -> ToolRegistry:
     extract["extract.lewis_1890.json"] = lewis_1890_handlers.extract_lewis_1890_json
     derive["derive.lewis_1890.entries"] = lewis_1890_handlers.derive_lewis_1890_entries
     claim["claim.lewis_1890.entries"] = lewis_1890_handlers.claim_lewis_1890_entries
+    # Local Strong's Greek handlers
+    extract["extract.strongs_greek.json"] = strongs_greek_handlers.extract_strongs_greek_json
+    derive["derive.strongs_greek.entries"] = strongs_greek_handlers.derive_strongs_greek_entries
+    claim["claim.strongs_greek.entries"] = strongs_greek_handlers.claim_strongs_greek_entries
 
     if use_stubs:
         # Fallback to stub handlers for any tool not registered above.

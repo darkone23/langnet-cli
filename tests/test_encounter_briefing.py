@@ -117,6 +117,49 @@ def test_build_encounter_briefing_flow_extracts_reader_word_study_digest() -> No
     assert flow["draft_output"]["phrase_pairs"][1]["gloss"] == "arms"
 
 
+def test_build_encounter_briefing_flow_filters_non_reference_source_notes() -> None:
+    payload = {
+        "schema_version": "langnet.encounter.v1",
+        "query": "jñāna",
+        "language": "san",
+        "display": {
+            "header": {"forms": ["jnaana"]},
+            "meanings": [
+                {
+                    "bucket_id": "bucket:jnana",
+                    "display_gloss": "knowledge",
+                    "sources": ["cdsl", "dico"],
+                    "witness_count": 2,
+                    "confidence_label": "multi-witness",
+                    "source_refs": ["dico:27.html#j~naana:0", "mw:80379.0"],
+                    "source_detail_summary": {
+                        "source_refs": ["ontologie.", "VS.", "Fig.", "L.", "ŚāṅkhŚr. xiii"],
+                        "examples": ["jñāna => knowledge"],
+                    },
+                }
+            ],
+        },
+    }
+
+    flow = build_encounter_briefing_flow(payload)
+
+    meaning = flow["digest"]["meanings"][0]
+    assert meaning["source_refs"] == [
+        "dico:27.html#j~naana:0",
+        "mw:80379.0",
+        "ŚāṅkhŚr. xiii",
+    ]
+    assert "ontologie." not in flow["digest"]["source_refs"]
+    assert "VS." not in flow["digest"]["source_refs"]
+    assert "Fig." not in flow["digest"]["source_refs"]
+    assert "L." not in flow["digest"]["source_refs"]
+    assert flow["draft_output"]["meanings"][0]["source_refs"] == [
+        "dico:27.html#j~naana:0",
+        "mw:80379.0",
+        "ŚāṅkhŚr. xiii",
+    ]
+
+
 def test_encounter_briefing_spike_cli_reads_saved_payload() -> None:
     payload = json.dumps(
         {

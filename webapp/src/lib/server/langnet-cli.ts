@@ -1825,6 +1825,7 @@ function sourceToolFromSourceRef(sourceRef: string): ToolId | undefined {
 	if (sourceRef.startsWith('gaffiot:')) return 'gaffiot';
 	if (sourceRef.startsWith('bailly:')) return 'bailly';
 	if (sourceRef.startsWith('lewis_1890:')) return 'lewis_1890';
+	if (sourceRef.startsWith('strongs_greek:')) return 'strongs_greek';
 	if (sourceRef.startsWith('mw:') || sourceRef.startsWith('ap90:')) return 'cdsl';
 	if (sourceRef.startsWith('diogenes:')) return 'diogenes';
 	return undefined;
@@ -2084,7 +2085,8 @@ function normalizeToolId(value: string): ToolId {
 		value === 'cltk' ||
 		value === 'whitakers' ||
 		value === 'gaffiot' ||
-		value === 'lewis_1890'
+		value === 'lewis_1890' ||
+		value === 'strongs_greek'
 	) {
 		return value;
 	}
@@ -2116,7 +2118,8 @@ function sourceLayerLabel(toolId: ToolId | undefined, sourceLang: string) {
 		cltk: 'CLTK',
 		whitakers: 'Words',
 		gaffiot: 'Gaffiot',
-		lewis_1890: 'Lewis 1890'
+		lewis_1890: 'Lewis 1890',
+		strongs_greek: "Strong's Greek"
 	};
 	const tool = toolId ? toolLabels[toolId] : '';
 	const lang = languageCodeLabel(sourceLang);

@@ -20,6 +20,7 @@ from langnet.cli import (
     LanguageHint,
     NormalizeConfig,
     _encounter_actions,
+    _encounter_bucket_learner_gloss,
     _encounter_bucket_sort_key,
     _encounter_compact_gloss,
     _encounter_component_candidates,
@@ -993,6 +994,27 @@ def test_encounter_compact_gloss_extracts_learner_summary_from_source_entry() ->
     )
     assert _encounter_compact_gloss("God, the Deity, in general sense, both sg. and pl.") == (
         "God, the Deity, in general sense"
+    )
+
+
+def test_encounter_strongs_greek_learner_gloss_keeps_short_source_definition() -> None:
+    gloss = "of Hebrew origin (H3470); Hesaias (i.e. Jeshajah), an Israelite; KJV: Esaias."
+    bucket = SimpleNamespace(
+        display_gloss=gloss,
+        witnesses=[
+            SimpleNamespace(
+                source_tool="strongs_greek",
+                evidence={
+                    "source_tool": "strongs_greek",
+                    "learner_gloss": gloss,
+                },
+            )
+        ],
+    )
+
+    assert _encounter_bucket_learner_gloss(bucket, max_chars=240) == gloss
+    assert _encounter_bucket_learner_gloss(bucket, max_chars=40) == (
+        "of Hebrew origin (H3470); Hesaias (i.e.…"
     )
 
 

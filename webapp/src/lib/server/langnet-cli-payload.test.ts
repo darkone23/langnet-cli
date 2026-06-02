@@ -607,4 +607,90 @@ assert.equal(
 	'Ask what relation the form marks.'
 );
 
+const strongsGreekResult = mapCliPayload(
+	{
+		query: 'Ἠσαίᾳ',
+		source_tools: ['strongs_greek'],
+		display: {
+			analysis: [],
+			meanings: [
+				{
+					bucket_id: 'bucket:hesaias',
+					sources: ['strongs_greek'],
+					source_langs: ['en'],
+					display_gloss:
+						'of Hebrew origin (H3470); Hesaias (i.e. Jeshajah), an Israelite; KJV: Esaias.',
+					evidence_gloss:
+						'of Hebrew origin (H3470); Hesaias (i.e. Jeshajah), an Israelite; KJV: Esaias.',
+					entries: [
+						{
+							source_tool: 'strongs_greek',
+							source_ref: 'strongs_greek:G2268',
+							source_lang: 'en',
+							dictionary: 'strongs_greek',
+							headword: 'Ἡσαΐας'
+						}
+					]
+				}
+			]
+		},
+		buckets: [
+			{
+				bucket_id: 'bucket:hesaias',
+				witnesses: [
+					{
+						sense_anchor: 'sense:lex:hesaias#strongs',
+						source_tool: 'strongs_greek',
+						gloss: 'of Hebrew origin (H3470); Hesaias (i.e. Jeshajah), an Israelite; KJV: Esaias.',
+						evidence: {
+							source_ref: 'strongs_greek:G2268',
+							source_tool: 'strongs_greek',
+							source_lang: 'en'
+						}
+					}
+				]
+			}
+		],
+		ranking: [
+			{
+				bucket_id: 'bucket:hesaias',
+				source_tools: ['strongs_greek'],
+				bucket_lemmas: ['Ἡσαΐας'],
+				has_english_translation: true,
+				has_bilingual_source: false
+			}
+		],
+		translation_cache: {
+			mode: 'cache',
+			model: 'openai:qwen/qwen3.7-max',
+			cache_available: true,
+			populate: false,
+			written: 0,
+			before: { total: 0, hits: 0, missing: 0, errors: 0 },
+			after: { total: 0, hits: 0, missing: 0, errors: 0 }
+		},
+		request: {
+			translation_mode: 'cache',
+			tool_filter: ['strongs_greek'],
+			reader_lang: 'en'
+		}
+	},
+	{
+		language: 'grc',
+		query: 'Ἠσαίᾳ',
+		dictionaries: ['strongs_greek'],
+		translationMode: 'cache',
+		maxBuckets: 1,
+		maxGlossChars: 1200,
+		timeoutMs: 300_000
+	},
+	'strongs_greek'
+);
+
+assert.deepEqual(strongsGreekResult.source_tools, ['strongs_greek']);
+assert.equal(strongsGreekResult.buckets[0]?.source_tools[0], 'strongs_greek');
+assert.equal(strongsGreekResult.buckets[0]?.witnesses[0]?.tool, 'strongs_greek');
+assert.equal(strongsGreekResult.buckets[0]?.witnesses[0]?.source_ref, 'strongs_greek:G2268');
+assert.equal(strongsGreekResult.request.tool_filter[0], 'strongs_greek');
+
 console.log('langnet-cli payload mapping ok');

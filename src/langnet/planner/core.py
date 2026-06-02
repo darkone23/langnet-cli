@@ -26,6 +26,7 @@ from langnet.planner.local_lexicons import (
     append_dico_calls,
     append_gaffiot_calls,
     append_lewis_1890_calls,
+    append_strongs_greek_calls,
 )
 
 
@@ -44,6 +45,7 @@ class PlannerConfig:
     include_gaffiot: bool = True
     include_lewis_1890: bool = True
     include_bailly: bool = True
+    include_strongs_greek: bool = True
     cdsl_dicts: tuple[str, ...] = ("mw", "ap90")
     max_candidates: int = 3
 
@@ -944,6 +946,14 @@ class ToolPlanner:
 
         if self.config.include_bailly:
             append_bailly_calls(
+                calls,
+                deps,
+                headword=normalized.original,
+                lemma=candidate.lemma or query_value,
+                lemma_candidates=[cand.lemma for cand in normalized.candidates if cand.lemma],
+            )
+        if self.config.include_strongs_greek:
+            append_strongs_greek_calls(
                 calls,
                 deps,
                 headword=normalized.original,

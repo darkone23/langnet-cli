@@ -49,6 +49,25 @@ def test_lewis_1890_fetch_client_returns_local_entries() -> None:
     assert "wolf" in body["entries"][0]["plain_text"]
 
 
+def test_lewis_1890_fetch_skips_distant_fallback_candidates() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = _build_lewis_db(tmpdir)
+
+        raw = Lewis1890FetchClient(db_path=db_path).execute(
+            "lewis-fetch-fallback",
+            "duckdb://lewis_1890",
+            params={
+                "headword": "lupus",
+                "lemma": "lupus",
+                "lemma_candidates": "lupus;amo",
+            },
+        )
+
+    body = orjson.loads(raw.body)
+
+    assert [entry["source_key"] for entry in body["entries"]] == ["lupus"]
+
+
 def test_claim_lewis_1890_entries_emits_english_gloss_triples() -> None:
     raw = RawResponseEffect(
         response_id="raw-lewis-1",

@@ -14,6 +14,7 @@ from langnet.databuild.paths import build_dir
 from langnet.word_of_day import WORD_OF_DAY_SCHEMA_VERSION, WordCandidate
 
 SUPPORTED_MOTD_POOL_LANGUAGES = ("san", "grc", "lat")
+MOTD_POOL_SNAPSHOT_SCHEMA_VERSION = "langnet.motd_pool.snapshot.v1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +194,109 @@ def build_motd_pool(
     }
 
 
+def export_motd_pool_snapshot(db_path: Path, snapshot_path: Path) -> dict[str, Any]:
+    """Write a reviewed JSON snapshot of a MOTD pool for durable generated-data storage."""
+    if not db_path.exists():
+        raise FileNotFoundError(f"MOTD pool database does not exist: {db_path}")
+    conn = duckdb.connect(str(db_path), read_only=True)
+    try:
+        rows = conn.execute(
+            """
+            SELECT card_key, language, query, level, didactic_score, didactic_rationale,
+                   item_json, source, source_ref
+            FROM motd_pool_cards
+            ORDER BY language, didactic_score DESC, query
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+
+    cards = [_row_to_card(row) for row in rows]
+    payload = {
+        "schema_version": MOTD_POOL_SNAPSHOT_SCHEMA_VERSION,
+        "generated_at": datetime.now(UTC).isoformat(),
+        "source_db_path": str(db_path),
+        "card_count": len(cards),
+        "language_counts": _language_counts(cards),
+        "cards": [
+            {
+                "card_key": card.key,
+                "language": card.language,
+                "query": card.query,
+                "level": card.level,
+                "didactic_score": card.didactic_score,
+                "didactic_rationale": card.didactic_rationale,
+                "item": card.item,
+                "source": card.source,
+                "source_ref": card.source_ref,
+            }
+            for card in cards
+        ],
+    }
+    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+    snapshot_path.write_bytes(orjson.dumps(payload, option=orjson.OPT_INDENT_2))
+    return {
+        "schema_version": "langnet.motd_pool.snapshot_export.v1",
+        "db_path": str(db_path),
+        "snapshot_path": str(snapshot_path),
+        "card_count": len(cards),
+        "language_counts": payload["language_counts"],
+    }
+
+
+def restore_motd_pool_snapshot(
+    snapshot_path: Path,
+    db_path: Path,
+    *,
+    replace: bool = True,
+) -> dict[str, Any]:
+    """Restore a reviewed MOTD pool JSON snapshot into a DuckDB pool."""
+    payload = orjson.loads(snapshot_path.read_bytes())
+    if not isinstance(payload, Mapping):
+        raise ValueError("MOTD pool snapshot must be a JSON object.")
+    schema_version = str(payload.get("schema_version") or "")
+    if schema_version != MOTD_POOL_SNAPSHOT_SCHEMA_VERSION:
+        raise ValueError(
+            f"Unsupported MOTD pool snapshot schema {schema_version!r}; "
+            f"expected {MOTD_POOL_SNAPSHOT_SCHEMA_VERSION}."
+        )
+    raw_cards = payload.get("cards")
+    if not isinstance(raw_cards, Sequence) or isinstance(raw_cards, (str, bytes)):
+        raise ValueError("MOTD pool snapshot must contain cards[].")
+    cards: list[MotdPoolCard] = []
+    for raw_card in raw_cards:
+        if not isinstance(raw_card, Mapping):
+            continue
+        item = raw_card.get("item")
+        if not isinstance(item, Mapping):
+            continue
+        language = str(raw_card.get("language") or item.get("language") or "").strip()
+        query = str(raw_card.get("query") or item.get("query") or "").strip()
+        if language not in SUPPORTED_MOTD_POOL_LANGUAGES or not query:
+            continue
+        cards.append(
+            MotdPoolCard(
+                language=language,
+                query=query,
+                level=str(raw_card.get("level") or item.get("level") or "beginner"),
+                didactic_score=_bounded_score(raw_card.get("didactic_score")),
+                didactic_rationale=str(raw_card.get("didactic_rationale") or ""),
+                item=dict(item),
+                source=str(raw_card.get("source") or "snapshot"),
+                source_ref=str(raw_card.get("source_ref") or str(snapshot_path)),
+            )
+        )
+    build_summary = build_motd_pool(db_path, cards, replace=replace)
+    return {
+        "schema_version": "langnet.motd_pool.snapshot_restore.v1",
+        "snapshot_path": str(snapshot_path),
+        "db_path": str(db_path),
+        "replace": replace,
+        "restored": len(cards),
+        "build": build_summary,
+    }
+
+
 def validate_motd_pool(db_path: Path, *, per_language: int = 1) -> dict[str, Any]:
     if not db_path.exists():
         return {
@@ -252,6 +356,13 @@ def validate_motd_pool(db_path: Path, *, per_language: int = 1) -> dict[str, Any
             language: language_counts.get(language, 0) for language in SUPPORTED_MOTD_POOL_LANGUAGES
         },
         "issues": issues,
+    }
+
+
+def _language_counts(cards: Sequence[MotdPoolCard]) -> dict[str, int]:
+    return {
+        language: sum(1 for card in cards if card.language == language)
+        for language in SUPPORTED_MOTD_POOL_LANGUAGES
     }
 
 

@@ -231,6 +231,21 @@ def test_greek_plan_includes_bailly_dictionary_provider() -> None:
     assert bailly_call.params.get("lemma_candidates") == "λόγος"
 
 
+def test_greek_plan_includes_strongs_greek_dictionary_provider() -> None:
+    plan = ToolPlanner(PlannerConfig(max_candidates=2)).build(_grc_normalized())
+
+    tools = {call.tool for call in plan.tool_calls}
+    assert "fetch.strongs_greek" in tools
+    assert "extract.strongs_greek.json" in tools
+    assert "derive.strongs_greek.entries" in tools
+    assert "claim.strongs_greek.entries" in tools
+    strongs_call = next(call for call in plan.tool_calls if call.tool == "fetch.strongs_greek")
+    assert strongs_call.params.get("headword") == "logos"
+    assert strongs_call.params.get("lemma") == "λόγος"
+    assert strongs_call.params.get("lemma_candidates") == "λόγος"
+    assert strongs_call.params.get("index_signature")
+
+
 def test_greek_plan_adds_surface_morphology_parse_when_normalized() -> None:
     normalized = NormalizedQuery(
         original="μῆνιν",

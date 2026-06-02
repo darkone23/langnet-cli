@@ -227,6 +227,8 @@ def test_cdsl_slp1_iast_round_trip_covers_common_sanskrit_letters() -> None:
     assert cdsl._to_slp1("phala") == "Pala"
     assert cdsl._to_slp1("bhakti") == "Bakti"
     assert cdsl._to_slp1("jñāna") == "jYAna"
+    assert cdsl._to_slp1("mṛtás") == "mftas"
+    assert "mfta" in cdsl._candidate_keys("mṛtás")
     assert cdsl._to_slp1("duḥkha") == "duHKa"
     assert cdsl._to_slp1("śraddhā") == "SradDA"
     assert cdsl._to_slp1("du.hkha") == "duHKa"

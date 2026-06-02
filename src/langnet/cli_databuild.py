@@ -111,6 +111,16 @@ class BuildLewis1890Config:
 
 
 @dataclass
+class BuildStrongsGreekConfig:
+    source_path: str
+    output: str | None
+    limit: int | None
+    batch_size: int
+    wipe: bool
+    force: bool
+
+
+@dataclass
 class BuildDiogenesConfig:
     language: str
     mode: str
@@ -284,6 +294,30 @@ def _build_lewis_1890_impl(config: BuildLewis1890Config) -> None:
         force_rebuild=config.force,
     )
     builder = Lewis1890Builder(builder_config)
+    result = builder.build()
+    _print_build_result(result)
+
+
+def _build_strongs_greek_impl(config: BuildStrongsGreekConfig) -> None:
+    _ensure_logging()
+    from langnet.databuild.paths import default_strongs_greek_path  # noqa: PLC0415
+    from langnet.databuild.strongs_greek import (  # noqa: PLC0415
+        StrongsGreekBuildConfig,
+        StrongsGreekBuilder,
+    )
+
+    output_path = (
+        Path(config.output).expanduser() if config.output else default_strongs_greek_path()
+    )
+    builder_config = StrongsGreekBuildConfig(
+        source_path=Path(config.source_path).expanduser(),
+        output_path=output_path,
+        limit=config.limit,
+        batch_size=config.batch_size,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+    )
+    builder = StrongsGreekBuilder(builder_config)
     result = builder.build()
     _print_build_result(result)
 
@@ -714,6 +748,52 @@ def build_lewis_1890(  # noqa: PLR0913
         force=force,
     )
     _build_lewis_1890_impl(config)
+
+
+@databuild.command("strongs-greek")
+@click.option(
+    "--source",
+    "source_path",
+    type=click.Path(exists=True),
+    required=True,
+    help="Path to MorphGNT strongsgreek.xml.",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output DuckDB path (defaults to data/build/lex_strongs_greek.duckdb)",
+)
+@click.option("--limit", type=int, help="Limit rows for testing.")
+@click.option(
+    "--batch-size",
+    type=int,
+    default=500,
+    show_default=True,
+    help="Rows per batch while inserting.",
+)
+@click.option(
+    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_strongs_greek(  # noqa: PLR0913
+    source_path: str,
+    output: str | None,
+    limit: int | None,
+    batch_size: int,
+    wipe: bool,
+    force: bool,
+):
+    """Build Strong's Greek English index from MorphGNT XML."""
+    config = BuildStrongsGreekConfig(
+        source_path=source_path,
+        output=output,
+        limit=limit,
+        batch_size=batch_size,
+        wipe=wipe,
+        force=force,
+    )
+    _build_strongs_greek_impl(config)
 
 
 @databuild.command("diogenes-index")
