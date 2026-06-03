@@ -5,8 +5,17 @@ import {
 	wordIndexBrowseItems,
 	wordIndexBrowseGroups,
 	wordIndexDisplayOrderLabel,
+	wordIndexDisplay,
+	wordIndexEntryCountLabel,
 	wordIndexItemEntryCount,
+	wordIndexItemKey,
 	wordIndexItemLookupTarget,
+	wordIndexLookup,
+	wordIndexMergedRowsFromResponse,
+	wordIndexPrimaryItem,
+	wordIndexRowMatched,
+	wordIndexRowPosition,
+	wordIndexRowSources,
 	wordIndexSectionLookupTarget,
 	wordIndexSectionForItem,
 	type WordIndexResponse,
@@ -510,6 +519,123 @@ function wordIndexItem(overrides: Partial<WordIndexItem>): WordIndexItem {
 		...overrides
 	};
 }
+
+const mergedIndexRows = wordIndexMergedRowsFromResponse({
+	...baseResponse,
+	request: { ...baseResponse.request, language: 'san' },
+	neighborhood: {
+		groups: [
+			{
+				language: 'san',
+				source: 'cdsl',
+				dictionary: 'mw',
+				radius: 1,
+				neighborhood_kind: 'source',
+				anchor_status: 'exact',
+				window: {
+					policy: 'source',
+					contiguous: true,
+					collapsed: false,
+					before_count: 1,
+					after_count: 1,
+					source_entry_count: 3
+				},
+				before: [
+					wordIndexItem({
+						lexeme_id: 'lexeme:san:jaya',
+						wheel_id: 'wheel:san:jaya',
+						index_entry_id: 'index:jaya',
+						canonical_name: 'जय',
+						canonical_key: 'jaya',
+						source_name: 'jaya',
+						lookup: 'jaya',
+						display: { primary: 'जय', transliteration: 'jaya', source_key: 'jaya' },
+						encounter: { language: 'san', q: 'jaya', dictionary: 'cdsl' },
+						source_entries: [
+							{
+								source: 'cdsl',
+								dictionary: 'mw',
+								source_ref: 'cdsl:mw:jaya',
+								source_order_key: 'jaya:1'
+							}
+						]
+					})
+				],
+				anchor: wordIndexItem({
+					source: 'dico',
+					dictionary: 'dico',
+					source_counts: [
+						{ source: 'cdsl', dictionary: 'mw', count: 2 },
+						{ source: 'dico', dictionary: 'dico', count: 1 }
+					],
+					encounter: { language: 'san', q: 'jyotir', dictionary: 'all' },
+					match: true,
+					homograph_count: 2
+				}),
+				after: [
+					wordIndexItem({
+						lexeme_id: 'lexeme:san:jnaana',
+						wheel_id: 'wheel:san:jnaana',
+						index_entry_id: 'index:jnaana',
+						canonical_name: 'ज्ञान',
+						canonical_key: 'jnaana',
+						source_name: 'jJAna',
+						lookup: 'jnaana',
+						display: { primary: 'ज्ञान', transliteration: 'jñāna', source_key: 'jJAna' },
+						encounter: { language: 'san', q: 'jñāna', dictionary: 'cdsl' }
+					})
+				]
+			}
+		],
+		items: []
+	}
+});
+
+assert.equal(mergedIndexRows.length, 3);
+assert.equal(wordIndexPrimaryItem(mergedIndexRows[1])?.encounter.dictionary, 'all');
+assert.equal(wordIndexRowPosition(mergedIndexRows[1]), 'anchor');
+assert.equal(wordIndexRowMatched(mergedIndexRows[1], { query: 'jyotis' }), true);
+assert.deepEqual(wordIndexRowSources(mergedIndexRows[1], 'san'), ['CDSL/mw 2', 'DICO']);
+assert.equal(wordIndexEntryCountLabel(wordIndexPrimaryItem(mergedIndexRows[1])!), '2 entries');
+
+const numberedVariant = wordIndexItem({
+	display: { primary: '1 jyotis', transliteration: 'jyotis', source_key: 'jyotis' },
+	lookup: 'jyotis'
+});
+assert.equal(wordIndexDisplay(numberedVariant), 'jyotis');
+assert.equal(wordIndexLookup(numberedVariant), '');
+
+const browseRows = wordIndexMergedRowsFromResponse({
+	...baseResponse,
+	request: { ...baseResponse.request, mode: 'browse' },
+	browse: {
+		groups: [
+			{
+				source: 'cdsl',
+				dictionary: 'mw',
+				item_count: 1,
+				items: [wordIndexItem({})]
+			}
+		]
+	}
+});
+assert.equal(wordIndexRowPosition(browseRows[0]), 'browse');
+assert.equal(
+	wordIndexItemKey(
+		wordIndexItem({
+			index_entry_id: '',
+			source_ref: 'cdsl:mw:1',
+			ids: {
+				lexeme: 'lexeme:test',
+				wheel: 'wheel:test',
+				index_entry: '',
+				source_order: 'order:test',
+				source_ref: 'cdsl:mw:1'
+			}
+		})
+	),
+	'cdsl:mw:1'
+);
 
 assert.equal(wordIndexSectionForItem(wordIndexItem({}), sectionFixture)?.label, 'ध');
 assert.equal(

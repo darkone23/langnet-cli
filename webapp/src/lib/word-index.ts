@@ -1,4 +1,4 @@
-import type { LanguageMode, ToolRequest } from './search-data';
+import { tools, type LanguageMode, type ToolId, type ToolRequest } from './search-data';
 
 export type WordIndexLanguage = LanguageMode | 'all';
 export type WordIndexMode = 'sources' | 'sections' | 'wheel' | 'list' | 'nearby' | 'browse';
@@ -152,6 +152,20 @@ export type WordIndexNeighborhoodGroup = {
 	};
 };
 
+export type WordIndexRow = {
+	item: WordIndexItem;
+	position: 'before' | 'anchor' | 'after';
+};
+
+export type WordIndexMergedPosition = WordIndexRow['position'] | 'nearby' | 'browse';
+
+export type WordIndexMergedRow = {
+	key: string;
+	items: WordIndexItem[];
+	positions: WordIndexMergedPosition[];
+	sortKey: string;
+};
+
 export type WordIndexBrowseGroup = {
 	source: string;
 	dictionary: string;
@@ -257,6 +271,326 @@ export function wordIndexBrowseItems(response: WordIndexResponse | null) {
 
 export function wordIndexItemEntryCount(item: WordIndexItem) {
 	return item.homograph_count || item.source_entry_count || item.source_entries.length || 0;
+}
+
+export function wordIndexRows(group: WordIndexNeighborhoodGroup): WordIndexRow[] {
+	return [
+		...group.before.map((item) => ({ item, position: 'before' as const })),
+		...(group.anchor ? [{ item: group.anchor, position: 'anchor' as const }] : []),
+		...group.after.map((item) => ({ item, position: 'after' as const }))
+	];
+}
+
+export function mergeWordIndexRows(groups: WordIndexNeighborhoodGroup[]): WordIndexMergedRow[] {
+	const merged = new Map<string, WordIndexMergedRow>();
+
+	for (const row of groups.flatMap(wordIndexRows)) {
+		const key = wordIndexMergeKey(row.item);
+		const existing = merged.get(key);
+
+		if (existing) {
+			if (!existing.items.some((item) => wordIndexItemKey(item) === wordIndexItemKey(row.item))) {
+				existing.items.push(row.item);
+			}
+			if (!existing.positions.includes(row.position)) existing.positions.push(row.position);
+			if (wordIndexSortKey(row.item) < existing.sortKey)
+				existing.sortKey = wordIndexSortKey(row.item);
+		} else {
+			merged.set(key, {
+				key,
+				items: [row.item],
+				positions: [row.position],
+				sortKey: wordIndexSortKey(row.item)
+			});
+		}
+	}
+
+	return [...merged.values()];
+}
+
+export function wordIndexMergedRowsFromResponse(
+	result: WordIndexResponse | null
+): WordIndexMergedRow[] {
+	const browseRows = wordIndexMergedRowsFromBrowseItems(wordIndexBrowseItems(result));
+	if (browseRows.length) return browseRows;
+
+	const mergedItemRows = wordIndexMergedRowsFromItems(result?.neighborhood?.items ?? []);
+	const groupedRows = mergeWordIndexRows(result?.neighborhood?.groups ?? []);
+
+	if (preferMergedWordIndexItems(mergedItemRows, groupedRows)) return mergedItemRows;
+	if (groupedRows.length) return groupedRows;
+	if (mergedItemRows.length) return mergedItemRows;
+
+	const anchor = result?.neighborhood?.anchor;
+	if (!anchor) return [];
+
+	return [
+		{
+			key: wordIndexMergeKey(anchor),
+			items: [anchor],
+			positions: ['anchor'],
+			sortKey: wordIndexSortKey(anchor)
+		}
+	];
+}
+
+export function wordIndexMergedRowsFromItems(items: WordIndexItem[]): WordIndexMergedRow[] {
+	return items.map((item) => ({
+		key: wordIndexMergeKey(item),
+		items: [item],
+		positions: [item.position ?? 'anchor'],
+		sortKey: wordIndexSortKey(item)
+	}));
+}
+
+export function wordIndexMergedRowsFromBrowseItems(items: WordIndexItem[]): WordIndexMergedRow[] {
+	return items.map((item) => ({
+		key: `browse:${wordIndexItemKey(item)}`,
+		items: [item],
+		positions: ['browse' as const],
+		sortKey: wordIndexSortKey(item)
+	}));
+}
+
+export function wordIndexMergedRowsFromBrowseGroups(
+	groups: ReturnType<typeof wordIndexBrowseGroups>
+): WordIndexMergedRow[] {
+	return groups.flatMap((group) =>
+		group.items.map((item) => ({
+			key: `${group.source}:${group.dictionary}:${wordIndexItemKey(item)}`,
+			items: [item],
+			positions: ['browse' as const],
+			sortKey: wordIndexSortKey(item)
+		}))
+	);
+}
+
+export function wordIndexMergeKey(item: WordIndexItem) {
+	return (
+		item.wheel_id ||
+		item.lexeme_id ||
+		`${item.language}:${item.canonical_key || item.lookup || item.encounter.q}`
+	);
+}
+
+export function wordIndexSortKey(item: WordIndexItem) {
+	return item.wheel_order_key || item.canonical_key || item.lookup || item.encounter.q;
+}
+
+export function wordIndexPrimaryItem(row: WordIndexMergedRow) {
+	return (
+		row.items.find((item) => item.encounter.dictionary === 'all') ??
+		row.items.find((item) => isTranslatedSourceTool(sourceToolFromWordIndex(item.source))) ??
+		row.items[0]
+	);
+}
+
+export function wordIndexDisplay(item: WordIndexItem) {
+	const display = item.display.primary || item.canonical_name || item.source_name;
+	const cleanDisplay = stripSourceVariantNumber(display);
+	const normalizedLookup = item.lookup || item.canonical_key || item.encounter.q;
+
+	if (display !== cleanDisplay && normalizedLookup) return normalizedLookup.normalize('NFC');
+	return (cleanDisplay || normalizedLookup).normalize('NFC');
+}
+
+export function wordIndexLookup(item: WordIndexItem) {
+	const display = wordIndexDisplay(item).toLowerCase();
+	const lookup = item.display.transliteration || item.lookup || item.canonical_key;
+	if (!lookup || lookup.toLowerCase() === display) return '';
+	return lookup.normalize('NFC');
+}
+
+export function wordIndexEntryCountLabel(item: WordIndexItem) {
+	const count = wordIndexItemEntryCount(item);
+	if (count <= 1) return '';
+	return `${count} entries`;
+}
+
+export function wordIndexRowSources(row: WordIndexMergedRow, fallbackLanguage?: LanguageMode) {
+	return [
+		...new Set(
+			row.items.flatMap((item) => {
+				if (item.source_counts?.length) {
+					return item.source_counts.map((source) =>
+						source.count > 1
+							? `${wordIndexSourceLabelFromParts(source, fallbackLanguage)} ${source.count}`
+							: wordIndexSourceLabelFromParts(source, fallbackLanguage)
+					);
+				}
+				if (item.sources?.length) {
+					return item.sources.map((source) =>
+						wordIndexSourceLabelFromParts(source, fallbackLanguage)
+					);
+				}
+				if (item.source_entries.length) {
+					return item.source_entries.map((entry) =>
+						wordIndexSourceLabelFromParts(entry, fallbackLanguage)
+					);
+				}
+				return [wordIndexSourceLabel(item, fallbackLanguage)];
+			})
+		)
+	];
+}
+
+export function wordIndexSourceLabel(item: WordIndexItem, fallbackLanguage?: LanguageMode) {
+	return wordIndexSourceLabelFromParts(
+		{
+			source: item.source,
+			dictionary: item.dictionary,
+			language: item.language
+		},
+		fallbackLanguage
+	);
+}
+
+export function wordIndexSourceLabelFromParts(
+	{
+		source,
+		dictionary,
+		language
+	}: {
+		source: string;
+		dictionary: string;
+		language?: LanguageMode;
+	},
+	fallbackLanguage?: LanguageMode
+) {
+	const sourceLanguage = language ?? fallbackLanguage;
+	const tool = toolMeta(sourceToolFromWordIndex(source), sourceLanguage);
+	return dictionary && dictionary !== source ? `${tool.shortLabel}/${dictionary}` : tool.shortLabel;
+}
+
+export function wordIndexRowPosition(row: WordIndexMergedRow): WordIndexMergedPosition {
+	const directPosition = row.items.find((item) => item.position)?.position;
+	if (directPosition) return directPosition;
+	if (row.positions.includes('anchor')) return 'anchor';
+	if (row.positions.includes('before') && row.positions.includes('after')) return 'nearby';
+	return row.positions[0] ?? 'anchor';
+}
+
+export function wordIndexRowMatched(
+	row: WordIndexMergedRow,
+	{
+		query,
+		encounterMatchKeys = new Set<string>()
+	}: {
+		query: string;
+		encounterMatchKeys?: Set<string>;
+	}
+) {
+	if (row.items.some((item) => item.match)) return true;
+
+	const queryKeys = queryEquivalentKeys(query);
+	for (const key of encounterMatchKeys) queryKeys.add(key);
+	if (!queryKeys.size) return false;
+
+	return row.items.some((item) => wordIndexItemLexemeKeys(item).some((key) => queryKeys.has(key)));
+}
+
+export function encounterWordIndexMatchKeys(
+	result: {
+		lexeme_anchors: string[];
+		buckets: {
+			bucket_lemmas: string[];
+			witnesses: {
+				headword?: string;
+				lexeme_anchor?: string;
+			}[];
+		}[];
+	} | null
+) {
+	const keys = new Set<string>();
+	if (!result) return keys;
+
+	for (const anchor of result.lexeme_anchors) addWordIndexMatchKey(keys, anchor);
+	for (const bucket of result.buckets) {
+		for (const lemma of bucket.bucket_lemmas) addWordIndexMatchKey(keys, lemma);
+		for (const witness of bucket.witnesses) {
+			addWordIndexMatchKey(keys, witness.headword);
+			addWordIndexMatchKey(keys, witness.lexeme_anchor);
+		}
+	}
+
+	return keys;
+}
+
+export function queryEquivalentKeys(value: string) {
+	const keys = new Set<string>();
+	addWordIndexMatchKey(keys, value);
+	return keys;
+}
+
+export function wordIndexItemLexemeKeys(item: WordIndexItem) {
+	const keys = new Set<string>();
+	addWordIndexMatchKey(keys, item.lookup);
+	addWordIndexMatchKey(keys, item.canonical_key);
+	addWordIndexMatchKey(keys, item.canonical_name);
+	addWordIndexMatchKey(keys, item.source_name);
+	addWordIndexMatchKey(keys, item.display.primary);
+	addWordIndexMatchKey(keys, item.display.transliteration);
+	addWordIndexMatchKey(keys, item.encounter.q);
+	for (const entry of item.source_entries) {
+		addWordIndexMatchKey(keys, entry.source_name);
+		addWordIndexMatchKey(keys, entry.source_display);
+	}
+	return [...keys];
+}
+
+export function addWordIndexMatchKey(keys: Set<string>, value: string | undefined) {
+	const key = strictStudyKey(value);
+	if (key) keys.add(key);
+	const sanskritKey = sanskritSourceStudyKey(value);
+	if (sanskritKey) keys.add(sanskritKey);
+}
+
+export function strictStudyKey(value: string | undefined) {
+	return (value ?? '')
+		.replace(/^lex:/, '')
+		.replace(/#(?:noun|verb|adj|adjective|adv|adverb)\b/gi, '')
+		.normalize('NFC')
+		.toLowerCase()
+		.replace(/[^a-z0-9.\-āīūṛṝḷḹṃḥṅñṭḍṇśṣ\u0370-\u03ff\u0900-\u097f]+/gu, '')
+		.trim();
+}
+
+export function sanskritSourceStudyKey(value: string | undefined) {
+	return strictStudyKey(value)
+		.replace(/\.n/g, 'ṇ')
+		.replace(/\.s/g, 'ṣ')
+		.replace(/aa/g, 'ā')
+		.replace(/ii/g, 'ī')
+		.replace(/uu/g, 'ū')
+		.replace(/[^a-z0-9āīūṛṝḷḹṃḥṅñṭḍṇśṣ\u0900-\u097f]+/gu, '')
+		.trim();
+}
+
+export function stripSourceVariantNumber(value: string) {
+	return value.replace(/^\s*\d+\s+/u, '').trim();
+}
+
+export function wordIndexItemKey(item: WordIndexItem) {
+	return (
+		item.ids.index_entry ||
+		item.index_entry_id ||
+		item.source_ref ||
+		`${item.language}:${item.source}:${item.dictionary}:${item.lookup || item.encounter.q}`
+	);
+}
+
+export function sourceToolFromWordIndex(source: string): ToolId {
+	if (source === 'gaffiot') return 'gaffiot';
+	if (source === 'lewis_1890') return 'lewis_1890';
+	if (source === 'bailly') return 'bailly';
+	if (source === 'dico') return 'dico';
+	if (source === 'cdsl') return 'cdsl';
+	if (source === 'heritage') return 'heritage';
+	if (source === 'whitakers') return 'whitakers';
+	if (source === 'cltk') return 'cltk';
+	if (source === 'spacy') return 'spacy';
+	if (source === 'cts_index') return 'cts_index';
+	return 'diogenes';
 }
 
 export function wordIndexSectionLookupTarget(
@@ -427,6 +761,40 @@ function activeWordIndexItem(response: WordIndexResponse) {
 	}
 
 	return response.items[0];
+}
+
+function preferMergedWordIndexItems(
+	mergedItemRows: WordIndexMergedRow[],
+	groupedRows: WordIndexMergedRow[]
+) {
+	if (!mergedItemRows.length) return false;
+	if (!groupedRows.length) return true;
+
+	const mergedBefore = mergedItemRows.filter((row) => row.positions.includes('before')).length;
+	const groupedBefore = groupedRows.filter((row) => row.positions.includes('before')).length;
+	const mergedHasAnchor = mergedItemRows.some((row) => row.positions.includes('anchor'));
+	const groupedHasAnchor = groupedRows.some((row) => row.positions.includes('anchor'));
+	const mergedHasAfter = mergedItemRows.some((row) => row.positions.includes('after'));
+
+	return mergedHasAnchor && mergedHasAfter && (!groupedHasAnchor || mergedBefore > groupedBefore);
+}
+
+function toolMeta(toolId: ToolId, mode?: LanguageMode) {
+	return (
+		(mode && tools.find((tool) => tool.id === toolId && tool.language === mode)) ??
+		tools.find((tool) => tool.id === toolId) ?? {
+			id: toolId,
+			language: mode ?? 'grc',
+			label: toolId,
+			shortLabel: toolId,
+			kind: 'tool',
+			description: 'Source entry evidence.'
+		}
+	);
+}
+
+function isTranslatedSourceTool(tool: ToolId | undefined) {
+	return tool === 'dico' || tool === 'gaffiot' || tool === 'bailly';
 }
 
 function normalizeSectionKey(value: string | undefined) {

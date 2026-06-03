@@ -37,10 +37,19 @@ files in `src/routes`. Follow that split:
 - `src/routes/**/+page.svelte`: route shell, URL state, high-level page
   orchestration, and composition of components.
 - `src/routes/**/+server.ts`: HTTP endpoint adapters.
-- `src/lib/*.svelte`: reusable or route-extracted components.
-- `src/lib/*.ts`: pure helpers, payload normalization, route-state parsing,
-  and type-oriented utilities.
+- `src/lib/*.svelte`: shared primitives and broadly reusable components.
+- `src/lib/*.ts`: shared pure helpers, payload normalization, route-state
+  parsing, and type-oriented utilities.
+- `src/lib/<surface>/*`: vertically clustered components, helpers, styles, and
+  focused tests for one product surface once extraction would otherwise leave a
+  flat directory full of similarly named files. The Lexicon Word Desk lives in
+  `src/lib/desk/*`; Reader-specific domain helpers and tests live in
+  `src/lib/reader/*`.
 - `src/lib/server/*.ts`: server-only helpers.
+
+Do not solve a giant file by creating a giant horizontal directory. If a route
+family gains a clear concept label, give it a folder and keep navigation by
+surface: `desk`, `reader`, `learn`, or another product object name.
 
 Size guidance:
 
@@ -49,6 +58,9 @@ Size guidance:
 - Do not grow route files beyond 1000 lines without an explicit extraction plan.
 - A file over 2000 lines is an active refactor target, not a place for new UI
   markup.
+- Source-level guard tests should follow the same pressure: split large guard
+  files by product concern instead of letting one test file become a new
+  monolith.
 
 Indentation guidance:
 
@@ -98,10 +110,11 @@ Routes should remain readable as page orchestration:
 - compose components;
 - synchronize URL and session storage when needed.
 
-Do not keep large repeated UI regions in a route. The Reader route is currently
-an active cleanup target; new work should reduce its size. The Lexicon route is
-also over the preferred size and should be split as the overhaul reaches the
-Word Desk.
+Do not keep large repeated UI regions in a route. The Reader route has moved
+below the active-refactor threshold, but it is still over the preferred route
+ceiling; new work should continue reducing route-owned orchestration. The
+Lexicon route is also over the preferred size and should be split as the
+overhaul reaches the Word Desk.
 
 SvelteKit reuses page and layout components during navigation. Do not assume a
 route component is destroyed and recreated on every URL change. Reset state
@@ -173,6 +186,8 @@ Current extracted scoped-style primitives:
 
 - `OrionObjectCard.svelte`
 - `OrionProvenanceChips.svelte`
+- `src/lib/desk/Desk*.svelte`, `src/lib/desk/desk-entry.ts`, and
+  `src/lib/desk/desk-entry.css`
 - `ReaderActiveFilter.svelte`
 - `ReaderAddressLookup.svelte`
 - `ReaderAuthorDiscoveryView.svelte`
@@ -288,7 +303,10 @@ Before adding UI to an existing Svelte file:
 ## Current Cleanup Targets
 
 - `webapp/src/routes/+page.svelte`: split Lexicon Word Desk into object card,
-  source dossier, word-index wheel, oracle trace, and loading components.
+  source dossier, word-index wheel, oracle trace, lookup execution, and loading
+  components. Keep Word Desk-specific files clustered under
+  `webapp/src/lib/desk/`; status, reader-layer, and cache-display policies
+  belong in `desk-status.ts`, not in the route.
 - `webapp/src/routes/reader/+page.svelte`: continue extracting Reader
   discovery, Work Desk, Leaf, and route-state helpers.
 - `webapp/src/app.css`: move component-only rules into component styles where

@@ -1,7 +1,23 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { onMount, tick } from 'svelte';
-	import { fetchPayload } from '$lib/msgpack';
+	import {
+		fetchReaderApi,
+		fetchReaderEncounterBriefing,
+		readerAuthorSectionsUrl,
+		readerAuthorsUrl,
+		readerCatalogsUrl,
+		readerContentsUrl,
+		readerFacetsUrl,
+		readerResolveAddressUrl,
+		readerShelvesUrl,
+		readerShowUrl,
+		readerStructureUrl,
+		readerTextSearchUrl,
+		readerWorkDossierUrl,
+		readerWorkMetadataUrl,
+		readerWorksUrl
+	} from '$lib/reader/reader-api';
 	import ReaderApparatusSheet from '$lib/ReaderApparatusSheet.svelte';
 	import ReaderApparatusTabs from '$lib/ReaderApparatusTabs.svelte';
 	import ReaderContextSidebar from '$lib/ReaderContextSidebar.svelte';
@@ -19,14 +35,14 @@
 		readStoredReaderIndexState,
 		writeStoredReaderIndexState,
 		type ReaderIndexView
-	} from '$lib/reader-index-storage';
-	import { createReaderLoadingTimers, type ReaderLoadingKey } from '$lib/reader-loading-timers';
+	} from '$lib/reader/index-storage';
+	import { createReaderLoadingTimers, type ReaderLoadingKey } from '$lib/reader/loading-timers';
 	import {
 		buildReaderIndexStatsTargets,
 		findReaderIndexStatsInList,
 		readerIndexStatsFromSections,
 		upsertReaderIndexStatsList
-	} from '$lib/reader-index-stats';
+	} from '$lib/reader/index-stats';
 	import {
 		readerFacetValueLabel,
 		readerFacetValues as facetValues,
@@ -37,7 +53,7 @@
 		readerSyntheticAuthorFromRoute,
 		readerSyntheticAuthorFromWork,
 		upsertReaderAuthor
-	} from '$lib/reader-page-authors';
+	} from '$lib/reader/page-authors';
 	import {
 		deriveReaderPagePagination,
 		readerAuthorSectionRomanHint as authorSectionRomanHint,
@@ -48,13 +64,13 @@
 		readerTextSearchCandidateLabel as textSearchCandidateLabel,
 		readerVisibleTextSearchCandidates as visibleTextSearchCandidates,
 		readerWorkMetaLine as workMetaLine
-	} from '$lib/reader-page-formatting';
+	} from '$lib/reader/page-formatting';
 	import {
 		readerCurrentReadingWorkRef,
 		readerSearchResultWorkRef,
 		readerSegmentIsActive,
 		readerShelfIsActive
-	} from '$lib/reader-page-navigation';
+	} from '$lib/reader/page-navigation';
 	import {
 		encounterBriefingCanGenerate,
 		encounterBriefingIsGenerated,
@@ -65,7 +81,6 @@
 	} from '$lib/encounter-briefing';
 	import {
 		buildReaderTokenParts,
-		buildReaderRouteSearch,
 		cleanReaderToken,
 		parseReaderRouteState,
 		readerAuthorMatchesId,
@@ -90,7 +105,6 @@
 		type ReaderContentsResponse,
 		type ReaderDiscoveryShelf,
 		type ReaderFacet,
-		type ReaderFacetValue,
 		type ReaderFacetsResponse,
 		type ReaderIndexStats,
 		type ReaderNavigationTarget,
@@ -111,13 +125,14 @@
 		type ReaderWorksResponse
 	} from '$lib/reader';
 	import {
+		buildReaderRouteUrlUpdate,
 		buildCurrentReaderRouteState,
 		defaultReaderAddressForLanguage,
 		formatReaderAddress,
 		readerIsCanonicalRef,
 		readerWorkHasContributorMetadata,
 		type ReaderRouteOverrides
-	} from '$lib/reader-page-routing';
+	} from '$lib/reader/page-routing';
 	import { romanizeSearchTerm } from '$lib/search-romanization';
 	import { languageModes, type LanguageMode } from '$lib/search-data';
 	import { uiCopy } from '$lib/ui-copy';
@@ -276,6 +291,12 @@
 			languageLabel: readerLanguageLabel(language)
 		})
 	);
+	let selectedWorkLabels = $derived({
+		title: readerSelectedWorkTitleLabel(selectedWork, works),
+		discriminator: readerSelectedWorkDiscriminator(selectedWork, works),
+		contributorLine: readerSelectedWorkContributorLine(selectedWork),
+		author: readerSelectedWorkAuthorLabel(selectedWork)
+	});
 	let hasActiveDiscoveryQuery = $derived(
 		Boolean(
 			workQuery.trim() || discoveryGroup || discoveryTag || discoveryAuthorId || worksCursorParam
@@ -470,9 +491,7 @@
 	async function loadCatalogs(historyMode: ReaderHistoryMode = 'replace') {
 		catalogError = '';
 		try {
-			const { response, data } = await fetchReaderApi<ReaderCatalogsResponse>(
-				'/api/reader?mode=catalogs'
-			);
+			const { response, data } = await fetchReaderApi<ReaderCatalogsResponse>(readerCatalogsUrl());
 			if (!response.ok) throw new Error(data.error || 'Reader catalogs failed.');
 			catalogs = data.items;
 			catalogDefaults = data.defaults;
@@ -497,10 +516,6 @@
 		}
 	}
 
-	async function fetchReaderApi<T>(url: string) {
-		return fetchPayload<T & { error?: string }>(url);
-	}
-
 	async function fetchEncounterBriefing(word: string, generate = false) {
 		const token = cleanReaderToken(word);
 		if (!token) return;
@@ -512,17 +527,12 @@
 		selectedWordBriefingError = '';
 		if (!generate) selectedWordBriefing = null;
 		try {
-			const params = new URLSearchParams({
+			const { response, data } = await fetchReaderEncounterBriefing({
 				language,
-				q: token,
-				translation: 'cache',
-				timeout_ms: generate ? '300000' : '180000'
+				token,
+				generate,
+				signal: controller.signal
 			});
-			if (generate) params.set('generate', '1');
-			const { response, data } = await fetchPayload<EncounterBriefingFlow & { error?: string }>(
-				`/api/encounter-briefing?${params.toString()}`,
-				{ signal: controller.signal }
-			);
 			if (!response.ok) throw new Error(data.error || 'Encounter briefing failed.');
 			if (selectedWord === token) selectedWordBriefing = data;
 		} catch (error) {
@@ -543,13 +553,8 @@
 	async function loadFacets() {
 		if (!catalogId) return;
 		try {
-			const params = new URLSearchParams({
-				mode: 'facets',
-				catalog: catalogId,
-				language
-			});
 			const { response, data } = await fetchReaderApi<ReaderFacetsResponse>(
-				`/api/reader?${params.toString()}`
+				readerFacetsUrl({ catalogId, language })
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader facets failed.');
 			facets = data.items;
@@ -571,18 +576,10 @@
 	async function loadShelves() {
 		if (!catalogId) return;
 		shelvesLoading = true;
-		startReaderLoadingTimer('shelves');
+		readerLoadingTimers.start('shelves');
 		try {
-			const params = new URLSearchParams({
-				mode: 'shelves',
-				catalog: catalogId,
-				language,
-				limit: '12',
-				sample_limit: '2',
-				timeout_ms: '300000'
-			});
 			const { response, data } = await fetchReaderApi<ReaderShelvesResponse>(
-				`/api/reader?${params.toString()}`
+				readerShelvesUrl({ catalogId, language })
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader shelves failed.');
 			discoveryShelves = data.items;
@@ -591,7 +588,7 @@
 			discoveryShelves = [];
 		} finally {
 			shelvesLoading = false;
-			stopReaderLoadingTimer('shelves');
+			readerLoadingTimers.stop('shelves');
 		}
 	}
 
@@ -657,13 +654,8 @@
 	}
 
 	async function fetchReaderAuthorSections(targetLanguage: LanguageMode, targetCatalogId: string) {
-		const params = new URLSearchParams({
-			mode: 'author-sections',
-			catalog: targetCatalogId,
-			language: targetLanguage
-		});
 		const { response, data } = await fetchReaderApi<ReaderAuthorSectionsResponse>(
-			`/api/reader?${params.toString()}`
+			readerAuthorSectionsUrl({ catalogId: targetCatalogId, language: targetLanguage })
 		);
 		if (!response.ok) throw new Error(data.error || 'Reader author sections failed.');
 		return data.items;
@@ -718,7 +710,7 @@
 
 	async function loadAuthorSections(historyMode: ReaderHistoryMode = 'replace') {
 		authorsLoading = true;
-		startReaderLoadingTimer('authors');
+		readerLoadingTimers.start('authors');
 		authorsError = '';
 		const authorsPromise = !activeAuthorSection
 			? loadAuthors(authorsCursorParam, historyMode, true)
@@ -747,7 +739,7 @@
 			} else {
 				authorsError = sectionError;
 				authorsLoading = false;
-				stopReaderLoadingTimer('authors');
+				readerLoadingTimers.stop('authors');
 			}
 		}
 	}
@@ -758,7 +750,7 @@
 		loadingAlreadyStarted = false
 	) {
 		authorsLoading = true;
-		if (!loadingAlreadyStarted) startReaderLoadingTimer('authors');
+		if (!loadingAlreadyStarted) readerLoadingTimers.start('authors');
 		authorsError = '';
 		if (!cursor) {
 			authors = [];
@@ -766,20 +758,17 @@
 			works = [];
 		}
 		try {
-			const params = new URLSearchParams({
-				mode: 'authors',
-				catalog: catalogId,
-				language,
-				limit: '50'
-			});
-			if (activeAuthorSection) params.set('section', activeAuthorSection);
-			if (workQuery.trim() && !activeAuthorSection) params.set('q', workQuery.trim());
-			if (authorAgentKind) params.set('agent_kind', authorAgentKind);
-			if (authorHistoricity) params.set('historicity', authorHistoricity);
-			if (!activeAuthorSection && !workQuery.trim()) params.set('sort', 'prominence');
-			if (cursor) params.set('cursor', cursor);
 			const { response, data } = await fetchReaderApi<ReaderAuthorsResponse>(
-				`/api/reader?${params.toString()}`
+				readerAuthorsUrl({
+					catalogId,
+					language,
+					section: activeAuthorSection,
+					query: activeAuthorSection ? '' : workQuery,
+					agentKind: authorAgentKind,
+					historicity: authorHistoricity,
+					sort: !activeAuthorSection && !workQuery.trim() ? 'prominence' : '',
+					cursor
+				})
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader authors failed.');
 			authors = data.items;
@@ -792,7 +781,7 @@
 			authorsError = error instanceof Error ? error.message : 'Reader authors failed.';
 		} finally {
 			authorsLoading = false;
-			stopReaderLoadingTimer('authors');
+			readerLoadingTimers.stop('authors');
 		}
 	}
 
@@ -806,15 +795,8 @@
 
 	async function findAuthorByQuery(authorId: string, authorName: string) {
 		if (!authorName.trim()) return null;
-		const params = new URLSearchParams({
-			mode: 'authors',
-			catalog: catalogId,
-			language,
-			q: authorName.trim(),
-			limit: '50'
-		});
 		const { response, data } = await fetchReaderApi<ReaderAuthorsResponse>(
-			`/api/reader?${params.toString()}`
+			readerAuthorsUrl({ catalogId, language, query: authorName })
 		);
 		if (!response.ok) return null;
 		return data.items.find((author) => readerAuthorMatchesId(author, authorId)) ?? null;
@@ -853,7 +835,7 @@
 		authorName?: string
 	) {
 		libraryLoading = true;
-		startReaderLoadingTimer('library');
+		readerLoadingTimers.start('library');
 		libraryError = '';
 		if (!cursor) {
 			selectedWork = null;
@@ -866,50 +848,44 @@
 			selectedWord = '';
 		}
 		try {
-			const params = new URLSearchParams({
-				mode: 'works',
-				catalog: catalogId,
-				language,
-				limit: '120'
-			});
-			if (authorId) params.set('author_id', authorId);
-			else if (authorName) params.set('author', authorName);
-			else if (discoveryAuthorId) params.set('author_id', discoveryAuthorId);
-			else if (workQuery.trim()) params.set('q', workQuery.trim());
-			if (!authorId && discoveryGroup) params.set('group', discoveryGroup);
-			if (!authorId && discoveryTag) params.set('tag', discoveryTag);
-			if (!authorId && discoverySort) params.set('sort', discoverySort);
-			if (activeCollection !== 'all') params.set('collection', activeCollection);
-			if (cursor) params.set('cursor', cursor);
 			const { response, data: initialData } = await fetchReaderApi<ReaderWorksResponse>(
-				`/api/reader?${params.toString()}`
+				readerWorksUrl({
+					catalogId,
+					language,
+					authorId: authorId || discoveryAuthorId,
+					authorName,
+					query: workQuery,
+					group: !authorId ? discoveryGroup : '',
+					tag: !authorId ? discoveryTag : '',
+					sort: !authorId ? discoverySort : '',
+					collection: activeCollection,
+					cursor
+				})
 			);
 			let data = initialData;
 			if (!response.ok) throw new Error(data.error || 'Reader work search failed.');
 			if (authorName && authorId && !data.items.length && !cursor) {
-				const authorParams = new URLSearchParams({
-					mode: 'works',
-					catalog: catalogId,
-					language,
-					limit: '120',
-					author: authorName
-				});
-				if (activeCollection !== 'all') authorParams.set('collection', activeCollection);
 				const { response: authorResponse, data: authorData } =
-					await fetchReaderApi<ReaderWorksResponse>(`/api/reader?${authorParams.toString()}`);
+					await fetchReaderApi<ReaderWorksResponse>(
+						readerWorksUrl({
+							catalogId,
+							language,
+							authorName,
+							collection: activeCollection
+						})
+					);
 				if (authorResponse.ok && authorData.items.length) data = authorData;
 			}
 			if (authorName && !authorId && !data.items.length && !cursor) {
-				const fallbackParams = new URLSearchParams({
-					mode: 'works',
-					catalog: catalogId,
-					language,
-					limit: '120',
-					q: authorName
-				});
-				if (activeCollection !== 'all') fallbackParams.set('collection', activeCollection);
 				const { response: fallbackResponse, data: fallbackData } =
-					await fetchReaderApi<ReaderWorksResponse>(`/api/reader?${fallbackParams.toString()}`);
+					await fetchReaderApi<ReaderWorksResponse>(
+						readerWorksUrl({
+							catalogId,
+							language,
+							query: authorName,
+							collection: activeCollection
+						})
+					);
 				if (fallbackResponse.ok && fallbackData.items.length) data = fallbackData;
 			}
 			works = data.items;
@@ -931,7 +907,7 @@
 			libraryError = error instanceof Error ? error.message : 'Reader work search failed.';
 		} finally {
 			libraryLoading = false;
-			stopReaderLoadingTimer('library');
+			readerLoadingTimers.stop('library');
 		}
 	}
 
@@ -950,23 +926,18 @@
 			return;
 		}
 		textSearchLoading = true;
-		startReaderLoadingTimer('textSearch');
+		readerLoadingTimers.start('textSearch');
 		textSearchError = '';
 		try {
-			const params = new URLSearchParams({
-				mode: 'search',
-				catalog: catalogId,
-				language,
-				q: query,
-				search_mode: textSearchMode,
-				context: '1',
-				limit: '5',
-				timeout_ms: '90000'
-			});
-			if (activeCollection !== 'all') params.set('collection', activeCollection);
-			if (cursor) params.set('cursor', cursor);
 			const { response, data } = await fetchReaderApi<ReaderSearchResponse>(
-				`/api/reader?${params.toString()}`
+				readerTextSearchUrl({
+					catalogId,
+					language,
+					query,
+					searchMode: textSearchMode,
+					collection: activeCollection,
+					cursor
+				})
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader text search failed.');
 			textSearchResults = data.items;
@@ -980,7 +951,7 @@
 			textSearchError = error instanceof Error ? error.message : 'Reader text search failed.';
 		} finally {
 			textSearchLoading = false;
-			stopReaderLoadingTimer('textSearch');
+			readerLoadingTimers.stop('textSearch');
 		}
 	}
 
@@ -1025,17 +996,10 @@
 		if (!work || !catalogId) return;
 		structureLoading = true;
 		structureError = '';
-		startReaderLoadingTimer('structure');
+		readerLoadingTimers.start('structure');
 		try {
-			const params = new URLSearchParams({
-				mode: 'structure',
-				catalog: catalogId,
-				language,
-				work,
-				timeout_ms: '120000'
-			});
 			const { response, data } = await fetchReaderApi<ReaderStructureResponse>(
-				`/api/reader?${params.toString()}`
+				readerStructureUrl({ catalogId, language, work })
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader structure failed.');
 			structure = data.items ?? [];
@@ -1043,7 +1007,7 @@
 			structureError = error instanceof Error ? error.message : 'Reader structure failed.';
 		} finally {
 			structureLoading = false;
-			stopReaderLoadingTimer('structure');
+			readerLoadingTimers.stop('structure');
 		}
 	}
 
@@ -1051,17 +1015,10 @@
 		if (!work || !catalogId) return;
 		dossierLoading = true;
 		dossierError = '';
-		startReaderLoadingTimer('dossier');
+		readerLoadingTimers.start('dossier');
 		try {
-			const params = new URLSearchParams({
-				mode: 'about',
-				catalog: catalogId,
-				language,
-				work,
-				timeout_ms: '120000'
-			});
 			const { response, data } = await fetchReaderApi<ReaderWorkDossierResponse>(
-				`/api/reader?${params.toString()}`
+				readerWorkDossierUrl({ catalogId, language, work })
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader work dossier failed.');
 			workDossier = data;
@@ -1069,7 +1026,7 @@
 			dossierError = error instanceof Error ? error.message : 'Reader work dossier failed.';
 		} finally {
 			dossierLoading = false;
-			stopReaderLoadingTimer('dossier');
+			readerLoadingTimers.stop('dossier');
 		}
 	}
 
@@ -1079,19 +1036,17 @@
 		historyMode: ReaderHistoryMode = 'replace'
 	) {
 		contentsLoading = true;
-		startReaderLoadingTimer('contents');
+		readerLoadingTimers.start('contents');
 		try {
-			const params = new URLSearchParams({
-				mode: 'contents',
-				catalog: catalogId,
-				language,
-				work,
-				limit: String(pageLimit),
-				char_budget: String(pageTextBudget)
-			});
-			if (cursor) params.set('cursor', cursor);
 			const { response, data } = await fetchReaderApi<ReaderContentsResponse>(
-				`/api/reader?${params.toString()}`
+				readerContentsUrl({
+					catalogId,
+					language,
+					work,
+					limit: pageLimit,
+					charBudget: pageTextBudget,
+					cursor
+				})
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader contents failed.');
 			contents = data.items;
@@ -1111,7 +1066,7 @@
 			contentsError = error instanceof Error ? error.message : 'Reader contents failed.';
 		} finally {
 			contentsLoading = false;
-			stopReaderLoadingTimer('contents');
+			readerLoadingTimers.stop('contents');
 		}
 	}
 
@@ -1121,7 +1076,7 @@
 		historyMode: ReaderHistoryMode = 'replace'
 	) {
 		segmentLoading = true;
-		startReaderLoadingTimer('segment');
+		readerLoadingTimers.start('segment');
 		segmentError = '';
 		selectedWord = '';
 		try {
@@ -1132,15 +1087,8 @@
 			if (selectedWork && workDossier?.work?.work_id !== selectedWork.work_id) {
 				await loadWorkDossier(readerWorkRef(selectedWork));
 			}
-			const params = new URLSearchParams({
-				mode: 'show',
-				catalog: catalogId,
-				language,
-				work,
-				segment
-			});
 			const { response, data } = await fetchReaderApi<ReaderShowResponse>(
-				`/api/reader?${params.toString()}`
+				readerShowUrl({ catalogId, language, work, segment })
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader segment failed.');
 			selectedSegment = data.segment;
@@ -1155,7 +1103,7 @@
 			segmentError = error instanceof Error ? error.message : 'Reader segment failed.';
 		} finally {
 			segmentLoading = false;
-			stopReaderLoadingTimer('segment');
+			readerLoadingTimers.stop('segment');
 		}
 	}
 
@@ -1187,18 +1135,12 @@
 
 	async function showAddress(address: string, historyMode: ReaderHistoryMode = 'replace') {
 		segmentLoading = true;
-		startReaderLoadingTimer('segment');
+		readerLoadingTimers.start('segment');
 		segmentError = '';
 		selectedWord = '';
 		try {
-			const params = new URLSearchParams({
-				mode: 'show',
-				catalog: catalogId,
-				language,
-				address
-			});
 			const { response, data } = await fetchReaderApi<ReaderShowResponse>(
-				`/api/reader?${params.toString()}`
+				readerShowUrl({ catalogId, language, address })
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader segment failed.');
 			selectedSegment = data.segment;
@@ -1214,24 +1156,18 @@
 			segmentError = error instanceof Error ? error.message : 'Reader segment failed.';
 		} finally {
 			segmentLoading = false;
-			stopReaderLoadingTimer('segment');
+			readerLoadingTimers.stop('segment');
 		}
 	}
 
 	async function resolveAddress(address: string, historyMode: ReaderHistoryMode = 'replace') {
 		segmentLoading = true;
-		startReaderLoadingTimer('segment');
+		readerLoadingTimers.start('segment');
 		segmentError = '';
 		selectedWord = '';
 		try {
-			const params = new URLSearchParams({
-				mode: 'resolve-address',
-				catalog: catalogId,
-				language,
-				address
-			});
 			const { response, data } = await fetchReaderApi<ReaderShowResponse>(
-				`/api/reader?${params.toString()}`
+				readerResolveAddressUrl({ catalogId, language, address })
 			);
 			if (!response.ok) throw new Error(data.error || 'Reference lookup failed.');
 			selectedSegment = data.segment
@@ -1259,7 +1195,7 @@
 			segmentError = error instanceof Error ? error.message : 'Reference lookup failed.';
 		} finally {
 			segmentLoading = false;
-			stopReaderLoadingTimer('segment');
+			readerLoadingTimers.stop('segment');
 		}
 	}
 
@@ -1274,14 +1210,8 @@
 		)
 			return;
 		try {
-			const params = new URLSearchParams({
-				mode: 'work',
-				catalog: catalogId,
-				language,
-				work
-			});
 			const { response, data } = await fetchReaderApi<ReaderWorkResponse>(
-				`/api/reader?${params.toString()}`
+				readerWorkMetadataUrl({ catalogId, language, work })
 			);
 			if (response.ok && data.item) selectedWork = data.item;
 		} catch {
@@ -1291,18 +1221,16 @@
 
 	async function loadPageWindow(work: string, citation: string) {
 		try {
-			const params = new URLSearchParams({
-				mode: 'contents',
-				catalog: catalogId,
-				language,
-				work,
-				around: citation,
-				radius: String(pageRadius),
-				limit: String(pageRadius * 2 + 1),
-				char_budget: String(pageTextBudget)
-			});
 			const { response, data } = await fetchReaderApi<ReaderContentsResponse>(
-				`/api/reader?${params.toString()}`
+				readerContentsUrl({
+					catalogId,
+					language,
+					work,
+					around: citation,
+					radius: pageRadius,
+					limit: pageRadius * 2 + 1,
+					charBudget: pageTextBudget
+				})
 			);
 			if (!response.ok) throw new Error(data.error || 'Reader page window failed.');
 			pageSegments = data.items.length ? data.items : selectedSegment ? [selectedSegment] : [];
@@ -1333,17 +1261,13 @@
 
 	function updateReaderUrl(overrides: ReaderRouteOverrides = {}, historyMode: ReaderHistoryMode) {
 		if (!browser || historyMode === 'none') return;
-		const state = currentReaderRouteState();
-		for (const [key, value] of Object.entries(overrides) as [
-			keyof ReaderRouteState,
-			ReaderRouteState[keyof ReaderRouteState] | null
-		][]) {
-			if (value === null) delete state[key];
-			else if (value !== undefined) state[key] = value as never;
-		}
-		const nextUrl = `/reader${buildReaderRouteSearch(state)}`;
 		const currentUrl = `${window.location.pathname}${window.location.search}`;
-		if (nextUrl === currentUrl) return;
+		const nextUrl = buildReaderRouteUrlUpdate({
+			currentUrl,
+			state: currentReaderRouteState(),
+			overrides
+		});
+		if (!nextUrl) return;
 		if (historyMode === 'push') window.history.pushState({}, '', nextUrl);
 		else window.history.replaceState({}, '', nextUrl);
 	}
@@ -1512,14 +1436,6 @@
 		updateReaderUrl({}, 'push');
 	}
 
-	function startReaderLoadingTimer(kind: ReaderLoadingKey) {
-		readerLoadingTimers.start(kind);
-	}
-
-	function stopReaderLoadingTimer(kind: ReaderLoadingKey) {
-		readerLoadingTimers.stop(kind);
-	}
-
 	function stopAllReaderLoadingTimers() {
 		readerLoadingTimers.stopAll();
 	}
@@ -1544,10 +1460,6 @@
 		if (kind === 'structure') return structureLoadingElapsedSeconds;
 		if (kind === 'dossier') return dossierLoadingElapsedSeconds;
 		return segmentLoadingElapsedSeconds;
-	}
-
-	function readerLoadingElapsed(kind: ReaderLoadingKey) {
-		return readerLoadingElapsedSeconds(kind);
 	}
 
 	function readerLoadingStatus(label: string, kind: ReaderLoadingKey) {
@@ -1713,34 +1625,6 @@
 		void searchWorks(null, author.author_id, 'push');
 	}
 
-	function facetValueLabel(values: ReaderFacetValue[], id: string) {
-		return readerFacetValueLabel(values, id);
-	}
-
-	function workListLabel(work: ReaderWork) {
-		return readerWorkListLabel(work, works);
-	}
-
-	function workListDiscriminator(work: ReaderWork) {
-		return readerWorkListDiscriminator(work, works);
-	}
-
-	function selectedWorkTitleLabel() {
-		return readerSelectedWorkTitleLabel(selectedWork, works);
-	}
-
-	function selectedWorkDiscriminator() {
-		return readerSelectedWorkDiscriminator(selectedWork, works);
-	}
-
-	function selectedWorkContributorLine() {
-		return readerSelectedWorkContributorLine(selectedWork);
-	}
-
-	function selectedWorkAuthorLabel() {
-		return readerSelectedWorkAuthorLabel(selectedWork);
-	}
-
 	function openSelectedWorkAuthor() {
 		if (!selectedWork) return;
 		filterDiscoveryByAuthor(selectedWork);
@@ -1845,8 +1729,8 @@
 	<ReaderShell>
 		{#if selectedWork}
 			<ReaderSelectedWorkDesk
-				workTitle={selectedWorkTitleLabel()}
-				workSubtitle={selectedWorkContributorLine() || selectedWorkDiscriminator()}
+				workTitle={selectedWorkLabels.title}
+				workSubtitle={selectedWorkLabels.contributorLine || selectedWorkLabels.discriminator}
 				classificationConfidence={selectedWork.classification_confidence}
 				dossier={workDossier}
 				{dossierLoading}
@@ -1861,10 +1745,10 @@
 		<article class="orion-reader-desk-passage orion-manuscript-panel">
 			<ReaderDeskHeader
 				languageLabel={readerLanguageLabel(language)}
-				workAuthorLabel={selectedWork ? selectedWorkAuthorLabel() : null}
-				workTitle={selectedWork ? selectedWorkTitleLabel() : null}
-				workDiscriminator={selectedWorkDiscriminator()}
-				workContributorLine={selectedWorkContributorLine()}
+				workAuthorLabel={selectedWork ? selectedWorkLabels.author : null}
+				workTitle={selectedWork ? selectedWorkLabels.title : null}
+				workDiscriminator={selectedWorkLabels.discriminator}
+				workContributorLine={selectedWorkLabels.contributorLine}
 				canOpenAuthor={Boolean(
 					selectedWork?.canonical_author_id ||
 					selectedWork?.source_author_id ||
@@ -1894,12 +1778,12 @@
 					{language}
 					{selectedWord}
 					{showTransliteration}
-					selectedWorkLabel={selectedWork ? selectedWorkTitleLabel() : 'reader page'}
-					selectedWorkDetail={selectedWorkDiscriminator()}
+					selectedWorkLabel={selectedWork ? selectedWorkLabels.title : 'reader page'}
+					selectedWorkDetail={selectedWorkLabels.discriminator}
 					openingStatusLabel={readerLoadingStatus('Opening passage', 'segment')}
-					openingElapsedLabel={readerLoadingElapsed('segment')}
+					openingElapsedLabel={readerLoadingElapsedSeconds('segment')}
 					updatingStatusLabel={readerLoadingStatus('Updating passage', 'segment')}
-					updatingElapsedLabel={readerLoadingElapsed('segment')}
+					updatingElapsedLabel={readerLoadingElapsedSeconds('segment')}
 					{segmentParts}
 					onRetrySegment={retrySegmentLoad}
 					onOpenPage={showPageCursor}
@@ -1923,9 +1807,9 @@
 					{textSearchPrevCursor}
 					{textSearchNextCursor}
 					textSearchingStatusLabel={readerLoadingStatus('Searching texts', 'textSearch')}
-					textSearchingElapsedLabel={readerLoadingElapsed('textSearch')}
+					textSearchingElapsedLabel={readerLoadingElapsedSeconds('textSearch')}
 					textUpdatingStatusLabel={readerLoadingStatus('Updating text matches', 'textSearch')}
-					textUpdatingElapsedLabel={readerLoadingElapsed('textSearch')}
+					textUpdatingElapsedLabel={readerLoadingElapsedSeconds('textSearch')}
 					{discoveryShelves}
 					{shelvesLoading}
 					{workQuery}
@@ -1945,11 +1829,11 @@
 					{worksPrevCursor}
 					{worksNextCursor}
 					shelvesStatusLabel={readerLoadingStatus('Loading shelves', 'shelves')}
-					shelvesElapsedLabel={readerLoadingElapsed('shelves')}
+					shelvesElapsedLabel={readerLoadingElapsedSeconds('shelves')}
 					loadingWorksStatusLabel={readerLoadingStatus('Loading works', 'library')}
-					loadingWorksElapsedLabel={readerLoadingElapsed('library')}
+					loadingWorksElapsedLabel={readerLoadingElapsedSeconds('library')}
 					updatingWorksStatusLabel={readerLoadingStatus('Updating works', 'library')}
-					updatingWorksElapsedLabel={readerLoadingElapsed('library')}
+					updatingWorksElapsedLabel={readerLoadingElapsedSeconds('library')}
 					{authorAgentKind}
 					{authorHistoricity}
 					{authorAgentKinds}
@@ -1964,14 +1848,14 @@
 					{authorsPrevCursor}
 					{authorsNextCursor}
 					searchingAuthorsStatusLabel={readerLoadingStatus('Searching authors', 'authors')}
-					searchingAuthorsElapsedLabel={readerLoadingElapsed('authors')}
+					searchingAuthorsElapsedLabel={readerLoadingElapsedSeconds('authors')}
 					updatingAuthorsStatusLabel={readerLoadingStatus('Updating authors', 'authors')}
-					updatingAuthorsElapsedLabel={readerLoadingElapsed('authors')}
+					updatingAuthorsElapsedLabel={readerLoadingElapsedSeconds('authors')}
 					loadingAuthorWorksStatusLabel={readerLoadingStatus('Loading author works', 'library')}
-					loadingAuthorWorksElapsedLabel={readerLoadingElapsed('library')}
-					{facetValueLabel}
-					{workListLabel}
-					{workListDiscriminator}
+					loadingAuthorWorksElapsedLabel={readerLoadingElapsedSeconds('library')}
+					facetValueLabel={readerFacetValueLabel}
+					workListLabel={(work) => readerWorkListLabel(work, works)}
+					workListDiscriminator={(work) => readerWorkListDiscriminator(work, works)}
 					{workMetaLine}
 					{shelfIsActive}
 					{shelfMetaLabel}
@@ -2041,13 +1925,13 @@
 				{structureLoading}
 				{structureError}
 				structureStatusLabel={readerLoadingStatus(uiCopy.readerStructure.loading, 'structure')}
-				structureElapsedLabel={readerLoadingElapsed('structure')}
+				structureElapsedLabel={readerLoadingElapsedSeconds('structure')}
 				hasSelectedWork={Boolean(selectedWork)}
 				{contents}
 				{contentsLoading}
 				{contentsError}
 				contentsStatusLabel={readerLoadingStatus('Loading contents', 'contents')}
-				contentsElapsedLabel={readerLoadingElapsed('contents')}
+				contentsElapsedLabel={readerLoadingElapsedSeconds('contents')}
 				{selectedWord}
 				{selectedWordRomanization}
 				{selectedWordHref}
@@ -2089,7 +1973,7 @@
 		{currentDivisionTrail}
 		{currentDivisionNode}
 		{selectedSegment}
-		selectedWorkTitle={selectedWorkTitleLabel()}
+		selectedWorkTitle={selectedWorkLabels.title}
 		selectedWorkAddress={selectedWork?.canonical_address || ''}
 		onClose={() => (activeApparatusPanel = '')}
 		onOpenDivision={(workId, citation) => showSegment(workId, citation, 'push')}

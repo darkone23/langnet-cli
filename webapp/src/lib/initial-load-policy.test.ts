@@ -3,16 +3,21 @@ import { readFileSync } from 'node:fs';
 
 const pageSource = readFileSync('src/routes/+page.svelte', 'utf8');
 const compactPageSource = pageSource.replace(/\s+/g, ' ');
-const componentLedgerSource = readFileSync('src/lib/DeskComponentLedger.svelte', 'utf8');
+const deskEndpointsSource = readFileSync('src/lib/desk/desk-endpoints.ts', 'utf8');
+const deskSessionSource = readFileSync('src/lib/desk/desk-session.ts', 'utf8');
+const componentLedgerSource = readFileSync('src/lib/desk/DeskComponentLedger.svelte', 'utf8');
 const compactComponentLedgerSource = componentLedgerSource.replace(/\s+/g, ' ');
-const dictionaryGroupCardSource = readFileSync('src/lib/DeskDictionaryGroupCard.svelte', 'utf8');
+const dictionaryGroupCardSource = readFileSync(
+	'src/lib/desk/DeskDictionaryGroupCard.svelte',
+	'utf8'
+);
 const compactDictionaryGroupCardSource = dictionaryGroupCardSource.replace(/\s+/g, ' ');
-const lookupResultsSource = readFileSync('src/lib/DeskLookupResults.svelte', 'utf8');
+const lookupResultsSource = readFileSync('src/lib/desk/DeskLookupResults.svelte', 'utf8');
 const compactLookupResultsSource = lookupResultsSource.replace(/\s+/g, ' ');
-const paradigmPanelSource = readFileSync('src/lib/DeskParadigmPanel.svelte', 'utf8');
-const deskParadigmSource = readFileSync('src/lib/desk-paradigm.ts', 'utf8');
+const paradigmPanelSource = readFileSync('src/lib/desk/DeskParadigmPanel.svelte', 'utf8');
+const deskParadigmSource = readFileSync('src/lib/desk/desk-paradigm.ts', 'utf8');
 const learnPageSource = readFileSync('src/routes/learn/+page.svelte', 'utf8');
-const motdFolioSource = readFileSync('src/lib/DeskMotdFolio.svelte', 'utf8');
+const motdFolioSource = readFileSync('src/lib/desk/DeskMotdFolio.svelte', 'utf8');
 const learnSource = readFileSync('src/lib/learn.ts', 'utf8');
 const appCssSource = readFileSync('src/app.css', 'utf8');
 const motdSource = readFileSync('src/routes/api/motd/+server.ts', 'utf8');
@@ -44,13 +49,15 @@ assert.equal(
 );
 assert.equal(
 	pageSource.includes('encounterNeedsFreshReaderLayer(stored.encounter)') &&
-		pageSource.includes('hasMissingSourceReaderTranslations(result)') &&
-		pageSource.includes('hasStaleTranslatedSourceLayer(result)'),
+		pageSource.includes("from '$lib/desk/desk-session'") &&
+		deskSessionSource.includes('hasMissingSourceReaderTranslations(result)') &&
+		deskSessionSource.includes('hasStaleTranslatedSourceLayer(result)'),
 	true,
 	'stored encounters with incomplete reader translations should not bypass a fresh lookup'
 );
 assert.equal(
-	pageSource.includes("params.set('source_layer_version', '3');"),
+	deskEndpointsSource.includes("params.set('source_layer_version', '3');") &&
+		pageSource.includes('searchEndpointUrl({'),
 	true,
 	'CLI search requests should bust server response cache after translated source-layer contract changes'
 );

@@ -89,7 +89,8 @@ Important paths:
   morphology concepts, native grammar terms, and source-backed practice links.
 - `src/app.css`: Tailwind v4, DaisyUI theme tokens, and project-specific reader
   styling.
-- `src/lib/reader.ts`: shared reader catalog, work, and segment types.
+- `src/lib/reader/`: shared reader catalog, work, segment types, Reader route
+  helpers, loading timers, API URL builders, and focused Reader tests.
 - `src/lib/learn.ts`: reusable learning concept map for Foster gateways,
   Sanskrit/Greek/Latin terms, reader questions, and practice words.
 - `src/lib/headword-display.ts`: script-aware display model for Sanskrit, Greek,

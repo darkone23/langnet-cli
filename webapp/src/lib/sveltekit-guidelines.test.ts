@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
 
 const guidelinesSource = readFileSync(
@@ -9,7 +9,71 @@ const uiDocSource = readFileSync(new URL('../../docs/UI.md', import.meta.url), '
 const webappReadmeSource = readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
 const docsReadmeSource = readFileSync(new URL('../../../docs/README.md', import.meta.url), 'utf8');
 const appCssSource = readFileSync(new URL('../app.css', import.meta.url), 'utf8');
-const deskEntryCssSource = readFileSync(new URL('./desk-entry.css', import.meta.url), 'utf8');
+const deskRouteSource = readFileSync(new URL('../routes/+page.svelte', import.meta.url), 'utf8');
+const deskDirectoryUrl = new URL('./desk/', import.meta.url);
+const readerRouteSource = readFileSync(
+	new URL('../routes/reader/+page.svelte', import.meta.url),
+	'utf8'
+);
+const readerDirectoryUrl = new URL('./reader/', import.meta.url);
+const readerApiSource = readFileSync(new URL('./reader-api.ts', readerDirectoryUrl), 'utf8');
+const deskEntryCssSource = readFileSync(new URL('./desk-entry.css', deskDirectoryUrl), 'utf8');
+const deskEntrySource = readFileSync(new URL('./desk-entry.ts', deskDirectoryUrl), 'utf8');
+const deskEndpointsSource = readFileSync(new URL('./desk-endpoints.ts', deskDirectoryUrl), 'utf8');
+const deskLookupSource = readFileSync(new URL('./desk-lookup.ts', deskDirectoryUrl), 'utf8');
+const deskMotdSource = readFileSync(new URL('./desk-motd.ts', deskDirectoryUrl), 'utf8');
+const deskRouteHelperSource = readFileSync(new URL('./desk-route.ts', deskDirectoryUrl), 'utf8');
+const deskSessionSource = readFileSync(new URL('./desk-session.ts', deskDirectoryUrl), 'utf8');
+const deskStatusSource = readFileSync(new URL('./desk-status.ts', deskDirectoryUrl), 'utf8');
+const wordIndexSource = readFileSync(new URL('./word-index.ts', import.meta.url), 'utf8');
+
+const rootLibFileNames = readdirSync(new URL('./', import.meta.url), { withFileTypes: true })
+	.filter((entry) => entry.isFile())
+	.map((entry) => entry.name);
+
+assert.deepEqual(
+	rootLibFileNames.filter((name) => /^Desk|^desk-/.test(name)).sort(),
+	[],
+	'Word Desk files should be clustered under src/lib/desk instead of flat src/lib'
+);
+
+assert.ok(
+	existsSync(new URL('./reader-api.ts', readerDirectoryUrl)) &&
+		existsSync(new URL('./reader-api.test.ts', readerDirectoryUrl)) &&
+		existsSync(new URL('./text.ts', readerDirectoryUrl)),
+	'Reader-specific API and text helpers should live under src/lib/reader'
+);
+
+assert.deepEqual(
+	rootLibFileNames
+		.filter(
+			(name) =>
+				name === 'reader.ts' ||
+				name === 'reader.test.ts' ||
+				/^reader-(index|loading|page)-.*\.ts$/.test(name)
+		)
+		.sort(),
+	[],
+	'Reader domain helpers should be clustered under src/lib/reader instead of flat src/lib'
+);
+
+for (const readerGuardFile of ['page-loading.test.ts', 'reading-surface-guards.test.ts']) {
+	const source = readFileSync(new URL(`./${readerGuardFile}`, readerDirectoryUrl), 'utf8');
+	const lineCount = source.split('\n').length;
+	assert.ok(
+		lineCount < 1000,
+		`Reader source guard ${readerGuardFile} should stay below 1000 lines; split by UI concern`
+	);
+}
+
+{
+	const source = readFileSync(new URL('./index.ts', readerDirectoryUrl), 'utf8');
+	const lineCount = source.split('\n').length;
+	assert.ok(
+		lineCount < 1000,
+		'Reader domain index should stay below 1000 lines; extract focused helper modules'
+	);
+}
 
 for (const referenceUrl of [
 	'https://svelte.dev/docs/kit/project-structure',
@@ -29,6 +93,8 @@ for (const guidelineToken of [
 	'Do not add Alpine.js or htmx',
 	'SvelteKit routes should orchestrate. Components should render.',
 	'Use Svelte 5 `$props` with typed props',
+	'src/lib/<surface>/*',
+	'The Lexicon Word Desk lives in',
 	'Prefer SvelteKit `load`',
 	'Do not put request-specific state in shared server modules',
 	'visible waits should expose elapsed seconds',
@@ -115,7 +181,9 @@ for (const extractedComponent of [
 	'ReaderApparatusOraclePanel.svelte',
 	'ReaderApparatusEvidencePanel.svelte'
 ]) {
-	const componentUrl = new URL(`./${extractedComponent}`, import.meta.url);
+	const componentUrl = extractedComponent.startsWith('Desk')
+		? new URL(`./${extractedComponent}`, deskDirectoryUrl)
+		: new URL(`./${extractedComponent}`, import.meta.url);
 	assert.ok(existsSync(componentUrl), `${extractedComponent} should exist as a focused component`);
 	const source = readFileSync(componentUrl, 'utf8');
 	const lineCount = source.split('\n').length;
@@ -124,6 +192,199 @@ for (const extractedComponent of [
 		`${extractedComponent} should stay below the preferred 500-line target`
 	);
 	assert.ok(source.includes('$props'), `${extractedComponent} should use Svelte 5 $props`);
+}
+
+assert.ok(
+	deskRouteSource.includes("from '$lib/desk/desk-endpoints'") &&
+		deskRouteSource.includes('searchEndpointUrl({') &&
+		deskRouteSource.includes('wordIndexNearbyEndpointUrl({') &&
+		deskEndpointsSource.includes('export function searchEndpointUrl') &&
+		deskEndpointsSource.includes('export function wordIndexNearbyEndpointUrl'),
+	'Word Desk route should delegate endpoint construction to focused helper functions'
+);
+
+assert.ok(
+	deskEntrySource.includes('export function groupBuckets') &&
+		deskEntrySource.includes('export function sectionSegments') &&
+		deskEntrySource.includes('export function componentMeaningSegments') &&
+		!deskRouteSource.includes('function groupBuckets') &&
+		!deskRouteSource.includes('function sectionSegments') &&
+		!deskRouteSource.includes('function componentMeaningSegments'),
+	'Word Desk route should delegate entry grouping, section display, and component meaning helpers to desk-entry.ts'
+);
+assert.ok(
+	deskRouteHelperSource.includes('export function deskAppRouteUrl') &&
+		deskRouteHelperSource.includes('export function deskMotdHref') &&
+		deskRouteHelperSource.includes('export function deskWordIndexHref') &&
+		deskRouteSource.includes('deskAppRouteUrl({') &&
+		deskRouteSource.includes('deskMotdHref(item') &&
+		deskRouteSource.includes('deskWordIndexHref(item') &&
+		!deskRouteSource.includes("params.append('visible'") &&
+		!deskRouteSource.includes("params.append('source'") &&
+		!deskRouteSource.includes("params.set('dictionary'"),
+	'Word Desk route should delegate shareable URL construction to desk-route.ts'
+);
+assert.ok(
+	deskRouteHelperSource.includes('export function deskRouteHydration') &&
+		deskRouteSource.includes('deskRouteHydration({') &&
+		!deskRouteSource.includes('readLanguageParam') &&
+		!deskRouteSource.includes('readToolParams') &&
+		!deskRouteSource.includes('routeShouldLoad') &&
+		!deskRouteSource.includes('shouldLoadEncounterForRoute') &&
+		!deskRouteSource.includes('shouldResetEncounterForRoute'),
+	'Word Desk route should delegate URL hydration parsing and load/preserve decisions to desk-route.ts'
+);
+assert.ok(
+	deskLookupSource.includes('export function validateDeskLookupWord') &&
+		deskLookupSource.includes('export function firstPassTranslationMode') &&
+		deskLookupSource.includes('export function deskEncounterViewState') &&
+		deskRouteSource.includes('validateDeskLookupWord(query)') &&
+		deskRouteSource.includes('deskEncounterViewState({') &&
+		!deskRouteSource.includes("mode === 'auto' || mode === 'populate'") &&
+		!deskRouteSource.includes('const nextReturnedTools = [') &&
+		!deskRouteSource.includes('const routedVisibleTools ='),
+	'Word Desk route should delegate lookup validation, enrichment policy, and encounter view-state derivation to desk-lookup.ts'
+);
+assert.ok(
+	deskLookupSource.includes('export async function fetchDeskEncounter') &&
+		deskLookupSource.includes('export async function retryDeskTranslation') &&
+		deskRouteSource.includes('fetchDeskEncounter({') &&
+		deskRouteSource.includes('retryDeskTranslation({') &&
+		!deskRouteSource.includes('Promise.all([') &&
+		!deskRouteSource.includes("'/api/translation-cache'") &&
+		!deskRouteSource.includes('max_retries'),
+	'Word Desk route should delegate encounter fetch delay mechanics and translation retry POST construction to desk-lookup.ts'
+);
+
+assert.ok(
+	deskStatusSource.includes('export function deskCacheSummary') &&
+		deskStatusSource.includes('export function deskCurrentStatusLabel') &&
+		deskStatusSource.includes('export function deskCurrentStatusDetail') &&
+		deskStatusSource.includes('export function deskReaderLayerStatus') &&
+		deskRouteSource.includes('deskCacheSummary(encounter)') &&
+		deskRouteSource.includes('deskCurrentStatusLabel({') &&
+		deskRouteSource.includes('deskCurrentStatusDetail({') &&
+		deskRouteSource.includes('deskReaderLayerStatus({') &&
+		!deskRouteSource.includes('function cacheSummary') &&
+		!deskRouteSource.includes('function readerLayerStatus') &&
+		!deskRouteSource.includes('uiCopy.status.cacheUnavailable') &&
+		!deskRouteSource.includes('uiCopy.status.showingSections(') &&
+		!deskRouteSource.includes('uiCopy.readerLayer.'),
+	'Word Desk route should delegate status, reader-layer, and translation-cache display policy to desk-status.ts'
+);
+
+assert.ok(
+	readerRouteSource.includes("from '$lib/reader/reader-api'") &&
+		readerApiSource.includes('export function readerCatalogsUrl') &&
+		readerApiSource.includes('export function readerEncounterBriefingUrl') &&
+		readerApiSource.includes('export async function fetchReaderEncounterBriefing') &&
+		readerApiSource.includes('export function readerWorksUrl') &&
+		readerApiSource.includes('export function readerContentsUrl') &&
+		readerRouteSource.includes('readerCatalogsUrl()') &&
+		readerRouteSource.includes('fetchReaderEncounterBriefing({') &&
+		readerRouteSource.includes('readerWorksUrl({') &&
+		readerRouteSource.includes('readerContentsUrl({') &&
+		!readerRouteSource.includes('new URLSearchParams({') &&
+		!readerRouteSource.includes("'/api/reader?mode=catalogs'") &&
+		!readerRouteSource.includes('/api/encounter-briefing?'),
+	'Reader route should delegate API and encounter briefing URL construction to src/lib/reader/reader-api.ts'
+);
+
+for (const localEndpointFunction of [
+	'function wordIndexEndpointUrl',
+	'function wordIndexSectionsEndpointUrl',
+	'function wordIndexBrowseEndpointUrl'
+]) {
+	assert.equal(
+		deskRouteSource.includes(localEndpointFunction),
+		false,
+		`Word Desk route should not keep local endpoint builder ${localEndpointFunction}`
+	);
+}
+
+assert.ok(
+	deskRouteSource.includes('wordIndexMergedRowsFromResponse(currentWordIndex)') &&
+		deskRouteSource.includes('wordIndexRowMatchedWithQuery(row') &&
+		deskRouteSource.includes('wordIndexRowSourcesForLanguage(row, language') &&
+		wordIndexSource.includes('export function wordIndexMergedRowsFromResponse') &&
+		wordIndexSource.includes('export function wordIndexRowMatched'),
+	'Word Desk route should keep pure endpoint and word-index row helpers outside route markup'
+);
+
+for (const localWordIndexFunction of [
+	'function mergeWordIndexRows',
+	'function mergedWordIndexRowsFromResponse',
+	'function wordIndexMergeKey',
+	'function wordIndexSortKey',
+	'function wordIndexPrimaryItem',
+	'function wordIndexDisplay(',
+	'function wordIndexLookup(',
+	'function wordIndexEntryCountLabel',
+	'function encounterWordIndexMatchKeys',
+	'function sourceToolFromWordIndex'
+]) {
+	assert.equal(
+		deskRouteSource.includes(localWordIndexFunction),
+		false,
+		`Word Desk route should not keep local word-index helper ${localWordIndexFunction}`
+	);
+}
+
+assert.ok(
+	deskRouteSource.includes("from '$lib/desk/desk-motd'") &&
+		deskRouteSource.includes('motdVisibleWarningsForResult(motd)') &&
+		deskMotdSource.includes('export function normalizeMotdResult') &&
+		deskMotdSource.includes('export function motdDisplayWord'),
+	'Word Desk route should delegate MOTD normalization and display helpers to desk-motd.ts'
+);
+
+for (const localMotdFunction of [
+	'function normalizeMotdResult',
+	'function normalizeMotdItem',
+	'function motdDisplayWord',
+	'function stripLatinMotdTags',
+	'function stripGreekMotdEncoding',
+	'function motdWordClass',
+	'function motdWordLang',
+	'function motdDisplayLookup',
+	'function greekMotdRomanLookup',
+	'function transliterateGreekMotd',
+	'function stripSanskritMotdEncoding',
+	'function motdDisplayGloss',
+	'function motdDisplayNote',
+	'function shouldShowMotdWarning',
+	'function isRecoverableMotdWarning'
+]) {
+	assert.equal(
+		deskRouteSource.includes(localMotdFunction),
+		false,
+		`Word Desk route should not keep local MOTD helper ${localMotdFunction}`
+	);
+}
+
+assert.ok(
+	deskRouteSource.includes("from '$lib/desk/desk-session'") &&
+		deskRouteSource.includes('encounterMatchesStoredRoute(stored.encounter, language, query)') &&
+		deskSessionSource.includes('export function encounterNeedsFreshReaderLayer') &&
+		deskSessionSource.includes('export function validStoredTools'),
+	'Word Desk route should delegate pure session/freshness helpers to desk-session.ts'
+);
+
+for (const localSessionFunction of [
+	'function encounterNeedsFreshReaderLayer',
+	'function hasStaleTranslatedSourceLayer',
+	'function sourceLayerLooksLikeReaderEnglish',
+	'function encounterMatchesStoredRoute',
+	'function validStoredTools',
+	'function returnedToolsForEncounter',
+	'function hasMissingSourceReaderTranslations',
+	'function isTranslatedSourceTool'
+]) {
+	assert.equal(
+		deskRouteSource.includes(localSessionFunction),
+		false,
+		`Word Desk route should not keep local session helper ${localSessionFunction}`
+	);
 }
 
 for (const [globalChipSelector, componentName] of [
@@ -211,9 +472,9 @@ for (const entryFrameComponent of [
 	'DeskDictionaryGroupCard.svelte',
 	'DeskComponentLedger.svelte'
 ] as const) {
-	const source = readFileSync(new URL(`./${entryFrameComponent}`, import.meta.url), 'utf8');
+	const source = readFileSync(new URL(`./${entryFrameComponent}`, deskDirectoryUrl), 'utf8');
 	assert.ok(
-		source.includes("import '$lib/desk-entry.css';"),
+		source.includes("import '$lib/desk/desk-entry.css';"),
 		`${entryFrameComponent} should import the shared entry frame stylesheet`
 	);
 }
@@ -293,7 +554,7 @@ for (const entryFrameComponent of [
 	);
 
 	const lookupResultsSource = readFileSync(
-		new URL('./DeskLookupResults.svelte', import.meta.url),
+		new URL('./DeskLookupResults.svelte', deskDirectoryUrl),
 		'utf8'
 	);
 	assert.ok(
@@ -314,7 +575,7 @@ for (const entryFrameComponent of [
 	);
 
 	const heroSearchSource = readFileSync(
-		new URL('./DeskHeroSearch.svelte', import.meta.url),
+		new URL('./DeskHeroSearch.svelte', deskDirectoryUrl),
 		'utf8'
 	);
 	assert.ok(
@@ -344,7 +605,7 @@ for (const entryFrameComponent of [
 	);
 
 	const wordIndexRailSource = readFileSync(
-		new URL('./DeskWordIndexRail.svelte', import.meta.url),
+		new URL('./DeskWordIndexRail.svelte', deskDirectoryUrl),
 		'utf8'
 	);
 	assert.ok(
@@ -353,7 +614,7 @@ for (const entryFrameComponent of [
 			wordIndexRailSource.includes('DeskWordIndexRows'),
 		'DeskWordIndexRail should compose saved earmarks, section navigation, and row rendering'
 	);
-	const sidebarSource = readFileSync(new URL('./DeskSidebar.svelte', import.meta.url), 'utf8');
+	const sidebarSource = readFileSync(new URL('./DeskSidebar.svelte', deskDirectoryUrl), 'utf8');
 	assert.ok(
 		sidebarSource.includes('DeskWordIndexRail') &&
 			sidebarSource.includes('DeskSourceControls') &&
@@ -378,11 +639,11 @@ for (const entryFrameComponent of [
 	);
 
 	const componentLedgerSource = readFileSync(
-		new URL('./DeskComponentLedger.svelte', import.meta.url),
+		new URL('./DeskComponentLedger.svelte', deskDirectoryUrl),
 		'utf8'
 	);
 	const dictionaryGroupCardSource = readFileSync(
-		new URL('./DeskDictionaryGroupCard.svelte', import.meta.url),
+		new URL('./DeskDictionaryGroupCard.svelte', deskDirectoryUrl),
 		'utf8'
 	);
 	assert.ok(

@@ -9,18 +9,38 @@ Current state audit, 2026-06-03:
 
 - Reader traditional-structure foundations are in place: `reader structure`,
   `/api/reader?mode=structure`, structure-aware address resolution, `reader
-  about`, Work Dossier payloads, current-division marginalia, Canon Table
+about`, Work Dossier payloads, current-division marginalia, Canon Table
   rendering, and mobile Apparatus panels.
-- Reader UI decomposition is substantially improved, but
-  `webapp/src/routes/reader/+page.svelte` is still over the active-refactor
-  threshold at roughly 2100 lines. Most remaining weight is route state,
-  API orchestration, URL synchronization, and selected-work/page loading
-  actions.
-- The Lexicon Word Desk is still the largest deviation from the file-size and
-  indentation rules. `webapp/src/routes/+page.svelte` is down to roughly 3260
-  lines, with route state, lookup orchestration, endpoint construction, MOTD
-  normalization/display, and word-index row/merge helpers still mixed in the
-  route.
+- Reader UI decomposition is substantially improved, and
+  `webapp/src/routes/reader/+page.svelte` is now below the active-refactor
+  threshold at roughly 1990 lines. It is still above the preferred route
+  ceiling; most remaining weight is route state, URL synchronization, and
+  selected-work/page loading actions.
+- The Lexicon Word Desk route is now below the active-refactor threshold but
+  still above the preferred route ceiling. `webapp/src/routes/+page.svelte` is
+  down to roughly 1690 lines, with lookup execution, refresh sequencing, and
+  state-bound Word Desk wrappers still mixed in the route.
+- The Lexicon Word Desk now has a vertical file cluster at
+  `webapp/src/lib/desk/` for its `Desk*.svelte` components, `desk-*.ts`
+  helpers/tests, shared `desk-entry.css`, and pure entry-display helper module
+  `desk-entry.ts`. Source-level guards prevent new Word Desk files from
+  returning to the flat root `src/lib` directory, and now also guard the
+  extracted status/cache display policy.
+- Reader-specific API URL builders and payload fetch helpers now have a first
+  vertical cluster at `webapp/src/lib/reader/reader-api.ts`, with focused tests
+  and source-level guards preventing `/api/reader` and encounter-briefing URL
+  construction from returning to the Reader route.
+- Reader TypeScript domain helpers and tests now live under
+  `webapp/src/lib/reader/`: `index.ts`, `page-formatting.ts`,
+  `page-authors.ts`, `page-routing.ts`, `page-navigation.ts`,
+  `index-stats.ts`, `index-storage.ts`, `loading-timers.ts`, `text.ts`, and
+  `reader-api.ts`. Source-level guards prevent these files from returning to
+  the flat root `src/lib` directory.
+- Reader source-level UI guards are now split by concern:
+  `src/lib/reader/page-loading.test.ts` covers discovery, forms, async panels,
+  and loading composition, while `src/lib/reader/reading-surface-guards.test.ts`
+  covers apparatus, reading layout, Work Dossier, current-division, page
+  navigation, Leaf, source details, and reader state persistence contracts.
 - `webapp/src/app.css` is down below 750 lines after the latest Word Desk
   extractions. Remaining component-specific blocks are mostly legacy
   entry-card, gloss/list, memory-routine, study-panel, marginalia, source-beast,
@@ -133,10 +153,10 @@ Implemented slices:
 - Reader Discovery View now lives in `ReaderDiscoveryView.svelte`, composing
   discovery header, mode chooser, text search, shelf/work discovery, and author
   discovery while leaving URL state, timers, and API calls in the route.
-- Reader page formatting helpers now live in `reader-page-formatting.ts`, moving
-  pure candidate, shelf, author-section, pagination, and discovery-title logic
-  out of the route.
-- Reader index storage helpers now live in `reader-index-storage.ts`, moving
+- Reader page formatting helpers now live in `src/lib/reader/page-formatting.ts`,
+  moving pure candidate, shelf, author-section, pagination, and discovery-title
+  logic out of the route.
+- Reader index storage helpers now live in `src/lib/reader/index-storage.ts`, moving
   session storage validation, TTL construction, and write error handling out of
   the route while the route applies restored values to Svelte state.
 - Reader Desk Chrome now lives in `ReaderDeskChrome.svelte`, composing the top
@@ -145,7 +165,7 @@ Implemented slices:
 - Reader Selected Work Desk now lives in `ReaderSelectedWorkDesk.svelte`,
   composing the selected work Object Card and work dossier while leaving
   loading, retry, and division navigation callbacks in the route.
-- Reader loading timer bookkeeping now lives in `reader-loading-timers.ts`,
+- Reader loading timer bookkeeping now lives in `src/lib/reader/loading-timers.ts`,
   moving interval start, reset, elapsed-second calculation, and stop-all cleanup
   out of the route while elapsed Svelte state remains route-owned.
 - Reader Shell now lives in `ReaderShell.svelte`, moving the reader grid,
@@ -153,16 +173,16 @@ Implemented slices:
   global stylesheet. Selected-work, discovery, desk-kicker, and page-segment
   styles now live with their owning components.
 - Reader author, facet, synthetic-author, and selected-work display helpers now
-  live in `reader-page-authors.ts`, keeping route logic focused on state changes
-  and API orchestration instead of pure display derivation.
-- Reader route-state helpers now live in `reader-page-routing.ts`, covering
-  default reader addresses, canonical reference detection, work metadata
-  readiness, address formatting, and current route-state derivation outside the
-  Svelte route.
-- Reader index summary helpers now live in `reader-index-stats.ts`, moving
-  author-section totals, stats lookup/upsert behavior, default catalog
+  live in `src/lib/reader/page-authors.ts`, keeping route logic focused on state
+  changes and API orchestration instead of pure display derivation.
+- Reader route-state helpers now live in `src/lib/reader/page-routing.ts`,
+  covering default reader addresses, canonical reference detection, work
+  metadata readiness, address formatting, and current route-state derivation
+  outside the Svelte route.
+- Reader index summary helpers now live in `src/lib/reader/index-stats.ts`,
+  moving author-section totals, stats lookup/upsert behavior, default catalog
   selection, and stats target construction out of the route.
-- Reader page navigation helpers now live in `reader-page-navigation.ts`,
+- Reader page navigation helpers now live in `src/lib/reader/page-navigation.ts`,
   covering shelf active-state checks, selected-segment checks, current reading
   work references, and search-result work references outside the route.
 - Learn page styles now live in `routes/learn/+page.svelte`, removing the
@@ -294,6 +314,9 @@ feature slice is the traditional-division layer:
 - Treat oversized Svelte route files as active refactor targets. Routes should
   orchestrate URL state, data refresh, and component composition; new UI markup
   should be extracted into typed Svelte 5 components under `webapp/src/lib`.
+  Once a surface has several related files, cluster it vertically under a clear
+  product label such as `webapp/src/lib/desk/` instead of widening the root
+  library directory.
 
 ## Persona Handoffs
 
@@ -347,7 +370,7 @@ feature slice is the traditional-division layer:
   parsing, and browser-storage helpers into focused components/modules with
   tests.
 - Moved the shared Word Desk entry-frame rules for dictionary groups and
-  component ledgers into `webapp/src/lib/desk-entry.css`, keeping
+  component ledgers into `webapp/src/lib/desk/desk-entry.css`, keeping
   `webapp/src/app.css` below 900 lines while avoiding duplicated CSS in the two
   entry-rendering components.
 - Extracted `DeskTopbar.svelte` so the Word Desk navigation, translation-mode
@@ -364,34 +387,114 @@ feature slice is the traditional-division layer:
 - Extracted `DeskPageShell.svelte` so the Word Desk main layout, topbar slot,
   content column, sidebar slot, and shell typography/background rules are scoped
   outside the route and global `app.css`.
+- Word Desk endpoint builders now live in `desk-endpoints.ts`, with focused
+  tests covering search cache-busting parameters, dictionary selection, and
+  word-index nearby/sections/browse URLs.
+- Word Desk word-index row merging, display labels, match-key generation, source
+  labels, and item keys now live in `word-index.ts`, with focused tests and
+  route guards preventing the pure helpers from returning to `routes/+page.svelte`.
+- Word Desk MOTD normalization, presentability checks, warning filtering, source
+  script cleanup, display labels, lookup hints, and note cleanup now live in
+  `desk-motd.ts`, with focused tests and source guards preventing route-local
+  helper regressions.
+- Word Desk session/freshness helpers now live in `desk-session.ts`, covering
+  stored-route matching, stale translated source layers, missing reader
+  translations, valid stored tool filtering, returned-tool derivation, and the
+  translated-source-tool predicate with focused tests.
+- Clustered the Word Desk files under `webapp/src/lib/desk/`, including
+  `Desk*.svelte` components, `desk-*.ts` helpers/tests, and `desk-entry.css`,
+  so the earlier line-count extraction now has a surface-level navigation label
+  instead of a flat pile of desk files in root `src/lib`.
+- Extracted Word Desk entry grouping, section rendering, source-layer labels,
+  component meaning display, source-reference sorting, and dictionary tool
+  presentation helpers into `webapp/src/lib/desk/desk-entry.ts` with focused
+  tests, reducing `routes/+page.svelte` below 2000 lines while leaving only
+  route-state mutation wrappers in the route.
+- Extracted Word Desk shareable URL construction into
+  `webapp/src/lib/desk/desk-route.ts`, covering canonical desk URLs, MOTD
+  recommendation links, word-index item links, and word-index section links
+  with focused tests and guards preventing `visible`, `source`, and
+  `dictionary` route-param assembly from returning to the Svelte route.
+- Extracted Word Desk URL hydration parsing into
+  `webapp/src/lib/desk/desk-route.ts` as a pure route-intent helper, covering
+  language/query/tool parsing, load/prefill decisions, preserve/reset
+  decisions, pending layer lists, and validated theme/backend/translation params
+  while leaving Svelte `$state` assignment in the route.
+- Extracted Word Desk lookup policy helpers into
+  `webapp/src/lib/desk/desk-lookup.ts`, covering one-word validation,
+  progressive enrichment first-pass mode selection, pending route-query
+  comparison, and encounter-result view-state derivation for visible tools,
+  source layers, expanded sections, and collapsed branches.
+- Extracted Word Desk async lookup mechanics into
+  `webapp/src/lib/desk/desk-lookup.ts`, covering encounter fetches with the
+  minimum visible lookup delay and translation-cache retry POST construction,
+  while keeping Svelte state flags, refresh sequencing, and result application
+  explicit in the route.
+- Extracted Word Desk current-status labels, status details, reader-layer
+  colophon status, and translation-cache summary copy into
+  `webapp/src/lib/desk/desk-status.ts`, with focused tests and guideline guards
+  preventing route-local status/cache display policy from returning to
+  `routes/+page.svelte`.
+- Extracted Reader API URL construction and payload fetch helpers into
+  `webapp/src/lib/reader/reader-api.ts`, covering catalog, facets, shelves,
+  author sections, author/work search, text search, structure, dossier,
+  contents/page-window, show, resolve-address, work metadata, and selected-word
+  encounter briefing requests. The Reader route now delegates endpoint IO while
+  retaining Svelte state, abort-controller, timer, and navigation ownership.
+- Removed low-value Reader route passthrough wrappers for loading timers and
+  selected-work display labels, replacing them with direct timer-helper calls
+  and derived selected-work label state.
 - Added SvelteKit guideline guards requiring extracted Word Desk components and
   styles to stay focused and preventing their selectors from returning to global
   CSS.
+- Added SvelteKit guideline guards requiring Reader endpoint construction and
+  encounter briefing fetches to remain under the `src/lib/reader/` surface
+  cluster instead of returning to `routes/reader/+page.svelte`.
+- Clustered Reader TypeScript domain helpers and tests under
+  `webapp/src/lib/reader/`, including the Reader domain index, page formatting,
+  page authors, page routing, page navigation, index stats, index storage,
+  loading timers, API helpers, and the source-level loading guard.
+- Split the oversized Reader source guard into `page-loading.test.ts` and
+  `reading-surface-guards.test.ts`, with a SvelteKit guideline guard keeping
+  both files below the 1000-line cap.
+- Extracted Reader text/tokenization helpers into `src/lib/reader/text.ts`,
+  covering selected-token cleanup, display/transliteration text selection,
+  token part generation, and aligned transliteration fallback. The public
+  `src/lib/reader` exports remain stable while `index.ts` falls below the
+  1000-line ceiling.
+- Extracted Reader route URL override application and next-URL construction
+  into `src/lib/reader/page-routing.ts`, so `routes/reader/+page.svelte` now
+  keeps the browser history side effect while delegating query-state assembly.
 
 ## Immediate Next Step
 
 Continue the UI overhaul in this order:
 
-1. Extract the remaining Word Desk view surfaces from `routes/+page.svelte`:
-   MOTD presentation seams and any remaining route-owned markup that is not
-   orchestration.
-2. Move the remaining Word Desk pure helpers out of the route: MOTD
-   normalization/display, word-index row merging, endpoint construction, and
-   lookup/session orchestration boundaries.
+1. Continue reducing `routes/+page.svelte` toward the preferred 1000-line route
+   ceiling by extracting the remaining stateful lookup orchestration seams:
+   first-pass search sequencing, enrichment refresh sequencing, and retry
+   refresh sequencing. Status/cache copy has already moved to `desk-status.ts`.
+2. Move the remaining Word Desk orchestration boundaries out of the route:
+   storage synchronization and async activity coordination should stay under
+   the `src/lib/desk/` surface label when they are desk-specific.
 3. Continue reducing `app.css` by moving component-only Word Desk styles into
    the extracted Svelte components. Keep only tokens, app shell, theme, and
    shared primitive rules global.
-4. Reduce `routes/reader/+page.svelte` below the active-refactor threshold by
-   extracting reader API orchestration, URL actions, and selected-work/page
-   loading routines into focused helper modules.
-5. Normalize async surfaces across the Word Desk so adding content uses
+4. Continue reducing `routes/reader/+page.svelte` toward the preferred
+   1000-line route ceiling by extracting URL actions, route hydration
+   application, and selected-work/page loading routines into focused Reader
+   helper modules under `src/lib/reader/`.
+5. Continue moving focused Reader helpers out of `src/lib/reader/index.ts`
+   where they form clearer concept modules, while keeping the public Reader
+   domain export stable.
+6. Normalize async surfaces across the Word Desk so adding content uses
    skeletons, replacing content uses one spinner/badge/loading strip, and
    visible waits expose elapsed seconds.
-6. Add the encounter reliability Oracle trace: selected surface form,
+7. Add the encounter reliability Oracle trace: selected surface form,
    normalized candidates, dictionary buckets, word-index anchors,
    reader-search candidates, cache policy, warnings, and provenance chips.
-7. Expand traditional-structure metadata with curated aliases and work maps for
+8. Expand traditional-structure metadata with curated aliases and work maps for
    Greek/Latin examples such as Plato's Republic, then add review-gated work
    and chapter bios from source-backed research artifacts.
-8. Perform visual QA across desktop, tablet, and mobile for Reader Work Desk,
+9. Perform visual QA across desktop, tablet, and mobile for Reader Work Desk,
    Lexicon Word Desk, and mobile Apparatus before calling the overhaul stable.
