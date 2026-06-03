@@ -163,14 +163,16 @@ class NormalizationService:
                 cached = None
             if cached is not None:
                 reranked = self._rerank_candidates(raw_query, language, cached)
-                if not self._cached_reader_completion_is_stale(
-                    raw_query,
-                    language,
-                    reranked,
-                ) and not self._cached_greek_epic_eus_is_stale(
-                    raw_query, language, reranked
-                ) and not self._cached_ascii_greek_word_list_parse_is_stale(
-                    raw_query, language, reranked
+                if (
+                    not self._cached_reader_completion_is_stale(
+                        raw_query,
+                        language,
+                        reranked,
+                    )
+                    and not self._cached_greek_epic_eus_is_stale(raw_query, language, reranked)
+                    and not self._cached_ascii_greek_word_list_parse_is_stale(
+                        raw_query, language, reranked
+                    )
                 ):
                     return NormalizationResult(query_hash=query_hash, normalized=reranked)
 

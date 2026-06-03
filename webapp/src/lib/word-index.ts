@@ -311,11 +311,13 @@ export function wordIndexSectionForItem(
 	if (!response || response.request.language !== item.language) return undefined;
 
 	const candidates = response.sections
-		.filter((section) => section.available && section.transliteration)
-		.map((section) => ({
-			section,
-			key: normalizeSectionKey(section.transliteration)
-		}))
+		.filter((section) => section.available)
+		.flatMap((section) =>
+			sectionCandidateKeys(section).map((key) => ({
+				section,
+				key
+			}))
+		)
 		.filter(({ key }) => key)
 		.sort(
 			(left, right) =>
@@ -323,15 +325,7 @@ export function wordIndexSectionForItem(
 				left.section.order_key.localeCompare(right.section.order_key)
 		);
 
-	const itemKeys = [
-		item.display.transliteration,
-		item.lookup,
-		item.canonical_key,
-		item.encounter.q,
-		item.source_entries[0]?.display?.transliteration
-	]
-		.map(normalizeSectionKey)
-		.filter(Boolean);
+	const itemKeys = itemCandidateKeys(item);
 
 	for (const itemKey of itemKeys) {
 		const match = candidates.find(({ key }) => itemKey.startsWith(key));
@@ -339,6 +333,48 @@ export function wordIndexSectionForItem(
 	}
 
 	return undefined;
+}
+
+function sectionCandidateKeys(section: WordIndexSection) {
+	return uniqueSectionKeys([
+		section.transliteration,
+		sectionKeyIfSafe(section.anchor?.query),
+		section.anchor?.canonical_key,
+		sectionKeyIfSafe(section.anchor?.display?.source_key),
+		section.anchor?.display?.transliteration
+	]);
+}
+
+function sectionKeyIfSafe(value: string | undefined) {
+	if (!value) return undefined;
+	if (/[A-Z]/.test(value) && value.length > 1) return undefined;
+	return value;
+}
+
+function itemCandidateKeys(item: WordIndexItem) {
+	return uniqueSectionKeys([
+		item.display.transliteration,
+		item.canonical_key,
+		item.lookup,
+		item.encounter.q,
+		item.display.source_key,
+		item.source_name,
+		...item.source_entries.flatMap((entry) => [
+			entry.display?.transliteration,
+			entry.display?.source_key,
+			entry.source_display,
+			entry.source_name
+		])
+	]);
+}
+
+function uniqueSectionKeys(values: (string | undefined)[]) {
+	const keys: string[] = [];
+	for (const value of values) {
+		const key = normalizeSectionKey(value);
+		if (key && !keys.includes(key)) keys.push(key);
+	}
+	return keys;
 }
 
 export function wordIndexActiveSection(

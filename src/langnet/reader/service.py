@@ -1079,9 +1079,7 @@ class ReaderService:
                 citation_ref=split_citation_path,
             )
             if structure_node is not None:
-                resolved_address = (
-                    f"{structure_node['work_id']}:{structure_node['start_citation']}"
-                )
+                resolved_address = f"{structure_node['work_id']}:{structure_node['start_citation']}"
                 segment = lookup_segment_by_work_and_citation(
                     self.catalog_path,
                     str(structure_node["work_id"]),

@@ -113,6 +113,7 @@ class BuildLewis1890Config:
 @dataclass
 class BuildStrongsGreekConfig:
     source_path: str
+    combined_lexicon_path: str | None
     output: str | None
     limit: int | None
     batch_size: int
@@ -311,6 +312,11 @@ def _build_strongs_greek_impl(config: BuildStrongsGreekConfig) -> None:
     )
     builder_config = StrongsGreekBuildConfig(
         source_path=Path(config.source_path).expanduser(),
+        combined_lexicon_path=(
+            Path(config.combined_lexicon_path).expanduser()
+            if config.combined_lexicon_path
+            else None
+        ),
         output_path=output_path,
         limit=config.limit,
         batch_size=config.batch_size,
@@ -764,6 +770,12 @@ def build_lewis_1890(  # noqa: PLR0913
     type=click.Path(),
     help="Output DuckDB path (defaults to data/build/lex_strongs_greek.duckdb)",
 )
+@click.option(
+    "--combined-lexicon",
+    "combined_lexicon_path",
+    type=click.Path(exists=True),
+    help="Optional combined Strong's JSON/SQLite/CSV lexicon for resolving G/H references.",
+)
 @click.option("--limit", type=int, help="Limit rows for testing.")
 @click.option(
     "--batch-size",
@@ -778,6 +790,7 @@ def build_lewis_1890(  # noqa: PLR0913
 @click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
 def build_strongs_greek(  # noqa: PLR0913
     source_path: str,
+    combined_lexicon_path: str | None,
     output: str | None,
     limit: int | None,
     batch_size: int,
@@ -787,6 +800,7 @@ def build_strongs_greek(  # noqa: PLR0913
     """Build Strong's Greek English index from MorphGNT XML."""
     config = BuildStrongsGreekConfig(
         source_path=source_path,
+        combined_lexicon_path=combined_lexicon_path,
         output=output,
         limit=limit,
         batch_size=batch_size,

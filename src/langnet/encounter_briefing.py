@@ -457,11 +457,7 @@ def deterministic_briefing_summary(digest: Mapping[str, Any]) -> dict[str, Any]:
             for meaning in _mapping_list(digest.get("meanings"))
             for source in _string_list(meaning.get("sources"))
         }
-        | {
-            _string(item.get("source"))
-            for item in morphology
-            if _string(item.get("source"))
-        }
+        | {_string(item.get("source")) for item in morphology if _string(item.get("source"))}
         | {
             _string(item.get("source"))
             for item in word_decomposition
@@ -825,9 +821,7 @@ def _briefing_validation_context(digest: Mapping[str, Any]) -> _BriefingValidati
         _string(item.get("source")) for item in morphology_rows if _string(item.get("source"))
     }
     decomposition_sources = {
-        _string(item.get("source"))
-        for item in decomposition_rows
-        if _string(item.get("source"))
+        _string(item.get("source")) for item in decomposition_rows if _string(item.get("source"))
     }
     source_refs = set(_string_list(digest.get("source_refs")))
     source_refs.update(

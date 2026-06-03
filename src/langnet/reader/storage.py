@@ -5584,7 +5584,8 @@ def current_divisions_for_segment(
     matches = [
         item
         for item in items
-        if _citation_sort_value(str(item.get("start_citation") or "")) <= current_sort
+        if _citation_sort_value(str(item.get("start_citation") or ""))
+        <= current_sort
         <= _citation_sort_value(str(item.get("end_citation") or ""))
     ]
     return sorted(

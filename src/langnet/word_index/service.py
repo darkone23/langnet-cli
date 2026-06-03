@@ -4201,10 +4201,11 @@ def _is_exact_anchor(item: Mapping[str, object], query: str) -> bool:
     if not query_norm:
         return False
     query_plain = _plain_index_key(query_norm)
+    query_keys = _match_keys(query_norm)
     canonical_key = str(item.get("canonical_key") or "").strip().lower()
     source_name = str(item.get("source_name") or "").strip().lower()
     if canonical_key and canonical_key in _exact_canonical_query_keys(
-        query_norm, query_plain, _match_keys(query_norm)
+        query_norm, query_plain, query_keys
     ):
         return True
     return bool(
@@ -4222,6 +4223,7 @@ def _anchor_score(item: Mapping[str, object], query: str) -> int:
     query_dico = normalize_dico_headword(query_norm)
     query_plain = _plain_index_key(query_norm)
     query_keys = _match_keys(query_norm)
+    expanded_anchor_keys = set(_query_keys(query_norm))
     expanded_query_keys = _expanded_query_keys(query_norm)
     canonical_key = str(item.get("canonical_key") or "").strip().lower()
     source_name_raw = str(item.get("source_name") or "").strip()
@@ -4245,16 +4247,38 @@ def _anchor_score(item: Mapping[str, object], query: str) -> int:
         value_norm = value.strip().lower()
         if not value_norm:
             continue
-        if value_norm == query_norm:
-            best = max(best, 100)
-        if _plain_index_key(value_norm) == query_plain:
-            best = max(best, 85)
-        if normalize_dico_headword(value_norm) == query_dico:
-            best = max(best, 60)
+        best = max(
+            best,
+            _anchor_value_score(
+                value_norm,
+                query_norm=query_norm,
+                query_plain=query_plain,
+                query_dico=query_dico,
+            ),
+        )
     item_keys = set(_match_keys(*item_values))
-    if query_keys & item_keys:
+    canonical_key = str(item.get("canonical_key") or "").strip().lower()
+    if canonical_key and canonical_key in expanded_anchor_keys:
+        best = max(best, 75)
+    if expanded_anchor_keys & item_keys:
         best = max(best, 10)
     return best
+
+
+def _anchor_value_score(
+    value_norm: str,
+    *,
+    query_norm: str,
+    query_plain: str,
+    query_dico: str,
+) -> int:
+    if value_norm == query_norm:
+        return 100
+    if _plain_index_key(value_norm) == query_plain:
+        return 85
+    if normalize_dico_headword(value_norm) == query_dico:
+        return 60
+    return 0
 
 
 def _direct_anchor_score(  # noqa: PLR0913

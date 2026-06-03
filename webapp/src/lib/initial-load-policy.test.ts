@@ -3,6 +3,14 @@ import { readFileSync } from 'node:fs';
 
 const pageSource = readFileSync('src/routes/+page.svelte', 'utf8');
 const compactPageSource = pageSource.replace(/\s+/g, ' ');
+const componentLedgerSource = readFileSync('src/lib/DeskComponentLedger.svelte', 'utf8');
+const compactComponentLedgerSource = componentLedgerSource.replace(/\s+/g, ' ');
+const dictionaryGroupCardSource = readFileSync('src/lib/DeskDictionaryGroupCard.svelte', 'utf8');
+const compactDictionaryGroupCardSource = dictionaryGroupCardSource.replace(/\s+/g, ' ');
+const lookupResultsSource = readFileSync('src/lib/DeskLookupResults.svelte', 'utf8');
+const compactLookupResultsSource = lookupResultsSource.replace(/\s+/g, ' ');
+const paradigmPanelSource = readFileSync('src/lib/DeskParadigmPanel.svelte', 'utf8');
+const deskParadigmSource = readFileSync('src/lib/desk-paradigm.ts', 'utf8');
 const learnPageSource = readFileSync('src/routes/learn/+page.svelte', 'utf8');
 const motdFolioSource = readFileSync('src/lib/DeskMotdFolio.svelte', 'utf8');
 const learnSource = readFileSync('src/lib/learn.ts', 'utf8');
@@ -28,8 +36,9 @@ assert.equal(
 assert.equal(
 	pageSource.includes("const deskStorageKey = 'orion-desk-state:v5';") &&
 		pageSource.includes('version: 5') &&
-		pageSource.includes("sessionStorage.removeItem('orion-desk-state:v4');") &&
-		pageSource.includes("sessionStorage.removeItem('orion-desk-state:v3');"),
+		pageSource.includes('clearStorageKeys(sessionStorage') &&
+		pageSource.includes("'orion-desk-state:v4'") &&
+		pageSource.includes("'orion-desk-state:v3'"),
 	true,
 	'desk session storage version should invalidate stale pre-translation/source-layer state'
 );
@@ -46,13 +55,21 @@ assert.equal(
 	'CLI search requests should bust server response cache after translated source-layer contract changes'
 );
 assert.equal(
-	compactPageSource.includes('sectionSegments(bucket, textLayers') &&
-		compactPageSource.includes('groupLayerIsSource(group, textLayers)') &&
-		compactPageSource.includes('readerEntryLabel(group, textLayers)') &&
-		compactPageSource.includes('componentMeaningSegments( meaning, textLayers') &&
-		compactPageSource.includes('componentLayerIsSource(component, textLayers)'),
+	compactPageSource.includes('<DeskLookupResults') &&
+		compactPageSource.includes('{textLayers}') &&
+		compactLookupResultsSource.includes('<DeskDictionaryGroupCard') &&
+		compactLookupResultsSource.includes('{textLayers}') &&
+		compactDictionaryGroupCardSource.includes('helpers.sectionSegments(bucket, textLayers') &&
+		compactDictionaryGroupCardSource.includes('helpers.groupLayerIsSource(group, textLayers)') &&
+		compactDictionaryGroupCardSource.includes('helpers.readerEntryLabel(group, textLayers)') &&
+		compactLookupResultsSource.includes('<DeskComponentLedger') &&
+		compactLookupResultsSource.includes('{textLayers}') &&
+		compactComponentLedgerSource.includes(
+			'helpers.componentMeaningSegments( meaning, textLayers'
+		) &&
+		compactComponentLedgerSource.includes('helpers.componentLayerIsSource(component, textLayers)'),
 	true,
-	'reader source/English layer toggles should expose textLayers as a direct Svelte template dependency'
+	'reader source/English layer toggles should expose textLayers through the result Svelte template dependency chain'
 );
 assert.equal(
 	pageSource.includes('!query.trim() && !currentWordIndex && !wordIndexEarmarks.length'),
@@ -131,21 +148,21 @@ assert.equal(
 	'MOTD API default timeout should be tight because normal requests are local pool samples'
 );
 assert.equal(
-	pageSource.includes('gateway.language !== targetLanguage') &&
-		pageSource.includes('candidateLearningLanguage(candidate)'),
+	deskParadigmSource.includes('gateway.language !== targetLanguage') &&
+		paradigmPanelSource.includes('candidateLearningLanguage(candidate, fallbackLanguage)'),
 	true,
 	'learning overlay native grammar terms should be scoped to the active lookup language'
 );
 assert.equal(
-	pageSource.includes('learnerDisplayForm') &&
-		pageSource.includes('learningGatewayTitle(learning)') &&
-		pageSource.includes('href="/learn"'),
+	paradigmPanelSource.includes('learnerDisplayForm') &&
+		paradigmPanelSource.includes('learningGatewayTitle(learning)') &&
+		paradigmPanelSource.includes('href="/learn"'),
 	true,
 	'dictionary form cards should be a small learning preview with a path into the Learn workflow'
 );
 assert.equal(
-	pageSource.includes('learningEvidenceGapLabels') ||
-		pageSource.includes('candidate.provenance.join'),
+	paradigmPanelSource.includes('learningEvidenceGapLabels') ||
+		paradigmPanelSource.includes('candidate.provenance.join'),
 	false,
 	'beginner-facing form cards should not expose raw evidence gaps or source provenance'
 );

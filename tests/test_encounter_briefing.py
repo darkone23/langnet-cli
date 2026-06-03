@@ -615,6 +615,7 @@ def test_encounter_briefing_model_benchmark_cli_reads_jsonl_payloads() -> None:
     )
 
     with unittest.mock.patch("langnet.cli._encounter_briefing_generate_response") as generate:
+
         def generate_response(flow, *, model):
             assert model == "openai:test-fast"
             return response

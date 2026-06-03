@@ -5,6 +5,37 @@
 Active implementation handoff. The detailed design spec is
 `docs/superpowers/specs/2026-06-02-orion-reader-structure-design.md`.
 
+Current state audit, 2026-06-03:
+
+- Reader traditional-structure foundations are in place: `reader structure`,
+  `/api/reader?mode=structure`, structure-aware address resolution, `reader
+  about`, Work Dossier payloads, current-division marginalia, Canon Table
+  rendering, and mobile Apparatus panels.
+- Reader UI decomposition is substantially improved, but
+  `webapp/src/routes/reader/+page.svelte` is still over the active-refactor
+  threshold at roughly 2100 lines. Most remaining weight is route state,
+  API orchestration, URL synchronization, and selected-work/page loading
+  actions.
+- The Lexicon Word Desk is still the largest deviation from the file-size and
+  indentation rules. `webapp/src/routes/+page.svelte` is down to roughly 3260
+  lines, with route state, lookup orchestration, endpoint construction, MOTD
+  normalization/display, and word-index row/merge helpers still mixed in the
+  route.
+- `webapp/src/app.css` is down below 750 lines after the latest Word Desk
+  extractions. Remaining component-specific blocks are mostly legacy
+  entry-card, gloss/list, memory-routine, study-panel, marginalia, source-beast,
+  and MOTD styles. Font/theme tokens and truly shared primitives can stay
+  global.
+- New extracted Svelte components are following the project guidelines: typed
+  Svelte 5 `$props`, focused file sizes under 500 lines, scoped component
+  styles, DaisyUI/Tailwind controls where appropriate, and source-level guards
+  in `webapp/src/lib/sveltekit-guidelines.test.ts`.
+- Async guidelines are partially met. Reader loading surfaces and the Word Desk
+  now share elapsed-second activity surfaces for lookup, translation
+  enrichment, MOTD refresh, word-index lookup, word-index section browse, and
+  paradigm loading. Remaining work is visual QA and eliminating any older
+  competing spinners or badges that duplicate those waits.
+
 Implemented slices:
 
 - Orion UI vocabulary, Object Card, provenance chips, Canon Table, Work Desk,
@@ -137,6 +168,23 @@ Implemented slices:
 - Learn page styles now live in `routes/learn/+page.svelte`, removing the
   `orion-learn-*` page-specific block from global `app.css` while keeping the
   Learn route below the preferred 1000-line ceiling.
+- Word Desk async activity now has a focused `DeskActivityLedger.svelte`
+  component and `desk-activity.ts` timer helper, so lookup, translation,
+  word-index, section-browse, MOTD, and paradigm waits can surface elapsed
+  seconds through one stable visualization.
+- Word Desk lookup waiting markup now lives in `DeskLookupLoadingPanel.svelte`,
+  with the elapsed timer visible in the large lookup panel instead of hidden in
+  route-local state.
+- Word Desk Forms/paradigm display now lives in `DeskParadigmPanel.svelte`,
+  with pure display helpers in `desk-paradigm.ts` and component-local
+  `orion-paradigm-*` / `orion-learning-*` styles instead of route-local markup
+  or global `app.css` rules.
+- Word Desk URL-state parsing now lives in `desk-route.ts`, covering route
+  list params, load/prefill flags, language/tool params, clear-route checks,
+  and stable desk route keys outside the Svelte route.
+- Word Desk browser storage helpers now live in `desk-storage.ts`, covering
+  MOTD local cache, word-index earmarks, desk session state, and versioned
+  storage cleanup with focused tests.
 - `reader structure` and `/api/reader?mode=structure`.
 - Division metadata overlay storage, sync, builder integration, and a reviewed
   Bhagavadgītā chapter 9 fixture.
@@ -278,11 +326,72 @@ feature slice is the traditional-division layer:
 - Extracted `DeskMotdFolio.svelte` and `DeskMotdSkeletonList.svelte` so the
   margin recommendation folio, its loading skeleton, and folio-specific styles
   no longer live in the oversized route or global `app.css`.
-- Added a SvelteKit guideline guard requiring the desk chip component to stay
-  focused and preventing those chip selectors from returning to global CSS.
+- Extracted `DeskPageMarksPanel.svelte` so route/API share marks and
+  endpoint-code styling live in a focused sidebar component.
+- Extracted `DeskWordIndexEarmarks.svelte` so saved word-index links and
+  earmark styling are scoped outside the oversized route/global `app.css`.
+- Extracted `DeskWordIndexRail.svelte`, `DeskWordIndexSections.svelte`, and
+  `DeskWordIndexRows.svelte` so the visible word-index sidebar instrument is
+  componentized instead of deeply nested route markup and global CSS.
+- Extracted `DeskComponentLedger.svelte` so compound/member evidence is a
+  focused Word Desk surface with scoped component styles rather than old route
+  markup and global `orion-component-*` rules.
+- Extracted `DeskHeadwordBookplate.svelte` so dictionary groups and compound
+  members share one illuminated Word object heading with scoped styles instead
+  of duplicated route/component markup and global headword CSS.
+- Extracted `DeskDictionaryGroupCard.svelte` so dictionary source groups,
+  source/reader layer switching, retry controls, nested section expansion, and
+  returned-ending notes render in a focused Word Desk component instead of the
+  oversized route.
+- Extracted Word Desk async activity, lookup loading, paradigm display, route
+  parsing, and browser-storage helpers into focused components/modules with
+  tests.
+- Moved the shared Word Desk entry-frame rules for dictionary groups and
+  component ledgers into `webapp/src/lib/desk-entry.css`, keeping
+  `webapp/src/app.css` below 900 lines while avoiding duplicated CSS in the two
+  entry-rendering components.
+- Extracted `DeskTopbar.svelte` so the Word Desk navigation, translation-mode
+  selector, status counters, and theme controls live in a focused component
+  with scoped topbar styles instead of route-owned markup and global `app.css`
+  selectors.
+- Extracted `DeskLookupResults.svelte` so lookup alerts, translation-enrichment
+  notices, component ledger composition, dictionary witness framing, lookup
+  loading, paradigm display, and empty-filter messaging live in one focused
+  result surface instead of route-owned markup.
+- Extracted `DeskSidebar.svelte` so the word-index rail, source controls,
+  colophon, and page marks are composed through one focused sidebar surface, and
+  fixed sidebar styles are scoped outside global `app.css`.
+- Extracted `DeskPageShell.svelte` so the Word Desk main layout, topbar slot,
+  content column, sidebar slot, and shell typography/background rules are scoped
+  outside the route and global `app.css`.
+- Added SvelteKit guideline guards requiring extracted Word Desk components and
+  styles to stay focused and preventing their selectors from returning to global
+  CSS.
 
 ## Immediate Next Step
 
-Continue expanding Work Dossier and structure-address coverage from
-source-backed curated data. Keep `reader about`, `reader structure`, and
-`resolve-address` as the backend contracts for the UI overhaul.
+Continue the UI overhaul in this order:
+
+1. Extract the remaining Word Desk view surfaces from `routes/+page.svelte`:
+   MOTD presentation seams and any remaining route-owned markup that is not
+   orchestration.
+2. Move the remaining Word Desk pure helpers out of the route: MOTD
+   normalization/display, word-index row merging, endpoint construction, and
+   lookup/session orchestration boundaries.
+3. Continue reducing `app.css` by moving component-only Word Desk styles into
+   the extracted Svelte components. Keep only tokens, app shell, theme, and
+   shared primitive rules global.
+4. Reduce `routes/reader/+page.svelte` below the active-refactor threshold by
+   extracting reader API orchestration, URL actions, and selected-work/page
+   loading routines into focused helper modules.
+5. Normalize async surfaces across the Word Desk so adding content uses
+   skeletons, replacing content uses one spinner/badge/loading strip, and
+   visible waits expose elapsed seconds.
+6. Add the encounter reliability Oracle trace: selected surface form,
+   normalized candidates, dictionary buckets, word-index anchors,
+   reader-search candidates, cache policy, warnings, and provenance chips.
+7. Expand traditional-structure metadata with curated aliases and work maps for
+   Greek/Latin examples such as Plato's Republic, then add review-gated work
+   and chapter bios from source-backed research artifacts.
+8. Perform visual QA across desktop, tablet, and mobile for Reader Work Desk,
+   Lexicon Word Desk, and mobile Apparatus before calling the overhaul stable.

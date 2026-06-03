@@ -4112,21 +4112,21 @@ def test_encounter_retries_uncached_for_ascii_greek_partial_dictionary_sources()
             "subject": "lex:teleutaios",
             "predicate": "has_sense",
             "object": "sense:lex:teleutaios#last",
-            "metadata": {
-                "evidence": {"source_tool": "bailly", "source_ref": "bailly:teleutaios"}
-            },
+            "metadata": {"evidence": {"source_tool": "bailly", "source_ref": "bailly:teleutaios"}},
         },
         {
             "subject": "sense:lex:teleutaios#last",
             "predicate": "gloss",
             "object": "dernier",
-            "metadata": {
-                "evidence": {"source_tool": "bailly", "source_ref": "bailly:teleutaios"}
-            },
+            "metadata": {"evidence": {"source_tool": "bailly", "source_ref": "bailly:teleutaios"}},
         },
     ]
     stale_result = SimpleNamespace(
-        claims=[_claim_with_triples(tool="diogenes", subject="lex:teleut_aios", triples=diogenes_triples)]
+        claims=[
+            _claim_with_triples(
+                tool="diogenes", subject="lex:teleut_aios", triples=diogenes_triples
+            )
+        ]
     )
     recovered_result = SimpleNamespace(
         claims=[
@@ -4157,9 +4157,7 @@ def test_encounter_retries_uncached_for_ascii_greek_partial_dictionary_sources()
     assert cli_result.exit_code == 0, cli_result.output
     payload = json.loads(cli_result.output)
     source_tools = {
-        witness["source_tool"]
-        for bucket in payload["buckets"]
-        for witness in bucket["witnesses"]
+        witness["source_tool"] for bucket in payload["buckets"] for witness in bucket["witnesses"]
     }
     assert source_tools == {"bailly", "diogenes"}
     assert (

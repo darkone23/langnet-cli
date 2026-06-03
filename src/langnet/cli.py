@@ -10436,7 +10436,7 @@ def _encounter_word_index_context(
     warnings: list[object] = []
     anchors: list[dict[str, object]] = []
     seen_anchor_keys: set[tuple[str, str, str]] = set()
-    for candidate in candidates:
+    for candidate_rank, candidate in enumerate(candidates):
         try:
             payload = word_index_neighborhood_payload(
                 language,
@@ -10458,6 +10458,7 @@ def _encounter_word_index_context(
             payload.get("neighborhood"),
             query=candidate,
         ):
+            anchor["candidate_rank"] = candidate_rank
             key = (
                 str(anchor.get("source") or ""),
                 str(anchor.get("dictionary") or ""),
@@ -10476,6 +10477,16 @@ def _encounter_word_index_context(
 def _encounter_word_index_preferred_anchors(
     anchors: Sequence[dict[str, object]],
 ) -> list[dict[str, object]]:
+    if not anchors:
+        return []
+    ranked = [anchor for anchor in anchors if isinstance(anchor.get("candidate_rank"), int)]
+    if ranked:
+        first_rank = min(int(anchor.get("candidate_rank", 0)) for anchor in ranked)
+        first_rank_anchors = [
+            anchor for anchor in ranked if int(anchor.get("candidate_rank", 0)) == first_rank
+        ]
+        exact = [anchor for anchor in first_rank_anchors if anchor.get("anchor_status") == "exact"]
+        return exact or first_rank_anchors
     exact = [anchor for anchor in anchors if anchor.get("anchor_status") == "exact"]
     return exact or list(anchors)
 

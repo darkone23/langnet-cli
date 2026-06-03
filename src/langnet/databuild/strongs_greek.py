@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import csv
 import hashlib
+import json
 import re
+import sqlite3
 import unicodedata
 import xml.etree.ElementTree as ET
 from collections.abc import Iterable, Mapping, Sequence
@@ -48,9 +51,21 @@ CREATE TABLE IF NOT EXISTS aliases (
     rank INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS strongs_lexicon (
+    strongs_number VARCHAR PRIMARY KEY,
+    language VARCHAR NOT NULL,
+    lemma_unicode VARCHAR NOT NULL,
+    lemma_translit VARCHAR,
+    pronunciation VARCHAR,
+    description TEXT,
+    source_path VARCHAR,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS strongs_greek_alias_key_idx ON aliases(alias_key);
 CREATE INDEX IF NOT EXISTS strongs_greek_alias_entry_idx ON aliases(alias_key, entry_id);
 CREATE INDEX IF NOT EXISTS strongs_greek_strongs_number_idx ON entries(strongs_number);
+CREATE INDEX IF NOT EXISTS strongs_lexicon_language_idx ON strongs_lexicon(language);
 """
 
 
@@ -59,6 +74,7 @@ class StrongsGreekBuildConfig:
     """Configuration for building the MorphGNT Strong's Greek XML index."""
 
     source_path: Path
+    combined_lexicon_path: Path | None = None
     output_path: Path | None = None
     limit: int | None = None
     batch_size: int = 500
@@ -71,6 +87,11 @@ class StrongsGreekBuilder:
 
     def __init__(self, config: StrongsGreekBuildConfig) -> None:
         self.source_path = config.source_path.expanduser()
+        self.combined_lexicon_path = (
+            config.combined_lexicon_path.expanduser()
+            if config.combined_lexicon_path is not None
+            else None
+        )
         self.output_path = config.output_path or default_strongs_greek_path()
         self.limit = config.limit
         self.batch_size = config.batch_size
@@ -96,6 +117,9 @@ class StrongsGreekBuilder:
             self.output_path.parent.mkdir(parents=True, exist_ok=True)
             self._conn = duckdb.connect(str(self.output_path))
             apply_strongs_greek_schema(self._conn)
+            strongs_lemmas = self._load_combined_lexicon()
+            if strongs_lemmas:
+                self._resolved_ref_lemmas = strongs_lemmas
             processed = self._load_entries()
             stats = replace(self.get_stats(), entry_count=processed)
             return BuildResult(
@@ -117,7 +141,8 @@ class StrongsGreekBuilder:
         assert self._conn is not None
         total = 0
         batch: list[dict[str, Any]] = []
-        for entry in _iter_xml_entries(self.source_path):
+        ref_lemmas = getattr(self, "_resolved_ref_lemmas", {})
+        for entry in _iter_xml_entries(self.source_path, ref_lemmas=ref_lemmas):
             if self.limit is not None and total + len(batch) >= self.limit:
                 break
             batch.append(entry)
@@ -127,6 +152,36 @@ class StrongsGreekBuilder:
         if batch:
             total += self._insert_batch(batch)
         return total
+
+    def _load_combined_lexicon(self) -> dict[str, str]:
+        assert self._conn is not None
+        if self.combined_lexicon_path is None:
+            return {}
+        if not self.combined_lexicon_path.exists():
+            raise FileNotFoundError(
+                f"Combined Strong's lexicon not found at {self.combined_lexicon_path}"
+            )
+
+        rows = list(_iter_combined_lexicon_rows(self.combined_lexicon_path))
+        if not rows:
+            return {}
+        self._conn.register("strongs_lexicon_batch", pa.Table.from_pylist(rows))
+        try:
+            self._conn.execute(
+                """
+                INSERT OR REPLACE INTO strongs_lexicon (
+                    strongs_number, language, lemma_unicode, lemma_translit,
+                    pronunciation, description, source_path
+                )
+                SELECT
+                    strongs_number, language, lemma_unicode, lemma_translit,
+                    pronunciation, description, source_path
+                FROM strongs_lexicon_batch
+                """
+            )
+        finally:
+            self._conn.unregister("strongs_lexicon_batch")
+        return {str(row["strongs_number"]): str(row["lemma_unicode"]) for row in rows}
 
     def _insert_batch(self, entries: Sequence[Mapping[str, Any]]) -> int:
         assert self._conn is not None
@@ -347,7 +402,91 @@ def _candidate_keys(raw: str) -> list[str]:
     return _unique(keys)
 
 
-def _iter_xml_entries(source_path: Path) -> Iterable[dict[str, Any]]:
+def _iter_combined_lexicon_rows(source_path: Path) -> Iterable[dict[str, str | None]]:
+    suffix = source_path.suffix.lower()
+    if suffix == ".json":
+        yield from _iter_combined_json_rows(source_path)
+    elif suffix in {".db", ".sqlite", ".sqlite3"}:
+        yield from _iter_combined_sqlite_rows(source_path)
+    elif suffix == ".csv":
+        yield from _iter_combined_csv_rows(source_path)
+    else:
+        raise ValueError(
+            f"Combined Strong's lexicon must be JSON, SQLite, or CSV (got {source_path.name})"
+        )
+
+
+def _iter_combined_json_rows(source_path: Path) -> Iterable[dict[str, str | None]]:
+    loaded = json.loads(source_path.read_text(encoding="utf-8"))
+    rows: Iterable[object]
+    if isinstance(loaded, list):
+        rows = loaded
+    elif isinstance(loaded, Mapping):
+        rows = loaded.values()
+    else:
+        rows = []
+    for row in rows:
+        if isinstance(row, Mapping):
+            normalized = _combined_lexicon_row(row, source_path)
+            if normalized:
+                yield normalized
+
+
+def _iter_combined_sqlite_rows(source_path: Path) -> Iterable[dict[str, str | None]]:
+    with sqlite3.connect(str(source_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        for row in conn.execute(
+            "SELECT number, lemma, xlit, pronounce, description FROM strongs ORDER BY number"
+        ):
+            normalized = _combined_lexicon_row(row, source_path)
+            if normalized:
+                yield normalized
+
+
+def _iter_combined_csv_rows(source_path: Path) -> Iterable[dict[str, str | None]]:
+    with source_path.open(newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            normalized = _combined_lexicon_row(row, source_path)
+            if normalized:
+                yield normalized
+
+
+def _combined_lexicon_row(
+    row: Mapping[str, object], source_path: Path
+) -> dict[str, str | None] | None:
+    strongs_number = _canonical_strongs_number(str(row.get("number") or ""))
+    lemma = str(row.get("lemma") or "").strip()
+    if not strongs_number or not lemma:
+        return None
+    return {
+        "strongs_number": strongs_number,
+        "language": _strongs_language(strongs_number),
+        "lemma_unicode": lemma,
+        "lemma_translit": _none_if_empty(row.get("xlit")),
+        "pronunciation": _none_if_empty(row.get("pronounce")),
+        "description": _none_if_empty(row.get("description")),
+        "source_path": str(source_path),
+    }
+
+
+def _canonical_strongs_number(value: str) -> str:
+    match = re.search(r"([GH])?\s*0*(\d+)", (value or "").upper())
+    if not match:
+        return ""
+    prefix = match.group(1) or ""
+    if not prefix:
+        return ""
+    return f"{prefix}{int(match.group(2))}"
+
+
+def _strongs_language(strongs_number: str) -> str:
+    return "heb" if strongs_number.startswith("H") else "grc"
+
+
+def _iter_xml_entries(
+    source_path: Path, *, ref_lemmas: Mapping[str, str] | None = None
+) -> Iterable[dict[str, Any]]:
+    ref_lemmas = ref_lemmas or {}
     root = ET.parse(source_path).getroot()  # noqa: S314 - local XML source file
     for entry_el in root.iter("entry"):
         strongs_text = _child_text(entry_el, "strongs") or entry_el.attrib.get("strongs") or ""
@@ -367,42 +506,45 @@ def _iter_xml_entries(source_path: Path) -> Iterable[dict[str, Any]]:
                 greek_el.attrib.get("translit", "") if greek_el is not None else ""
             ).strip(),
             "pronunciation": _pronunciation(entry_el),
-            "derivation": _child_text(entry_el, "strongs_derivation"),
-            "definition": _child_text(entry_el, "strongs_def"),
-            "kjv_definition": _clean_kjv(_child_text(entry_el, "kjv_def")),
+            "derivation": _child_text(entry_el, "strongs_derivation", ref_lemmas=ref_lemmas),
+            "definition": _child_text(entry_el, "strongs_def", ref_lemmas=ref_lemmas),
+            "kjv_definition": _clean_kjv(_child_text(entry_el, "kjv_def", ref_lemmas=ref_lemmas)),
         }
 
 
-def _child_text(element: ET.Element, tag: str) -> str | None:
+def _child_text(
+    element: ET.Element, tag: str, *, ref_lemmas: Mapping[str, str] | None = None
+) -> str | None:
     child = element.find(tag)
     if child is None:
         return None
-    return _collapse_ws(_element_text_with_refs(child))
+    return _collapse_ws(_element_text_with_refs(child, ref_lemmas=ref_lemmas or {}))
 
 
-def _element_text_with_refs(element: ET.Element) -> str:
+def _element_text_with_refs(element: ET.Element, *, ref_lemmas: Mapping[str, str]) -> str:
     parts: list[str] = []
     if element.text:
         parts.append(element.text)
     for child in element:
         if child.tag == "strongsref":
-            ref = _strongs_ref_text(child)
+            ref = _strongs_ref_text(child, ref_lemmas=ref_lemmas)
             if ref:
                 parts.append(ref)
         else:
-            parts.append(_element_text_with_refs(child))
+            parts.append(_element_text_with_refs(child, ref_lemmas=ref_lemmas))
         if child.tail:
             parts.append(child.tail)
     return "".join(parts)
 
 
-def _strongs_ref_text(element: ET.Element) -> str:
+def _strongs_ref_text(element: ET.Element, *, ref_lemmas: Mapping[str, str]) -> str:
     number = _strongs_int(element.attrib.get("strongs") or "")
     if number is None:
         return ""
     language = (element.attrib.get("language") or "").strip().lower()
     prefix = "H" if language == "hebrew" else "G"
-    return f"{prefix}{number}"
+    strongs_number = f"{prefix}{number}"
+    return ref_lemmas.get(strongs_number, strongs_number)
 
 
 def _pronunciation(entry_el: ET.Element) -> str | None:

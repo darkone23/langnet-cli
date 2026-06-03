@@ -3,64 +3,59 @@
 	import { pushState, replaceState } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
 	import {
-		Asterisk,
 		Bird,
 		BookmarkCheck,
-		BookmarkPlus,
 		BookOpen,
 		Bug,
 		Cat,
-		ChevronDown,
-		Compass,
-		Database,
 		Dog,
-		Eraser,
 		Fish,
-		Moon,
-		RefreshCw,
-		Search,
 		Shell,
 		Snail,
-		Sparkles,
 		Squirrel,
 		ScrollText,
-		Sun,
-		Telescope,
 		Turtle
 	} from 'lucide-svelte';
+	import { buildComponentHeadwordDisplay, buildHeadwordDisplay } from '$lib/headword-display';
 	import {
-		buildComponentHeadwordDisplay,
-		buildHeadwordDisplay,
-		type HeadwordDisplay
-	} from '$lib/headword-display';
+		createDeskLoadingTimers,
+		deskActivityItems,
+		type DeskActivityKey
+	} from '$lib/desk-activity';
 	import { fetchPayload } from '$lib/msgpack';
 	import {
+		currentDeskRouteKey,
+		isClearDeskRouteState,
+		readLanguageParam,
+		readRouteList,
+		readToolParams,
 		routeMatchesEncounter,
+		routeExplicitlyRequestsLoad,
+		routePrefillOnlyRequested,
+		routeShouldLoad,
 		shouldLoadEncounterForRoute,
 		shouldPersistDeskRouteListParam,
 		shouldResetEncounterForRoute
 	} from '$lib/desk-route';
-	import { motdItemKeys, motdTtlMs, storedMotdStatus, type StoredMotd } from '$lib/motd-cache';
+	import { motdItemKeys } from '$lib/motd-cache';
 	import {
-		normalizeParadigmPayload,
-		paradigmRequestKey,
-		type ParadigmBlock,
-		type ParadigmPayload
-	} from '$lib/paradigm';
+		clearStorageKeys,
+		readStoredDeskState as readStoredDeskStateFromStorage,
+		readStoredMotd as readStoredMotdFromStorage,
+		readStoredWordIndexEarmarks as readStoredWordIndexEarmarksFromStorage,
+		saveStoredDeskState,
+		saveStoredMotd,
+		saveStoredWordIndexEarmarks,
+		type StoredDeskState
+	} from '$lib/desk-storage';
+	import { normalizeParadigmPayload, type ParadigmPayload } from '$lib/paradigm';
 	import {
 		curateParadigmCandidates,
-		learnerDisplayForm,
 		paradigmPayloadHasForms,
-		paradigmSlotMatchesCandidate,
-		paradigmSlotGroups,
 		paradigmUnavailableMessage
 	} from '$lib/paradigm-ui';
-	import type {
-		LearningConcept,
-		LearningFosterBridge,
-		LearningNativeGateway,
-		ParadigmResolutionCandidate
-	} from '$lib/paradigm-resolution';
+	import type { ParadigmResolutionCandidate } from '$lib/paradigm-resolution';
+	import { paradigmCandidateKey, paradigmRequestUrl } from '$lib/desk-paradigm';
 	import {
 		isSingleWord,
 		languageModes,
@@ -98,11 +93,12 @@
 		wordIndexItemLookupTarget,
 		wordIndexSectionLookupTarget
 	} from '$lib/word-index';
-	import DeskColophonPanel from '$lib/DeskColophonPanel.svelte';
 	import DeskHeroSearch from '$lib/DeskHeroSearch.svelte';
 	import DeskMotdFolio from '$lib/DeskMotdFolio.svelte';
-	import DeskPulseWidget from '$lib/DeskPulseWidget.svelte';
-	import DeskSourceControls from '$lib/DeskSourceControls.svelte';
+	import DeskLookupResults from '$lib/DeskLookupResults.svelte';
+	import DeskPageShell from '$lib/DeskPageShell.svelte';
+	import DeskSidebar from '$lib/DeskSidebar.svelte';
+	import DeskTopbar from '$lib/DeskTopbar.svelte';
 	import type {
 		WordIndexItem,
 		WordIndexNeighborhoodGroup,
@@ -110,6 +106,7 @@
 		WordIndexSection,
 		WordIndexSectionsResponse
 	} from '$lib/word-index';
+	import DeskActivityLedger from '$lib/DeskActivityLedger.svelte';
 
 	const toolStyle: Record<ToolId, { accent: string; badge: string }> = {
 		cdsl: { accent: 'border-l-secondary', badge: 'badge-secondary' },
@@ -127,7 +124,6 @@
 	};
 
 	const simulatedLookupDelayMs = 900;
-	const loadingSteps = uiCopy.search.loadingSteps;
 	const motdSkeletonRows = [0, 1, 2];
 	const motdStorageKey = 'orion-motd-cache:v5';
 	const deskStorageKey = 'orion-desk-state:v5';
@@ -158,30 +154,6 @@
 	type Mnemonic = {
 		Icon: typeof Bird;
 		name: string;
-	};
-
-	type StoredDeskState = {
-		version: 5;
-		expiresAt: number;
-		routeKey: string;
-		language: LanguageMode;
-		query: string;
-		backendMode: SearchBackend;
-		translationMode: TranslationMode;
-		theme: 'manuscript' | 'vespers';
-		lookupTools: ToolId[];
-		visibleTools: ToolId[];
-		encounter: EncounterResult | null;
-		textLayers: Record<string, 'reader' | 'source'>;
-		expandedSections: Record<string, boolean>;
-		collapsedBranches: Record<string, boolean>;
-		wordIndex?: WordIndexResponse | null;
-		wordIndexSections?: WordIndexSectionsResponse | null;
-	};
-
-	type StoredWordIndexEarmarks = {
-		version: 1;
-		items: WordIndexItem[];
 	};
 
 	type WordIndexRow = {
@@ -258,6 +230,7 @@
 	let expandedSections = $state<Record<string, boolean>>({});
 	let collapsedBranches = $state<Record<string, boolean>>({});
 	let sidebarFullHeight = $state(false);
+	let deskActivityElapsed = $state<Partial<Record<DeskActivityKey, number>>>({});
 	let routeLoadRequested = $state(false);
 	let routePrefillOnly = $state(false);
 	let activeSearchId = 0;
@@ -272,6 +245,9 @@
 	let wordIndexRequestId = 0;
 	let dictionaryWitnessesSection: HTMLElement | null = null;
 	let translationArrivalTimer: ReturnType<typeof setTimeout> | null = null;
+	const deskLoadingTimers = createDeskLoadingTimers((kind, seconds) => {
+		deskActivityElapsed = { ...deskActivityElapsed, [kind]: seconds };
+	});
 
 	let availableTools = $derived(toolsForLanguage(language));
 	let returnedToolIds = $derived(
@@ -299,6 +275,23 @@
 	);
 	let isAllLookupSelected = $derived(lookupTools.length === availableTools.length);
 	let motdPending = $derived(motdLoading && !motd && !motdError);
+	let hasTranslationActivity = $derived(
+		enrichingTranslations || Object.values(translationRetrying).some(Boolean)
+	);
+	let hasParadigmActivity = $derived(Object.values(paradigmLoading).some(Boolean));
+	let deskActivityRows = $derived(
+		deskActivityItems({
+			active: {
+				lookup: loading,
+				translation: hasTranslationActivity,
+				wordIndex: wordIndexLoading,
+				wordIndexSections: wordIndexSectionsLoading,
+				motd: motdLoading || motdRefreshing,
+				paradigm: hasParadigmActivity
+			},
+			elapsed: deskActivityElapsed
+		})
+	);
 	let motdItems = $derived(motd?.items.filter(isPresentableMotdItem) ?? []);
 	let motdVisibleWarnings = $derived(
 		motd?.warnings.filter((warning) => shouldShowMotdWarning(warning.message)) ?? []
@@ -332,7 +325,66 @@
 		)
 	);
 	let paradigmCandidates = $derived(paradigmCandidateCuration.visible);
-	let hasParadigmCandidates = $derived(paradigmCandidates.length > 0);
+
+	const componentLedgerHelpers = {
+		countLabel,
+		componentPrimaryTool,
+		componentToolIds,
+		componentHeadwordDisplay,
+		componentLookupLine,
+		componentCanSwitchTextLayer,
+		componentLayerIsSource,
+		setComponentTextLayer,
+		componentSourceLayerLabel,
+		componentHasTranslationToggle,
+		componentAwaitsReaderTranslation,
+		componentTranslationModel,
+		componentMeaningSegments,
+		componentMeaningCanToggle,
+		componentMeaningToggleLabel,
+		componentMeaningKey,
+		componentMeaningSourceLabel,
+		toggleComponentMeaning,
+		toolMeta,
+		toolMnemonic,
+		translationModelLabel
+	};
+
+	const dictionaryGroupHelpers = {
+		countLabel,
+		groupHeadwordDisplay,
+		groupLead,
+		groupToolIds,
+		groupWitnesses,
+		readerEntryLabel,
+		groupCanSwitchTextLayer,
+		groupLayerIsSource,
+		groupHasReaderTranslation,
+		setGroupTextLayer,
+		groupSourceLayerLabel,
+		groupTranslationModel,
+		groupHasTranslationToggle,
+		groupAwaitsReaderTranslation,
+		retryableGroupTranslation,
+		groupTranslationRetrying,
+		retryGroupTranslation,
+		visibleGroupBuckets,
+		sectionSegments,
+		sectionHasTreeChildren,
+		sectionId,
+		readerSectionClass,
+		readerSectionStyle,
+		branchToggleLabel,
+		toggleBranchCollapse,
+		sectionExpansionKey,
+		sectionCanToggle,
+		sectionToggleLabel,
+		toggleSectionExpansion,
+		sectionShowsReturnedEndingNote,
+		toolMeta,
+		toolMnemonic,
+		translationModelLabel
+	};
 
 	$effect(() => {
 		if (!browser || !routeStateReady) return;
@@ -633,101 +685,27 @@
 
 	function readStoredMotd(): { result: WordRecommendationResult | null; stale: boolean } {
 		if (!browser) return { result: null, stale: false };
-
-		try {
-			const raw = localStorage.getItem(motdStorageKey);
-			if (!raw) return { result: null, stale: false };
-
-			const stored = JSON.parse(raw) as Partial<StoredMotd>;
-			const status = storedMotdStatus(stored);
-			if (status === 'invalid') {
-				localStorage.removeItem(motdStorageKey);
-				return { result: null, stale: false };
-			}
-
-			if (!stored.result) return { result: null, stale: false };
-			const result = normalizeMotdResult(stored.result);
-			if (!result.items.length) {
-				localStorage.removeItem(motdStorageKey);
-				return { result: null, stale: false };
-			}
-			return { result, stale: status === 'stale' };
-		} catch {
-			localStorage.removeItem(motdStorageKey);
-			return { result: null, stale: false };
-		}
+		return readStoredMotdFromStorage(localStorage, motdStorageKey, normalizeMotdResult);
 	}
 
 	function saveMotdToLocalStorage(result: WordRecommendationResult) {
-		if (!browser || !result.items.length) return;
-
-		const ttlMs = motdTtlMs(result.suggested_ttl_seconds);
-		const stored: StoredMotd = {
-			version: 3,
-			savedAt: Date.now(),
-			expiresAt: Date.now() + ttlMs,
-			kind: 'current',
-			result
-		};
-
-		try {
-			localStorage.setItem(motdStorageKey, JSON.stringify(stored));
-		} catch {
-			// localStorage may be unavailable or full; the app can still use the API path.
-		}
+		if (!browser) return;
+		saveStoredMotd(localStorage, motdStorageKey, result);
 	}
 
 	function readStoredWordIndexEarmarks() {
 		if (!browser) return [];
-
-		try {
-			const raw = localStorage.getItem(wordIndexStorageKey);
-			if (!raw) return [];
-
-			const stored = JSON.parse(raw) as Partial<StoredWordIndexEarmarks>;
-			if (stored.version !== 1 || !Array.isArray(stored.items)) {
-				localStorage.removeItem(wordIndexStorageKey);
-				return [];
-			}
-
-			return stored.items.filter((item) => Boolean(item?.encounter?.q)).slice(0, 18);
-		} catch {
-			localStorage.removeItem(wordIndexStorageKey);
-			return [];
-		}
+		return readStoredWordIndexEarmarksFromStorage(localStorage, wordIndexStorageKey);
 	}
 
 	function saveWordIndexEarmarks() {
 		if (!browser) return;
-
-		try {
-			localStorage.setItem(
-				wordIndexStorageKey,
-				JSON.stringify({ version: 1, items: wordIndexEarmarks } satisfies StoredWordIndexEarmarks)
-			);
-		} catch {
-			// Earmarks are a reader convenience; failure must not affect lookup.
-		}
+		saveStoredWordIndexEarmarks(localStorage, wordIndexStorageKey, wordIndexEarmarks);
 	}
 
 	function readStoredDeskState() {
 		if (!browser) return null;
-
-		try {
-			const raw = sessionStorage.getItem(deskStorageKey);
-			if (!raw) return null;
-
-			const stored = JSON.parse(raw) as Partial<StoredDeskState>;
-			if (stored.version !== 5 || !stored.expiresAt || stored.expiresAt <= Date.now()) {
-				sessionStorage.removeItem(deskStorageKey);
-				return null;
-			}
-
-			return stored;
-		} catch {
-			sessionStorage.removeItem(deskStorageKey);
-			return null;
-		}
+		return readStoredDeskStateFromStorage(sessionStorage, deskStorageKey);
 	}
 
 	function saveDeskStateToSessionStorage() {
@@ -757,49 +735,34 @@
 			wordIndexSections
 		};
 
-		try {
-			sessionStorage.setItem(deskStorageKey, JSON.stringify(stored));
-		} catch {
-			// Long dictionary entries can exceed browser storage limits; hard links still work.
-		}
+		saveStoredDeskState(sessionStorage, deskStorageKey, stored);
 	}
 
 	function clearStoredDeskState() {
 		if (!browser) return;
-
-		try {
-			sessionStorage.removeItem(deskStorageKey);
-			sessionStorage.removeItem('orion-desk-state:v4');
-			sessionStorage.removeItem('orion-desk-state:v3');
-			sessionStorage.removeItem('orion-desk-state:v2');
-			sessionStorage.removeItem('orion-desk-state:v1');
-		} catch {
-			// Ignore storage failures.
-		}
+		clearStorageKeys(sessionStorage, [
+			deskStorageKey,
+			'orion-desk-state:v4',
+			'orion-desk-state:v3',
+			'orion-desk-state:v2',
+			'orion-desk-state:v1'
+		]);
 	}
 
 	function clearStoredMotdState() {
 		if (!browser) return;
-
-		try {
-			localStorage.removeItem(motdStorageKey);
-			localStorage.removeItem('orion-motd-cache:v4');
-			localStorage.removeItem('orion-motd-cache:v3');
-			localStorage.removeItem('orion-motd-cache:v2');
-			localStorage.removeItem('orion-motd-cache:v1');
-		} catch {
-			// Ignore storage failures.
-		}
+		clearStorageKeys(localStorage, [
+			motdStorageKey,
+			'orion-motd-cache:v4',
+			'orion-motd-cache:v3',
+			'orion-motd-cache:v2',
+			'orion-motd-cache:v1'
+		]);
 	}
 
 	function clearStoredWordIndexState() {
 		if (!browser) return;
-
-		try {
-			localStorage.removeItem(wordIndexStorageKey);
-		} catch {
-			// Ignore storage failures.
-		}
+		clearStorageKeys(localStorage, [wordIndexStorageKey]);
 	}
 
 	function clearStoredThemeState() {
@@ -821,12 +784,12 @@
 	}
 
 	function currentRouteKey() {
-		return JSON.stringify({
+		return currentDeskRouteKey({
 			language,
-			query: query.trim().toLowerCase(),
+			query,
 			backendMode,
 			translationMode,
-			lookupTools: [...lookupTools].sort()
+			lookupTools
 		});
 	}
 
@@ -1367,207 +1330,6 @@
 		void loadBrowseWordIndex(anchor.query, anchor.language);
 	}
 
-	function paradigmCandidateKey(candidate: ParadigmResolutionCandidate) {
-		if (candidate.paradigm_request) return paradigmRequestKey(candidate.paradigm_request);
-		return [
-			candidate.lemma,
-			candidate.entry_type,
-			candidate.part_of_speech,
-			candidate.paradigm_kind,
-			candidate.unresolved_reason ?? 'unresolved'
-		].join(':');
-	}
-
-	function paradigmCandidateTitle(candidate: ParadigmResolutionCandidate) {
-		const kind =
-			candidate.paradigm_kind && candidate.paradigm_kind !== 'unknown'
-				? candidate.paradigm_kind
-				: 'form';
-		const label = learnerDisplayForm(candidate.lemma || encounter?.query || 'form');
-		return `${label || 'form'} ${kind}`;
-	}
-
-	function paradigmCandidateSubtitle(candidate: ParadigmResolutionCandidate) {
-		return [
-			candidate.observed_form ? `form ${learnerDisplayForm(candidate.observed_form)}` : '',
-			candidate.part_of_speech && candidate.part_of_speech !== 'unknown'
-				? candidate.part_of_speech
-				: '',
-			candidate.entry_type && candidate.entry_type !== 'unknown' ? candidate.entry_type : '',
-			candidate.foster_display,
-			candidate.ranking_reasons.includes('ambiguous-analysis') ? 'ambiguous analysis' : '',
-			candidate.confidence ? `${candidate.confidence} confidence` : ''
-		]
-			.filter(Boolean)
-			.join(' · ');
-	}
-
-	function paradigmFeatureEntries(candidate: ParadigmResolutionCandidate) {
-		const seen = new Set<string>();
-		const entries: { key: string; value: string }[] = [];
-
-		for (const analysis of candidate.native_analyses) {
-			for (const [key, value] of Object.entries(analysis.features)) {
-				const label = paradigmFeatureLabel(key);
-				const display = paradigmFeatureValue(value);
-				const entryKey = `${label}:${display}`;
-				if (!display || display === 'unknown' || seen.has(entryKey)) continue;
-				seen.add(entryKey);
-				entries.push({ key: label, value: display });
-			}
-		}
-
-		return entries;
-	}
-
-	function paradigmFunctionalLabels(candidate: ParadigmResolutionCandidate) {
-		return [
-			...new Set(
-				candidate.functional_analyses
-					.map((analysis) => paradigmRelationLabel(analysis.relation))
-					.filter((label) => label && label !== 'unknown')
-			)
-		];
-	}
-
-	function learningConcepts(candidate: ParadigmResolutionCandidate) {
-		return candidate.learning_overlay?.concepts ?? [];
-	}
-
-	function learningPrimarySummary(candidate: ParadigmResolutionCandidate) {
-		const overlay = candidate.learning_overlay;
-		const caseConcept =
-			overlay?.concepts.find((concept) => concept.kind === 'case') ?? overlay?.concepts[0];
-		if (candidate.display_summary) return learnerDisplayForm(candidate.display_summary);
-		if (caseConcept?.plain_english) return caseConcept.plain_english;
-		return candidate.foster_display || '';
-	}
-
-	function learningGatewayTitle(concepts: LearningConcept[]) {
-		return learningPrimaryConcept(concepts)?.foster_gateway || '';
-	}
-
-	function learningPrimaryConcept(concepts: LearningConcept[]) {
-		const priority = ['case', 'person', 'tense', 'mood', 'voice', 'number', 'gender', 'process'];
-		return (
-			[...concepts].sort(
-				(left, right) =>
-					conceptPriority(left.kind, priority) - conceptPriority(right.kind, priority)
-			)[0] ?? null
-		);
-	}
-
-	function conceptPriority(kind: string, priority: string[]) {
-		const index = priority.indexOf(kind);
-		return index === -1 ? priority.length : index;
-	}
-
-	function learningNativeGateways(
-		concepts: LearningConcept[],
-		targetLanguage: LanguageMode = language
-	) {
-		const seen = new Set<string>();
-		const gateways: LearningNativeGateway[] = [];
-		const primaryConcept = learningPrimaryConcept(concepts);
-		for (const concept of primaryConcept ? [primaryConcept] : concepts) {
-			const nativeGateways = concept.native_gateways.length
-				? concept.native_gateways
-				: derivedNativeGateways(concept, targetLanguage);
-			for (const gateway of nativeGateways) {
-				if (gateway.language !== targetLanguage) continue;
-				if (!gateway.term) continue;
-				const key = `${gateway.language}:${gateway.term}:${gateway.role}`;
-				if (seen.has(key)) continue;
-				seen.add(key);
-				gateways.push(gateway);
-			}
-		}
-		return gateways.slice(0, 1);
-	}
-
-	function candidateLearningLanguage(candidate: ParadigmResolutionCandidate): LanguageMode {
-		return (
-			candidate.paradigm_request?.language ??
-			candidate.native_analyses.find((analysis) => analysis.language)?.language ??
-			encounter?.language ??
-			language
-		);
-	}
-
-	function derivedNativeGateways(
-		concept: LearningConcept,
-		targetLanguage: LanguageMode
-	): LearningNativeGateway[] {
-		const labels = {
-			grc: 'Greek',
-			lat: 'Latin',
-			san: 'Sanskrit'
-		} as const;
-		return [targetLanguage]
-			.map((language) => {
-				const term = concept.traditional[language] ?? '';
-				const role =
-					language === 'san'
-						? (concept.traditional.san_role ?? concept.traditional.san_process ?? '')
-						: '';
-				return {
-					language,
-					label: labels[language],
-					term,
-					role,
-					foster_gateway: concept.foster_gateway,
-					explanation: `${labels[language]} gateway: ${term}; LangNet uses ${concept.foster_gateway} as the learner gateway.`
-				};
-			})
-			.filter((gateway) => gateway.term);
-	}
-
-	function learningFosterBridges(concepts: LearningConcept[]) {
-		const primaryConcept = learningPrimaryConcept(concepts);
-		const byId = new Map<string, LearningFosterBridge>();
-		for (const concept of primaryConcept ? [primaryConcept] : concepts) {
-			for (const bridge of concept.foster_bridges) {
-				if (bridge.id) byId.set(bridge.id, bridge);
-			}
-		}
-		return [...byId.values()]
-			.sort(
-				(left, right) =>
-					Number(right.status !== 'aggregate_candidate') -
-					Number(left.status !== 'aggregate_candidate')
-			)
-			.slice(0, 1);
-	}
-
-	function paradigmFeatureLabel(value: string) {
-		return value.replace(/_/g, ' ');
-	}
-
-	function paradigmFeatureValue(value: unknown) {
-		if (value === null || value === undefined || value === '') return '';
-		return String(value).replace(/_/g, ' ');
-	}
-
-	function paradigmRelationLabel(value: string) {
-		return value.replace(/_/g, ' ');
-	}
-
-	function paradigmRequestUrl(candidate: ParadigmResolutionCandidate) {
-		const request = candidate.paradigm_request;
-		if (!request) return '';
-		const params = new URLSearchParams({
-			language: request.language,
-			lemma: request.lemma,
-			kind: request.kind,
-			timeout_ms: '120000'
-		});
-		const gender = request.options.gender;
-		const presentClass = request.options.class;
-		if (typeof gender === 'string' && gender) params.set('gender', gender);
-		if (typeof presentClass === 'string' && presentClass) params.set('class', presentClass);
-		return `/api/paradigm?${params.toString()}`;
-	}
-
 	async function loadParadigm(candidate: ParadigmResolutionCandidate) {
 		const key = paradigmCandidateKey(candidate);
 		if (!candidate.paradigm_request || paradigmPayloads[key] || paradigmLoading[key]) return;
@@ -1592,54 +1354,6 @@
 		} finally {
 			paradigmLoading = { ...paradigmLoading, [key]: false };
 		}
-	}
-
-	function paradigmSlotFeatureSummary(features: Record<string, unknown>) {
-		return Object.entries(features)
-			.map(([key, value]) => `${paradigmFeatureLabel(key)} ${paradigmFeatureValue(value)}`.trim())
-			.filter(Boolean)
-			.join(' · ');
-	}
-
-	function paradigmTableLearningTitle(candidate: ParadigmResolutionCandidate) {
-		if (candidate.paradigm_kind === 'declension') return 'Reading a declension table';
-		if (candidate.paradigm_kind === 'conjugation') return 'Reading a conjugation table';
-		return 'Reading a form table';
-	}
-
-	function paradigmTableLearningSummary(
-		candidate: ParadigmResolutionCandidate,
-		block: ParadigmBlock
-	) {
-		const dimensionText = block.dimensions.map(paradigmFeatureLabel).join(', ');
-		if (candidate.paradigm_kind === 'declension') {
-			return `This table maps noun-form jobs. ${dimensionText || 'The listed features'} tell what role, count, and agreement shape a form can carry.`;
-		}
-		if (candidate.paradigm_kind === 'conjugation') {
-			return `This table maps verb-form jobs. ${dimensionText || 'The listed features'} tell who acts, when or how the action is framed, and how the action relates to its subject.`;
-		}
-		return `This table maps possible forms by ${dimensionText || 'their grammatical features'}.`;
-	}
-
-	function paradigmTableAxisNotes(block: ParadigmBlock) {
-		return block.dimensions.map((dimension) => ({
-			label: paradigmFeatureLabel(dimension),
-			note: paradigmDimensionNote(dimension)
-		}));
-	}
-
-	function paradigmDimensionNote(dimension: string) {
-		const notes: Record<string, string> = {
-			case: 'job in the expression',
-			number: 'one, two, or many',
-			gender: 'agreement class',
-			person: 'speaker, addressee, or other',
-			tense: 'time or verbal frame',
-			mood: 'mode of statement',
-			voice: 'action relation',
-			degree: 'comparison level'
-		};
-		return notes[dimension] ?? 'form feature';
 	}
 
 	function wordIndexDisplay(item: WordIndexItem) {
@@ -1906,25 +1620,25 @@
 	}
 
 	function isClearRouteState(includeLoad = false) {
-		return (
-			!includeLoad &&
-			language === 'san' &&
-			!query.trim() &&
-			backendMode === 'cli' &&
-			translationMode === 'auto' &&
-			theme === 'manuscript' &&
-			lookupTools.length === toolsForLanguage('san').length &&
-			lookupTools.every((tool) => toolsForLanguage('san').some(({ id }) => id === tool)) &&
-			!encounter &&
-			!visibleTools.length &&
-			!Object.keys(textLayers).length &&
-			!Object.keys(expandedSections).length &&
-			!Object.keys(collapsedBranches).length &&
-			!pendingVisibleToolsFromRoute?.length &&
-			!pendingSourceLayersFromRoute.length &&
-			!pendingExpandedSectionsFromRoute.length &&
-			!pendingCollapsedBranchesFromRoute.length
-		);
+		return isClearDeskRouteState({
+			includeLoad,
+			language,
+			query,
+			backendMode,
+			translationMode,
+			theme,
+			lookupTools,
+			defaultTools: toolsForLanguage('san').map(({ id }) => id),
+			hasEncounter: Boolean(encounter),
+			visibleTools,
+			textLayers,
+			expandedSections,
+			collapsedBranches,
+			pendingVisibleTools: pendingVisibleToolsFromRoute ?? [],
+			pendingSourceLayers: pendingSourceLayersFromRoute,
+			pendingExpandedSections: pendingExpandedSectionsFromRoute,
+			pendingCollapsedBranches: pendingCollapsedBranchesFromRoute
+		});
 	}
 
 	function queueRouteStateSync() {
@@ -2046,31 +1760,6 @@
 		}
 	}
 
-	function routeShouldLoad(params: URLSearchParams) {
-		const value = params.get('load')?.toLowerCase();
-		if (routePrefillOnlyRequested(params)) return false;
-		if (value === 'yes' || value === 'true' || value === '1') return true;
-		return Boolean(params.get('q')?.trim());
-	}
-
-	function routeExplicitlyRequestsLoad(params: URLSearchParams) {
-		const value = params.get('load')?.toLowerCase();
-		return value === 'yes' || value === 'true' || value === '1';
-	}
-
-	function routePrefillOnlyRequested(params: URLSearchParams) {
-		const loadValue = params.get('load')?.toLowerCase();
-		const prefillValue = params.get('prefill')?.toLowerCase();
-		return (
-			loadValue === 'no' ||
-			loadValue === 'false' ||
-			loadValue === '0' ||
-			prefillValue === 'yes' ||
-			prefillValue === 'true' ||
-			prefillValue === '1'
-		);
-	}
-
 	function clearPendingRouteState() {
 		pendingVisibleToolsFromRoute = null;
 		pendingSourceLayersFromRoute = [];
@@ -2106,31 +1795,6 @@
 		paradigmPayloads = {};
 		paradigmLoading = {};
 		paradigmErrors = {};
-	}
-
-	function readLanguageParam(params: URLSearchParams) {
-		const requestedLanguage = params.get('lang') ?? params.get('language');
-		return languageModes.some((mode) => mode.id === requestedLanguage)
-			? (requestedLanguage as LanguageMode)
-			: null;
-	}
-
-	function readToolParams(params: URLSearchParams, name: string, validTools: ToolId[]) {
-		const values = readRouteList(params, name);
-		if (!values.length) return null;
-		if (values.includes('all')) return validTools;
-
-		const validToolSet = new Set(validTools);
-		const parsed = values.filter((value): value is ToolId => validToolSet.has(value as ToolId));
-		return parsed.length ? [...new Set(parsed)] : null;
-	}
-
-	function readRouteList(params: URLSearchParams, name: string) {
-		return params
-			.getAll(name)
-			.flatMap((value) => value.split(','))
-			.map((value) => value.trim())
-			.filter(Boolean);
 	}
 
 	function delay(milliseconds: number) {
@@ -2882,15 +2546,6 @@
 		});
 	}
 
-	function illuminatedTitleClass(title: HeadwordDisplay['title']) {
-		const base = 'orion-illuminated-title font-serif text-3xl leading-tight';
-		if (!title) return base;
-		if (title.script === 'devanagari') {
-			return `${base} orion-illuminated-title-explicit orion-illuminated-title-devanagari`;
-		}
-		return `${base} orion-illuminated-title-explicit`;
-	}
-
 	function componentLookupLine(component: EncounterComponent) {
 		const terms = component.lookup_terms.length
 			? component.lookup_terms.join(', ')
@@ -3379,6 +3034,10 @@
 		localStorage.setItem('orion-theme', nextTheme);
 	}
 
+	function setTranslationMode(nextMode: TranslationMode) {
+		translationMode = nextMode;
+	}
+
 	function handleSidebarWheel(event: WheelEvent) {
 		if (!window.matchMedia('(min-width: 64rem)').matches) return;
 
@@ -3395,6 +3054,28 @@
 			event.preventDefault();
 		}
 	}
+
+	function setDictionaryWitnessesSection(element: HTMLElement | null) {
+		dictionaryWitnessesSection = element;
+	}
+
+	function syncDeskActivityTimer(kind: DeskActivityKey, active: boolean) {
+		if (active) {
+			if (!deskLoadingTimers.isRunning(kind)) deskLoadingTimers.start(kind);
+			return;
+		}
+
+		deskLoadingTimers.stop(kind);
+	}
+
+	$effect(() => {
+		syncDeskActivityTimer('lookup', loading);
+		syncDeskActivityTimer('translation', hasTranslationActivity);
+		syncDeskActivityTimer('wordIndex', wordIndexLoading);
+		syncDeskActivityTimer('wordIndexSections', wordIndexSectionsLoading);
+		syncDeskActivityTimer('motd', motdLoading || motdRefreshing);
+		syncDeskActivityTimer('paradigm', hasParadigmActivity);
+	});
 
 	onMount(() => {
 		const savedTheme = localStorage.getItem('orion-theme');
@@ -3417,6 +3098,7 @@
 		return () => {
 			abortMotdRequest();
 			clearTranslationArrival();
+			deskLoadingTimers.stopAll();
 			window.removeEventListener('scroll', syncSidebarHeight);
 			window.removeEventListener('popstate', hydrateRouteStateFromUrl);
 		};
@@ -3428,1084 +3110,153 @@
 	<meta name="description" content={uiCopy.app.description} />
 </svelte:head>
 
-<main class="orion-page bg-base-200 text-base-content min-h-screen" data-theme={theme}>
-	<header class="navbar border-base-300 bg-base-100 border-b px-4 lg:px-8">
-		<div class="min-w-0 flex-1">
-			<div class="flex items-center gap-3">
-				<a
-					href="/"
-					class="orion-home-seal grid h-10 w-10 place-items-center rounded transition-opacity hover:opacity-85"
-					aria-label={uiCopy.nav.homeAria}
-					onclick={handleHomeNavigation}
-				>
-					<Telescope size={21} />
-				</a>
-				<div class="min-w-0">
-					<div class="truncate text-base font-semibold">{uiCopy.app.name}</div>
-					<div class="text-base-content/60 truncate text-sm">
-						{uiCopy.app.motto}
-					</div>
-				</div>
-			</div>
-		</div>
+<DeskPageShell {theme}>
+	<DeskHeroSearch
+		{language}
+		{query}
+		{loading}
+		{searchRomanization}
+		{languageLabel}
+		statusDetail={currentStatusDetail()}
+		onSelectLanguage={selectLanguage}
+		onQueryInput={handleHeroQueryInput}
+		onSubmit={handleSubmit}
+		onClear={clearSearchDesk}
+	/>
 
-		<div class="hidden items-center gap-3 md:flex">
-			<a class="btn btn-sm btn-ghost" href="/reader">
-				<BookOpen size={15} />
-				Reader
-			</a>
-			<a class="btn btn-sm btn-ghost" href="/learn">
-				<Sparkles size={15} />
-				Learn
-			</a>
+	<DeskActivityLedger items={deskActivityRows} />
 
-			<label class="orion-topbar-control">
-				<span>{uiCopy.readerLayer.label}</span>
-				<select
-					class="select select-xs border-base-300 bg-base-100"
-					aria-label={uiCopy.readerLayer.modeAria}
-					bind:value={translationMode}
-				>
-					<option value="auto">auto</option>
-					<option value="cache">cache</option>
-					<option value="off">off</option>
-					<option value="populate">populate</option>
-				</select>
-				{#if enrichingTranslations}
-					<span
-						class="loading loading-spinner loading-xs"
-						aria-label={uiCopy.readerLayer.loadingAria}
-					></span>
-				{/if}
-			</label>
+	<DeskMotdFolio
+		{motd}
+		items={motdItems}
+		visibleWarnings={motdVisibleWarnings}
+		pending={motdPending}
+		refreshing={motdRefreshing}
+		error={motdError}
+		linksLoad={motdLinksLoad}
+		skeletonRows={motdSkeletonRows}
+		{languageLabel}
+		{isActiveMotd}
+		{motdHref}
+		{motdWordClass}
+		{motdWordLang}
+		{motdDisplayWord}
+		{motdDisplayLookup}
+		{motdDisplayGloss}
+		{motdDisplayNote}
+		onToggleLinksLoad={() => {
+			motdLinksLoad = !motdLinksLoad;
+		}}
+		onRefresh={() => void loadMotd(true)}
+		onNavigate={handleMotdNavigation}
+	/>
 
-			<div class="stats stats-horizontal border-base-300 bg-base-100 border shadow-none">
-				<div class="stat px-4 py-2">
-					<div class="stat-title text-xs">{uiCopy.nav.languageStat}</div>
-					<div class="stat-value text-lg">{languageLabel(language)}</div>
-				</div>
-				<div class="stat px-4 py-2">
-					<div class="stat-title text-xs">{uiCopy.nav.statusStat}</div>
-					<div class="stat-value text-lg">{currentStatusLabel()}</div>
-				</div>
-			</div>
+	<DeskLookupResults
+		{errorMessage}
+		{enrichmentError}
+		{enrichingTranslations}
+		{encounter}
+		{loading}
+		{translationArrived}
+		{visibleComponents}
+		{visibleBucketGroups}
+		{textLayers}
+		{expandedSections}
+		{collapsedBranches}
+		{toolStyle}
+		{componentLedgerHelpers}
+		{dictionaryGroupHelpers}
+		{query}
+		languageName={languageLabel(language)}
+		allSourcesSelected={isAllLookupSelected}
+		lookupElapsedSeconds={deskActivityElapsed.lookup ?? 0}
+		{paradigmCandidates}
+		paradigmHiddenCount={paradigmCandidateCuration.hiddenCount}
+		{paradigmPayloads}
+		{paradigmLoading}
+		{paradigmErrors}
+		{countLabel}
+		onShowAllReturnedTools={showAllReturnedTools}
+		onLoadParadigm={loadParadigm}
+		onWitnessesElement={setDictionaryWitnessesSection}
+	/>
 
-			<div class="join">
-				<button
-					type="button"
-					class={theme === 'manuscript'
-						? 'btn btn-sm join-item btn-primary'
-						: 'btn btn-sm join-item'}
-					aria-label={uiCopy.theme.readerAria}
-					onclick={() => setTheme('manuscript')}
-				>
-					<Sun size={16} />
-					<span class="hidden lg:inline">{uiCopy.theme.reader}</span>
-				</button>
-				<button
-					type="button"
-					class={theme === 'vespers' ? 'btn btn-sm join-item btn-primary' : 'btn btn-sm join-item'}
-					aria-label={uiCopy.theme.nightAria}
-					onclick={() => setTheme('vespers')}
-				>
-					<Moon size={16} />
-					<span class="hidden lg:inline">{uiCopy.theme.night}</span>
-				</button>
-			</div>
-		</div>
-	</header>
+	{#snippet topbar()}
+		<DeskTopbar
+			{theme}
+			{language}
+			{translationMode}
+			{enrichingTranslations}
+			{languageLabel}
+			statusLabel={currentStatusLabel()}
+			onHomeNavigation={handleHomeNavigation}
+			onTranslationModeChange={setTranslationMode}
+			onSetTheme={setTheme}
+		/>
+	{/snippet}
 
-	<div
-		class="orion-page-shell mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,48rem)_21rem] lg:px-8"
-	>
-		<article class="min-w-0 space-y-6">
-			<DeskHeroSearch
-				{language}
-				{query}
-				{loading}
-				{searchRomanization}
-				{languageLabel}
-				statusDetail={currentStatusDetail()}
-				onSelectLanguage={selectLanguage}
-				onQueryInput={handleHeroQueryInput}
-				onSubmit={handleSubmit}
-				onClear={clearSearchDesk}
-			/>
-
-			<DeskMotdFolio
-				{motd}
-				items={motdItems}
-				visibleWarnings={motdVisibleWarnings}
-				pending={motdPending}
-				refreshing={motdRefreshing}
-				error={motdError}
-				linksLoad={motdLinksLoad}
-				skeletonRows={motdSkeletonRows}
-				{languageLabel}
-				{isActiveMotd}
-				{motdHref}
-				{motdWordClass}
-				{motdWordLang}
-				{motdDisplayWord}
-				{motdDisplayLookup}
-				{motdDisplayGloss}
-				{motdDisplayNote}
-				onToggleLinksLoad={() => {
-					motdLinksLoad = !motdLinksLoad;
-				}}
-				onRefresh={() => void loadMotd(true)}
-				onNavigate={handleMotdNavigation}
-			/>
-
-			{#if errorMessage}
-				<div class="alert alert-warning">
-					<Search size={18} />
-					<span>{errorMessage}</span>
-				</div>
-			{/if}
-
-			{#if enrichingTranslations && encounter}
-				<div class="alert alert-info">
-					<span class="loading loading-spinner loading-sm"></span>
-					<span>{uiCopy.translator.alert}</span>
-				</div>
-			{/if}
-
-			{#if enrichmentError}
-				<div class="alert alert-warning">
-					<Search size={18} />
-					<span>{uiCopy.translator.failed(enrichmentError)}</span>
-				</div>
-			{/if}
-
-			{#if !loading && encounter && visibleComponents.length}
-				<section class="orion-component-ledger">
-					<div class="orion-component-ledger-head">
-						<div>
-							<h2 class="font-serif text-2xl">{uiCopy.components.title}</h2>
-							<p>{uiCopy.components.intro}</p>
-						</div>
-						<span class="orion-component-count">
-							<span>{visibleComponents.length}</span>
-							<span>{visibleComponents.length === 1 ? 'member' : 'members'}</span>
-						</span>
-					</div>
-
-					<div class="orion-component-list">
-						{#each visibleComponents as component}
-							{@const componentTool = componentPrimaryTool(component)}
-							{@const ComponentIcon = toolMnemonic(componentTool).Icon}
-							{@const componentDisplay = componentHeadwordDisplay(component)}
-							<article class="orion-result-group orion-component-group">
-								<header class="orion-result-group-head">
-									<div class="min-w-0">
-										<div class="mb-2 flex flex-wrap items-center gap-2">
-											<span class="orion-source-beast" title={toolMnemonic(componentTool).name}>
-												<ComponentIcon size={16} />
-											</span>
-											<span class={`badge ${toolStyle[componentTool].badge}`}>
-												{toolMeta(componentTool).shortLabel}
-											</span>
-											<span class="badge badge-outline">member</span>
-										</div>
-										<div class="orion-entry-bookplate">
-											<h3
-												class={illuminatedTitleClass(componentDisplay.title)}
-												lang={componentDisplay.primaryLang}
-												aria-label={componentDisplay.title ? componentDisplay.primary : undefined}
-											>
-												{#if componentDisplay.title?.script === 'devanagari'}
-													<span class="orion-devanagari-title" aria-hidden="true">
-														<span class="orion-devanagari-initial">
-															<span class="orion-devanagari-initial-glyph">
-																{componentDisplay.title.initial}
-															</span>
-														</span>
-														{#if componentDisplay.title.rest}
-															<span class="orion-devanagari-connector"></span>
-															<span class="orion-devanagari-rest"
-																>{componentDisplay.title.rest}</span
-															>
-														{/if}
-													</span>
-												{:else if componentDisplay.title}
-													<span class="orion-plain-title" aria-hidden="true">
-														<span class="orion-plain-initial">
-															<span class="orion-plain-initial-glyph">
-																{componentDisplay.title.initial}
-															</span>
-														</span>
-														{#if componentDisplay.title.rest}
-															<span class="orion-plain-rest">{componentDisplay.title.rest}</span>
-														{/if}
-													</span>
-												{:else}
-													{componentDisplay.primary}
-												{/if}
-											</h3>
-											{#if componentDisplay.forms.length}
-												<div class="orion-headword-forms" aria-label="Headword forms">
-													{#each componentDisplay.forms as form}
-														<span class="orion-headword-form">
-															<span class="orion-headword-form-label">{form.label}</span>
-															{#if form.kind === 'code'}
-																<code>{form.value}</code>
-															{:else}
-																<span>{form.value}</span>
-															{/if}
-														</span>
-													{/each}
-												</div>
-											{/if}
-											<p class="orion-entry-lead">{componentLookupLine(component)}</p>
-										</div>
-										{#if component.analysis}
-											<p class="orion-entry-source-line">{component.analysis}</p>
-										{/if}
-									</div>
-									<div class="orion-entry-chrome">
-										<div class="orion-entry-source-strip">
-											{#each componentToolIds(component) as tool}
-												{@const ToolIcon = toolMnemonic(tool).Icon}
-												<span
-													class="orion-source-beast orion-source-beast-sm"
-													title={toolMnemonic(tool).name}
-												>
-													<ToolIcon size={14} />
-												</span>
-											{/each}
-											<span>{component.evidence.meanings.length} entries</span>
-											<span>{component.evidence.status || 'linked'}</span>
-										</div>
-
-										{#if componentCanSwitchTextLayer(component)}
-											<div class="flex shrink-0 flex-col items-end gap-1">
-												<div class="orion-layer-switch join">
-													<button
-														type="button"
-														class={componentLayerIsSource(component, textLayers)
-															? 'btn btn-xs join-item'
-															: 'btn btn-xs join-item btn-secondary'}
-														onclick={() => setComponentTextLayer(component, 'reader')}
-													>
-														Reader English
-													</button>
-													<button
-														type="button"
-														class={componentLayerIsSource(component, textLayers)
-															? 'btn btn-xs join-item btn-secondary'
-															: 'btn btn-xs join-item'}
-														onclick={() => setComponentTextLayer(component, 'source')}
-													>
-														{componentSourceLayerLabel(component)}
-													</button>
-												</div>
-												{#if translationModelLabel(componentTranslationModel(component))}
-													<div
-														class="text-base-content/50 flex items-center gap-1 text-[0.68rem] leading-none"
-													>
-														<span
-															>EN by {translationModelLabel(
-																componentTranslationModel(component)
-															)}</span
-														>
-													</div>
-												{/if}
-											</div>
-										{:else if componentHasTranslationToggle(component)}
-											<span class="badge badge-outline"
-												>{componentSourceLayerLabel(component)} only</span
-											>
-										{/if}
-										{#if componentAwaitsReaderTranslation(component)}
-											<span class="orion-translator-sigil" title={uiCopy.translator.title}>
-												<span>{uiCopy.translator.badge}</span>
-												<i></i><i></i><i></i>
-											</span>
-										{/if}
-									</div>
-								</header>
-
-								{#if component.evidence.error}
-									<div class="alert alert-warning text-sm">{component.evidence.error}</div>
-								{:else if component.evidence.meanings.length}
-									<div class={`orion-entry-reader ${toolStyle[componentTool].accent}`}>
-										<div class="orion-reader-sections">
-											{#each component.evidence.meanings as meaning}
-												{@const segments = componentMeaningSegments(
-													meaning,
-													textLayers,
-													expandedSections
-												)}
-												<section
-													class={`orion-reader-section orion-reader-section-${componentTool} orion-component-meaning`}
-												>
-													<div class="orion-reader-marker"></div>
-													<div>
-														<div class="orion-component-source">
-															{componentMeaningSourceLabel(meaning)}
-														</div>
-														<div class="orion-reader-copy">
-															{#each segments as gloss, segmentIndex}
-																<p>
-																	{gloss}
-																	{#if segmentIndex === segments.length - 1 && componentMeaningCanToggle(meaning, textLayers)}
-																		<button
-																			type="button"
-																			class="orion-section-detail-toggle"
-																			aria-label={componentMeaningToggleLabel(
-																				meaning,
-																				expandedSections
-																			)}
-																			title={componentMeaningToggleLabel(meaning, expandedSections)}
-																			onclick={() => toggleComponentMeaning(meaning)}
-																		>
-																			<ChevronDown
-																				size={12}
-																				class={expandedSections[componentMeaningKey(meaning)]
-																					? 'orion-chevron-open'
-																					: ''}
-																			/>
-																		</button>
-																	{/if}
-																</p>
-															{/each}
-														</div>
-													</div>
-												</section>
-											{/each}
-										</div>
-									</div>
-								{:else}
-									<div class="orion-component-empty">{uiCopy.components.empty}</div>
-								{/if}
-							</article>
-						{/each}
-					</div>
-				</section>
-			{/if}
-
-			<section
-				bind:this={dictionaryWitnessesSection}
-				class={translationArrived
-					? 'orion-dictionary-witnesses orion-translation-arrived space-y-4'
-					: 'orion-dictionary-witnesses space-y-4'}
-			>
-				<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<div>
-						<h2 class="font-serif text-3xl">{uiCopy.results.title}</h2>
-						<p class="text-base-content/60 text-sm">{uiCopy.results.intro}</p>
-					</div>
-					<div class="join">
-						<button type="button" class="btn btn-sm join-item" onclick={showAllReturnedTools}>
-							{uiCopy.results.all}
-						</button>
-						<button type="button" class="btn btn-sm join-item btn-ghost">
-							{countLabel(visibleBucketGroups.length, 'source group')}
-						</button>
-					</div>
-				</div>
-
-				{#if loading}
-					<section class="card orion-manuscript-panel">
-						<div class="card-body items-center gap-6 p-8 text-center">
-							<DeskPulseWidget />
-
-							<div class="max-w-xl">
-								<h3 class="font-serif text-3xl leading-tight">{uiCopy.search.loadingTitle}</h3>
-								<p class="text-base-content/65 mt-3 font-serif text-lg leading-7">
-									Looking up <em>{query.trim()}</em> in {languageLabel(language)} with
-									<code class="mx-1">dictionary={isAllLookupSelected ? 'all' : 'custom'}</code>.
-								</p>
-								<p class="text-base-content/60 mt-2 text-sm leading-6">
-									{uiCopy.search.coldSources}
-								</p>
-							</div>
-
-							<ul class="steps steps-vertical md:steps-horizontal w-full max-w-2xl">
-								{#each loadingSteps as step}
-									<li class="step step-primary">{step}</li>
-								{/each}
-							</ul>
-						</div>
-					</section>
-				{:else if encounter}
-					{#if hasParadigmCandidates}
-						<section class="orion-paradigm-panel orion-manuscript-panel">
-							<header class="orion-paradigm-head">
-								<div>
-									<h3>
-										<ScrollText size={18} />
-										Forms
-									</h3>
-									<p>
-										{learnerDisplayForm(encounter.paradigm_resolution?.searched_form)}
-										{#if encounter.paradigm_resolution?.normalized_form && learnerDisplayForm(encounter.paradigm_resolution.normalized_form) !== learnerDisplayForm(encounter.paradigm_resolution.searched_form)}
-											<span>
-												· {learnerDisplayForm(encounter.paradigm_resolution.normalized_form)}
-											</span>
-										{/if}
-									</p>
-								</div>
-								<span>{countLabel(paradigmCandidates.length, 'reading')}</span>
-							</header>
-
-							<div class="orion-paradigm-candidates">
-								{#each paradigmCandidates as candidate}
-									{@const candidateKey = paradigmCandidateKey(candidate)}
-									{@const features = paradigmFeatureEntries(candidate)}
-									{@const relations = paradigmFunctionalLabels(candidate)}
-									{@const learning = learningConcepts(candidate)}
-									{@const nativeGateways = learningNativeGateways(
-										learning,
-										candidateLearningLanguage(candidate)
-									)}
-									{@const fosterBridges = learningFosterBridges(learning)}
-									{@const paradigm = paradigmPayloads[candidateKey]}
-									<article class="orion-paradigm-card">
-										<div class="orion-paradigm-card-head">
-											<div>
-												<h4>{paradigmCandidateTitle(candidate)}</h4>
-												{#if paradigmCandidateSubtitle(candidate)}
-													<p>{paradigmCandidateSubtitle(candidate)}</p>
-												{/if}
-											</div>
-											{#if candidate.paradigm_request}
-												<button
-													type="button"
-													class="orion-paradigm-load"
-													disabled={Boolean(paradigmLoading[candidateKey] || paradigm)}
-													onclick={() => loadParadigm(candidate)}
-												>
-													{#if paradigmLoading[candidateKey]}
-														<span class="loading loading-spinner loading-xs"></span>
-													{/if}
-													{paradigm ? 'Table loaded' : 'Load table'}
-												</button>
-											{:else if candidate.unresolved_reason}
-												<span class="orion-paradigm-unresolved">
-													{paradigmRelationLabel(candidate.unresolved_reason)}
-												</span>
-											{/if}
-										</div>
-
-										{#if features.length || relations.length}
-											<div class="orion-paradigm-tags">
-												{#each features as feature}
-													<span><b>{feature.key}</b>{feature.value}</span>
-												{/each}
-												{#each relations as relation}
-													<span class="orion-paradigm-relation">{relation}</span>
-												{/each}
-											</div>
-										{/if}
-
-										{#if learning.length}
-											<section class="orion-learning-strip">
-												<div class="orion-learning-head">
-													<span>Learn this form</span>
-													<strong>{learningGatewayTitle(learning)}</strong>
-												</div>
-												{#if learningPrimarySummary(candidate)}
-													<p>{learningPrimarySummary(candidate)}</p>
-												{/if}
-												{#if nativeGateways.length}
-													<div class="orion-learning-chips">
-														{#each nativeGateways as gateway}
-															<span title={gateway.explanation}>
-																<b>{gateway.label}</b>
-																{gateway.term}
-																{#if gateway.role}<em>{gateway.role}</em>{/if}
-															</span>
-														{/each}
-													</div>
-												{/if}
-												{#if fosterBridges.length}
-													<div class="orion-learning-bridges">
-														{#each fosterBridges as bridge}
-															<span
-																class={bridge.status === 'aggregate_candidate'
-																	? 'orion-learning-bridge orion-learning-bridge-related'
-																	: 'orion-learning-bridge'}
-															>
-																<b>Try this</b>
-																{bridge.learner_action || bridge.plain_english}
-															</span>
-														{/each}
-													</div>
-												{/if}
-												<a class="orion-learning-open" href="/learn">Open the learning path</a>
-											</section>
-										{/if}
-
-										{#if paradigmErrors[candidateKey]}
-											<div class="orion-paradigm-warning">{paradigmErrors[candidateKey]}</div>
-										{/if}
-
-										{#if paradigm}
-											<div class="orion-paradigm-tables">
-												{#each paradigm.paradigms as block}
-													{@const slotGroups = paradigmSlotGroups(block)}
-													{@const axisNotes = paradigmTableAxisNotes(block)}
-													<section class="orion-paradigm-table">
-														<div class="orion-paradigm-table-head">
-															<span>{block.label}</span>
-															<small>{block.dimensions.join(' · ')}</small>
-														</div>
-														<section class="orion-table-learning">
-															<div class="orion-table-learning-head">
-																<span>{paradigmTableLearningTitle(candidate)}</span>
-																<p>{paradigmTableLearningSummary(candidate, block)}</p>
-															</div>
-															{#if axisNotes.length}
-																<div class="orion-table-axis-notes">
-																	{#each axisNotes as axis}
-																		<span><b>{axis.label}</b>{axis.note}</span>
-																	{/each}
-																</div>
-															{/if}
-														</section>
-														<div class="orion-paradigm-slot-groups">
-															{#each slotGroups as group}
-																<section class="orion-paradigm-slot-group">
-																	<h5>{group.label}</h5>
-																	<div class="orion-paradigm-slots">
-																		{#each group.slots as slot}
-																			<div
-																				class={paradigmSlotMatchesCandidate(
-																					slot,
-																					candidate,
-																					encounter?.query ?? ''
-																				)
-																					? 'orion-paradigm-slot orion-paradigm-slot-match'
-																					: 'orion-paradigm-slot'}
-																			>
-																				<span class="orion-paradigm-slot-feature">
-																					{paradigmSlotFeatureSummary(slot.features)}
-																				</span>
-																				<span class="orion-paradigm-slot-forms">
-																					{slot.forms.map((form) => form.text).join(', ')}
-																				</span>
-																			</div>
-																		{/each}
-																	</div>
-																</section>
-															{/each}
-														</div>
-													</section>
-												{/each}
-											</div>
-										{/if}
-									</article>
-								{/each}
-								{#if paradigmCandidateCuration.hiddenCount}
-									<p class="orion-paradigm-hidden-note">
-										{countLabel(paradigmCandidateCuration.hiddenCount, 'additional reading')}
-										held back from the first view.
-									</p>
-								{/if}
-							</div>
-						</section>
-					{/if}
-
-					{#each visibleBucketGroups as group}
-						{@const groupTool = toolMeta(group.toolId, encounter.language)}
-						{@const GroupIcon = toolMnemonic(group.toolId).Icon}
-						{@const headwordDisplay = groupHeadwordDisplay(group)}
-
-						<section class="orion-result-group">
-							<div class="orion-result-group-head">
-								<div class="min-w-0">
-									<div class="mb-2 flex flex-wrap items-center gap-2">
-										<span class="orion-source-beast" title={toolMnemonic(group.toolId).name}>
-											<GroupIcon size={16} />
-										</span>
-										<span class={`badge ${toolStyle[group.toolId].badge}`}>
-											{groupTool.shortLabel}
-										</span>
-									</div>
-									<div class="orion-entry-bookplate">
-										<h3
-											class={illuminatedTitleClass(headwordDisplay.title)}
-											lang={headwordDisplay.primaryLang}
-											aria-label={headwordDisplay.title ? headwordDisplay.primary : undefined}
-										>
-											{#if headwordDisplay.title?.script === 'devanagari'}
-												<span class="orion-devanagari-title" aria-hidden="true">
-													<span class="orion-devanagari-initial">
-														<span class="orion-devanagari-initial-glyph">
-															{headwordDisplay.title.initial}
-														</span>
-													</span>
-													{#if headwordDisplay.title.rest}
-														<span class="orion-devanagari-connector"></span>
-														<span class="orion-devanagari-rest">{headwordDisplay.title.rest}</span>
-													{/if}
-												</span>
-											{:else if headwordDisplay.title}
-												<span class="orion-plain-title" aria-hidden="true">
-													<span class="orion-plain-initial">
-														<span class="orion-plain-initial-glyph">
-															{headwordDisplay.title.initial}
-														</span>
-													</span>
-													{#if headwordDisplay.title.rest}
-														<span class="orion-plain-rest">{headwordDisplay.title.rest}</span>
-													{/if}
-												</span>
-											{:else}
-												{headwordDisplay.primary}
-											{/if}
-										</h3>
-										{#if headwordDisplay.forms.length}
-											<div class="orion-headword-forms" aria-label="Headword forms">
-												{#each headwordDisplay.forms as form}
-													<span class="orion-headword-form">
-														<span class="orion-headword-form-label">{form.label}</span>
-														{#if form.kind === 'code'}
-															<code>{form.value}</code>
-														{:else}
-															<span>{form.value}</span>
-														{/if}
-													</span>
-												{/each}
-											</div>
-										{/if}
-										{#if groupLead(group, textLayers, expandedSections)}
-											<p class="orion-entry-lead">
-												{groupLead(group, textLayers, expandedSections)}
-											</p>
-										{/if}
-									</div>
-									<p class="orion-entry-source-line">
-										{groupTool.label}
-										{#if group.dictionary !== group.toolId}
-											<span> · {group.dictionary}</span>
-										{/if}
-									</p>
-								</div>
-								<div class="orion-entry-chrome">
-									<div class="orion-entry-source-strip">
-										{#each groupToolIds(group) as tool}
-											{@const ToolIcon = toolMnemonic(tool).Icon}
-											<span
-												class="orion-source-beast orion-source-beast-sm"
-												title={toolMnemonic(tool).name}
-											>
-												<ToolIcon size={14} />
-											</span>
-										{/each}
-										<span>{readerEntryLabel(group, textLayers)}</span>
-										<span>{countLabel(group.buckets.length, 'section')}</span>
-										<span>{countLabel(groupWitnesses(group).length, 'source entry')}</span>
-									</div>
-
-									{#if groupCanSwitchTextLayer(group)}
-										<div class="flex shrink-0 flex-col items-end gap-1">
-											<div class="orion-layer-switch join">
-												<button
-													type="button"
-													class={groupLayerIsSource(group, textLayers)
-														? 'btn btn-xs join-item'
-														: 'btn btn-xs join-item btn-secondary'}
-													onclick={() => setGroupTextLayer(group, 'reader')}
-												>
-													Reader English
-												</button>
-												<button
-													type="button"
-													class={groupLayerIsSource(group, textLayers) ||
-													!groupHasReaderTranslation(group)
-														? 'btn btn-xs join-item btn-secondary'
-														: 'btn btn-xs join-item'}
-													onclick={() => setGroupTextLayer(group, 'source')}
-												>
-													{groupSourceLayerLabel(group)}
-												</button>
-											</div>
-											{#if translationModelLabel(groupTranslationModel(group)) || retryableGroupTranslation(group)}
-												<div
-													class="text-base-content/50 flex items-center gap-1 text-[0.68rem] leading-none"
-												>
-													{#if translationModelLabel(groupTranslationModel(group))}
-														<span>EN by {translationModelLabel(groupTranslationModel(group))}</span>
-													{/if}
-													{#if retryableGroupTranslation(group)}
-														<button
-															type="button"
-															class="btn btn-ghost btn-xs h-5 min-h-0 px-1"
-															disabled={groupTranslationRetrying(group)}
-															aria-label="Retry English translation"
-															title="Retry English translation"
-															onclick={() => retryGroupTranslation(group)}
-														>
-															{#if groupTranslationRetrying(group)}
-																<span class="loading loading-spinner loading-xs"></span>
-															{:else}
-																<RefreshCw size={12} />
-															{/if}
-														</button>
-													{/if}
-												</div>
-											{/if}
-										</div>
-									{:else if groupHasTranslationToggle(group)}
-										<div class="flex shrink-0 items-center gap-1">
-											<span class="badge badge-outline">{groupSourceLayerLabel(group)} only</span>
-											{#if retryableGroupTranslation(group)}
-												<button
-													type="button"
-													class="btn btn-ghost btn-xs h-5 min-h-0 px-1"
-													disabled={groupTranslationRetrying(group)}
-													aria-label="Retry English translation"
-													title="Retry English translation"
-													onclick={() => retryGroupTranslation(group)}
-												>
-													{#if groupTranslationRetrying(group)}
-														<span class="loading loading-spinner loading-xs"></span>
-													{:else}
-														<RefreshCw size={12} />
-													{/if}
-												</button>
-											{/if}
-										</div>
-									{/if}
-									{#if groupAwaitsReaderTranslation(group)}
-										<span class="orion-translator-sigil" title={uiCopy.translator.title}>
-											<span>{uiCopy.translator.badge}</span>
-											<i></i><i></i><i></i>
-										</span>
-									{/if}
-								</div>
-							</div>
-
-							<article class={`orion-entry-reader ${toolStyle[group.toolId].accent}`}>
-								<div class="orion-reader-sections">
-									{#each visibleGroupBuckets(group) as bucket}
-										{@const segments = sectionSegments(bucket, textLayers, expandedSections)}
-										{@const hasTreeChildren = sectionHasTreeChildren(group, bucket)}
-										<section
-											id={sectionId(group, bucket)}
-											class={readerSectionClass(bucket, textLayers)}
-											style={readerSectionStyle(bucket)}
-										>
-											<div class="orion-reader-marker">
-												{#if hasTreeChildren}
-													<button
-														type="button"
-														class="orion-branch-toggle"
-														aria-label={branchToggleLabel(bucket)}
-														title={branchToggleLabel(bucket)}
-														onclick={() => toggleBranchCollapse(bucket)}
-													>
-														<Asterisk
-															size={11}
-															strokeWidth={2.2}
-															class={collapsedBranches[sectionExpansionKey(bucket)]
-																? 'orion-branch-mark-collapsed'
-																: ''}
-														/>
-													</button>
-												{/if}
-											</div>
-											<div class="orion-reader-copy">
-												{#each segments as gloss, segmentIndex}
-													<p>
-														{gloss}
-														{#if segmentIndex === segments.length - 1}
-															{#if sectionCanToggle(bucket, textLayers)}
-																<button
-																	type="button"
-																	class="orion-section-detail-toggle"
-																	aria-label={sectionToggleLabel(
-																		bucket,
-																		textLayers,
-																		expandedSections
-																	)}
-																	title={sectionToggleLabel(bucket, textLayers, expandedSections)}
-																	onclick={() => toggleSectionExpansion(bucket)}
-																>
-																	<ChevronDown
-																		size={12}
-																		class={expandedSections[sectionExpansionKey(bucket)]
-																			? 'orion-chevron-open'
-																			: ''}
-																	/>
-																</button>
-															{/if}
-															{#if sectionShowsReturnedEndingNote(bucket, textLayers, expandedSections)}
-																<span class="orion-section-detail-note"
-																	>{uiCopy.results.returnedEnding}</span
-																>
-															{/if}
-														{/if}
-													</p>
-												{/each}
-											</div>
-										</section>
-									{/each}
-								</div>
-							</article>
-						</section>
-					{:else}
-						<div class="alert alert-info">
-							<Database size={18} />
-							<span>{uiCopy.results.noFilterMatch}</span>
-						</div>
-					{/each}
-				{/if}
-			</section>
-		</article>
-
-		<aside
-			class={sidebarFullHeight
-				? 'orion-sidebar orion-sidebar-full min-w-0 space-y-4'
-				: 'orion-sidebar min-w-0 space-y-4'}
-			onwheel={handleSidebarWheel}
-		>
-			{#if query.trim() || wordIndexSectionItems.length || wordIndexEarmarks.length}
-				<section class="card orion-manuscript-panel w-full min-w-0">
-					<div class="card-body min-w-0 gap-3 p-4">
-						<h2 class="card-title text-base">
-							<Compass size={17} />
-							{uiCopy.wordIndex.title}
-							{#if wordIndexLoading && !wordIndexInitialLoading}
-								<span class="orion-index-busy" title={uiCopy.wordIndex.loading}>
-									<span class="loading loading-spinner loading-xs"></span>
-								</span>
-							{/if}
-						</h2>
-						<p class="text-base-content/65 font-serif text-xs leading-5">
-							{uiCopy.wordIndex.intro}
-						</p>
-
-						{#if wordIndexSectionItems.length}
-							<section class="orion-index-section-rail" aria-label={wordIndexSectionsTitle}>
-								<div class="orion-index-section-head">
-									<span>{wordIndexSectionsTitle}</span>
-									<div class="orion-index-section-actions">
-										{#if activeWordIndexSection?.anchor?.query}
-											<button
-												type="button"
-												class="orion-index-section-browse"
-												onclick={() => browseWordIndexSection(activeWordIndexSection)}
-											>
-												{uiCopy.wordIndex.browseSection}
-											</button>
-										{/if}
-										{#if wordIndexSectionsLoading}
-											<span title={uiCopy.wordIndex.sectionsLoading}>
-												<span class="loading loading-spinner loading-xs"></span>
-											</span>
-										{/if}
-									</div>
-								</div>
-								<div class="orion-index-section-list">
-									{#each wordIndexSectionItems as section}
-										{@const sectionCanOpen = Boolean(wordIndexSectionLookupTarget(section))}
-										<button
-											type="button"
-											class={activeWordIndexSection?.id === section.id
-												? 'orion-index-section-button orion-index-section-button-active'
-												: sectionCanOpen
-													? 'orion-index-section-button'
-													: 'orion-index-section-button orion-index-section-button-unavailable'}
-											disabled={!sectionCanOpen}
-											title={`${section.label} ${section.transliteration}`}
-											aria-current={activeWordIndexSection?.id === section.id ? 'true' : undefined}
-											onclick={() => openWordIndexSection(section)}
-										>
-											<span>{section.label}</span>
-											<small>{section.transliteration}</small>
-										</button>
-									{/each}
-								</div>
-							</section>
-						{:else if wordIndexSectionsError}
-							<div class="orion-motd-warning">{wordIndexSectionsError}</div>
-						{/if}
-
-						{#if wordIndexInitialLoading}
-							<div class="orion-index-skeleton" aria-busy="true">
-								<span></span>
-								<span></span>
-								<span></span>
-								<span class="sr-only">{uiCopy.wordIndex.loading}</span>
-							</div>
-						{:else if wordIndexHasRows}
-							<div class="orion-index-groups">
-								<section class="orion-index-group">
-									<div class="orion-index-group-head">
-										<span class="orion-source-beast orion-source-beast-sm">
-											<Compass size={13} />
-										</span>
-										<span>{wordIndexOrderTitle}</span>
-										<span>{wordIndexSourceSetCount} source sets</span>
-									</div>
-
-									<div class="orion-index-rows">
-										{#each wordIndexMergedRows as row}
-											{@const item = wordIndexPrimaryItem(row)}
-											{@const position = wordIndexRowPosition(row)}
-											{@const matched = wordIndexRowMatched(row)}
-											<div
-												class={matched
-													? 'orion-index-row orion-index-row-matched'
-													: position === 'anchor'
-														? 'orion-index-row orion-index-row-anchor'
-														: 'orion-index-row'}
-											>
-												<a
-													class="orion-index-link"
-													href={wordIndexHref(item)}
-													aria-current={position === 'anchor' ? 'page' : undefined}
-													onclick={(event) => handleWordIndexNavigation(event, item)}
-												>
-													<span class="orion-index-word">{wordIndexDisplay(item)}</span>
-													<span class="orion-index-source-list">
-														{#each wordIndexRowSources(row) as source}
-															<span>{source}</span>
-														{/each}
-													</span>
-													{#if wordIndexLookup(item)}
-														<span class="orion-index-lookup">{wordIndexLookup(item)}</span>
-													{/if}
-													{#if wordIndexEntryCountLabel(item)}
-														<span class="orion-index-entry-count">
-															{wordIndexEntryCountLabel(item)}
-														</span>
-													{/if}
-													<span class="orion-index-position">
-														{matched
-															? uiCopy.wordIndex.active
-															: uiCopy.wordIndex.position(position)}
-													</span>
-												</a>
-												<button
-													type="button"
-													class="orion-index-earmark"
-													title={isEarmarked(item)
-														? uiCopy.wordIndex.removeEarmarkTitle
-														: uiCopy.wordIndex.earmarkTitle}
-													aria-label={isEarmarked(item)
-														? uiCopy.wordIndex.removeEarmarkTitle
-														: uiCopy.wordIndex.earmarkTitle}
-													onclick={() => toggleWordIndexEarmark(item)}
-												>
-													{#if isEarmarked(item)}
-														<BookmarkCheck size={14} />
-													{:else}
-														<BookmarkPlus size={14} />
-													{/if}
-												</button>
-											</div>
-										{/each}
-									</div>
-								</section>
-							</div>
-						{:else if wordIndexError}
-							<div class="orion-motd-warning">{wordIndexError}</div>
-						{:else if wordIndex}
-							<div class="orion-motd-warning">
-								{wordIndexWarnings[0]?.message || uiCopy.wordIndex.empty}
-							</div>
-						{/if}
-
-						{#if wordIndexEarmarks.length}
-							<div class="orion-earmarks">
-								<div class="orion-earmarks-head">
-									<div class="orion-earmarks-title">{uiCopy.wordIndex.earmarks}</div>
-									<button
-										type="button"
-										class="orion-earmarks-clear"
-										title={uiCopy.wordIndex.clearEarmarksTitle}
-										onclick={clearWordIndexEarmarks}
-									>
-										<Eraser size={12} />
-										{uiCopy.wordIndex.clearEarmarks}
-									</button>
-								</div>
-								<div class="orion-earmark-list">
-									{#each wordIndexEarmarks as item}
-										<a
-											class="orion-earmark-link"
-											href={wordIndexHref(item)}
-											onclick={(event) => handleWordIndexNavigation(event, item)}
-										>
-											<span>{wordIndexDisplay(item)}</span>
-											<small>{languageLabel(item.encounter.language)}</small>
-										</a>
-									{/each}
-								</div>
-							</div>
-						{/if}
-					</div>
-				</section>
-			{/if}
-
-			<DeskSourceControls
-				{availableTools}
-				{lookupTools}
-				{isAllLookupSelected}
-				returnedTools={returnedToolOptions}
-				{visibleTools}
-				{toolMnemonic}
-				onShowAllLookupTools={showAllLookupTools}
-				onToggleLookupTool={toggleLookupTool}
-				onShowAllReturnedTools={showAllReturnedTools}
-				onToggleVisibleTool={toggleVisibleTool}
-			/>
-
-			{#if encounter}
-				<DeskColophonPanel
-					{encounter}
-					cacheAccount={cacheSummary(encounter)}
-					readerLayerStatus={readerLayerStatus()}
-				/>
-			{/if}
-
-			<section class="card orion-manuscript-panel w-full min-w-0">
-				<div class="card-body min-w-0 gap-3 p-4">
-					<h2 class="card-title text-base">
-						<span class="flex min-w-0 flex-1 items-center gap-2">
-							<Sparkles size={17} />
-							{uiCopy.pageMarks.title}
-						</span>
-						<button
-							type="button"
-							class="btn btn-ghost btn-xs gap-1"
-							onclick={clearRouteState}
-							title={uiCopy.pageMarks.clearTitle}
-						>
-							<Eraser size={14} />
-							Clear
-						</button>
-					</h2>
-					<div>
-						<div class="text-base-content/50 mb-1 text-xs font-medium uppercase">
-							{uiCopy.pageMarks.pageLink}
-						</div>
-						<div class="mockup-code orion-endpoint-code w-full min-w-0 overflow-x-auto text-xs">
-							<pre class="break-all whitespace-pre-wrap"><code
-									>{appRouteUrl(encounterMatchesQuery())}</code
-								></pre>
-						</div>
-					</div>
-					<div>
-						<div class="text-base-content/50 mb-1 text-xs font-medium uppercase">
-							{uiCopy.pageMarks.endpoint}
-						</div>
-						<div class="mockup-code orion-endpoint-code w-full min-w-0 overflow-x-auto text-xs">
-							<pre class="break-all whitespace-pre-wrap"><code>{endpointUrl()}</code></pre>
-						</div>
-					</div>
-					<p class="text-base-content/65 font-serif text-sm leading-6">
-						{uiCopy.pageMarks.contractPrefix}
-						<code>dictionary=all</code>
-						{uiCopy.pageMarks.contractSuffix}
-					</p>
-				</div>
-			</section>
-		</aside>
-	</div>
-</main>
+	{#snippet sidebar()}
+		<DeskSidebar
+			fullHeight={sidebarFullHeight}
+			onWheel={handleSidebarWheel}
+			wordIndex={{
+				query,
+				sections: wordIndexSectionItems,
+				activeSection: activeWordIndexSection,
+				sectionsTitle: wordIndexSectionsTitle,
+				sectionsLoading: wordIndexSectionsLoading,
+				sectionsError: wordIndexSectionsError,
+				loading: wordIndexLoading,
+				initialLoading: wordIndexInitialLoading,
+				rows: wordIndexMergedRows,
+				hasRows: wordIndexHasRows,
+				sourceSetCount: wordIndexSourceSetCount,
+				orderTitle: wordIndexOrderTitle,
+				error: wordIndexError,
+				emptyMessage: wordIndexWarnings[0]?.message || uiCopy.wordIndex.empty,
+				hasResponse: Boolean(wordIndex),
+				earmarks: wordIndexEarmarks,
+				canOpenSection: (section) => Boolean(wordIndexSectionLookupTarget(section)),
+				wordIndexPrimaryItem,
+				wordIndexRowPosition,
+				wordIndexRowMatched,
+				wordIndexRowSources,
+				wordIndexHref,
+				wordIndexDisplay,
+				wordIndexLookup,
+				wordIndexEntryCountLabel,
+				isEarmarked,
+				languageLabel,
+				onBrowseSection: browseWordIndexSection,
+				onOpenSection: openWordIndexSection,
+				onNavigate: handleWordIndexNavigation,
+				onToggleEarmark: toggleWordIndexEarmark,
+				onClearEarmarks: clearWordIndexEarmarks
+			}}
+			sourceControls={{
+				availableTools,
+				lookupTools,
+				isAllLookupSelected,
+				returnedTools: returnedToolOptions,
+				visibleTools,
+				toolMnemonic,
+				onShowAllLookupTools: showAllLookupTools,
+				onToggleLookupTool: toggleLookupTool,
+				onShowAllReturnedTools: showAllReturnedTools,
+				onToggleVisibleTool: toggleVisibleTool
+			}}
+			colophon={encounter
+				? {
+						encounter,
+						cacheAccount: cacheSummary(encounter),
+						readerLayerStatus: readerLayerStatus()
+					}
+				: null}
+			pageMarks={{
+				pageLink: appRouteUrl(encounterMatchesQuery()),
+				endpoint: endpointUrl(),
+				onClear: clearRouteState
+			}}
+		/>
+	{/snippet}
+</DeskPageShell>

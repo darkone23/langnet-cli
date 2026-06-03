@@ -13,6 +13,7 @@ import {
 	type WordIndexItem,
 	type WordIndexSectionsResponse
 } from './word-index';
+import { wordIndexSectionsResponse } from './word-index-sections';
 
 const baseResponse = {
 	schema_version: 'langnet.word_index.v1',
@@ -511,6 +512,28 @@ function wordIndexItem(overrides: Partial<WordIndexItem>): WordIndexItem {
 }
 
 assert.equal(wordIndexSectionForItem(wordIndexItem({}), sectionFixture)?.label, 'ध');
+assert.equal(
+	wordIndexSectionForItem(
+		wordIndexItem({
+			canonical_name: 'ज्योतिर्',
+			canonical_key: 'jyotir',
+			source_name: 'jyotir',
+			lookup: 'jyotir',
+			display: {
+				primary: 'ज्योतिर्',
+				transliteration: 'jyotir',
+				source_key: 'jyotir'
+			},
+			encounter: {
+				language: 'san',
+				q: 'jyotir',
+				dictionary: 'cdsl'
+			}
+		}),
+		wordIndexSectionsResponse('san', 'all')
+	)?.label,
+	'ज'
+);
 assert.equal(
 	wordIndexActiveSection(
 		{

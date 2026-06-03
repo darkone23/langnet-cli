@@ -100,6 +100,39 @@ def _write_cdsl_fixture(path: Path, dict_id: str, entries: list[tuple[str, float
             )
 
 
+def _write_cdsl_fixture_with_search_keys(
+    path: Path, dict_id: str, entries: list[tuple[str, float, str]]
+) -> None:
+    with duckdb.connect(str(path)) as conn:
+        conn.execute(
+            """
+            CREATE TABLE entries (
+              dict_id VARCHAR, key VARCHAR, key_normalized VARCHAR, key2 VARCHAR,
+              key2_normalized VARCHAR, lnum DOUBLE, hom INTEGER, h_type VARCHAR,
+              data TEXT, body TEXT, plain_text TEXT, page_ref VARCHAR
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE headwords (
+              dict_id VARCHAR, key VARCHAR, key_normalized VARCHAR, lnum DOUBLE,
+              hom INTEGER, is_primary BOOLEAN, search_key VARCHAR
+            )
+            """
+        )
+        for key, lnum, search_key in entries:
+            key_norm = key.lower()
+            conn.execute(
+                "INSERT INTO entries VALUES (?, ?, ?, NULL, NULL, ?, NULL, NULL, '', '', '', '')",
+                [dict_id, key, key_norm, lnum],
+            )
+            conn.execute(
+                "INSERT INTO headwords VALUES (?, ?, ?, ?, NULL, true, ?)",
+                [dict_id, key, key_norm, lnum, search_key],
+            )
+
+
 def _write_dico_fixture(path: Path) -> None:
     with duckdb.connect(str(path)) as conn:
         conn.execute(
@@ -428,6 +461,37 @@ def test_word_index_neighborhood_reads_strongs_greek_source_for_inflected_bible_
     metadata = cast(dict[str, object], anchor["metadata"])
     assert metadata["matched_alias_kind"] == "generated_form"
     assert metadata["dictionary_genre"] == "religious"
+
+
+def test_word_index_neighborhood_anchors_sanskrit_final_n_to_jyotir() -> None:
+    with TemporaryDirectory() as tmpdir:
+        paths = _fixture_paths(Path(tmpdir))
+        paths.cdsl_mw.unlink()
+        _write_cdsl_fixture_with_search_keys(
+            paths.cdsl_mw,
+            "MW",
+            [
+                ("jyoti", 10.0, "jyoti"),
+                ("jyotir", 11.0, "jyotir"),
+                ("jyotirmaya", 12.0, "jyotirmaya"),
+            ],
+        )
+        payload = word_index_neighborhood_payload(
+            "san",
+            "jyotin",
+            source="cdsl",
+            radius=1,
+            paths=paths,
+        )
+
+    _assert_matches_word_index_schema(payload)
+    assert payload["warnings"] == []
+    neighborhood = cast(dict[str, object], payload["neighborhood"])
+    anchor = cast(dict[str, object], neighborhood["anchor"])
+    assert anchor["source"] == "cdsl"
+    assert anchor["dictionary"] == "mw"
+    assert anchor["canonical_key"] == "jyotir"
+    assert neighborhood["anchor_status"] == "nearest"
 
 
 def test_word_index_wheel_includes_lewis_1890_and_bailly_sources() -> None:
@@ -798,12 +862,8 @@ def test_word_index_neighborhood_resolves_motd_sanskrit_ascii_lemmas() -> None:
     darshan_anchor = cast(
         dict[str, object], cast(dict[str, object], darshan["neighborhood"])["anchor"]
     )
-    hast_anchor = cast(
-        dict[str, object], cast(dict[str, object], hast["neighborhood"])["anchor"]
-    )
-    kar_anchor = cast(
-        dict[str, object], cast(dict[str, object], kar["neighborhood"])["anchor"]
-    )
+    hast_anchor = cast(dict[str, object], cast(dict[str, object], hast["neighborhood"])["anchor"])
+    kar_anchor = cast(dict[str, object], cast(dict[str, object], kar["neighborhood"])["anchor"])
     assert darshan_anchor["canonical_key"] == "darshana"
     assert darshan_anchor["lookup"] == "darśana"
     assert hast_anchor["canonical_key"] == "hasta"
