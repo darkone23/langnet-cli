@@ -379,7 +379,11 @@ export async function readerWorkDossier({
 	options?: ReaderCliOptions;
 }): Promise<ReaderWorkDossierResponse & { catalog: ReaderCatalog }> {
 	const catalog = await resolveReaderCatalog(catalogId, language, options);
-	const rawPayload = await runReaderJsonCommand(catalog, ['about', work, '--output', 'json'], options);
+	const rawPayload = await runReaderJsonCommand(
+		catalog,
+		['about', work, '--output', 'json'],
+		options
+	);
 	return {
 		...(withCatalog(rawPayload, catalog) as ReaderWorkDossierResponse & {
 			catalog: ReaderCatalog;

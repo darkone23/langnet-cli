@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs';
 const pageSource = readFileSync('src/routes/+page.svelte', 'utf8');
 const compactPageSource = pageSource.replace(/\s+/g, ' ');
 const learnPageSource = readFileSync('src/routes/learn/+page.svelte', 'utf8');
+const motdFolioSource = readFileSync('src/lib/DeskMotdFolio.svelte', 'utf8');
 const learnSource = readFileSync('src/lib/learn.ts', 'utf8');
+const appCssSource = readFileSync('src/app.css', 'utf8');
 const motdSource = readFileSync('src/routes/api/motd/+server.ts', 'utf8');
 const wordIndexSource = readFileSync('src/routes/api/word-index/+server.ts', 'utf8');
 
@@ -78,7 +80,7 @@ assert.equal(
 	'stale local MOTD should remain visible while a refresh starts in the background'
 );
 assert.equal(
-	pageSource.includes('uiCopy.margin.refreshingPrevious'),
+	motdFolioSource.includes('uiCopy.margin.refreshingPrevious'),
 	true,
 	'MOTD should display a stale/refreshing indicator while old cards stay visible'
 );
@@ -160,6 +162,16 @@ assert.equal(
 	'standalone Learn workflow should expose concept study, reader questions, source references, and source practice'
 );
 assert.equal(
+	learnPageSource.includes('<style>') && learnPageSource.includes('.orion-learn-page'),
+	true,
+	'Learn page should own its page-specific scoped styles'
+);
+assert.equal(
+	appCssSource.includes('\n\t.orion-learn-'),
+	false,
+	'Learn page selectors should move out of app.css'
+);
+assert.equal(
 	learnSource.includes('Receiving Function') &&
 		learnSource.includes('learnStartCards') &&
 		learnSource.includes('learnScriptGuides') &&
@@ -184,6 +196,12 @@ assert.equal(
 		wordIndexSource.indexOf('return respond(await wordIndexFromCli(request))'),
 	true,
 	'word-index sections should avoid the Python CLI path'
+);
+
+assert.equal(
+	pageSource.includes("result.language !== 'lat'"),
+	false,
+	'word-index sidebar match keys should use encounter anchors for Greek and Sanskrit, not only Latin'
 );
 
 console.log('initial-load performance policy ok');

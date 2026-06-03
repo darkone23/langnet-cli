@@ -183,9 +183,9 @@ def test_cached_latin_results_are_enriched_with_ae_to_a_candidate() -> None:
         conn_read.close()
 
 
-def test_ascii_greek_normalization_skips_raw_diogenes_parse() -> None:
+def test_ascii_greek_normalization_skips_raw_parse_and_parses_word_list_hit() -> None:
     conn = duckdb.connect(database=":memory:")
-    dio = GreekDiogenes(word_list_lemmas=["ἕν"])
+    dio = GreekDiogenes(parse_lemmas=["ἕν"], word_list_lemmas=["ἕν"])
     svc = NormalizationService(
         conn,
         diogenes_config=DiogenesConfig(greek_client=cast(DiogenesClient, dio)),
@@ -194,7 +194,7 @@ def test_ascii_greek_normalization_skips_raw_diogenes_parse() -> None:
 
     result = svc.normalize("hen", LanguageHint.LANGUAGE_HINT_GRC)
 
-    assert dio.parse_queries == []
+    assert dio.parse_queries == ["ἕν"]
     assert "hen" not in dio.word_list_queries
     assert dio.word_list_queries == ["ἕν"]
     assert result.normalized.candidates[0].lemma == "ἕν"
@@ -226,6 +226,56 @@ def test_cached_ascii_greek_results_are_enriched_with_exact_transliteration() ->
         result = svc.normalize("hen", LanguageHint.LANGUAGE_HINT_GRC)
 
         assert result.normalized.candidates[0].lemma == "ἕν"
+        conn_read.close()
+
+
+def test_cached_ascii_greek_word_list_without_parse_is_recomputed() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "canon.duckdb"
+        conn = duckdb.connect(str(db_path))
+        ensure_norm_schema(conn)
+        index = NormalizationIndex(conn)
+        stale = NormalizedQuery(
+            original="teleutaiais",
+            language=LanguageHint.LANGUAGE_HINT_GRC,
+            candidates=[
+                CanonicalCandidate(
+                    lemma="τελευταίαις",
+                    encodings={},
+                    sources=["diogenes_word_list"],
+                )
+            ],
+        )
+        index.upsert(
+            query_hash=_hash_query("teleutaiais", LanguageHint.LANGUAGE_HINT_GRC),
+            raw_query="teleutaiais",
+            language=str(LanguageHint.LANGUAGE_HINT_GRC).lower(),
+            normalized=stale,
+            source_response_ids=None,
+        )
+        conn.close()
+
+        conn_read = duckdb.connect(str(db_path))
+        dio = GreekDiogenes(
+            parse_lemmas=["τελευτ-αιος"],
+            word_list_lemmas=["τελευταίαις"],
+        )
+        svc = NormalizationService(
+            conn_read,
+            diogenes_config=DiogenesConfig(greek_client=cast(DiogenesClient, dio)),
+            use_cache=True,
+        )
+        result = svc.normalize("teleutaiais", LanguageHint.LANGUAGE_HINT_GRC)
+
+        assert "τελευταίαις" in dio.parse_queries
+        assert {candidate.lemma for candidate in result.normalized.candidates} >= {
+            "τελευταίαις",
+            "τελευτ-αιος",
+        }
+        assert any(
+            "diogenes_word_list_parse" in candidate.sources
+            for candidate in result.normalized.candidates
+        )
         conn_read.close()
 
 

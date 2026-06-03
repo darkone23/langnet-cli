@@ -20,11 +20,21 @@ from .core import (
 )
 from .greek_transliterator import transliterate_variants
 from .sanskrit import HeritageClientProtocol, sanskrit_candidate_sort_key
-from .utils import normalize_greek_compatibility, strip_accents
+from .utils import contains_greek, normalize_greek_compatibility, strip_accents
 
 LanguageValue = LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
 SANSKRIT_READER_COMPLETION_MIN_LEN = 4
+GREEK_ASCII_WORD_LIST_PARSE_STALE_SUFFIXES = (
+    "ais",
+    "ois",
+    "ous",
+    "ein",
+    "einai",
+    "men",
+    "tai",
+    "sthai",
+)
 
 if TYPE_CHECKING:
     from langnet.diogenes.client import DiogenesClient
@@ -157,7 +167,11 @@ class NormalizationService:
                     raw_query,
                     language,
                     reranked,
-                ) and not self._cached_greek_epic_eus_is_stale(raw_query, language, reranked):
+                ) and not self._cached_greek_epic_eus_is_stale(
+                    raw_query, language, reranked
+                ) and not self._cached_ascii_greek_word_list_parse_is_stale(
+                    raw_query, language, reranked
+                ):
                     return NormalizationResult(query_hash=query_hash, normalized=reranked)
 
         self._ensure_normalizer()
@@ -208,6 +222,22 @@ class NormalizationService:
             for candidate in normalized.candidates
         }
         return expected.isdisjoint(actual)
+
+    def _cached_ascii_greek_word_list_parse_is_stale(
+        self,
+        raw_query: str,
+        language: LanguageValue,
+        normalized: NormalizedQuery,
+    ) -> bool:
+        if language != LanguageHint.LANGUAGE_HINT_GRC:
+            return False
+        text = raw_query.strip().lower()
+        if not text or contains_greek(text):
+            return False
+        if not text.endswith(GREEK_ASCII_WORD_LIST_PARSE_STALE_SUFFIXES):
+            return False
+        sources = {source for candidate in normalized.candidates for source in candidate.sources}
+        return "diogenes_word_list" in sources and "diogenes_word_list_parse" not in sources
 
     def _cached_greek_compatibility_is_stale(
         self,

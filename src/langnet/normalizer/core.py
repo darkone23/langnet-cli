@@ -40,6 +40,7 @@ LanguageValue = LanguageHint.ValueType
 LATIN_AE_SUFFIX_LEN = 2
 GREEK_EPIC_EUS_GENITIVE_SUFFIX = "ῆος"
 GREEK_EUS_NOMINATIVE_SUFFIX = "εύς"
+GREEK_WORD_LIST_PARSE_LIMIT = 3
 
 
 def _hash_query(raw_query: str, language: LanguageValue) -> str:
@@ -251,6 +252,41 @@ class GreekNormalizer(LanguageNormalizer):
         for lemma in result.lemmas:
             sources = lemma_sources.setdefault(lemma, set())
             sources.add("diogenes_word_list")
+        if not contains_greek(base):
+            self._add_word_list_parse_sources(result.lemmas, steps, lemma_sources)
+
+    def _add_word_list_parse_sources(
+        self,
+        lemmas: Sequence[str],
+        steps: list[NormalizationStep],
+        lemma_sources: dict[str, set[str]],
+    ) -> None:
+        if self.diogenes is None:
+            return
+        seen: set[str] = set()
+        parsed = 0
+        for lemma in lemmas:
+            if parsed >= GREEK_WORD_LIST_PARSE_LIMIT:
+                return
+            if not lemma or lemma in seen or not contains_greek(lemma):
+                continue
+            seen.add(lemma)
+            try:
+                parse = self.diogenes.fetch_parse(lemma, lang="grc")
+            except Exception:  # noqa: BLE001
+                continue
+            if not parse.lemmas:
+                continue
+            parsed += 1
+            steps.append(
+                NormalizationStep(
+                    operation="diogenes_word_list_parse",
+                    input=lemma,
+                    output=";".join(parse.lemmas),
+                    tool="diogenes",
+                )
+            )
+            self._record_sources(parse.lemmas, "diogenes_word_list_parse", lemma_sources)
 
     def _add_epic_eus_sources(
         self,

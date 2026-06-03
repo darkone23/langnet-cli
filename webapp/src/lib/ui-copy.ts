@@ -132,6 +132,10 @@ const resources = {
 				title: 'About this work',
 				loading: 'Loading work dossier',
 				empty: 'No work dossier is available yet.',
+				structureSummary: 'Structure summary',
+				metadataReady: 'Metadata ready',
+				metadataPending: 'Metadata pending',
+				currentDivision: 'Current division',
 				headings: 'Headings',
 				divisionBios: 'Division notes',
 				opening: 'Opening structure'
@@ -399,6 +403,18 @@ export const uiCopy = {
 		study: text('readerStructure.study'),
 		evidence: text('readerStructure.evidence'),
 		current: text('readerStructure.current')
+	},
+	workDossier: {
+		title: text('workDossier.title'),
+		loading: text('workDossier.loading'),
+		empty: text('workDossier.empty'),
+		structureSummary: text('workDossier.structureSummary'),
+		metadataReady: text('workDossier.metadataReady'),
+		metadataPending: text('workDossier.metadataPending'),
+		currentDivision: text('workDossier.currentDivision'),
+		headings: text('workDossier.headings'),
+		divisionBios: text('workDossier.divisionBios'),
+		opening: text('workDossier.opening')
 	},
 	apparatus: {
 		structure: text('apparatus.structure'),

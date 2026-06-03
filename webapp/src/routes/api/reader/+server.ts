@@ -169,7 +169,10 @@ export async function GET({ url, request }) {
 		if (mode === 'about') {
 			const work = (url.searchParams.get('work') ?? url.searchParams.get('ref') ?? '').trim();
 			if (!work)
-				return respond({ error: 'Reader work dossier requires a work parameter.' }, { status: 400 });
+				return respond(
+					{ error: 'Reader work dossier requires a work parameter.' },
+					{ status: 400 }
+				);
 			return cachedRespond(await readerWorkDossier({ catalogId, language, work, options }));
 		}
 		if (mode === 'works') {

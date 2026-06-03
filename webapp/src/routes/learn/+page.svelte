@@ -289,3 +289,457 @@
 		</section>
 	</div>
 </main>
+
+<style>
+	.orion-learn-page {
+		font-family: var(--font-sans);
+	}
+
+	.orion-learn-shell {
+		align-items: start;
+	}
+
+	.orion-learn-sidebar,
+	.orion-learn-foundation,
+	.orion-learn-script,
+	.orion-learn-lesson,
+	.orion-learn-steps {
+		display: grid;
+		gap: 1rem;
+		padding: 1rem;
+	}
+
+	.orion-learn-sidebar {
+		position: sticky;
+		top: 1rem;
+	}
+
+	.orion-learn-sidebar h1,
+	.orion-learn-foundation h2,
+	.orion-learn-script h2,
+	.orion-learn-lesson h2,
+	.orion-learn-steps h2 {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 84%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-weight: 760;
+		line-height: 1.12;
+	}
+
+	.orion-learn-sidebar h1 {
+		font-size: clamp(2rem, 5vw, 3rem);
+	}
+
+	.orion-learn-foundation h2,
+	.orion-learn-script h2 {
+		font-size: clamp(1.8rem, 3.4vw, 2.65rem);
+	}
+
+	.orion-learn-lesson h2 {
+		font-size: clamp(2.2rem, 5vw, 4rem);
+	}
+
+	.orion-learn-steps h2 {
+		font-size: clamp(1.65rem, 3vw, 2.35rem);
+	}
+
+	.orion-learn-sidebar p,
+	.orion-learn-foundation p,
+	.orion-learn-script p,
+	.orion-learn-lesson-head p,
+	.orion-learn-section-head p,
+	.orion-learn-panel p,
+	.orion-learn-step p {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 64%, transparent);
+		font-family: var(--font-serif);
+		line-height: 1.65;
+	}
+
+	.orion-learn-kicker,
+	.orion-learn-kind,
+	.orion-learn-question span,
+	.orion-learn-native span,
+	.orion-learn-source span,
+	.orion-learn-practice-card span,
+	.orion-learn-script-cell span {
+		color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+		font-size: 0.72rem;
+		font-variant-caps: small-caps;
+		font-weight: 780;
+		letter-spacing: 0;
+		line-height: 1.15;
+	}
+
+	.orion-learn-kicker {
+		margin: 0 0 0.35rem;
+	}
+
+	.orion-learn-concepts {
+		display: grid;
+		gap: 0.45rem;
+	}
+
+	.orion-learn-concept {
+		display: grid;
+		gap: 0.16rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
+		padding: 0.65rem 0.75rem;
+		text-align: left;
+		transition:
+			border-color 160ms ease,
+			background 160ms ease,
+			transform 160ms ease;
+	}
+
+	.orion-learn-concept:hover,
+	.orion-learn-concept-active {
+		border-color: color-mix(in oklab, var(--color-secondary) 34%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-secondary) 7%);
+		transform: translateY(-1px);
+	}
+
+	.orion-learn-concept span {
+		color: color-mix(in oklab, var(--color-base-content) 78%, var(--color-secondary));
+		font-family: var(--font-serif);
+		font-weight: 740;
+		line-height: 1.25;
+	}
+
+	.orion-learn-concept small {
+		color: color-mix(in oklab, var(--color-base-content) 56%, transparent);
+		font-size: 0.78rem;
+		line-height: 1.3;
+	}
+
+	.orion-learn-main {
+		display: grid;
+		gap: 1rem;
+		min-width: 0;
+	}
+
+	.orion-learn-start-grid {
+		display: grid;
+		gap: 0.75rem;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+
+	.orion-learn-start-card {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 0.65rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 91%, var(--color-primary) 4%);
+		padding: 0.85rem;
+	}
+
+	.orion-learn-start-card > span {
+		display: grid;
+		width: 1.85rem;
+		height: 1.85rem;
+		place-items: center;
+		border-radius: 50%;
+		background: color-mix(in oklab, var(--color-primary) 78%, var(--color-secondary));
+		color: var(--color-primary-content);
+		font-size: 0.8rem;
+		font-weight: 800;
+	}
+
+	.orion-learn-start-card h3,
+	.orion-learn-script-cell small {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 82%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-size: 1.02rem;
+		font-weight: 740;
+		line-height: 1.22;
+	}
+
+	.orion-learn-start-card strong {
+		display: block;
+		margin-top: 0.45rem;
+		color: color-mix(in oklab, var(--color-base-content) 76%, var(--color-secondary));
+		font-size: 0.86rem;
+		font-weight: 750;
+		line-height: 1.35;
+	}
+
+	.orion-learn-script-grid {
+		display: grid;
+		gap: 0.6rem;
+		grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+	}
+
+	.orion-learn-script-cell {
+		display: grid;
+		gap: 0.12rem;
+		min-height: 7.25rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-accent) 5%);
+		padding: 0.75rem;
+	}
+
+	.orion-learn-script-cell strong {
+		color: color-mix(in oklab, var(--color-base-content) 84%, var(--color-accent));
+		font-family: var(--font-reader);
+		font-size: 1.55rem;
+		font-weight: 760;
+		line-height: 1.2;
+		overflow-wrap: anywhere;
+	}
+
+	.orion-learn-script-cell small {
+		font-size: 0.9rem;
+	}
+
+	.orion-learn-script-cell em {
+		color: color-mix(in oklab, var(--color-base-content) 54%, transparent);
+		font-size: 0.78rem;
+		font-style: normal;
+		line-height: 1.35;
+	}
+
+	.orion-learn-lesson-head {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 1rem;
+		border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		padding-bottom: 1rem;
+	}
+
+	.orion-learn-kind {
+		align-self: start;
+		border: 1px solid color-mix(in oklab, var(--color-accent) 30%, var(--color-base-300));
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-accent) 8%);
+		padding: 0.28rem 0.55rem;
+	}
+
+	.orion-learn-question {
+		display: grid;
+		gap: 0.25rem;
+		border-left: 0.22rem solid color-mix(in oklab, var(--color-secondary) 58%, var(--color-accent));
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-secondary) 5%);
+		padding: 0.8rem 1rem;
+	}
+
+	.orion-learn-question strong {
+		color: color-mix(in oklab, var(--color-base-content) 84%, var(--color-secondary));
+		font-family: var(--font-serif);
+		font-size: clamp(1.2rem, 2.4vw, 1.65rem);
+		line-height: 1.35;
+	}
+
+	.orion-learn-grid {
+		display: grid;
+		gap: 0.75rem;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.orion-learn-panel {
+		display: grid;
+		gap: 0.65rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-base-200));
+		padding: 0.85rem;
+	}
+
+	.orion-learn-panel h3,
+	.orion-learn-section-head h3,
+	.orion-learn-step h3 {
+		margin: 0;
+		color: color-mix(in oklab, var(--color-base-content) 80%, var(--color-primary));
+		font-family: var(--font-serif);
+		font-size: 1.08rem;
+		font-weight: 740;
+		line-height: 1.25;
+	}
+
+	.orion-learn-native-list,
+	.orion-learn-source-list,
+	.orion-learn-practice-list,
+	.orion-learn-step-list {
+		display: grid;
+		gap: 0.55rem;
+	}
+
+	.orion-learn-native {
+		display: grid;
+		gap: 0.18rem;
+		border-left: 0.15rem solid color-mix(in oklab, var(--color-accent) 48%, var(--color-base-300));
+		padding-left: 0.6rem;
+	}
+
+	.orion-learn-native strong {
+		color: color-mix(in oklab, var(--color-base-content) 80%, var(--color-accent));
+		font-family: var(--font-reader);
+		font-size: 1.08rem;
+		line-height: 1.3;
+		overflow-wrap: anywhere;
+	}
+
+	.orion-learn-native em {
+		color: color-mix(in oklab, var(--color-base-content) 54%, transparent);
+		font-style: normal;
+		line-height: 1.3;
+	}
+
+	.orion-learn-sources {
+		display: grid;
+		gap: 0.65rem;
+	}
+
+	.orion-learn-source {
+		display: grid;
+		gap: 0.16rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-left: 0.18rem solid
+			color-mix(in oklab, var(--color-secondary) 48%, var(--color-base-300));
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 91%, var(--color-secondary) 4%);
+		padding: 0.65rem 0.75rem;
+		text-decoration: none;
+	}
+
+	.orion-learn-source:hover {
+		border-color: color-mix(in oklab, var(--color-secondary) 34%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-secondary) 7%);
+	}
+
+	.orion-learn-source strong {
+		color: color-mix(in oklab, var(--color-base-content) 80%, var(--color-secondary));
+		font-family: var(--font-serif);
+		font-size: 1rem;
+		line-height: 1.3;
+	}
+
+	.orion-learn-source small {
+		color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+		font-size: 0.82rem;
+		line-height: 1.35;
+	}
+
+	.orion-learn-source em {
+		color: color-mix(in oklab, var(--color-base-content) 48%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.72rem;
+		font-style: normal;
+		line-height: 1.3;
+		overflow-wrap: anywhere;
+	}
+
+	.orion-learn-practice {
+		display: grid;
+		gap: 0.65rem;
+	}
+
+	.orion-learn-section-head {
+		display: grid;
+		gap: 0.22rem;
+	}
+
+	.orion-learn-practice-list {
+		grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	}
+
+	.orion-learn-practice-card {
+		position: relative;
+		display: grid;
+		gap: 0.18rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-accent) 5%);
+		padding: 0.75rem 2.1rem 0.75rem 0.8rem;
+		text-decoration: none;
+		transition:
+			border-color 160ms ease,
+			background 160ms ease,
+			transform 160ms ease;
+	}
+
+	.orion-learn-practice-card:hover {
+		border-color: color-mix(in oklab, var(--color-secondary) 34%, var(--color-base-300));
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-secondary) 7%);
+		transform: translateY(-1px);
+	}
+
+	.orion-learn-practice-card strong {
+		color: color-mix(in oklab, var(--color-base-content) 84%, var(--color-primary));
+		font-family: var(--font-reader);
+		font-size: 1.34rem;
+		line-height: 1.18;
+		overflow-wrap: anywhere;
+	}
+
+	.orion-learn-practice-card small {
+		color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+		font-size: 0.82rem;
+		line-height: 1.3;
+	}
+
+	.orion-learn-practice-card em {
+		color: color-mix(in oklab, var(--color-base-content) 50%, var(--color-accent));
+		font-size: 0.76rem;
+		font-style: normal;
+		line-height: 1.3;
+	}
+
+	:global(.orion-learn-practice-card svg) {
+		position: absolute;
+		right: 0.75rem;
+		top: 50%;
+		transform: translateY(-50%);
+		color: color-mix(in oklab, var(--color-base-content) 52%, var(--color-secondary));
+	}
+
+	.orion-learn-step-list {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+
+	.orion-learn-step {
+		position: relative;
+		display: grid;
+		gap: 0.45rem;
+		border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+		border-radius: var(--radius-box);
+		background: color-mix(in oklab, var(--color-base-100) 90%, var(--color-base-200));
+		padding: 0.8rem;
+	}
+
+	.orion-learn-step > span {
+		display: grid;
+		width: 1.7rem;
+		height: 1.7rem;
+		place-items: center;
+		border-radius: 50%;
+		background: color-mix(in oklab, var(--color-secondary) 82%, var(--color-primary));
+		color: var(--color-secondary-content);
+		font-size: 0.78rem;
+		font-weight: 800;
+	}
+
+	:global(.orion-learn-step svg) {
+		position: absolute;
+		right: 0.7rem;
+		top: 0.7rem;
+		color: color-mix(in oklab, var(--color-success) 70%, var(--color-base-content));
+	}
+
+	@media (max-width: 48rem) {
+		.orion-learn-sidebar {
+			position: static;
+		}
+
+		.orion-learn-grid,
+		.orion-learn-start-grid,
+		.orion-learn-step-list {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

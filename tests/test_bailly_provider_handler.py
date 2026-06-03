@@ -190,6 +190,42 @@ def test_bailly_fallback_match_sets_claim_subject_to_resolved_entry() -> None:
     assert claim.subject == "lex:agelaios"
 
 
+def test_bailly_fetch_resolves_ascii_greekish_separator_candidates() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "lex_bailly.duckdb"
+        with duckdb.connect(str(db_path)) as conn:
+            apply_bailly_schema(conn)
+            insert_pdf_structural_entry(
+                conn,
+                {
+                    "entry_id": "bailly-p2258-c2-0016",
+                    "lemma": "τελευταῖος",
+                    "lemma_norm": "teleutaios",
+                    "source": {"kind": "pdf", "page_start": 2258, "page_end": 2258},
+                    "raw_text": "τελευταῖος, α, ον final",
+                    "blocks": [
+                        {"path": "00", "marker": "head", "text": "τελευταῖος, α, ον"},
+                        {"path": "01", "marker": "I", "text": "final"},
+                    ],
+                },
+            )
+
+        raw = BaillyFetchClient(db_path=db_path).execute(
+            "bailly-fetch-teleutaios",
+            "duckdb://bailly",
+            params={
+                "headword": "teleutaiais",
+                "lemma": "teleut_aios",
+                "lemma_candidates": "teleut-aios;teleut_aios",
+            },
+        )
+
+    payload = orjson.loads(raw.body)
+
+    assert payload["matched_headword"] == "teleut_aios"
+    assert payload["entries"][0]["lemma_norm"] == "teleutaios"
+
+
 def test_bailly_fetch_skips_distant_greek_fallback_candidates() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = Path(tmpdir) / "lex_bailly.duckdb"

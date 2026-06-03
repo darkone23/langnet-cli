@@ -125,6 +125,8 @@ Web design docs:
 
 - `docs/UI.md`: current page layout, reader principles, result grouping, Forms,
   and visual direction.
+- `docs/SVELTEKIT_GUIDELINES.md`: SvelteKit and Svelte 5 implementation
+  boundaries for route shape, component extraction, state, async UI, and tests.
 - `docs/LEARNING_UI.md`: Foster-first "Learn this form" north star and first
   integration slice.
 - `docs/BACKEND.md`: SvelteKit API adapter contracts.

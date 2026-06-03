@@ -11,20 +11,15 @@
 		Bug,
 		Cat,
 		ChevronDown,
-		CheckCircle2,
 		Compass,
 		Database,
 		Dog,
 		Eraser,
-		Feather,
 		Fish,
-		Flower2,
 		Moon,
-		Omega,
 		RefreshCw,
 		Search,
 		Shell,
-		SlidersHorizontal,
 		Snail,
 		Sparkles,
 		Squirrel,
@@ -103,6 +98,11 @@
 		wordIndexItemLookupTarget,
 		wordIndexSectionLookupTarget
 	} from '$lib/word-index';
+	import DeskColophonPanel from '$lib/DeskColophonPanel.svelte';
+	import DeskHeroSearch from '$lib/DeskHeroSearch.svelte';
+	import DeskMotdFolio from '$lib/DeskMotdFolio.svelte';
+	import DeskPulseWidget from '$lib/DeskPulseWidget.svelte';
+	import DeskSourceControls from '$lib/DeskSourceControls.svelte';
 	import type {
 		WordIndexItem,
 		WordIndexNeighborhoodGroup,
@@ -278,6 +278,9 @@
 		encounter
 			? [...new Set(encounter.buckets.flatMap((bucket) => bucket.source_tools))]
 			: ([] as ToolId[])
+	);
+	let returnedToolOptions = $derived(
+		returnedToolIds.map((toolId) => toolMeta(toolId, encounter?.language ?? language))
 	);
 	let visibleBuckets = $derived(
 		encounter
@@ -1729,7 +1732,7 @@
 
 	function encounterWordIndexMatchKeys(result: EncounterResult | null) {
 		const keys = new Set<string>();
-		if (!result || result.language !== 'lat') return keys;
+		if (!result) return keys;
 
 		for (const anchor of result.lexeme_anchors) addWordIndexMatchKey(keys, anchor);
 		for (const bucket of result.buckets) {
@@ -2417,6 +2420,25 @@
 		routePrefillOnly = false;
 		clearPendingRouteState();
 		clearWordIndexState();
+	}
+
+	function handleHeroQueryInput(value: string) {
+		query = value;
+		handleQueryInput();
+	}
+
+	function clearSearchDesk() {
+		activeSearchId += 1;
+		query = '';
+		encounter = null;
+		visibleTools = [];
+		errorMessage = '';
+		enrichmentError = '';
+		enrichingTranslations = false;
+		textLayers = {};
+		expandedSections = {};
+		collapsedBranches = {};
+		clearPendingRouteState();
 	}
 
 	function resetAppState() {
@@ -3268,16 +3290,6 @@
 		return mnemonics[toolId];
 	}
 
-	function languageModeIcon(mode: LanguageMode) {
-		const icons = {
-			san: Flower2,
-			grc: Omega,
-			lat: ScrollText
-		};
-
-		return icons[mode];
-	}
-
 	function readerLayerLabel(bucket: EncounterBucket) {
 		return bucket.translation?.available
 			? `Reader ${bucket.reader_lang.toUpperCase()}`
@@ -3507,238 +3519,43 @@
 		class="orion-page-shell mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,48rem)_21rem] lg:px-8"
 	>
 		<article class="min-w-0 space-y-6">
-			<section class="hero orion-manuscript-panel">
-				<div class="hero-content block w-full p-6 lg:p-8">
-					<div class="max-w-3xl">
-						<div class="badge badge-secondary badge-outline mb-4 gap-2">
-							<Feather size={14} />
-							{uiCopy.hero.badge}
-						</div>
-						<h1 class="font-serif text-4xl leading-tight md:text-5xl">
-							{uiCopy.hero.title(language)}
-						</h1>
-						<p class="text-base-content/70 mt-4 max-w-2xl font-serif text-xl leading-8">
-							{uiCopy.hero.intro}
-						</p>
-					</div>
+			<DeskHeroSearch
+				{language}
+				{query}
+				{loading}
+				{searchRomanization}
+				{languageLabel}
+				statusDetail={currentStatusDetail()}
+				onSelectLanguage={selectLanguage}
+				onQueryInput={handleHeroQueryInput}
+				onSubmit={handleSubmit}
+				onClear={clearSearchDesk}
+			/>
 
-					<div class="mt-6">
-						<div class="tabs tabs-box w-full md:w-auto">
-							{#each languageModes as mode}
-								{@const ModeIcon = languageModeIcon(mode.id)}
-								<button
-									type="button"
-									class={mode.id === language ? 'tab tab-active gap-2' : 'tab gap-2'}
-									title={`Set the desk for ${mode.label}`}
-									onclick={() => selectLanguage(mode.id)}
-								>
-									<ModeIcon size={15} />
-									{mode.label}
-								</button>
-							{/each}
-						</div>
-					</div>
-
-					<form class="mt-6" onsubmit={handleSubmit}>
-						<div class="join w-full">
-							<label class="input input-lg join-item flex-1">
-								<Search size={20} class="text-base-content/50" />
-								<input
-									bind:value={query}
-									type="search"
-									placeholder={uiCopy.search.placeholder(languageLabel(language))}
-									aria-label={uiCopy.search.inputAria}
-									autocomplete="off"
-									disabled={loading}
-									oninput={handleQueryInput}
-								/>
-							</label>
-							<button class="btn btn-neutral btn-lg join-item" disabled={loading}>
-								{#if loading}
-									<span class="loading loading-spinner loading-sm"></span>
-								{:else}
-									<Search size={17} />
-								{/if}
-								<span class="hidden sm:inline">{uiCopy.search.button(loading)}</span>
-							</button>
-						</div>
-						{#if searchRomanization}
-							<div class="orion-search-reading" aria-live="polite">
-								<span>{searchRomanization.label}</span>
-								<code>{searchRomanization.value}</code>
-							</div>
-						{/if}
-
-						<div class="mt-4 flex flex-wrap items-center gap-3">
-							<button
-								type="button"
-								class="btn btn-ghost btn-sm"
-								disabled={loading}
-								onclick={() => {
-									activeSearchId += 1;
-									query = '';
-									encounter = null;
-									visibleTools = [];
-									errorMessage = '';
-									enrichmentError = '';
-									enrichingTranslations = false;
-									textLayers = {};
-									expandedSections = {};
-									collapsedBranches = {};
-									clearPendingRouteState();
-								}}
-							>
-								{uiCopy.search.clear}
-							</button>
-							<span class={loading ? 'loading loading-spinner loading-sm' : 'hidden'}></span>
-							<span class="text-base-content/60 text-sm" role="status" aria-live="polite">
-								{currentStatusDetail()}
-							</span>
-						</div>
-					</form>
-				</div>
-			</section>
-
-			<section class="card orion-manuscript-panel orion-motd-folio">
-				<div class="card-body gap-5 p-5 lg:p-6">
-					<div class="orion-motd-folio-head">
-						<div class="orion-motd-folio-title">
-							<span class="orion-motd-emblem" aria-hidden="true">
-								<BookOpen size={18} />
-								<Sparkles size={12} />
-							</span>
-							<div>
-								<h2 class="card-title text-lg">{uiCopy.margin.title}</h2>
-								<p class="text-base-content/65 font-serif text-sm leading-6">
-									{uiCopy.margin.intro}
-									{#if !motdPending}
-										{uiCopy.margin.linkMode(motdLinksLoad)}
-									{/if}
-								</p>
-							</div>
-						</div>
-
-						<div class="orion-motd-actions">
-							{#if motdPending}
-								<span
-									class="orion-motd-control-skeleton orion-motd-control-skeleton-load"
-									aria-hidden="true"
-								></span>
-								<span
-									class="orion-motd-control-skeleton orion-motd-control-skeleton-refresh"
-									aria-hidden="true"
-								></span>
-							{:else}
-								<button
-									type="button"
-									class={motdLinksLoad ? 'btn btn-xs btn-secondary' : 'btn btn-xs'}
-									disabled={motdRefreshing}
-									title={uiCopy.margin.loadTitle}
-									onclick={() => {
-										motdLinksLoad = !motdLinksLoad;
-									}}
-								>
-									<Search size={13} />
-									{uiCopy.margin.linkToggle(motdLinksLoad)}
-								</button>
-								<button
-									type="button"
-									class="btn btn-xs"
-									disabled={motdRefreshing}
-									title={uiCopy.margin.refreshTitle}
-									onclick={() => void loadMotd(true)}
-								>
-									{#if motdRefreshing}
-										<span class="loading loading-spinner loading-xs"></span>
-									{:else}
-										<RefreshCw size={13} />
-									{/if}
-									{uiCopy.margin.refresh}
-								</button>
-							{/if}
-						</div>
-					</div>
-
-					{#if motdPending}
-						<div class="orion-motd-list" aria-busy="true" aria-label={uiCopy.margin.prepareAria}>
-							{#each motdSkeletonRows as _}
-								<div class="orion-motd-link orion-motd-skeleton-card">
-									<span class="orion-motd-skeleton-block orion-motd-skeleton-heading"></span>
-									<span class="orion-motd-skeleton-block orion-motd-skeleton-gloss"></span>
-									<span class="orion-motd-skeleton-block orion-motd-skeleton-foot"></span>
-								</div>
-							{/each}
-							<span class="sr-only">{uiCopy.margin.prepareAria}</span>
-						</div>
-					{:else if motd}
-						{#if motdItems.length}
-							<div
-								class={motdRefreshing
-									? 'orion-motd-list orion-motd-list-refreshing'
-									: 'orion-motd-list'}
-								aria-busy={motdRefreshing}
-							>
-								{#each motdItems as item}
-									{@const activeMotd = isActiveMotd(item)}
-									<a
-										class={activeMotd
-											? 'orion-motd-link orion-motd-link-active'
-											: 'orion-motd-link'}
-										href={motdHref(item)}
-										aria-current={activeMotd ? 'page' : undefined}
-										onclick={(event) => handleMotdNavigation(event, item)}
-									>
-										<span class="orion-motd-lang">{languageLabel(item.language)}</span>
-										<span class={motdWordClass(item)} lang={motdWordLang(item)}>
-											<span>{motdDisplayWord(item)}</span>
-											{#if motdDisplayLookup(item)}
-												<span class="orion-motd-lookup">{motdDisplayLookup(item)}</span>
-											{/if}
-										</span>
-										<span class="orion-motd-gloss">{motdDisplayGloss(item)}</span>
-										<span class="orion-motd-note">{motdDisplayNote(item)}</span>
-										<span class="orion-motd-action">
-											{uiCopy.margin.cardAction(item.language, motdLinksLoad)}
-										</span>
-										{#if item.ambiguity.has_multiple_lexemes}
-											<span class="orion-motd-caveat">{uiCopy.margin.multipleAnchors}</span>
-										{/if}
-										{#if item.novelty?.is_repeat}
-											<span class="orion-motd-caveat">{uiCopy.margin.repeat}</span>
-										{/if}
-										{#if activeMotd}
-											<span class="orion-motd-active-label">{uiCopy.margin.active}</span>
-										{/if}
-									</a>
-								{/each}
-							</div>
-						{/if}
-
-						{#if motdError}
-							<div class="orion-motd-warning">
-								{motdError}
-							</div>
-						{/if}
-						{#if motdRefreshing}
-							<div class="orion-motd-warning">
-								{uiCopy.margin.refreshingPrevious}
-							</div>
-						{/if}
-						{#if motdVisibleWarnings.length}
-							<div class="orion-motd-warning">
-								{motdVisibleWarnings[0].message}
-							</div>
-						{/if}
-						{#if motd.exhaustion?.fresh_requested && !motd.exhaustion.fresh_satisfied}
-							<div class="orion-motd-warning">
-								{motd.exhaustion.reason || uiCopy.margin.noFreshWord}
-							</div>
-						{/if}
-					{:else if motdError}
-						<div class="alert alert-warning text-sm">{motdError}</div>
-					{/if}
-				</div>
-			</section>
+			<DeskMotdFolio
+				{motd}
+				items={motdItems}
+				visibleWarnings={motdVisibleWarnings}
+				pending={motdPending}
+				refreshing={motdRefreshing}
+				error={motdError}
+				linksLoad={motdLinksLoad}
+				skeletonRows={motdSkeletonRows}
+				{languageLabel}
+				{isActiveMotd}
+				{motdHref}
+				{motdWordClass}
+				{motdWordLang}
+				{motdDisplayWord}
+				{motdDisplayLookup}
+				{motdDisplayGloss}
+				{motdDisplayNote}
+				onToggleLinksLoad={() => {
+					motdLinksLoad = !motdLinksLoad;
+				}}
+				onRefresh={() => void loadMotd(true)}
+				onNavigate={handleMotdNavigation}
+			/>
 
 			{#if errorMessage}
 				<div class="alert alert-warning">
@@ -3992,14 +3809,7 @@
 				{#if loading}
 					<section class="card orion-manuscript-panel">
 						<div class="card-body items-center gap-6 p-8 text-center">
-							<div class="orion-pulse-widget" aria-hidden="true">
-								<div class="orion-pulse-core">
-									<BookOpen size={30} />
-								</div>
-								<span class="orion-pulse-dot orion-pulse-dot-a"></span>
-								<span class="orion-pulse-dot orion-pulse-dot-b"></span>
-								<span class="orion-pulse-dot orion-pulse-dot-c"></span>
-							</div>
+							<DeskPulseWidget />
 
 							<div class="max-w-xl">
 								<h3 class="font-serif text-3xl leading-tight">{uiCopy.search.loadingTitle}</h3>
@@ -4633,137 +4443,25 @@
 				</section>
 			{/if}
 
-			<fieldset class="fieldset orion-manuscript-panel w-full min-w-0 p-4">
-				<legend class="fieldset-legend gap-2">
-					<SlidersHorizontal size={16} />
-					{uiCopy.sidebar.sourceTitle}
-				</legend>
-
-				<p class="text-base-content/65 mb-3 font-serif text-xs leading-5">
-					{uiCopy.sidebar.sourceIntro}
-				</p>
-
-				<div class="orion-source-grid">
-					<button
-						type="button"
-						class={isAllLookupSelected
-							? 'orion-tool-chip orion-tool-chip-active'
-							: 'orion-tool-chip'}
-						onclick={showAllLookupTools}
-						title={uiCopy.sidebar.generatorAllTitle}
-					>
-						<span class="orion-tool-icon">
-							<BookOpen size={16} />
-						</span>
-						<span class="orion-tool-chip-label">{uiCopy.sidebar.all}</span>
-						{#if isAllLookupSelected}
-							<CheckCircle2 size={14} class="orion-tool-check" />
-						{/if}
-					</button>
-
-					{#each availableTools as tool}
-						{@const MnemonicIcon = toolMnemonic(tool.id).Icon}
-						<button
-							type="button"
-							class={lookupTools.includes(tool.id)
-								? 'orion-tool-chip orion-tool-chip-active'
-								: 'orion-tool-chip'}
-							onclick={() => toggleLookupTool(tool.id)}
-							title={`${toolMnemonic(tool.id).name}: ${tool.description}`}
-						>
-							<span class="orion-tool-icon">
-								<MnemonicIcon size={16} />
-							</span>
-							<span class="orion-tool-chip-label">{tool.shortLabel}</span>
-							{#if lookupTools.includes(tool.id)}
-								<CheckCircle2 size={14} class="orion-tool-check" />
-							{/if}
-						</button>
-					{/each}
-				</div>
-			</fieldset>
-
-			{#if encounter?.buckets.length}
-				<fieldset class="fieldset orion-manuscript-panel w-full min-w-0 p-4">
-					<legend class="fieldset-legend gap-2">
-						<Database size={16} />
-						{uiCopy.sidebar.returnedTitle}
-					</legend>
-
-					<div class="orion-source-grid">
-						<button
-							type="button"
-							class={visibleTools.length === returnedToolIds.length
-								? 'orion-tool-chip orion-tool-chip-active'
-								: 'orion-tool-chip'}
-							onclick={showAllReturnedTools}
-							title={uiCopy.sidebar.showLoaded}
-						>
-							<span class="orion-tool-icon">
-								<Database size={16} />
-							</span>
-							<span class="orion-tool-chip-label">{uiCopy.sidebar.all}</span>
-						</button>
-
-						{#each returnedToolIds as toolId}
-							{@const tool = toolMeta(toolId, encounter.language)}
-							{@const MnemonicIcon = toolMnemonic(toolId).Icon}
-							<button
-								type="button"
-								class={visibleTools.includes(toolId)
-									? 'orion-tool-chip orion-tool-chip-active'
-									: 'orion-tool-chip'}
-								onclick={() => toggleVisibleTool(toolId)}
-								title={`${toolMnemonic(toolId).name}: ${tool.label}`}
-							>
-								<span class="orion-tool-icon">
-									<MnemonicIcon size={16} />
-								</span>
-								<span class="orion-tool-chip-label">{tool.shortLabel}</span>
-								{#if visibleTools.includes(toolId)}
-									<CheckCircle2 size={14} class="orion-tool-check" />
-								{/if}
-							</button>
-						{/each}
-					</div>
-				</fieldset>
-			{/if}
+			<DeskSourceControls
+				{availableTools}
+				{lookupTools}
+				{isAllLookupSelected}
+				returnedTools={returnedToolOptions}
+				{visibleTools}
+				{toolMnemonic}
+				onShowAllLookupTools={showAllLookupTools}
+				onToggleLookupTool={toggleLookupTool}
+				onShowAllReturnedTools={showAllReturnedTools}
+				onToggleVisibleTool={toggleVisibleTool}
+			/>
 
 			{#if encounter}
-				<section class="card orion-manuscript-panel w-full min-w-0">
-					<div class="card-body min-w-0 gap-3 p-4">
-						<h2 class="card-title text-base">
-							<Sparkles size={17} />
-							{uiCopy.colophon.title}
-						</h2>
-						<div class="flex flex-wrap gap-2">
-							{#each encounter.lexeme_anchors as anchor}
-								<span class="badge badge-outline">{anchor}</span>
-							{/each}
-						</div>
-						<div class="rounded-box bg-base-200 p-3 text-sm leading-6">
-							<div class="font-medium">{uiCopy.colophon.translationAccount}</div>
-							<div class="text-base-content/65">
-								{encounter.translation_cache.after.hits}/{encounter.translation_cache.after.total} hits,
-								{encounter.translation_cache.written} written
-							</div>
-							<div class="text-base-content/65">Account: {cacheSummary(encounter)}</div>
-						</div>
-						<div class="rounded-box bg-base-200 p-3 text-sm leading-6">
-							<div class="font-medium">{uiCopy.colophon.requestSeal}</div>
-							<div class="text-base-content/65">
-								backend={encounter.backend}, translation={encounter.request.translation_mode},
-								reader={encounter.request.reader_lang}
-							</div>
-							<div class="text-base-content/65 mt-1">{readerLayerStatus()}</div>
-						</div>
-						{#if encounter.warnings.length}
-							<div class="alert alert-warning text-sm">
-								{encounter.warnings[0]}
-							</div>
-						{/if}
-					</div>
-				</section>
+				<DeskColophonPanel
+					{encounter}
+					cacheAccount={cacheSummary(encounter)}
+					readerLayerStatus={readerLayerStatus()}
+				/>
 			{/if}
 
 			<section class="card orion-manuscript-panel w-full min-w-0">

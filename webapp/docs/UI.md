@@ -15,6 +15,11 @@ For the Foster-first grammar learning experience, use
 the general page and component rules; the learning doc narrows those rules into
 the "Learn this form" integration.
 
+For implementation boundaries, use
+[`SVELTEKIT_GUIDELINES.md`](SVELTEKIT_GUIDELINES.md). It records the SvelteKit
+and Svelte 5 reference rules for route shape, `$lib` components, `$props`,
+async states, styling, tests, and the active oversized-file cleanup targets.
+
 ## Current Principles
 
 - Search is one word at a time.
@@ -44,7 +49,7 @@ the "Learn this form" integration.
 Project Orion should feel compute-native while preserving the dignity of source
 texts, words, authors, and traditions. The working design lineage is Umberto
 Eco, Albertus Magnus, Ramon Llull, Giordano Bruno, Eusebius, Comenius,
-Cornelius Agrippa, Paracelsus, and Burton's *Anatomy of Melancholy*: mnemonic,
+Cornelius Agrippa, Paracelsus, and Burton's _Anatomy of Melancholy_: mnemonic,
 scholarly, didactic, and reverential, but still practical as an app.
 
 Use the localization layer for all visible names and repeated UI labels. This

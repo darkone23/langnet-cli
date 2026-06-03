@@ -1056,23 +1056,73 @@ def test_encounter_adds_local_greek_epic_eos_morphology_when_source_parse_is_emp
     ]
 
 
-def test_get_query_value_for_plan_uses_passthrough_for_greek_script() -> None:
-    query = _get_query_value_for_plan(
-        "ἀρχῇ",
-        LanguageHint.LANGUAGE_HINT_GRC,
-        normalize=True,
-        norm_cfg=NormalizeConfig(
-            diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
-            heritage_base="http://localhost:48080",
-            db_path="/path/that/should/not/be/opened.duckdb",
-            no_cache=False,
-            output="pretty",
-        ),
+def test_get_query_value_for_plan_normalizes_greek_script_for_dictionary_candidates() -> None:
+    normalized = NormalizedQuery(
+        original="ἀρχῇ",
+        language=LanguageHint.LANGUAGE_HINT_GRC,
+        candidates=[
+            CanonicalCandidate(
+                lemma="ἀρχή",
+                sources=["diogenes_parse"],
+            )
+        ],
+    )
+    service = SimpleNamespace(
+        normalize=lambda _text, _lang_hint: SimpleNamespace(normalized=normalized)
     )
 
+    with patch("langnet.cli._create_normalization_service", return_value=service):
+        query = _get_query_value_for_plan(
+            "ἀρχῇ",
+            LanguageHint.LANGUAGE_HINT_GRC,
+            normalize=True,
+            norm_cfg=NormalizeConfig(
+                diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                heritage_base="http://localhost:48080",
+                db_path="examples/debug/nonexistent/test-normalize.duckdb",
+                no_cache=True,
+                output="pretty",
+            ),
+        )
+
     assert query.original == "ἀρχῇ"
-    assert query.candidates[0].lemma == "ἀρχῇ"
-    assert query.candidates[0].sources == ["manual"]
+    assert query.candidates[0].lemma == "ἀρχή"
+    assert query.candidates[0].sources == ["diogenes_parse"]
+
+
+def test_greek_plan_passes_inflected_parse_candidates_to_bailly() -> None:
+    normalized = NormalizedQuery(
+        original="τελευταίαις",
+        language=LanguageHint.LANGUAGE_HINT_GRC,
+        candidates=[
+            CanonicalCandidate(lemma="τελευταίαις", sources=["diogenes_word_list"]),
+            CanonicalCandidate(lemma="τελευτ-αιος", sources=["diogenes_parse"]),
+            CanonicalCandidate(lemma="τελευταιαις", sources=["diogenes_parse"]),
+        ],
+    )
+    service = SimpleNamespace(
+        normalize=lambda _text, _lang_hint: SimpleNamespace(normalized=normalized)
+    )
+
+    with patch("langnet.cli._create_normalization_service", return_value=service):
+        query = _get_query_value_for_plan(
+            "τελευταίαις",
+            LanguageHint.LANGUAGE_HINT_GRC,
+            normalize=True,
+            norm_cfg=NormalizeConfig(
+                diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                heritage_base="http://localhost:48080",
+                db_path="examples/debug/nonexistent/test-normalize.duckdb",
+                no_cache=True,
+                output="pretty",
+            ),
+        )
+
+    assert [candidate.lemma for candidate in query.candidates] == [
+        "τελευταίαις",
+        "τελευτ-αιος",
+        "τελευταιαις",
+    ]
 
 
 def test_get_query_value_for_plan_normalizes_greek_compatibility_symbol() -> None:
@@ -4036,6 +4086,88 @@ def test_encounter_retries_uncached_when_cached_normalization_has_no_senses() ->
         "   sources: cdsl; witnesses: 1; confidence: single-witness\n"
         "   refs: mw:109472.0\n"
     )
+
+
+def test_encounter_retries_uncached_for_ascii_greek_partial_dictionary_sources() -> None:
+    diogenes_triples = [
+        {
+            "subject": "lex:teleut_aios",
+            "predicate": "has_sense",
+            "object": "sense:lex:teleut_aios#last",
+            "metadata": {
+                "evidence": {"source_tool": "diogenes", "source_ref": "diogenes:teleut_aios"}
+            },
+        },
+        {
+            "subject": "sense:lex:teleut_aios#last",
+            "predicate": "gloss",
+            "object": "last",
+            "metadata": {
+                "evidence": {"source_tool": "diogenes", "source_ref": "diogenes:teleut_aios"}
+            },
+        },
+    ]
+    bailly_triples = [
+        {
+            "subject": "lex:teleutaios",
+            "predicate": "has_sense",
+            "object": "sense:lex:teleutaios#last",
+            "metadata": {
+                "evidence": {"source_tool": "bailly", "source_ref": "bailly:teleutaios"}
+            },
+        },
+        {
+            "subject": "sense:lex:teleutaios#last",
+            "predicate": "gloss",
+            "object": "dernier",
+            "metadata": {
+                "evidence": {"source_tool": "bailly", "source_ref": "bailly:teleutaios"}
+            },
+        },
+    ]
+    stale_result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="diogenes", subject="lex:teleut_aios", triples=diogenes_triples)]
+    )
+    recovered_result = SimpleNamespace(
+        claims=[
+            _claim_with_triples(
+                tool="diogenes", subject="lex:teleut_aios", triples=diogenes_triples
+            ),
+            _claim_with_triples(tool="bailly", subject="lex:teleutaios", triples=bailly_triples),
+        ]
+    )
+
+    with patch(
+        "langnet.cli._execute_lookup_plan", side_effect=[stale_result, recovered_result]
+    ) as execute_lookup:
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "grc",
+                "teleutaiais",
+                "all",
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    source_tools = {
+        witness["source_tool"]
+        for bucket in payload["buckets"]
+        for witness in bucket["witnesses"]
+    }
+    assert source_tools == {"bailly", "diogenes"}
+    assert (
+        "Cached Greek encounter had partial dictionary evidence; retried with fresh normalization."
+        in payload["warnings"]
+    )
+    assert execute_lookup.call_count == 2
+    assert execute_lookup.call_args_list[1].kwargs["no_cache"] is True
 
 
 def test_encounter_latin_source_language_snapshot() -> None:

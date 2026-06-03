@@ -217,6 +217,16 @@ SANSKRIT_AN_STEM_MIN_CHARS = 3
 ENCOUNTER_JSON_SCHEMA_VERSION = "langnet.encounter.v1"
 ENCOUNTER_JSON_ERROR_SCHEMA_VERSION = "langnet.encounter.error.v1"
 DATABASE_BUSY_RETRY_AFTER_MS = 1500
+ENCOUNTER_GREEK_PARTIAL_SOURCE_RETRY_SUFFIXES = (
+    "ais",
+    "ois",
+    "ous",
+    "ein",
+    "einai",
+    "men",
+    "tai",
+    "sthai",
+)
 TRANSLATION_CACHE_SCHEMA_VERSION = "langnet.translation_cache.v1"
 DOCTOR_SCHEMA_VERSION = "langnet.doctor.v1"
 DEFAULT_TRANSLATION_MODEL = "openai:google/gemini-2.5-flash"
@@ -7885,14 +7895,6 @@ def _get_query_value_for_plan(
     text: str, lang_hint, normalize: bool, norm_cfg: NormalizeConfig
 ) -> query_spec.NormalizedQuery:
     """Get the query value for planning, either normalized or passthrough."""
-    if (
-        normalize
-        and lang_hint == LanguageHint.LANGUAGE_HINT_GRC
-        and _contains_greek_script(text)
-        and not _requires_greek_script_normalization(text)
-    ):
-        return _passthrough_normalized_query(text, lang_hint)
-
     if normalize:
         normalized_result = _normalize_with_short_cache_lock(norm_cfg, text, lang_hint)
         return normalized_result.normalized
@@ -8217,6 +8219,39 @@ def _encounter_should_retry_uncached(
     if not normalize or no_cache or reduction.buckets:
         return False
     return tool_filter.lower() not in {"heritage", "claim.heritage.morph"}
+
+
+def _encounter_should_retry_uncached_for_greek_partial_sources(
+    *,
+    language: str,
+    text: str,
+    normalize: bool,
+    no_cache: bool,
+    tool_filter: str,
+    reduction,
+) -> bool:
+    if not normalize or no_cache or not reduction.buckets:
+        return False
+    if language.lower() != "grc" or tool_filter.lower() != "all":
+        return False
+    query = text.strip().lower()
+    if (
+        not query
+        or not query.isascii()
+        or not query.endswith(ENCOUNTER_GREEK_PARTIAL_SOURCE_RETRY_SUFFIXES)
+    ):
+        return False
+    source_tools = _encounter_reduction_source_tools(reduction)
+    return source_tools == {"diogenes"}
+
+
+def _encounter_reduction_source_tools(reduction) -> set[str]:
+    return {
+        source_tool
+        for bucket in getattr(reduction, "buckets", []) or []
+        for source_tool in _encounter_bucket_source_tools(bucket)
+        if source_tool
+    }
 
 
 def _shorten(text: str, max_chars: int) -> str:
@@ -12072,6 +12107,53 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 reduction.warnings.append(
                     "Cached normalization produced no sense buckets; retried with fresh "
                     "normalization."
+                )
+        if _encounter_should_retry_uncached_for_greek_partial_sources(
+            language=language,
+            text=text,
+            normalize=normalize,
+            no_cache=no_cache,
+            tool_filter=tool_filter,
+            reduction=reduction,
+        ):
+            cached_source_tools = _encounter_reduction_source_tools(reduction)
+            fresh_result = _execute_lookup_plan(
+                language=language,
+                text=text,
+                tool_filter=tool_filter,
+                normalize=normalize,
+                diogenes_endpoint=diogenes_endpoint,
+                diogenes_parse_endpoint=diogenes_parse_endpoint,
+                heritage_base=heritage_base,
+                db_path=db_path,
+                no_cache=True,
+                include_cltk=include_cltk,
+            )
+            fresh_claims = _claims_as_mappings(fresh_result)
+            if translation_cache is not None:
+                try:
+                    fresh_claims = _encounter_apply_translation_cache(
+                        claims=fresh_claims,
+                        language=language,
+                        model=translation_model,
+                        cache=translation_cache,  # type: ignore[arg-type]
+                        populate=populate_translations,
+                        translate=translation_callback,
+                        diagnostics=translation_diagnostics,
+                        context="greek-partial-source-retry",
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    raise click.ClickException(
+                        f"Unable to read translation cache {translation_cache_db}: {exc}"
+                    ) from exc
+            fresh_reduction = reduce_claims(query=text, language=language, claims=fresh_claims)
+            fresh_source_tools = _encounter_reduction_source_tools(fresh_reduction)
+            if len(fresh_source_tools) > len(cached_source_tools):
+                claims = fresh_claims
+                reduction = fresh_reduction
+                reduction.warnings.append(
+                    "Cached Greek encounter had partial dictionary evidence; retried with "
+                    "fresh normalization."
                 )
 
         morphology_claims = claims

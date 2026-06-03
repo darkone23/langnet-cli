@@ -382,6 +382,8 @@ def _lookup_keys(headword: str) -> list[str]:
         comma_no_dot,
         raw.lower(),
         comma_head.lower(),
+        _undotted_normalized_key(raw.lower()),
+        _undotted_normalized_key(comma_head.lower()),
         normalize_greekish_token(raw) or "",
         normalize_greekish_token(comma_head) or "",
         _undotted_normalized_key(normalize_greekish_token(raw) or ""),
@@ -415,7 +417,7 @@ def _undotted_headword(value: str) -> str:
 
 
 def _undotted_normalized_key(value: str) -> str:
-    return value.replace("_", "")
+    return value.replace("_", "").replace("-", "")
 
 
 def _lookup_entry_from_row(row: tuple[Any, ...], blocks: list[dict[str, Any]]) -> dict[str, Any]:

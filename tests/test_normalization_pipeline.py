@@ -93,6 +93,24 @@ class _GreekCompatibilityDiogenes:
         return WordListResult(query=query, lemmas=["ὄμβρος"], matched=True)
 
 
+class _GreekAsciiInflectedDiogenes:
+    def __init__(self) -> None:
+        self.parse_queries: list[str] = []
+        self.word_list_queries: list[str] = []
+
+    def fetch_parse(self, query: str, lang: str = "grc") -> ParseResult:
+        self.parse_queries.append(query)
+        if query == "τελευταίαις":
+            return ParseResult(query=query, lemmas=["τελευτ-αιος"], matched=True)
+        return ParseResult(query=query, lemmas=[], matched=False)
+
+    def fetch_word_list(self, query: str) -> WordListResult:
+        self.word_list_queries.append(query)
+        if query == "τελευταιαισ":
+            return WordListResult(query=query, lemmas=["τελευταίαις"], matched=True)
+        return WordListResult(query=query, lemmas=[], matched=False)
+
+
 class _GreekEpicEusDiogenes:
     def fetch_word_list(self, query: str) -> WordListResult:
         lemmas_by_query = {
@@ -440,6 +458,26 @@ def test_greek_normalizer_folds_compatibility_beta_symbol_before_diogenes() -> N
         "ombros",
         "ὄμβρος",
     }
+
+
+def test_greek_normalizer_parses_ascii_word_list_hit_for_dictionary_candidates() -> None:
+    diogenes = _GreekAsciiInflectedDiogenes()
+    normalizer = QueryNormalizer(diogenes_greek_client=diogenes)
+
+    result = normalizer.normalize("teleutaiais", LanguageHint.LANGUAGE_HINT_GRC)
+
+    assert "τελευταιαισ" in diogenes.word_list_queries
+    assert diogenes.parse_queries == ["τελευταίαις"]
+    assert {candidate.lemma for candidate in result.normalized.candidates} >= {
+        "τελευταίαις",
+        "τελευτ-αιος",
+    }
+    assert any(
+        step.operation == "diogenes_word_list_parse"
+        and step.input == "τελευταίαις"
+        and step.output == "τελευτ-αιος"
+        for step in result.normalized.normalizations
+    )
 
 
 def test_latin_normalizer_uses_diogenes_parse() -> None:

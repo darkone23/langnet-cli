@@ -28,6 +28,8 @@ Start here:
 - `docs/READER_WEB_CONTRACT.md` - reader/web integration contract.
 - `webapp/README.md` - webapp setup and operational notes.
 - `webapp/docs/UI.md` - current web UI layout and visual rules.
+- `webapp/docs/SVELTEKIT_GUIDELINES.md` - SvelteKit implementation
+  boundaries for the Orion UI overhaul.
 - `webapp/docs/LEARNING_UI.md` - Foster-first "Learn this form" UI north star.
 - `webapp/docs/` - webapp-specific backend, operations, and regression notes.
 

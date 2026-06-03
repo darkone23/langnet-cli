@@ -1,22 +1,62 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { onMount, tick } from 'svelte';
-	import {
-		BookOpen,
-		Database,
-		Feather,
-		FileSearch,
-		Moon,
-		ScrollText,
-		Search,
-		Sparkles,
-		Sun,
-		Telescope
-	} from 'lucide-svelte';
 	import { fetchPayload } from '$lib/msgpack';
+	import ReaderApparatusSheet from '$lib/ReaderApparatusSheet.svelte';
+	import ReaderApparatusTabs from '$lib/ReaderApparatusTabs.svelte';
+	import ReaderContextSidebar from '$lib/ReaderContextSidebar.svelte';
+	import ReaderDeskChrome from '$lib/ReaderDeskChrome.svelte';
+	import ReaderDeskHeader from '$lib/ReaderDeskHeader.svelte';
+	import ReaderDiscoveryView from '$lib/ReaderDiscoveryView.svelte';
+	import ReaderErrorPanel from '$lib/ReaderErrorPanel.svelte';
+	import ReaderLoadingRows from '$lib/ReaderLoadingRows.svelte';
+	import ReaderLoadingStrip from '$lib/ReaderLoadingStrip.svelte';
+	import ReaderPassageView from '$lib/ReaderPassageView.svelte';
+	import ReaderSelectedWorkDesk from '$lib/ReaderSelectedWorkDesk.svelte';
+	import ReaderShell from '$lib/ReaderShell.svelte';
+	import {
+		buildStoredReaderIndexState,
+		readStoredReaderIndexState,
+		writeStoredReaderIndexState,
+		type ReaderIndexView
+	} from '$lib/reader-index-storage';
+	import { createReaderLoadingTimers, type ReaderLoadingKey } from '$lib/reader-loading-timers';
+	import {
+		buildReaderIndexStatsTargets,
+		findReaderIndexStatsInList,
+		readerIndexStatsFromSections,
+		upsertReaderIndexStatsList
+	} from '$lib/reader-index-stats';
+	import {
+		readerFacetValueLabel,
+		readerFacetValues as facetValues,
+		readerSelectedWorkAuthorLabel,
+		readerSelectedWorkContributorLine,
+		readerSelectedWorkDiscriminator,
+		readerSelectedWorkTitleLabel,
+		readerSyntheticAuthorFromRoute,
+		readerSyntheticAuthorFromWork,
+		upsertReaderAuthor
+	} from '$lib/reader-page-authors';
+	import {
+		deriveReaderPagePagination,
+		readerAuthorSectionRomanHint as authorSectionRomanHint,
+		readerCitationRangeLabel,
+		readerDiscoverySummaryLabel,
+		readerDiscoveryTitleLabel,
+		readerShelfMetaLabel as shelfMetaLabel,
+		readerTextSearchCandidateLabel as textSearchCandidateLabel,
+		readerVisibleTextSearchCandidates as visibleTextSearchCandidates,
+		readerWorkMetaLine as workMetaLine
+	} from '$lib/reader-page-formatting';
+	import {
+		readerCurrentReadingWorkRef,
+		readerSearchResultWorkRef,
+		readerSegmentIsActive,
+		readerShelfIsActive
+	} from '$lib/reader-page-navigation';
 	import {
 		encounterBriefingCanGenerate,
-		encounterBriefingCompactText,
 		encounterBriefingIsGenerated,
 		encounterBriefingModelLabel,
 		encounterBriefingOutput,
@@ -28,7 +68,6 @@
 		buildReaderRouteSearch,
 		cleanReaderToken,
 		parseReaderRouteState,
-		readerAddressRouteValue,
 		readerAuthorMatchesId,
 		readerAuthorRouteStateFromWork,
 		readerDiscoverySortValues,
@@ -38,14 +77,9 @@
 		readerIndexStatsKey,
 		readerLanguageLabel,
 		readerLoadingStatusLabel,
-		readerPopularityLabel,
-		readerSegmentDisplayText,
 		readerShelfRouteState,
-		readerWorkContributorLabels,
-		readerWorkDisplayAuthor,
 		readerWorkListDiscriminator,
 		readerWorkListLabel,
-		readerWorkDiscoveryTags,
 		readerWorkRef,
 		type ReaderAuthor,
 		type ReaderAuthorSection,
@@ -76,49 +110,19 @@
 		type ReaderStructureResponse,
 		type ReaderWorksResponse
 	} from '$lib/reader';
+	import {
+		buildCurrentReaderRouteState,
+		defaultReaderAddressForLanguage,
+		formatReaderAddress,
+		readerIsCanonicalRef,
+		readerWorkHasContributorMetadata,
+		type ReaderRouteOverrides
+	} from '$lib/reader-page-routing';
 	import { romanizeSearchTerm } from '$lib/search-romanization';
 	import { languageModes, type LanguageMode } from '$lib/search-data';
 	import { uiCopy } from '$lib/ui-copy';
 
 	type ReaderHistoryMode = 'push' | 'replace' | 'none';
-	type ReaderIndexView = 'choose' | NonNullable<ReaderRouteState['readerView']>;
-	type ReaderLoadingKey =
-		| 'shelves'
-		| 'library'
-		| 'authors'
-		| 'textSearch'
-		| 'contents'
-		| 'segment'
-		| 'dossier'
-		| 'structure';
-
-	const readerIndexStorageKey = 'orion-reader-index-state:v6';
-	const readerIndexStorageTtlMs = 2 * 60 * 60 * 1000;
-
-	type StoredReaderIndexState = {
-		version: 6;
-		expiresAt: number;
-		language: LanguageMode;
-		catalogId: string;
-		readerView: ReaderIndexView;
-		activeAuthorSection: string;
-		workQuery: string;
-		textQuery: string;
-		textSearchMode: ReaderSearchMode;
-		discoveryGroup: string;
-		discoveryTag: string;
-		discoveryAuthorId: string;
-		discoveryAuthorLabel: string;
-		discoverySort: ReaderRouteState['discoverySort'];
-		authorAgentKind: string;
-		authorHistoricity: string;
-		worksNextCursor: string | null;
-		worksPrevCursor: string | null;
-		authorsNextCursor: string | null;
-		authorsPrevCursor: string | null;
-		textSearchNextCursor: string | null;
-		textSearchPrevCursor: string | null;
-	};
 
 	let theme = $state<'manuscript' | 'vespers'>('manuscript');
 	let language = $state<LanguageMode>('grc');
@@ -210,7 +214,7 @@
 	let pageCursorParam = $state<string | null>(null);
 	let showTransliteration = $state(false);
 	let readerResultsRegion = $state<HTMLElement | null>(null);
-	const readerLoadingTimers = new Map<ReaderLoadingKey, ReturnType<typeof setInterval>>();
+	const readerLoadingTimers = createReaderLoadingTimers(setReaderLoadingElapsedSeconds);
 	const readerIndexStatsInFlight = new Set<string>();
 	let selectedWordBriefingController: AbortController | null = null;
 
@@ -235,11 +239,15 @@
 				: uiCopy.encounterBriefing.statusGenerated
 			: uiCopy.encounterBriefing.statusDraft
 	);
+	let currentDivisionTrail = $derived(selectedSegment?.current_divisions ?? []);
+	let currentDivisionNode = $derived(
+		currentDivisionTrail.length ? currentDivisionTrail[currentDivisionTrail.length - 1] : null
+	);
 	let activeReaderIndexStats = $derived(findReaderIndexStats(language, catalogId));
 	let indexSummaryLabel = $derived(
 		readerIndexSummaryLabel(language, catalogId, activeReaderIndexStats)
 	);
-	let pageRangeLabel = $derived(citationRangeLabel(pageSegments, selectedSegment));
+	let pageRangeLabel = $derived(readerCitationRangeLabel(pageSegments, selectedSegment));
 	let discoveryGroups = $derived(facetValues(facets, 'discovery_groups'));
 	let discoveryTags = $derived(
 		readerFacetValuesForLanguage(facetValues(facets, 'discovery_tags'), language)
@@ -247,7 +255,27 @@
 	let discoverySorts = $derived(readerDiscoverySortValues(facetValues(facets, 'sorts')));
 	let authorAgentKinds = $derived(facetValues(facets, 'author_agent_kinds'));
 	let authorHistoricityStatuses = $derived(facetValues(facets, 'author_historicity_statuses'));
-	let activeDiscoverySummary = $derived(discoverySummary());
+	let activeDiscoverySummary = $derived(
+		readerDiscoverySummaryLabel({
+			discoveryGroup,
+			discoveryTag,
+			workQuery,
+			discoveryAuthorLabel,
+			discoveryGroups,
+			discoveryTags,
+			languageLabel: readerLanguageLabel(language)
+		})
+	);
+	let activeDiscoveryTitle = $derived(
+		readerDiscoveryTitleLabel({
+			readerView,
+			activeDiscoverySummary,
+			textQuery,
+			activeAuthorSection,
+			workQuery,
+			languageLabel: readerLanguageLabel(language)
+		})
+	);
 	let hasActiveDiscoveryQuery = $derived(
 		Boolean(
 			workQuery.trim() || discoveryGroup || discoveryTag || discoveryAuthorId || worksCursorParam
@@ -367,7 +395,8 @@
 		if (route.address) {
 			addressInput = route.address;
 			showAddressLookup = true;
-		} else if (!route.work && !route.segment) addressInput = defaultAddressForLanguage(language);
+		} else if (!route.work && !route.segment)
+			addressInput = defaultReaderAddressForLanguage(language);
 		if (!route.work && !route.segment) {
 			selectedWork = null;
 			selectedSegment = null;
@@ -404,9 +433,10 @@
 			readerView = 'authors';
 			routeAuthorId = route.discoveryAuthorId;
 			routeAuthorName = route.discoveryAuthorLabel ?? '';
-			selectedAuthor = syntheticAuthorFromRoute(
+			selectedAuthor = readerSyntheticAuthorFromRoute(
 				route.discoveryAuthorId,
-				route.discoveryAuthorLabel ?? route.discoveryAuthorId
+				route.discoveryAuthorLabel ?? route.discoveryAuthorId,
+				language
 			);
 			if (!authors.some((author) => author.author_id === selectedAuthor?.author_id)) {
 				authors = selectedAuthor ? [selectedAuthor, ...authors] : authors;
@@ -510,14 +540,6 @@
 		}
 	}
 
-	function selectedWordMeaningSummaries(summary: EncounterBriefingSummary | null) {
-		return (summary?.meanings ?? []).slice(0, 3);
-	}
-
-	function selectedWordGrammarSummaries(summary: EncounterBriefingSummary | null) {
-		return (summary?.grammar_functions ?? []).slice(0, 2);
-	}
-
 	async function loadFacets() {
 		if (!catalogId) return;
 		try {
@@ -593,7 +615,7 @@
 		discoverySort = 'global-popularity';
 		authorAgentKind = '';
 		authorHistoricity = '';
-		addressInput = defaultAddressForLanguage(nextLanguage);
+		addressInput = defaultReaderAddressForLanguage(nextLanguage);
 		works = [];
 		discoveryShelves = [];
 		authorSections = [];
@@ -647,44 +669,13 @@
 		return data.items;
 	}
 
-	function readerIndexStatsFromSections(
-		targetLanguage: LanguageMode,
-		targetCatalogId: string,
-		sections: ReaderAuthorSection[]
-	): ReaderIndexStats {
-		return {
-			language: targetLanguage,
-			catalogId: targetCatalogId,
-			workCount: sections.reduce((count, section) => count + section.work_count, 0),
-			authorCount: sections.reduce((count, section) => count + section.author_count, 0)
-		};
-	}
-
 	function findReaderIndexStats(targetLanguage: LanguageMode, targetCatalogId: string) {
-		const key = readerIndexStatsKey(targetLanguage, targetCatalogId);
-		return readerIndexStats.find(
-			(stats) => readerIndexStatsKey(stats.language, stats.catalogId) === key
-		);
+		return findReaderIndexStatsInList(readerIndexStats, targetLanguage, targetCatalogId);
 	}
 
 	function upsertReaderIndexStats(stats: ReaderIndexStats) {
-		const key = readerIndexStatsKey(stats.language, stats.catalogId);
-		readerIndexStats = [
-			...readerIndexStats.filter(
-				(item) => readerIndexStatsKey(item.language, item.catalogId) !== key
-			),
-			stats
-		];
+		readerIndexStats = upsertReaderIndexStatsList(readerIndexStats, stats);
 		saveReaderIndexState();
-	}
-
-	function defaultCatalogForLanguage(targetLanguage: LanguageMode) {
-		return (
-			catalogDefaults[targetLanguage] ??
-			catalogs.find((catalog) => catalog.available && catalog.languages.includes(targetLanguage))
-				?.id ??
-			''
-		);
 	}
 
 	async function loadReaderIndexStatsFor(targetLanguage: LanguageMode, targetCatalogId: string) {
@@ -712,24 +703,16 @@
 
 	async function loadAllReaderIndexStats() {
 		if (!catalogs.length) return;
-		const targets = new Map<string, { language: LanguageMode; catalogId: string }>();
-		for (const mode of languageModes) {
-			const defaultCatalogId = defaultCatalogForLanguage(mode.id);
-			if (defaultCatalogId) {
-				targets.set(readerIndexStatsKey(mode.id, defaultCatalogId), {
-					language: mode.id,
-					catalogId: defaultCatalogId
-				});
-			}
-		}
-		if (catalogId) {
-			targets.set(readerIndexStatsKey(language, catalogId), { language, catalogId });
-		}
+		const targets = buildReaderIndexStatsTargets({
+			catalogs,
+			catalogDefaults,
+			languageModes,
+			activeLanguage: language,
+			activeCatalogId: catalogId
+		});
 
 		await Promise.all(
-			Array.from(targets.values()).map((target) =>
-				loadReaderIndexStatsFor(target.language, target.catalogId)
-			)
+			targets.map((target) => loadReaderIndexStatsFor(target.language, target.catalogId))
 		);
 	}
 
@@ -817,22 +800,8 @@
 		return authors.find((author) => readerAuthorMatchesId(author, authorId)) ?? null;
 	}
 
-	function authorIdentityValues(author: ReaderAuthor) {
-		return [author.author_id, author.source_author_id, author.canonical_author_id].filter(
-			(value): value is string => Boolean(value)
-		);
-	}
-
-	function authorsMatch(left: ReaderAuthor, right: ReaderAuthor) {
-		return authorIdentityValues(right).some((id) => readerAuthorMatchesId(left, id));
-	}
-
 	function upsertAuthor(author: ReaderAuthor) {
-		if (authors.some((item) => authorsMatch(item, author))) {
-			authors = authors.map((item) => (authorsMatch(item, author) ? author : item));
-			return;
-		}
-		authors = [author, ...authors];
+		authors = upsertReaderAuthor(authors, author);
 	}
 
 	async function findAuthorByQuery(authorId: string, authorName: string) {
@@ -862,7 +831,7 @@
 		}
 
 		if (!authorName) return null;
-		const synthetic = syntheticAuthorFromRoute(authorId, authorName);
+		const synthetic = readerSyntheticAuthorFromRoute(authorId, authorName, language);
 		upsertAuthor(synthetic);
 		return synthetic;
 	}
@@ -1029,7 +998,7 @@
 		contentsCursorParam = null;
 		pageCursorParam = null;
 		showAddressLookup = false;
-		addressInput = defaultAddressForLanguage(language);
+		addressInput = defaultReaderAddressForLanguage(language);
 		updateReaderUrl({}, 'push');
 		if (readerView === 'shelves' && hasActiveDiscoveryQuery && !works.length)
 			void searchWorks(null, routeAuthorId || undefined, 'replace');
@@ -1097,8 +1066,7 @@
 			if (!response.ok) throw new Error(data.error || 'Reader work dossier failed.');
 			workDossier = data;
 		} catch (error) {
-			dossierError =
-				error instanceof Error ? error.message : 'Reader work dossier failed.';
+			dossierError = error instanceof Error ? error.message : 'Reader work dossier failed.';
 		} finally {
 			dossierLoading = false;
 			stopReaderLoadingTimer('dossier');
@@ -1206,11 +1174,11 @@
 			historyMode
 		);
 		const workSegment = address.match(/^(.+)\s+([^\s]+)$/u);
-		if (workSegment && isCanonicalReaderRef(workSegment[1])) {
+		if (workSegment && readerIsCanonicalRef(workSegment[1])) {
 			await showSegment(workSegment[1], workSegment[2], 'replace');
 			return;
 		}
-		if (isCanonicalReaderRef(address)) {
+		if (readerIsCanonicalRef(address)) {
 			await showAddress(address, 'replace');
 			return;
 		}
@@ -1295,15 +1263,6 @@
 		}
 	}
 
-	function isCanonicalReaderRef(value: string) {
-		return (
-			value.startsWith('urn:ctsv2:') ||
-			value.startsWith('ctsv2://') ||
-			value.startsWith('urn:cts:') ||
-			value.startsWith('langnet:reader:')
-		);
-	}
-
 	async function ensureSelectedWork(work: string) {
 		if (
 			selectedWork &&
@@ -1311,7 +1270,7 @@
 				selectedWork.cts_work_urn === work ||
 				selectedWork.canonical_text_id === work ||
 				selectedWork.canonical_address === work) &&
-			workHasContributorMetadata(selectedWork)
+			readerWorkHasContributorMetadata(selectedWork)
 		)
 			return;
 		try {
@@ -1328,15 +1287,6 @@
 		} catch {
 			// Work metadata is helpful chrome; failure should not block exact reading.
 		}
-	}
-
-	function workHasContributorMetadata(work: ReaderWork) {
-		return Boolean(
-			work.translator_names?.length ||
-			work.traditional_author_names?.length ||
-			work.attributed_author_names?.length ||
-			work.metadata_attributions?.length
-		);
 	}
 
 	async function loadPageWindow(work: string, citation: string) {
@@ -1357,7 +1307,7 @@
 			if (!response.ok) throw new Error(data.error || 'Reader page window failed.');
 			pageSegments = data.items.length ? data.items : selectedSegment ? [selectedSegment] : [];
 			contents = data.items.length ? data.items : contents;
-			const derivedPagination = derivePagePagination(pageSegments);
+			const derivedPagination = deriveReaderPagePagination(pageSegments, pageLimit);
 			pageNextCursor = data.pagination?.next_cursor ?? derivedPagination.next;
 			pagePrevCursor = data.pagination?.prev_cursor ?? derivedPagination.previous;
 		} catch {
@@ -1366,10 +1316,6 @@
 			pagePrevCursor = null;
 		}
 	}
-
-	type ReaderRouteOverrides = Partial<{
-		[K in keyof ReaderRouteState]: ReaderRouteState[K] | null;
-	}>;
 
 	function syncUrl(work: string, segment: string, historyMode: ReaderHistoryMode = 'replace') {
 		addressInput = formatReaderAddress(work, segment);
@@ -1403,57 +1349,38 @@
 	}
 
 	function currentReaderRouteState(): Partial<ReaderRouteState> {
-		const work = selectedWork ? readerWorkRef(selectedWork) : selectedSegment?.work_id || undefined;
-		const segment = selectedSegment?.citation_path || undefined;
-		const address = readerAddressRouteValue({
-			addressInput,
-			defaultAddress: defaultAddressForLanguage(language),
-			hasWork: Boolean(work),
-			showAddressLookup
-		});
-
-		return {
+		return buildCurrentReaderRouteState({
 			language,
 			catalogId,
-			readerView: readerView === 'choose' ? undefined : readerView,
-			address,
-			query: readerView === 'shelves' || readerView === 'authors' ? workQuery : undefined,
-			textQuery: readerView === 'search' ? textQuery : undefined,
-			textSearchMode: readerView === 'search' ? textSearchMode : undefined,
-			textSearchCursor: readerView === 'search' ? (textSearchCursorParam ?? undefined) : undefined,
-			discoveryGroup: readerView === 'shelves' ? discoveryGroup || undefined : undefined,
-			discoveryTag: readerView === 'shelves' ? discoveryTag || undefined : undefined,
-			discoveryAuthorId: readerView === 'shelves' ? discoveryAuthorId || undefined : undefined,
-			discoveryAuthorLabel:
-				readerView === 'shelves' ? discoveryAuthorLabel || undefined : undefined,
-			discoverySort: readerView === 'shelves' ? discoverySort : undefined,
-			authorAgentKind: readerView === 'authors' ? authorAgentKind || undefined : undefined,
-			authorHistoricity: readerView === 'authors' ? authorHistoricity || undefined : undefined,
-			authorSection: readerView === 'authors' ? activeAuthorSection : undefined,
-			authorId: readerView === 'authors' ? (selectedAuthor?.author_id ?? routeAuthorId) : undefined,
-			authorName: readerView === 'authors' ? routeAuthorName || undefined : undefined,
-			authorsCursor: readerView === 'authors' ? (authorsCursorParam ?? undefined) : undefined,
-			worksCursor: worksCursorParam ?? undefined,
-			contentsCursor: contentsCursorParam ?? undefined,
-			pageCursor: pageCursorParam ?? undefined,
-			collection: activeCollection,
-			work,
-			segment,
+			readerView,
+			selectedWork,
+			selectedSegment,
+			addressInput,
+			showAddressLookup,
+			workQuery,
+			textQuery,
+			textSearchMode,
+			textSearchCursorParam,
+			discoveryGroup,
+			discoveryTag,
+			discoveryAuthorId,
+			discoveryAuthorLabel,
+			discoverySort,
+			authorAgentKind,
+			authorHistoricity,
+			activeAuthorSection,
+			selectedAuthorId: selectedAuthor?.author_id,
+			routeAuthorId,
+			routeAuthorName,
+			authorsCursorParam,
+			worksCursorParam,
+			contentsCursorParam,
+			pageCursorParam,
+			activeCollection,
 			selectedWord,
 			theme,
-			transliteration: showTransliteration || undefined
-		};
-	}
-
-	function defaultAddressForLanguage(nextLanguage: LanguageMode) {
-		return nextLanguage === 'grc' ? 'Od. 3.74' : '';
-	}
-
-	function formatReaderAddress(work: string, segment: string) {
-		if (work.startsWith('urn:ctsv2:') || work.startsWith('ctsv2://')) {
-			return `${work}?ref=${encodeURIComponent(segment)}`;
-		}
-		return [work, segment].filter(Boolean).join(' ');
+			showTransliteration
+		});
 	}
 
 	function selectToken(text: string) {
@@ -1468,7 +1395,7 @@
 	}
 
 	function segmentIsActive(segment: ReaderSegment) {
-		return selectedSegment?.citation_path === segment.citation_path;
+		return readerSegmentIsActive(selectedSegment, segment);
 	}
 
 	function segmentParts(segment: ReaderSegment): ReaderTokenPart[] {
@@ -1483,7 +1410,7 @@
 	function closeAddressLookup() {
 		showAddressLookup = false;
 		if (!selectedWork && !selectedSegment) {
-			addressInput = defaultAddressForLanguage(language);
+			addressInput = defaultReaderAddressForLanguage(language);
 			updateReaderUrl({ address: null }, 'replace');
 		}
 	}
@@ -1558,10 +1485,7 @@
 	}
 
 	function shelfIsActive(shelf: ReaderDiscoveryShelf) {
-		return (
-			(Boolean(shelf.query.group) && discoveryGroup === shelf.query.group && !discoveryTag) ||
-			(Boolean(shelf.query.tag) && discoveryTag === shelf.query.tag && !discoveryGroup)
-		);
+		return readerShelfIsActive(shelf, { discoveryGroup, discoveryTag });
 	}
 
 	function clearDiscoveryFilters() {
@@ -1588,40 +1512,16 @@
 		updateReaderUrl({}, 'push');
 	}
 
-	function visibleTextSearchCandidates(candidates: ReaderSearchQueryCandidate[]) {
-		return candidates
-			.filter((candidate) => candidate.query && candidate.kind !== 'input')
-			.slice(0, 8);
-	}
-
-	function textSearchCandidateLabel(candidate: ReaderSearchQueryCandidate) {
-		if (candidate.kind === 'concept_alias' && candidate.concept_label) {
-			return `${candidate.concept_label}: ${candidate.query}`;
-		}
-		return candidate.query;
-	}
-
 	function startReaderLoadingTimer(kind: ReaderLoadingKey) {
-		stopReaderLoadingTimer(kind);
-		const startedAt = Date.now();
-		setReaderLoadingElapsedSeconds(kind, 0);
-		readerLoadingTimers.set(
-			kind,
-			setInterval(() => {
-				setReaderLoadingElapsedSeconds(kind, Math.floor((Date.now() - startedAt) / 1000));
-			}, 1000)
-		);
+		readerLoadingTimers.start(kind);
 	}
 
 	function stopReaderLoadingTimer(kind: ReaderLoadingKey) {
-		const timer = readerLoadingTimers.get(kind);
-		if (!timer) return;
-		clearInterval(timer);
-		readerLoadingTimers.delete(kind);
+		readerLoadingTimers.stop(kind);
 	}
 
 	function stopAllReaderLoadingTimers() {
-		for (const kind of readerLoadingTimers.keys()) stopReaderLoadingTimer(kind);
+		readerLoadingTimers.stopAll();
 	}
 
 	function setReaderLoadingElapsedSeconds(kind: ReaderLoadingKey, seconds: number) {
@@ -1694,15 +1594,28 @@
 	}
 
 	function openSearchResult(result: ReaderSearchResult) {
-		const work = result.target?.work_ref || result.cts_work_urn || result.work_id;
+		const work = readerSearchResultWorkRef(result);
 		if (!work || !result.citation_path) return;
 		void showSegment(work, result.citation_path, 'push');
+	}
+
+	function openSearchResultAuthor(result: ReaderSearchResult) {
+		if (!result.canonical_author_id) return;
+		readerView = 'authors';
+		routeAuthorId = result.canonical_author_id;
+		routeAuthorName = result.canonical_author_name || result.author;
+		selectedAuthor = readerSyntheticAuthorFromRoute(
+			result.canonical_author_id,
+			routeAuthorName,
+			language
+		);
+		void searchWorks(null, result.canonical_author_id, 'push', routeAuthorName);
 	}
 
 	function filterDiscoveryByAuthor(work: ReaderWork) {
 		const route = readerAuthorRouteStateFromWork(work);
 		if (!route?.authorId) return;
-		const author = syntheticAuthorFromWork(work, route.authorId);
+		const author = readerSyntheticAuthorFromWork(work, route.authorId);
 		readerView = 'authors';
 		selectedAuthor = author;
 		if (!authors.some((item) => item.author_id === author.author_id))
@@ -1742,14 +1655,14 @@
 
 	function showPageCursor(cursor: string | null) {
 		if (!cursor) return;
-		const work = selectedWork ? readerWorkRef(selectedWork) : selectedSegment?.work_id;
+		const work = readerCurrentReadingWorkRef(selectedWork, selectedSegment);
 		if (!work) return;
 		void loadContentsPage(work, cursor, 'push');
 	}
 
 	function showNavigationTarget(target: ReaderNavigationTarget | null) {
 		if (!target) return;
-		const work = selectedWork ? readerWorkRef(selectedWork) : selectedSegment?.work_id;
+		const work = readerCurrentReadingWorkRef(selectedWork, selectedSegment);
 		if (!work) return;
 		void showSegment(work, target.citation_path, 'push');
 	}
@@ -1800,73 +1713,8 @@
 		void searchWorks(null, author.author_id, 'push');
 	}
 
-	function syntheticAuthorFromWork(work: ReaderWork, authorId: string): ReaderAuthor {
-		const displayName = readerWorkDisplayAuthor(work);
-		return {
-			author_id: authorId,
-			source_author_id: work.source_author_id || '',
-			display_name: displayName,
-			author: displayName,
-			index_name: displayName,
-			native_name: displayName,
-			section_key: '',
-			language: work.language,
-			work_count: 0,
-			alternate_names: [work.source_author, work.canonical_author_name, work.author].filter(
-				(value): value is string => Boolean(value && value !== displayName)
-			),
-			sort_key: displayName
-		};
-	}
-
-	function syntheticAuthorFromRoute(authorId: string, authorName: string): ReaderAuthor {
-		return {
-			author_id: authorId,
-			source_author_id: '',
-			display_name: authorName,
-			author: authorName,
-			index_name: authorName,
-			native_name: authorName,
-			section_key: '',
-			language,
-			work_count: 0,
-			alternate_names: [],
-			sort_key: authorName
-		};
-	}
-
-	function facetValues(items: ReaderFacet[], id: string): ReaderFacetValue[] {
-		return items.find((item) => item.id === id)?.values ?? [];
-	}
-
 	function facetValueLabel(values: ReaderFacetValue[], id: string) {
-		return values.find((value) => value.id === id)?.label || labelFromId(id);
-	}
-
-	function labelFromId(id: string) {
-		return id
-			.replace(/[_-]+/g, ' ')
-			.replace(/\b\w/g, (letter) => letter.toUpperCase())
-			.trim();
-	}
-
-	function discoverySummary() {
-		const parts = [];
-		if (discoveryGroup) parts.push(facetValueLabel(discoveryGroups, discoveryGroup));
-		if (discoveryTag) parts.push(facetValueLabel(discoveryTags, discoveryTag));
-		if (!parts.length && workQuery.trim()) parts.push(`Search: ${workQuery.trim()}`);
-		if (discoveryAuthorLabel) parts.push(discoveryAuthorLabel);
-		if (!parts.length) parts.push(`${readerLanguageLabel(language)} works`);
-		return parts.join(' · ');
-	}
-
-	function workMetaLine(work: ReaderWork) {
-		const parts = [
-			work.classification_category || work.classification_scope || '',
-			work.classification_period || '',
-			wordCountLabel(work.word_count)
-		].filter(Boolean);
-		return parts.join(' · ');
+		return readerFacetValueLabel(values, id);
 	}
 
 	function workListLabel(work: ReaderWork) {
@@ -1878,20 +1726,19 @@
 	}
 
 	function selectedWorkTitleLabel() {
-		return selectedWork ? readerWorkListLabel(selectedWork, works) : '';
+		return readerSelectedWorkTitleLabel(selectedWork, works);
 	}
 
 	function selectedWorkDiscriminator() {
-		return selectedWork ? readerWorkListDiscriminator(selectedWork, works) : '';
+		return readerSelectedWorkDiscriminator(selectedWork, works);
 	}
 
 	function selectedWorkContributorLine() {
-		return selectedWork ? readerWorkContributorLabels(selectedWork).join(' · ') : '';
+		return readerSelectedWorkContributorLine(selectedWork);
 	}
 
 	function selectedWorkAuthorLabel() {
-		if (!selectedWork) return '';
-		return readerWorkDisplayAuthor(selectedWork);
+		return readerSelectedWorkAuthorLabel(selectedWork);
 	}
 
 	function openSelectedWorkAuthor() {
@@ -1899,160 +1746,44 @@
 		filterDiscoveryByAuthor(selectedWork);
 	}
 
-	function wordCountLabel(count: number | undefined) {
-		if (!count) return '';
-		return `${count.toLocaleString()} words`;
-	}
-
-	function shelfMetaLabel(shelf: ReaderDiscoveryShelf) {
-		const workLabel = `${shelf.work_count.toLocaleString()} ${
-			shelf.work_count === 1 ? 'work' : 'works'
-		}`;
-		const authorLabel = shelf.author_count
-			? `${shelf.author_count.toLocaleString()} ${shelf.author_count === 1 ? 'author' : 'authors'}`
-			: '';
-		return [workLabel, authorLabel].filter(Boolean).join(' · ');
-	}
-
-	function authorSectionRomanHint(nextLanguage: LanguageMode, key: string) {
-		if (nextLanguage === 'grc') {
-			const hints: Record<string, string> = {
-				Α: 'A',
-				Β: 'B',
-				Γ: 'G',
-				Δ: 'D',
-				Ε: 'E',
-				Ζ: 'Z',
-				Η: 'E',
-				Θ: 'Th',
-				Ι: 'I',
-				Κ: 'K',
-				Λ: 'L',
-				Μ: 'M',
-				Ν: 'N',
-				Ξ: 'X',
-				Ο: 'O',
-				Π: 'P',
-				Ρ: 'R',
-				Σ: 'S',
-				Τ: 'T',
-				Υ: 'Y',
-				Φ: 'Ph'
-			};
-			return hints[key] ?? '';
-		}
-		if (nextLanguage === 'san') {
-			const hints: Record<string, string> = {
-				अ: 'a',
-				आ: 'aa',
-				ई: 'ii',
-				उ: 'u',
-				ऐ: 'ai',
-				क: 'ka',
-				ग: 'ga',
-				घ: 'gha',
-				च: 'ca',
-				छ: 'cha',
-				ज: 'ja',
-				त: 'ta',
-				द: 'da',
-				ध: 'dha',
-				न: 'na',
-				प: 'pa',
-				ब: 'ba',
-				भ: 'bha',
-				म: 'ma',
-				य: 'ya',
-				र: 'ra',
-				ल: 'la',
-				व: 'va',
-				श: 'sha',
-				ष: 'ssa',
-				स: 'sa',
-				ह: 'ha'
-			};
-			return hints[key] ?? '';
-		}
-		return '';
-	}
-
-	function citationRangeLabel(items: ReaderSegment[], fallback: ReaderSegment | null) {
-		const first = items[0]?.citation_path;
-		const last = items[items.length - 1]?.citation_path;
-		if (first && last && first !== last) return `${first} - ${last}`;
-		return first || fallback?.citation_path || '';
-	}
-
-	function derivePagePagination(items: ReaderSegment[]) {
-		const firstSortKey = items[0]?.sort_key;
-		const lastSortKey = items[items.length - 1]?.sort_key;
-		return {
-			previous:
-				typeof firstSortKey === 'number' && firstSortKey > pageLimit
-					? String(Math.max(0, firstSortKey - 1 - pageLimit))
-					: null,
-			next: typeof lastSortKey === 'number' ? String(lastSortKey) : null
-		};
-	}
-
 	function restoreReaderIndexState() {
 		if (!browser) return false;
 
-		try {
-			const raw = sessionStorage.getItem(readerIndexStorageKey);
-			if (!raw) return false;
+		const stored = readStoredReaderIndexState(sessionStorage, { language, catalogId });
+		if (!stored) return false;
 
-			const stored = JSON.parse(raw) as Partial<StoredReaderIndexState>;
-			if (
-				stored.version !== 6 ||
-				!stored.expiresAt ||
-				stored.expiresAt <= Date.now() ||
-				stored.language !== language ||
-				(catalogId && stored.catalogId !== catalogId) ||
-				!stored.catalogId
-			) {
-				sessionStorage.removeItem(readerIndexStorageKey);
-				return false;
-			}
-
-			catalogId = stored.catalogId;
-			readerView = stored.readerView ?? 'choose';
-			activeAuthorSection = stored.activeAuthorSection ?? '';
-			workQuery = stored.workQuery ?? '';
-			textQuery = stored.textQuery ?? '';
-			textSearchMode = stored.textSearchMode ?? 'fuzzy';
-			discoveryGroup = stored.discoveryGroup ?? '';
-			discoveryTag = stored.discoveryTag ?? '';
-			discoveryAuthorId = stored.discoveryAuthorId ?? '';
-			discoveryAuthorLabel = stored.discoveryAuthorLabel ?? '';
-			discoverySort = stored.discoverySort ?? 'global-popularity';
-			authorAgentKind = stored.authorAgentKind ?? '';
-			authorHistoricity = stored.authorHistoricity ?? '';
-			worksNextCursor = stored.worksNextCursor ?? null;
-			worksPrevCursor = stored.worksPrevCursor ?? null;
-			authorsNextCursor = stored.authorsNextCursor ?? null;
-			authorsPrevCursor = stored.authorsPrevCursor ?? null;
-			textSearchNextCursor = stored.textSearchNextCursor ?? null;
-			textSearchPrevCursor = stored.textSearchPrevCursor ?? null;
-			authorsLoading = false;
-			textSearchLoading = false;
-			libraryLoading = false;
-			catalogError = '';
-			authorsError = '';
-			textSearchError = '';
-			return true;
-		} catch {
-			sessionStorage.removeItem(readerIndexStorageKey);
-			return false;
-		}
+		catalogId = stored.catalogId;
+		readerView = stored.readerView ?? 'choose';
+		activeAuthorSection = stored.activeAuthorSection ?? '';
+		workQuery = stored.workQuery ?? '';
+		textQuery = stored.textQuery ?? '';
+		textSearchMode = stored.textSearchMode ?? 'fuzzy';
+		discoveryGroup = stored.discoveryGroup ?? '';
+		discoveryTag = stored.discoveryTag ?? '';
+		discoveryAuthorId = stored.discoveryAuthorId ?? '';
+		discoveryAuthorLabel = stored.discoveryAuthorLabel ?? '';
+		discoverySort = stored.discoverySort ?? 'global-popularity';
+		authorAgentKind = stored.authorAgentKind ?? '';
+		authorHistoricity = stored.authorHistoricity ?? '';
+		worksNextCursor = stored.worksNextCursor ?? null;
+		worksPrevCursor = stored.worksPrevCursor ?? null;
+		authorsNextCursor = stored.authorsNextCursor ?? null;
+		authorsPrevCursor = stored.authorsPrevCursor ?? null;
+		textSearchNextCursor = stored.textSearchNextCursor ?? null;
+		textSearchPrevCursor = stored.textSearchPrevCursor ?? null;
+		authorsLoading = false;
+		textSearchLoading = false;
+		libraryLoading = false;
+		catalogError = '';
+		authorsError = '';
+		textSearchError = '';
+		return true;
 	}
 
 	function saveReaderIndexState() {
 		if (!browser || !catalogId || !catalogs.length) return;
 
-		const stored: StoredReaderIndexState = {
-			version: 6,
-			expiresAt: Date.now() + readerIndexStorageTtlMs,
+		const stored = buildStoredReaderIndexState({
 			language,
 			catalogId,
 			readerView,
@@ -2073,105 +1804,11 @@
 			authorsPrevCursor,
 			textSearchNextCursor,
 			textSearchPrevCursor
-		};
+		});
 
-		try {
-			sessionStorage.setItem(readerIndexStorageKey, JSON.stringify(stored));
-		} catch {
-			// Reader discovery remains usable through the API path when storage is unavailable.
-		}
+		writeStoredReaderIndexState(sessionStorage, stored);
 	}
 </script>
-
-{#snippet readerSkeletonRows(label: string, kind: ReaderLoadingKey, variant: string, count = 4)}
-	<div class="orion-reader-loading-region" aria-busy="true" aria-live="polite">
-		<div class="orion-reader-loading-status">
-			<span>{readerLoadingStatus(label, kind)}</span>
-		</div>
-		<div class={`orion-reader-skeleton-list orion-reader-skeleton-${variant}`}>
-			{#each Array.from({ length: count }) as _, index}
-				<article class="orion-reader-skeleton-row" aria-hidden="true">
-					<span class="orion-reader-skeleton-block orion-reader-skeleton-title"></span>
-					<span class="orion-reader-skeleton-block orion-reader-skeleton-line"></span>
-					<span class="orion-reader-skeleton-block orion-reader-skeleton-line short"></span>
-					<span class="orion-reader-skeleton-chip-row">
-						<span class="orion-reader-skeleton-block orion-reader-skeleton-chip"></span>
-						<span class="orion-reader-skeleton-block orion-reader-skeleton-chip"></span>
-					</span>
-				</article>
-			{/each}
-		</div>
-	</div>
-{/snippet}
-
-{#snippet readerLoadingStrip(label: string, kind: ReaderLoadingKey)}
-	<div class="orion-reader-loading-strip" aria-busy="true" aria-live="polite">
-		<span>{readerLoadingStatus(label, kind)}</span>
-	</div>
-{/snippet}
-
-{#snippet provenanceChips(chips: string[] | undefined)}
-	{#if chips?.length}
-		<div class="orion-reader-provenance-row" aria-label="Provenance">
-			{#each chips as chip}
-				<span class="orion-reader-provenance-chip">{chip}</span>
-			{/each}
-		</div>
-	{/if}
-{/snippet}
-
-{#snippet orionObjectCard(kind: string, title: string, subtitle = '', chips: string[] = [])}
-	<article class="orion-object-card">
-		<span>{kind}</span>
-		<strong>{title}</strong>
-		{#if subtitle}
-			<small>{subtitle}</small>
-		{/if}
-		{@render provenanceChips(chips)}
-	</article>
-{/snippet}
-
-{#snippet canonTable(items: ReaderStructureNode[])}
-	<div class="orion-reader-canon-table">
-		{#each items as item}
-			<article
-				class="orion-reader-division-card"
-				style={`--division-depth: ${Math.max(0, item.level - 1)}`}
-			>
-				<div>
-					<span>{item.kind}</span>
-					<strong>{item.short_label || item.label}</strong>
-					{#if item.native_label}
-						<small>{item.native_label}</small>
-					{/if}
-				</div>
-				<div>
-					<span>{item.traditional_reference || item.start_citation}</span>
-					<small>{item.start_citation}..{item.end_citation}</small>
-				</div>
-				{#if item.summary}
-					<p>{item.summary}</p>
-				{/if}
-				{@render provenanceChips(item.provenance_chips)}
-				<button
-					type="button"
-					class="btn btn-xs"
-					onclick={() => showSegment(item.work_id, item.start_citation, 'push')}
-				>
-					{uiCopy.readerStructure.open}
-				</button>
-			</article>
-		{/each}
-	</div>
-{/snippet}
-
-{#snippet readerErrorPanel(title: string, message: string, retryLabel: string, retry: () => void)}
-	<div class="orion-reader-state-panel orion-reader-state-error" role="alert">
-		<strong>{title}</strong>
-		<p>{message}</p>
-		<button type="button" class="btn btn-sm" onclick={retry}>{retryLabel}</button>
-	</div>
-{/snippet}
 
 <svelte:window onkeydown={handleReaderKeydown} />
 
@@ -2184,1199 +1821,278 @@
 </svelte:head>
 
 <main class="orion-page bg-base-200 text-base-content min-h-screen" data-theme={theme}>
-	<header class="navbar border-base-300 bg-base-100 border-b px-4 lg:px-8">
-		<div class="min-w-0 flex-1">
-			<div class="flex items-center gap-3">
-				<a
-					href="/"
-					class="orion-home-seal grid h-10 w-10 place-items-center rounded transition-opacity hover:opacity-85"
-					aria-label={uiCopy.nav.homeAria}
-				>
-					<Telescope size={21} />
-				</a>
-				<div class="min-w-0">
-					<div class="truncate text-base font-semibold">{uiCopy.app.name}</div>
-					<div class="text-base-content/60 truncate text-sm">Reader Desk</div>
-				</div>
-			</div>
-		</div>
+	<ReaderDeskChrome
+		{theme}
+		{language}
+		{indexSummaryLabel}
+		{catalogError}
+		{showAddressLookup}
+		{addressInput}
+		{segmentLoading}
+		catalogReady={Boolean(catalogId)}
+		onThemeSelect={setTheme}
+		onLanguageSelect={selectLanguage}
+		onAddressInput={(value) => {
+			addressInput = value;
+		}}
+		onOpenAddress={() => void openAddress('push')}
+		onCloseLookup={closeAddressLookup}
+		onShowLookup={() => {
+			showAddressLookup = true;
+		}}
+	/>
 
-		<div class="flex items-center gap-2">
-			<a class="btn btn-sm btn-ghost hidden sm:inline-flex" href="/">
-				<Search size={15} />
-				Dictionary
-			</a>
-			<div class="join">
-				<button
-					type="button"
-					class={theme === 'manuscript'
-						? 'btn btn-sm join-item btn-primary'
-						: 'btn btn-sm join-item'}
-					aria-label={uiCopy.theme.readerAria}
-					onclick={() => setTheme('manuscript')}
-				>
-					<Sun size={16} />
-				</button>
-				<button
-					type="button"
-					class={theme === 'vespers' ? 'btn btn-sm join-item btn-primary' : 'btn btn-sm join-item'}
-					aria-label={uiCopy.theme.nightAria}
-					onclick={() => setTheme('vespers')}
-				>
-					<Moon size={16} />
-				</button>
-			</div>
-		</div>
-	</header>
+	<ReaderShell>
+		{#if selectedWork}
+			<ReaderSelectedWorkDesk
+				workTitle={selectedWorkTitleLabel()}
+				workSubtitle={selectedWorkContributorLine() || selectedWorkDiscriminator()}
+				classificationConfidence={selectedWork.classification_confidence}
+				dossier={workDossier}
+				{dossierLoading}
+				dossierLoadingLabel={readerLoadingStatus(uiCopy.workDossier.loading, 'dossier')}
+				{dossierError}
+				{currentDivisionNode}
+				onOpenDivision={(workId, citation) => showSegment(workId, citation, 'push')}
+				onRetry={() => selectedWork && void loadWorkDossier(readerWorkRef(selectedWork))}
+			/>
+		{/if}
 
-	<div
-		class="orion-reader-shell mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:px-8"
-	>
-		<section class="min-w-0 space-y-6">
-			<div class="orion-manuscript-panel p-5 lg:p-6">
-				<div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-					<div class="min-w-0">
-						<div class="badge badge-secondary badge-outline mb-3 gap-2">
-							<BookOpen size={14} />
-							Unified reader
-						</div>
-						<h1 class="font-serif text-3xl leading-tight md:text-4xl">Reader Desk</h1>
-						<p class="text-base-content/68 mt-3 max-w-2xl font-serif text-lg leading-7">
-							A common desk for Sanskrit, Greek, and Latin: read the text, find the form, and follow
-							the lesson through the sources.
-						</p>
-					</div>
+		<article class="orion-reader-desk-passage orion-manuscript-panel">
+			<ReaderDeskHeader
+				languageLabel={readerLanguageLabel(language)}
+				workAuthorLabel={selectedWork ? selectedWorkAuthorLabel() : null}
+				workTitle={selectedWork ? selectedWorkTitleLabel() : null}
+				workDiscriminator={selectedWorkDiscriminator()}
+				workContributorLine={selectedWorkContributorLine()}
+				canOpenAuthor={Boolean(
+					selectedWork?.canonical_author_id ||
+					selectedWork?.source_author_id ||
+					selectedWork?.author_id
+				)}
+				segmentWorkId={selectedSegment?.work_id}
+				hasSelectedSegment={Boolean(selectedSegment)}
+				{showTransliteration}
+				{pageRangeLabel}
+				onOpenAuthor={openSelectedWorkAuthor}
+				onToggleTransliteration={toggleTransliteration}
+				onShowLibrary={showLibrary}
+			/>
 
-					<div class="grid gap-3 sm:min-w-80">
-						<div class="tabs tabs-box">
-							{#each languageModes as mode}
-								<button
-									type="button"
-									class={mode.id === language ? 'tab tab-active' : 'tab'}
-									onclick={() => selectLanguage(mode.id)}
-								>
-									{mode.label}
-								</button>
-							{/each}
-						</div>
-						<p class="text-base-content/55 font-serif text-sm">
-							{indexSummaryLabel}
-						</p>
-						{#if catalogError}
-							<p class="text-error text-sm">{catalogError}</p>
-						{/if}
-					</div>
-				</div>
-
-				<div class="mt-5">
-					{#if showAddressLookup}
-						<form
-							class="orion-reader-address-lookup"
-							onsubmit={(event) => {
-								event.preventDefault();
-								void openAddress('push');
-							}}
-						>
-							<label class="input input-bordered flex min-w-0 items-center gap-2">
-								<ScrollText size={16} class="text-base-content/45" />
-								<input
-									class="font-serif"
-									bind:value={addressInput}
-									placeholder={language === 'grc' ? 'Od. 3.74' : 'Reader address'}
-									autocomplete="off"
-								/>
-							</label>
-							<button class="btn btn-neutral" disabled={segmentLoading || !catalogId}>
-								<ScrollText size={16} />
-								{segmentLoading ? 'Opening' : 'Open'}
-							</button>
-							<button type="button" class="btn btn-ghost" onclick={closeAddressLookup}>
-								Close
-							</button>
-						</form>
-					{:else}
-						<button
-							type="button"
-							class="btn btn-sm btn-ghost"
-							onclick={() => {
-								showAddressLookup = true;
-							}}
-						>
-							<ScrollText size={15} />
-							Open reference
-						</button>
-					{/if}
-				</div>
-			</div>
-
-			{#if selectedWork}
-				<section class="orion-reader-work-desk" aria-label="Reader work desk">
-					{@render orionObjectCard(
-						uiCopy.orionObjects.work,
-						selectedWorkTitleLabel(),
-						selectedWorkContributorLine() || selectedWorkDiscriminator(),
-						selectedWork.classification_confidence ? [selectedWork.classification_confidence] : []
-					)}
-					<div class="orion-reader-work-dossier">
-						<div>
-							<span>{uiCopy.orionObjects.dossier}</span>
-							<strong>{uiCopy.workDossier.title}</strong>
-							{#if workDossier?.summary.structure_label}
-								<small>{workDossier.summary.structure_label}</small>
-							{/if}
-						</div>
-						{@render provenanceChips(workDossier?.provenance_chips)}
-						{#if dossierLoading && !workDossier}
-							{@render readerLoadingStrip(uiCopy.workDossier.loading, 'dossier')}
-						{:else if dossierError}
-							{@render readerErrorPanel(
-								'Work dossier failed to load',
-								dossierError,
-								'Load dossier again',
-								() => selectedWork && void loadWorkDossier(readerWorkRef(selectedWork))
-							)}
-						{:else if workDossier}
-							{#if workDossier.headings.length}
-								<div class="orion-reader-work-dossier-headings">
-									<span>{uiCopy.workDossier.headings}</span>
-									{#each workDossier.headings.slice(0, 8) as heading}
-										<button
-											type="button"
-											onclick={() => showSegment(heading.work_id, heading.start_citation, 'push')}
-										>
-											{heading.traditional_reference || heading.label}
-										</button>
-									{/each}
-								</div>
-							{/if}
-							{#if workDossier.division_bios.length}
-								<div class="orion-reader-work-dossier-bio">
-									<span>{uiCopy.workDossier.divisionBios}</span>
-									<strong>
-										{workDossier.division_bios[0].traditional_reference ||
-											workDossier.division_bios[0].label}
-									</strong>
-									<p>{workDossier.division_bios[0].summary}</p>
-								</div>
-							{/if}
-						{:else}
-							<p>{uiCopy.workDossier.empty}</p>
-						{/if}
-					</div>
-				</section>
-			{/if}
-
-			<article class="orion-reader-desk-passage orion-manuscript-panel">
-				<div class="orion-reader-desk-head">
-					<div class="min-w-0">
-						<div class="orion-reader-desk-kicker">
-							{readerLanguageLabel(language)} index
-						</div>
-						<h2>
-							{#if selectedWork}
-								<span class="orion-reader-work-heading">
-									<button
-										type="button"
-										class="orion-reader-desk-author"
-										disabled={!(
-											selectedWork.canonical_author_id ||
-											selectedWork.source_author_id ||
-											selectedWork.author_id
-										)}
-										onclick={openSelectedWorkAuthor}
-									>
-										{selectedWorkAuthorLabel()}
-									</button>
-									<span>{selectedWorkTitleLabel()}</span>
-									{#if selectedWorkDiscriminator()}
-										<small>{selectedWorkDiscriminator()}</small>
-									{/if}
-									{#if selectedWorkContributorLine()}
-										<small>{selectedWorkContributorLine()}</small>
-									{/if}
-								</span>
-							{:else if selectedSegment}
-								{selectedSegment.work_id}
-							{:else}
-								Library
-							{/if}
-						</h2>
-					</div>
-					{#if selectedSegment}
-						<div class="orion-reader-desk-actions">
-							<button
-								type="button"
-								class={showTransliteration ? 'btn btn-xs btn-secondary' : 'btn btn-xs'}
-								aria-pressed={showTransliteration}
-								onclick={toggleTransliteration}
-							>
-								<Feather size={13} />
-								Transliteration
-							</button>
-							<button type="button" class="btn btn-xs" onclick={showLibrary}>
-								<Database size={13} />
-								Library
-							</button>
-							<div class="orion-reader-desk-citation">
-								<span>page</span>
-								<strong>{pageRangeLabel}</strong>
-							</div>
-						</div>
-					{/if}
-				</div>
-
-				{#if segmentError}
-					<div class="m-5">
-						{@render readerErrorPanel(
-							'Passage failed to load',
-							segmentError,
-							'Try opening again',
-							retrySegmentLoad
-						)}
-					</div>
-				{:else if segmentLoading && !selectedSegment}
-					{@render readerSkeletonRows('Opening passage', 'segment', 'passage', 5)}
-				{:else if selectedSegment}
-					{#if segmentLoading}
-						{@render readerLoadingStrip('Updating passage', 'segment')}
-					{/if}
-					<div class="orion-reader-page-nav">
-						<button
-							type="button"
-							class="btn btn-sm"
-							disabled={!pagePrevCursor || segmentLoading || contentsLoading}
-							onclick={() => showPageCursor(pagePrevCursor)}
-						>
-							Previous page
-						</button>
-						<div>
-							<span>page</span>
-							<strong>{pageRangeLabel}</strong>
-						</div>
-						<button
-							type="button"
-							class="btn btn-sm"
-							disabled={!pageNextCursor || segmentLoading || contentsLoading}
-							onclick={() => showPageCursor(pageNextCursor)}
-						>
-							Next page
-						</button>
-					</div>
-
-					<div
-						class="orion-reader-leaf"
-						lang={language === 'grc' ? 'grc' : language === 'san' ? 'sa' : 'la'}
-					>
-						{#each pageSegments as segment}
-							<section class="orion-reader-leaf-line">
-								<button
-									type="button"
-									class="orion-reader-leaf-ref"
-									onclick={() => showSelectedWorkSegment(segment)}
-								>
-									{segment.citation_path}
-								</button>
-								<p class:interlinear={showTransliteration} class="orion-reader-desk-text">
-									{#each segmentParts(segment) as part}
-										{#if part.isWord}
-											<button
-												type="button"
-												class:selected={selectedWord === part.word}
-												class:interlinear={Boolean(showTransliteration && part.transliteration)}
-												class="orion-reader-token"
-												onclick={() => selectToken(part.text)}
-											>
-												<span class="orion-reader-token-native">{part.text}</span>
-												{#if showTransliteration && part.transliteration}
-													<span class="orion-reader-token-translit">{part.transliteration}</span>
-												{/if}
-											</button>
-										{:else}
-											<span>{part.text}</span>
-										{/if}
-									{/each}
-								</p>
-							</section>
-						{/each}
-					</div>
-
-					<div class="orion-reader-page-nav orion-reader-page-nav-bottom">
-						<button
-							type="button"
-							class="btn btn-sm"
-							disabled={!pagePrevCursor || segmentLoading || contentsLoading}
-							onclick={() => showPageCursor(pagePrevCursor)}
-						>
-							Previous page
-						</button>
-						<div>
-							<span class="orion-reader-page-work-label">
-								{selectedWork ? selectedWorkTitleLabel() : 'reader page'}
-								{#if selectedWorkDiscriminator()}
-									<small>{selectedWorkDiscriminator()}</small>
-								{/if}
-							</span>
-							<strong>{pageRangeLabel}</strong>
-						</div>
-						<button
-							type="button"
-							class="btn btn-sm"
-							disabled={!pageNextCursor || segmentLoading || contentsLoading}
-							onclick={() => showPageCursor(pageNextCursor)}
-						>
-							Next page
-						</button>
-					</div>
-
-					{#if selectedSegment.source_text || selectedSegment.transliteration}
-						<details class="orion-reader-desk-source">
-							<summary>Source / transliteration</summary>
-							{#if selectedSegment.transliteration}
-								<p>{selectedSegment.transliteration}</p>
-							{/if}
-							{#if selectedSegment.source_text}
-								<p>{selectedSegment.source_text}</p>
-							{/if}
-						</details>
-					{/if}
-				{:else}
-					<div class="orion-reader-discovery">
-						<div class="orion-reader-discovery-topline">
-							<div class="min-w-0">
-								<div class="orion-reader-desk-kicker">Library discovery</div>
-								<h3>
-									{readerView === 'choose'
-										? 'Choose a library view'
-										: readerView === 'shelves'
-											? activeDiscoverySummary
-											: readerView === 'search'
-												? textQuery.trim()
-													? `Text matches for "${textQuery.trim()}"`
-													: `${readerLanguageLabel(language)} text search`
-												: activeAuthorSection
-													? `${readerLanguageLabel(language)} author section ${activeAuthorSection}`
-													: workQuery.trim()
-														? `Authors matching "${workQuery.trim()}"`
-														: `${readerLanguageLabel(language)} authors`}
-								</h3>
-							</div>
-							<div class="join">
-								<button
-									type="button"
-									class="btn join-item btn-sm"
-									class:btn-neutral={readerView === 'shelves'}
-									aria-pressed={readerView === 'shelves'}
-									onclick={() => selectReaderView('shelves')}
-								>
-									<Telescope size={15} />
-									Shelves
-								</button>
-								<button
-									type="button"
-									class="btn join-item btn-sm"
-									class:btn-neutral={readerView === 'authors'}
-									aria-pressed={readerView === 'authors'}
-									onclick={() => selectReaderView('authors')}
-								>
-									<BookOpen size={15} />
-									Top authors
-								</button>
-								<button
-									type="button"
-									class="btn join-item btn-sm"
-									class:btn-neutral={readerView === 'search'}
-									aria-pressed={readerView === 'search'}
-									onclick={() => selectReaderView('search')}
-								>
-									<FileSearch size={15} />
-									Text search
-								</button>
-							</div>
-						</div>
-
-						{#if readerView === 'choose'}
-							<div class="orion-reader-shelf-grid">
-								<button
-									type="button"
-									class="orion-reader-shelf-card"
-									onclick={() => selectReaderView('shelves')}
-								>
-									<span>Browse</span>
-									<strong>Shelves</strong>
-									<small>{readerLanguageLabel(language)} works by art, subject, and genre</small>
-									<p>
-										Enter the library by discipline and use, then narrow from broad learning to a
-										particular work.
-									</p>
-								</button>
-								<button
-									type="button"
-									class="orion-reader-shelf-card"
-									onclick={() => selectReaderView('authors')}
-								>
-									<span>Browse</span>
-									<strong>Authors</strong>
-									<small>{readerLanguageLabel(language)} author index</small>
-									<p>
-										Begin with teachers, poets, historians, and witnesses, then open the works
-										attached to their names.
-									</p>
-								</button>
-								<button
-									type="button"
-									class="orion-reader-shelf-card"
-									onclick={() => selectReaderView('search')}
-								>
-									<span>Search</span>
-									<strong>Text search</strong>
-									<small>Trace words and phrases inside {readerLanguageLabel(language)} texts</small
-									>
-									<p>
-										Follow a form through its passages, with enough nearby context to turn a match
-										into a lesson.
-									</p>
-								</button>
-							</div>
-						{:else if readerView === 'search'}
-							<form
-								class="orion-reader-discovery-search"
-								onsubmit={(event) => {
-									event.preventDefault();
-									submitTextSearch();
-								}}
-							>
-								<label class="input input-bordered flex min-w-0 items-center gap-2">
-									<FileSearch size={16} class="text-base-content/45" />
-									<input
-										bind:value={textQuery}
-										type="search"
-										placeholder="Search inside texts"
-										autocomplete="off"
-									/>
-								</label>
-								<select
-									class="select select-bordered"
-									bind:value={textSearchMode}
-									onchange={applyTextSearchMode}
-								>
-									<option value="fuzzy">Fuzzy</option>
-									<option value="keyword">Keyword</option>
-									<option value="phrase">Phrase</option>
-									<option value="exact">Exact</option>
-								</select>
-								<button class="btn btn-neutral" disabled={textSearchLoading || !catalogId}>
-									<Search size={16} />
-									{textSearchLoading ? 'Searching' : 'Search'}
-								</button>
-								<button
-									type="button"
-									class="btn btn-ghost"
-									disabled={textSearchLoading || (!textQuery.trim() && !textSearchResults.length)}
-									onclick={clearTextSearch}
-								>
-									Clear
-								</button>
-							</form>
-
-							{#if textSearchError}
-								{@render readerErrorPanel(
-									'Text search failed',
-									textSearchError,
-									'Search again',
-									retryTextSearch
-								)}
-							{:else if textSearchLoading && !textSearchResults.length}
-								{@render readerSkeletonRows('Searching texts', 'textSearch', 'search', 5)}
-							{:else if textSearchResults.length}
-								{#if textSearchLoading}
-									{@render readerLoadingStrip('Updating text matches', 'textSearch')}
-								{/if}
-								<div class="orion-reader-discovery-summary">
-									<span>{textSearchResults.length} matches on this page</span>
-									<span
-										>{textSearchMode === 'fuzzy'
-											? 'Fuzzy text search'
-											: `${textSearchMode} search`}</span
-									>
-								</div>
-								{#if visibleTextSearchCandidates(textSearchQueryCandidates).length}
-									<div class="orion-reader-work-meta">
-										{#each visibleTextSearchCandidates(textSearchQueryCandidates) as candidate}
-											<small title={candidate.explanation || candidate.kind}
-												>{candidate.kind.replace(/_/g, ' ')} · {textSearchCandidateLabel(
-													candidate
-												)}</small
-											>
-										{/each}
-									</div>
-								{/if}
-								<div class="orion-reader-work-list orion-reader-work-list-discovery">
-									{#each textSearchResults as result}
-										<article class="orion-reader-work-row">
-											<div class="orion-reader-work-row-main">
-												<button
-													type="button"
-													class="orion-reader-work-open"
-													onclick={() => openSearchResult(result)}
-												>
-													<strong>
-														{result.title || result.work_id}
-														<small>{result.citation_path}</small>
-													</strong>
-												</button>
-												<button
-													type="button"
-													class="orion-reader-work-author"
-													disabled={!result.canonical_author_id}
-													onclick={() => {
-														if (!result.canonical_author_id) return;
-														readerView = 'authors';
-														routeAuthorId = result.canonical_author_id;
-														routeAuthorName = result.canonical_author_name || result.author;
-														selectedAuthor = syntheticAuthorFromRoute(
-															result.canonical_author_id,
-															routeAuthorName
-														);
-														void searchWorks(
-															null,
-															result.canonical_author_id,
-															'push',
-															routeAuthorName
-														);
-													}}
-												>
-													{result.author || result.canonical_author_name || 'Unknown'}
-												</button>
-											</div>
-											<span>{result.snippet || result.text}</span>
-											<div class="orion-reader-work-meta">
-												{#if result.match_type}
-													<small>{result.match_type.replace(/_/g, ' ')}</small>
-												{/if}
-												{#if result.matched_query}
-													<small>matched {result.matched_query}</small>
-												{/if}
-												{#if result.score}
-													<small>{result.score.toFixed(2)} score</small>
-												{/if}
-											</div>
-										</article>
-									{/each}
-								</div>
-								{#if textSearchPrevCursor || textSearchNextCursor}
-									<div class="orion-reader-discovery-pager">
-										<button
-											type="button"
-											class="btn btn-sm"
-											disabled={!textSearchPrevCursor || textSearchLoading}
-											onclick={() => void searchReaderText(textSearchPrevCursor, 'push')}
-										>
-											Previous matches
-										</button>
-										<button
-											type="button"
-											class="btn btn-sm btn-neutral"
-											disabled={!textSearchNextCursor || textSearchLoading}
-											onclick={() => void searchReaderText(textSearchNextCursor, 'push')}
-										>
-											Next matches
-										</button>
-									</div>
-								{/if}
-							{:else if textQuery.trim()}
-								<div class="orion-reader-desk-empty">
-									<FileSearch size={24} />
-									<span>No text matches found for "{textQuery.trim()}".</span>
-								</div>
-							{/if}
-						{:else if readerView === 'shelves'}
-							{#if discoveryShelves.length}
-								<div class="orion-reader-shelf-grid">
-									{#each discoveryShelves as shelf}
-										<button
-											type="button"
-											class="orion-reader-shelf-card"
-											class:active={shelfIsActive(shelf)}
-											aria-pressed={shelfIsActive(shelf)}
-											onclick={() => selectDiscoveryShelf(shelf)}
-										>
-											<span>{shelf.query.tag ? 'Tag' : 'Shelf'}</span>
-											<strong>{shelf.label}</strong>
-											<small>{shelfMetaLabel(shelf)}</small>
-											{#if shelf.description}
-												<p>{shelf.description}</p>
-											{/if}
-										</button>
-									{/each}
-								</div>
-							{:else if shelvesLoading}
-								{@render readerSkeletonRows('Loading shelves', 'shelves', 'work', 4)}
-							{/if}
-							<form
-								class="orion-reader-discovery-search"
-								onsubmit={(event) => {
-									event.preventDefault();
-									submitDiscoverySearch();
-								}}
-							>
-								<label class="input input-bordered flex min-w-0 items-center gap-2">
-									<Search size={16} class="text-base-content/45" />
-									<input
-										bind:value={workQuery}
-										type="search"
-										placeholder="Search titles or authors"
-										autocomplete="off"
-									/>
-								</label>
-								<select
-									class="select select-bordered"
-									bind:value={discoveryGroup}
-									onchange={applyDiscoveryFilters}
-								>
-									<option value="">All groups</option>
-									{#each discoveryGroups as group}
-										<option value={group.id}>{group.label}</option>
-									{/each}
-								</select>
-								<select
-									class="select select-bordered"
-									bind:value={discoveryTag}
-									onchange={applyDiscoveryFilters}
-								>
-									<option value="">All tags</option>
-									{#each discoveryTags as tag}
-										<option value={tag.id}>{tag.label}</option>
-									{/each}
-								</select>
-								<select
-									class="select select-bordered"
-									bind:value={discoverySort}
-									onchange={applyDiscoveryFilters}
-								>
-									{#if discoverySorts.length}
-										{#each discoverySorts as sort}
-											<option value={sort.id}>{sort.label}</option>
-										{/each}
-									{:else}
-										<option value="global-popularity">Global popularity</option>
-										<option value="group-popularity">Group popularity</option>
-										<option value="catalog">Catalog order</option>
-									{/if}
-								</select>
-								<button class="btn btn-neutral" disabled={libraryLoading || !catalogId}>
-									<Search size={16} />
-									{libraryLoading ? 'Searching' : 'Search'}
-								</button>
-								<button
-									type="button"
-									class="btn btn-ghost"
-									disabled={libraryLoading ||
-										(!workQuery.trim() &&
-											!discoveryGroup &&
-											!discoveryTag &&
-											!discoveryAuthorId &&
-											discoverySort === 'global-popularity')}
-									onclick={clearDiscoveryFilters}
-								>
-									Clear
-								</button>
-							</form>
-
-							{#if libraryError}
-								{@render readerErrorPanel(
-									'Works failed to load',
-									libraryError,
-									'Load works again',
-									retryLibrarySearch
-								)}
-							{:else if !hasActiveDiscoveryQuery}
-								<!-- Shelf cards are the default discovery surface; raw works appear after a choice. -->
-							{:else if libraryLoading && !works.length}
-								{@render readerSkeletonRows('Loading works', 'library', 'work', 5)}
-							{:else if works.length}
-								{#if libraryLoading}
-									{@render readerLoadingStrip('Updating works', 'library')}
-								{/if}
-								<div bind:this={readerResultsRegion} class="orion-reader-discovery-summary">
-									<span>{works.length} works</span>
-									<span
-										>{facetValueLabel(discoverySorts, discoverySort ?? 'global-popularity')}</span
-									>
-								</div>
-								<div class="orion-reader-work-list orion-reader-work-list-discovery">
-									{#if discoveryAuthorId}
-										<div class="orion-reader-active-filter">
-											<span>{discoveryAuthorLabel || 'Author'}</span>
-											<button
-												type="button"
-												class="btn btn-xs btn-ghost"
-												onclick={clearDiscoveryAuthor}
-											>
-												Clear author
-											</button>
-										</div>
-									{/if}
-									{#each works as work}
-										<article
-											class:selected={selectedWork?.work_id === work.work_id}
-											class="orion-reader-work-row"
-										>
-											<div class="orion-reader-work-row-main">
-												<button
-													type="button"
-													class="orion-reader-work-open"
-													onclick={() => void openWork(work)}
-												>
-													<strong>
-														{workListLabel(work)}
-														{#if workListDiscriminator(work)}
-															<small>{workListDiscriminator(work)}</small>
-														{/if}
-													</strong>
-												</button>
-												<button
-													type="button"
-													class="orion-reader-work-author"
-													disabled={!(
-														work.canonical_author_id ||
-														work.source_author_id ||
-														work.author_id
-													)}
-													onclick={() => filterDiscoveryByAuthor(work)}
-												>
-													{readerWorkDisplayAuthor(work)}
-												</button>
-											</div>
-											{#if workMetaLine(work)}
-												<span>{workMetaLine(work)}</span>
-											{/if}
-											<div class="orion-reader-work-meta">
-												{#if work.classification_discovery_group_id}
-													<small>
-														{facetValueLabel(
-															discoveryGroups,
-															work.classification_discovery_group_id
-														)}
-													</small>
-												{/if}
-												{#each readerWorkDiscoveryTags(work).slice(0, 4) as tag}
-													<small>{facetValueLabel(discoveryTags, tag)}</small>
-												{/each}
-												{#if readerPopularityLabel(work)}
-													<small>{readerPopularityLabel(work)}</small>
-												{/if}
-											</div>
-										</article>
-									{/each}
-								</div>
-								{#if worksPrevCursor || worksNextCursor}
-									<div class="orion-reader-discovery-pager">
-										<button
-											type="button"
-											class="btn btn-sm"
-											disabled={!worksPrevCursor || libraryLoading}
-											onclick={() => void searchWorks(worksPrevCursor, undefined, 'push')}
-										>
-											Previous works
-										</button>
-										<button
-											type="button"
-											class="btn btn-sm btn-neutral"
-											disabled={!worksNextCursor || libraryLoading}
-											onclick={() => void searchWorks(worksNextCursor, undefined, 'push')}
-										>
-											Next works
-										</button>
-									</div>
-								{/if}
-							{:else if hasActiveDiscoveryQuery && !libraryLoading}
-								<div class="orion-reader-desk-empty">
-									<Telescope size={24} />
-									<span>No works found for this selection.</span>
-								</div>
-							{/if}
-						{:else}
-							<form
-								class="orion-reader-discovery-search orion-reader-author-search"
-								onsubmit={(event) => {
-									event.preventDefault();
-									submitAuthorSearch();
-								}}
-							>
-								<label class="input input-bordered flex min-w-0 items-center gap-2">
-									<Search size={16} class="text-base-content/45" />
-									<input
-										bind:value={workQuery}
-										type="search"
-										placeholder="Search authors"
-										autocomplete="off"
-									/>
-								</label>
-								<select
-									class="select select-bordered"
-									bind:value={authorAgentKind}
-									onchange={applyAuthorFilters}
-								>
-									<option value="">All author kinds</option>
-									{#each authorAgentKinds as kind}
-										<option value={kind.id}>{kind.label}</option>
-									{/each}
-								</select>
-								<select
-									class="select select-bordered"
-									bind:value={authorHistoricity}
-									onchange={applyAuthorFilters}
-								>
-									<option value="">All historicity</option>
-									{#each authorHistoricityStatuses as status}
-										<option value={status.id}>{status.label}</option>
-									{/each}
-								</select>
-								<button class="btn btn-neutral" disabled={authorsLoading || !catalogId}>
-									<Search size={16} />
-									{authorsLoading ? 'Searching' : 'Search'}
-								</button>
-							</form>
-
-							<div class="orion-reader-author-toc" aria-label="Author sections">
-								<div>
-									<span>{readerLanguageLabel(language)} author index</span>
-									{#if activeAuthorSection}
-										<button type="button" class="btn btn-xs btn-ghost" onclick={clearAuthorSection}>
-											All
-										</button>
-									{/if}
-								</div>
-								<div class="orion-reader-author-toc-grid">
-									{#each authorSections as section}
-										{@const nativeLabel = section.native_label || section.label || section.key}
-										{@const romanHint = authorSectionRomanHint(language, section.key)}
-										<button
-											type="button"
-											class:active={activeAuthorSection === section.key}
-											onclick={() => jumpToAuthorSection(section.key)}
-											title={`${section.author_count} authors, ${section.work_count} works`}
-										>
-											<span class="orion-reader-author-section-native">{nativeLabel}</span>
-											{#if romanHint && romanHint !== nativeLabel}
-												<span class="orion-reader-author-section-roman">{romanHint}</span>
-											{/if}
-										</button>
-									{/each}
-								</div>
-							</div>
-
-							{#if authorsError || libraryError}
-								{@render readerErrorPanel(
-									authorsError ? 'Authors failed to load' : 'Author works failed to load',
-									authorsError || libraryError,
-									authorsError ? 'Search authors again' : 'Load works again',
-									authorsError ? retryAuthorSearch : retryLibrarySearch
-								)}
-							{:else if authorsLoading && !authors.length}
-								{@render readerSkeletonRows('Searching authors', 'authors', 'author', 5)}
-							{:else if authors.length}
-								{#if authorsLoading}
-									{@render readerLoadingStrip('Updating authors', 'authors')}
-								{/if}
-								<div class="orion-reader-discovery-summary">
-									<span>{authors.length} authors</span>
-									<span>{indexSummaryLabel}</span>
-								</div>
-								<div class="orion-reader-author-list">
-									{#each authors as author}
-										<section class="orion-reader-author-group">
-											<div class="orion-reader-author-heading">
-												<button
-													type="button"
-													class="orion-reader-author-button"
-													onclick={() => openAuthor(author)}
-												>
-													<h3>{author.display_name || author.author}</h3>
-													{#if author.index_name && author.index_name !== author.display_name}
-														<small>{author.index_name}</small>
-													{/if}
-												</button>
-												<span>{author.work_count} {author.work_count === 1 ? 'work' : 'works'}</span
-												>
-											</div>
-											{#if selectedAuthor?.author_id === author.author_id}
-												{#if libraryLoading}
-													{@render readerSkeletonRows('Loading author works', 'library', 'work', 3)}
-												{:else if works.length}
-													<div class="orion-reader-work-list">
-														{#each works as work}
-															<button
-																type="button"
-																class:selected={selectedWork?.work_id === work.work_id}
-																class="orion-reader-work-row"
-																onclick={() => void openWork(work)}
-															>
-																<strong>
-																	{workListLabel(work)}
-																	{#if workListDiscriminator(work)}
-																		<small>{workListDiscriminator(work)}</small>
-																	{/if}
-																</strong>
-																<span>{workMetaLine(work) || 'First page'}</span>
-															</button>
-														{/each}
-													</div>
-												{/if}
-											{/if}
-										</section>
-									{/each}
-								</div>
-								{#if authorsPrevCursor || authorsNextCursor}
-									<div class="orion-reader-discovery-pager">
-										<button
-											type="button"
-											class="btn btn-sm"
-											disabled={!authorsPrevCursor || authorsLoading}
-											onclick={() => void loadAuthors(authorsPrevCursor, 'push')}
-										>
-											Previous authors
-										</button>
-										<button
-											type="button"
-											class="btn btn-sm btn-neutral"
-											disabled={!authorsNextCursor || authorsLoading}
-											onclick={() => void loadAuthors(authorsNextCursor, 'push')}
-										>
-											Next authors
-										</button>
-									</div>
-								{/if}
-							{:else}
-								<div class="orion-reader-desk-empty">
-									<Feather size={24} />
-									<span>
-										{activeAuthorSection
-											? `No authors found in section ${activeAuthorSection}.`
-											: 'No authors found for this selection.'}
-									</span>
-								</div>
-							{/if}
-						{/if}
-					</div>
-				{/if}
-			</article>
-		</section>
-
-		<aside class="orion-reader-sidebar space-y-4">
-			<section class="orion-manuscript-panel p-4">
-				<div class="mb-3 flex items-start justify-between gap-3">
-					<div>
-						<h2 class="font-serif text-lg font-semibold">{uiCopy.readerStructure.title}</h2>
-					</div>
-					<ScrollText class="text-base-content/45 mt-1" size={18} />
-				</div>
-				{#if structureLoading && !structure.length}
-					{@render readerSkeletonRows(uiCopy.readerStructure.loading, 'structure', 'contents', 4)}
-				{:else if structureError}
-					{@render readerErrorPanel(
-						'Structure failed to load',
-						structureError,
-						'Load structure again',
-						() => selectedWork && void loadStructure(readerWorkRef(selectedWork))
-					)}
-				{:else if structure.length}
-					{#if structureLoading}
-						<span class="sr-only">{readerLoadingElapsed('structure')}</span>
-						{@render readerLoadingStrip(uiCopy.readerStructure.loading, 'structure')}
-					{/if}
-					{@render canonTable(structure)}
-				{:else if selectedWork}
-					<p class="text-base-content/55 text-sm">{uiCopy.readerStructure.empty}</p>
-				{:else}
-					<p class="text-base-content/55 text-sm">No book selected.</p>
-				{/if}
-
-				{#if contentsLoading}
-					<div class="mt-4">
-						{@render readerSkeletonRows('Loading contents', 'contents', 'contents', 4)}
-					</div>
-				{:else if contentsError}
-					{@render readerErrorPanel(
-						'Contents failed to load',
-						contentsError,
-						'Load contents again',
-						retryContentsLoad
-					)}
-				{:else if contents.length && selectedWork}
-					<details class="orion-reader-page-segments mt-4">
-						<summary>Page segments</summary>
-						<div class="orion-reader-contents-list">
-							{#each contents as segment}
-								<button
-									type="button"
-									class:active={segmentIsActive(segment)}
-									onclick={() => showSelectedWorkSegment(segment)}
-								>
-									<span>{segment.citation_path}</span>
-									<small>{readerSegmentDisplayText(segment)}</small>
-								</button>
-							{/each}
-						</div>
-					</details>
-				{/if}
-			</section>
-
-			<section class="orion-manuscript-panel p-4">
-				<div class="mb-3 flex items-start justify-between gap-3">
-					<div>
-						<h2 class="font-serif text-lg font-semibold">{uiCopy.encounterBriefing.title}</h2>
-						<p class="text-base-content/60 text-sm">{uiCopy.encounterBriefing.subtitle}</p>
-					</div>
-					<BookOpen class="text-base-content/45 mt-1" size={18} />
-				</div>
-				{#if selectedWord}
-					<div class="orion-reader-selected-word">
-						<strong>{selectedWord}</strong>
-						{#if selectedWordRomanization}
-							<span>{selectedWordRomanization.label}: {selectedWordRomanization.value}</span>
-						{/if}
-						{#if selectedWordBriefingLoading && !selectedWordBriefingOutput}
-							<div class="text-base-content/60 mt-3 flex items-center gap-2 text-sm">
-								<span class="loading loading-spinner loading-xs"></span>
-								<span>{uiCopy.encounterBriefing.loading}</span>
-							</div>
-						{:else if selectedWordBriefingError && !selectedWordBriefingOutput}
-							<div class="text-error mt-3 text-sm">{selectedWordBriefingError}</div>
-						{:else if selectedWordBriefingOutput}
-							<div class="mt-3 space-y-3 text-sm">
-								<div class="flex items-center justify-between gap-2">
-									<span class="badge badge-sm badge-outline">
-										{selectedWordBriefingBadge}
-									</span>
-									{#if selectedWordBriefingCanGenerate}
-										<button
-											type="button"
-											class="btn btn-xs btn-outline"
-											disabled={selectedWordBriefingLoading}
-											title={uiCopy.encounterBriefing.generateTitle}
-											onclick={() => void fetchEncounterBriefing(selectedWord, true)}
-										>
-											{#if selectedWordBriefingGenerating}
-												<span class="loading loading-spinner loading-xs"></span>
-												{uiCopy.encounterBriefing.generateLoading}
-											{:else}
-												<Sparkles size={13} />
-												{uiCopy.encounterBriefing.generateReady}
-											{/if}
-										</button>
-									{/if}
-								</div>
-								{#if selectedWordBriefingGenerating}
-									<div class="text-base-content/60 flex items-center gap-2 text-xs">
-										<span class="loading loading-spinner loading-xs"></span>
-										<span>{uiCopy.encounterBriefing.generatingNotice}</span>
-									</div>
-								{/if}
-								{#if selectedWordBriefingError}
-									<div class="text-error text-xs">{selectedWordBriefingError}</div>
-								{/if}
-								<p class="text-base-content/85 leading-relaxed">
-									{encounterBriefingCompactText(selectedWordBriefingOutput.short, 220)}
-								</p>
-								{#if selectedWordMeaningSummaries(selectedWordBriefingOutput).length}
-									<ul class="space-y-2">
-										{#each selectedWordMeaningSummaries(selectedWordBriefingOutput) as meaning}
-											<li>
-												<div class="text-base-content/90 font-medium">
-													{encounterBriefingCompactText(meaning.summary, 150)}
-												</div>
-												{#if meaning.sources.length}
-													<div class="text-base-content/55 text-xs">
-														{meaning.sources.join(', ')}
-													</div>
-												{/if}
-											</li>
-										{/each}
-									</ul>
-								{/if}
-								{#if selectedWordGrammarSummaries(selectedWordBriefingOutput).length}
-									<div class="border-base-content/10 space-y-1 border-t pt-3">
-										{#each selectedWordGrammarSummaries(selectedWordBriefingOutput) as grammar}
-											<div>
-												<div class="text-base-content/80">
-													{grammar.summary || grammar.analysis}
-												</div>
-												{#if grammar.lemma}
-													<div class="text-base-content/55 text-xs">{grammar.lemma}</div>
-												{/if}
-											</div>
-										{/each}
-									</div>
-								{/if}
-								{#if selectedWordBriefingOutput.caveats.length}
-									<div class="text-base-content/55 text-xs">
-										{selectedWordBriefingOutput.caveats.slice(0, 2).join(' ')}
-									</div>
-								{/if}
-							</div>
-						{/if}
-						<a class="btn btn-sm btn-secondary mt-3" href={selectedWordHref}>
-							<Search size={15} />
-							{uiCopy.encounterBriefing.studyWord}
-						</a>
-					</div>
-				{:else}
-					<p class="text-base-content/55 text-sm">
-						{uiCopy.encounterBriefing.empty}
-					</p>
-				{/if}
-			</section>
-		</aside>
-	</div>
-
-	{#if selectedWork || selectedSegment || selectedWord}
-		<nav class="orion-reader-apparatus-tabs" aria-label="Reader apparatus">
-			<button type="button" onclick={() => (activeApparatusPanel = 'structure')}>
-				<ScrollText size={15} />
-				<span>{uiCopy.apparatus.structure}</span>
-			</button>
-			<button type="button" onclick={() => (activeApparatusPanel = 'word')}>
-				<BookOpen size={15} />
-				<span>{uiCopy.apparatus.word}</span>
-			</button>
-			<button type="button" onclick={() => (activeApparatusPanel = 'oracle')}>
-				<Sparkles size={15} />
-				<span>{uiCopy.apparatus.oracle}</span>
-			</button>
-			<button type="button" onclick={() => (activeApparatusPanel = 'evidence')}>
-				<Database size={15} />
-				<span>{uiCopy.apparatus.evidence}</span>
-			</button>
-		</nav>
-	{/if}
-
-	{#if activeApparatusPanel}
-		<section class="orion-reader-apparatus-sheet open" aria-label="Reader apparatus sheet">
-			<div class="orion-reader-apparatus-sheet-head">
-				<strong>{activeApparatusPanel}</strong>
-				<button type="button" class="btn btn-xs" onclick={() => (activeApparatusPanel = '')}>
-					{uiCopy.apparatus.close}
-				</button>
-			</div>
-			{#if activeApparatusPanel === 'structure'}
-				{#if structure.length}
-					{@render canonTable(structure)}
-				{:else}
-					<p>{uiCopy.readerStructure.empty}</p>
-				{/if}
-			{:else if activeApparatusPanel === 'word'}
-				<p>{selectedWord || uiCopy.encounterBriefing.empty}</p>
-			{:else if activeApparatusPanel === 'oracle'}
-				<p>{selectedWordBriefingOutput?.short || uiCopy.encounterBriefing.empty}</p>
+			{#if segmentError || segmentLoading || selectedSegment}
+				<ReaderPassageView
+					{segmentError}
+					{segmentLoading}
+					{selectedSegment}
+					{pagePrevCursor}
+					{pageNextCursor}
+					{contentsLoading}
+					{pageRangeLabel}
+					{currentDivisionTrail}
+					{currentDivisionNode}
+					{pageSegments}
+					{language}
+					{selectedWord}
+					{showTransliteration}
+					selectedWorkLabel={selectedWork ? selectedWorkTitleLabel() : 'reader page'}
+					selectedWorkDetail={selectedWorkDiscriminator()}
+					openingStatusLabel={readerLoadingStatus('Opening passage', 'segment')}
+					openingElapsedLabel={readerLoadingElapsed('segment')}
+					updatingStatusLabel={readerLoadingStatus('Updating passage', 'segment')}
+					updatingElapsedLabel={readerLoadingElapsed('segment')}
+					{segmentParts}
+					onRetrySegment={retrySegmentLoad}
+					onOpenPage={showPageCursor}
+					onOpenDivision={(workId, citation) => showSegment(workId, citation, 'push')}
+					onOpenSegment={showSelectedWorkSegment}
+					onSelectToken={selectToken}
+				/>
 			{:else}
-				<p>
-					{selectedSegment?.canonical_address ||
-						selectedSegment?.address ||
-						selectedWork?.canonical_address ||
-						''}
-				</p>
+				<ReaderDiscoveryView
+					{activeDiscoveryTitle}
+					{readerView}
+					languageLabel={readerLanguageLabel(language)}
+					catalogReady={Boolean(catalogId)}
+					{textQuery}
+					{textSearchMode}
+					{textSearchLoading}
+					{textSearchError}
+					{textSearchResults}
+					textSearchQueryCandidates={visibleTextSearchCandidates(textSearchQueryCandidates)}
+					{textSearchCandidateLabel}
+					{textSearchPrevCursor}
+					{textSearchNextCursor}
+					textSearchingStatusLabel={readerLoadingStatus('Searching texts', 'textSearch')}
+					textSearchingElapsedLabel={readerLoadingElapsed('textSearch')}
+					textUpdatingStatusLabel={readerLoadingStatus('Updating text matches', 'textSearch')}
+					textUpdatingElapsedLabel={readerLoadingElapsed('textSearch')}
+					{discoveryShelves}
+					{shelvesLoading}
+					{workQuery}
+					{discoveryGroup}
+					{discoveryTag}
+					{discoveryAuthorId}
+					{discoveryAuthorLabel}
+					discoverySort={discoverySort ?? 'global-popularity'}
+					{discoveryGroups}
+					{discoveryTags}
+					{discoverySorts}
+					{libraryLoading}
+					{libraryError}
+					{hasActiveDiscoveryQuery}
+					{works}
+					selectedWorkId={selectedWork?.work_id}
+					{worksPrevCursor}
+					{worksNextCursor}
+					shelvesStatusLabel={readerLoadingStatus('Loading shelves', 'shelves')}
+					shelvesElapsedLabel={readerLoadingElapsed('shelves')}
+					loadingWorksStatusLabel={readerLoadingStatus('Loading works', 'library')}
+					loadingWorksElapsedLabel={readerLoadingElapsed('library')}
+					updatingWorksStatusLabel={readerLoadingStatus('Updating works', 'library')}
+					updatingWorksElapsedLabel={readerLoadingElapsed('library')}
+					{authorAgentKind}
+					{authorHistoricity}
+					{authorAgentKinds}
+					{authorHistoricityStatuses}
+					{authorsLoading}
+					{authorsError}
+					{authors}
+					selectedAuthorId={selectedAuthor?.author_id}
+					{authorSections}
+					{activeAuthorSection}
+					{indexSummaryLabel}
+					{authorsPrevCursor}
+					{authorsNextCursor}
+					searchingAuthorsStatusLabel={readerLoadingStatus('Searching authors', 'authors')}
+					searchingAuthorsElapsedLabel={readerLoadingElapsed('authors')}
+					updatingAuthorsStatusLabel={readerLoadingStatus('Updating authors', 'authors')}
+					updatingAuthorsElapsedLabel={readerLoadingElapsed('authors')}
+					loadingAuthorWorksStatusLabel={readerLoadingStatus('Loading author works', 'library')}
+					loadingAuthorWorksElapsedLabel={readerLoadingElapsed('library')}
+					{facetValueLabel}
+					{workListLabel}
+					{workListDiscriminator}
+					{workMetaLine}
+					{shelfIsActive}
+					{shelfMetaLabel}
+					romanHintForSection={(sectionKey) => authorSectionRomanHint(language, sectionKey)}
+					onSelectView={selectReaderView}
+					onTextQueryInput={(value) => {
+						textQuery = value;
+					}}
+					onTextSearchModeChange={(mode) => {
+						textSearchMode = mode;
+						applyTextSearchMode();
+					}}
+					onSubmitTextSearch={submitTextSearch}
+					onClearTextSearch={clearTextSearch}
+					onRetryTextSearch={retryTextSearch}
+					onOpenTextResult={openSearchResult}
+					onOpenTextAuthor={openSearchResultAuthor}
+					onOpenPreviousText={(cursor) => void searchReaderText(cursor, 'push')}
+					onOpenNextText={(cursor) => void searchReaderText(cursor, 'push')}
+					onSelectShelf={selectDiscoveryShelf}
+					onWorkQueryInput={(value) => {
+						workQuery = value;
+					}}
+					onDiscoveryGroupChange={(value) => {
+						discoveryGroup = value;
+					}}
+					onDiscoveryTagChange={(value) => {
+						discoveryTag = value;
+					}}
+					onDiscoverySortChange={(value) => {
+						discoverySort = value;
+					}}
+					onApplyDiscoveryFilters={applyDiscoveryFilters}
+					onSubmitDiscoverySearch={submitDiscoverySearch}
+					onClearDiscoveryFilters={clearDiscoveryFilters}
+					onRetryLibrary={retryLibrarySearch}
+					onSummaryElement={(element) => {
+						readerResultsRegion = element;
+					}}
+					onOpenWork={(work) => void openWork(work)}
+					onFilterByAuthor={filterDiscoveryByAuthor}
+					onClearAuthorFilter={clearDiscoveryAuthor}
+					onOpenPreviousWorks={(cursor) => void searchWorks(cursor, undefined, 'push')}
+					onOpenNextWorks={(cursor) => void searchWorks(cursor, undefined, 'push')}
+					onAuthorAgentKindChange={(value) => {
+						authorAgentKind = value;
+					}}
+					onAuthorHistoricityChange={(value) => {
+						authorHistoricity = value;
+					}}
+					onApplyAuthorFilters={applyAuthorFilters}
+					onSubmitAuthorSearch={submitAuthorSearch}
+					onJumpToAuthorSection={jumpToAuthorSection}
+					onClearAuthorSection={clearAuthorSection}
+					onRetryAuthors={retryAuthorSearch}
+					onOpenAuthor={openAuthor}
+					onOpenAuthorWork={(work) => void openWork(work)}
+					onOpenPreviousAuthors={(cursor) => void loadAuthors(cursor, 'push')}
+					onOpenNextAuthors={(cursor) => void loadAuthors(cursor, 'push')}
+				/>
 			{/if}
-		</section>
-	{/if}
+		</article>
+
+		{#snippet sidebar()}
+			<ReaderContextSidebar
+				{structure}
+				{structureLoading}
+				{structureError}
+				structureStatusLabel={readerLoadingStatus(uiCopy.readerStructure.loading, 'structure')}
+				structureElapsedLabel={readerLoadingElapsed('structure')}
+				hasSelectedWork={Boolean(selectedWork)}
+				{contents}
+				{contentsLoading}
+				{contentsError}
+				contentsStatusLabel={readerLoadingStatus('Loading contents', 'contents')}
+				contentsElapsedLabel={readerLoadingElapsed('contents')}
+				{selectedWord}
+				{selectedWordRomanization}
+				{selectedWordHref}
+				{selectedWordBriefingOutput}
+				{selectedWordBriefingBadge}
+				{selectedWordBriefingCanGenerate}
+				{selectedWordBriefingLoading}
+				{selectedWordBriefingGenerating}
+				{selectedWordBriefingError}
+				{segmentIsActive}
+				onRetryStructure={() => selectedWork && void loadStructure(readerWorkRef(selectedWork))}
+				onRetryContents={retryContentsLoad}
+				onOpenDivision={(workId, citation) => showSegment(workId, citation, 'push')}
+				onOpenSegment={showSelectedWorkSegment}
+				onGenerateBriefing={() => void fetchEncounterBriefing(selectedWord, true)}
+			/>
+		{/snippet}
+	</ReaderShell>
+
+	<ReaderApparatusTabs
+		showing={Boolean(selectedWork || selectedSegment || selectedWord)}
+		onOpenPanel={(panel) => {
+			activeApparatusPanel = panel;
+		}}
+	/>
+
+	<ReaderApparatusSheet
+		activePanel={activeApparatusPanel}
+		{structure}
+		{selectedWord}
+		{selectedWordRomanization}
+		{selectedWordHref}
+		{selectedWordBriefingOutput}
+		{selectedWordBriefingBadge}
+		{selectedWordBriefingCanGenerate}
+		{selectedWordBriefingLoading}
+		{selectedWordBriefingGenerating}
+		{selectedWordBriefingError}
+		{currentDivisionTrail}
+		{currentDivisionNode}
+		{selectedSegment}
+		selectedWorkTitle={selectedWorkTitleLabel()}
+		selectedWorkAddress={selectedWork?.canonical_address || ''}
+		onClose={() => (activeApparatusPanel = '')}
+		onOpenDivision={(workId, citation) => showSegment(workId, citation, 'push')}
+		onGenerateBriefing={() => selectedWord && void fetchEncounterBriefing(selectedWord, true)}
+	/>
 </main>
