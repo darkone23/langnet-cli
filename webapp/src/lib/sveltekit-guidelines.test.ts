@@ -8,11 +8,27 @@ const guidelinesSource = readFileSync(
 const uiDocSource = readFileSync(new URL('../../docs/UI.md', import.meta.url), 'utf8');
 const webappReadmeSource = readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
 const docsReadmeSource = readFileSync(new URL('../../../docs/README.md', import.meta.url), 'utf8');
+const activeOverhaulPlanSource = readFileSync(
+	new URL(
+		'../../../docs/plans/active/infra/reader-traditional-structure-overhaul.md',
+		import.meta.url
+	),
+	'utf8'
+);
 const appCssSource = readFileSync(new URL('../app.css', import.meta.url), 'utf8');
-const deskRouteSource = readFileSync(new URL('../routes/+page.svelte', import.meta.url), 'utf8');
+const deskRouteShellSource = readFileSync(new URL('../routes/+page.svelte', import.meta.url), 'utf8');
+const deskRouteControllerSource = readFileSync(
+	new URL('./desk/DeskRouteController.svelte', import.meta.url),
+	'utf8'
+);
+const deskRouteSource = `${deskRouteShellSource}\n${deskRouteControllerSource}`;
 const deskDirectoryUrl = new URL('./desk/', import.meta.url);
 const readerRouteSource = readFileSync(
 	new URL('../routes/reader/+page.svelte', import.meta.url),
+	'utf8'
+);
+const readerRoutePageSource = readFileSync(
+	new URL('./reader/ReaderRouteController.svelte', import.meta.url),
 	'utf8'
 );
 const readerDirectoryUrl = new URL('./reader/', import.meta.url);
@@ -21,6 +37,7 @@ const deskEntryCssSource = readFileSync(new URL('./desk-entry.css', deskDirector
 const deskEntrySource = readFileSync(new URL('./desk-entry.ts', deskDirectoryUrl), 'utf8');
 const deskEndpointsSource = readFileSync(new URL('./desk-endpoints.ts', deskDirectoryUrl), 'utf8');
 const deskLookupSource = readFileSync(new URL('./desk-lookup.ts', deskDirectoryUrl), 'utf8');
+const deskWorkflowsSource = readFileSync(new URL('./desk-workflows.ts', deskDirectoryUrl), 'utf8');
 const deskMotdSource = readFileSync(new URL('./desk-motd.ts', deskDirectoryUrl), 'utf8');
 const deskRouteHelperSource = readFileSync(new URL('./desk-route.ts', deskDirectoryUrl), 'utf8');
 const deskSessionSource = readFileSync(new URL('./desk-session.ts', deskDirectoryUrl), 'utf8');
@@ -183,7 +200,9 @@ for (const extractedComponent of [
 ]) {
 	const componentUrl = extractedComponent.startsWith('Desk')
 		? new URL(`./${extractedComponent}`, deskDirectoryUrl)
-		: new URL(`./${extractedComponent}`, import.meta.url);
+		: extractedComponent.startsWith('Reader')
+			? new URL(`./${extractedComponent}`, readerDirectoryUrl)
+			: new URL(`./${extractedComponent}`, import.meta.url);
 	assert.ok(existsSync(componentUrl), `${extractedComponent} should exist as a focused component`);
 	const source = readFileSync(componentUrl, 'utf8');
 	const lineCount = source.split('\n').length;
@@ -248,12 +267,15 @@ assert.ok(
 assert.ok(
 	deskLookupSource.includes('export async function fetchDeskEncounter') &&
 		deskLookupSource.includes('export async function retryDeskTranslation') &&
+		deskWorkflowsSource.includes('export async function refreshDeskSearchTranslations') &&
+		deskWorkflowsSource.includes('export async function retryDeskGroupTranslation') &&
 		deskRouteSource.includes('fetchDeskEncounter({') &&
-		deskRouteSource.includes('retryDeskTranslation({') &&
+		deskRouteSource.includes('retryDeskGroupTranslation({') &&
+		deskRouteSource.includes('refreshDeskSearchTranslations({') &&
 		!deskRouteSource.includes('Promise.all([') &&
 		!deskRouteSource.includes("'/api/translation-cache'") &&
 		!deskRouteSource.includes('max_retries'),
-	'Word Desk route should delegate encounter fetch delay mechanics and translation retry POST construction to desk-lookup.ts'
+	'Word Desk route should delegate encounter fetch delay mechanics to desk-lookup.ts and retry orchestration to desk-workflows.ts'
 );
 
 assert.ok(
@@ -274,19 +296,19 @@ assert.ok(
 );
 
 assert.ok(
-	readerRouteSource.includes("from '$lib/reader/reader-api'") &&
+	readerRoutePageSource.includes("from '$lib/reader/reader-api'") &&
 		readerApiSource.includes('export function readerCatalogsUrl') &&
 		readerApiSource.includes('export function readerEncounterBriefingUrl') &&
 		readerApiSource.includes('export async function fetchReaderEncounterBriefing') &&
 		readerApiSource.includes('export function readerWorksUrl') &&
 		readerApiSource.includes('export function readerContentsUrl') &&
-		readerRouteSource.includes('readerCatalogsUrl()') &&
-		readerRouteSource.includes('fetchReaderEncounterBriefing({') &&
-		readerRouteSource.includes('readerWorksUrl({') &&
-		readerRouteSource.includes('readerContentsUrl({') &&
-		!readerRouteSource.includes('new URLSearchParams({') &&
-		!readerRouteSource.includes("'/api/reader?mode=catalogs'") &&
-		!readerRouteSource.includes('/api/encounter-briefing?'),
+		readerRoutePageSource.includes('readerCatalogsUrl(') &&
+		readerRoutePageSource.includes('fetchReaderEncounterBriefing({') &&
+		readerRoutePageSource.includes('readerWorksUrl(') &&
+		readerRoutePageSource.includes('readerContentsUrl(') &&
+		!readerRoutePageSource.includes('new URLSearchParams({') &&
+		!readerRoutePageSource.includes("'/api/reader?mode=catalogs'") &&
+		!readerRoutePageSource.includes('/api/encounter-briefing?'),
 	'Reader route should delegate API and encounter briefing URL construction to src/lib/reader/reader-api.ts'
 );
 
@@ -364,9 +386,10 @@ for (const localMotdFunction of [
 
 assert.ok(
 	deskRouteSource.includes("from '$lib/desk/desk-session'") &&
-		deskRouteSource.includes('encounterMatchesStoredRoute(stored.encounter, language, query)') &&
+		deskRouteSource.includes('restoreDeskStateFromStorage(') &&
 		deskSessionSource.includes('export function encounterNeedsFreshReaderLayer') &&
-		deskSessionSource.includes('export function validStoredTools'),
+		deskSessionSource.includes('export function validStoredTools') &&
+		deskRouteSource.includes("from '$lib/desk/desk-route-workspace'"),
 	'Word Desk route should delegate pure session/freshness helpers to desk-session.ts'
 );
 
@@ -480,10 +503,8 @@ for (const entryFrameComponent of [
 }
 
 {
-	const deskRouteSource = readFileSync(new URL('../routes/+page.svelte', import.meta.url), 'utf8');
-
-	assert.ok(
-		deskRouteSource.includes('DeskPageShell'),
+		assert.ok(
+			deskRouteSource.includes('DeskPageShell'),
 		'desk route should compose page layout through DeskPageShell'
 	);
 	assert.ok(
@@ -662,9 +683,9 @@ for (const entryFrameComponent of [
 }
 
 for (const primitiveConsumer of [
-	'./ReaderCurrentDivision.svelte',
-	'./ReaderWorkDossier.svelte',
-	'./ReaderApparatusEvidencePanel.svelte'
+	'./reader/ReaderCurrentDivision.svelte',
+	'./reader/ReaderWorkDossier.svelte',
+	'./reader/ReaderApparatusEvidencePanel.svelte'
 ]) {
 	const source = readFileSync(new URL(primitiveConsumer, import.meta.url), 'utf8');
 
@@ -679,15 +700,15 @@ for (const primitiveConsumer of [
 }
 
 for (const composedConsumer of [
-	['../routes/reader/+page.svelte', 'ReaderPassageView', ''],
-	['../routes/reader/+page.svelte', 'ReaderDiscoveryView', ''],
-	['../routes/reader/+page.svelte', 'ReaderSelectedWorkDesk', ''],
-	['./ReaderSelectedWorkDesk.svelte', 'OrionObjectCard', 'ReaderWorkDossier'],
-	['./ReaderDiscoveryView.svelte', 'ReaderTextSearchView', 'ReaderShelfWorkView'],
-	['./ReaderPassageView.svelte', 'ReaderCurrentDivision', 'ReaderLeaf'],
-	['./ReaderContextSidebar.svelte', 'ReaderCanonTable', 'ReaderContentsList'],
-	['./ReaderApparatusWordPanel.svelte', 'OrionObjectCard', ''],
-	['./ReaderApparatusStructurePanel.svelte', 'ReaderCanonTable', '']
+	['./reader/ReaderRouteControllerView.svelte', 'ReaderPassageView', ''],
+	['./reader/ReaderRouteControllerView.svelte', 'ReaderDiscoveryView', ''],
+	['./reader/ReaderRouteControllerView.svelte', 'ReaderSelectedWorkDesk', ''],
+	['./reader/ReaderSelectedWorkDesk.svelte', 'OrionObjectCard', 'ReaderWorkDossier'],
+	['./reader/ReaderDiscoveryView.svelte', 'ReaderTextSearchView', 'ReaderShelfWorkView'],
+	['./reader/ReaderPassageView.svelte', 'ReaderCurrentDivision', 'ReaderLeaf'],
+	['./reader/ReaderContextSidebar.svelte', 'ReaderCanonTable', 'ReaderContentsList'],
+	['./reader/ReaderApparatusWordPanel.svelte', 'OrionObjectCard', ''],
+	['./reader/ReaderApparatusStructurePanel.svelte', 'ReaderCanonTable', '']
 ]) {
 	const [path, firstComponent, secondComponent] = composedConsumer;
 	const source = readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -713,10 +734,20 @@ for (const routePath of [
 	const source = readFileSync(new URL(relativeToLib, import.meta.url), 'utf8');
 	const lineCount = source.split('\n').length;
 
-	if (lineCount > 2000) {
+	if (lineCount > 1000) {
 		assert.ok(
-			guidelinesSource.includes(routePath),
-			`${routePath} is oversized and must remain listed as an active cleanup target`
+			guidelinesSource.includes(routePath) && activeOverhaulPlanSource.includes(routePath),
+			`${routePath} is above the preferred route ceiling and must remain listed in the guidelines and active overhaul plan`
 		);
 	}
+}
+
+{
+	const lineCount = appCssSource.split('\n').length;
+
+	assert.ok(lineCount < 750, 'app.css should stay below the current 750-line cleanup budget');
+	assert.ok(
+		guidelinesSource.includes('Keep `app.css` below the current 750-line cleanup budget'),
+		'SvelteKit guidelines should preserve the current app.css cleanup budget'
+	);
 }

@@ -1,0 +1,180 @@
+work_maps:
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-01"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 1"
+    ordinal: 1
+    start_citation: "1.327"
+    end_citation: "1.354"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 1 citation span in the Perseus/CTS export." 
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"
+
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-02"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 2"
+    ordinal: 2
+    start_citation: "2.357"
+    end_citation: "2.383"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 2 citation span in the Perseus/CTS export."
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"
+
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-03"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 3"
+    ordinal: 3
+    start_citation: "3.386"
+    end_citation: "3.417"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 3 citation span in the Perseus/CTS export."
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"
+
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-04"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 4"
+    ordinal: 4
+    start_citation: "4.419"
+    end_citation: "4.445"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 4 citation span in the Perseus/CTS export."
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"
+
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-05"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 5"
+    ordinal: 5
+    start_citation: "5.449"
+    end_citation: "5.480"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 5 citation span in the Perseus/CTS export."
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"
+
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-06"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 6"
+    ordinal: 6
+    start_citation: "6.484"
+    end_citation: "6.511"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 6 citation span in the Perseus/CTS export."
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"
+
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-07"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 7"
+    ordinal: 7
+    start_citation: "7.514"
+    end_citation: "7.541"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 7 citation span in the Perseus/CTS export."
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"
+
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-08"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 8"
+    ordinal: 8
+    start_citation: "8.543"
+    end_citation: "8.569"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 8 citation span in the Perseus/CTS export."
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"
+
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-09"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 9"
+    ordinal: 9
+    start_citation: "9.571"
+    end_citation: "9.592"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 9 citation span in the Perseus/CTS export."
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"
+
+  - work_id: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    node_id: "rep-book-10"
+    parent_node_id: ""
+    level: 1
+    kind: "chapter"
+    label: "Book 10"
+    ordinal: 10
+    start_citation: "10.595"
+    end_citation: "10.621"
+    provenance: "curated"
+    confidence: "high"
+    status: "accepted"
+    note: "Republic book 10 citation span in the Perseus/CTS export."
+    evidence:
+      - source_type: "reader-work-map"
+        citation: "perseus:urn:cts:greekLit:tlg0059.tlg030"
+        label: "Perseus Greek text for Republic"

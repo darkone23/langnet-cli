@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const pageSource = readFileSync('src/routes/+page.svelte', 'utf8');
-const compactPageSource = pageSource.replace(/\s+/g, ' ');
+const pageControllerSource = readFileSync('src/lib/desk/DeskRouteController.svelte', 'utf8');
+const fullPageSource = `${pageSource}\n${pageControllerSource}`;
+const compactPageSource = fullPageSource.replace(/\s+/g, ' ');
 const deskEndpointsSource = readFileSync('src/lib/desk/desk-endpoints.ts', 'utf8');
+const deskWorkspaceSource = readFileSync('src/lib/desk/desk-route-workspace.ts', 'utf8');
 const deskSessionSource = readFileSync('src/lib/desk/desk-session.ts', 'utf8');
 const componentLedgerSource = readFileSync('src/lib/desk/DeskComponentLedger.svelte', 'utf8');
 const compactComponentLedgerSource = componentLedgerSource.replace(/\s+/g, ' ');
@@ -24,32 +27,33 @@ const motdSource = readFileSync('src/routes/api/motd/+server.ts', 'utf8');
 const wordIndexSource = readFileSync('src/routes/api/word-index/+server.ts', 'utf8');
 
 assert.equal(
-	pageSource.includes('if (!motdItems.length) void loadMotd(false);'),
+	fullPageSource.includes('if (!motdItems.length) void loadMotd(false);'),
 	true,
 	'initial page load should prepare the learner folio when no usable cached item exists'
 );
 assert.equal(
-	pageSource.includes('uiCopy.margin.noWord'),
+	fullPageSource.includes('uiCopy.margin.noWord'),
 	false,
 	'learner folio should not render an empty no-word content state'
 );
 assert.equal(
-	pageSource.includes('throw new Error(data.error ?? uiCopy.errors.recommendationsFailed);'),
+	fullPageSource.includes('throw new Error(data.error ?? uiCopy.errors.recommendationsFailed);'),
 	true,
 	'empty MOTD responses should be treated as errors instead of visible empty content'
 );
 assert.equal(
-	pageSource.includes("const deskStorageKey = 'orion-desk-state:v5';") &&
-		pageSource.includes('version: 5') &&
-		pageSource.includes('clearStorageKeys(sessionStorage') &&
-		pageSource.includes("'orion-desk-state:v4'") &&
-		pageSource.includes("'orion-desk-state:v3'"),
+	fullPageSource.includes("from '$lib/desk/desk-route-workspace'") &&
+		deskWorkspaceSource.includes('const legacyDeskStorageKeys = [') &&
+		deskWorkspaceSource.includes('version: 5') &&
+		deskWorkspaceSource.includes('orion-desk-state:v4') &&
+		deskWorkspaceSource.includes("orion-desk-state:v3'"),
 	true,
 	'desk session storage version should invalidate stale pre-translation/source-layer state'
 );
 assert.equal(
-	pageSource.includes('encounterNeedsFreshReaderLayer(stored.encounter)') &&
-		pageSource.includes("from '$lib/desk/desk-session'") &&
+	fullPageSource.includes('restoreDeskStateFromStorage(') &&
+		fullPageSource.includes("from '$lib/desk/desk-session'") &&
+		deskWorkspaceSource.includes('encounterNeedsFreshReaderLayer(stored.encounter') &&
 		deskSessionSource.includes('hasMissingSourceReaderTranslations(result)') &&
 		deskSessionSource.includes('hasStaleTranslatedSourceLayer(result)'),
 	true,
@@ -57,7 +61,7 @@ assert.equal(
 );
 assert.equal(
 	deskEndpointsSource.includes("params.set('source_layer_version', '3');") &&
-		pageSource.includes('searchEndpointUrl({'),
+		fullPageSource.includes('searchEndpointUrl({'),
 	true,
 	'CLI search requests should bust server response cache after translated source-layer contract changes'
 );
@@ -79,27 +83,27 @@ assert.equal(
 	'reader source/English layer toggles should expose textLayers through the result Svelte template dependency chain'
 );
 assert.equal(
-	pageSource.includes('!query.trim() && !currentWordIndex && !wordIndexEarmarks.length'),
+	fullPageSource.includes('!query.trim() && !currentWordIndex && !wordIndexEarmarks.length'),
 	false,
 	'word-index sections are static and should not wait for a search before loading'
 );
 assert.equal(
-	pageSource.includes('void loadWordIndexSections(language);'),
+	fullPageSource.includes('void loadWordIndexSections(language);'),
 	true,
 	'word-index sections should be requested as soon as route state is ready'
 );
 assert.equal(
-	pageSource.includes('let motdPending = $derived(motdLoading && !motd && !motdError);'),
+	fullPageSource.includes('let motdPending = $derived(motdLoading && !motd && !motdError);'),
 	true,
 	'MOTD skeleton should reflect active loading, not an idle empty state'
 );
 assert.equal(
-	pageSource.includes('let motdLoading = $state(false);'),
+	fullPageSource.includes('let motdLoading = $state(false);'),
 	true,
 	'MOTD loading should not start true before the initial API request is actually scheduled'
 );
 assert.equal(
-	pageSource.includes('if (motdStale && motdItems.length) void loadMotd(false);'),
+	fullPageSource.includes('if (motdStale && motdItems.length) void loadMotd(false);'),
 	true,
 	'stale local MOTD should remain visible while a refresh starts in the background'
 );
@@ -109,9 +113,9 @@ assert.equal(
 	'MOTD should display a stale/refreshing indicator while old cards stay visible'
 );
 assert.equal(
-	pageSource.includes("candidate_source: 'pool'") &&
-		pageSource.includes("timeout_ms: '3000'") &&
-		pageSource.includes("language: 'all'"),
+	fullPageSource.includes("candidate_source: 'pool'") &&
+		fullPageSource.includes("timeout_ms: '3000'") &&
+		fullPageSource.includes("language: 'all'"),
 	true,
 	'MOTD page requests should use all-language precomputed pool recommendations with a tight timeout'
 );
@@ -223,7 +227,7 @@ assert.equal(
 );
 
 assert.equal(
-	pageSource.includes("result.language !== 'lat'"),
+	fullPageSource.includes("result.language !== 'lat'"),
 	false,
 	'word-index sidebar match keys should use encounter anchors for Greek and Sanskrit, not only Latin'
 );

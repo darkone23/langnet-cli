@@ -8,6 +8,14 @@ from langnet.reader.division_metadata import (
     load_division_metadata,
 )
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+CURATED_DIVISION_METADATA_ROOT = REPO_ROOT / "data" / "curated" / "reader_division_metadata"
+
+
+def _accepted_metadata_node_ids_for_work(work_id: str) -> list[str]:
+    rows = accepted_division_metadata(load_division_metadata(CURATED_DIVISION_METADATA_ROOT))
+    return sorted([row.node_id for row in rows if row.work_id == work_id])
+
 
 def test_load_division_metadata_reads_chapter_bio_with_provenance() -> None:
     with TemporaryDirectory() as tmpdir:
@@ -123,3 +131,15 @@ division_metadata:
             raise AssertionError("expected missing evidence to fail")
 
     assert "requires at least one evidence item" in message
+
+
+def test_curated_bhagavadgita_division_metadata_covers_all_chapters() -> None:
+    node_ids = _accepted_metadata_node_ids_for_work("urn:cts:sanskritLit:mbh.bhg")
+    expected = [f"bhg-{index:02d}" for index in range(1, 19)]
+    assert node_ids == expected
+
+
+def test_curated_republic_division_metadata_covers_all_books() -> None:
+    node_ids = _accepted_metadata_node_ids_for_work("urn:ctsv2:grc:politeia-kateben-chthes-eis")
+    expected = [f"rep-book-{index:02d}" for index in range(1, 11)]
+    assert node_ids == expected

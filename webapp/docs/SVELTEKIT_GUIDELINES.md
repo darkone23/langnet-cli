@@ -179,6 +179,8 @@ This project also has a large shared `app.css`; use it deliberately:
 - app shell, theme tokens, font imports, Tailwind/DaisyUI setup, and page-level
   layout rails belong in `app.css`;
 - component-specific Orion rules belong in the component `<style>`;
+- Keep `app.css` below the current 750-line cleanup budget; if a new shared
+  primitive would push it over, extract component-local CSS first;
 - large new global CSS sections should be grouped by component prefix;
 - use stable `orion-*` class names for source-level regression tests.
 

@@ -187,6 +187,15 @@
 		gap: 0.45rem;
 	}
 
+	.orion-motd-warning {
+		border-left: 0.18rem solid
+			color-mix(in oklab, var(--color-warning) 52%, var(--color-base-content));
+		padding-left: 0.55rem;
+		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+		font-size: 0.72rem;
+		line-height: 1.35;
+	}
+
 	.orion-motd-folio {
 		overflow: hidden;
 	}

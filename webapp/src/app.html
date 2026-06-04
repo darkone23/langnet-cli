@@ -6,6 +6,31 @@
 		<meta name="text-scale" content="scale" />
 		<script>
 			(() => {
+				const fallbackMs = 12000;
+				const revealBootstrap = () => {
+					document.documentElement.classList.remove('orion-booting');
+
+					try {
+						document.querySelectorAll('.orion-app-hidden').forEach((node) => {
+							node.classList.remove('orion-app-hidden');
+						});
+						document.querySelectorAll('.orion-global-loader').forEach((node) => {
+							node.remove();
+						});
+					} catch {
+						// Best effort: if DOM manipulation fails, avoid boot gating from blocking indefinitely.
+					}
+				};
+
+				const fallbackTimer = window.setTimeout(revealBootstrap, fallbackMs);
+				window.addEventListener(
+					'load',
+					() => {
+						window.clearTimeout(fallbackTimer);
+					},
+					{ once: true }
+				);
+
 				try {
 					const theme = localStorage.getItem('orion-theme');
 					document.documentElement.dataset.theme =

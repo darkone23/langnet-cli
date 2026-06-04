@@ -3,6 +3,7 @@
 	import { Database, Search } from 'lucide-svelte';
 	import DeskComponentLedger from '$lib/desk/DeskComponentLedger.svelte';
 	import DeskDictionaryGroupCard from '$lib/desk/DeskDictionaryGroupCard.svelte';
+	import DeskOracleTrace from '$lib/desk/DeskOracleTrace.svelte';
 	import DeskLookupLoadingPanel from '$lib/desk/DeskLookupLoadingPanel.svelte';
 	import DeskParadigmPanel from '$lib/desk/DeskParadigmPanel.svelte';
 	import type { EncounterResult } from '$lib/search-data';
@@ -117,6 +118,8 @@
 		? 'orion-dictionary-witnesses orion-translation-arrived space-y-4'
 		: 'orion-dictionary-witnesses space-y-4'}
 >
+	<DeskOracleTrace {encounter} {query} />
+
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 		<div>
 			<h2 class="font-serif text-3xl">{uiCopy.results.title}</h2>

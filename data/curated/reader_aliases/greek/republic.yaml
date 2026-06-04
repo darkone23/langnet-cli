@@ -1,0 +1,28 @@
+aliases:
+  - alias: "Republic"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    display: "Plato, Republic"
+    sources: ["manual"]
+
+  - alias: "Plato Republic"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    display: "Plato, Republic"
+    sources: ["manual"]
+
+  - alias: "Πολιτεία"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    display: "Πλάτων, Πολιτεία"
+    sources: ["manual"]
+
+  - alias: "Rep."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:ctsv2:grc:politeia-kateben-chthes-eis"
+    display: "Plato, Republic"
+    sources: ["manual"]

@@ -1,65 +1,66 @@
 import { readFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
 
-const readerPageSource = readFileSync(
-	new URL('../../routes/reader/+page.svelte', import.meta.url),
-	'utf8'
+const readerPageSource = readFileSync(new URL('./ReaderRouteController.svelte', import.meta.url), 'utf8');
+const readerPageViewSource = readFileSync(
+  new URL('./ReaderRouteControllerView.svelte', import.meta.url),
+  'utf8'
 );
 const readerApiSource = readFileSync(new URL('./reader-api.ts', import.meta.url), 'utf8');
 const readerCssSource = readFileSync(new URL('../../app.css', import.meta.url), 'utf8');
 const apparatusSheetSource = readFileSync(
-	new URL('../ReaderApparatusSheet.svelte', import.meta.url),
+	new URL('./ReaderApparatusSheet.svelte', import.meta.url),
 	'utf8'
 );
 const apparatusWordSource = readFileSync(
-	new URL('../ReaderApparatusWordPanel.svelte', import.meta.url),
+	new URL('./ReaderApparatusWordPanel.svelte', import.meta.url),
 	'utf8'
 );
 const apparatusOracleSource = readFileSync(
-	new URL('../ReaderApparatusOraclePanel.svelte', import.meta.url),
+	new URL('./ReaderApparatusOraclePanel.svelte', import.meta.url),
 	'utf8'
 );
 const apparatusEvidenceSource = readFileSync(
-	new URL('../ReaderApparatusEvidencePanel.svelte', import.meta.url),
+	new URL('./ReaderApparatusEvidencePanel.svelte', import.meta.url),
 	'utf8'
 );
 const apparatusStructureSource = readFileSync(
-	new URL('../ReaderApparatusStructurePanel.svelte', import.meta.url),
+	new URL('./ReaderApparatusStructurePanel.svelte', import.meta.url),
 	'utf8'
 );
-const readerShellSource = readFileSync(new URL('../ReaderShell.svelte', import.meta.url), 'utf8');
+const readerShellSource = readFileSync(new URL('./ReaderShell.svelte', import.meta.url), 'utf8');
 const readerSelectedWorkDeskSource = readFileSync(
-	new URL('../ReaderSelectedWorkDesk.svelte', import.meta.url),
+	new URL('./ReaderSelectedWorkDesk.svelte', import.meta.url),
 	'utf8'
 );
 const discoveryViewSource = readFileSync(
-	new URL('../ReaderDiscoveryView.svelte', import.meta.url),
+	new URL('./ReaderDiscoveryView.svelte', import.meta.url),
 	'utf8'
 );
 const deskHeaderSource = readFileSync(
-	new URL('../ReaderDeskHeader.svelte', import.meta.url),
+	new URL('./ReaderDeskHeader.svelte', import.meta.url),
 	'utf8'
 );
 const readerContentsListSource = readFileSync(
-	new URL('../ReaderContentsList.svelte', import.meta.url),
+	new URL('./ReaderContentsList.svelte', import.meta.url),
 	'utf8'
 );
 const workDossierSource = readFileSync(
-	new URL('../ReaderWorkDossier.svelte', import.meta.url),
+	new URL('./ReaderWorkDossier.svelte', import.meta.url),
 	'utf8'
 );
 const currentDivisionSource = readFileSync(
-	new URL('../ReaderCurrentDivision.svelte', import.meta.url),
+	new URL('./ReaderCurrentDivision.svelte', import.meta.url),
 	'utf8'
 );
-const pageNavSource = readFileSync(new URL('../ReaderPageNav.svelte', import.meta.url), 'utf8');
+const pageNavSource = readFileSync(new URL('./ReaderPageNav.svelte', import.meta.url), 'utf8');
 const readerPassageViewSource = readFileSync(
-	new URL('../ReaderPassageView.svelte', import.meta.url),
+	new URL('./ReaderPassageView.svelte', import.meta.url),
 	'utf8'
 );
-const readerLeafSource = readFileSync(new URL('../ReaderLeaf.svelte', import.meta.url), 'utf8');
+const readerLeafSource = readFileSync(new URL('./ReaderLeaf.svelte', import.meta.url), 'utf8');
 const readerSourceDetailsSource = readFileSync(
-	new URL('../ReaderSourceDetails.svelte', import.meta.url),
+	new URL('./ReaderSourceDetails.svelte', import.meta.url),
 	'utf8'
 );
 
@@ -177,18 +178,24 @@ for (const token of [
 }
 
 assertIncludes(
-	`${readerPageSource}\n${readerApiSource}`,
+	`${readerPageSource}\n${readerPageViewSource}\n${readerApiSource}`,
 	[
 		'let structure = $state<ReaderStructureNode[]>([])',
 		'readerStructureUrl({ catalogId, language, work })',
 		'await loadStructure(readerWorkRef(selectedWork))',
 		'ReaderContextSidebar',
+		'ReaderApparatusTabs',
 		"readerLoadingElapsedSeconds('structure')"
 	],
 	'reader page structure UI'
 );
 assertIncludes(
-	`${readerPageSource}\n${readerApiSource}`,
+	readerPageSource,
+	['ReaderRouteControllerView'],
+	'reader page orchestration'
+);
+assertIncludes(
+	`${readerPageSource}\n${readerPageViewSource}\n${readerApiSource}`,
 	[
 		'let workDossier = $state<ReaderWorkDossierResponse | null>(null)',
 		'loadWorkDossier',
@@ -219,8 +226,8 @@ assertScoped(
 );
 
 assertIncludes(
-	readerPageSource,
-	['currentDivisionTrail', 'currentDivisionNode', 'ReaderPassageView'],
+		`${readerPageSource}\n${readerPageViewSource}`,
+		['currentDivisionTrail', 'currentDivisionNode', 'ReaderPassageView', 'ReaderApparatusSheet'],
 	'reader page current division marginalium'
 );
 assertIncludes(
@@ -242,7 +249,7 @@ assertScoped(
 );
 
 assertIncludes(
-	readerPageSource,
+	`${readerPageSource}\n${readerPageViewSource}`,
 	['ReaderPassageView', 'pagePrevCursor', 'pageNextCursor', 'pageRangeLabel'],
 	'reader page navigation'
 );
@@ -264,7 +271,7 @@ assertScoped(
 );
 
 assertIncludes(
-	readerPageSource,
+	`${readerPageSource}\n${readerPageViewSource}`,
 	['ReaderPassageView', 'pageSegments', 'segmentParts', 'selectToken', 'showSelectedWorkSegment'],
 	'reader page Reader Leaf composition'
 );

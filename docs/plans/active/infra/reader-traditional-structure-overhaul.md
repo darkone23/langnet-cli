@@ -11,15 +11,17 @@ Current state audit, 2026-06-03:
   `/api/reader?mode=structure`, structure-aware address resolution, `reader
 about`, Work Dossier payloads, current-division marginalia, Canon Table
   rendering, and mobile Apparatus panels.
-- Reader UI decomposition is substantially improved, and
-  `webapp/src/routes/reader/+page.svelte` is now below the active-refactor
-  threshold at roughly 1990 lines. It is still above the preferred route
-  ceiling; most remaining weight is route state, URL synchronization, and
-  selected-work/page loading actions.
+- Reader UI decomposition is substantially improved, and the reader route is now
+  a thin wrapper at `webapp/src/routes/reader/+page.svelte` over
+  `webapp/src/lib/reader/ReaderRoutePage.svelte`. The extracted route page
+  implementation is still above the preferred 1000-line ceiling; remaining work
+  is route state orchestration, URL synchronization, and selected-work/page
+  loading actions.
 - The Lexicon Word Desk route is now below the active-refactor threshold but
   still above the preferred route ceiling. `webapp/src/routes/+page.svelte` is
-  down to roughly 1690 lines, with lookup execution, refresh sequencing, and
-  state-bound Word Desk wrappers still mixed in the route.
+  down to roughly 1680 lines. Lookup execution remains route-owned while
+  enrichment refresh and group translation retry orchestration now live in
+  `webapp/src/lib/desk/desk-workflows.ts`.
 - The Lexicon Word Desk now has a vertical file cluster at
   `webapp/src/lib/desk/` for its `Desk*.svelte` components, `desk-*.ts`
   helpers/tests, shared `desk-entry.css`, and pure entry-display helper module
@@ -41,15 +43,23 @@ about`, Work Dossier payloads, current-division marginalia, Canon Table
   and loading composition, while `src/lib/reader/reading-surface-guards.test.ts`
   covers apparatus, reading layout, Work Dossier, current-division, page
   navigation, Leaf, source details, and reader state persistence contracts.
+- Reader page loading contracts are now split into a fixture module and two
+  focused guards (`src/lib/reader/page-loading-fixtures.ts`,
+  `src/lib/reader/page-loading.test.ts`,
+  `src/lib/reader/page-loading-components.test.ts`) to keep source guard files
+  comfortably below the 1000-line operational ceiling.
 - `webapp/src/app.css` is down below 750 lines after the latest Word Desk
   extractions. Remaining component-specific blocks are mostly legacy
   entry-card, gloss/list, memory-routine, study-panel, marginalia, source-beast,
   and MOTD styles. Font/theme tokens and truly shared primitives can stay
-  global.
+  global. Legacy dead blocks have now been removed and `orion-motd-warning`
+  moved into `DeskMotdFolio.svelte`.
 - New extracted Svelte components are following the project guidelines: typed
   Svelte 5 `$props`, focused file sizes under 500 lines, scoped component
   styles, DaisyUI/Tailwind controls where appropriate, and source-level guards
   in `webapp/src/lib/sveltekit-guidelines.test.ts`.
+- Word desk encounter reliability now has an explicit Oracle trace slice: `DeskOracleTrace.svelte`,
+  `desk-oracle.ts`, and `desk-oracle.test.ts`.
 - Async guidelines are partially met. Reader loading surfaces and the Word Desk
   now share elapsed-second activity surfaces for lookup, translation
   enrichment, MOTD refresh, word-index lookup, word-index section browse, and
@@ -179,6 +189,10 @@ Implemented slices:
   covering default reader addresses, canonical reference detection, work
   metadata readiness, address formatting, and current route-state derivation
   outside the Svelte route.
+- Reader route orchestration now uses a shared workspace-state binding layer:
+  `reader-route-workspace-state.ts`, with content and discovery loading flows moved
+  to dedicated loader modules (`reader-route-content-loaders.ts` and
+  `reader-route-discovery-loaders.ts`).
 - Reader index summary helpers now live in `src/lib/reader/index-stats.ts`,
   moving author-section totals, stats lookup/upsert behavior, default catalog
   selection, and stats target construction out of the route.
@@ -195,10 +209,17 @@ Implemented slices:
 - Word Desk lookup waiting markup now lives in `DeskLookupLoadingPanel.svelte`,
   with the elapsed timer visible in the large lookup panel instead of hidden in
   route-local state.
+- Word Desk word-index orchestration for nearby/browse loading, request state
+  transitions, and earmark toggles now lives in
+  `webapp/src/lib/desk/desk-word-index.ts`, reducing `DeskRouteController.svelte`
+  to orchestration boundaries.
 - Word Desk Forms/paradigm display now lives in `DeskParadigmPanel.svelte`,
   with pure display helpers in `desk-paradigm.ts` and component-local
   `orion-paradigm-*` / `orion-learning-*` styles instead of route-local markup
   or global `app.css` rules.
+- Word Desk enrichment/retry sequencing is now extracted into
+  `webapp/src/lib/desk/desk-workflows.ts` and covered by
+  `webapp/src/lib/desk/desk-workflows.test.ts`.
 - Word Desk URL-state parsing now lives in `desk-route.ts`, covering route
   list params, load/prefill flags, language/tool params, clear-route checks,
   and stable desk route keys outside the Svelte route.
@@ -206,8 +227,11 @@ Implemented slices:
   MOTD local cache, word-index earmarks, desk session state, and versioned
   storage cleanup with focused tests.
 - `reader structure` and `/api/reader?mode=structure`.
-- Division metadata overlay storage, sync, builder integration, and a reviewed
-  Bhagavadgītā chapter 9 fixture.
+- Division metadata overlay storage, sync, builder integration, and reviewed
+  traditional mappings across all targeted texts (Bhagavadgītā chapters 1-18 and
+  Republic Books 1-10), with regression tests in
+  `tests/test_reader_division_metadata.py` preventing chapter/book coverage
+  regressions.
 - Structure-aware `resolve-address`, including exact `traditional_reference`
   lookups such as `BhG 9` and work-qualified labels such as `Republic Book 10`.
 - `reader about` and `/api/reader?mode=about` Work Dossier payloads for
@@ -219,9 +243,15 @@ Implemented slices:
 - Mobile Apparatus Sheet now has concrete Structure, Word, Oracle, and Evidence
   panel contents instead of placeholders, using the same Object Card,
   provenance, selected-word, and current-division state as the desktop Reader.
+- Greek canonical mapping baseline is now curated for Plato's Republic in
+  `data/curated/reader_aliases/greek/republic.yaml` and a 10-book chapter
+  scaffold is now curated in `data/curated/reader_work_maps/greek/republic.yaml`.
 - Greek encounter normalization now feeds dictionary candidates into fuzzy
   lookup surfaces, so text forms such as `τελευταίαις` can reach both Diogenes
   and Bailly while the word-index sidebar matches non-Latin encounter anchors.
+- The Word Desk now exposes an inspectable encounter reliability Oracle trace so
+  reader-invoked forms, dictionary buckets, normalized candidates, and word-index
+  anchors are surfaced in one provenance-bearing slice.
 
 Remaining high-value slices:
 
@@ -230,12 +260,16 @@ Remaining high-value slices:
 - Bring the Lexicon Word Desk into the same component system: Object Card,
   source-group Dossier sections, Oracle trace, provenance chips, and stable
   async indicators.
-- More curated aliases and work maps for Greek/Latin canonical examples such as
-  Plato's Republic.
-- A shared encounter reliability contract for reader-invoked forms: surface
-  form, normalized candidates, dictionary buckets, word-index anchors, and
-  reader-search candidates should be inspectable as one provenance-bearing
-  Oracle trace.
+- Continue decomposing reader-specific route scaffolds and controls:
+  (`webapp/src/lib/reader/ReaderRoutePage.svelte` and
+  `webapp/src/routes/reader/+page.svelte`) and then reduce
+  `webapp/src/lib/reader/ReaderRouteController.svelte` under the 1000-line ceiling
+  by extracting further non-render orchestration.
+  into focused orchestration plus component-owned concerns so the main route
+  scripts stay under the 1000-line envelope.
+- Decompose `webapp/src/lib/desk/DeskRouteController.svelte` similarly; it
+  remains above the preferred line-ceiling and should move orchestration into
+  focused helper modules.
 - A richer dossier route or drawer for full author/work/chapter biography and
   evidence inspection.
 - Generated, review-gated work and chapter bios after source-backed evidence
@@ -252,22 +286,25 @@ Treat this as one overhaul, delivered in small verifiable slices.
    divisions, Work Dossiers, and Leaf reading feel like one manuscript desk.
    Use `reader structure`, `reader about`, and `resolve-address` without adding
    new browser-only contracts.
-3. **Mobile Apparatus:** fill the bottom Apparatus Sheet with real Structure,
+3. **Storage Hygiene:** complete migration of Word Desk storage orchestration
+   (MOTD, word-index earmarks, desk session state) out of `routes/+page.svelte`
+   into workspace helpers.
+4. **Mobile Apparatus:** fill the bottom Apparatus Sheet with real Structure,
    Word, Oracle, and Evidence content rather than placeholders. Preserve one
    loading indicator per async operation with elapsed seconds.
-4. **Lexicon Word Desk:** refactor the dictionary encounter page toward the
+5. **Lexicon Word Desk:** refactor the dictionary encounter page toward the
    same primitives: word Object Card, source Dossier sections, word-index Wheel,
    provenance chips, and Oracle trace for lookup/normalization/retrieval.
-5. **Oracle Trace:** expose reader-invoked lookup reliability as a flat,
+6. **Oracle Trace:** expose reader-invoked lookup reliability as a flat,
    inspectable chain: selected token, normalized candidates, dictionary buckets,
    word-index anchors, reader-search candidates, cache policy, and warnings.
-6. **Library And Author Indices:** make shelves, author sections, and work
+7. **Library And Author Indices:** make shelves, author sections, and work
    lists use Canon Table/Object Card conventions where they carry structure or
    identity metadata.
-7. **Research Metadata Loop:** expand Firecrawl-backed evidence artifacts and
+8. **Research Metadata Loop:** expand Firecrawl-backed evidence artifacts and
    reviewed YAML overlays for work/chapter bios, aliases, and canonical work
    maps. Generated prose stays review-gated and provenance-marked.
-8. **Visual QA:** verify desktop, tablet, and mobile screenshots for text
+9. **Visual QA:** verify desktop, tablet, and mobile screenshots for text
    overlap, cramped buttons, blank panels, one-note palettes, and broken async
    states before considering a slice complete.
 
@@ -435,6 +472,10 @@ feature slice is the traditional-division layer:
   `webapp/src/lib/desk/desk-status.ts`, with focused tests and guideline guards
   preventing route-local status/cache display policy from returning to
   `routes/+page.svelte`.
+- Extracted Word Desk persistence orchestration into
+  `webapp/src/lib/desk/desk-route-workspace.ts`, moving MOTD, word-index
+  earmark, and desk session storage reads/writes behind browser-aware workspace
+  helpers.
 - Extracted Reader API URL construction and payload fetch helpers into
   `webapp/src/lib/reader/reader-api.ts`, covering catalog, facets, shelves,
   author sections, author/work search, text search, structure, dossier,
@@ -447,6 +488,9 @@ feature slice is the traditional-division layer:
 - Added SvelteKit guideline guards requiring extracted Word Desk components and
   styles to stay focused and preventing their selectors from returning to global
   CSS.
+- Added SvelteKit guideline guards keeping both oversized routes listed in the
+  active overhaul plan while they remain above the preferred 1000-line ceiling,
+  and preserving the current `app.css` budget below 750 lines.
 - Added SvelteKit guideline guards requiring Reader endpoint construction and
   encounter briefing fetches to remain under the `src/lib/reader/` surface
   cluster instead of returning to `routes/reader/+page.svelte`.
@@ -463,8 +507,14 @@ feature slice is the traditional-division layer:
   `src/lib/reader` exports remain stable while `index.ts` falls below the
   1000-line ceiling.
 - Extracted Reader route URL override application and next-URL construction
-  into `src/lib/reader/page-routing.ts`, so `routes/reader/+page.svelte` now
-  keeps the browser history side effect while delegating query-state assembly.
+  into `src/lib/reader/page-routing.ts`, so the thin `routes/reader/+page.svelte`
+  wrapper plus `ReaderRoutePage.svelte` now keeps the browser history side
+  effect while delegating query-state assembly.
+- Extracted Reader route startup/state orchestration and URL-parsing state hydrate
+  application into `src/lib/reader/reader-route-workspace.ts`, including route
+  defaults, restoration, URL state hydration, and cursor/statestore persistence
+  plumbing. `ReaderRouteController.svelte` now delegates these lifecycle seams to
+  the workspace module while preserving in-route data loading and selection actions.
 
 ## Immediate Next Step
 
@@ -472,25 +522,28 @@ Continue the UI overhaul in this order:
 
 1. Continue reducing `routes/+page.svelte` toward the preferred 1000-line route
    ceiling by extracting the remaining stateful lookup orchestration seams:
-   first-pass search sequencing, enrichment refresh sequencing, and retry
-   refresh sequencing. Status/cache copy has already moved to `desk-status.ts`.
+   first-pass search sequencing remains in-route; enrichment refresh sequencing
+   and retry refresh sequencing now flow through `desk-workflows.ts`, and word-index
+   orchestration now flows through `desk-word-index.ts`. Status/cache copy has
+   already moved to `desk-status.ts`.
 2. Move the remaining Word Desk orchestration boundaries out of the route:
    storage synchronization and async activity coordination should stay under
    the `src/lib/desk/` surface label when they are desk-specific.
 3. Continue reducing `app.css` by moving component-only Word Desk styles into
    the extracted Svelte components. Keep only tokens, app shell, theme, and
    shared primitive rules global.
-4. Continue reducing `routes/reader/+page.svelte` toward the preferred
-   1000-line route ceiling by extracting URL actions, route hydration
-   application, and selected-work/page loading routines into focused Reader
-   helper modules under `src/lib/reader/`.
+4. Remaining selected-work/page orchestration is extracted into
+   `src/lib/reader/reader-route-content-loaders.ts`; continue reducing
+   `routes/reader/+page.svelte` and `ReaderRouteController.svelte` by extracting
+   the remaining discovery/search orchestration (author sections, shelves, works,
+   and text search loaders) into focused `src/lib/reader/` helpers.
 5. Continue moving focused Reader helpers out of `src/lib/reader/index.ts`
    where they form clearer concept modules, while keeping the public Reader
    domain export stable.
 6. Normalize async surfaces across the Word Desk so adding content uses
    skeletons, replacing content uses one spinner/badge/loading strip, and
    visible waits expose elapsed seconds.
-7. Add the encounter reliability Oracle trace: selected surface form,
+7. (Done) Add the encounter reliability Oracle trace: selected surface form,
    normalized candidates, dictionary buckets, word-index anchors,
    reader-search candidates, cache policy, warnings, and provenance chips.
 8. Expand traditional-structure metadata with curated aliases and work maps for

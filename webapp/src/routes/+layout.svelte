@@ -9,34 +9,51 @@
 
 	let { children } = $props();
 	let booting = $state(true);
+	const hardBootTimeoutMs = 10000;
+	let bootDeadlineId: ReturnType<typeof setTimeout> | null = null;
 
 	onMount(() => {
 		const removeReloadDiagnostics = installReloadDiagnostics();
-		void revealWhenStable();
+		bootDeadlineId = setTimeout(() => {
+			console.warn('[orion] boot sequence timed out; continuing without transition guard');
+			finalizeBoot();
+		}, hardBootTimeoutMs);
+
+		void revealWhenStable().finally(() => {
+			if (bootDeadlineId) clearTimeout(bootDeadlineId);
+		});
 
 		return () => {
+			if (bootDeadlineId) clearTimeout(bootDeadlineId);
 			removeReloadDiagnostics();
 		};
 	});
 
-	async function revealWhenStable() {
-		document.documentElement.classList.add('orion-booting');
-		syncDocumentTheme();
-
-		if (shouldSkipBootGate()) {
-			booting = false;
-			document.documentElement.classList.remove('orion-booting');
-			return;
-		}
-
-		await tick();
-		await waitForFonts();
-		await nextFrame();
-		await nextFrame();
-
+	function finalizeBoot() {
+		if (!booting) return;
 		booting = false;
-		markBootReady();
 		document.documentElement.classList.remove('orion-booting');
+		markBootReady();
+	}
+
+	async function revealWhenStable() {
+		try {
+			document.documentElement.classList.add('orion-booting');
+			syncDocumentTheme();
+
+			if (shouldSkipBootGate()) {
+				return;
+			}
+
+			await tick();
+			await waitForFonts();
+			await nextFrame();
+			await nextFrame();
+		} catch (error) {
+			console.error('[orion] boot sequence failed', error);
+		} finally {
+			finalizeBoot();
+		}
 	}
 
 	function shouldSkipBootGate() {
