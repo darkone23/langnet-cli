@@ -2543,7 +2543,7 @@ def _emit_reader_payload(payload: Mapping[str, object], output: str) -> None:
         _emit_reader_item(mode, cast(Mapping[str, object], item))
 
 
-def _emit_reader_single_payload(  # noqa: C901, PLR0911, PLR0912
+def _emit_reader_single_payload(  # noqa: C901, PLR0911, PLR0912, PLR0915
     mode: str, payload: Mapping[str, object]
 ) -> bool:
     if mode == "show":
@@ -2629,7 +2629,9 @@ def _emit_reader_single_payload(  # noqa: C901, PLR0911, PLR0912
     return False
 
 
-def _emit_reader_item(mode: str, item: Mapping[str, object]) -> None:  # noqa: C901, PLR0912
+def _emit_reader_item(  # noqa: C901, PLR0912, PLR0915
+    mode: str, item: Mapping[str, object]
+) -> None:
     if mode == "collections":
         click.echo(
             f"{item.get('collection_id')}  works={item.get('work_count')}  "
@@ -8221,7 +8223,7 @@ def _encounter_should_retry_uncached(
     return tool_filter.lower() not in {"heritage", "claim.heritage.morph"}
 
 
-def _encounter_should_retry_uncached_for_greek_partial_sources(
+def _encounter_should_retry_uncached_for_greek_partial_sources(  # noqa: PLR0913
     *,
     language: str,
     text: str,
@@ -10477,18 +10479,44 @@ def _encounter_word_index_context(
 def _encounter_word_index_preferred_anchors(
     anchors: Sequence[dict[str, object]],
 ) -> list[dict[str, object]]:
+    def candidate_rank(anchor: Mapping[str, object]) -> int:
+        rank = anchor.get("candidate_rank")
+        return rank if isinstance(rank, int) else 0
+
+    def is_script_pivot_exact(
+        anchor: Mapping[str, object], first_rank_anchors: Sequence[Mapping[str, object]]
+    ) -> bool:
+        query = str(anchor.get("query") or "")
+        if query.isascii():
+            return False
+        return any(
+            str(first_anchor.get("query") or "").isascii() for first_anchor in first_rank_anchors
+        )
+
     if not anchors:
         return []
     ranked = [anchor for anchor in anchors if isinstance(anchor.get("candidate_rank"), int)]
     if ranked:
-        first_rank = min(int(anchor.get("candidate_rank", 0)) for anchor in ranked)
-        first_rank_anchors = [
-            anchor for anchor in ranked if int(anchor.get("candidate_rank", 0)) == first_rank
+        first_rank = min(candidate_rank(anchor) for anchor in ranked)
+        first_rank_anchors = [anchor for anchor in ranked if candidate_rank(anchor) == first_rank]
+        first_rank_exact = [
+            anchor for anchor in first_rank_anchors if anchor.get("anchor_status") == "exact"
         ]
-        exact = [anchor for anchor in first_rank_anchors if anchor.get("anchor_status") == "exact"]
-        return exact or first_rank_anchors
+        if first_rank_exact:
+            return first_rank_exact
+        script_pivot_exact = [
+            anchor
+            for anchor in ranked
+            if anchor.get("anchor_status") == "exact"
+            and is_script_pivot_exact(anchor, first_rank_anchors)
+        ]
+        if script_pivot_exact:
+            return script_pivot_exact
+        return first_rank_anchors
     exact = [anchor for anchor in anchors if anchor.get("anchor_status") == "exact"]
-    return exact or list(anchors)
+    if exact:
+        return exact
+    return list(anchors)
 
 
 def _dedupe_word_index_warnings(warnings: Sequence[object]) -> list[object]:

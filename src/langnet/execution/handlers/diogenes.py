@@ -837,7 +837,8 @@ def _build_triples(
 
 def _has_no_match_header(chunks: Sequence[object]) -> bool:
     return any(
-        isinstance(chunk, Mapping) and chunk.get("chunk_type") == "NoMatchFoundHeader"
+        isinstance(chunk, Mapping)
+        and cast(Mapping[str, object], chunk).get("chunk_type") == "NoMatchFoundHeader"
         for chunk in chunks
     )
 

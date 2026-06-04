@@ -88,7 +88,7 @@ assert.equal(
 	'word-index sections are static and should not wait for a search before loading'
 );
 assert.equal(
-	fullPageSource.includes('void loadWordIndexSections(language);'),
+	fullPageSource.includes('void wordIndexController.loadSections(language);'),
 	true,
 	'word-index sections should be requested as soon as route state is ready'
 );

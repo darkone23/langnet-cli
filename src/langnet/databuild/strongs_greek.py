@@ -636,7 +636,7 @@ def _gloss_part(value: object) -> str:
 def _alias_rows(
     entry: Mapping[str, Any], entry_id: str, strongs_number: str
 ) -> list[tuple[str, str, str, str, str, int]]:
-    aliases: list[tuple[str, str, str, int]] = []
+    aliases: list[tuple[str, str, int]] = []
     strongs_int = int(entry["strongs_int"])
     aliases.extend(
         [

@@ -161,8 +161,8 @@ assert.equal(
 		pendingExpandedSections: [],
 		pendingCollapsedBranches: []
 	}),
-	'/',
-	'clear default desk state should collapse to the home route'
+	'/q',
+	'clear default desk state should collapse to the canonical app route'
 );
 assert.equal(
 	deskAppRouteUrl({
@@ -188,7 +188,7 @@ assert.equal(
 		pendingExpandedSections: [],
 		pendingCollapsedBranches: []
 	}),
-	'/?lang=grc&q=logos&backend=cli&translation=cache&theme=vespers&load=yes&dictionary=all&visible=bailly&source=bucket1'
+	'/q?lang=grc&q=logos&backend=cli&translation=cache&theme=vespers&load=yes&dictionary=all&visible=bailly&source=bucket1'
 );
 assert.equal(
 	deskMotdHref(
@@ -218,7 +218,7 @@ assert.equal(
 		},
 		{ theme: 'vespers', motdLinksLoad: false }
 	),
-	'/?lang=san&q=agni&dictionary=dico&translation=cache&backend=cli&theme=vespers&load=no'
+	'/q?lang=san&q=agni&dictionary=dico&translation=cache&backend=cli&theme=vespers&load=no'
 );
 
 const wordIndexItem = {
@@ -241,7 +241,7 @@ assert.equal(
 		theme: 'manuscript',
 		includeLoad: true
 	}),
-	'/?lang=grc&q=logos&translation=auto&theme=manuscript&dictionary=bailly&load=yes'
+	'/q?lang=grc&q=logos&translation=auto&theme=manuscript&dictionary=bailly&load=yes'
 );
 
 const wordIndexSection = {
@@ -266,7 +266,7 @@ assert.equal(
 		translationMode: 'cache',
 		theme: 'vespers'
 	}),
-	'/?lang=grc&q=logos&translation=cache&theme=vespers&dictionary=bailly&load=yes'
+	'/q?lang=grc&q=logos&translation=cache&theme=vespers&dictionary=bailly&load=yes'
 );
 {
 	const hydration = deskRouteHydration({

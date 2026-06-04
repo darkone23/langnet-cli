@@ -185,7 +185,9 @@ try {
 	assert.equal(apiResult.data.ok, true);
 	assert.deepEqual(briefingResult.data, { flow: [] });
 	assert.deepEqual(fetchedUrls, [
+		'/api/auth/request-token',
 		'/api/reader?mode=catalogs',
+		'/api/auth/request-token',
 		'/api/encounter-briefing?language=grc&q=%CE%BB%CF%8C%CE%B3%CE%BF%CF%82&translation=cache&timeout_ms=180000'
 	]);
 	assert.ok(

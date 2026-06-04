@@ -4,6 +4,7 @@ const {
 	readerPageSource,
 	readerPageViewSource,
 	readerApiSource,
+	readerRouteWorkspaceSource,
 	readerCssSource,
 	apparatusSheetSource,
 	apparatusWordSource,
@@ -69,7 +70,9 @@ for (const primitiveSourceToken of [
 	'readerLoadingElapsedSeconds'
 ]) {
 	assert.ok(
-		`${readerPageSource}\n${readerPageViewSource}\n${readerPassageViewSource}`.includes(primitiveSourceToken),
+		`${readerPageSource}\n${readerPageViewSource}\n${readerPassageViewSource}\n${readerRouteWorkspaceSource}`.includes(
+			primitiveSourceToken
+		),
 		`reader page should expose Orion primitive source token: ${primitiveSourceToken}`
 	);
 }
@@ -201,7 +204,9 @@ for (const workDeskSourceToken of [
 	'currentDivisionTrail'
 ]) {
 	assert.ok(
-		`${readerPageSource}\n${readerPageViewSource}\n${readerPassageViewSource}\n${readerContextSidebarSource}`.includes(workDeskSourceToken),
+		`${readerPageSource}\n${readerPageViewSource}\n${readerPassageViewSource}\n${readerContextSidebarSource}`.includes(
+			workDeskSourceToken
+		),
 		`reader page should expose Work Desk apparatus token: ${workDeskSourceToken}`
 	);
 }

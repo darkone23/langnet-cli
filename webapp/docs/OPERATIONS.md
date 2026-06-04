@@ -38,6 +38,8 @@ app can be checked through the existing server with:
 ```sh
 curl -sS -o /tmp/langnet-web-root.html -w '%{http_code} %{content_type}\n' \
   http://127.0.0.1:43210/
+curl -sS -o /tmp/langnet-web-q.html -w '%{http_code} %{content_type}\n' \
+  'http://127.0.0.1:43210/q?lang=grc&q=logos&load=yes'
 ```
 
 If another server is already running on `43210`, do not start a competing server
@@ -115,6 +117,12 @@ just smoke-cli
 Reader and search endpoints include `Server-Timing` headers. `reader_cache` and
 `search_cache` indicate an in-process exact-request cache hit; restart the
 preview/dev process to pick up code changes or clear those in-memory caches.
+
+Health probe:
+
+```sh
+curl -sS 'http://127.0.0.1:43210/api/health'
+```
 
 Summarize a result:
 

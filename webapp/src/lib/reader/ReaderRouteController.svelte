@@ -194,7 +194,7 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 	);
 	let selectedWordHref = $derived(
 		selectedWord
-			? `/?language=${language}&q=${encodeURIComponent(selectedWord)}&load=yes&backend=cli`
+			? `/q?language=${language}&q=${encodeURIComponent(selectedWord)}&load=yes&backend=cli`
 			: '/'
 	);
 	let selectedWordBriefingOutput = $derived(encounterBriefingOutput(selectedWordBriefing));

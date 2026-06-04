@@ -16,7 +16,10 @@ const activeOverhaulPlanSource = readFileSync(
 	'utf8'
 );
 const appCssSource = readFileSync(new URL('../app.css', import.meta.url), 'utf8');
-const deskRouteShellSource = readFileSync(new URL('../routes/+page.svelte', import.meta.url), 'utf8');
+const deskRouteShellSource = readFileSync(
+	new URL('../routes/q/+page.svelte', import.meta.url),
+	'utf8'
+);
 const deskRouteControllerSource = readFileSync(
 	new URL('./desk/DeskRouteController.svelte', import.meta.url),
 	'utf8'
@@ -31,11 +34,21 @@ const readerRoutePageSource = readFileSync(
 	new URL('./reader/ReaderRouteController.svelte', import.meta.url),
 	'utf8'
 );
+const readerRouteContentLoadersSource = readFileSync(
+	new URL('./reader/reader-route-content-loaders.ts', import.meta.url),
+	'utf8'
+);
+const readerRouteDiscoveryLoadersSource = readFileSync(
+	new URL('./reader/reader-route-discovery-loaders.ts', import.meta.url),
+	'utf8'
+);
+const readerRouteImplementationSource = `${readerRoutePageSource}\n${readerRouteContentLoadersSource}\n${readerRouteDiscoveryLoadersSource}`;
 const readerDirectoryUrl = new URL('./reader/', import.meta.url);
 const readerApiSource = readFileSync(new URL('./reader-api.ts', readerDirectoryUrl), 'utf8');
 const deskEntryCssSource = readFileSync(new URL('./desk-entry.css', deskDirectoryUrl), 'utf8');
 const deskEntrySource = readFileSync(new URL('./desk-entry.ts', deskDirectoryUrl), 'utf8');
 const deskEndpointsSource = readFileSync(new URL('./desk-endpoints.ts', deskDirectoryUrl), 'utf8');
+const deskWordIndexSource = readFileSync(new URL('./desk-word-index.ts', deskDirectoryUrl), 'utf8');
 const deskLookupSource = readFileSync(new URL('./desk-lookup.ts', deskDirectoryUrl), 'utf8');
 const deskWorkflowsSource = readFileSync(new URL('./desk-workflows.ts', deskDirectoryUrl), 'utf8');
 const deskMotdSource = readFileSync(new URL('./desk-motd.ts', deskDirectoryUrl), 'utf8');
@@ -216,7 +229,7 @@ for (const extractedComponent of [
 assert.ok(
 	deskRouteSource.includes("from '$lib/desk/desk-endpoints'") &&
 		deskRouteSource.includes('searchEndpointUrl({') &&
-		deskRouteSource.includes('wordIndexNearbyEndpointUrl({') &&
+		deskWordIndexSource.includes('wordIndexNearbyEndpointUrl({') &&
 		deskEndpointsSource.includes('export function searchEndpointUrl') &&
 		deskEndpointsSource.includes('export function wordIndexNearbyEndpointUrl'),
 	'Word Desk route should delegate endpoint construction to focused helper functions'
@@ -296,19 +309,19 @@ assert.ok(
 );
 
 assert.ok(
-	readerRoutePageSource.includes("from '$lib/reader/reader-api'") &&
+	readerRouteImplementationSource.includes("from '$lib/reader/reader-api'") &&
 		readerApiSource.includes('export function readerCatalogsUrl') &&
 		readerApiSource.includes('export function readerEncounterBriefingUrl') &&
 		readerApiSource.includes('export async function fetchReaderEncounterBriefing') &&
 		readerApiSource.includes('export function readerWorksUrl') &&
 		readerApiSource.includes('export function readerContentsUrl') &&
-		readerRoutePageSource.includes('readerCatalogsUrl(') &&
-		readerRoutePageSource.includes('fetchReaderEncounterBriefing({') &&
-		readerRoutePageSource.includes('readerWorksUrl(') &&
-		readerRoutePageSource.includes('readerContentsUrl(') &&
-		!readerRoutePageSource.includes('new URLSearchParams({') &&
-		!readerRoutePageSource.includes("'/api/reader?mode=catalogs'") &&
-		!readerRoutePageSource.includes('/api/encounter-briefing?'),
+		readerRouteImplementationSource.includes('readerCatalogsUrl(') &&
+		readerRouteImplementationSource.includes('fetchReaderEncounterBriefing({') &&
+		readerRouteImplementationSource.includes('readerWorksUrl(') &&
+		readerRouteImplementationSource.includes('readerContentsUrl(') &&
+		!readerRouteImplementationSource.includes('new URLSearchParams({') &&
+		!readerRouteImplementationSource.includes("'/api/reader?mode=catalogs'") &&
+		!readerRouteImplementationSource.includes('/api/encounter-briefing?'),
 	'Reader route should delegate API and encounter briefing URL construction to src/lib/reader/reader-api.ts'
 );
 
@@ -503,8 +516,8 @@ for (const entryFrameComponent of [
 }
 
 {
-		assert.ok(
-			deskRouteSource.includes('DeskPageShell'),
+	assert.ok(
+		deskRouteSource.includes('DeskPageShell'),
 		'desk route should compose page layout through DeskPageShell'
 	);
 	assert.ok(

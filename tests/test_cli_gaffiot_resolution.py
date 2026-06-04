@@ -124,7 +124,7 @@ def test_gaffiot_fetch_client_uses_normalized_lemma_candidates() -> None:
         )
 
     payload = orjson.loads(raw.body)
-    assert payload["headwords"] == ["virumque", "virus", "", "virus", "vir"]
+    assert payload["headwords"] == ["virumque", "virus", "", "vir"]
     assert payload["entries"][0]["headword_norm"] == "vir"
 
 

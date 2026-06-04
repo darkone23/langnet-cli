@@ -402,7 +402,7 @@ export function practiceHref(item: LearnPracticeWord) {
 		dictionary: 'all',
 		load: 'yes'
 	});
-	return `/?${params.toString()}`;
+	return `/q?${params.toString()}`;
 }
 
 export function sourceReferenceHref(reference: LearnSourceReference) {

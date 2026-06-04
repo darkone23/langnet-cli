@@ -9,6 +9,10 @@ export const readerPageViewSource = readFileSync(
 	'utf8'
 );
 export const readerApiSource = readFileSync(new URL('./reader-api.ts', import.meta.url), 'utf8');
+export const readerRouteWorkspaceSource = readFileSync(
+	new URL('./reader-route-workspace.ts', import.meta.url),
+	'utf8'
+);
 export const readerCssSource = readFileSync(new URL('../../app.css', import.meta.url), 'utf8');
 export const apparatusSheetSource = readFileSync(
 	new URL('./ReaderApparatusSheet.svelte', import.meta.url),

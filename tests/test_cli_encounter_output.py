@@ -4164,7 +4164,8 @@ def test_encounter_retries_uncached_for_ascii_greek_partial_dictionary_sources()
         "Cached Greek encounter had partial dictionary evidence; retried with fresh normalization."
         in payload["warnings"]
     )
-    assert execute_lookup.call_count == 2
+    expected_lookup_count = 2
+    assert execute_lookup.call_count == expected_lookup_count
     assert execute_lookup.call_args_list[1].kwargs["no_cache"] is True
 
 

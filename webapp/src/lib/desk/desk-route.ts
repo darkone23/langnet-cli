@@ -321,7 +321,7 @@ export function isClearDeskRouteState(state: ClearDeskRouteState) {
 }
 
 export function deskAppRouteUrl(state: DeskAppRouteUrlState) {
-	if (isClearDeskRouteState(state)) return '/';
+	if (isClearDeskRouteState(state)) return '/q';
 
 	const params = new URLSearchParams();
 	params.set('lang', state.language);
@@ -350,7 +350,7 @@ export function deskAppRouteUrl(state: DeskAppRouteUrlState) {
 		for (const tool of state.pendingVisibleTools) params.append('visible', tool);
 	}
 
-	const sourceLayerIds = new Set(!state.hasEncounter ? state.pendingSourceLayers : []);
+const sourceLayerIds = new Set(!state.hasEncounter ? state.pendingSourceLayers : []);
 	if (state.encounterMatchesQuery) {
 		for (const [bucketId, layer] of Object.entries(state.textLayers)) {
 			if (layer === 'source') sourceLayerIds.add(bucketId);
@@ -359,7 +359,7 @@ export function deskAppRouteUrl(state: DeskAppRouteUrlState) {
 	for (const bucketId of sourceLayerIds) params.append('source', bucketId);
 
 	const queryString = params.toString();
-	return queryString ? `/?${queryString}` : '/';
+	return queryString ? `/q?${queryString}` : '/q';
 }
 
 export function deskMotdHref(item: WordRecommendationItem, options: DeskMotdHrefOptions) {
@@ -373,7 +373,7 @@ export function deskMotdHref(item: WordRecommendationItem, options: DeskMotdHref
 	params.set('backend', request.backend || 'cli');
 	params.set('theme', options.theme);
 	params.set('load', options.motdLinksLoad ? 'yes' : 'no');
-	return `/?${params.toString()}`;
+	return `/q?${params.toString()}`;
 }
 
 export function deskWordIndexHref(
@@ -403,5 +403,5 @@ function deskWordIndexTargetHref(
 	const validTools = new Set(toolsForLanguage(target.language).map(({ id }) => id));
 	params.set('dictionary', validTools.has(target.dictionary as ToolId) ? target.dictionary : 'all');
 	if (options.includeLoad) params.set('load', 'yes');
-	return `/?${params.toString()}`;
+	return `/q?${params.toString()}`;
 }

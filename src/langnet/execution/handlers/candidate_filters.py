@@ -26,6 +26,9 @@ def close_fallback_candidates(
         if headword_key == candidate_key:
             filtered.append(candidate)
             continue
+        if headword_key.startswith(candidate_key):
+            filtered.append(candidate)
+            continue
         similarity = SequenceMatcher(None, headword_key, candidate_key).ratio()
         if similarity >= min_similarity:
             filtered.append(candidate)

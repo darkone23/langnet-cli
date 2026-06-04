@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from langnet.execution.handlers import cltk as cltk_handlers
 from langnet.execution.handlers import diogenes as dio_handlers
 
@@ -127,13 +129,16 @@ def test_diogenes_no_match_fuzzy_reference_does_not_become_definition_evidence()
 
 
 def test_diogenes_no_match_fuzzy_reference_does_not_become_lemma() -> None:
-    chunks = [
-        {"chunk_type": "NoMatchFoundHeader"},
-        {
-            "chunk_type": "DiogenesFuzzyReference",
-            "definitions": {"term": "ἥσθημα", "blocks": []},
-        },
-    ]
+    chunks = cast(
+        list[dio_handlers.DiogenesChunk],
+        [
+            {"chunk_type": "NoMatchFoundHeader"},
+            {
+                "chunk_type": "DiogenesFuzzyReference",
+                "definitions": {"term": "ἥσθημα", "blocks": []},
+            },
+        ],
+    )
 
     assert dio_handlers._extract_lemmas_from_chunks(chunks) == []
 

@@ -63,14 +63,14 @@ assert.equal(participle.sources.lat[0]?.segment, '73');
 assert.equal(learnConceptById('missing').id, learnConcepts[0]?.id);
 
 const href = practiceHref({ language: 'san', word: 'gam', gloss: 'go', note: 'probe' });
-assert.equal(href, '/?lang=san&q=gam&backend=cli&translation=auto&dictionary=all&load=yes');
+assert.equal(href, '/q?lang=san&q=gam&backend=cli&translation=auto&dictionary=all&load=yes');
 assert.equal(
 	practiceHref({ language: 'grc', word: 'logon', gloss: 'word', note: 'probe' }),
-	'/?lang=grc&q=logon&backend=cli&translation=auto&dictionary=all&load=yes'
+	'/q?lang=grc&q=logon&backend=cli&translation=auto&dictionary=all&load=yes'
 );
 assert.equal(
 	practiceHref({ language: 'lat', word: 'lupum', gloss: 'wolf', note: 'probe' }),
-	'/?lang=lat&q=lupum&backend=cli&translation=auto&dictionary=all&load=yes'
+	'/q?lang=lat&q=lupum&backend=cli&translation=auto&dictionary=all&load=yes'
 );
 
 assert.equal(

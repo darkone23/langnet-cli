@@ -15,11 +15,11 @@ from langnet.reader.discovery_taxonomy import (
     discovery_group_allowed_values,
     discovery_tag_allowed_values,
 )
+from langnet.reader.display import decorate_segment_display
 from langnet.reader.division_metadata import (
     accepted_division_metadata,
     load_division_metadata,
 )
-from langnet.reader.display import decorate_segment_display
 from langnet.reader.metadata_attribution import load_metadata_attributions
 from langnet.reader.metadata_overlay import load_metadata_overlays
 from langnet.reader.search_index import (
@@ -1027,7 +1027,7 @@ class ReaderService:
             },
         }
 
-    def resolve_address(self, address: str) -> dict[str, Any]:
+    def resolve_address(self, address: str) -> dict[str, Any]:  # noqa: C901, PLR0912
         resolved_address = address
         segment = None
         segments: list[dict[str, Any]] = []

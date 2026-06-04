@@ -1,12 +1,27 @@
 import { readFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
 
-const readerPageSource = readFileSync(new URL('./ReaderRouteController.svelte', import.meta.url), 'utf8');
+const readerPageSource = readFileSync(
+	new URL('./ReaderRouteController.svelte', import.meta.url),
+	'utf8'
+);
 const readerPageViewSource = readFileSync(
-  new URL('./ReaderRouteControllerView.svelte', import.meta.url),
-  'utf8'
+	new URL('./ReaderRouteControllerView.svelte', import.meta.url),
+	'utf8'
 );
 const readerApiSource = readFileSync(new URL('./reader-api.ts', import.meta.url), 'utf8');
+const readerContentLoadersSource = readFileSync(
+	new URL('./reader-route-content-loaders.ts', import.meta.url),
+	'utf8'
+);
+const readerDiscoveryLoadersSource = readFileSync(
+	new URL('./reader-route-discovery-loaders.ts', import.meta.url),
+	'utf8'
+);
+const readerRouteWorkspaceSource = readFileSync(
+	new URL('./reader-route-workspace.ts', import.meta.url),
+	'utf8'
+);
 const readerCssSource = readFileSync(new URL('../../app.css', import.meta.url), 'utf8');
 const apparatusSheetSource = readFileSync(
 	new URL('./ReaderApparatusSheet.svelte', import.meta.url),
@@ -178,28 +193,24 @@ for (const token of [
 }
 
 assertIncludes(
-	`${readerPageSource}\n${readerPageViewSource}\n${readerApiSource}`,
+	`${readerPageSource}\n${readerPageViewSource}\n${readerApiSource}\n${readerContentLoadersSource}`,
 	[
 		'let structure = $state<ReaderStructureNode[]>([])',
-		'readerStructureUrl({ catalogId, language, work })',
-		'await loadStructure(readerWorkRef(selectedWork))',
+		'readerStructureUrl({ catalogId: stateBag.catalogId, language: stateBag.language, work })',
+		'await loadStructure(readerWorkRef(work))',
 		'ReaderContextSidebar',
 		'ReaderApparatusTabs',
 		"readerLoadingElapsedSeconds('structure')"
 	],
 	'reader page structure UI'
 );
+assertIncludes(readerPageSource, ['ReaderRouteControllerView'], 'reader page orchestration');
 assertIncludes(
-	readerPageSource,
-	['ReaderRouteControllerView'],
-	'reader page orchestration'
-);
-assertIncludes(
-	`${readerPageSource}\n${readerPageViewSource}\n${readerApiSource}`,
+	`${readerPageSource}\n${readerPageViewSource}\n${readerApiSource}\n${readerContentLoadersSource}`,
 	[
 		'let workDossier = $state<ReaderWorkDossierResponse | null>(null)',
 		'loadWorkDossier',
-		'readerWorkDossierUrl({ catalogId, language, work })',
+		'readerWorkDossierUrl({ catalogId: stateBag.catalogId, language: stateBag.language, work })',
 		'ReaderSelectedWorkDesk',
 		'readerLoadingStatus(uiCopy.workDossier.loading,'
 	],
@@ -226,8 +237,8 @@ assertScoped(
 );
 
 assertIncludes(
-		`${readerPageSource}\n${readerPageViewSource}`,
-		['currentDivisionTrail', 'currentDivisionNode', 'ReaderPassageView', 'ReaderApparatusSheet'],
+	`${readerPageSource}\n${readerPageViewSource}`,
+	['currentDivisionTrail', 'currentDivisionNode', 'ReaderPassageView', 'ReaderApparatusSheet'],
 	'reader page current division marginalium'
 );
 assertIncludes(
@@ -336,7 +347,7 @@ assertScoped(
 	'Reader Source Details component'
 );
 
-const loadAuthorSectionsMatch = readerPageSource.match(
+const loadAuthorSectionsMatch = readerDiscoveryLoadersSource.match(
 	/async function loadAuthorSections[\s\S]*?\n\t}\n\n\tasync function loadAuthors/
 );
 assert.ok(
@@ -345,19 +356,19 @@ assert.ok(
 );
 const loadAuthorSectionsSource = loadAuthorSectionsMatch[0];
 assert.ok(
-	loadAuthorSectionsSource.indexOf('authorsLoading = true') !== -1 &&
-		loadAuthorSectionsSource.indexOf('authorsLoading = true') <
-			loadAuthorSectionsSource.indexOf('await fetchReaderAuthorSections'),
+	loadAuthorSectionsSource.indexOf('stateBag.authorsLoading = true') !== -1 &&
+		loadAuthorSectionsSource.indexOf('stateBag.authorsLoading = true') <
+			loadAuthorSectionsSource.indexOf('readerAuthorSectionsUrl'),
 	'author loading should begin before fetching author sections'
 );
 assert.ok(
 	loadAuthorSectionsSource.indexOf('const authorsPromise =') !== -1 &&
 		loadAuthorSectionsSource.indexOf('const authorsPromise =') <
-			loadAuthorSectionsSource.indexOf('await fetchReaderAuthorSections'),
+			loadAuthorSectionsSource.indexOf('readerAuthorSectionsUrl'),
 	'top-author loading should begin before author sections finish'
 );
 
-const restoreReaderIndexStateMatch = readerPageSource.match(
+const restoreReaderIndexStateMatch = readerRouteWorkspaceSource.match(
 	/function restoreReaderIndexState\(\)[\s\S]*?\n\t}\n\n\tfunction saveReaderIndexState/
 );
 assert.ok(restoreReaderIndexStateMatch, 'reader page should define restoreReaderIndexState');
@@ -378,8 +389,8 @@ for (const token of [
 	);
 }
 
-const saveReaderIndexStateMatch = readerPageSource.match(
-	/function saveReaderIndexState\(\)[\s\S]*?\n\t}\n<\/script>/
+const saveReaderIndexStateMatch = readerRouteWorkspaceSource.match(
+	/function saveReaderIndexState\(\)[\s\S]*?\n\t}\n\n\treturn/
 );
 assert.ok(saveReaderIndexStateMatch, 'reader page should define saveReaderIndexState');
 for (const token of [
@@ -400,7 +411,7 @@ for (const token of [
 }
 
 const selectLanguageMatch = readerPageSource.match(
-	/function selectLanguage[\s\S]*?\n\t}\n\n\tasync function fetchReaderAuthorSections/
+	/function selectLanguage[\s\S]*?\n\t}\n\n\tasync function fetchEncounterBriefing/
 );
 assert.ok(selectLanguageMatch, 'reader page should define selectLanguage before fetch helpers');
 assert.ok(

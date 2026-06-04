@@ -4,6 +4,7 @@
 devenv.local.nix
 .dev-envfile
 
+webapp/data/
 data/*
 !data/README.md
 !data/curated/

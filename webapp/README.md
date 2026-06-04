@@ -80,8 +80,9 @@ launches from narrower shells can still find user-local tools such as
 
 Important paths:
 
-- `src/routes/+page.svelte`: main search UI, live filters, result grouping, reader
-  presentation, and theme switching.
+- `src/routes/+page.svelte`: static landing page for `/`, with canonical lookup now
+  served at `/q`.
+- `src/routes/q/+page.svelte`: interactive lookup route at `/q`.
 - `src/routes/reader/+page.svelte`: read-only Reader Desk for browsing cataloged
   works, opening contents, reading exact segments, and sending selected words
   back into the dictionary encounter flow.
@@ -194,6 +195,18 @@ curl 'http://127.0.0.1:43210/api/search?backend=cli&language=grc&q=logos&diction
 curl 'http://127.0.0.1:43210/api/search?backend=cli&language=san&q=dharma&dictionary=all&translation=cache'
 ```
 
+Health endpoint:
+
+```txt
+GET /api/health
+```
+
+Process checks:
+
+```sh
+curl -sS 'http://127.0.0.1:43210/api/health'
+```
+
 Search currently accepts one word at a time.
 
 MOTD endpoint:
@@ -255,6 +268,7 @@ Current endpoints:
 - `GET /api/word-index`
 - `GET /api/paradigm`
 - `GET /api/motd`
+- `GET /api/health`
 - `POST /api/translation-cache`
 
 Reader endpoint:
@@ -329,7 +343,7 @@ curl 'http://127.0.0.1:43210/api/paradigm?language=lat&lemma=ratio&kind=declensi
 ## Page State URLs
 
 The UI state is encoded in the page URL so searches can be linked, reloaded, and
-shared. Opening a URL with `q=` restores the form and filter state. It only runs
+shared. For `/q`, opening a URL with `q=` restores the form and filter state. It only runs
 the lookup automatically when `load=yes` is present.
 
 The address bar is kept prefill-oriented by default: after a manual search, the
@@ -353,7 +367,7 @@ Common page parameters:
 Example:
 
 ```txt
-/?lang=lat&q=nox&dictionary=all&translation=auto&theme=manuscript&load=yes
+/q?lang=lat&q=nox&dictionary=all&translation=auto&theme=manuscript&load=yes
 ```
 
 ## Search Workflow

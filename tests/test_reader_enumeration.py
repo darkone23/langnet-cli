@@ -377,7 +377,8 @@ def test_reader_service_work_dossier_summarizes_structure_and_bios() -> None:
 
     assert dossier["mode"] == "work-dossier"
     assert dossier["work"]["title"] == "Bhagavadgītā"
-    assert dossier["summary"]["top_level_count"] == 2
+    expected_top_level_count = 2
+    assert dossier["summary"]["top_level_count"] == expected_top_level_count
     assert dossier["summary"]["top_level_kind"] == "chapter"
     assert dossier["summary"]["structure_label"] == "2 chapters"
     assert dossier["summary"]["division_bio_count"] == 1
