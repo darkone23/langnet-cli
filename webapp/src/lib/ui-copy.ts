@@ -10,6 +10,264 @@ const resources = {
 				name: 'Project Orion',
 				motto: 'Every day is a good day for learning.'
 			},
+			publicSite: {
+				nav: {
+					learn: 'Learn',
+					evidence: 'Evidence',
+					latin: 'Latin',
+					greek: 'Greek',
+					sanskrit: 'Sanskrit',
+					openLookup: 'Open lookup'
+				},
+				home: {
+					metaDescription:
+						'A source-aware reading desk for Latin, Greek, and Sanskrit: word forms, meanings, morphology, and the evidence behind them.',
+					eyebrow: 'Project Orion',
+					title: 'Move from a classical word to accountable evidence.',
+					intro:
+						'Project Orion is the public reading desk for LangNet: a local evidence engine that connects Latin, Greek, and Sanskrit forms to dictionary witnesses, morphology, source claims, and learner-facing explanations.',
+					primaryCta: 'Study a word',
+					secondaryCta: 'Learn form and function',
+					aboutCta: 'About Orion',
+					principles: [
+						{
+							title: 'Evidence before fluency',
+							body:
+								'Every useful claim should point back to a dictionary, analyzer, citation, or explicit derivation.',
+							tone: 'primary'
+						},
+						{
+							title: 'Clarity before completeness',
+							body:
+								'Beginners get a reading path first; teachers, researchers, and builders can inspect provenance below it.',
+							tone: 'secondary'
+						}
+					],
+					languages: [
+						{
+							href: '/languages/latin',
+							label: 'Latin',
+							body:
+								'Connect inflected forms to headwords, morphology, and source-backed glosses.',
+							tone: 'warning',
+							icon: 'latin'
+						},
+						{
+							href: '/languages/greek',
+							label: 'Greek',
+							body: 'Keep script, form, lexeme, and dictionary witness visible together.',
+							tone: 'info',
+							icon: 'greek'
+						},
+						{
+							href: '/languages/sanskrit',
+							label: 'Sanskrit',
+							body:
+								'Study forms, compounds, and grammar gateways without hiding source caveats.',
+							tone: 'success',
+							icon: 'sanskrit'
+						}
+					]
+				},
+				about: {
+					metaDescription:
+						"Project Orion is LangNet's source-aware reading desk for Latin, Greek, and Sanskrit: useful first, auditable second.",
+					eyebrow: 'About the project',
+					title: 'Useful first. Auditable second. Never an oracle.',
+					intro:
+						'Project Orion is the web reading desk for LangNet. It helps a reader move from an inflected word in a classical text to an accountable explanation of what the word can mean, what form it may be, and which sources support that answer.',
+					productPromiseTitle: 'The product promise',
+					productPromise:
+						'For a Latin, Greek, or Sanskrit word, Orion should help answer five questions: what headword it may belong to, what grammatical form it may be, what meanings are source-supported, where each claim came from, and where the sources agree, disagree, or remain incomplete.',
+					principles: [
+						{
+							title: 'Evidence first',
+							body:
+								'Displayed lexical, morphological, and semantic facts should trace back to a tool response, dictionary entry, citation, cache row, or explicit derivation.'
+						},
+						{
+							title: 'Tradition with function',
+							body:
+								'Orion keeps terms such as genitive, dative, or instrumental visible while adding functional reading questions such as possession, to/for, or by/with.'
+						},
+						{
+							title: 'Determinism before inference',
+							body:
+								'Stable rules, repeatable IDs, fixture-backed tests, and exact reductions come before embeddings, broad inference, or fluent-looking generated interpretation.'
+						}
+					],
+					audiencesTitle: 'Who it serves',
+					audiences: [
+						'Students reading classical texts who need help connecting forms to meanings.',
+						'Teachers preparing concise lexical and grammatical explanations.',
+						'Researchers checking source evidence across tools quickly.',
+						'Developers building structured classical-language datasets.'
+					],
+					startTitle: 'Start with a word',
+					startBody:
+						'The reliable surface is word-level evidence: form, meaning, source support, and caveats. Passage interpretation and generated prose should not outrun that evidence.'
+				},
+				evidence: {
+					metaDescription:
+						"How Project Orion treats source evidence, dictionary witnesses, generated prose, and learner-facing explanations.",
+					eyebrow: 'Evidence model',
+					title: 'Orion explains what it can support, and where support stops.',
+					intro:
+						'The reading desk is designed around accountable word-level evidence. A fluent answer is useful only when a reader can inspect the dictionary witness, analyzer output, citation, cache row, or explicit derivation behind it.',
+					sections: [
+						{
+							title: 'Dictionary witnesses',
+							body:
+								'Dictionaries and lexical tools are treated as witnesses. They may agree, differ, omit details, or preserve different traditions. Orion should keep that disagreement visible instead of flattening it into one answer.'
+						},
+						{
+							title: 'Morphology and form',
+							body:
+								'Form analysis starts with the word on the page. The system should show possible headwords, grammatical labels, and learner-facing functional questions before asking the reader to choose a passage interpretation.'
+						},
+						{
+							title: 'Generated prose',
+							body:
+								'Generated explanations may help summarize or translate source material, but generated text is not itself source evidence. It should remain marked as a derived reading aid.'
+						},
+						{
+							title: 'Caveats',
+							body:
+								'Classical-language evidence is often incomplete. A useful interface should say when evidence is missing, ambiguous, cached, translated, or dependent on a particular source tradition.'
+						}
+					],
+					ctaTitle: 'Use evidence in the lookup desk',
+					ctaBody:
+						'Start with one word, then inspect source groups, morphology, provenance chips, and cache notes before trusting a gloss.'
+				},
+				learn: {
+					metaDescription:
+						'A function-first learning path for Sanskrit, Greek, and Latin morphology.',
+					headerMotto: 'Learn morphology by function.',
+					aboutLabel: 'About',
+					lookupLabel: 'Lookup',
+					readerLabel: 'Reader',
+					learnLabel: 'Learn',
+					sidebarEyebrow: 'Foster gateway',
+					sidebarTitle: 'Learn Forms',
+					sidebarIntro:
+						'Start with the shape of a word, ask what job it is doing, then learn the grammar name for the language in front of you.',
+					conceptsAria: 'Learning concepts',
+					foundationEyebrow: 'Start here',
+					foundationTitle: 'How Ancient Forms Work',
+					foundationIntro:
+						'The first skill is not memorizing a table. It is noticing that the word ending is carrying a sentence job.',
+					readerQuestion: 'Reader question',
+					nativeGrammar: 'Native Grammar',
+					tableCue: 'Table Cue',
+					sourceTradition: 'Source Tradition',
+					sourceTraditionIntro: 'Native grammar references for the terms shown above.',
+					trySourceWord: 'Try A Source Word',
+					trySourceWordIntro:
+						'Open a live lookup, read the first form card, then come back to the question.'
+				},
+				languages: {
+					lat: {
+						label: 'Latin',
+						metaDescription:
+							'Latin in Project Orion: source-backed forms, dictionary witnesses, morphology, and learner-facing grammar.',
+						lookupLabel: 'Open Latin lookup',
+						eyebrow: 'Latin',
+						title: 'Latin reading starts with the form on the page.',
+						intro:
+							'Orion connects Latin forms to possible headwords, morphology, compact learner glosses, and dictionary witnesses. The goal is not to replace judgement, but to make the evidence easier to inspect.',
+						wordOfDayTitle: 'Latin word of the day',
+						wordOfDayIntro:
+							'One date-selected Latin lookup, chosen to invite source comparison rather than passive memorization.',
+						features: [
+							{
+								icon: 'search',
+								title: 'From form to lexeme',
+								body:
+									'Ask what headword this form may belong to before flattening the answer.'
+							},
+							{
+								icon: 'book',
+								title: 'Witnesses, not oracles',
+								body:
+									'Dictionary rows are displayed as source witnesses that can agree, differ, or remain incomplete.'
+							},
+							{
+								icon: 'learn',
+								title: 'Function beside terminology',
+								body:
+									'Keep Latin labels visible while asking what the form is doing in the expression.'
+							}
+						]
+					},
+					grc: {
+						label: 'Greek',
+						metaDescription:
+							'Greek in Project Orion: source-backed forms, dictionary evidence, morphology, and learner-facing grammar.',
+						lookupLabel: 'Open Greek lookup',
+						eyebrow: 'Greek',
+						title: 'Greek lookup should keep script, form, and evidence together.',
+						intro:
+							'Orion helps Greek readers move from surface form to possible lexeme and meaning without hiding morphology, source differences, or the transliteration details needed by backend tools.',
+						wordOfDayTitle: 'Greek word of the day',
+						wordOfDayIntro:
+							'One date-selected Greek lookup that keeps script, transliteration, gloss, and evidence boundaries visible.',
+						features: [
+							{
+								icon: 'search',
+								title: 'Form before fluency',
+								body:
+									'A useful answer begins with what form may be in front of the reader.'
+							},
+							{
+								icon: 'book',
+								title: 'Citable evidence',
+								body:
+									'Lexical and grammatical claims should remain tied to inspectable source support.'
+							},
+							{
+								icon: 'learn',
+								title: 'Traditional terms, readable jobs',
+								body:
+									"Greek labels remain visible while learner copy explains the form's likely function."
+							}
+						]
+					},
+					san: {
+						label: 'Sanskrit',
+						metaDescription:
+							'Sanskrit in Project Orion: source-backed dictionary evidence, forms, compounds, scripts, and learner-facing grammar.',
+						lookupLabel: 'Open Sanskrit lookup',
+						eyebrow: 'Sanskrit',
+						title: 'Sanskrit evidence needs forms, compounds, scripts, and caveats.',
+						intro:
+							'Orion supports Sanskrit lookup with attention to dictionary witnesses, morphology, compound components, Devanagari and transliteration, and learner-friendly grammar gateways.',
+						wordOfDayTitle: 'Sanskrit word of the day',
+						wordOfDayIntro:
+							'One date-selected Sanskrit lookup that treats script, transliteration, range, and caveat as part of the same reading object.',
+						features: [
+							{
+								icon: 'search',
+								title: 'Source-backed lookup',
+								body:
+									'Inspect Sanskrit words through dictionary and analyzer evidence, not unsupported summary.'
+							},
+							{
+								icon: 'book',
+								title: 'Compounds and components',
+								body:
+									'Compound members are kept as secondary evidence when the backend can support them.'
+							},
+							{
+								icon: 'learn',
+								title: 'Native labels, learner functions',
+								body:
+									'Sanskrit terms stay visible while gateway copy explains what the form is doing.'
+							}
+						]
+					}
+				}
+			},
 			boot: {
 				aria: 'Loading the reading desk',
 				title: 'Loading the reading desk',
@@ -294,12 +552,122 @@ function text(key: string, options?: Record<string, unknown>) {
 	return i18next.t(key, options);
 }
 
+function objectText<T>(key: string): T {
+	return i18next.t(key, { returnObjects: true }) as T;
+}
+
 export const uiCopy = {
 	app: {
 		title: text('app.title'),
 		description: text('app.description'),
 		name: text('app.name'),
 		motto: text('app.motto')
+	},
+	publicSite: {
+		nav: objectText<{
+			learn: string;
+			evidence: string;
+			latin: string;
+			greek: string;
+			sanskrit: string;
+			openLookup: string;
+		}>('publicSite.nav'),
+		home: objectText<{
+			metaDescription: string;
+			eyebrow: string;
+			title: string;
+			intro: string;
+			primaryCta: string;
+			secondaryCta: string;
+			aboutCta: string;
+			principles: { title: string; body: string; tone: 'primary' | 'secondary' }[];
+			languages: {
+				href: string;
+				label: string;
+				body: string;
+				tone: 'warning' | 'info' | 'success';
+				icon: 'latin' | 'greek' | 'sanskrit';
+			}[];
+		}>('publicSite.home'),
+		about: objectText<{
+			metaDescription: string;
+			eyebrow: string;
+			title: string;
+			intro: string;
+			productPromiseTitle: string;
+			productPromise: string;
+			principles: { title: string; body: string }[];
+			audiencesTitle: string;
+			audiences: string[];
+			startTitle: string;
+			startBody: string;
+		}>('publicSite.about'),
+		evidence: objectText<{
+			metaDescription: string;
+			eyebrow: string;
+			title: string;
+			intro: string;
+			sections: { title: string; body: string }[];
+			ctaTitle: string;
+			ctaBody: string;
+		}>('publicSite.evidence'),
+		learn: objectText<{
+			metaDescription: string;
+			headerMotto: string;
+			aboutLabel: string;
+			lookupLabel: string;
+			readerLabel: string;
+			learnLabel: string;
+			sidebarEyebrow: string;
+			sidebarTitle: string;
+			sidebarIntro: string;
+			conceptsAria: string;
+			foundationEyebrow: string;
+			foundationTitle: string;
+			foundationIntro: string;
+			readerQuestion: string;
+			nativeGrammar: string;
+			tableCue: string;
+			sourceTradition: string;
+			sourceTraditionIntro: string;
+			trySourceWord: string;
+			trySourceWordIntro: string;
+		}>('publicSite.learn'),
+		languages: objectText<{
+			lat: {
+				label: string;
+				metaDescription: string;
+				lookupLabel: string;
+				eyebrow: string;
+				title: string;
+				intro: string;
+				wordOfDayTitle: string;
+				wordOfDayIntro: string;
+				features: { icon: 'search' | 'book' | 'learn'; title: string; body: string }[];
+			};
+			grc: {
+				label: string;
+				metaDescription: string;
+				lookupLabel: string;
+				eyebrow: string;
+				title: string;
+				intro: string;
+				wordOfDayTitle: string;
+				wordOfDayIntro: string;
+				features: { icon: 'search' | 'book' | 'learn'; title: string; body: string }[];
+			};
+			san: {
+				label: string;
+				metaDescription: string;
+				lookupLabel: string;
+				eyebrow: string;
+				title: string;
+				intro: string;
+				wordOfDayTitle: string;
+				wordOfDayIntro: string;
+				features: { icon: 'search' | 'book' | 'learn'; title: string; body: string }[];
+			};
+		}>('publicSite.languages')
 	},
 	boot: {
 		aria: text('boot.aria'),

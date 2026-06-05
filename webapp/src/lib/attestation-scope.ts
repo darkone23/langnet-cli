@@ -6,6 +6,7 @@ export type AttestationScope =
 	| 'reader'
 	| 'paradigm'
 	| 'motd'
+	| 'word_of_day'
 	| 'translation_cache'
 	| 'encounter_briefing'
 	| 'unknown_api';
@@ -34,6 +35,8 @@ export function attestationScopeFromPath(pathname: string): AttestationScope {
 			return 'paradigm';
 		case '/api/motd':
 			return 'motd';
+		case '/api/word-of-day':
+			return 'word_of_day';
 		case '/api/translation-cache':
 			return 'translation_cache';
 		case '/api/encounter-briefing':

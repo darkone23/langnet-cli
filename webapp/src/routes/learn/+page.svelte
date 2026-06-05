@@ -36,6 +36,7 @@
 		selectedConcept.practice.filter((item) => item.language === language)
 	);
 	let selectedScriptGuide = $derived(learnScriptGuides[language]);
+	const copy = uiCopy.publicSite.learn;
 
 	function selectLanguage(nextLanguage: LanguageMode) {
 		language = nextLanguage;
@@ -69,10 +70,7 @@
 
 <svelte:head>
 	<title>Learn | {uiCopy.app.title}</title>
-	<meta
-		name="description"
-		content="A Foster-first learning path for Sanskrit, Greek, and Latin morphology."
-	/>
+	<meta name="description" content={copy.metaDescription} />
 </svelte:head>
 
 <main class="orion-page orion-learn-page bg-base-200 text-base-content min-h-screen">
@@ -86,25 +84,33 @@
 				>
 					<Telescope size={21} />
 				</a>
-				<div class="min-w-0">
-					<div class="truncate text-base font-semibold">{uiCopy.app.name}</div>
-					<div class="text-base-content/60 truncate text-sm">Learn morphology by function.</div>
+					<div class="min-w-0">
+						<div class="truncate text-base font-semibold">{uiCopy.app.name}</div>
+					<div class="text-base-content/60 truncate text-sm">{copy.headerMotto}</div>
+					</div>
 				</div>
-			</div>
 		</div>
 
 		<div class="hidden items-center gap-3 md:flex">
 			<a class="btn btn-sm btn-ghost" href="/">
+				<Telescope size={15} />
+				{copy.aboutLabel}
+			</a>
+			<a class="btn btn-sm btn-ghost" href="/evidence">
+				<CheckCircle2 size={15} />
+				{uiCopy.publicSite.nav.evidence}
+			</a>
+			<a class="btn btn-sm btn-ghost" href="/q">
 				<Search size={15} />
-				Dictionary
+				{copy.lookupLabel}
 			</a>
 			<a class="btn btn-sm btn-ghost" href="/reader">
 				<BookOpen size={15} />
-				Reader
+				{copy.readerLabel}
 			</a>
 			<a class="btn btn-sm btn-primary" href="/learn">
 				<Sparkles size={15} />
-				Learn
+				{copy.learnLabel}
 			</a>
 		</div>
 	</header>
@@ -114,12 +120,9 @@
 	>
 		<aside class="orion-learn-sidebar orion-manuscript-panel">
 			<div>
-				<p class="orion-learn-kicker">Foster gateway</p>
-				<h1>Learn Forms</h1>
-				<p>
-					Start with the shape of a word, ask what job it is doing, then learn the grammar name for
-					the language in front of you.
-				</p>
+				<p class="orion-learn-kicker">{copy.sidebarEyebrow}</p>
+				<h1>{copy.sidebarTitle}</h1>
+				<p>{copy.sidebarIntro}</p>
 			</div>
 
 			<div class="tabs tabs-box w-full">
@@ -137,7 +140,7 @@
 				{/each}
 			</div>
 
-			<nav class="orion-learn-concepts" aria-label="Learning concepts">
+			<nav class="orion-learn-concepts" aria-label={copy.conceptsAria}>
 				{#each concepts as concept}
 					<button
 						type="button"
@@ -156,12 +159,9 @@
 		<section class="orion-learn-main">
 			<section class="orion-learn-foundation orion-manuscript-panel">
 				<div class="orion-learn-section-head">
-					<p class="orion-learn-kicker">Start here</p>
-					<h2>How Ancient Forms Work</h2>
-					<p>
-						The first skill is not memorizing a table. It is noticing that the word ending is
-						carrying a sentence job.
-					</p>
+					<p class="orion-learn-kicker">{copy.foundationEyebrow}</p>
+					<h2>{copy.foundationTitle}</h2>
+					<p>{copy.foundationIntro}</p>
 				</div>
 
 				<div class="orion-learn-start-grid">
@@ -208,13 +208,13 @@
 				</div>
 
 				<div class="orion-learn-question">
-					<span>Reader question</span>
+					<span>{copy.readerQuestion}</span>
 					<strong>{selectedConcept.readerQuestion}</strong>
 				</div>
 
 				<div class="orion-learn-grid">
 					<section class="orion-learn-panel">
-						<h3>Native Grammar</h3>
+						<h3>{copy.nativeGrammar}</h3>
 						<div class="orion-learn-native-list">
 							{#each selectedGateways as gateway}
 								<div class="orion-learn-native">
@@ -227,15 +227,15 @@
 					</section>
 
 					<section class="orion-learn-panel">
-						<h3>Table Cue</h3>
+						<h3>{copy.tableCue}</h3>
 						<p>{selectedConcept.tableCue}</p>
 					</section>
 				</div>
 
 				<section class="orion-learn-sources">
 					<div class="orion-learn-section-head">
-						<h3>Source Tradition</h3>
-						<p>Native grammar references for the terms shown above.</p>
+						<h3>{copy.sourceTradition}</h3>
+						<p>{copy.sourceTraditionIntro}</p>
 					</div>
 					<div class="orion-learn-source-list">
 						{#each selectedSources as source}
@@ -251,8 +251,8 @@
 
 				<section class="orion-learn-practice">
 					<div class="orion-learn-section-head">
-						<h3>Try A Source Word</h3>
-						<p>Open a live lookup, read the first form card, then come back to the question.</p>
+						<h3>{copy.trySourceWord}</h3>
+						<p>{copy.trySourceWordIntro}</p>
 					</div>
 					<div class="orion-learn-practice-list">
 						{#each selectedPractice as item}

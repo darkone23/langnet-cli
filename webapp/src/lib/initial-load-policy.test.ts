@@ -20,6 +20,7 @@ const compactLookupResultsSource = lookupResultsSource.replace(/\s+/g, ' ');
 const paradigmPanelSource = readFileSync('src/lib/desk/DeskParadigmPanel.svelte', 'utf8');
 const deskParadigmSource = readFileSync('src/lib/desk/desk-paradigm.ts', 'utf8');
 const learnPageSource = readFileSync('src/routes/learn/+page.svelte', 'utf8');
+const uiCopySource = readFileSync('src/lib/ui-copy.ts', 'utf8');
 const motdFolioSource = readFileSync('src/lib/desk/DeskMotdFolio.svelte', 'utf8');
 const learnSource = readFileSync('src/lib/learn.ts', 'utf8');
 const appCssSource = readFileSync('src/app.css', 'utf8');
@@ -178,16 +179,17 @@ assert.equal(
 	'beginner-facing form cards should not expose raw evidence gaps or source provenance'
 );
 assert.equal(
-	learnPageSource.includes('Start here') &&
-		learnPageSource.includes('How Ancient Forms Work') &&
+	learnPageSource.includes('uiCopy.publicSite.learn') &&
 		learnPageSource.includes('selectedScriptGuide') &&
-		learnPageSource.includes('Learn Forms') &&
-		learnPageSource.includes('Reader question') &&
-		learnPageSource.includes('Try A Source Word') &&
-		learnPageSource.includes('Source Tradition') &&
-		learnPageSource.includes('sourceReferenceHref'),
+		learnPageSource.includes('sourceReferenceHref') &&
+		uiCopySource.includes('Start here') &&
+		uiCopySource.includes('How Ancient Forms Work') &&
+		uiCopySource.includes('Learn Forms') &&
+		uiCopySource.includes('Reader question') &&
+		uiCopySource.includes('Try A Source Word') &&
+		uiCopySource.includes('Source Tradition'),
 	true,
-	'standalone Learn workflow should expose concept study, reader questions, source references, and source practice'
+	'standalone Learn workflow should expose copy-system-backed concept study, reader questions, source references, and source practice'
 );
 assert.equal(
 	learnPageSource.includes('<style>') && learnPageSource.includes('.orion-learn-page'),

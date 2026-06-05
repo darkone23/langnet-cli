@@ -4,3 +4,4 @@ Disallow: /q
 Disallow: /reader
 
 Allow: /
+Sitemap: https://project-orion.net/sitemap.xml

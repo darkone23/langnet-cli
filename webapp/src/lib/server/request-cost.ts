@@ -27,6 +27,9 @@ export function requestCostFromUrl(url: URL): RequestCost {
 		else if (mode === 'populate' || mode === 'do-it-all') score = 40;
 		else score = 1;
 		reason = `route:${route}:translation=${mode}`;
+	} else if (route === '/api/word-of-day') {
+		score = 1;
+		reason = `route:${route}:curated-public-copy`;
 	}
 
 	if (dictionary !== 'none' && expensiveDictionaries.has(dictionary)) {
