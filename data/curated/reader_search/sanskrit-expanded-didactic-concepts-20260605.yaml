@@ -1,0 +1,121 @@
+concepts:
+  - id: "bhagavadgita-kurukshetra-dharma-yoga"
+    language: "san"
+    labels:
+      - "Bhagavadgītā"
+      - "Bhagavad Gita"
+      - "Kurukṣetra"
+      - "dharma and yoga"
+    source_queries:
+      - "dharmakṣetre kurukṣetre"
+      - "dharma-kṣetre kuru-kṣetre"
+      - "arjuna"
+      - "kṛṣṇa"
+      - "yoga"
+      - "Bhagavad Gita"
+    explanation: >
+      The Bhagavadgītā is a contained Mahābhārata work and a central didactic
+      text for dharma, yoga, Kṛṣṇa, and Arjuna. These forms support discovery
+      by Sanskrit opening, common romanizations, character names, and religious
+      or philosophical theme.
+
+  - id: "mahabharata-epic-dharma"
+    language: "san"
+    labels:
+      - "Mahābhārata"
+      - "Mahabharata"
+      - "itihāsa"
+      - "dharma epic"
+    source_queries:
+      - "mahābhārata"
+      - "mahabharata"
+      - "vyāsa"
+      - "dharma"
+      - "itihāsa"
+      - "pāṇḍava"
+      - "kaurava"
+    explanation: >
+      The Mahābhārata is one of the foundational Sanskrit epics, traditionally
+      associated with Vyāsa and central to epic narrative, dharma, and itihāsa.
+      These query forms help learners find the work through names, tradition,
+      and major thematic handles.
+
+  - id: "ramayana-valmiki-rama-sita"
+    language: "san"
+    labels:
+      - "Rāmāyaṇa"
+      - "Ramayana"
+      - "Rāma and Sītā"
+      - "Vālmīki"
+    source_queries:
+      - "tapaḥsvādhyāyanirataṃ"
+      - "tapaḥ svādhyāya"
+      - "rāma"
+      - "sītā"
+      - "vālmīki"
+      - "rāmāyaṇa"
+      - "ramayana"
+    explanation: >
+      The Rāmāyaṇa is a foundational Sanskrit epic traditionally associated
+      with Vālmīki and centered on Rāma, Sītā, exile, kingship, and dharma.
+      These forms support both Sanskrit and romanized discovery.
+
+  - id: "panini-astadhyayi-vrddhir-adaic"
+    language: "san"
+    labels:
+      - "Aṣṭādhyāyī"
+      - "Panini grammar"
+      - "vṛddhir ādaiC"
+      - "Sanskrit grammar"
+    source_queries:
+      - "vṛddhir ādaiC"
+      - "vrddhir adaic"
+      - "aṣṭādhyāyī"
+      - "ashtadhyayi"
+      - "pāṇini"
+      - "panini"
+      - "vyākaraṇa"
+    explanation: >
+      Pāṇini's Aṣṭādhyāyī is the central Sanskrit grammatical text, opening
+      locally from the well-known sūtra "vṛddhir ādaiC." These query forms help
+      learners search by author, title, grammar tradition, and opening sūtra.
+
+  - id: "amarakosa-sanskrit-lexicon"
+    language: "san"
+    labels:
+      - "Amarakośa"
+      - "Amarakosha"
+      - "Sanskrit lexicon"
+      - "kośa"
+    source_queries:
+      - "amarakośa"
+      - "amarakosha"
+      - "amarasiṃha"
+      - "amarasimha"
+      - "kośa"
+      - "sanskrit lexicon"
+      - "thesaurus"
+    explanation: >
+      The Amarakośa is a major Sanskrit lexical and thesaurus text attributed
+      to Amarasiṃha. These handles support dictionary-like discovery for
+      students using the reader alongside vocabulary and lexicography work.
+
+  - id: "hitopadesa-fables-niti"
+    language: "san"
+    labels:
+      - "Hitopadeśa"
+      - "Hitopadesha"
+      - "Sanskrit fables"
+      - "nīti stories"
+    source_queries:
+      - "hitopadeśa"
+      - "hitopadesha"
+      - "nārāyaṇa"
+      - "narayana"
+      - "nīti"
+      - "fables"
+      - "moral stories"
+    explanation: >
+      The Hitopadeśa is a widely read Sanskrit collection of fables and moral
+      instruction attributed to Nārāyaṇa. These query forms help learners find
+      the work by Sanskrit title, romanized title, author, and didactic genre.

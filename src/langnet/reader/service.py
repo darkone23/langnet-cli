@@ -55,6 +55,7 @@ from langnet.reader.storage import (
     list_metadata_attributions,
     list_metadata_overlays,
     list_segments_for_work,
+    list_source_index,
     list_source_files,
     list_source_metadata,
     list_works,
@@ -1126,6 +1127,35 @@ class ReaderService:
 
     def aliases(self) -> dict[str, Any]:
         return self._payload("aliases", list_aliases(self.catalog_path))
+
+    def source_index(  # noqa: PLR0913
+        self,
+        *,
+        collection_id: str | None = None,
+        language: str | None = None,
+        source_id: str | None = None,
+        work_id: str | None = None,
+        query: str | None = None,
+        limit: int = 500,
+    ) -> dict[str, Any]:
+        return self._payload(
+            "source-index",
+            list_source_index(
+                self.catalog_path,
+                collection_id=collection_id,
+                language=language,
+                source_id=source_id,
+                work_id=work_id,
+                query=query,
+                limit=limit,
+            ),
+            collection_id=collection_id,
+            language=language,
+            source_id=source_id,
+            work_id=work_id,
+            query=query,
+            limit=limit,
+        )
 
     def alias_conflicts(self) -> dict[str, Any]:
         return self._payload("alias-check", list_alias_conflicts(self.catalog_path))

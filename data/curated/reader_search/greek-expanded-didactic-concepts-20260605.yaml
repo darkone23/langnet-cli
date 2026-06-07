@@ -1,0 +1,117 @@
+concepts:
+  - id: "herodotus-histories-opening-inquiry"
+    language: "grc"
+    labels:
+      - "Herodotus opening"
+      - "Histories proem"
+      - "inquiry"
+      - "Greeks and barbarians"
+    source_queries:
+      - "Ἡροδότου Ἁλικαρνησσέος"
+      - "ἱστορίης ἀπόδεξις"
+      - "ἔργα μεγάλα τε καὶ θωμαστά"
+      - "Ἕλλησι"
+      - "βαρβάροισι"
+      - "Herodotus Histories proem"
+    explanation: >
+      Herodotus' Histories opens with the author's Halicarnassian identity,
+      the display of inquiry, memorable deeds, Greeks and non-Greeks, and the
+      question of why they came into conflict. These forms support discovery of
+      the canonical historiographical proem.
+
+  - id: "thucydides-peloponnesian-war-opening"
+    language: "grc"
+    labels:
+      - "Thucydides opening"
+      - "Peloponnesian War opening"
+      - "Thucydides the Athenian"
+      - "greatest war"
+    source_queries:
+      - "Θουκυδίδης Ἀθηναῖος"
+      - "ξυνέγραψε τὸν πόλεμον"
+      - "Πελοποννησίων καὶ Ἀθηναίων"
+      - "μέγαν τε ἔσεσθαι"
+      - "Peloponnesian War 1.1"
+    explanation: >
+      Thucydides 1.1.1 frames the Peloponnesian War as a major conflict
+      written by Thucydides the Athenian. These Greek and English handles help
+      readers find the opening statement of method and scale.
+
+  - id: "sophocles-antigone-burial-law"
+    language: "grc"
+    labels:
+      - "Antigone"
+      - "Antigone and Ismene"
+      - "burial law"
+      - "divine law and civic law"
+    source_queries:
+      - "ὦ κοινὸν αὐτάδελφον"
+      - "Ἰσμήνης"
+      - "Ἀντιγόνη"
+      - "burial of Polynices"
+      - "divine law"
+      - "Creon"
+    explanation: >
+      Sophocles' Antigone is a core tragedy for the conflict between family,
+      burial obligation, divine law, and civic authority. The local text opens
+      with Antigone addressing Ismene, making these forms useful for both
+      passage and theme discovery.
+
+  - id: "euripides-medea-jason-revenge"
+    language: "grc"
+    labels:
+      - "Medea"
+      - "Medea and Jason"
+      - "revenge tragedy"
+      - "Euripides Medea"
+    source_queries:
+      - "Μήδεια"
+      - "Ἰάσων"
+      - "Jason"
+      - "Medea revenge"
+      - "children"
+      - "Euripides Medea"
+    explanation: >
+      Euripides' Medea is a standard classroom tragedy centered on Medea,
+      Jason, exile, revenge, and the children. These query forms improve
+      thematic discovery even when learners arrive through English names.
+
+  - id: "xenophon-anabasis-ten-thousand"
+    language: "grc"
+    labels:
+      - "Xenophon Anabasis"
+      - "Ten Thousand"
+      - "march up-country"
+      - "Cyrus and Artaxerxes"
+    source_queries:
+      - "Δαρείου καὶ Παρυσάτιδος"
+      - "Ἀρταξέρξης"
+      - "Κῦρος"
+      - "Anabasis"
+      - "Ten Thousand"
+      - "thalatta thalatta"
+    explanation: >
+      Xenophon's Anabasis opens with the sons of Darius and Parysatis, setting
+      up Cyrus' expedition and the later return of the Ten Thousand. These
+      terms connect the local opening with common historical and classroom
+      handles.
+
+  - id: "lysias-against-eratosthenes-thirty"
+    language: "grc"
+    labels:
+      - "Lysias Against Eratosthenes"
+      - "Thirty Tyrants"
+      - "Attic oratory"
+      - "forensic speech"
+    source_queries:
+      - "κατὰ Ἐρατοσθένους"
+      - "οὐκ ἄρξασθαί μοι"
+      - "ὦ ἄνδρες δικασταί"
+      - "Thirty Tyrants"
+      - "Against Eratosthenes"
+      - "Lysias 12"
+    explanation: >
+      Lysias' Against Eratosthenes is a common entry point into Attic oratory,
+      Athenian legal speech, and the aftermath of the Thirty. These source
+      queries support discovery by Greek opening, conventional English title,
+      and historical topic.

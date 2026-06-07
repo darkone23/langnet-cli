@@ -86,6 +86,13 @@ def default_dico_path() -> Path:
     return build_dir() / "lex_dico.duckdb"
 
 
+def default_georges_1913_path() -> Path:
+    """
+    Default output path for Georges 1913 (German) Latin dictionary.
+    """
+    return build_dir() / "lex_georges_1913.duckdb"
+
+
 def default_diogenes_path(language: str) -> Path:
     """
     Default output path for a crawled Diogenes dictionary index.

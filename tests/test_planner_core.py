@@ -144,6 +144,9 @@ def test_latin_plan_includes_parse_and_whitakers() -> None:
     assert any(c.tool == "extract.lewis_1890.json" for c in plan.tool_calls)
     assert any(c.tool == "derive.lewis_1890.entries" for c in plan.tool_calls)
     assert any(c.tool == "claim.lewis_1890.entries" for c in plan.tool_calls)
+    assert "fetch.georges_1913" in tools
+    georges_call = next(call for call in plan.tool_calls if call.tool == "fetch.georges_1913")
+    assert georges_call.params.get("index_signature")
 
 
 def test_latin_plan_passes_all_normalized_candidates_to_gaffiot() -> None:
@@ -168,6 +171,12 @@ def test_latin_plan_passes_all_normalized_candidates_to_gaffiot() -> None:
     assert lewis_call.params.get("headword") == "virumque"
     assert lewis_call.params.get("lemma") == "virus"
     assert lewis_call.params.get("lemma_candidates") == "virus;vir"
+
+    georges_call = next(call for call in plan.tool_calls if call.tool == "fetch.georges_1913")
+    assert georges_call.params.get("headword") == "virumque"
+    assert georges_call.params.get("lemma") == "virus"
+    assert georges_call.params.get("lemma_candidates") == "virus;vir"
+    assert georges_call.params.get("index_signature")
 
 
 def test_latin_plan_passes_local_form_rule_candidate_to_gaffiot() -> None:

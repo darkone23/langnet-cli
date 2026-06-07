@@ -254,6 +254,7 @@ WORD_INDEX_SOURCES = {
     "cdsl",
     "dico",
     "gaffiot",
+    "georges_1913",
     "lewis_1890",
     "strongs_greek",
     "whitakers",
@@ -2724,6 +2725,22 @@ def _emit_reader_item(  # noqa: C901, PLR0912, PLR0915
             f"{item.get('collection_id')}  {item.get('file_status')}  "
             f"{item.get('file_role')}  {item.get('source_path')}"
         )
+    elif mode == "source-index":
+        click.echo(
+            f"{item.get('collection_id')}  {item.get('language')}  "
+            f"{item.get('author')} — {item.get('title')}  [{item.get('work_id')}]"
+        )
+        click.echo(
+            f"  source={item.get('source_id')}  edition={item.get('edition_label')}  "
+            f"segments={item.get('segment_count')}  words={item.get('token_count')}"
+        )
+        click.echo(f"  path={item.get('source_path')}")
+        canonical = item.get("canonical_text_id")
+        witnesses = item.get("source_witness_collections")
+        if canonical or witnesses:
+            click.echo(
+                f"  canonical={canonical or ''}  witnesses={witnesses or 'none'}"
+            )
     elif mode == "metadata":
         click.echo(
             f"{item.get('collection_id')}  {item.get('subject_kind')}  "
@@ -4819,6 +4836,45 @@ def reader_sources(
         _reader_service_from_context(ctx).sources(
             collection_id=collection_id,
             file_status=file_status,
+            limit=limit,
+        ),
+        output,
+    )
+
+
+@reader_cli.command("source-index")
+@click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
+@click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
+@click.option("--source-id", default=None, help="Optional source id, CTS URN, or work id substring.")
+@click.option("--work-id", default=None, help="Optional exact work id filter.")
+@click.option("--query", default=None, help="Optional title/author/source/path substring filter.")
+@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 5000))
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_source_index(  # noqa: PLR0913
+    ctx: click.Context,
+    collection_id: str | None,
+    language: str | None,
+    source_id: str | None,
+    work_id: str | None,
+    query: str | None,
+    limit: int,
+    output: str,
+) -> None:
+    """List imported works with source file, edition, artifact, and witness provenance."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).source_index(
+            collection_id=collection_id,
+            language=language,
+            source_id=source_id,
+            work_id=work_id,
+            query=query,
             limit=limit,
         ),
         output,
@@ -7530,6 +7586,18 @@ def _create_gaffiot_client(tool: str, use_stubs: bool) -> ToolClient | None:
     return None
 
 
+def _create_georges_1913_client(tool: str, use_stubs: bool) -> ToolClient | None:
+    """Create a local Georges 1913 client, with stub fallback."""
+    try:
+        from langnet.execution.handlers.georges_1913 import Georges1913FetchClient  # noqa: PLC0415
+
+        return Georges1913FetchClient()
+    except Exception:
+        if use_stubs:
+            return StubToolClient(tool)
+    return None
+
+
 def _create_bailly_client(tool: str, use_stubs: bool) -> ToolClient | None:
     """Create a local Bailly client, with stub fallback."""
     try:
@@ -7580,6 +7648,7 @@ def _get_client_factory(tool: str, use_stubs: bool):
         "fetch.cdsl": lambda: _create_cdsl_client(tool, use_stubs),
         "fetch.dico": lambda: _create_dico_client(tool, use_stubs),
         "fetch.gaffiot": lambda: _create_gaffiot_client(tool, use_stubs),
+        "fetch.georges_1913": lambda: _create_georges_1913_client(tool, use_stubs),
         "fetch.bailly": lambda: _create_bailly_client(tool, use_stubs),
         "fetch.lewis_1890": lambda: _create_lewis_1890_client(tool, use_stubs),
         "fetch.strongs_greek": lambda: _create_strongs_greek_client(tool, use_stubs),

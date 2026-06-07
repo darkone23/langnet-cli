@@ -35,6 +35,7 @@ DEFAULT_STOPWORDS: frozenset[str] = frozenset(
 SOURCE_PRIORITY = {
     "dico": 1,
     "gaffiot": 1,
+    "georges_1913": 1,
     "cdsl": 2,
     "mw": 2,
     "ap90": 3,

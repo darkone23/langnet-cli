@@ -5,6 +5,7 @@ import hashlib
 import logging
 import re
 import time
+import zlib
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -22,7 +23,24 @@ from .paths import default_dico_path
 logger = logging.getLogger(__name__)
 
 LEX_ID = "DICO_FR_SAN"
-DEFAULT_SOURCE = Path.home() / "langnet-tools" / "sanskrit-heritage" / "webroot" / "htdocs" / "DICO"
+
+
+def _default_dico_source() -> Path:
+    candidates = [
+        Path.home() / "opengreekandlatin" / "Latin" / "Georges_1913-avr17.col",
+        Path.home() / "opengreekandlatin" / "Latin" / "DICO",
+        Path.home() / "langnet-tools" / "sanskrit-heritage" / "webroot" / "htdocs" / "DICO",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+DEFAULT_SOURCE = _default_dico_source()
+COL_FIN_MARKER = b"!<--- FIN --->"
+COL_BOLD_RE = re.compile(r"<b>(.*?)</b>", flags=re.IGNORECASE | re.DOTALL)
+COL_ENTRY_AFTER_BOLD_RE = re.compile(r"\s*,")
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS entries_fr (
@@ -41,6 +59,17 @@ CREATE TABLE IF NOT EXISTS entries_fr (
 CREATE INDEX IF NOT EXISTS entries_fr_headword_norm_idx ON entries_fr(headword_norm);
 CREATE INDEX IF NOT EXISTS entries_fr_page_headword_idx ON entries_fr(source_page, headword_norm);
 
+CREATE TABLE IF NOT EXISTS lexicon_metadata (
+    lex_id VARCHAR PRIMARY KEY,
+    source_label VARCHAR NOT NULL,
+    source_language VARCHAR NOT NULL,
+    metalanguage VARCHAR NOT NULL,
+    direction VARCHAR NOT NULL,
+    source_path VARCHAR,
+    entry_count INTEGER,
+    build_version VARCHAR
+);
+
 """
 
 
@@ -56,6 +85,11 @@ class DicoBuildConfig:
     batch_size: int = 500
     wipe_existing: bool = True
     force_rebuild: bool = False
+    lex_id: str = LEX_ID
+    source_label: str = "DICO"
+    source_language: str = "san"
+    metalanguage: str = "fr"
+    direction: str = "fr->san"
 
 
 def _normalize_id(entry_id: str) -> str:
@@ -128,6 +162,19 @@ def _extract_plain_text(chunk_soup: BeautifulSoup) -> str:
     return text.strip()
 
 
+def _is_col_entry_boundary(full_text: str, match: re.Match[str]) -> bool:
+    """
+    Return whether a bold span looks like a `.col` dictionary entry boundary.
+
+    Georges `.col` data uses `<b>...</b>` both for entry headwords and for
+    emphasized German glosses inside an entry. Real entry headwords are followed
+    by the lemma comma outside the bold span, e.g. `<b>animus</b>, ī, m.`.
+    Gloss emphasis usually keeps punctuation inside the bold span or continues
+    prose immediately after it, e.g. `<b>Seele,</b> als ...`.
+    """
+    return COL_ENTRY_AFTER_BOLD_RE.match(full_text[match.end() : match.end() + 16]) is not None
+
+
 class DicoBuilder:
     """
     Build DICO French→Sanskrit index into DuckDB.
@@ -135,17 +182,27 @@ class DicoBuilder:
 
     def __init__(self, config: DicoBuildConfig) -> None:
         self.source_dir = (config.source_dir or DEFAULT_SOURCE).expanduser()
+        self._is_col_source = self.source_dir.suffix.lower() == ".col"
         self.output_path = config.output_path or default_dico_path()
+        self.lex_id = config.lex_id
         self.limit = config.limit
         self.batch_size = config.batch_size
         self.wipe_existing = config.wipe_existing
         self.force_rebuild = config.force_rebuild
+        self.source_label = config.source_label
+        self.source_language = config.source_language
+        self.metalanguage = config.metalanguage
+        self.direction = config.direction
         self._conn: duckdb.DuckDBPyConnection | None = None
 
     def build(self) -> BuildResult[LexiconStats | BuildErrorStats]:
         try:
             if not self.source_dir.exists():
                 raise FileNotFoundError(f"DICO source directory not found at {self.source_dir}")
+            if not self.source_dir.is_dir() and not self._is_col_source:
+                raise FileNotFoundError(
+                    "DICO source must be a directory containing *.html files or a .col file"
+                )
 
             if self.output_path.exists():
                 if self.wipe_existing:
@@ -177,6 +234,7 @@ class DicoBuilder:
                     self._conn.execute(sql_stmt)
 
             processed = self._load_entries()
+            self._write_lexicon_metadata(processed)
             stats = replace(self.get_stats(), entry_count=processed)
             logger.info(
                 "Finished DICO index",
@@ -267,8 +325,39 @@ class DicoBuilder:
                 entries_batch,
             )
 
+    def _write_lexicon_metadata(self, entry_count: int) -> None:
+        assert self._conn is not None
+        self._conn.execute("DELETE FROM lexicon_metadata WHERE lex_id = ?", [self.lex_id])
+        self._conn.execute(
+            """
+            INSERT INTO lexicon_metadata (
+                lex_id,
+                source_label,
+                source_language,
+                metalanguage,
+                direction,
+                source_path,
+                entry_count,
+                build_version
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                self.lex_id,
+                self.source_label,
+                self.source_language,
+                self.metalanguage,
+                self.direction,
+                str(self.source_dir),
+                entry_count,
+                "dico-builder-v2",
+            ],
+        )
+
     def _iter_entries(self):
         seen_bodies: dict[str, set[str]] = {}
+        if self._is_col_source:
+            yield from self._parse_col_entries(seen_bodies)
+            return
         for html_path in self._iter_source_files():
             page = html_path.stem
             html = html_path.read_text(encoding="utf-8", errors="ignore")
@@ -327,6 +416,114 @@ class DicoBuilder:
                 page,
             )
 
+    def _iter_col_chunks(self) -> Iterable[bytes]:
+        raw = self.source_dir.read_bytes()
+        marker_idx = raw.find(COL_FIN_MARKER)
+        if marker_idx == -1:
+            raise ValueError(f"invalid DICO .col source: marker {COL_FIN_MARKER!r} not found")
+        idx = marker_idx + len(COL_FIN_MARKER)
+        if raw[idx:idx + 1] == b"\n":
+            idx += 1
+
+        chunks_yielded = 0
+        while idx + 4 < len(raw):
+            # Skip whitespace between binary blocks.
+            while raw[idx : idx + 1] in (b"\n", b"\r", b"\t", b" "):
+                idx += 1
+                if idx + 4 >= len(raw):
+                    return
+
+            if idx + 4 > len(raw):
+                return
+
+            size = int.from_bytes(raw[idx : idx + 4], "big")
+            if size <= 0:
+                idx += 4
+                continue
+
+            payload = raw[idx + 4 :]
+            decompressor = zlib.decompressobj(15)
+            try:
+                chunk = decompressor.decompress(payload)
+            except zlib.error as exc:
+                if chunks_yielded and len(payload) < 1024:
+                    logger.info(
+                        "Stopping DICO .col parser at trailing non-compressed footer "
+                        "(offset=%s, remaining_bytes=%s)",
+                        idx,
+                        len(payload),
+                    )
+                    return
+                raise ValueError(
+                    f"failed to decompress DICO .col block at offset {idx}: {exc}"
+                ) from exc
+
+            consumed = len(payload) - len(decompressor.unused_data)
+            if consumed <= 0:
+                raise ValueError(f"unable to advance DICO .col parser at offset {idx}")
+            if len(chunk) != size:
+                logger.warning(
+                    "DICO .col chunk size mismatch: expected %s bytes, decoded %s bytes",
+                    size,
+                    len(chunk),
+                )
+
+            idx += 4 + consumed
+            chunks_yielded += 1
+            yield chunk
+
+    def _parse_col_entries(self, seen_bodies: dict[str, set[str]]):
+        full_text = "".join(chunk.decode("utf-8", errors="replace") for chunk in self._iter_col_chunks())
+        if not full_text.strip():
+            return
+
+        matches = [match for match in COL_BOLD_RE.finditer(full_text) if _is_col_entry_boundary(full_text, match)]
+        if not matches:
+            logger.warning("No <b>...</b> entries detected in %s", self.source_dir)
+            return
+
+        for entry_no, match in enumerate(matches):
+            start = match.start()
+            end = matches[entry_no + 1].start() if entry_no + 1 < len(matches) else len(full_text)
+            chunk_html = full_text[start:end].strip()
+            if not chunk_html:
+                continue
+
+            headword_html = match.group(0)
+            headword_roma = BeautifulSoup(headword_html, "lxml").get_text(" ", strip=True)
+            if not headword_roma:
+                continue
+
+            chunk_soup = BeautifulSoup(chunk_html, "lxml")
+            base_entry_id = _strip_variant_suffix(headword_roma)
+            entry_id = _normalize_id(base_entry_id) or f"entry-{entry_no:05d}"
+            body_hash = hashlib.sha1(chunk_html.encode("utf-8")).hexdigest()
+            seen_set = seen_bodies.setdefault(entry_id, set())
+            if body_hash in seen_set:
+                continue
+            occurrence = len(seen_set)
+            seen_set.add(body_hash)
+
+            variant_num = _parse_variant(entry_id)
+            headword_norm = _normalize_id(base_entry_id)
+            plain_text = _extract_plain_text(chunk_soup)
+            plain_text = _strip_leading_headword(
+                plain_text,
+                [headword_roma, base_entry_id, entry_id],
+            )
+
+            yield (
+                entry_id,
+                occurrence,
+                None,
+                headword_roma,
+                headword_norm,
+                variant_num,
+                chunk_html,
+                plain_text,
+                f"{self.source_dir.name}:{entry_no:05d}",
+            )
+
     def _collect_chunk(self, start_span: Tag, next_span: Tag | None):
         nodes = [start_span]
         cursor = start_span.next_sibling
@@ -354,7 +551,7 @@ class DicoBuilder:
                     if conn is not None and conn is not self._conn:
                         conn.close()
         return LexiconStats(
-            lex_id=LEX_ID,
+            lex_id=self.lex_id,
             path=str(self.output_path),
             entry_count=entry_count,
             size_mb=size_mb,

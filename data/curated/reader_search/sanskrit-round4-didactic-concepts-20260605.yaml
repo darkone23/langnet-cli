@@ -1,0 +1,95 @@
+concepts:
+  - id: "patanjali-yogasutra-atha-yoganusasanam"
+    language: "san"
+    labels:
+      - "Yogasūtra"
+      - "Yoga Sutra"
+      - "Patañjali"
+      - "atha yogānuśāsanam"
+      - "aṣṭāṅga yoga"
+      - "Sanskrit philosophy"
+      - "sūtra style"
+    source_queries:
+      - "Patanjali Yoga Sutra atha yoganusasanam"
+      - "Yogasūtra aṣṭāṅga yoga"
+      - "Patañjali Yoga Sutra Sanskrit"
+    explanation: >
+      Yogasūtra is a canonical short-form philosophy target: students can study
+      sūtra compression, technical compounds, nominal style, and core Yoga
+      vocabulary.
+
+  - id: "bharata-natyasastra-rasa"
+    language: "san"
+    labels:
+      - "Nāṭyaśāstra"
+      - "Natyashastra"
+      - "Bharata Muni"
+      - "rasa theory"
+      - "dramaturgy"
+      - "Sanskrit aesthetics"
+      - "performance theory"
+    source_queries:
+      - "Bharata Natyashastra rasa theory Sanskrit dramaturgy"
+      - "Nāṭyaśāstra rasa theory"
+      - "Bharata Muni Natyashastra"
+    explanation: >
+      Nāṭyaśāstra is essential for Sanskrit aesthetics and performance studies,
+      with didactic value around technical terminology, rasa, drama, music, and
+      embodied performance vocabulary.
+
+  - id: "asvaghosa-buddhacarita-buddha-life"
+    language: "san"
+    labels:
+      - "Buddhacarita"
+      - "Aśvaghoṣa"
+      - "Buddha biography"
+      - "aikṣvāka"
+      - "Sanskrit Buddhist kāvya"
+      - "life of the Buddha"
+      - "mahākāvya"
+    source_queries:
+      - "Ashvaghosha Buddhacarita Sanskrit kavya"
+      - "Buddhacarita life of the Buddha"
+      - "Aśvaghoṣa Buddhacarita Sanskrit"
+    explanation: >
+      Buddhacarita adds Buddhist kāvya coverage, combining classical poetic
+      style with biographical narrative, royal vocabulary, renunciation, and
+      doctrinally important terms.
+
+  - id: "bharavi-kiratarjuniya-arjuna-siva"
+    language: "san"
+    labels:
+      - "Kirātārjunīya"
+      - "Kiratarjuniya"
+      - "Bhāravi"
+      - "Arjuna and Shiva"
+      - "śriyaḥ kurūṇām"
+      - "Sanskrit mahākāvya"
+      - "Mahabharata episode"
+    source_queries:
+      - "Bharavi Kiratarjuniya Sanskrit mahakavya"
+      - "Kirātārjunīya Arjuna Shiva"
+      - "śriyaḥ kurūṇām Bhāravi"
+    explanation: >
+      Kirātārjunīya is a major mahākāvya target for advanced compounds,
+      political diction, epic reception, and the transformation of a Mahābhārata
+      episode into highly wrought court poetry.
+
+  - id: "magha-sisupalavadha-krsna-sisupala"
+    language: "san"
+    labels:
+      - "Śiśupālavadha"
+      - "Shishupalavadha"
+      - "Māgha"
+      - "Krishna and Shishupala"
+      - "śriyaḥ patiḥ"
+      - "Sanskrit mahākāvya"
+      - "ornate poetry"
+    source_queries:
+      - "Magha Shishupalavadha Sanskrit mahakavya"
+      - "Śiśupālavadha Māgha"
+      - "śriyaḥ patiḥ śrīmati"
+    explanation: >
+      Śiśupālavadha is a strong advanced kāvya target for dense compounds,
+      rhetorical ornament, epic allusion, and comparison with Bhāravi and
+      Kālidāsa in literary pedagogy.

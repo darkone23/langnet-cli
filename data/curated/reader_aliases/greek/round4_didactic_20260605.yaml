@@ -1,0 +1,105 @@
+aliases:
+  - alias: "Aeschylus Agamemnon"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg005"
+    display: "Aeschylus, Agamemnon"
+    sources: ["web_research", "manual"]
+
+  - alias: "Aesch. Ag."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0085.tlg005"
+    display: "Aeschylus, Agamemnon"
+    sources: ["manual"]
+
+  - alias: "Ἀγαμέμνων Aeschylus"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg005"
+    display: "Αἰσχύλος, Ἀγαμέμνων"
+    sources: ["manual"]
+
+  - alias: "Aeschylus Persians"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg002"
+    display: "Aeschylus, Persians"
+    sources: ["web_research", "manual"]
+
+  - alias: "Aesch. Pers."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0085.tlg002"
+    display: "Aeschylus, Persians"
+    sources: ["manual"]
+
+  - alias: "Aeschylus Persae"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg002"
+    display: "Aeschylus, Persians"
+    sources: ["manual"]
+
+  - alias: "Aeschylus Prometheus Bound"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg003"
+    display: "Aeschylus, Prometheus Bound"
+    sources: ["web_research", "manual"]
+
+  - alias: "Aesch. PV"
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0085.tlg003"
+    display: "Aeschylus, Prometheus Bound"
+    sources: ["manual"]
+
+  - alias: "Prometheus Desmotes"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg003"
+    display: "Aeschylus, Prometheus Bound"
+    sources: ["manual"]
+
+  - alias: "Aeschylus Suppliants"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg001"
+    display: "Aeschylus, Suppliants"
+    sources: ["web_research", "manual"]
+
+  - alias: "Aesch. Supp."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0085.tlg001"
+    display: "Aeschylus, Suppliants"
+    sources: ["manual"]
+
+  - alias: "Aeschylus Hiketides"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg001"
+    display: "Aeschylus, Suppliants"
+    sources: ["manual"]
+
+  - alias: "Demosthenes Against Conon"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0014.tlg054"
+    display: "Demosthenes, Against Conon"
+    sources: ["web_research", "manual"]
+
+  - alias: "Dem. Con."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0014.tlg054"
+    display: "Demosthenes, Against Conon"
+    sources: ["manual"]
+
+  - alias: "Against Conon"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0014.tlg054"
+    display: "Demosthenes, Against Conon"
+    sources: ["manual"]

@@ -23,7 +23,7 @@ from langnet.word_index.service import _best_anchor
 
 WORD_INDEX_SCHEMA_PATH = Path("docs/schemas/word_index.v1.schema.json")
 SANSKRIT_SOURCE_BUCKET_COUNT = 3
-LATIN_SOURCE_BUCKET_COUNT = 4
+LATIN_SOURCE_BUCKET_COUNT = 5
 FULL_RADIUS_ONE_WINDOW_COUNT = 3
 SATYA_HYDRATED_SOURCE_ENTRY_COUNT = 9
 ANUSVARA_AND_MA_CARD_COUNT = 2
@@ -40,6 +40,7 @@ def _fixture_paths(tmp_path: Path) -> WordIndexPaths:
     dico = tmp_path / "lex_dico.duckdb"
     gaffiot = tmp_path / "lex_gaffiot.duckdb"
     lewis_1890 = tmp_path / "lex_lewis_1890.duckdb"
+    georges_1913 = tmp_path / "lex_georges_1913.duckdb"
     bailly = tmp_path / "lex_bailly.duckdb"
     strongs_greek = tmp_path / "lex_strongs_greek.duckdb"
     whitakers = tmp_path / "lex_whitakers.duckdb"
@@ -50,6 +51,7 @@ def _fixture_paths(tmp_path: Path) -> WordIndexPaths:
     _write_dico_fixture(dico)
     _write_gaffiot_fixture(gaffiot)
     _write_lewis_1890_fixture(lewis_1890)
+    _write_georges_1913_fixture(georges_1913)
     _write_bailly_fixture(bailly)
     _write_strongs_greek_fixture(strongs_greek)
     _write_whitakers_fixture(whitakers)
@@ -61,6 +63,7 @@ def _fixture_paths(tmp_path: Path) -> WordIndexPaths:
         dico=dico,
         gaffiot=gaffiot,
         lewis_1890=lewis_1890,
+        georges_1913=georges_1913,
         bailly=bailly,
         strongs_greek=strongs_greek,
         whitakers=whitakers,
@@ -201,6 +204,27 @@ def _write_lewis_1890_fixture(path: Path) -> None:
                 ("lewis-1890:amo", "amo", "amo", "amo", "to love", "h1"),
                 ("lewis-1890:lupus", "lupus", "lupus", "lupus", "a wolf", "h2"),
                 ("lewis-1890:nox", "nox", "nox", "nox", "night", "h3"),
+            ],
+        )
+
+
+def _write_georges_1913_fixture(path: Path) -> None:
+    with duckdb.connect(str(path)) as conn:
+        conn.execute(
+            """
+            CREATE TABLE entries_fr (
+              entry_id VARCHAR, occurrence INTEGER, headword_deva VARCHAR,
+              headword_roma VARCHAR, headword_norm VARCHAR, variant_num INTEGER,
+              body_html TEXT, plain_text TEXT, source_page VARCHAR
+            )
+            """
+        )
+        conn.executemany(
+            "INSERT INTO entries_fr VALUES (?, ?, NULL, ?, ?, NULL, '', ?, ?)",
+            [
+                ("amor", 0, "amor", "amor", "die Liebe", "Georges_1913.col:1"),
+                ("lupus", 0, "lupus", "lupus", "der Wolf", "Georges_1913.col:2"),
+                ("nox", 0, "nox", "nox", "die Nacht", "Georges_1913.col:3"),
             ],
         )
 
@@ -380,6 +404,7 @@ def test_word_index_sources_report_local_statuses() -> None:
         ("san", "dico", "dico"),
         ("lat", "gaffiot", "gaffiot"),
         ("lat", "lewis_1890", "lewis_1890"),
+        ("lat", "georges_1913", "georges_1913"),
         ("lat", "whitakers", "whitakers"),
         ("lat", "diogenes", "lewis_short"),
         ("grc", "diogenes", "lsj"),
@@ -414,6 +439,30 @@ def test_word_index_list_reads_lewis_1890_source() -> None:
         "language": "lat",
         "q": "lupus",
         "dictionary": "lewis_1890",
+    }
+
+
+def test_word_index_list_reads_georges_1913_source() -> None:
+    with TemporaryDirectory() as tmpdir:
+        payload = word_index_list_payload(
+            "lat",
+            source="georges_1913",
+            prefix="lu",
+            limit=5,
+            paths=_fixture_paths(Path(tmpdir)),
+        )
+
+    _assert_matches_word_index_schema(payload)
+    items = cast(list[dict[str, object]], payload["items"])
+    assert len(items) == 1
+    assert items[0]["source"] == "georges_1913"
+    assert items[0]["dictionary"] == "georges_1913"
+    assert items[0]["canonical_key"] == "lupus"
+    assert items[0]["source_ref"] == "georges_1913:Georges_1913.col:2#lupus:0"
+    assert items[0]["encounter"] == {
+        "language": "lat",
+        "q": "lupus",
+        "dictionary": "georges_1913",
     }
 
 
@@ -517,6 +566,7 @@ def test_word_index_wheel_includes_lewis_1890_and_bailly_sources() -> None:
         for source in cast(list[dict[str, object]], item.get("sources", []))
     }
     assert "lewis_1890" in lat_sources
+    assert "georges_1913" in lat_sources
     assert "bailly" in grc_sources
     assert "strongs_greek" in grc_sources
 
@@ -628,6 +678,7 @@ def test_word_index_list_all_collapses_sources_by_total_ordered_lexeme() -> None
     assert {(entry["source"], entry["dictionary"]) for entry in source_entries} == {
         ("gaffiot", "gaffiot"),
         ("lewis_1890", "lewis_1890"),
+        ("georges_1913", "georges_1913"),
         ("whitakers", "whitakers"),
         ("diogenes", "lewis_short"),
     }

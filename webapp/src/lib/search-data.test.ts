@@ -3,8 +3,11 @@ import { encounterWord, resolveToolRequests, toolsForLanguage } from './search-d
 
 const latinTools = toolsForLanguage('lat').map(({ id }) => id);
 assert.ok(latinTools.includes('lewis_1890'));
+assert.ok(latinTools.includes('georges_1913'));
 assert.deepEqual(resolveToolRequests('lat', ['lewis_1890']), ['lewis_1890']);
+assert.deepEqual(resolveToolRequests('lat', ['georges_1913']), ['georges_1913']);
 assert.ok(encounterWord('', 'lat', ['all']).source_tools.includes('lewis_1890'));
+assert.ok(encounterWord('', 'lat', ['all']).source_tools.includes('georges_1913'));
 
 const greekTools = toolsForLanguage('grc').map(({ id }) => id);
 assert.ok(greekTools.includes('bailly'));

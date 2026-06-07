@@ -1,0 +1,105 @@
+aliases:
+  - alias: "Arthashastra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_354"
+    display: "Kauṭilya, Arthaśāstra"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Arthaśāstra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_354"
+    display: "Kauṭilya, Arthaśāstra"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Kautilya Arthashastra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_354"
+    display: "Kauṭilya, Arthaśāstra"
+    sources: ["manual"]
+
+  - alias: "Saundarananda"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_463"
+    display: "Aśvaghoṣa, Saundarānanda"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Aśvaghoṣa Saundarānanda"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_463"
+    display: "Aśvaghoṣa, Saundarānanda"
+    sources: ["manual"]
+
+  - alias: "Kathasaritsagara"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_456"
+    display: "Somadeva, Kathāsaritsāgara"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Ocean of Story"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_456"
+    display: "Somadeva, Kathāsaritsāgara"
+    sources: ["manual"]
+
+  - alias: "Kavyadarsa"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_191"
+    display: "Daṇḍin, Kāvyādarśa"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Dandin Kavyadarsa"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_191"
+    display: "Daṇḍin, Kāvyādarśa"
+    sources: ["manual"]
+
+  - alias: "Mulamadhyamakakarika"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_263"
+    display: "Nāgārjuna, Mūlamadhyamakakārikāḥ"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Nagarjuna Mulamadhyamakakarika"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_263"
+    display: "Nāgārjuna, Mūlamadhyamakakārikāḥ"
+    sources: ["manual"]
+
+  - alias: "Charaka Samhita"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_58"
+    display: "Caraka, Carakasaṃhitā"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Carakasamhita"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_58"
+    display: "Caraka, Carakasaṃhitā"
+    sources: ["manual"]
+
+  - alias: "Yogasutrabhasya"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_381"
+    display: "Yogasūtrabhāṣya"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Yoga Sutra Bhashya"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_381"
+    display: "Yogasūtrabhāṣya"
+    sources: ["manual"]

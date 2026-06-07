@@ -3174,7 +3174,7 @@ def list_collections(catalog_path: Path) -> list[dict[str, Any]]:
     if not catalog_path.exists():
         return []
     with duckdb.connect(str(catalog_path), read_only=True) as conn:
-        return _dict_rows(
+        rows = _dict_rows(
             conn,
             """
             WITH work_metrics AS (
@@ -3197,6 +3197,67 @@ def list_collections(catalog_path: Path) -> list[dict[str, Any]]:
             ORDER BY collection_id
             """,
         )
+    for row in rows:
+        row.update(_collection_display_metadata(str(row["collection_id"])))
+    return rows
+
+
+def _collection_display_metadata(collection_id: str) -> dict[str, str]:
+    metadata = {
+        "digiliblt": (
+            "Digital Library of Late-Antique Latin Texts",
+            "Late antique Latin texts from the DigilibLT corpus.",
+        ),
+        "first1kgreek": (
+            "First1K Greek",
+            "Greek texts from the First Thousand Years of Greek corpus.",
+        ),
+        "opengreekandlatin_church_fathers": (
+            "OpenGreekAndLatin Church Fathers",
+            "Greek patristic and biblical editions imported from OpenGreekAndLatin.",
+        ),
+        "opengreekandlatin_csel": (
+            "Corpus Scriptorum Ecclesiasticorum Latinorum",
+            "Latin Christian texts from the OpenGreekAndLatin CSEL corpus.",
+        ),
+        "opengreekandlatin_latin": (
+            "OpenGreekAndLatin Latin",
+            "Latin texts from OpenGreekAndLatin outside the larger CSEL and Patrologia collections.",
+        ),
+        "opengreekandlatin_patrologia": (
+            "Patrologia Latina",
+            "Latin patristic and medieval texts from the OpenGreekAndLatin Patrologia Latina corpus.",
+        ),
+        "perseus": (
+            "Perseus",
+            "Greek and Latin texts from the Perseus corpus.",
+        ),
+        "phi": (
+            "PHI Latin",
+            "Classical Latin texts from the PHI corpus.",
+        ),
+        "sanskrit_dcs": (
+            "DCS Sanskrit",
+            "Sanskrit reader texts imported from the Digital Corpus of Sanskrit.",
+        ),
+        "sanskrit_json": (
+            "Sanskrit JSON",
+            "Sanskrit reader texts imported from local structured JSON sources.",
+        ),
+        "sanskrit_texts": (
+            "Sanskrit Texts",
+            "Sanskrit reader texts imported from local plain-text sources.",
+        ),
+        "tlg": (
+            "TLG Greek",
+            "Greek texts from the TLG corpus.",
+        ),
+    }
+    label, description = metadata.get(
+        collection_id,
+        (collection_id.replace("_", " ").title(), "Reader corpus collection."),
+    )
+    return {"label": label, "description": description}
 
 
 def list_authors(
@@ -4658,6 +4719,125 @@ def reader_discovery_coverage(catalog_path: Path) -> list[dict[str, Any]]:
             }
         )
     return items
+
+
+def list_source_index(  # noqa: PLR0913
+    catalog_path: Path,
+    *,
+    collection_id: str | None = None,
+    language: str | None = None,
+    source_id: str | None = None,
+    work_id: str | None = None,
+    query: str | None = None,
+    limit: int = 500,
+) -> list[dict[str, Any]]:
+    if not catalog_path.exists():
+        return []
+    conditions = []
+    params: list[object] = []
+    if collection_id:
+        conditions.append("w.collection_id = ?")
+        params.append(collection_id)
+    if language:
+        conditions.append("w.language = ?")
+        params.append(language)
+    if source_id:
+        source_like = f"%{source_id.casefold()}%"
+        conditions.append(
+            """
+            (
+                lower(w.source_id) LIKE ?
+                OR lower(coalesce(w.cts_work_urn, '')) LIKE ?
+                OR lower(w.work_id) LIKE ?
+            )
+            """
+        )
+        params.extend([source_like, source_like, source_like])
+    if work_id:
+        conditions.append("w.work_id = ?")
+        params.append(work_id)
+    if query:
+        query_like = f"%{query.casefold()}%"
+        conditions.append(
+            """
+            (
+                lower(w.title) LIKE ?
+                OR lower(w.author) LIKE ?
+                OR lower(w.source_id) LIKE ?
+                OR lower(w.work_id) LIKE ?
+                OR lower(coalesce(w.cts_work_urn, '')) LIKE ?
+                OR lower(coalesce(w.canonical_text_id, '')) LIKE ?
+                OR lower(coalesce(e.label, '')) LIKE ?
+                OR lower(coalesce(e.source_path, '')) LIKE ?
+            )
+            """
+        )
+        params.extend([query_like] * 8)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        return _dict_rows(
+            conn,
+            f"""
+            WITH artifact_metrics AS (
+                SELECT
+                    work_id,
+                    edition_id,
+                    COUNT(*) AS artifact_count,
+                    COALESCE(SUM(segment_count), 0) AS segment_count,
+                    COALESCE(SUM(token_count), 0) AS token_count,
+                    string_agg(DISTINCT adapter, ', ' ORDER BY adapter) AS adapters,
+                    string_agg(DISTINCT artifact_path, ' | ' ORDER BY artifact_path)
+                        AS artifact_paths
+                FROM artifacts
+                GROUP BY work_id, edition_id
+            ),
+            witness_counts AS (
+                SELECT
+                    canonical_text_id,
+                    COUNT(*) AS source_witness_count,
+                    string_agg(DISTINCT collection_id, ', ' ORDER BY collection_id)
+                        AS source_witness_collections
+                FROM source_witnesses
+                GROUP BY canonical_text_id
+            )
+            SELECT
+                w.collection_id,
+                w.language,
+                w.work_id,
+                w.title,
+                w.author,
+                w.author_id,
+                w.source_id,
+                w.cts_work_urn,
+                w.canonical_text_id,
+                e.edition_id,
+                e.label AS edition_label,
+                e.source_path,
+                e.cts_edition_urn,
+                coalesce(sf.file_role, '') AS file_role,
+                coalesce(sf.file_status, '') AS file_status,
+                coalesce(sf.source_hash, '') AS source_hash,
+                sf.size_bytes,
+                coalesce(am.artifact_count, 0) AS artifact_count,
+                coalesce(am.segment_count, 0) AS segment_count,
+                coalesce(am.token_count, 0) AS token_count,
+                coalesce(am.adapters, '') AS adapters,
+                coalesce(am.artifact_paths, '') AS artifact_paths,
+                coalesce(wc.source_witness_count, 0) AS source_witness_count,
+                coalesce(wc.source_witness_collections, '') AS source_witness_collections
+            FROM works w
+            LEFT JOIN editions e ON e.work_id = w.work_id
+            LEFT JOIN artifact_metrics am
+              ON am.work_id = w.work_id AND am.edition_id = e.edition_id
+            LEFT JOIN source_files sf ON sf.source_path = e.source_path
+            LEFT JOIN witness_counts wc ON wc.canonical_text_id = w.canonical_text_id
+            {where}
+            ORDER BY w.collection_id, w.language, w.author, w.title, e.label, w.work_id
+            LIMIT ?
+            """,
+            params,
+        )
 
 
 def _merge_discovery_counts(

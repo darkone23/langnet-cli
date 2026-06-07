@@ -37,7 +37,7 @@
 			onclick={() => onSelectView('authors')}
 		>
 			<BookOpen size={15} />
-			Top authors
+			Authors & works
 		</button>
 		<button
 			type="button"

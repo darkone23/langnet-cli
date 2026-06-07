@@ -64,6 +64,7 @@ export const toolStyle: ToolStyle = {
 	cltk: { accent: 'border-l-success', badge: 'badge-success' },
 	whitakers: { accent: 'border-l-secondary', badge: 'badge-secondary' },
 	gaffiot: { accent: 'border-l-accent', badge: 'badge-accent' },
+	georges_1913: { accent: 'border-l-warning', badge: 'badge-warning' },
 	lewis_1890: { accent: 'border-l-info', badge: 'badge-info' }
 };
 
@@ -741,6 +742,7 @@ export function toolMnemonic(toolId: ToolId): Mnemonic {
 		cltk: { Icon: Cat, name: 'Supplemental lexicon' },
 		whitakers: { Icon: Dog, name: 'Latin morphology' },
 		gaffiot: { Icon: Snail, name: 'Gaffiot source entries' },
+		georges_1913: { Icon: ScrollText, name: 'Georges German source entries' },
 		lewis_1890: { Icon: ScrollText, name: 'Lewis 1890 source entries' }
 	};
 

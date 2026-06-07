@@ -1,0 +1,132 @@
+concepts:
+  - id: "quintilian-institutio-oratoria-education"
+    language: "lat"
+    labels:
+      - "Quintilian Institutio Oratoria"
+      - "Institutio Oratoria"
+      - "rhetorical education"
+      - "orator training"
+      - "Latin rhetoric"
+      - "efflagitasti cotidiano convicio"
+      - "Quintilian"
+    source_queries:
+      - "Quintilian Institutio Oratoria rhetoric education"
+      - "Institutio Oratoria orator training"
+      - "Quintilian rhetorical education Latin"
+    explanation: >
+      Institutio Oratoria is essential for Roman rhetorical education,
+      pedagogical vocabulary, school culture, literary criticism, and the ideal
+      formation of the orator.
+
+  - id: "suetonius-de-vita-caesarum"
+    language: "lat"
+    labels:
+      - "Suetonius De Vita Caesarum"
+      - "Lives of the Caesars"
+      - "Twelve Caesars"
+      - "imperial biography"
+      - "Roman emperors"
+      - "De Vita Caesarum"
+      - "Suetonius"
+    source_queries:
+      - "Suetonius De Vita Caesarum Twelve Caesars"
+      - "Suetonius Lives of the Caesars"
+      - "De Vita Caesarum imperial biography"
+    explanation: >
+      De Vita Caesarum is a major imperial prose target for biography,
+      anecdote, political vocabulary, character sketching, and comparison with
+      annalistic history.
+
+  - id: "suetonius-divus-augustus"
+    language: "lat"
+    labels:
+      - "Suetonius Divus Augustus"
+      - "Life of Augustus"
+      - "Augustus"
+      - "Octavian"
+      - "imperial biography"
+      - "gentem Octaviam"
+      - "Suetonius Augustus"
+    source_queries:
+      - "Suetonius Divus Augustus life of Augustus"
+      - "Suetonius Augustus gentem Octaviam"
+      - "Life of Augustus Suetonius Latin"
+    explanation: >
+      Divus Augustus is a focused classroom entry into Suetonian biography,
+      Augustan ideology, family lineage, political titles, and imperial
+      exemplarity.
+
+  - id: "velleius-historia-romana"
+    language: "lat"
+    labels:
+      - "Velleius Paterculus"
+      - "Historia Romana"
+      - "Roman History"
+      - "Tiberian history"
+      - "Latin historiography"
+      - "historiae romanae"
+      - "Velleius"
+    source_queries:
+      - "Velleius Paterculus Historia Romana"
+      - "Velleius Roman History Latin"
+      - "Historia Romana Velleius Paterculus"
+    explanation: >
+      Velleius offers a concise imperial-period historical style useful for
+      survey reading, rhetorical compression, and the transition from Republic
+      to Principate.
+
+  - id: "valerius-maximus-memorabilia"
+    language: "lat"
+    labels:
+      - "Valerius Maximus"
+      - "Facta et Dicta Memorabilia"
+      - "memorable deeds and sayings"
+      - "Roman exempla"
+      - "moral anecdotes"
+      - "Latin prose"
+      - "exemplary history"
+    source_queries:
+      - "Valerius Maximus Facta et Dicta Memorabilia"
+      - "Valerius Maximus Roman exempla"
+      - "memorable deeds and sayings Latin"
+    explanation: >
+      Facta et Dicta Memorabilia is ideal for studying Roman exempla,
+      moralizing prose, topical organization, and reusable historical anecdotes.
+
+  - id: "ammianus-res-gestae-late-roman"
+    language: "lat"
+    labels:
+      - "Ammianus Marcellinus"
+      - "Res Gestae"
+      - "Rerum Gestarum"
+      - "late Roman history"
+      - "Julian"
+      - "Latin historiography"
+      - "post emensos"
+    source_queries:
+      - "Ammianus Marcellinus Res Gestae late Roman history"
+      - "Ammianus Res Gestae Julian"
+      - "Rerum gestarum libri qui supersunt"
+    explanation: >
+      Ammianus expands Latin reader coverage into late antique historiography,
+      military and administrative vocabulary, ethnography, and complex periodic
+      prose.
+
+  - id: "eutropius-breviarium-survey-history"
+    language: "lat"
+    labels:
+      - "Eutropius Breviarium"
+      - "Breviarium ab urbe condita"
+      - "Roman history summary"
+      - "late Latin historiography"
+      - "res Romanae"
+      - "Eutropius"
+      - "survey Latin"
+    source_queries:
+      - "Eutropius Breviarium ab urbe condita"
+      - "Eutropius Roman history summary"
+      - "Breviarium ab urbe condita Latin"
+    explanation: >
+      Eutropius is a strong learner-facing history text because of its compact
+      survey structure, relatively straightforward prose, and broad historical
+      vocabulary.

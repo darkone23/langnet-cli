@@ -91,6 +91,16 @@ class BuildDicoConfig:
 
 
 @dataclass
+class BuildGeorges1913Config:
+    source_dir: str | None
+    output: str | None
+    limit: int | None
+    batch_size: int
+    wipe: bool
+    force: bool
+
+
+@dataclass
 class BuildBaillyConfig:
     source_path: str
     output: str | None
@@ -164,6 +174,10 @@ class BuildReaderConfig:
     phi_latin_dir: str | None
     tlg_e_dir: str | None
     sanskrit_dir: str | None
+    opengreekandlatin_latin_dir: str | None
+    opengreekandlatin_csel_dir: str | None
+    opengreekandlatin_patrologia_dir: str | None
+    opengreekandlatin_church_fathers_dir: str | None
     alias_dir: str | None
     metadata_overlay_dir: str | None
     metadata_attribution_dir: str | None
@@ -252,6 +266,38 @@ def _build_dico_impl(config: BuildDicoConfig) -> None:
         batch_size=config.batch_size,
         wipe_existing=config.wipe,
         force_rebuild=config.force,
+        source_label="DICO French-Sanskrit",
+        source_language="san",
+        metalanguage="fr",
+        direction="fr->san",
+    )
+    builder = DicoBuilder(builder_config)
+    result = builder.build()
+    _print_build_result(result)
+
+
+def _build_georges_1913_impl(config: BuildGeorges1913Config) -> None:
+    _ensure_logging()
+    from langnet.databuild.dico import DicoBuildConfig, DicoBuilder  # noqa: PLC0415
+    from langnet.databuild.paths import default_georges_1913_path  # noqa: PLC0415
+
+    output_path = (
+        Path(config.output).expanduser()
+        if config.output
+        else default_georges_1913_path()
+    )
+    builder_config = DicoBuildConfig(
+        source_dir=Path(config.source_dir).expanduser() if config.source_dir else None,
+        output_path=output_path,
+        limit=config.limit,
+        batch_size=config.batch_size,
+        wipe_existing=config.wipe,
+        force_rebuild=config.force,
+        lex_id="GEORGES_1913_DEM_LAT",
+        source_label="Georges 1913 German-Latin",
+        source_language="lat",
+        metalanguage="de",
+        direction="lat->de",
     )
     builder = DicoBuilder(builder_config)
     result = builder.build()
@@ -429,6 +475,26 @@ def _build_reader_impl(config: BuildReaderConfig) -> None:
         phi_latin_dir=Path(config.phi_latin_dir).expanduser() if config.phi_latin_dir else None,
         tlg_e_dir=Path(config.tlg_e_dir).expanduser() if config.tlg_e_dir else None,
         sanskrit_dir=Path(config.sanskrit_dir).expanduser() if config.sanskrit_dir else None,
+        opengreekandlatin_latin_dir=(
+            Path(config.opengreekandlatin_latin_dir).expanduser()
+            if config.opengreekandlatin_latin_dir
+            else None
+        ),
+        opengreekandlatin_csel_dir=(
+            Path(config.opengreekandlatin_csel_dir).expanduser()
+            if config.opengreekandlatin_csel_dir
+            else None
+        ),
+        opengreekandlatin_patrologia_dir=(
+            Path(config.opengreekandlatin_patrologia_dir).expanduser()
+            if config.opengreekandlatin_patrologia_dir
+            else None
+        ),
+        opengreekandlatin_church_fathers_dir=(
+            Path(config.opengreekandlatin_church_fathers_dir).expanduser()
+            if config.opengreekandlatin_church_fathers_dir
+            else None
+        ),
         alias_dir=Path(config.alias_dir).expanduser() if config.alias_dir else None,
         metadata_overlay_dir=(
             Path(config.metadata_overlay_dir).expanduser() if config.metadata_overlay_dir else None
@@ -619,8 +685,9 @@ def build_gaffiot(  # noqa: PLR0913
     type=click.Path(),
     default=None,
     help=(
-        "Path to DICO HTML directory "
-        "(defaults to ~/langnet-tools/sanskrit-heritage/webroot/htdocs/DICO/)."
+        "Path to DICO source directory (legacy HTML) or .col file. "
+        "Defaults to ~/opengreekandlatin/Latin/Georges_1913-avr17.col when present "
+        "(fallbacks to legacy DICO paths if available)."
     ),
 )
 @click.option(
@@ -659,6 +726,55 @@ def build_dico(  # noqa: PLR0913
         force=force,
     )
     _build_dico_impl(config)
+
+
+@databuild.command("build-georges-1913")
+@click.option(
+    "--source-dir",
+    type=click.Path(),
+    default=None,
+    help=(
+        "Path to Georges 1913 source directory (.col file or legacy directory). "
+        "Defaults to ~/opengreekandlatin/Latin/Georges_1913-avr17.col when present "
+        "(fallbacks to legacy DICO paths if available)."
+    ),
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output DuckDB path (defaults to data/build/lex_georges_1913.duckdb)",
+)
+@click.option("--limit", type=int, help="Limit rows for testing.")
+@click.option(
+    "--batch-size",
+    type=int,
+    default=500,
+    show_default=True,
+    help="Rows per batch while inserting.",
+)
+@click.option(
+    "--wipe/--no-wipe", default=True, show_default=True, help="Delete existing DB before building."
+)
+@click.option("--force", is_flag=True, help="Rebuild even if output exists without wiping.")
+def build_georges_1913(  # noqa: PLR0913
+    source_dir: str | None,
+    output: str | None,
+    limit: int | None,
+    batch_size: int,
+    wipe: bool,
+    force: bool,
+):
+    """Build the Georges 1913 (German) Latin dictionary index from `.col` data."""
+    config = BuildGeorges1913Config(
+        source_dir=source_dir,
+        output=output,
+        limit=limit,
+        batch_size=batch_size,
+        wipe=wipe,
+        force=force,
+    )
+    _build_georges_1913_impl(config)
 
 
 @databuild.command("bailly")
@@ -1566,6 +1682,34 @@ def _motd_pool_log(*, json_output: bool, message: str) -> None:
     help="Sanskrit JSON/plain text corpus root.",
 )
 @click.option(
+    "--opengreekandlatin-latin-dir",
+    type=click.Path(),
+    default=str(Path.home() / "opengreekandlatin" / "Latin"),
+    show_default=True,
+    help="Open Greek and Latin Latin-text TEI directory.",
+)
+@click.option(
+    "--opengreekandlatin-csel-dir",
+    type=click.Path(),
+    default=str(Path.home() / "opengreekandlatin" / "csel-dev"),
+    show_default=True,
+    help="Open Greek and Latin CSEL corpus root.",
+)
+@click.option(
+    "--opengreekandlatin-patrologia-dir",
+    type=click.Path(),
+    default=str(Path.home() / "opengreekandlatin" / "patrologia_latina-dev"),
+    show_default=True,
+    help="Open Greek and Latin Patrologia Latina corpus root.",
+)
+@click.option(
+    "--opengreekandlatin-church-fathers-dir",
+    type=click.Path(),
+    default=str(Path.home() / "opengreekandlatin" / "church_fathers-dev"),
+    show_default=True,
+    help="Open Greek and Latin Church Fathers corpus root.",
+)
+@click.option(
     "--alias-dir",
     type=click.Path(),
     default="data/curated/reader_aliases",
@@ -1637,6 +1781,10 @@ def build_reader(  # noqa: PLR0913
     phi_latin_dir: str | None,
     tlg_e_dir: str | None,
     sanskrit_dir: str | None,
+    opengreekandlatin_latin_dir: str | None,
+    opengreekandlatin_csel_dir: str | None,
+    opengreekandlatin_patrologia_dir: str | None,
+    opengreekandlatin_church_fathers_dir: str | None,
     alias_dir: str | None,
     metadata_overlay_dir: str | None,
     metadata_attribution_dir: str | None,
@@ -1659,6 +1807,10 @@ def build_reader(  # noqa: PLR0913
             phi_latin_dir=phi_latin_dir,
             tlg_e_dir=tlg_e_dir,
             sanskrit_dir=sanskrit_dir,
+            opengreekandlatin_latin_dir=opengreekandlatin_latin_dir,
+            opengreekandlatin_csel_dir=opengreekandlatin_csel_dir,
+            opengreekandlatin_patrologia_dir=opengreekandlatin_patrologia_dir,
+            opengreekandlatin_church_fathers_dir=opengreekandlatin_church_fathers_dir,
             alias_dir=alias_dir,
             metadata_overlay_dir=metadata_overlay_dir,
             metadata_attribution_dir=metadata_attribution_dir,

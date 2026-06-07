@@ -1,0 +1,95 @@
+concepts:
+  - id: "aeschylus-agamemnon-oresteia-opening"
+    language: "grc"
+    labels:
+      - "Aeschylus Agamemnon"
+      - "Agamemnon"
+      - "Oresteia"
+      - "Clytemnestra"
+      - "watchman scene"
+      - "Greek tragedy"
+      - "Ἀγαμέμνων"
+    source_queries:
+      - "Aeschylus Agamemnon Oresteia Greek tragedy"
+      - "Agamemnon watchman opening"
+      - "Aeschylus Agamemnon Clytemnestra"
+    explanation: >
+      Agamemnon is a core tragedy for students moving from narrative Greek into
+      dramatic lyric and dialogue: it foregrounds choral diction, compound
+      imagery, house-of-Atreus myth, and justice vocabulary.
+
+  - id: "aeschylus-persians-salamis"
+    language: "grc"
+    labels:
+      - "Aeschylus Persians"
+      - "Persians"
+      - "Persae"
+      - "Salamis"
+      - "historical tragedy"
+      - "Persian War"
+      - "Πέρσαι"
+    source_queries:
+      - "Aeschylus Persians earliest surviving Greek tragedy"
+      - "Persians Salamis Aeschylus"
+      - "Aeschylus Persae Greek tragedy"
+    explanation: >
+      Persians is especially valuable because it treats recent historical events
+      through tragedy, giving learners a bridge between historical vocabulary,
+      choral lament, royal language, and Athenian memory of the Persian Wars.
+
+  - id: "aeschylus-prometheus-bound-defiance"
+    language: "grc"
+    labels:
+      - "Aeschylus Prometheus Bound"
+      - "Prometheus Bound"
+      - "Prometheus"
+      - "Zeus"
+      - "fire and punishment"
+      - "Greek tragedy"
+      - "Προμηθεὺς Δεσμώτης"
+    source_queries:
+      - "Aeschylus Prometheus Bound Greek tragedy"
+      - "Prometheus Bound Zeus fire punishment"
+      - "Prometheus Desmotes Aeschylus"
+    explanation: >
+      Prometheus Bound is a strong classroom target for mythic narrative,
+      suffering vocabulary, divine-political language, and debate over power,
+      justice, and benefaction.
+
+  - id: "aeschylus-suppliants-danaids"
+    language: "grc"
+    labels:
+      - "Aeschylus Suppliants"
+      - "Suppliants"
+      - "Danaids"
+      - "supplication"
+      - "forced marriage"
+      - "Greek tragedy"
+      - "Ἱκέτιδες"
+    source_queries:
+      - "Aeschylus Suppliants Danaids supplication"
+      - "Aeschylus Hiketides Greek tragedy"
+      - "Suppliants forced marriage Danaids"
+    explanation: >
+      Suppliants is useful for supplication formulas, kinship and asylum
+      vocabulary, choral voice, and ethical discussion around consent, civic
+      decision-making, and divine protection.
+
+  - id: "demosthenes-against-conon-hubris-assault"
+    language: "grc"
+    labels:
+      - "Demosthenes Against Conon"
+      - "Against Conon"
+      - "κατὰ Κόνωνος"
+      - "hubris"
+      - "assault case"
+      - "Attic oratory"
+      - "private speech"
+    source_queries:
+      - "Demosthenes Against Conon Greek oratory"
+      - "Demosthenes Against Conon assault hubris"
+      - "κατὰ Κόνωνος αἰκείας"
+    explanation: >
+      Against Conon gives students a vivid Attic prose alternative to drama and
+      philosophy, with legal narration, public/private honor vocabulary, and
+      practical courtroom rhetoric.

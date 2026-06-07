@@ -117,6 +117,22 @@ _CATALOG: tuple[ToolCatalogEntry, ...] = (
         notes="CLTK source for Charlton T. Lewis, An Elementary Latin Dictionary (1890).",
     ),
     ToolCatalogEntry(
+        language="lat",
+        tool_filter="georges_1913",
+        label="Georges 1913",
+        role="Latin-German dictionary entries",
+        source_tools=("georges_1913",),
+        plan_tools=(
+            "fetch.georges_1913",
+            "extract.georges_1913.json",
+            "derive.georges_1913.entries",
+            "claim.georges_1913.entries",
+        ),
+        dictionary_genre="lexicographic",
+        translation_capable=True,
+        notes="German source entries can be projected through the translation cache.",
+    ),
+    ToolCatalogEntry(
         language="grc",
         tool_filter="diogenes",
         label="Diogenes / LSJ",

@@ -1,0 +1,98 @@
+aliases:
+  - alias: "Quintilian Institutio Oratoria"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi1002.phi001"
+    display: "Quintilian, Institutio Oratoria"
+    sources: ["web_research", "manual"]
+
+  - alias: "Quint. Inst."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi1002.phi001"
+    display: "Quintilian, Institutio Oratoria"
+    sources: ["manual"]
+
+  - alias: "Suetonius De Vita Caesarum"
+    language: "lat"
+    kind: "work_title"
+    target: "langnet:reader:phi:lat1348.001"
+    display: "Suetonius, De Vita Caesarum"
+    sources: ["web_research", "manual"]
+
+  - alias: "Suetonius Twelve Caesars"
+    language: "lat"
+    kind: "work_title"
+    target: "langnet:reader:phi:lat1348.001"
+    display: "Suetonius, De Vita Caesarum"
+    sources: ["manual"]
+
+  - alias: "Suetonius Divus Augustus"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi1348.abo012"
+    display: "Suetonius, Divus Augustus"
+    sources: ["web_research", "manual"]
+
+  - alias: "Suet. Aug."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi1348.abo012"
+    display: "Suetonius, Divus Augustus"
+    sources: ["manual"]
+
+  - alias: "Velleius Historia Romana"
+    language: "lat"
+    kind: "work_title"
+    target: "langnet:reader:phi:lat1044.001"
+    display: "Velleius Paterculus, Historia Romana"
+    sources: ["web_research", "manual"]
+
+  - alias: "Vell. Pat."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "langnet:reader:phi:lat1044.001"
+    display: "Velleius Paterculus, Historia Romana"
+    sources: ["manual"]
+
+  - alias: "Valerius Maximus Facta et Dicta Memorabilia"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi1038.phi001"
+    display: "Valerius Maximus, Facta et Dicta Memorabilia"
+    sources: ["web_research", "manual"]
+
+  - alias: "Val. Max."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi1038.phi001"
+    display: "Valerius Maximus, Facta et Dicta Memorabilia"
+    sources: ["manual"]
+
+  - alias: "Ammianus Res Gestae"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:stoa0023.stoa001"
+    display: "Ammianus Marcellinus, Res Gestae"
+    sources: ["web_research", "manual"]
+
+  - alias: "Amm. Marc."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:stoa0023.stoa001"
+    display: "Ammianus Marcellinus, Res Gestae"
+    sources: ["manual"]
+
+  - alias: "Eutropius Breviarium"
+    language: "lat"
+    kind: "work_title"
+    target: "langnet:reader:digiliblt:dlt000171"
+    display: "Eutropius, Breviarium ab urbe condita"
+    sources: ["web_research", "manual"]
+
+  - alias: "Eutr. Brev."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "langnet:reader:digiliblt:dlt000171"
+    display: "Eutropius, Breviarium ab urbe condita"
+    sources: ["manual"]

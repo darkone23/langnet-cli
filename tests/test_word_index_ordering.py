@@ -84,6 +84,7 @@ def test_word_index_browse_groups_source_native_rows_for_all_sources() -> None:
     assert [(group["source"], group["dictionary"]) for group in groups] == [
         ("gaffiot", "gaffiot"),
         ("lewis_1890", "lewis_1890"),
+        ("georges_1913", "georges_1913"),
         ("whitakers", "whitakers"),
         ("diogenes", "lewis_short"),
     ]

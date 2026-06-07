@@ -272,6 +272,42 @@ export type ReaderWorksResponse = {
 	};
 };
 
+export type ReaderSourceIndexItem = {
+	collection_id: string;
+	language: ReaderCatalogLanguage;
+	work_id: string;
+	title: string;
+	author: string;
+	author_id: string | null;
+	source_id: string;
+	cts_work_urn: string | null;
+	canonical_text_id: string | null;
+	edition_id: string | null;
+	edition_label: string;
+	source_path: string;
+	cts_edition_urn: string | null;
+	file_role: string;
+	file_status: string;
+	source_hash: string;
+	size_bytes?: number;
+	artifact_count: number;
+	segment_count: number;
+	token_count: number;
+	adapters: string;
+	artifact_paths: string;
+	source_witness_count: number;
+	source_witness_collections: string;
+};
+
+export type ReaderSourceIndexResponse = {
+	schema_version: string;
+	mode: 'source-index';
+	catalog_path: string;
+	request: Record<string, unknown>;
+	items: ReaderSourceIndexItem[];
+	catalog?: ReaderCatalog;
+};
+
 export type ReaderSearchQueryCandidate = {
 	query: string;
 	kind: string;

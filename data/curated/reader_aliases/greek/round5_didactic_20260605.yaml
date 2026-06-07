@@ -1,0 +1,98 @@
+aliases:
+  - alias: "Euripides Bacchae"
+    language: "grc"
+    kind: "work_title"
+    target: "langnet:reader:tlg:tlg0006.050"
+    display: "Euripides, Bacchae"
+    sources: ["web_research", "manual"]
+
+  - alias: "Eur. Bacch."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "langnet:reader:tlg:tlg0006.050"
+    display: "Euripides, Bacchae"
+    sources: ["manual"]
+
+  - alias: "Euripides Hippolytus"
+    language: "grc"
+    kind: "work_title"
+    target: "langnet:reader:tlg:tlg0006.038"
+    display: "Euripides, Hippolytus"
+    sources: ["web_research", "manual"]
+
+  - alias: "Eur. Hipp."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "langnet:reader:tlg:tlg0006.038"
+    display: "Euripides, Hippolytus"
+    sources: ["manual"]
+
+  - alias: "Euripides Electra"
+    language: "grc"
+    kind: "work_title"
+    target: "langnet:reader:tlg:tlg0006.042"
+    display: "Euripides, Electra"
+    sources: ["web_research", "manual"]
+
+  - alias: "Eur. El."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "langnet:reader:tlg:tlg0006.042"
+    display: "Euripides, Electra"
+    sources: ["manual"]
+
+  - alias: "Xenophon Apology"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0032.tlg005"
+    display: "Xenophon, Apology"
+    sources: ["web_research", "manual"]
+
+  - alias: "Xen. Apol."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0032.tlg005"
+    display: "Xenophon, Apology"
+    sources: ["manual"]
+
+  - alias: "Aeschylus Seven Against Thebes"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg004"
+    display: "Aeschylus, Seven Against Thebes"
+    sources: ["web_research", "manual"]
+
+  - alias: "Aesch. Sept."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0085.tlg004"
+    display: "Aeschylus, Seven Against Thebes"
+    sources: ["manual"]
+
+  - alias: "Aeschylus Eumenides"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg007"
+    display: "Aeschylus, Eumenides"
+    sources: ["web_research", "manual"]
+
+  - alias: "Aesch. Eum."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0085.tlg007"
+    display: "Aeschylus, Eumenides"
+    sources: ["manual"]
+
+  - alias: "Aeschylus Choephoroi"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0085.tlg006"
+    display: "Aeschylus, Choephoroi"
+    sources: ["web_research", "manual"]
+
+  - alias: "Aesch. Cho."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0085.tlg006"
+    display: "Aeschylus, Choephoroi"
+    sources: ["manual"]

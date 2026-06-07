@@ -1,0 +1,21 @@
+aliases:
+  - alias: "Jesus ben Sira"
+    language: "lat"
+    kind: "work_title"
+    target: "langnet:reader:phi:civ0004.027"
+    display: "Sirach (Ben Sira, Ecclesiasticus)"
+    sources: ["manual", "vulgate"]
+
+  - alias: "Ben Sira"
+    language: "lat"
+    kind: "work_title"
+    target: "langnet:reader:phi:civ0004.027"
+    display: "Sirach (Ben Sira, Ecclesiasticus)"
+    sources: ["manual", "vulgate"]
+
+  - alias: "Ecclesiasticus"
+    language: "lat"
+    kind: "work_title"
+    target: "langnet:reader:phi:civ0004.027"
+    display: "Sirach (Ben Sira, Ecclesiasticus)"
+    sources: ["manual", "vulgate"]

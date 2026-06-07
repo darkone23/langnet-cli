@@ -1,0 +1,132 @@
+concepts:
+  - id: "euripides-bacchae-dionysus"
+    language: "grc"
+    labels:
+      - "Euripides Bacchae"
+      - "Bacchae"
+      - "Dionysus"
+      - "Pentheus"
+      - "maenads"
+      - "Greek tragedy"
+      - "Βάκχαι"
+    source_queries:
+      - "Euripides Bacchae Dionysus Greek tragedy"
+      - "Bacchae Pentheus Dionysus"
+      - "Euripides Bacchae maenads"
+    explanation: >
+      Bacchae is a major tragedy for religious vocabulary, recognition,
+      ecstatic ritual, gendered performance, and the grammar of divine
+      epiphany and civic collapse.
+
+  - id: "euripides-hippolytus-phaedra"
+    language: "grc"
+    labels:
+      - "Euripides Hippolytus"
+      - "Hippolytus"
+      - "Phaedra"
+      - "Aphrodite"
+      - "Artemis"
+      - "Greek tragedy"
+      - "Ἱππόλυτος"
+    source_queries:
+      - "Euripides Hippolytus Phaedra Greek tragedy"
+      - "Hippolytus Phaedra Aphrodite Artemis"
+      - "Euripides Hippolytus Greek"
+    explanation: >
+      Hippolytus is valuable for tragedy students because it combines divine
+      prologue, erotic pathology, oath and silence motifs, and intense kinship
+      and shame vocabulary.
+
+  - id: "euripides-electra-recognition"
+    language: "grc"
+    labels:
+      - "Euripides Electra"
+      - "Electra"
+      - "Orestes"
+      - "Clytemnestra"
+      - "recognition scene"
+      - "Greek tragedy"
+      - "Ἠλέκτρα"
+    source_queries:
+      - "Euripides Electra Greek tragedy"
+      - "Euripides Electra Orestes recognition"
+      - "Electra Clytemnestra Euripides"
+    explanation: >
+      Euripides' Electra supports comparison with Aeschylus and Sophocles,
+      especially around recognition, revenge, rural setting, and revision of
+      heroic myth.
+
+  - id: "xenophon-apology-socrates"
+    language: "grc"
+    labels:
+      - "Xenophon Apology"
+      - "Apology of Socrates"
+      - "Socrates"
+      - "Xenophon Socrates"
+      - "Greek prose"
+      - "Socratic literature"
+      - "Ἀπολογία"
+    source_queries:
+      - "Xenophon Apology Socrates Greek"
+      - "Xenophon Apology of Socrates"
+      - "Socratic apology Xenophon"
+    explanation: >
+      Xenophon's Apology is a compact prose counterpart to Platonic Socratic
+      texts, useful for comparing apology traditions, courtroom vocabulary, and
+      Socratic self-presentation.
+
+  - id: "aeschylus-seven-against-thebes-gates"
+    language: "grc"
+    labels:
+      - "Aeschylus Seven Against Thebes"
+      - "Seven Against Thebes"
+      - "Eteocles"
+      - "Polyneices"
+      - "Theban myth"
+      - "Greek tragedy"
+      - "Ἑπτὰ ἐπὶ Θήβας"
+    source_queries:
+      - "Aeschylus Seven Against Thebes Eteocles Polyneices"
+      - "Seven Against Thebes gates"
+      - "Aeschylus Theban trilogy"
+    explanation: >
+      Seven Against Thebes gives students martial, civic, and kinship language
+      organized around the gate sequence and the fratricidal climax of Theban
+      myth.
+
+  - id: "aeschylus-eumenides-furies-athena"
+    language: "grc"
+    labels:
+      - "Aeschylus Eumenides"
+      - "Eumenides"
+      - "Furies"
+      - "Athena"
+      - "Oresteia"
+      - "Areopagus"
+      - "Εὐμενίδες"
+    source_queries:
+      - "Aeschylus Eumenides Oresteia Furies Athena"
+      - "Eumenides Areopagus trial"
+      - "Aeschylus Furies Athena"
+    explanation: >
+      Eumenides is central for legal, civic, and religious Greek, ending the
+      Oresteia with trial language, persuasion, and the transformation of
+      vengeance into civic order.
+
+  - id: "aeschylus-choephoroi-libation-bearers"
+    language: "grc"
+    labels:
+      - "Aeschylus Libation Bearers"
+      - "Choephoroi"
+      - "Χοηφόροι"
+      - "Orestes"
+      - "Electra"
+      - "Oresteia"
+      - "revenge"
+    source_queries:
+      - "Aeschylus Libation Bearers Choephoroi Orestes"
+      - "Choephoroi Electra Orestes"
+      - "Aeschylus Oresteia Libation Bearers"
+    explanation: >
+      Choephoroi is a high-value middle Oresteia text for lament, recognition,
+      ritual libation, revenge commands, and inherited guilt vocabulary.

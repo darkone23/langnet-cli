@@ -1,0 +1,95 @@
+concepts:
+  - id: "seneca-de-brevitate-vitae-time"
+    language: "lat"
+    labels:
+      - "Seneca De Brevitate Vitae"
+      - "On the Shortness of Life"
+      - "maior pars mortalium"
+      - "Stoic prose"
+      - "time and life"
+      - "Latin philosophy"
+      - "Seneca essays"
+    source_queries:
+      - "Seneca De Brevitate Vitae"
+      - "De Brevitate Vitae maior pars mortalium"
+      - "Seneca On the Shortness of Life Latin"
+    explanation: >
+      De Brevitate Vitae is a compact Stoic prose target for moral vocabulary,
+      indirect discourse, antithesis, and the rhetoric of time, leisure, and
+      wasted life.
+
+  - id: "apuleius-metamorphoses-golden-ass"
+    language: "lat"
+    labels:
+      - "Apuleius Metamorphoses"
+      - "Golden Ass"
+      - "Asinus Aureus"
+      - "at ego tibi"
+      - "Latin novel"
+      - "Cupid and Psyche"
+      - "imperial prose"
+    source_queries:
+      - "Apuleius Metamorphoses Golden Ass Latin novel"
+      - "Apuleius Metamorphoses at ego tibi"
+      - "Cupid and Psyche Apuleius Latin"
+    explanation: >
+      Apuleius' Metamorphoses broadens Latin search coverage into imperial
+      narrative prose, colloquial and ornate registers, embedded tales, and
+      novelistic transformation.
+
+  - id: "petronius-satyricon-trimalchio"
+    language: "lat"
+    labels:
+      - "Petronius Satyricon"
+      - "Satyricon"
+      - "Cena Trimalchionis"
+      - "Trimalchio"
+      - "Latin novel"
+      - "comic prose"
+      - "Neronian literature"
+    source_queries:
+      - "Petronius Satyricon Latin novel Trimalchio"
+      - "Cena Trimalchionis Petronius"
+      - "Petronius Satyricon comic prose"
+    explanation: >
+      Satyricon is useful for non-classroom-standard Latin registers, satire,
+      social performance, freedman speech, and the literary history of the Roman
+      novel.
+
+  - id: "cicero-laelius-de-amicitia"
+    language: "lat"
+    labels:
+      - "Cicero Laelius De Amicitia"
+      - "De Amicitia"
+      - "Laelius"
+      - "friendship"
+      - "Ciceronian dialogue"
+      - "moral philosophy"
+      - "Q. Mucius Augur"
+    source_queries:
+      - "Cicero Laelius De Amicitia friendship"
+      - "Laelius De Amicitia Q Mucius Augur"
+      - "Cicero on friendship Latin"
+    explanation: >
+      Laelius De Amicitia gives learners polished Ciceronian prose in a shorter
+      ethical dialogue, centered on friendship, exempla, balanced periods, and
+      Roman moral vocabulary.
+
+  - id: "lucan-pharsalia-civil-war"
+    language: "lat"
+    labels:
+      - "Lucan Pharsalia"
+      - "Bellum Civile"
+      - "bella per Emathios"
+      - "Caesar and Pompey"
+      - "Roman civil war"
+      - "Neronian epic"
+      - "Latin epic"
+    source_queries:
+      - "Lucan Pharsalia bella per Emathios"
+      - "Lucan Bellum Civile Caesar Pompey"
+      - "Pharsalia Roman civil war epic"
+    explanation: >
+      Pharsalia is a major post-Vergilian epic target for civil-war vocabulary,
+      anti-epic style, rhetorical excess, and comparison with Vergil and
+      historical prose.

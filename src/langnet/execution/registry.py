@@ -10,6 +10,7 @@ from langnet.execution.handlers import cltk as cltk_handlers
 from langnet.execution.handlers import dico as dico_handlers
 from langnet.execution.handlers import diogenes as diogenes_handlers
 from langnet.execution.handlers import gaffiot as gaffiot_handlers
+from langnet.execution.handlers import georges_1913 as georges_1913_handlers
 from langnet.execution.handlers import heritage as heritage_handlers
 from langnet.execution.handlers import lewis_1890 as lewis_1890_handlers
 from langnet.execution.handlers import spacy as spacy_handlers
@@ -60,6 +61,10 @@ def default_registry(use_stubs: bool = False) -> ToolRegistry:
     extract["extract.gaffiot.json"] = gaffiot_handlers.extract_gaffiot_json
     derive["derive.gaffiot.entries"] = gaffiot_handlers.derive_gaffiot_entries
     claim["claim.gaffiot.entries"] = gaffiot_handlers.claim_gaffiot_entries
+    # Local Georges 1913 handlers
+    extract["extract.georges_1913.json"] = georges_1913_handlers.extract_georges_1913_json
+    derive["derive.georges_1913.entries"] = georges_1913_handlers.derive_georges_1913_entries
+    claim["claim.georges_1913.entries"] = georges_1913_handlers.claim_georges_1913_entries
     # Local Bailly handlers
     extract["extract.bailly.json"] = bailly_handlers.extract_bailly_json
     derive["derive.bailly.entries"] = bailly_handlers.derive_bailly_entries

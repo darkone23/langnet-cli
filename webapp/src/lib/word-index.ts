@@ -581,6 +581,7 @@ export function wordIndexItemKey(item: WordIndexItem) {
 
 export function sourceToolFromWordIndex(source: string): ToolId {
 	if (source === 'gaffiot') return 'gaffiot';
+	if (source === 'georges_1913') return 'georges_1913';
 	if (source === 'lewis_1890') return 'lewis_1890';
 	if (source === 'bailly') return 'bailly';
 	if (source === 'dico') return 'dico';
@@ -794,7 +795,7 @@ function toolMeta(toolId: ToolId, mode?: LanguageMode) {
 }
 
 function isTranslatedSourceTool(tool: ToolId | undefined) {
-	return tool === 'dico' || tool === 'gaffiot' || tool === 'bailly';
+	return tool === 'dico' || tool === 'gaffiot' || tool === 'bailly' || tool === 'georges_1913';
 }
 
 function normalizeSectionKey(value: string | undefined) {

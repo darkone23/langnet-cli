@@ -9,6 +9,7 @@ import type {
 	ReaderSearchMode,
 	ReaderSearchResponse,
 	ReaderShelvesResponse,
+	ReaderSourceIndexResponse,
 	ReaderStructureResponse,
 	ReaderWorkDossierResponse,
 	ReaderWorksResponse
@@ -322,6 +323,43 @@ export async function readerSearch({
 			next_cursor: nullableString(pagination?.next_cursor),
 			prev_cursor: nullableString(pagination?.prev_cursor)
 		}
+	};
+}
+
+export async function readerSourceIndex({
+	catalogId,
+	language,
+	collection,
+	sourceId,
+	workId,
+	query,
+	limit,
+	options = {}
+}: {
+	catalogId: string | null;
+	language?: LanguageMode;
+	collection?: string;
+	sourceId?: string;
+	workId?: string;
+	query?: string;
+	limit: number;
+	options?: ReaderCliOptions;
+}): Promise<ReaderSourceIndexResponse & { catalog: ReaderCatalog }> {
+	const catalog = await resolveReaderCatalog(catalogId, language, options);
+	const args = ['source-index'];
+	if (language) args.push('--language', language);
+	if (collection) args.push('--collection', collection);
+	if (sourceId) args.push('--source-id', sourceId);
+	if (workId) args.push('--work-id', workId);
+	if (query) args.push('--query', query);
+	args.push('--limit', String(limit));
+	args.push('--output', 'json');
+	const rawPayload = await runReaderJsonCommand(catalog, args, options);
+	return {
+		...(withCatalog(rawPayload, catalog) as Omit<ReaderSourceIndexResponse, 'items'> & {
+			catalog: ReaderCatalog;
+		}),
+		items: arrayOfObjects(rawPayload.items).map(mapReaderSourceIndexItem)
 	};
 }
 
@@ -759,6 +797,35 @@ function mapReaderWork(item: JsonObject) {
 		metadata_attributions: arrayOfObjects(item.metadata_attributions).map(
 			mapReaderMetadataAttribution
 		)
+	};
+}
+
+function mapReaderSourceIndexItem(item: JsonObject) {
+	return {
+		collection_id: stringValue(item.collection_id),
+		language: normalizeLanguage(stringValue(item.language)),
+		work_id: stringValue(item.work_id),
+		title: stringValue(item.title),
+		author: stringValue(item.author),
+		author_id: nullableString(item.author_id),
+		source_id: stringValue(item.source_id),
+		cts_work_urn: nullableString(item.cts_work_urn),
+		canonical_text_id: nullableString(item.canonical_text_id),
+		edition_id: nullableString(item.edition_id),
+		edition_label: stringValue(item.edition_label),
+		source_path: stringValue(item.source_path),
+		cts_edition_urn: nullableString(item.cts_edition_urn),
+		file_role: stringValue(item.file_role),
+		file_status: stringValue(item.file_status),
+		source_hash: stringValue(item.source_hash),
+		size_bytes: numberValue(item.size_bytes),
+		artifact_count: numberValue(item.artifact_count),
+		segment_count: numberValue(item.segment_count),
+		token_count: numberValue(item.token_count),
+		adapters: stringValue(item.adapters),
+		artifact_paths: stringValue(item.artifact_paths),
+		source_witness_count: numberValue(item.source_witness_count),
+		source_witness_collections: stringValue(item.source_witness_collections)
 	};
 }
 

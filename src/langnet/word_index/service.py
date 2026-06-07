@@ -18,6 +18,7 @@ from langnet.databuild.paths import (
     default_dico_path,
     default_diogenes_path,
     default_gaffiot_path,
+    default_georges_1913_path,
     default_lewis_1890_path,
     default_strongs_greek_path,
     default_whitakers_path,
@@ -27,6 +28,7 @@ from langnet.execution.handlers.bailly import normalize_bailly_headword
 from langnet.execution.handlers.cdsl import _slp1_to_iast, _strip_sanskrit_pitch_accents, _to_slp1
 from langnet.execution.handlers.dico import normalize_dico_headword
 from langnet.execution.handlers.gaffiot import normalize_gaffiot_headword
+from langnet.execution.handlers.georges_1913 import normalize_georges_1913_headword
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.storage.db import connect_duckdb_ro
 from langnet.tool_catalog import LANGUAGE_LABELS, LanguageCode, canonical_language
@@ -39,6 +41,7 @@ WordIndexSource = Literal[
     "cdsl",
     "dico",
     "gaffiot",
+    "georges_1913",
     "lewis_1890",
     "whitakers",
     "diogenes",
@@ -52,10 +55,11 @@ _SOURCE_ORDER = {
     "dico": 1,
     "gaffiot": 2,
     "lewis_1890": 3,
-    "whitakers": 4,
-    "diogenes": 5,
-    "bailly": 6,
-    "strongs_greek": 7,
+    "georges_1913": 4,
+    "whitakers": 5,
+    "diogenes": 6,
+    "bailly": 7,
+    "strongs_greek": 8,
 }
 _LANGUAGE_ORDER = {"san": 0, "grc": 1, "lat": 2}
 NON_ASCII_CODEPOINT_MIN = 128
@@ -129,6 +133,7 @@ class WordIndexPaths:
     diogenes_lat: Path
     diogenes_grc: Path
     lewis_1890: Path = Path("__missing_word_index_lewis_1890.duckdb__")
+    georges_1913: Path = Path("__missing_word_index_georges_1913.duckdb__")
     bailly: Path = Path("__missing_word_index_bailly.duckdb__")
     strongs_greek: Path = Path("__missing_word_index_strongs_greek.duckdb__")
     whitakers: Path = Path("__missing_word_index_whitakers.duckdb__")
@@ -141,6 +146,7 @@ class WordIndexPaths:
             dico=default_dico_path(),
             gaffiot=default_gaffiot_path(),
             lewis_1890=default_lewis_1890_path(),
+            georges_1913=default_georges_1913_path(),
             diogenes_lat=default_diogenes_path("lat"),
             diogenes_grc=default_diogenes_path("grc"),
             bailly=default_bailly_path(),
@@ -161,6 +167,7 @@ def word_index_sources_payload(
         _dico_status(paths, languages),
         _gaffiot_status(paths, languages),
         _lewis_1890_status(paths, languages),
+        _georges_1913_status(paths, languages),
         _whitakers_status(paths, languages),
         *_diogenes_statuses(paths, languages),
         _bailly_status(paths, languages),
@@ -432,6 +439,15 @@ def _source_neighborhoods(  # noqa: C901, PLR0913
                 warnings=warnings,
             )
         )
+    elif source_id == "georges_1913" and "lat" in languages:
+        neighborhoods.extend(
+            _neighborhood_georges_1913(
+                paths.georges_1913,
+                query=query,
+                radius=radius,
+                warnings=warnings,
+            )
+        )
     elif source_id == "whitakers" and "lat" in languages:
         neighborhoods.extend(
             _neighborhood_whitakers(
@@ -541,6 +557,10 @@ def _collect_wheel_items(  # noqa: C901, PLR0913
         elif source_id == "lewis_1890" and "lat" in languages:
             items.extend(
                 _wheel_lewis_1890(paths.lewis_1890, seed=seed, limit=limit, warnings=warnings)
+            )
+        elif source_id == "georges_1913" and "lat" in languages:
+            items.extend(
+                _wheel_georges_1913(paths.georges_1913, seed=seed, limit=limit, warnings=warnings)
             )
         elif source_id == "whitakers" and "lat" in languages:
             items.extend(
@@ -873,6 +893,7 @@ def _sources_for_request(source: str, languages: Sequence[LanguageCode]) -> list
         if "lat" in languages:
             sources.append("gaffiot")
             sources.append("lewis_1890")
+            sources.append("georges_1913")
             sources.append("whitakers")
         if "grc" in languages or "lat" in languages:
             sources.append("diogenes")
@@ -923,6 +944,12 @@ def _collect_items(  # noqa: C901, PLR0913
         elif source_id == "lewis_1890" and "lat" in languages:
             items.extend(
                 _list_lewis_1890(paths.lewis_1890, prefix=prefix, limit=limit, warnings=warnings)
+            )
+        elif source_id == "georges_1913" and "lat" in languages:
+            items.extend(
+                _list_georges_1913(
+                    paths.georges_1913, prefix=prefix, limit=limit, warnings=warnings
+                )
             )
         elif source_id == "whitakers" and "lat" in languages:
             items.extend(
@@ -1031,6 +1058,19 @@ def _browse_groups(  # noqa: C901, PLR0913
                     prefix=prefix,
                     items=_list_lewis_1890(
                         paths.lewis_1890, prefix=prefix, limit=limit, warnings=warnings
+                    ),
+                    homographs=homographs,
+                )
+            )
+        elif source_id == "georges_1913" and language == "lat":
+            groups.append(
+                _browse_group(
+                    language=language,
+                    source="georges_1913",
+                    dictionary="georges_1913",
+                    prefix=prefix,
+                    items=_list_georges_1913(
+                        paths.georges_1913, prefix=prefix, limit=limit, warnings=warnings
                     ),
                     homographs=homographs,
                 )
@@ -1828,6 +1868,165 @@ def _wheel_lewis_1890(
     return [_lewis_1890_item(row) for row in rows]
 
 
+def _list_georges_1913(
+    path: Path,
+    *,
+    prefix: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "georges_1913", path)
+        return []
+    params: list[object] = []
+    where = ""
+    if prefix:
+        norm = normalize_georges_1913_headword(prefix)
+        where = "WHERE headword_norm LIKE ? OR lower(headword_roma) LIKE ?"
+        params.extend([f"{norm}%", f"{norm}%"])
+    sql = f"""
+        SELECT entry_id, occurrence, headword_roma, headword_norm, source_page
+        FROM entries_fr
+        {where}
+        ORDER BY headword_norm, source_page, entry_id, occurrence
+    """
+    if limit > 0:
+        sql += " LIMIT ?"
+        params.append(limit)
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(sql, params).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "georges_1913", path, exc)
+        return []
+    return [_georges_1913_item(row) for row in rows]
+
+
+def _neighborhood_georges_1913(
+    path: Path,
+    *,
+    query: str,
+    radius: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "georges_1913", path)
+        return []
+    keys = _query_keys(query)
+    if not keys:
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            anchor_rows = conn.execute(
+                f"""
+                SELECT entry_id, occurrence, headword_roma, headword_norm, source_page
+                FROM entries_fr
+                WHERE lower(headword_norm) IN ({_placeholders(keys)})
+                   OR lower(headword_roma) IN ({_placeholders(keys)})
+                ORDER BY headword_norm, source_page, entry_id, occurrence
+                LIMIT 50
+                """,
+                [*keys, *keys],
+            ).fetchall()
+            anchor = _best_anchor([_georges_1913_item(row) for row in anchor_rows], query)
+            if anchor is None:
+                return []
+            metadata = cast(Mapping[str, object], anchor.get("metadata") or {})
+            anchor_sort = str(anchor["sort_key"])
+            source_page = str(metadata.get("source_page") or "")
+            entry_id = str(metadata.get("entry_id") or "")
+            occurrence = _as_int(metadata.get("occurrence"))
+            before_rows = conn.execute(
+                """
+                SELECT entry_id, occurrence, headword_roma, headword_norm, source_page
+                FROM entries_fr
+                WHERE headword_norm < ?
+                   OR (
+                     headword_norm = ?
+                     AND (
+                       source_page < ?
+                       OR (source_page = ? AND entry_id < ?)
+                       OR (source_page = ? AND entry_id = ? AND occurrence < ?)
+                     )
+                   )
+                ORDER BY headword_norm DESC, source_page DESC, entry_id DESC, occurrence DESC
+                LIMIT ?
+                """,
+                [
+                    anchor_sort,
+                    anchor_sort,
+                    source_page,
+                    source_page,
+                    entry_id,
+                    source_page,
+                    entry_id,
+                    occurrence,
+                    radius,
+                ],
+            ).fetchall()
+            after_rows = conn.execute(
+                """
+                SELECT entry_id, occurrence, headword_roma, headword_norm, source_page
+                FROM entries_fr
+                WHERE headword_norm > ?
+                   OR (
+                     headword_norm = ?
+                     AND (
+                       source_page > ?
+                       OR (source_page = ? AND entry_id > ?)
+                       OR (source_page = ? AND entry_id = ? AND occurrence > ?)
+                     )
+                   )
+                ORDER BY headword_norm, source_page, entry_id, occurrence
+                LIMIT ?
+                """,
+                [
+                    anchor_sort,
+                    anchor_sort,
+                    source_page,
+                    source_page,
+                    entry_id,
+                    source_page,
+                    entry_id,
+                    occurrence,
+                    radius,
+                ],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "georges_1913", path, exc)
+        return []
+    before = [_georges_1913_item(row) for row in reversed(before_rows)]
+    after = [_georges_1913_item(row) for row in after_rows]
+    return [_neighborhood(anchor, before=before, after=after, radius=radius, query=query)]
+
+
+def _wheel_georges_1913(
+    path: Path,
+    *,
+    seed: str,
+    limit: int,
+    warnings: list[dict[str, str]],
+) -> list[dict[str, object]]:
+    if not path.exists():
+        _warn_missing(warnings, "georges_1913", path)
+        return []
+    try:
+        with connect_duckdb_ro(path) as conn:
+            rows = conn.execute(
+                """
+                SELECT entry_id, occurrence, headword_roma, headword_norm, source_page
+                FROM entries_fr
+                ORDER BY hash(headword_norm || ?), headword_norm, source_page, entry_id, occurrence
+                LIMIT ?
+                """,
+                [seed, limit],
+            ).fetchall()
+    except Exception as exc:  # noqa: BLE001
+        _warn_error(warnings, "georges_1913", path, exc)
+        return []
+    return [_georges_1913_item(row) for row in rows]
+
+
 def _list_whitakers(
     path: Path,
     *,
@@ -2521,6 +2720,36 @@ def _lewis_1890_item(row: Sequence[object]) -> dict[str, object]:
             "headword_norm": headword_norm,
             "source_key": source_key,
             "entry_hash": entry_hash,
+        },
+    )
+
+
+def _georges_1913_item(row: Sequence[object]) -> dict[str, object]:
+    entry_id = str(row[0] or "")
+    occurrence = _as_int(row[1])
+    headword_roma = str(row[2] or "")
+    headword_norm = str(row[3] or normalize_georges_1913_headword(headword_roma or entry_id))
+    source_page = str(row[4] or "")
+    display = headword_roma or headword_norm
+    return _item(
+        language="lat",
+        source="georges_1913",
+        dictionary="georges_1913",
+        canonical_name=display,
+        canonical_key=_plain_index_key(headword_norm),
+        source_name=display,
+        lookup=headword_norm,
+        display_primary=display,
+        transliteration=headword_norm,
+        source_key=headword_norm,
+        sort_key=headword_norm,
+        source_order_key=_order_key(headword_norm, source_page, entry_id, occurrence),
+        source_ref=f"georges_1913:{source_page}#{entry_id}:{occurrence}",
+        extra={
+            "entry_id": entry_id,
+            "headword_norm": headword_norm,
+            "occurrence": occurrence,
+            "source_page": source_page,
         },
     )
 
@@ -3224,6 +3453,17 @@ def _lewis_1890_status(
     if "lat" not in languages:
         return None
     return _duckdb_status("lewis_1890", "lat", "lewis_1890", paths.lewis_1890, "entries")
+
+
+def _georges_1913_status(
+    paths: WordIndexPaths,
+    languages: Sequence[LanguageCode],
+) -> dict[str, object] | None:
+    if "lat" not in languages:
+        return None
+    return _duckdb_status(
+        "georges_1913", "lat", "georges_1913", paths.georges_1913, "entries_fr"
+    )
 
 
 def _whitakers_status(

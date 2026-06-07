@@ -23,8 +23,7 @@
 		<strong>Authors</strong>
 		<small>{languageLabel} author index</small>
 		<p>
-			Begin with teachers, poets, historians, and witnesses, then open the works attached to their
-			names.
+			Find names and attributions, then open the works attached to them.
 		</p>
 	</button>
 	<button type="button" class="orion-reader-shelf-card" onclick={() => onSelectView('search')}>
@@ -32,7 +31,8 @@
 		<strong>Text search</strong>
 		<small>Trace words and phrases inside {languageLabel} texts</small>
 		<p>
-			Follow a form through its passages, with enough nearby context to turn a match into a lesson.
+			Search passage contents rather than catalog names, with enough context to turn a match into
+			a lesson.
 		</p>
 	</button>
 </div>

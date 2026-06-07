@@ -6,7 +6,7 @@ export type RequestCost = {
 	reason: string;
 };
 
-const expensiveDictionaries = new Set(['diogenes', 'bailly', 'gaffiot', 'cdsl']);
+const expensiveDictionaries = new Set(['diogenes', 'bailly', 'gaffiot', 'georges_1913', 'cdsl']);
 
 export function requestCostFromUrl(url: URL): RequestCost {
 	let score = 1;

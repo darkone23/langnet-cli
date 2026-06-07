@@ -70,3 +70,22 @@ def test_dico_builder_minimal_html() -> None:
             assert "entries_fr_page_headword_idx" in indexes
         finally:
             conn.close()
+
+
+def test_col_parser_keeps_internal_bold_glosses_inside_entry() -> None:
+    html = (
+        "<b>animus</b>, ī, m. <i>I) die <b>Seele,</b> als Prinzip des geistigen "
+        "Lebens, der <b>Geist</b>.</i> Weitere Belege. "
+        "<b>anio</b>, īre, <i>atmen.</i>"
+    )
+    builder = DicoBuilder(DicoBuildConfig(source_dir=Path("Georges_1913.col")))
+    builder._iter_col_chunks = lambda: iter([html.encode("utf-8")])  # type: ignore[method-assign]
+
+    entries = list(builder._parse_col_entries({}))
+
+    assert [entry[0] for entry in entries] == ["animus", "anio"]
+    animus = entries[0]
+    assert "Seele" in animus[7]
+    assert "Geist" in animus[7]
+    assert "Weitere Belege" in animus[7]
+    assert "atmen" not in animus[7]

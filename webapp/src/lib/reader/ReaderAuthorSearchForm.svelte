@@ -59,7 +59,7 @@
 		<input
 			value={workQuery}
 			type="search"
-			placeholder="Search authors"
+			placeholder="Search authors (e.g. Jerome)"
 			autocomplete="off"
 			oninput={handleWorkQueryInput}
 		/>
@@ -84,6 +84,9 @@
 		<Search size={16} />
 		{loading ? 'Searching' : 'Search'}
 	</button>
+	<p class="orion-reader-author-search-hint">
+		Searches catalog author names and attributions. Use Text search for words inside passages.
+	</p>
 </form>
 
 <style>
@@ -94,6 +97,15 @@
 		gap: 0.55rem;
 		border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
 		padding-bottom: 1rem;
+	}
+
+	.orion-reader-author-search-hint {
+		grid-column: 1 / -1;
+		margin: -0.15rem 0 0;
+		color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+		font-family: var(--font-serif);
+		font-size: 0.82rem;
+		line-height: 1.35;
 	}
 
 	@media (max-width: 80rem) {

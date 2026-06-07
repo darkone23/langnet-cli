@@ -15,8 +15,10 @@ from langnet.reader.builder import (
     _aliases_for_registrations,
     _dedupe_book_registrations_for_catalog,
     _ensure_unique_canonical_text_ids,
+    _looks_like_opengreekandlatin_tei,
     _registrations_for_work_ids,
 )
+from langnet.reader.adapters import parse_perseus_tei_with_fallback_urn
 from langnet.reader.metadata_overlay import load_metadata_overlays
 from langnet.reader.models import ReaderAlias, ReaderBookArtifact, ReaderEdition, ReaderWork
 from langnet.reader.storage import ReaderBookRegistration, lookup_segment_by_address, register_book
@@ -90,6 +92,63 @@ def test_generated_ctsv2_ids_are_disambiguated_when_title_and_incipit_collide() 
         "urn:ctsv2:grc:fragmenta-agroikos-tlg0001-tlg001",
         "urn:ctsv2:grc:fragmenta-agroikos-tlg0002-tlg001",
     ]
+
+
+def test_opengreekandlatin_filter_excludes_metadata_and_non_tei_xml(tmp_path: Path) -> None:
+    builder = ReaderBuilder(ReaderBuildConfig())
+    text_path = tmp_path / "data" / "phi0001.phi001.xml"
+    text_path.parent.mkdir()
+    text_path.write_text("<TEI><text><body><p>arma virumque</p></body></text></TEI>")
+    build_path = tmp_path / "build.xml"
+    build_path.write_text("<project />")
+    catalog_path = tmp_path / "catalog.xml"
+    catalog_path.write_text("<catalog />")
+    target_path = tmp_path / "target" / "generated.xml"
+    target_path.parent.mkdir()
+    target_path.write_text("<TEI><text /></TEI>")
+
+    assert builder._is_opengreekandlatin_source_xml(text_path)
+    assert not builder._is_opengreekandlatin_source_xml(build_path)
+    assert not builder._is_opengreekandlatin_source_xml(catalog_path)
+    assert not builder._is_opengreekandlatin_source_xml(target_path)
+    assert _looks_like_opengreekandlatin_tei(text_path)
+
+
+def test_opengreekandlatin_fallback_urn_can_use_synthetic_namespace(tmp_path: Path) -> None:
+    path = tmp_path / "volume.xml"
+    path.write_text(
+        """
+        <TEI xml:lang="lat">
+          <teiHeader>
+            <fileDesc>
+              <titleStmt>
+                <title>Fixture Volume</title>
+                <author>Fixture Author</author>
+              </titleStmt>
+            </fileDesc>
+          </teiHeader>
+          <text>
+            <body>
+              <div type="edition">
+                <p n="1">lorem ipsum</p>
+              </div>
+            </body>
+          </text>
+        </TEI>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_perseus_tei_with_fallback_urn(
+        path,
+        collection_id="opengreekandlatin_csel",
+        fallback_namespace="langnet",
+        prefer_fallback_namespace=True,
+    )
+
+    assert parsed.work.work_id.startswith("urn:cts:langnet:")
+    assert parsed.work.collection_id == "opengreekandlatin_csel"
+    assert parsed.work.language == "lat"
 
 
 def test_generated_aliases_skip_ambiguous_source_identifiers() -> None:

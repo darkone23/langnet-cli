@@ -1,0 +1,91 @@
+aliases:
+  - alias: "Aeneid"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0690.phi003"
+    display: "Vergil, Aeneid"
+    sources: ["perseus"]
+
+  - alias: "Virgil Aeneid"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0690.phi003"
+    display: "Vergil, Aeneid"
+    sources: ["perseus"]
+
+  - alias: "Vergil Aeneid"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0690.phi003"
+    display: "Vergil, Aeneid"
+    sources: ["perseus"]
+
+  - alias: "Verg. Aen."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi0690.phi003"
+    display: "Vergil, Aeneid"
+    sources: ["perseus"]
+
+  - alias: "De bello Gallico"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0448.phi001"
+    display: "Caesar, De bello Gallico"
+    sources: ["perseus"]
+
+  - alias: "Caesar Gallic War"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0448.phi001"
+    display: "Caesar, De bello Gallico"
+    sources: ["perseus"]
+
+  - alias: "Caes. Gal."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi0448.phi001"
+    display: "Caesar, De bello Gallico"
+    sources: ["perseus"]
+
+  - alias: "Caes. BG"
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi0448.phi001"
+    display: "Caesar, De bello Gallico"
+    sources: ["perseus"]
+
+  - alias: "First Catilinarian"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0474.phi013"
+    display: "Cicero, In L. Catilinam"
+    sources: ["perseus"]
+
+  - alias: "In Catilinam 1"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0474.phi013"
+    display: "Cicero, In L. Catilinam"
+    sources: ["perseus"]
+
+  - alias: "Cic. Cat. 1"
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi0474.phi013"
+    display: "Cicero, In L. Catilinam"
+    sources: ["perseus"]
+
+  - alias: "Ovid Metamorphoses"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0959.phi006"
+    display: "Ovid, Metamorphoses"
+    sources: ["perseus"]
+
+  - alias: "Ov. Met."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi0959.phi006"
+    display: "Ovid, Metamorphoses"
+    sources: ["perseus"]

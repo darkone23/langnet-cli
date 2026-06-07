@@ -1,0 +1,70 @@
+aliases:
+  - alias: "Brihadaranyaka Upanishad"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_439"
+    display: "Bṛhadāraṇyakopaniṣad"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Bṛhadāraṇyaka Upaniṣad"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_439"
+    display: "Bṛhadāraṇyakopaniṣad"
+    sources: ["web_research", "dcs"]
+
+  - alias: "BU"
+    language: "san"
+    kind: "work_abbreviation"
+    target: "langnet:reader:sanskrit_dcs:dcs_439"
+    display: "Bṛhadāraṇyakopaniṣad"
+    sources: ["web_research", "manual"]
+
+  - alias: "Kaṭha Upaniṣad"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_457"
+    display: "Kaṭhopaniṣad"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Katha Upanishad"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_457"
+    display: "Kaṭhopaniṣad"
+    sources: ["web_research", "dcs"]
+
+  - alias: "KU"
+    language: "san"
+    kind: "work_abbreviation"
+    target: "langnet:reader:sanskrit_dcs:dcs_457"
+    display: "Kaṭhopaniṣad"
+    sources: ["web_research", "manual"]
+
+  - alias: "Rigveda"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_450"
+    display: "Ṛgveda"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Ṛgveda"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_450"
+    display: "Ṛgveda"
+    sources: ["web_research", "dcs"]
+
+  - alias: "RV"
+    language: "san"
+    kind: "work_abbreviation"
+    target: "langnet:reader:sanskrit_dcs:dcs_450"
+    display: "Ṛgveda"
+    sources: ["web_research", "manual"]
+
+  - alias: "Agni Suktam"
+    language: "san"
+    kind: "work_section"
+    target: "langnet:reader:sanskrit_dcs:dcs_450"
+    display: "Ṛgveda 1.1, Agni hymn"
+    sources: ["web_research", "manual"]

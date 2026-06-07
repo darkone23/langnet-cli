@@ -60,6 +60,15 @@ from langnet.reader.models import (
     ReaderSourceWitness,
     ReaderWorkRelation,
 )
+from langnet.reader.opengreekandlatin import (
+    discover_ogl_sources,
+    is_ogl_source_xml,
+    looks_like_ogl_tei,
+    ogl_source_files,
+    ogl_source_metadata,
+    parse_ogl_tei,
+    selected_ogl_sources,
+)
 from langnet.reader.source_enrichment import (
     parse_dcs_chapter_info_metadata,
     sync_dcs_corpus_metadata,
@@ -99,6 +108,10 @@ class ReaderBuildConfig:
     phi_latin_dir: Path | None = None
     tlg_e_dir: Path | None = None
     sanskrit_dir: Path | None = None
+    opengreekandlatin_latin_dir: Path | None = None
+    opengreekandlatin_csel_dir: Path | None = None
+    opengreekandlatin_patrologia_dir: Path | None = None
+    opengreekandlatin_church_fathers_dir: Path | None = None
     alias_dir: Path | None = None
     metadata_overlay_dir: Path | None = Path("data/curated/reader_metadata")
     metadata_attribution_dir: Path | None = Path("data/curated/reader_attributions")
@@ -219,6 +232,7 @@ class ReaderBuilder:
             self._register_sanskrit_source_metadata()
             self._register_perseus_source_metadata()
             self._register_first1k_greek_source_metadata()
+            self._register_opengreekandlatin_source_metadata()
 
             artifact_count = 0
             segment_count = 0
@@ -536,6 +550,10 @@ class ReaderBuilder:
         yield from self._digiliblt_sources()
         yield from self._perseus_sources()
         yield from self._first1k_greek_sources()
+        yield from self._opengreekandlatin_latin_sources()
+        yield from self._opengreekandlatin_csel_sources()
+        yield from self._opengreekandlatin_patrologia_sources()
+        yield from self._opengreekandlatin_church_fathers_sources()
 
     def _register_legacy_source_metadata(self) -> None:
         for root, collection_id in (
@@ -654,6 +672,26 @@ class ReaderBuilder:
         ]
         register_source_files(self.catalog_path, files)
 
+    def _register_opengreekandlatin_source_metadata(self) -> None:
+        roots = (
+            (self.config.opengreekandlatin_latin_dir, "opengreekandlatin_latin"),
+            (self.config.opengreekandlatin_csel_dir, "opengreekandlatin_csel"),
+            (self.config.opengreekandlatin_patrologia_dir, "opengreekandlatin_patrologia"),
+            (self.config.opengreekandlatin_church_fathers_dir, "opengreekandlatin_church_fathers"),
+        )
+        for root, collection_id in roots:
+            if root is None or not root.exists():
+                continue
+            candidates = discover_ogl_sources(root, collection_id)
+            register_source_files(
+                self.catalog_path,
+                ogl_source_files(candidates),
+            )
+            register_source_metadata(
+                self.catalog_path,
+                ogl_source_metadata(candidates),
+            )
+
     def _perseus_sources(self) -> Iterator[_ParsedSource]:
         if self.config.perseus_dir is None:
             return
@@ -679,6 +717,60 @@ class ReaderBuilder:
                 yield _ParsedSource(parsed, "first1kgreek_tei")
             except Exception as exc:  # noqa: BLE001
                 self._record_source_error(path, "first1kgreek", exc)
+
+    def _opengreekandlatin_latin_sources(self) -> Iterator[_ParsedSource]:
+        yield from self._opengreekandlatin_sources(
+            self.config.opengreekandlatin_latin_dir,
+            collection_id="opengreekandlatin_latin",
+        )
+
+    def _opengreekandlatin_csel_sources(self) -> Iterator[_ParsedSource]:
+        yield from self._opengreekandlatin_sources(
+            self.config.opengreekandlatin_csel_dir,
+            collection_id="opengreekandlatin_csel",
+        )
+
+    def _opengreekandlatin_patrologia_sources(self) -> Iterator[_ParsedSource]:
+        yield from self._opengreekandlatin_sources(
+            self.config.opengreekandlatin_patrologia_dir,
+            collection_id="opengreekandlatin_patrologia",
+        )
+
+    def _opengreekandlatin_church_fathers_sources(self) -> Iterator[_ParsedSource]:
+        yield from self._opengreekandlatin_sources(
+            self.config.opengreekandlatin_church_fathers_dir,
+            collection_id="opengreekandlatin_church_fathers",
+        )
+
+    def _opengreekandlatin_sources(
+        self,
+        root: Path | None,
+        *,
+        collection_id: str,
+    ) -> Iterator[_ParsedSource]:
+        if root is None:
+            return
+        for candidate in selected_ogl_sources(root, collection_id):
+            path = candidate.source_path
+            if not self._path_selected(path):
+                continue
+            try:
+                parsed = parse_ogl_tei(candidate)
+                yield _ParsedSource(parsed, f"{collection_id}_tei")
+            except Exception as exc:  # noqa: BLE001
+                self._record_source_error(path, collection_id, exc)
+
+    def _opengreekandlatin_text_paths(
+        self,
+        root: Path | None,
+        collection_id: str = "opengreekandlatin_latin",
+    ) -> list[Path]:
+        if root is None or not root.exists():
+            return []
+        return [candidate.source_path for candidate in selected_ogl_sources(root, collection_id)]
+
+    def _is_opengreekandlatin_source_xml(self, path: Path) -> bool:
+        return is_ogl_source_xml(path)
 
     def _first1k_greek_text_paths(self) -> list[Path]:
         root = self.config.first1k_greek_dir
@@ -1164,6 +1256,20 @@ def _overlay_matches_work(overlay, work) -> bool:
 
 def _is_perseus_text_xml(path: Path) -> bool:
     return path.name not in {"__cts__.xml", "build.xml", "expath-pkg.xml", "repo.xml"}
+
+
+def _looks_like_opengreekandlatin_tei(path: Path) -> bool:
+    return looks_like_ogl_tei(path)
+
+
+def _preferred_opengreekandlatin_text_paths(root: Path, paths: list[Path]) -> list[Path]:
+    candidates = discover_ogl_sources(root, "opengreekandlatin_latin")
+    selected_paths = {
+        candidate.source_path
+        for candidate in candidates
+        if candidate.import_status == "text_imported"
+    }
+    return [path for path in paths if path in selected_paths]
 
 
 def _preferred_first1k_greek_text_paths(paths: list[Path]) -> list[Path]:

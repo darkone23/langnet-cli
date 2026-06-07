@@ -339,15 +339,56 @@ def bucket_learner_quality_order(
 
 def _generic_quality_adjustment(text: str) -> int:
     score = 0
+    if _looks_like_dictionary_header_fragment(text):
+        score += 320
+    if _looks_like_section_label_only(text):
+        score += 220
+    if _looks_like_citation_heavy_example_fragment(text):
+        score += 90
     if "also considered by native grammarians" in text or "base of the cases" in text:
         score += 80
     if "as used in comp" in text and not any(term in text for term in ("you", "thou")):
         score += 30
     if _looks_like_bare_cross_reference(text):
         score += 40
-    if any(term in text for term in ("sing of", " to sing", " chant", "celebrate")):
+    if len(text) < 160 and any(
+        term in text for term in ("sing of", " to sing", " chant", "celebrate")
+    ):
         score -= 250
     return score
+
+
+def _looks_like_dictionary_header_fragment(text: str) -> bool:
+    compact = " ".join(text.strip().split())
+    if not compact:
+        return False
+    return bool(
+        re.fullmatch(r"[A-Z][A-ZĀĒĪŌŪȲÆŒ-]{1,18}", compact)
+        or re.fullmatch(r"[A-Z][A-ZĀĒĪŌŪȲÆŒ-]{1,18}\s*[.,;:]?", compact)
+    )
+
+
+def _looks_like_section_label_only(text: str) -> bool:
+    compact = " ".join(text.strip().split()).casefold()
+    return bool(
+        re.fullmatch(r"(?:[ivxlcdm]+|[a-z]|\d+)\.\s*(?:lit\.?|fig\.?|transf\.?)?", compact)
+    )
+
+
+def _looks_like_citation_heavy_example_fragment(text: str) -> bool:
+    if len(text) < 180:
+        return False
+    citation_markers = len(
+        re.findall(
+            r"\b(?:Cic|Caes|Liv|Plaut|Ter|Verg|Virg|Ov|Tac|Lucr|Hor|Sen)\.",
+            text,
+            flags=re.IGNORECASE,
+        )
+    )
+    if citation_markers < 3:
+        return False
+    definitional_markers = (" to ", " of ", " a ", " an ", " the ", " = ", ";")
+    return not any(marker in text for marker in definitional_markers[:3]) or citation_markers >= 6
 
 
 def _looks_like_bare_cross_reference(text: str) -> bool:
@@ -469,9 +510,10 @@ def _has_english_translation(witnesses: Sequence[object]) -> bool:
 
 def _has_bilingual_source(witnesses: Sequence[object]) -> bool:
     return any(
-        _witness_source_tool(witness) in {"dico", "gaffiot"}
-        or _witness_evidence(witness).get("source_tool") in {"dico", "gaffiot"}
-        or _witness_evidence(witness).get("derived_from_tool") in {"dico", "gaffiot"}
+        _witness_source_tool(witness) in {"dico", "gaffiot", "georges_1913"}
+        or _witness_evidence(witness).get("source_tool") in {"dico", "gaffiot", "georges_1913"}
+        or _witness_evidence(witness).get("derived_from_tool")
+        in {"dico", "gaffiot", "georges_1913"}
         for witness in witnesses
     )
 
@@ -486,15 +528,36 @@ def _has_source_dictionary_english(witnesses: Sequence[object]) -> bool:
     )
 
 
+def _has_native_english_source(witnesses: Sequence[object]) -> bool:
+    return any(
+        _witness_source_tool(witness) != "translation"
+        and _witness_evidence(witness).get("source_tool") != "translation"
+        and _witness_evidence(witness).get("source_lang") == "en"
+        for witness in witnesses
+    )
+
+
+def _has_generated_translation(witnesses: Sequence[object]) -> bool:
+    return any(
+        _witness_source_tool(witness) == "translation"
+        or _witness_evidence(witness).get("source_tool") == "translation"
+        for witness in witnesses
+    )
+
+
 def source_preference_order(bucket: object) -> int:
     witnesses = _bucket_witnesses(bucket)
-    if _has_english_translation(witnesses):
+    if _has_native_english_source(witnesses) or (
+        _has_source_dictionary_english(witnesses) and not _has_generated_translation(witnesses)
+    ):
         return 0
-    if _has_source_dictionary_english(witnesses):
+    if _has_generated_translation(witnesses):
         return 1
-    if _has_bilingual_source(witnesses):
+    if _has_source_dictionary_english(witnesses):
         return 2
-    return 3
+    if _has_bilingual_source(witnesses):
+        return 3
+    return 4
 
 
 def gaffiot_source_order(bucket: object) -> int:

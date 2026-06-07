@@ -1,10 +1,21 @@
 <script lang="ts">
-	import { BookOpen, GraduationCap, Search, ShieldCheck, Telescope } from 'lucide-svelte';
+	import {
+		BookOpen,
+		Database,
+		FileText,
+		GraduationCap,
+		Layers3,
+		Search,
+		ShieldCheck,
+		Sparkles,
+		Telescope
+	} from 'lucide-svelte';
 	import { uiCopy } from '$lib/ui-copy';
 
 	const copy = uiCopy.publicSite.about;
 	const nav = uiCopy.publicSite.nav;
 	const principleIcons = [BookOpen, GraduationCap, ShieldCheck];
+	const sourceIcons = [BookOpen, Database, Search, FileText, Sparkles];
 </script>
 
 <svelte:head>
@@ -58,6 +69,44 @@
 				<p class="text-base-content/70 mt-3">{principle.body}</p>
 			</article>
 		{/each}
+	</section>
+
+	<section class="mx-auto max-w-6xl px-6 pb-16 lg:px-12">
+		<div class="from-base-100 via-base-100 to-primary/5 border-base-300 rounded-[2rem] border bg-gradient-to-br p-6 md:p-8">
+			<div class="flex max-w-4xl flex-col gap-4 md:flex-row md:items-start">
+				<div class="bg-primary/10 text-primary rounded-2xl p-3">
+					<Layers3 size={30} />
+				</div>
+				<div>
+					<h2 class="text-3xl font-black">{copy.provenanceTitle}</h2>
+					<p class="text-base-content/70 mt-3 leading-7">{copy.provenanceIntro}</p>
+				</div>
+			</div>
+
+			<div class="mt-8 grid gap-5 md:grid-cols-2">
+				{#each copy.sourceGroups as group, index}
+					{@const SourceIcon = sourceIcons[index]}
+					<article class="bg-base-100/80 border-base-300 rounded-3xl border p-5">
+						<SourceIcon class="text-secondary mb-4" size={26} />
+						<h3 class="text-xl font-bold">{group.title}</h3>
+						<p class="text-base-content/65 mt-2 leading-6">{group.body}</p>
+						<ul class="mt-4 space-y-2 text-sm leading-6">
+							{#each group.items as item}
+								<li class="flex gap-2">
+									<span class="text-primary mt-0.5 font-black">·</span>
+									<span>{item}</span>
+								</li>
+							{/each}
+						</ul>
+					</article>
+				{/each}
+			</div>
+
+			<div class="border-base-300 bg-base-200/70 mt-6 rounded-3xl border p-5">
+				<h3 class="text-xl font-bold">{copy.provenanceNoteTitle}</h3>
+				<p class="text-base-content/70 mt-2 leading-7">{copy.provenanceNote}</p>
+			</div>
+		</div>
 	</section>
 
 	<section class="mx-auto grid max-w-6xl gap-5 px-6 pb-16 md:grid-cols-[0.9fr_1.1fr] lg:px-12">

@@ -105,7 +105,82 @@ const resources = {
 					],
 					startTitle: 'Start with a word',
 					startBody:
-						'The reliable surface is word-level evidence: form, meaning, source support, and caveats. Passage interpretation and generated prose should not outrun that evidence.'
+						'The reliable surface is word-level evidence: form, meaning, source support, and caveats. Passage interpretation and generated prose should not outrun that evidence.',
+					provenanceTitle: 'What we take as input',
+					provenanceIntro:
+						'LangNet is a databuild system over many source traditions. We normalize them into local reader, lexicon, morphology, and pedagogy artifacts while keeping provenance visible instead of pretending everything came from one canonical format.',
+					sourceGroups: [
+						{
+							title: 'Reader corpora',
+							body:
+								'Texts used to build the reader catalog and per-book segment artifacts.',
+							items: [
+								'PHI Latin legacy dumps with IDT metadata when available',
+								'TLG Greek legacy dumps with author and canon metadata',
+								'Perseus TEI XML',
+								'First1KGreek TEI XML',
+								'digilibLT TEI XML',
+								'Sanskrit JSON, plain-text, grouped text, and DCS CONLLU sources',
+								'OpenGreekAndLatin Latin, CSEL, Patrologia Latina, and Church Fathers corpora'
+							]
+						},
+						{
+							title: 'Lexica and morphology',
+							body:
+								'Dictionaries, analyzers, and lexical indices used as witnesses for lookup.',
+							items: [
+								'Whitaker’s Words',
+								'Gaffiot Latin',
+								'Lewis 1890 Latin',
+								'Georges 1913 German-Latin',
+								'Bailly Greek',
+								'Diogenes Greek and Latin indices',
+								'CDSL Sanskrit dictionaries',
+								'DICO French-Sanskrit',
+								'Strong’s Greek and related MorphGNT data'
+							]
+						},
+						{
+							title: 'External engines and references',
+							body:
+								'Programs, services, and extracted reference works that LangNet leans on during lookup, parsing, or pedagogy builds.',
+							items: [
+								'Diogenes for Greek and Latin lexical/index access',
+								'Sanskrit Heritage tooling and data for Sanskrit analysis paths',
+								'Whitaker’s Words as both source lexicon and analyzer dependency',
+								'CLTK and local normalization/transliteration utilities where appropriate',
+								'Foster/Ossa grammar reference material extracted from parsed local documents',
+								'Firecrawl research artifacts used to support reviewed reader metadata enrichment'
+							]
+						},
+						{
+							title: 'Curated LangNet layers',
+							body:
+								'Small reviewed files that correct, enrich, or organize imported source data.',
+							items: [
+								'Reader aliases and display metadata overlays',
+								'Attribution claims and contained-work boundaries',
+								'Reader work maps, division metadata, and citation maps',
+								'Reader search concepts and source-backed enrichment batches',
+								'Reviewed word-of-day pools and learner-facing grammar bridges'
+							]
+						},
+						{
+							title: 'Generated and derived artifacts',
+							body:
+								'Useful rebuildable products, not source authority by themselves.',
+							items: [
+								'Generated reader classifications and author classifications',
+								'Reader search Lance index',
+								'Translation cache rows',
+								'Word indexes, MOTD pool databases, and local runtime caches',
+								'Future LangNet canonical catalog exports and EPUB/static presentation bundles'
+							]
+						}
+					],
+					provenanceNoteTitle: 'Canonical for LangNet does not mean source-original',
+					provenanceNote:
+						'CTS and TEI remain important source/provenance formats, but LangNet’s internal contract is source-aware and normalized. Reader-facing addresses prefer CTSv2; raw CTS URNs, file paths, hashes, and import statuses remain provenance.'
 				},
 				evidence: {
 					metaDescription:
@@ -599,6 +674,11 @@ export const uiCopy = {
 			principles: { title: string; body: string }[];
 			audiencesTitle: string;
 			audiences: string[];
+			provenanceTitle: string;
+			provenanceIntro: string;
+			sourceGroups: { title: string; body: string; items: string[] }[];
+			provenanceNoteTitle: string;
+			provenanceNote: string;
 			startTitle: string;
 			startBody: string;
 		}>('publicSite.about'),

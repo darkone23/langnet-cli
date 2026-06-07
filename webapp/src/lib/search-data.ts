@@ -16,6 +16,7 @@ export type ToolId =
 	| 'cltk'
 	| 'whitakers'
 	| 'gaffiot'
+	| 'georges_1913'
 	| 'lewis_1890';
 
 export type ToolRequest = ToolId | 'all';
@@ -379,6 +380,14 @@ export const tools: ToolMeta[] = [
 		description: 'French-Latin entries with reader English when available.'
 	},
 	{
+		id: 'georges_1913',
+		language: 'lat',
+		label: 'Georges 1913',
+		shortLabel: 'Georges',
+		kind: 'dictionary',
+		description: 'German-Latin entries with reader English when available.'
+	},
+	{
 		id: 'whitakers',
 		language: 'lat',
 		label: "Whitaker's Words",
@@ -681,7 +690,7 @@ const encounters: EncounterResult[] = [
 		query: 'nexus',
 		language: 'lat',
 		dictionaries: ['all'],
-		source_tools: ['diogenes', 'gaffiot', 'whitakers', 'cltk'],
+		source_tools: ['diogenes', 'gaffiot', 'georges_1913', 'lewis_1890', 'whitakers', 'cltk'],
 		lexeme_anchors: ['lex:nexus', 'lex:necto'],
 		buckets: [
 			{

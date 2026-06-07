@@ -44,6 +44,12 @@ def test_catalog_lists_latin_lewis_1890_filter() -> None:
     assert "lewis_1890" in filters
 
 
+def test_catalog_lists_latin_georges_1913_filter() -> None:
+    filters = {entry.tool_filter for entry in catalog_entries("lat")}
+
+    assert "georges_1913" in filters
+
+
 def test_tools_json_output_lists_translation_capable_sources() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["tools", "san", "--output", "json"])
@@ -101,6 +107,19 @@ def test_tools_json_output_lists_latin_lewis_1890() -> None:
     assert "claim.lewis_1890.entries" in lewis["plan_tools"]
 
 
+def test_tools_json_output_lists_latin_georges_1913() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["tools", "lat", "--output", "json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    _assert_matches_schema(payload, TOOL_SCHEMA_PATH)
+    georges = next(tool for tool in payload["tools"] if tool["tool_filter"] == "georges_1913")
+    assert georges["accepted_filter"] == "georges_1913"
+    assert georges["translation_capable"] is True
+    assert "claim.georges_1913.entries" in georges["plan_tools"]
+
+
 def test_tools_json_output_can_list_all_languages() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["tools", "--output", "json"])
@@ -113,6 +132,7 @@ def test_tools_json_output_can_list_all_languages() -> None:
         "bailly",
         "dico",
         "gaffiot",
+        "georges_1913",
         "lewis_1890",
         "strongs_greek",
         "cdsl",

@@ -19,6 +19,7 @@ from langnet.reader.models import (
     ReaderMetadataOverlayEvidence,
     ReaderSegment,
     ReaderSegmentAddress,
+    ReaderSourceFile,
     ReaderSourceMetadata,
     ReaderWork,
     ReaderWorkMapNode,
@@ -32,6 +33,7 @@ from langnet.reader.storage import (
     register_division_metadata,
     register_metadata_attributions,
     register_segment_rows,
+    register_source_files,
     register_source_metadata,
     register_work_map_nodes,
 )
@@ -252,6 +254,62 @@ def test_reader_cli_help_surface() -> None:
     for args in commands:
         result = CliRunner().invoke(main, [*args, "--help"])
         assert result.exit_code == 0, result.output
+
+
+def test_reader_cli_source_index_lists_work_source_provenance() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:latinLit:fixture.work",
+            collection_id="opengreekandlatin_csel",
+            language="lat",
+            title="Fixture Work",
+            author="Fixture Author",
+            author_id="urn:cts:latinLit:fixture",
+            source_id="fixture.work",
+        )
+        register_source_files(
+            catalog_path,
+            [
+                ReaderSourceFile(
+                    collection_id="opengreekandlatin_csel",
+                    source_path=root / "fixture_work.xml",
+                    file_role="opengreekandlatin_csel_tei",
+                    file_status="text",
+                    source_id="fixture.work",
+                    source_hash="abc123",
+                    size_bytes=1234,
+                )
+            ],
+        )
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "reader",
+                "--catalog",
+                str(catalog_path),
+                "source-index",
+                "--collection",
+                "opengreekandlatin_csel",
+                "--output",
+                "json",
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert payload["mode"] == "source-index"
+        assert len(payload["items"]) == 1
+        item = payload["items"][0]
+        assert item["title"] == "Fixture Work"
+        assert item["source_id"] == "fixture.work"
+        assert item["file_role"] == "opengreekandlatin_csel_tei"
+        assert item["segment_count"] == 0
 
 
 def test_reader_cli_structure_returns_ui_ready_nodes() -> None:

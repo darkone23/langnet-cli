@@ -1136,7 +1136,7 @@ def _bucket_recommendation_sort_key(bucket: Any) -> tuple[int, int, int, int, in
     source_tools = [_witness_source_tool(witness) for witness in witnesses]
     source_langs = [_witness_source_lang(witness) for witness in witnesses]
     return (
-        1 if "fr" in source_langs else 0,
+        1 if "fr" in source_langs or "de" in source_langs else 0,
         min((_source_tool_preference(tool) for tool in source_tools), default=50),
         _bucket_gloss_quality_order(bucket),
         min((_witness_source_order(witness) for witness in witnesses), default=1_000_000),
@@ -1170,6 +1170,7 @@ def _source_tool_preference(tool: str) -> int:
         "cdsl": 1,
         "heritage": 2,
         "gaffiot": 4,
+        "georges_1913": 4,
         "dico": 4,
     }.get(tool, 3)
 

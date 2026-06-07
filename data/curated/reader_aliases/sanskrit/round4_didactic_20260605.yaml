@@ -1,0 +1,105 @@
+aliases:
+  - alias: "Yoga Sutra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_52"
+    display: "Patañjali, Yogasūtra"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Yogasūtra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_52"
+    display: "Patañjali, Yogasūtra"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Patanjali Yoga Sutra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_52"
+    display: "Patañjali, Yogasūtra"
+    sources: ["manual"]
+
+  - alias: "Natyashastra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_356"
+    display: "Bharata Muni, Nāṭyaśāstra"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Nāṭyaśāstra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_356"
+    display: "Bharata Muni, Nāṭyaśāstra"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Bharata Natyashastra"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_356"
+    display: "Bharata Muni, Nāṭyaśāstra"
+    sources: ["manual"]
+
+  - alias: "Buddhacarita"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_376"
+    display: "Aśvaghoṣa, Buddhacarita"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Aśvaghoṣa Buddhacarita"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_376"
+    display: "Aśvaghoṣa, Buddhacarita"
+    sources: ["manual"]
+
+  - alias: "Ashvaghosha Buddhacarita"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_376"
+    display: "Aśvaghoṣa, Buddhacarita"
+    sources: ["manual"]
+
+  - alias: "Kiratarjuniya"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_194"
+    display: "Bhāravi, Kirātārjunīya"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Kirātārjunīya"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_194"
+    display: "Bhāravi, Kirātārjunīya"
+    sources: ["web_research", "dcs"]
+
+  - alias: "Bharavi Kiratarjuniya"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_dcs:dcs_194"
+    display: "Bhāravi, Kirātārjunīya"
+    sources: ["manual"]
+
+  - alias: "Shishupalavadha"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_texts:GRETIL_sa_mAgha-zizupAlavadha"
+    display: "Māgha, Śiśupālavadha"
+    sources: ["web_research", "sanskrit_texts"]
+
+  - alias: "Śiśupālavadha"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_texts:GRETIL_sa_mAgha-zizupAlavadha"
+    display: "Māgha, Śiśupālavadha"
+    sources: ["web_research", "sanskrit_texts"]
+
+  - alias: "Magha Shishupalavadha"
+    language: "san"
+    kind: "work_title"
+    target: "langnet:reader:sanskrit_texts:GRETIL_sa_mAgha-zizupAlavadha"
+    display: "Māgha, Śiśupālavadha"
+    sources: ["manual"]

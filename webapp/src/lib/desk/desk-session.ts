@@ -78,5 +78,5 @@ export function returnedToolsForEncounter(result: EncounterResult) {
 }
 
 export function isTranslatedSourceTool(tool: ToolId | undefined) {
-	return tool === 'dico' || tool === 'gaffiot' || tool === 'bailly';
+	return tool === 'dico' || tool === 'gaffiot' || tool === 'bailly' || tool === 'georges_1913';
 }

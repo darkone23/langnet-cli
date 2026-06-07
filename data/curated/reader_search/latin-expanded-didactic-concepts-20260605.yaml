@@ -1,0 +1,109 @@
+concepts:
+  - id: "catullus-5-vivamus-lesbia"
+    language: "lat"
+    labels:
+      - "Catullus 5"
+      - "Vivamus mea Lesbia"
+      - "Lesbia love poem"
+      - "kisses"
+    source_queries:
+      - "Vivamus mea Lesbia atque amemus"
+      - "Catullus 5"
+      - "Lesbia"
+      - "da mi basia"
+      - "basia mille"
+    explanation: >
+      Catullus 5 is one of the most common classroom lyric poems, opening with
+      "Vivamus, mea Lesbia, atque amemus." These forms help learners find the
+      poem by number, opening line, Lesbia, and the famous sequence of kisses.
+
+  - id: "horace-odes-carpe-diem"
+    language: "lat"
+    labels:
+      - "carpe diem"
+      - "Horace Odes 1.11"
+      - "Leuconoe"
+      - "seize the day"
+    source_queries:
+      - "carpe diem"
+      - "quam minimum credula postero"
+      - "Leuconoe"
+      - "Horace Odes 1.11"
+      - "tu ne quaesieris"
+    explanation: >
+      Horace Odes 1.11 contains the famous "carpe diem" line. These Latin and
+      English query handles connect learners to the poem by phrase, citation,
+      and addressee.
+
+  - id: "lucretius-de-rerum-natura-venus-proem"
+    language: "lat"
+    labels:
+      - "Lucretius Venus proem"
+      - "De rerum natura opening"
+      - "Aeneadum genetrix"
+      - "Epicurean didactic"
+    source_queries:
+      - "Aeneadum genetrix"
+      - "hominum divomque voluptas"
+      - "alma Venus"
+      - "De rerum natura 1.1"
+      - "Lucretius proem"
+    explanation: >
+      Lucretius' De rerum natura opens with the invocation to Venus,
+      "Aeneadum genetrix." These terms support discovery of a major Latin
+      didactic and philosophical epic.
+
+  - id: "sallust-catilinarian-conspiracy-opening"
+    language: "lat"
+    labels:
+      - "Sallust Catiline"
+      - "Catilinarian Conspiracy"
+      - "Bellum Catilinae"
+      - "Omnis homines"
+    source_queries:
+      - "Omnis homines"
+      - "qui sese student"
+      - "Bellum Catilinae"
+      - "Catilinarian Conspiracy"
+      - "Sallust Catiline"
+    explanation: >
+      Sallust's monograph on Catiline is a standard Latin prose and Roman
+      historiography text. These forms support discovery by Latin opening,
+      traditional Latin title, and common English title.
+
+  - id: "tacitus-annals-urbem-romam"
+    language: "lat"
+    labels:
+      - "Tacitus Annals opening"
+      - "Urbem Romam"
+      - "Annales"
+      - "Roman imperial historiography"
+    source_queries:
+      - "Urbem Romam"
+      - "a principio reges"
+      - "Tacitus Annals"
+      - "Annales"
+      - "Tiberius"
+    explanation: >
+      Tacitus' Annals is a major imperial historiographical text. The catalog
+      identifies the work by the opening phrase "Urbem Romam a..."; these
+      forms connect learners to the standard opening and the Roman imperial
+      history context.
+
+  - id: "tacitus-germania-opening"
+    language: "lat"
+    labels:
+      - "Tacitus Germania"
+      - "Germania opening"
+      - "Germania omnis"
+      - "ethnography"
+    source_queries:
+      - "Germania omnis"
+      - "Gallis Raetisque"
+      - "Rheno et Danubio"
+      - "Tacitus Germania"
+      - "de origine et situ Germanorum"
+    explanation: >
+      Tacitus' Germania opens with a geographic and ethnographic framing of
+      Germania in relation to Gauls, Raetians, Pannonians, the Rhine, and the
+      Danube. These forms support passage and topic discovery.

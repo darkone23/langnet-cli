@@ -1220,7 +1220,8 @@ function mergeComponentTranslationMeaning(
 
 function componentTranslationKey(meaning: EncounterComponentMeaning) {
 	const tool = meaning.translation?.source_tool ?? meaning.source_tools[0];
-	if (tool !== 'dico' && tool !== 'gaffiot' && tool !== 'bailly') return '';
+	if (tool !== 'dico' && tool !== 'gaffiot' && tool !== 'bailly' && tool !== 'georges_1913')
+		return '';
 	const sourceRef = meaning.source_refs[0] ?? '';
 	if (!sourceRef) return '';
 	return `${tool}:${sourceRef}`;
@@ -1661,7 +1662,9 @@ function translationRetryMetadataFromEntry(entry: JsonObject | undefined) {
 }
 
 function parseTranslatableSourceRef(sourceRef: string) {
-	const parsed = /^(?:dico|gaffiot|bailly):(?:.*#)?([^:#]+)(?::(\d+))?$/.exec(sourceRef);
+	const parsed = /^(?:dico|gaffiot|bailly|georges_1913):(?:.*#)?([^:#]+)(?::(\d+))?$/.exec(
+		sourceRef
+	);
 	if (!parsed) return {};
 	const occurrence = parsed[2] === undefined ? undefined : Number.parseInt(parsed[2], 10);
 	return {
@@ -1671,7 +1674,7 @@ function parseTranslatableSourceRef(sourceRef: string) {
 }
 
 function isTranslatedSourceTool(tool: ToolId | undefined) {
-	return tool === 'dico' || tool === 'gaffiot' || tool === 'bailly';
+	return tool === 'dico' || tool === 'gaffiot' || tool === 'bailly' || tool === 'georges_1913';
 }
 
 function witnessFromEntry(entry: JsonObject) {
@@ -1823,6 +1826,7 @@ function sourceToolValueFromEntry(entry: JsonObject) {
 function sourceToolFromSourceRef(sourceRef: string): ToolId | undefined {
 	if (sourceRef.startsWith('dico:')) return 'dico';
 	if (sourceRef.startsWith('gaffiot:')) return 'gaffiot';
+	if (sourceRef.startsWith('georges_1913:')) return 'georges_1913';
 	if (sourceRef.startsWith('bailly:')) return 'bailly';
 	if (sourceRef.startsWith('lewis_1890:')) return 'lewis_1890';
 	if (sourceRef.startsWith('strongs_greek:')) return 'strongs_greek';
@@ -2085,6 +2089,7 @@ function normalizeToolId(value: string): ToolId {
 		value === 'cltk' ||
 		value === 'whitakers' ||
 		value === 'gaffiot' ||
+		value === 'georges_1913' ||
 		value === 'lewis_1890' ||
 		value === 'strongs_greek'
 	) {
@@ -2118,6 +2123,7 @@ function sourceLayerLabel(toolId: ToolId | undefined, sourceLang: string) {
 		cltk: 'CLTK',
 		whitakers: 'Words',
 		gaffiot: 'Gaffiot',
+		georges_1913: 'Georges',
 		lewis_1890: 'Lewis 1890',
 		strongs_greek: "Strong's Greek"
 	};

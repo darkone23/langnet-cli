@@ -1,0 +1,130 @@
+concepts:
+  - id: "kautilya-arthasastra-statecraft"
+    language: "san"
+    labels:
+      - "Arthaśāstra"
+      - "Arthashastra"
+      - "Kauṭilya"
+      - "Kautilya"
+      - "statecraft"
+      - "artha"
+      - "Sanskrit political theory"
+    source_queries:
+      - "Kautilya Arthashastra Sanskrit statecraft"
+      - "Arthaśāstra Kauṭilya"
+      - "Arthashastra political theory Sanskrit"
+    explanation: >
+      Arthaśāstra gives students technical prose for statecraft, economics,
+      administration, law, diplomacy, and the lexical world of artha.
+
+  - id: "asvaghosa-saundarananda-renunciation"
+    language: "san"
+    labels:
+      - "Saundarānanda"
+      - "Saundarananda"
+      - "Aśvaghoṣa"
+      - "Ashvaghosha"
+      - "Nanda"
+      - "Buddhist kāvya"
+      - "renunciation"
+    source_queries:
+      - "Ashvaghosha Saundarananda Sanskrit kavya"
+      - "Saundarānanda Aśvaghoṣa"
+      - "Saundarananda Buddhist Sanskrit poem"
+    explanation: >
+      Saundarānanda complements Buddhacarita with Buddhist poetic narrative,
+      renunciation vocabulary, didactic persuasion, and kāvya style.
+
+  - id: "somadeva-kathasaritsagara-ocean-story"
+    language: "san"
+    labels:
+      - "Kathāsaritsāgara"
+      - "Kathasaritsagara"
+      - "Ocean of Story"
+      - "Somadeva"
+      - "Sanskrit story cycle"
+      - "narrative prose and verse"
+      - "Bṛhatkathā tradition"
+    source_queries:
+      - "Somadeva Kathasaritsagara Ocean of Story"
+      - "Kathāsaritsāgara Sanskrit stories"
+      - "Ocean of Story Somadeva"
+    explanation: >
+      Kathāsaritsāgara broadens reader discovery into frame narrative,
+      embedded tales, story-cycle vocabulary, and the reception of the
+      Bṛhatkathā tradition.
+
+  - id: "dandin-kavyadarsa-poetics"
+    language: "san"
+    labels:
+      - "Kāvyādarśa"
+      - "Kavyadarsa"
+      - "Daṇḍin"
+      - "Dandin"
+      - "Sanskrit poetics"
+      - "alaṅkāra"
+      - "literary theory"
+    source_queries:
+      - "Dandin Kavyadarsa Sanskrit poetics"
+      - "Kāvyādarśa Daṇḍin"
+      - "Kavyadarsa alamkara Sanskrit"
+    explanation: >
+      Kāvyādarśa is a central poetics target for literary terminology,
+      ornament, style, genre theory, and the technical vocabulary of Sanskrit
+      aesthetic analysis.
+
+  - id: "nagarjuna-mulamadhyamakakarika"
+    language: "san"
+    labels:
+      - "Mūlamadhyamakakārikā"
+      - "Mulamadhyamakakarika"
+      - "Nāgārjuna"
+      - "Nagarjuna"
+      - "Madhyamaka"
+      - "emptiness"
+      - "Buddhist philosophy"
+    source_queries:
+      - "Nagarjuna Mulamadhyamakakarika Sanskrit Madhyamaka"
+      - "Mūlamadhyamakakārikā Nāgārjuna"
+      - "Madhyamaka root verses Sanskrit"
+    explanation: >
+      Mūlamadhyamakakārikā is a core philosophical verse text for negation,
+      causality, śūnyatā vocabulary, and Buddhist scholastic argument.
+
+  - id: "carakasamhita-ayurveda"
+    language: "san"
+    labels:
+      - "Carakasaṃhitā"
+      - "Charaka Samhita"
+      - "Caraka"
+      - "Ayurveda"
+      - "medical Sanskrit"
+      - "dirghamjivitiyam"
+      - "Sanskrit medicine"
+    source_queries:
+      - "Charaka Samhita Sanskrit Ayurveda"
+      - "Carakasaṃhitā Caraka"
+      - "Carakasamhita medical Sanskrit"
+    explanation: >
+      Carakasaṃhitā adds technical medical Sanskrit to discovery, with
+      vocabulary for diagnosis, longevity, bodily systems, therapeutics, and
+      Sanskrit scientific prose.
+
+  - id: "yogasutrabhasya-vyasa-commentary"
+    language: "san"
+    labels:
+      - "Yogasūtrabhāṣya"
+      - "Yoga Sutra Bhashya"
+      - "Vyāsa"
+      - "Yoga commentary"
+      - "Sanskrit commentary"
+      - "Patañjali tradition"
+      - "atha iti ayam"
+    source_queries:
+      - "Yogasūtrabhāṣya Vyasa Yoga Sutra commentary"
+      - "Yoga Sutra Bhashya Sanskrit"
+      - "Vyāsa Yogasūtrabhāṣya"
+    explanation: >
+      Yogasūtrabhāṣya gives learners a commentary-layer counterpart to
+      Yogasūtra, useful for bhāṣya syntax, interpretive prose, and classical
+      Yoga technical vocabulary.

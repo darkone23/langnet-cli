@@ -1,0 +1,78 @@
+concepts:
+  - id: "homer-iliad-opening-rage"
+    language: "grc"
+    labels:
+      - "Iliad opening"
+      - "rage of Achilles"
+      - "menin aeide"
+      - "μῆνιν ἄειδε"
+    source_queries:
+      - "μῆνιν"
+      - "μῆνιν ἄειδε"
+      - "menin aeide"
+      - "Πηληϊάδεω Ἀχιλῆος"
+      - "Achilles rage"
+    explanation: >
+      Iliad 1.1 opens with Achilles' rage, beginning "μῆνιν ἄειδε." These
+      forms give learners Greek, transliterated, and thematic handles for one
+      of the most common first encounters with Homeric Greek.
+
+  - id: "homer-odyssey-opening-polytropos"
+    language: "grc"
+    labels:
+      - "Odyssey opening"
+      - "polytropos"
+      - "man of many turns"
+      - "andra moi ennepe"
+    source_queries:
+      - "ἄνδρα μοι ἔννεπε"
+      - "πολύτροπον"
+      - "andra moi ennepe"
+      - "polytropos"
+      - "Odysseus"
+    explanation: >
+      Odyssey 1.1 begins with the request to sing of the πολύτροπον man.
+      These query forms support learner search around the poem's opening,
+      Odysseus' epithet, and the common transliterated phrase.
+
+  - id: "plato-republic-cave"
+    language: "grc"
+    labels:
+      - "allegory of the cave"
+      - "Plato's cave"
+      - "Republic Book 7"
+      - "Rep. 7.514a"
+    source_queries:
+      - "σπήλαιον"
+      - "δεσμώτας"
+      - "σκιὰς"
+      - "Republic 7"
+      - "Rep. 7.514a"
+      - "allegory of the cave"
+    explanation: >
+      The allegory of the cave is a standard didactic entry point into Plato's
+      Republic, conventionally cited around Book 7, 514a. The current local
+      reader catalog does not yet resolve Stephanus references directly, so
+      this concept improves discovery while leaving exact citation mapping to a
+      dedicated citation-map batch.
+
+  - id: "aristotle-poetics-mimesis-catharsis"
+    language: "grc"
+    labels:
+      - "mimesis"
+      - "catharsis"
+      - "tragedy"
+      - "Poetics"
+    source_queries:
+      - "μίμησις"
+      - "κάθαρσις"
+      - "τραγῳδία"
+      - "φόβος"
+      - "ἔλεος"
+      - "mimesis"
+      - "catharsis"
+    explanation: >
+      Aristotle's Poetics is a central classroom text for poetic art, mimesis,
+      tragedy, pity, fear, and catharsis. These Greek and transliterated query
+      forms help students navigate the text through its most frequently taught
+      critical concepts.

@@ -1,0 +1,78 @@
+concepts:
+  - id: "vergil-aeneid-opening-arms-man"
+    language: "lat"
+    labels:
+      - "Aeneid opening"
+      - "arms and the man"
+      - "arma virumque cano"
+      - "Aeneid 1.1"
+    source_queries:
+      - "Arma virumque cano"
+      - "Troiae qui primus ab oris"
+      - "arma"
+      - "virum"
+      - "cano"
+      - "Aeneid 1.1"
+    explanation: >
+      Vergil's Aeneid opens at 1.1 with "Arma virumque cano," one of the
+      standard first Latin epic lines taught to students. These query forms
+      connect the local reader text to common Latin, English, and citation
+      handles for the proem.
+
+  - id: "caesar-gallic-war-opening-gaul-three-parts"
+    language: "lat"
+    labels:
+      - "Gallic War opening"
+      - "Gaul divided into three parts"
+      - "Gallia est omnis"
+      - "De bello Gallico 1.1.1"
+    source_queries:
+      - "Gallia est omnis"
+      - "Gallia est omnis divisa in partes tres"
+      - "Belgae"
+      - "Aquitani"
+      - "Celtae"
+      - "Galli"
+      - "De bello Gallico 1.1"
+    explanation: >
+      Caesar's De bello Gallico begins locally at 1.1.1 with the famous
+      division of Gaul into three parts. These terms help learners find the
+      opening sentence, ethnic names, and the common classroom citation.
+
+  - id: "cicero-catilinarian-opening-quo-usque"
+    language: "lat"
+    labels:
+      - "First Catilinarian opening"
+      - "quo usque tandem"
+      - "Catiline speech"
+      - "In Catilinam 1.1"
+    source_queries:
+      - "quo usque tandem"
+      - "abutere Catilina patientia nostra"
+      - "Catilina"
+      - "patientia nostra"
+      - "In Catilinam 1.1"
+      - "First Catilinarian"
+    explanation: >
+      Cicero's First Catilinarian opens at 1.1 with the famous challenge to
+      Catiline, "quo usque tandem abutere, Catilina, patientia nostra?" These
+      forms support discovery by quotation, name, and standard classroom title.
+
+  - id: "ovid-metamorphoses-opening-changed-forms"
+    language: "lat"
+    labels:
+      - "Metamorphoses opening"
+      - "changed forms"
+      - "in nova fert animus"
+      - "Metamorphoses 1.1"
+    source_queries:
+      - "In nova fert animus"
+      - "mutatas dicere formas"
+      - "corpora"
+      - "Metamorphoses 1.1"
+      - "changed forms"
+      - "Ovid Metamorphoses opening"
+    explanation: >
+      Ovid's Metamorphoses opens at 1.1 with the poet's turn toward changed
+      forms. These Latin and English query handles help learners connect the
+      catalog text to a common first passage for Ovidian epic and myth.

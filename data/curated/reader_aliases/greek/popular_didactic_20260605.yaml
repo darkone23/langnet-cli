@@ -1,0 +1,84 @@
+aliases:
+  - alias: "Iliad"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0012.tlg001"
+    display: "Homer, Iliad"
+    sources: ["perseus_catalog"]
+
+  - alias: "Homer Iliad"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0012.tlg001"
+    display: "Homer, Iliad"
+    sources: ["perseus_catalog"]
+
+  - alias: "Epigrammata"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0012.tlg003"
+    display: "Homer, Epigrammata"
+    sources: ["perseus_catalog"]
+
+  - alias: "Homeric Epigrams"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0012.tlg003"
+    display: "Homer, Epigrammata"
+    sources: ["perseus_catalog"]
+
+  - alias: "AG 14.147"
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0012.tlg003"
+    display: "Homer, Epigrammata"
+    sources: ["perseus_catalog"]
+
+  - alias: "AP 14.147"
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0012.tlg003"
+    display: "Homer, Epigrammata"
+    sources: ["perseus_catalog"]
+
+  - alias: "Poetics"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0086.tlg034"
+    display: "Aristotle, Poetics"
+    sources: ["perseus_catalog"]
+
+  - alias: "Aristotle Poetics"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0086.tlg034"
+    display: "Aristotle, Poetics"
+    sources: ["perseus_catalog"]
+
+  - alias: "De arte poetica"
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0086.tlg034"
+    display: "Aristotle, Poetics"
+    sources: ["perseus_catalog"]
+
+  - alias: "Cattle Problem"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0552.tlg012"
+    display: "Archimedes, Problema bovinum"
+    sources: ["perseus_catalog"]
+
+  - alias: "Problema bovinum"
+    language: "grc"
+    kind: "work_title"
+    target: "urn:cts:greekLit:tlg0552.tlg012"
+    display: "Archimedes, Problema bovinum"
+    sources: ["perseus_catalog"]
+
+  - alias: "Archim.Bov."
+    language: "grc"
+    kind: "work_abbreviation"
+    target: "urn:cts:greekLit:tlg0552.tlg012"
+    display: "Archimedes, Problema bovinum"
+    sources: ["perseus_catalog"]

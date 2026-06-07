@@ -256,7 +256,9 @@ def parse_perseus_tei(path: Path, *, collection_id: str = "perseus") -> ParsedBo
 
     work_urn = _work_urn_from_edition_urn(edition_urn)
     language = _normalize_perseus_language(
-        edition_node.attrib.get(XML_LANG) or _language_from_cts_urn(work_urn)
+        edition_node.attrib.get(XML_LANG)
+        or root.attrib.get(XML_LANG)
+        or _language_from_cts_urn(work_urn)
     )
     title = _find_text(root, "title") or _work_tail(work_urn)
     author = _find_text(root, "author") or "Unknown"
@@ -295,6 +297,130 @@ def parse_perseus_tei(path: Path, *, collection_id: str = "perseus") -> ParsedBo
         _collect_perseus_milestone_segments(edition_node, [], context)
 
     return ParsedBook(work=work, edition=edition, segments=segments, addresses=addresses)
+
+
+def parse_perseus_tei_with_fallback_urn(
+    path: Path,
+    *,
+    collection_id: str = "perseus",
+    fallback_namespace: str = "latinLit",
+    fallback_urn: str | None = None,
+    prefer_fallback_namespace: bool = False,
+) -> ParsedBook:
+    """
+    Parse a Perseus-style TEI file, synthesizing a CTS URN when the edition
+    `<div type="edition">` is missing one.
+
+    Open Greek and Latin exports sometimes keep CTS textpart structure but omit
+    edition-level CTS identifiers. This helper preserves existing parsing behavior
+    while injecting stable synthetic URNs for indexing and citation.
+    """
+    root = _parse_perseus_xml(path)
+    edition_node = _find_perseus_text_node(root)
+
+    if edition_node is None:
+        edition_node = _find_first(root, "div", {"type": "edition"})
+    if edition_node is None:
+        edition_node = _find_first(root, "text")
+    if edition_node is None:
+        msg = f"{path}: missing TEI text div"
+        raise ValueError(msg)
+
+    edition_urn = edition_node.attrib.get("n", "").strip()
+    if not edition_urn.startswith("urn:cts:"):
+        if fallback_urn is None:
+            namespace = (
+                fallback_namespace
+                if prefer_fallback_namespace
+                else _fallback_namespace_from_node(root=root, edition_node=edition_node)
+            )
+            namespace = namespace or fallback_namespace
+            fallback_urn = _build_fallback_cts_urn(
+                path,
+                namespace=namespace,
+                collection_id=collection_id,
+            )
+        if fallback_urn is None:
+            msg = f"{path}: edition div n must be a CTS URN"
+            raise ValueError(msg)
+        edition_urn = fallback_urn
+
+    work_urn = _work_urn_from_edition_urn(edition_urn)
+    language = _normalize_perseus_language(
+        edition_node.attrib.get(XML_LANG)
+        or root.attrib.get(XML_LANG)
+        or _language_from_cts_urn(work_urn)
+    )
+    title = _find_text(root, "title") or _work_tail(work_urn)
+    author = _find_text(root, "author") or "Unknown"
+    author_id, source_id = _source_ids_from_work_urn(work_urn)
+
+    edition = ReaderEdition(
+        edition_id=edition_urn,
+        work_id=work_urn,
+        label=f"{title} ({edition_urn.rsplit('.', 1)[-1]})",
+        language=language,
+        source_path=path,
+        cts_edition_urn=edition_urn,
+    )
+    work = ReaderWork(
+        work_id=work_urn,
+        collection_id=collection_id,
+        language=language,
+        title=title,
+        author=author,
+        author_id=author_id,
+        source_id=source_id,
+        cts_work_urn=work_urn,
+    )
+
+    segments: list[ReaderSegment] = []
+    addresses: list[ReaderSegmentAddress] = []
+    context = _PerseusLineContext(
+        work=work,
+        edition=edition,
+        segments=segments,
+        addresses=addresses,
+        seen_citations=set(),
+    )
+    _collect_perseus_lines(edition_node, [], context)
+    if not segments:
+        _collect_perseus_milestone_segments(edition_node, [], context)
+
+    return ParsedBook(work=work, edition=edition, segments=segments, addresses=addresses)
+
+
+def _build_fallback_cts_urn(
+    path: Path,
+    *,
+    namespace: str,
+    collection_id: str,
+) -> str | None:
+    if not namespace:
+        return None
+    group = _slug(collection_id)
+    work = _slug(f"{path.parent.name}_{path.stem}")
+    if not group or not work:
+        return None
+    return f"urn:cts:{namespace}:{group}.{work}.auto"
+
+
+def _fallback_namespace_from_node(
+    *,
+    root: ET.Element,
+    edition_node: ET.Element,
+) -> str | None:
+    language = edition_node.attrib.get(XML_LANG)
+    if not language:
+        lang_node = _find_first(root, "language")
+        if lang_node is not None:
+            language = lang_node.attrib.get("ident", "") or " ".join(lang_node.itertext()).strip()
+    normalized = _normalize_perseus_language(language or "")
+    if normalized == "grc":
+        return "greekLit"
+    if normalized == "lat":
+        return "latinLit"
+    return None
 
 
 def _parse_perseus_xml(path: Path) -> ET.Element:

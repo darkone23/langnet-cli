@@ -229,6 +229,126 @@ def test_bucket_sort_key_combines_source_order_and_quality_policy() -> None:
     assert sorted([numbered, heading], key=bucket_sort_key) == [numbered, heading]
 
 
+def test_bucket_sort_key_demotes_dictionary_stem_header_over_definition() -> None:
+    header = SimpleNamespace(
+        display_gloss="FER-",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="lewis_1890",
+                lexeme_anchor="lex:fero",
+                evidence={
+                    "source_tool": "lewis_1890",
+                    "source_lang": "en",
+                    "display_gloss": "FER-",
+                },
+            )
+        ],
+    )
+    definition = SimpleNamespace(
+        display_gloss="bring, bear",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="whitaker",
+                lexeme_anchor="lex:fero",
+                evidence={
+                    "source_tool": "whitaker",
+                    "source_lang": "en",
+                    "source_order": "20492",
+                    "display_gloss": "bring, bear",
+                },
+            )
+        ],
+    )
+
+    assert sorted([header, definition], key=lambda bucket: bucket_sort_key(bucket, ["fero"])) == [
+        definition,
+        header,
+    ]
+
+
+def test_bucket_sort_key_demotes_bare_dictionary_section_label() -> None:
+    label = SimpleNamespace(
+        display_gloss="I. Lit.",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="diogenes",
+                lexeme_anchor="lex:fero",
+                evidence={
+                    "source_tool": "diogenes",
+                    "source_ref": "diogenes:lat:28962012",
+                    "display_gloss": "I. Lit.",
+                },
+            )
+        ],
+    )
+    definition = SimpleNamespace(
+        display_gloss="bring, bear",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="whitaker",
+                lexeme_anchor="lex:fero",
+                evidence={
+                    "source_tool": "whitaker",
+                    "source_lang": "en",
+                    "source_order": "20492",
+                    "display_gloss": "bring, bear",
+                },
+            )
+        ],
+    )
+
+    assert sorted([label, definition], key=lambda bucket: bucket_sort_key(bucket, ["fero"])) == [
+        definition,
+        label,
+    ]
+
+
+def test_bucket_sort_key_prefers_native_english_definition_over_generated_translation() -> None:
+    translated_preamble = SimpleNamespace(
+        display_gloss="tulī, lātum, ferre (Old-Indian bhárati, carries)",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="translation",
+                lexeme_anchor="lex:fero",
+                evidence={
+                    "source_tool": "translation",
+                    "source_lexicon": "georges_1913",
+                    "derived_from_tool": "georges_1913",
+                    "source_lang": "en",
+                    "source_text_lang": "de",
+                },
+            ),
+            SimpleNamespace(
+                source_tool="georges_1913",
+                lexeme_anchor="lex:fero",
+                evidence={
+                    "source_tool": "georges_1913",
+                    "source_lang": "de",
+                },
+            ),
+        ],
+    )
+    native_definition = SimpleNamespace(
+        display_gloss="to bear, carry, support, lift",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="lewis_1890",
+                lexeme_anchor="lex:fero",
+                evidence={
+                    "source_tool": "lewis_1890",
+                    "source_lang": "en",
+                    "display_gloss": "to bear, carry, support, lift",
+                },
+            )
+        ],
+    )
+
+    assert sorted(
+        [translated_preamble, native_definition],
+        key=lambda bucket: bucket_sort_key(bucket, ["fero"]),
+    ) == [native_definition, translated_preamble]
+
+
 def test_bucket_sort_key_prefers_source_english_over_untranslated_dico() -> None:
     dico = SimpleNamespace(
         display_gloss="niyama discipline morale",

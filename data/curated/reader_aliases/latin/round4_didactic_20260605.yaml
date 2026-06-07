@@ -1,0 +1,105 @@
+aliases:
+  - alias: "Seneca De Brevitate Vitae"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:stoa0255.stoa004"
+    display: "Seneca, De Brevitate Vitae"
+    sources: ["web_research", "manual"]
+
+  - alias: "De Brevitate Vitae"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:stoa0255.stoa004"
+    display: "Seneca, De Brevitate Vitae"
+    sources: ["manual"]
+
+  - alias: "Sen. Brev."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:stoa0255.stoa004"
+    display: "Seneca, De Brevitate Vitae"
+    sources: ["manual"]
+
+  - alias: "Apuleius Metamorphoses"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi1212.phi002"
+    display: "Apuleius, Metamorphoses"
+    sources: ["web_research", "manual"]
+
+  - alias: "Golden Ass"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi1212.phi002"
+    display: "Apuleius, Metamorphoses"
+    sources: ["manual"]
+
+  - alias: "Apul. Met."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi1212.phi002"
+    display: "Apuleius, Metamorphoses"
+    sources: ["manual"]
+
+  - alias: "Petronius Satyricon"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0972.phi001"
+    display: "Petronius, Satyricon"
+    sources: ["web_research", "manual"]
+
+  - alias: "Cena Trimalchionis"
+    language: "lat"
+    kind: "work_section"
+    target: "urn:cts:latinLit:phi0972.phi001"
+    display: "Petronius, Satyricon"
+    sources: ["manual"]
+
+  - alias: "Petron. Sat."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi0972.phi001"
+    display: "Petronius, Satyricon"
+    sources: ["manual"]
+
+  - alias: "Cicero De Amicitia"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0474.phi052"
+    display: "Cicero, Laelius De Amicitia"
+    sources: ["web_research", "manual"]
+
+  - alias: "Laelius De Amicitia"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0474.phi052"
+    display: "Cicero, Laelius De Amicitia"
+    sources: ["manual"]
+
+  - alias: "Cic. Amic."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi0474.phi052"
+    display: "Cicero, Laelius De Amicitia"
+    sources: ["manual"]
+
+  - alias: "Lucan Pharsalia"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0917.phi001"
+    display: "Lucan, Pharsalia"
+    sources: ["web_research", "manual"]
+
+  - alias: "Lucan Bellum Civile"
+    language: "lat"
+    kind: "work_title"
+    target: "urn:cts:latinLit:phi0917.phi001"
+    display: "Lucan, Pharsalia"
+    sources: ["manual"]
+
+  - alias: "Luc. Phars."
+    language: "lat"
+    kind: "work_abbreviation"
+    target: "urn:cts:latinLit:phi0917.phi001"
+    display: "Lucan, Pharsalia"
+    sources: ["manual"]

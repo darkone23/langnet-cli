@@ -19,6 +19,7 @@ import {
 	readerSearch,
 	readerShow,
 	readerShelves,
+	readerSourceIndex,
 	readerStructure,
 	readerSummary,
 	readerTags,
@@ -37,6 +38,7 @@ const validModes = new Set([
 	'groups',
 	'tags',
 	'author-facets',
+	'source-index',
 	'shelves',
 	'search',
 	'author-sections',
@@ -133,6 +135,20 @@ export async function GET({ url, request }) {
 					context: readInteger(url.searchParams.get('context'), 1, 0, 20),
 					limit: readInteger(url.searchParams.get('limit'), 20, 1, 100),
 					cursor: url.searchParams.get('cursor') ?? undefined,
+					options
+				})
+			);
+		}
+		if (mode === 'source-index') {
+			return cachedRespond(
+				await readerSourceIndex({
+					catalogId,
+					language,
+					collection: url.searchParams.get('collection') ?? undefined,
+					sourceId: url.searchParams.get('source_id') ?? url.searchParams.get('sourceId') ?? undefined,
+					workId: url.searchParams.get('work_id') ?? url.searchParams.get('workId') ?? undefined,
+					query: url.searchParams.get('q') ?? url.searchParams.get('query') ?? undefined,
+					limit: readInteger(url.searchParams.get('limit'), 100, 1, 1000),
 					options
 				})
 			);

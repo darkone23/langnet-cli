@@ -4,7 +4,7 @@ from pathlib import Path
 
 from query_spec import PlanDependency, ToolCallSpec, ToolStage
 
-from langnet.databuild.paths import default_strongs_greek_path
+from langnet.databuild.paths import default_georges_1913_path, default_strongs_greek_path
 from langnet.planner.calls import make_call, opts
 
 
@@ -281,6 +281,100 @@ def append_lewis_1890_calls(
             from_call_id=derive_id,
             to_call_id=claim_id,
             rationale="Produce local Lewis 1890 source gloss claims",
+        )
+    )
+
+
+def append_georges_1913_calls(
+    calls: list[ToolCallSpec],
+    deps: list[PlanDependency],
+    *,
+    headword: str,
+    lemma: str,
+    lemma_candidates: list[str] | None = None,
+) -> None:
+    """Append the staged local Georges 1913 source-gloss pipeline."""
+    fetch_id = "georges-1913-1"
+    params = {
+        "headword": headword,
+        "lemma": lemma,
+        "index_signature": _local_index_signature(default_georges_1913_path()),
+    }
+    if lemma_candidates:
+        params["lemma_candidates"] = ";".join(lemma_candidates)
+    calls.append(
+        make_call(
+            tool="fetch.georges_1913",
+            call_id=fetch_id,
+            endpoint="duckdb://georges_1913",
+            params=params,
+            opts=opts(expected="json", priority=7, optional=True, stage=ToolStage.TOOL_STAGE_FETCH),
+        )
+    )
+    extract_id = "georges-1913-extract-1"
+    calls.append(
+        make_call(
+            tool="extract.georges_1913.json",
+            call_id=extract_id,
+            endpoint="internal://georges_1913/json_extract",
+            params={"source_call_id": fetch_id},
+            opts=opts(
+                expected="extraction",
+                priority=8,
+                optional=True,
+                stage=ToolStage.TOOL_STAGE_EXTRACT,
+            ),
+        )
+    )
+    deps.append(
+        PlanDependency(
+            from_call_id=fetch_id,
+            to_call_id=extract_id,
+            rationale="Extract local Georges 1913 JSON after fetch",
+        )
+    )
+    derive_id = "georges-1913-derive-1"
+    calls.append(
+        make_call(
+            tool="derive.georges_1913.entries",
+            call_id=derive_id,
+            endpoint="internal://georges_1913/entry_derive",
+            params={"source_call_id": extract_id},
+            opts=opts(
+                expected="derivation",
+                priority=9,
+                optional=True,
+                stage=ToolStage.TOOL_STAGE_DERIVE,
+            ),
+        )
+    )
+    deps.append(
+        PlanDependency(
+            from_call_id=extract_id,
+            to_call_id=derive_id,
+            rationale="Derive local Georges 1913 entries",
+        )
+    )
+    claim_id = "claim-georges-1913-1"
+    calls.append(
+        make_call(
+            tool="claim.georges_1913.entries",
+            call_id=claim_id,
+            endpoint="internal://claim/georges_1913_entries",
+            params={"source_call_id": derive_id},
+            opts=opts(
+                expected="claim",
+                priority=10,
+                optional=True,
+                stage=ToolStage.TOOL_STAGE_CLAIM,
+            ),
+        )
+    )
+    deps.append(
+        PlanDependency(
+            from_call_id=derive_id,
+            to_call_id=claim_id,
+            rationale="Produce local Georges 1913 source gloss claims",
         )
     )
 

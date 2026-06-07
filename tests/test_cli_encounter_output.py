@@ -995,6 +995,12 @@ def test_encounter_compact_gloss_extracts_learner_summary_from_source_entry() ->
     assert _encounter_compact_gloss("God, the Deity, in general sense, both sg. and pl.") == (
         "God, the Deity, in general sense"
     )
+    assert (
+        _encounter_compact_gloss(
+            "ferō tulī, lātus, ferre 1 FER-; TAL-, to bear, carry, support, lift, hold"
+        )
+        == "to bear, carry, support, lift"
+    )
 
 
 def test_encounter_strongs_greek_learner_gloss_keeps_short_source_definition() -> None:

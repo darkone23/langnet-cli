@@ -1,0 +1,94 @@
+concepts:
+  - id: "seneca-medea-di-coniugales"
+    language: "lat"
+    labels:
+      - "Seneca Medea"
+      - "Medea"
+      - "di coniugales"
+      - "Roman tragedy"
+      - "Jason and Medea"
+      - "Senecan tragedy"
+      - "Latin drama"
+    source_queries:
+      - "Seneca Medea Di coniugales tuque"
+      - "Seneca Medea Roman tragedy"
+      - "Medea Seneca Latin opening"
+    explanation: >
+      Seneca's Medea gives readers a compact Roman tragic register, mythic
+      revenge vocabulary, apostrophe, imperatives, and high-style rhetorical
+      Latin.
+
+  - id: "plautus-menaechmi-twins-comedy"
+    language: "lat"
+    labels:
+      - "Plautus Menaechmi"
+      - "Menaechmi"
+      - "twins comedy"
+      - "Roman comedy"
+      - "Plautine comedy"
+      - "mistaken identity"
+      - "Latin stage"
+    source_queries:
+      - "Plautus Menaechmi twins comedy"
+      - "Menaechmi mistaken identity Plautus"
+      - "Plautus Menaechmi Latin comedy"
+    explanation: >
+      Menaechmi is a didactically useful Plautine comedy for colloquial stage
+      Latin, comic misunderstanding, family vocabulary, and Roman adaptation of
+      Greek New Comedy.
+
+  - id: "terence-andria-roman-comedy"
+    language: "lat"
+    labels:
+      - "Terence Andria"
+      - "Andria"
+      - "Roman comedy"
+      - "Terentian comedy"
+      - "prologue"
+      - "Latin dialogue"
+      - "New Comedy"
+    source_queries:
+      - "Terence Andria Roman comedy"
+      - "Andria Terence Latin prologue"
+      - "Terence Andria New Comedy"
+    explanation: >
+      Terence's Andria offers a cleaner, more conversational comic Latin than
+      much Plautus, making it useful for dialogue, prologue conventions, and
+      social vocabulary.
+
+  - id: "martial-epigrammata-latin-epigram"
+    language: "lat"
+    labels:
+      - "Martial Epigrammata"
+      - "Martial epigrams"
+      - "Latin epigram"
+      - "Epigrammata"
+      - "wit and satire"
+      - "short Latin poems"
+      - "Roman social life"
+    source_queries:
+      - "Martial Epigrammata Latin epigrams"
+      - "Martial epigrams Roman social life"
+      - "Epigrammata Martial Latin"
+    explanation: >
+      Martial's Epigrammata are strong short-form reading targets for vocabulary
+      review, punchline structure, social observation, meters, and Roman urban
+      culture.
+
+  - id: "juvenal-satires-semper-ego-auditor"
+    language: "lat"
+    labels:
+      - "Juvenal Satires"
+      - "Saturae"
+      - "semper ego auditor"
+      - "Roman satire"
+      - "Juvenalian satire"
+      - "indignation"
+      - "Latin hexameter"
+    source_queries:
+      - "Juvenal Satires semper ego auditor"
+      - "Juvenal Satires Roman satire"
+      - "Saturae Juvenal Latin opening"
+    explanation: >
+      Juvenal's Satires are central for Roman satire, moral invective, rhetorical
+      question patterns, hexameter reading, and imperial social critique.

@@ -25,6 +25,7 @@ from langnet.planner.local_lexicons import (
     append_bailly_calls,
     append_dico_calls,
     append_gaffiot_calls,
+    append_georges_1913_calls,
     append_lewis_1890_calls,
     append_strongs_greek_calls,
 )
@@ -43,6 +44,7 @@ class PlannerConfig:
     include_cdsl: bool = True
     include_dico: bool = True
     include_gaffiot: bool = True
+    include_georges_1913: bool = True
     include_lewis_1890: bool = True
     include_bailly: bool = True
     include_strongs_greek: bool = True
@@ -632,6 +634,18 @@ class ToolPlanner:
             )
         if self.config.include_lewis_1890:
             append_lewis_1890_calls(
+                calls,
+                deps,
+                headword=query_value,
+                lemma=candidate.lemma.lower(),
+                lemma_candidates=[
+                    cand.lemma.lower()
+                    for cand in normalized.candidates
+                    if cand.lemma and cand.lemma.lower()
+                ],
+            )
+        if self.config.include_georges_1913:
+            append_georges_1913_calls(
                 calls,
                 deps,
                 headword=query_value,

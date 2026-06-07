@@ -1,0 +1,93 @@
+concepts:
+  - id: "matthew-genealogy-biblos-geneseos"
+    language: "grc"
+    labels:
+      - "Matthew"
+      - "Gospel of Matthew"
+      - "biblos geneseos"
+      - "βίβλος γενέσεως"
+      - "genealogy of Jesus"
+      - "Greek New Testament Matthew"
+      - "Matthean genealogy"
+    source_queries:
+      - "Matthew genealogy biblos geneseos"
+      - "Greek Gospel of Matthew opening"
+      - "βίβλος γενέσεως Ἰησοῦ Χριστοῦ"
+    explanation: >
+      A high-value Koine Greek reading target: Matthew's opening genealogy
+      anchors learners in biblical narrative prose, proper names, formulaic
+      genitives, and the phrase βίβλος γενέσεως.
+
+  - id: "mark-opening-arche-euangelion"
+    language: "grc"
+    labels:
+      - "Mark"
+      - "Gospel of Mark"
+      - "arche tou euangeliou"
+      - "ἀρχὴ τοῦ εὐαγγελίου"
+      - "beginning of the gospel"
+      - "Greek New Testament Mark"
+      - "Markan opening"
+    source_queries:
+      - "Mark arche tou euangeliou"
+      - "Greek Gospel of Mark opening"
+      - "ἀρχὴ τοῦ εὐαγγελίου"
+    explanation: >
+      Mark's compact opening is useful for introducing Koine Greek article
+      phrases, genitive chains, gospel vocabulary, and narrative compression.
+
+  - id: "john-logos-opening"
+    language: "grc"
+    labels:
+      - "John"
+      - "Gospel of John"
+      - "Logos"
+      - "en arche en ho logos"
+      - "ἐν ἀρχῇ ἦν ὁ λόγος"
+      - "Johannine prologue"
+      - "Greek New Testament John"
+    source_queries:
+      - "John en arche en ho logos"
+      - "Greek Gospel of John Logos prologue"
+      - "ἐν ἀρχῇ ἦν ὁ λόγος"
+    explanation: >
+      The Johannine prologue is one of the most commonly studied Koine passages
+      for λόγος vocabulary, imperfect ἦν, predicate nominatives, and theological
+      Greek.
+
+  - id: "gorgias-encomium-helen-logos"
+    language: "grc"
+    labels:
+      - "Gorgias"
+      - "Encomium of Helen"
+      - "Helen"
+      - "logos"
+      - "persuasion"
+      - "Ἑλένης ἐγκώμιον"
+      - "Greek rhetoric"
+    source_queries:
+      - "Gorgias Encomium of Helen logos persuasion"
+      - "Ἑλένης ἐγκώμιον Gorgias"
+      - "kosmos polei men Gorgias Helen"
+    explanation: >
+      Gorgias' Encomium of Helen is a compact rhetorical showpiece for studying
+      sophistic prose, persuasion, antithesis, and the didactic vocabulary of
+      logos and blame.
+
+  - id: "plato-gorgias-rhetoric-justice"
+    language: "grc"
+    labels:
+      - "Plato Gorgias"
+      - "Gorgias dialogue"
+      - "Callicles"
+      - "Socrates"
+      - "rhetoric and justice"
+      - "Greek philosophy"
+      - "Γοργίας"
+    source_queries:
+      - "Plato Gorgias rhetoric justice Callicles Socrates"
+      - "Plato Gorgias Greek dialogue"
+      - "Γοργίας Plato rhetoric"
+    explanation: >
+      Plato's Gorgias is a central classroom text for rhetoric, justice, pleasure,
+      Socratic questioning, and contrastive readings against sophistic prose.

@@ -48,6 +48,7 @@ class TranslationSource:
     occurrence: int
     source_ref: str
     source_tool: str
+    source_lang: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +90,7 @@ def translation_source_from_evidence(
                 occurrence=_int_value(evidence.get("variant_num")),
                 source_ref=source_ref,
                 source_tool=source_tool,
+                source_lang=str(evidence.get("source_lang") or "fr"),
             )
 
     elif source_tool == "dico":
@@ -100,6 +102,7 @@ def translation_source_from_evidence(
                 occurrence=int(match.group("occurrence")),
                 source_ref=source_ref,
                 source_tool=source_tool,
+                source_lang=str(evidence.get("source_lang") or "fr"),
             )
 
     elif source_tool == "bailly":
@@ -111,6 +114,20 @@ def translation_source_from_evidence(
                 occurrence=_int_value(evidence.get("occurrence")),
                 source_ref=source_ref,
                 source_tool=source_tool,
+                source_lang=str(evidence.get("source_lang") or "fr"),
+            )
+
+    elif source_tool == "georges_1913":
+        _, _, rest = source_ref.partition(":")
+        entry_id = rest.split("#", 1)[-1].rsplit(":", 1)[0] if rest else ""
+        if entry_id:
+            source = TranslationSource(
+                source_lexicon="georges_1913",
+                entry_id=entry_id,
+                occurrence=_int_value(evidence.get("occurrence")),
+                source_ref=source_ref,
+                source_tool=source_tool,
+                source_lang=str(evidence.get("source_lang") or "de"),
             )
 
     return source
@@ -193,7 +210,7 @@ def _projection_for_gloss(
         return None
 
     evidence = _evidence_from(triple)
-    if evidence.get("source_lang") != "fr":
+    if evidence.get("source_lang") not in {"fr", "de"}:
         return None
     source = translation_source_from_evidence(evidence)
     if source is None:
@@ -209,6 +226,7 @@ def _projection_for_gloss(
         occurrence=source.occurrence,
         headword_norm=lexeme_anchor.removeprefix("lex:"),
         source_text=source_text,
+        source_lang=source.source_lang,
         model=model,
         prompt=BASE_SYSTEM,
         hint=hint,
@@ -380,7 +398,7 @@ def _translate_projection(
 
 
 def _should_segment_unstructured_projection(projection: TranslationProjection) -> bool:
-    if projection.source.source_lexicon not in {"dico", "gaffiot"}:
+    if projection.source.source_lexicon not in {"dico", "gaffiot", "georges_1913"}:
         return False
     if len(projection.source_text) < UNSTRUCTURED_SEGMENTED_MIN_CHARS:
         return False

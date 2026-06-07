@@ -1,0 +1,94 @@
+concepts:
+  - id: "meghaduta-cloud-messenger"
+    language: "san"
+    labels:
+      - "Meghaduta"
+      - "Meghadūta"
+      - "cloud messenger"
+      - "Kalidasa"
+      - "Kālidāsa"
+      - "kaścit kāntāvirahaguruṇā"
+      - "Sanskrit lyric poem"
+    source_queries:
+      - "Meghaduta Kalidasa kascit kantavirahaguruna"
+      - "Meghadūta cloud messenger Kālidāsa"
+      - "मेघदूत Kalidasa"
+    explanation: >
+      Meghadūta is a major lyric kāvya target for compound analysis, landscape
+      vocabulary, messenger-poem structure, and the grammar of separation and
+      longing.
+
+  - id: "raghuvamsa-vagarthav-opening"
+    language: "san"
+    labels:
+      - "Raghuvamsa"
+      - "Raghuvaṃśa"
+      - "Kalidasa"
+      - "Kālidāsa"
+      - "vāgarthāv iva saṃpṛktau"
+      - "Sanskrit mahakavya"
+      - "Raghu dynasty"
+    source_queries:
+      - "Raghuvamsa vagarthav iva samprktau Kalidasa"
+      - "Raghuvaṃśa Kālidāsa opening"
+      - "वागर्थाविव संप्रक्तौ"
+    explanation: >
+      Raghuvaṃśa is a high-value mahākāvya reading target for simile, compound
+      interpretation, royal genealogy, and kāvya conventions around dynastic
+      narrative.
+
+  - id: "kumarasambhava-himalaya-opening"
+    language: "san"
+    labels:
+      - "Kumarasambhava"
+      - "Kumārasambhava"
+      - "Kalidasa"
+      - "Kālidāsa"
+      - "asty uttarasyam disi"
+      - "Himalaya opening"
+      - "Shiva and Parvati"
+    source_queries:
+      - "Kumarasambhava asty uttarasyam disi Kalidasa"
+      - "Kumārasambhava Himalaya opening"
+      - "अस्त्युत्तरस्यां दिशि"
+    explanation: >
+      Kumārasambhava introduces students to ornate kāvya description, locative
+      framing, mythological narrative, and the famous opening depiction of the
+      Himalaya.
+
+  - id: "manusmrti-dharmasastra-opening"
+    language: "san"
+    labels:
+      - "Manusmriti"
+      - "Manusmṛti"
+      - "Mānava-Dharmaśāstra"
+      - "Dharmaśāstra"
+      - "Manu"
+      - "manum ekāgram āsīnam"
+      - "Sanskrit law text"
+    source_queries:
+      - "Manusmriti manum ekagram asinam dharmashastra"
+      - "Mānava Dharmaśāstra Sanskrit"
+      - "Manusmṛti opening"
+    explanation: >
+      Manusmṛti is a major Dharmaśāstra target for legal and normative Sanskrit,
+      technical social vocabulary, compounds, and evidence-aware discussion of
+      historical reception.
+
+  - id: "harsacarita-bana-court-biography"
+    language: "san"
+    labels:
+      - "Harshacharita"
+      - "Harṣacarita"
+      - "Banabhatta"
+      - "Bāṇabhaṭṭa"
+      - "Sanskrit biography"
+      - "court prose"
+      - "Harsha"
+    source_queries:
+      - "Harshacharita Banabhatta Sanskrit biography"
+      - "Harṣacarita Bāṇabhaṭṭa court prose"
+      - "Harsacarita Sanskrit biography Harsha"
+    explanation: >
+      Harṣacarita expands the reader index beyond verse into ornate Sanskrit
+      prose, courtly biography, long compounds, and historical-literary narrative.

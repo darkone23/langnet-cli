@@ -9,6 +9,10 @@ from langnet.parsing.source_entry_analysis import parse_source_entry
 _SEGMENT_SPLIT_RE = re.compile(r"\s+\|\|+\s+|[;\n¶]+")
 _COMPACT_ENTRY_BREAK_RE = re.compile(r"\s+\|+\s+|\s+—\s+")
 _COMPACT_HEADWORD_NUMBER_RE = re.compile(r"\b1\s+([^:;|]{2,120})(?=[:;|])")
+_COMPACT_STEM_LABEL_RE = re.compile(r"^[A-Z][A-ZĀĒĪŌŪȲÆŒ-]{1,24}$")
+_COMPACT_STEM_LABEL_PREFIX_RE = re.compile(
+    r"^(?:[A-Z][A-ZĀĒĪŌŪȲÆŒ-]{1,24}\s*[,;]\s*)+"
+)
 _COMPACT_INFLECTION_TAG_RE = re.compile(r"\b(?:sg|pl|nom|acc|gen|dat|abl)\.")
 _COMPACT_LEXICAL_PREAMBLE_RE = re.compile(
     r"^(?:[^\s\[]+(?:\s+\[[^\]]+\])?,\s*|"
@@ -64,7 +68,11 @@ def compact_source_gloss(
     text = re.sub(r"^\d+\.\s+", "", text)
     numbered = _COMPACT_HEADWORD_NUMBER_RE.search(text)
     if numbered and numbered.start() <= COMPACT_GLOSS_MAX_PREFIX_CHARS:
-        text = numbered.group(1).strip()
+        numbered_gloss = numbered.group(1).strip()
+        if _looks_like_stem_label(numbered_gloss):
+            text = _COMPACT_STEM_LABEL_PREFIX_RE.sub("", text[numbered.start() + 2 :].strip())
+        else:
+            text = numbered_gloss
     elif ":" in text and text.index(":") <= COMPACT_GLOSS_MAX_PREFIX_CHARS:
         prefix = text[: text.index(":")].strip()
         suffix = text[text.index(":") + 1 :].strip()
@@ -108,6 +116,10 @@ def compact_dico_source_gloss(
     if parts:
         text = "; ".join(parts[:max_items])
     return _shorten_display(text, max_chars)
+
+
+def _looks_like_stem_label(text: str) -> bool:
+    return bool(_COMPACT_STEM_LABEL_RE.fullmatch(text.strip()))
 
 
 def learner_segments_from_text(

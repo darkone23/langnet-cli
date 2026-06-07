@@ -1,0 +1,69 @@
+concepts:
+  - id: "chandogya-tat-tvam-asi"
+    language: "san"
+    labels:
+      - "tat tvam asi"
+      - "thou art that"
+      - "you are that"
+      - "Śvetaketu teaching"
+    source_queries:
+      - "tat tvam asi"
+      - "tattvamasi"
+      - "śvetaketo"
+      - "śvetaketu"
+      - "sa ātmā"
+    explanation: >
+      Chāndogya Upaniṣad 6.9.4 contains the recurring teaching to Śvetaketu,
+      commonly rendered "That thou art." These query forms help learners find
+      the passage and related discussion around self, truth, and instruction.
+
+  - id: "brhadaranyaka-neti-neti"
+    language: "san"
+    labels:
+      - "neti neti"
+      - "not this, not this"
+      - "Bṛhadāraṇyaka negation"
+    source_queries:
+      - "neti neti"
+      - "na iti na iti"
+      - "satyasya satyam"
+      - "ādeśaḥ"
+    explanation: >
+      Bṛhadāraṇyaka Upaniṣad 2.3.6 is a standard locus for the formula
+      "neti neti," used in teaching by negation. These query forms support
+      concept search without asserting a single authorial agent.
+
+  - id: "katha-naciketas-yama"
+    language: "san"
+    labels:
+      - "Naciketas and Yama"
+      - "Nachiketa and Death"
+      - "Katha Upanishad dialogue"
+    source_queries:
+      - "naciketas"
+      - "nachiketa"
+      - "yama"
+      - "mṛtyu"
+      - "preyas"
+      - "śreyas"
+    explanation: >
+      The Kaṭha Upaniṣad is organized around Naciketas' encounter with Yama and
+      the question of death, self, and the better path. These terms are useful
+      handles for learner search and thematic navigation.
+
+  - id: "rigveda-agni-opening"
+    language: "san"
+    labels:
+      - "Agni hymn"
+      - "Rigveda opening hymn"
+      - "agnim ile purohitam"
+      - "Agni Suktam"
+    source_queries:
+      - "agnim īḷe purohitam"
+      - "agnim ile purohitam"
+      - "agni"
+      - "purohitam"
+      - "hotāram"
+    explanation: >
+      Ṛgveda 1.1 opens with the Agni hymn. These query forms connect the
+      catalog work to a common beginner-facing entry point into Vedic Sanskrit.
