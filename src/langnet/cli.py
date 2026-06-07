@@ -5217,6 +5217,87 @@ def reader_import_pg_pilot(
     _emit_reader_payload(payload, output)
 
 
+@reader_cli.command("import-staged-jsonl")
+@click.option(
+    "--segments",
+    "segments_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Manifest-backed staged reader JSONL file to import.",
+)
+@click.option(
+    "--collection-id",
+    required=True,
+    help="Reader collection id for the imported staged work.",
+)
+@click.option(
+    "--namespace",
+    required=True,
+    help="Reader book-path namespace for the imported staged work.",
+)
+@click.option(
+    "--edition-label",
+    required=True,
+    help="Reader edition label for the imported staged work.",
+)
+@click.option(
+    "--edition-suffix",
+    default="staged_jsonl",
+    show_default=True,
+    help="Stable edition id/path suffix for this staged import.",
+)
+@click.option(
+    "--acquisition-source",
+    default="manifest_backed_staged_jsonl",
+    show_default=True,
+    help="Source metadata label for the acquisition path.",
+)
+@click.option(
+    "--data-root",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Optional data root for generated reader book DuckDB files.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_import_staged_jsonl(
+    ctx: click.Context,
+    segments_path: Path,
+    collection_id: str,
+    namespace: str,
+    edition_label: str,
+    edition_suffix: str,
+    acquisition_source: str,
+    data_root: Path | None,
+    output: str,
+) -> None:
+    """Import one manifest-backed staged JSONL work into the reader catalog."""
+    from langnet.reader.source_acquisition import (  # noqa: PLC0415
+        StagedJsonlCatalogImportConfig,
+        import_staged_jsonl_catalog,
+    )
+
+    service = _reader_service_from_context(ctx)
+    payload = import_staged_jsonl_catalog(
+        StagedJsonlCatalogImportConfig(
+            catalog_path=service.catalog_path,
+            segments_path=segments_path,
+            collection_id=collection_id,
+            namespace=namespace,
+            edition_label=edition_label,
+            edition_suffix=edition_suffix,
+            data_root=data_root,
+            acquisition_source=acquisition_source,
+        )
+    )
+    _emit_reader_payload(payload, output)
+
+
 @reader_cli.command("source-index-export")
 @click.option(
     "--output-dir",

@@ -12,6 +12,7 @@ Generated from `data/build/reader/catalog.duckdb`. These files are flat, grep-fr
 
 | Collection | Works | Editions | Segments | Words | File |
 | --- | ---: | ---: | ---: | ---: | --- |
+| `cusanus_latin_wikisource` | 1 | 1 | 104 | 11750 | `cusanus_latin_wikisource.tsv` |
 | `digiliblt` | 390 | 390 | 112104 | 6575222 | `digiliblt.tsv` |
 | `first1kgreek` | 1082 | 1082 | 249835 | 29482870 | `first1kgreek.tsv` |
 | `opengreekandlatin_church_fathers` | 3 | 3 | 232 | 150757 | `opengreekandlatin_church_fathers.tsv` |

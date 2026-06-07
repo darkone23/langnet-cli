@@ -149,6 +149,19 @@ class PgPilotCatalogImportConfig:
     namespace: str = "pg_pilot"
 
 
+@dataclass(frozen=True)
+class StagedJsonlCatalogImportConfig:
+    catalog_path: Path
+    segments_path: Path
+    collection_id: str
+    namespace: str
+    edition_label: str
+    edition_suffix: str = "staged_jsonl"
+    data_root: Path | None = None
+    replace_work: bool = True
+    acquisition_source: str = "manifest_backed_staged_jsonl"
+
+
 def stage_pl_wikisource(config: PlWikisourceStageConfig) -> dict[str, Any]:
     manifest = _load_manifest(config.manifest_path)
     raw_dir = config.raw_dir or _manifest_path(manifest, "raw_storage", config.manifest_path.parent / "raw")
@@ -638,6 +651,203 @@ def import_pg_pilot_catalog(config: PgPilotCatalogImportConfig) -> dict[str, Any
     }
 
 
+def import_staged_jsonl_catalog(config: StagedJsonlCatalogImportConfig) -> dict[str, Any]:
+    staged_segments = _read_staged_segments(config.segments_path)
+    if not staged_segments:
+        return {
+            "schema_version": "langnet.reader.source_acquisition.staged_jsonl_import.v1",
+            "mode": "import-staged-jsonl",
+            "catalog_path": str(config.catalog_path),
+            "segments_path": str(config.segments_path),
+            "collection_id": config.collection_id,
+            "work_count": 0,
+            "segment_count": 0,
+            "token_count": 0,
+            "items": [],
+        }
+    first = staged_segments[0]
+    title = str(first.get("title") or "Untitled staged reader work")
+    author = str(first.get("author") or "Unknown author")
+    language = str(first.get("language") or "lat")
+    staged_work_id = str(first.get("work_id") or "").strip()
+    canonical_text_id = ctsv2_text_id(language, title, _incipit_for_title(title, staged_segments))
+    work_id = staged_work_id or canonical_text_id
+    edition_id = f"{work_id}:{config.edition_suffix}"
+    source_id = str(first.get("source_id") or f"{config.collection_id}:{_safe_slug(title)}")
+    source_url = str(first.get("source_url") or "")
+    author_id = f"{config.collection_id}:{_safe_slug(author)}"
+    source_path = Path(str(first.get("source_path") or config.segments_path))
+    control_source_path_value = str(first.get("control_source_path") or "").strip()
+    control_source_path = Path(control_source_path_value) if control_source_path_value else None
+    source_paths = [config.segments_path, source_path]
+    if control_source_path is not None:
+        source_paths.append(control_source_path)
+    if config.replace_work:
+        delete_reader_works(config.catalog_path, {work_id})
+    book_path = reader_book_path(
+        ReaderBookPathParts(
+            collection=config.collection_id,
+            namespace=config.namespace,
+            author_id=_safe_slug(author),
+            work_id=_safe_slug(title),
+            edition_id=config.edition_suffix,
+        ),
+        data_root=config.data_root,
+    )
+    create_book_db(book_path)
+    reader_segments, addresses = _reader_segments_for_import(
+        staged_segments,
+        work_id=work_id,
+        edition_id=edition_id,
+        canonical_text_id=canonical_text_id,
+    )
+    token_count = sum(_token_count(segment.text) for segment in reader_segments)
+    source_hash = _hash_paths(source_paths)
+    register_segment_rows(book_path, segments=reader_segments, addresses=addresses)
+    register_book(
+        config.catalog_path,
+        ReaderWork(
+            work_id=work_id,
+            collection_id=config.collection_id,
+            language=language,
+            title=title,
+            author=author,
+            author_id=author_id,
+            source_id=source_id,
+            cts_work_urn=None,
+            canonical_text_id=canonical_text_id,
+        ),
+        ReaderEdition(
+            edition_id=edition_id,
+            work_id=work_id,
+            label=config.edition_label,
+            language=language,
+            source_path=source_path,
+            cts_edition_urn=None,
+        ),
+        ReaderBookArtifact(
+            artifact_id=f"{work_id}:{config.edition_suffix}:artifact",
+            work_id=work_id,
+            edition_id=edition_id,
+            artifact_path=book_path,
+            source_path=config.segments_path,
+            adapter="manifest_backed_staged_jsonl",
+            source_hash=source_hash,
+            segment_count=len(reader_segments),
+            token_count=token_count,
+        ),
+    )
+    source_files = [
+        ReaderSourceFile(
+            collection_id=config.collection_id,
+            source_path=source_path,
+            file_role="source_text",
+            file_status=str(first.get("quality_status") or "staged_candidate"),
+            source_id=source_id,
+            source_hash=source_hash,
+            size_bytes=source_path.stat().st_size if source_path.exists() else None,
+        ),
+        ReaderSourceFile(
+            collection_id=config.collection_id,
+            source_path=config.segments_path,
+            file_role="staging_jsonl",
+            file_status=str(first.get("review_status") or "segmented_staging"),
+            source_id=source_id,
+            source_hash=source_hash,
+            size_bytes=config.segments_path.stat().st_size,
+        ),
+    ]
+    if control_source_path is not None:
+        source_files.append(
+            ReaderSourceFile(
+                collection_id=config.collection_id,
+                source_path=control_source_path,
+                file_role="control_witness",
+                file_status=str(first.get("quality_status") or "source_control"),
+                source_id=str(first.get("control_source_id") or source_id),
+                source_hash=source_hash,
+                size_bytes=control_source_path.stat().st_size if control_source_path.exists() else None,
+            )
+        )
+    register_source_files(config.catalog_path, source_files)
+    register_source_metadata(
+        config.catalog_path,
+        _source_metadata_for_import(
+            collection_id=config.collection_id,
+            work_id=work_id,
+            source_id=source_id,
+            source_path=source_path,
+            first=first,
+            source_url=source_url,
+            segments_path=config.segments_path,
+            acquisition_source=config.acquisition_source,
+        )
+        + _staged_jsonl_extra_metadata(
+            collection_id=config.collection_id,
+            work_id=work_id,
+            source_id=source_id,
+            source_path=source_path,
+            first=first,
+        ),
+    )
+    witnesses = [
+        ReaderSourceWitness(
+            canonical_text_id=canonical_text_id,
+            work_id=work_id,
+            collection_id=config.collection_id,
+            language=language,
+            witness_id=f"{source_id}:{config.edition_suffix}",
+            source_id=source_id,
+            source_urn=source_url,
+            source_path=source_path,
+            status=str(first.get("review_status") or "imported_from_staging"),
+            confidence=str(first.get("boundary_confidence") or "medium"),
+            note="Imported from manifest-backed staged JSONL; preserve quality/review status in reader provenance.",
+        )
+    ]
+    if control_source_path is not None:
+        witnesses.append(
+            ReaderSourceWitness(
+                canonical_text_id=canonical_text_id,
+                work_id=work_id,
+                collection_id=config.collection_id,
+                language=language,
+                witness_id=f"{source_id}:control",
+                source_id=str(first.get("control_source_id") or source_id),
+                source_urn="",
+                source_path=control_source_path,
+                status="control_witness",
+                confidence=str(first.get("boundary_confidence") or "medium"),
+                note="Control witness recorded from staged segment metadata.",
+            )
+        )
+    register_source_witnesses(config.catalog_path, witnesses, replace=False)
+    return {
+        "schema_version": "langnet.reader.source_acquisition.staged_jsonl_import.v1",
+        "mode": "import-staged-jsonl",
+        "catalog_path": str(config.catalog_path),
+        "segments_path": str(config.segments_path),
+        "collection_id": config.collection_id,
+        "work_count": 1,
+        "segment_count": len(reader_segments),
+        "token_count": token_count,
+        "items": [
+            {
+                "title": title,
+                "author": author,
+                "work_id": work_id,
+                "canonical_text_id": canonical_text_id,
+                "source_id": source_id,
+                "book_path": str(book_path),
+                "source_path": str(source_path),
+                "segments_path": str(config.segments_path),
+                "segment_count": len(reader_segments),
+                "token_count": token_count,
+            }
+        ],
+    }
+
+
 def _load_manifest(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"manifest not found: {path}")
@@ -1100,7 +1310,7 @@ def _reader_segments_for_import(
     addresses: list[ReaderSegmentAddress] = []
     citation_count: dict[str, int] = {}
     for index, row in enumerate(staged_segments, start=1):
-        citation_path = str(row.get("citation_path") or index)
+        citation_path = str(row.get("citation_path") or row.get("citation") or index)
         if citation_path in citation_count:
             citation_count[citation_path] += 1
             citation_path = f"{citation_path}::{citation_count[citation_path]}"
@@ -1163,6 +1373,48 @@ def _source_metadata_for_import(
         "quality_status": str(first.get("quality_status") or ""),
         "boundary_confidence": str(first.get("boundary_confidence") or ""),
         "acquisition_source": acquisition_source,
+    }
+    rows = [
+        ReaderSourceMetadata(
+            collection_id=collection_id,
+            subject_kind="work",
+            subject_id=work_id,
+            key=key,
+            value=value,
+            source_path=source_path,
+        )
+        for key, value in values.items()
+        if value
+    ]
+    rows.extend(
+        ReaderSourceMetadata(
+            collection_id=collection_id,
+            subject_kind="source",
+            subject_id=source_id,
+            key=key,
+            value=value,
+            source_path=source_path,
+        )
+        for key, value in values.items()
+        if value
+    )
+    return rows
+
+
+def _staged_jsonl_extra_metadata(
+    *,
+    collection_id: str,
+    work_id: str,
+    source_id: str,
+    source_path: Path,
+    first: dict[str, Any],
+) -> list[ReaderSourceMetadata]:
+    values = {
+        "review_status": str(first.get("review_status") or ""),
+        "control_source_id": str(first.get("control_source_id") or ""),
+        "control_source_path": str(first.get("control_source_path") or ""),
+        "book_or_part": str(first.get("book_or_part") or ""),
+        "chapter_or_section": str(first.get("chapter_or_section") or ""),
     }
     rows = [
         ReaderSourceMetadata(

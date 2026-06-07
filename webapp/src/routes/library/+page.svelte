@@ -43,8 +43,10 @@
 	const initialData = () => data;
 	const initialCollections = (initialData().collections ?? []) as ReaderCollection[];
 	const initialSourceRows = (initialData().sourceRows ?? []) as ReaderSourceIndexResponse['items'];
+	const initialSourceRowLimit = Number(initialData().sourceRowLimit ?? 20000);
 	const initialWatchlistTargets = (initialData().watchlistTargets ?? []) as ReaderWatchlistTarget[];
 	const initialLoadError = initialData().loadError ?? '';
+	const SOURCE_INDEX_AUDIT_LIMIT = 20000;
 	const languageOptions: { value: '' | ReaderCatalogLanguage; label: string }[] = [
 		{ value: '', label: 'All languages' },
 		{ value: 'lat', label: 'Latin' },
@@ -55,6 +57,7 @@
 
 	let collections = $state<ReaderCollection[]>(initialCollections);
 	let rows = $state<ReaderSourceIndexResponse['items']>(initialSourceRows);
+	let sourceRowLimit = $state(initialSourceRowLimit);
 	let watchlistTargets = $state<ReaderWatchlistTarget[]>(initialWatchlistTargets);
 	let selectedCollection = $state('all');
 	let selectedLanguage = $state<'' | ReaderCatalogLanguage>('');
@@ -73,6 +76,7 @@
 	let watchlistPreview = $derived(
 		watchlistMatches.length > 0 ? watchlistMatches : watchlistTargets.slice(0, 6)
 	);
+	let sourceRowsMayBeCapped = $derived(rows.length >= sourceRowLimit);
 
 	async function loadInitial() {
 		loading = true;
@@ -80,7 +84,9 @@
 		try {
 			const [collectionPayload, sourcePayload, watchlistPayload] = await Promise.all([
 				fetchReaderApi<ReaderCollectionsResponse>(readerCollectionsUrl()),
-				fetchReaderApi<ReaderSourceIndexResponse>(readerSourceIndexUrl({ limit: 100 })),
+				fetchReaderApi<ReaderSourceIndexResponse>(
+					readerSourceIndexUrl({ limit: SOURCE_INDEX_AUDIT_LIMIT })
+				),
 				fetchReaderApi<ReaderWatchlistResponse>(readerLibraryWatchlistUrl({ limit: 100 }))
 			]);
 			if (collectionPayload.data.error) throw new Error(collectionPayload.data.error);
@@ -88,6 +94,7 @@
 			if (watchlistPayload.data.error) throw new Error(watchlistPayload.data.error);
 			collections = collectionPayload.data.items ?? [];
 			rows = sourcePayload.data.items ?? [];
+			sourceRowLimit = SOURCE_INDEX_AUDIT_LIMIT;
 			watchlistTargets = watchlistPayload.data.items ?? [];
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Unable to load the library index.';
@@ -106,11 +113,12 @@
 					collection: selectedCollection,
 					language: (selectedLanguage || null) as ReaderCatalogLanguage | null,
 					query,
-					limit: 200
+					limit: SOURCE_INDEX_AUDIT_LIMIT
 				})
 			);
 			if (payload.data.error) throw new Error(payload.data.error);
 			rows = payload.data.items ?? [];
+			sourceRowLimit = SOURCE_INDEX_AUDIT_LIMIT;
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Unable to search the library index.';
 			rows = [];
@@ -325,6 +333,12 @@
 								Showing the first provenance rows from the current reader catalog
 							{/if}
 						</p>
+						{#if sourceRowsMayBeCapped}
+							<p class="text-warning mt-2 text-sm font-semibold">
+								Showing the first {formatNumber(sourceRowLimit)} source-index rows. Narrow by
+								collection, language, or search to see the complete matching set.
+							</p>
+						{/if}
 					</div>
 					<a class="btn btn-outline btn-sm" href="/reader">
 						<BookOpen size={17} />

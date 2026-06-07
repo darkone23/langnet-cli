@@ -150,7 +150,7 @@ export async function GET({ url, request }) {
 					sourceId: url.searchParams.get('source_id') ?? url.searchParams.get('sourceId') ?? undefined,
 					workId: url.searchParams.get('work_id') ?? url.searchParams.get('workId') ?? undefined,
 					query: url.searchParams.get('q') ?? url.searchParams.get('query') ?? undefined,
-					limit: readInteger(url.searchParams.get('limit'), 100, 1, 1000),
+					limit: readInteger(url.searchParams.get('limit'), 100, 1, 20000),
 					options
 				})
 			);

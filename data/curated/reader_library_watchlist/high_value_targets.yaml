@@ -182,9 +182,12 @@ targets:
       - lat
     period: Medieval Latin
     tradition: Scholastic theology and philosophy
-    status: needs_source_review
-    source_plan: Corpus Thomisticum / AquinasOperaOmnia source decision
-    note: High-value corpus target; source and parser choice should be decided before acquisition.
+    status: bounded_q50_ocr_sample_staged_not_import_ready
+    source_plan: Archive.org Leonine q.50-q.119 OCR candidate plus aquinas.cc navigation and Corpus Thomisticum citation-control evidence.
+    note: High-value scholastic backbone target. A small Summa theologiae Prima Pars q.50 OCR candidate is staged, but it needs OCR review and article substructure separation before reader import; q.1 still needs a matching open witness if preferred.
+    local_artifacts:
+      - data/sources_external/aquinas/scholastic-core/manifest.yaml
+      - data/build/reader_import_staging/aquinas/scholastic_core/aquinas-summa-theologiae-i-q50-sample.segments.jsonl
   - id: latin-anselm
     display_name: Anselm of Canterbury
     aliases:
@@ -248,9 +251,11 @@ targets:
       - lat
     period: Medieval Latin
     tradition: Scholastic theology and metaphysics
-    status: needs_source_review
-    source_plan: Scholastic text source discovery; likely PDF/OCR or specialist corpus acquisition.
-    note: High-value scholastic target; requires careful work/edition selection before import.
+    status: archive_derivatives_inspected_non_ordinatio
+    source_plan: Archive.org inspected volumes provide non-Ordinatio Latin OCR candidates; Franciscan Archive provides Ordinatio excerpt/control evidence.
+    note: High-value scholastic target, but inspected Archive.org volumes are not Ordinatio. Locate an open Ordinatio witness or deliberately pivot the first sample to a bounded logical/Sentences work before staging.
+    local_artifacts:
+      - data/sources_external/duns-scotus/scholastic-core/manifest.yaml
   - id: latin-ficino
     display_name: Marsilio Ficino
     aliases:
@@ -336,9 +341,13 @@ targets:
       - lat
     period: Late Medieval / Renaissance Latin
     tradition: Christian mystical philosophy, learned ignorance, Platonism, theology
-    status: source_candidate_verified
-    source_plan: Latin Wikisource first, cross-checked against Archive.org McGill 1913 Latin witness.
-    note: Strong candidate for a lower-cost reader expansion because Wikisource has Dedicatio and three book pages, while Archive provides source-control OCR and page derivatives.
+    status: imported_source_index_exported
+    source_plan: Imported from Latin Wikisource paragraph-level staging, cross-checked against Archive.org McGill 1913 Latin witness.
+    note: De docta ignorantia is imported as 104 paragraph-level reader segments in collection cusanus_latin_wikisource. Provenance should continue to show Wikisource uncertain-source status and Archive.org control-witness evidence.
+    local_artifacts:
+      - data/sources_external/cusanus/de-docta-ignorantia/manifest.yaml
+      - data/build/reader_import_staging/cusanus/de_docta_ignorantia/cusanus-de-docta-ignorantia.segments.jsonl
+      - data/reference/reader_source_index/cusanus_latin_wikisource.tsv
   - id: latin-newton
     display_name: Isaac Newton
     aliases:

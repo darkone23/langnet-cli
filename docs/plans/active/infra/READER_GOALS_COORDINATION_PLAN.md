@@ -188,13 +188,19 @@ Status:
 - A seeded scorecard exists at `data/reference/ogl_import_audit/orion_humanist_mystical_acquisition_scorecard.tsv`.
 - The watchlist now includes Agrippa, Albertus Magnus, Paracelsus, Pico, Plethon, Suda reference bios, and Orion/etymologica targets alongside existing Ficino, Bruno, Llull, Aquinas, and Duns Scotus rows.
 - Suda is already imported as a First1KGreek reader work, but it is not yet structured as an author-bio/person/reference lookup layer.
+- The reusable reader-work ingestion skill now lives at `/home/nixos/.agents/skills/langnet-reader-work-ingestion/SKILL.md` and should guide future manifest-backed source acquisition, staging, and scorecard updates.
 
 Next actions:
 
-- Pick Agrippa `De occulta philosophia` or Ficino `De vita libri tres` as the first manifest-backed pilot.
+- Pause broad expansion until current staged/source-decision quality gates are closed in `data/reference/reader_quality_audit/current_known_issues.tsv` and `docs/plans/active/infra/READER_EXPANSION_QUALITY_CLOSEOUT_2026-06-07.md`.
+- QA the `/library` source-index truncation fix after web restart; PHI should no longer appear to stop early under the audit-sized source-index limit.
+- QA Cusanus reader and Library provenance after its import into `cusanus_latin_wikisource`.
+- Continue the reusable manifest-backed ingestion path rather than an author-specific pipeline; current candidates are Cusanus, Ficino, and deferred Agrippa.
 - Keep Agrippa deferred in `data/sources_external/agrippa/de-occulta-philosophia/manifest.yaml` until lexeme-level OCR cleanup policy is ready.
 - Continue Ficino from `data/sources_external/ficino/de-vita-libri-tres/manifest.yaml`: compare 1489, 1529, and 1549 OCR/text derivatives and pick the cleanest opening sample for staging.
-- Continue Cusanus from `data/sources_external/cusanus/de-docta-ignorantia/manifest.yaml`: Wikisource Dedicatio/Liber primus sample is staged; cross-check against the Archive.org 1913 witness before import.
+- Cusanus now proves the reusable clean-electronic-text plus control-witness ingestion path: full De docta ignorantia staging imported as 104 paragraph-level segments in `cusanus_latin_wikisource`, with source-index export generated. Next work is post-import reader/Library provenance QA.
+- Aquinas Archive.org derivative inspection found a Leonine Prima Pars q.50-q.119 volume; a bounded q.50 paragraph-level OCR candidate is now staged, but it needs OCR review and article substructure separation before reader import.
+- Duns Scotus Archive.org derivative inspection found usable non-Ordinatio volumes; locate an open Ordinatio primary witness or deliberately pivot the first Scotus sample to a bounded logical/Sentences work before staging.
 - Track Newton, Kepler, and Euler as scientific Latin expansion targets; defer staging until a diagram/formula/proposition-aware source policy is defined.
 - Inventory current Greek lexicographic coverage for Suda, Orion of Thebes, Etymologicum-style works, Pseudo-Zonaras, Stephanus Byzantius, and related sources.
 - Create source-backed relationship metadata for the Ficino/Plethon/Cosimo/Pico/Plotinus transmission cluster only where evidence is explicit.
