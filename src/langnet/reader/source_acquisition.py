@@ -45,6 +45,22 @@ IMAGE_LINK_RE = re.compile(r"!\[.*?\]\(.*?\)")
 MARKDOWN_LINK_RE = re.compile(r"\[([^\]]+)\]\([^\)]+\)")
 SPACE_RE = re.compile(r"\s+")
 MAX_SEGMENT_CHARS = 2200
+WIKISOURCE_FOOTER_PREFIXES = (
+    "receptum de",
+    "categoriae:",
+    "novissima mutatio",
+    "nonobstantibus ceteris condicionibus",
+    "consilium de secreto",
+    "repudiationes",
+    "code of conduct",
+    "elaboratores",
+    "statistica",
+    "cookie statement",
+    "pagina mobilis",
+    "toggle the table of contents",
+    "add languages",
+    "something went wrong",
+)
 
 
 @dataclass(frozen=True)
@@ -908,6 +924,8 @@ def _body_lines(markdown: str, title: str) -> list[str]:
         if not body_started and (_is_front_matter_line(stripped, title) or _is_marker_only_chunk(stripped)):
             continue
         body_started = True
+        if _is_wikisource_footer_line(stripped):
+            break
         if _is_boilerplate_line(stripped, title):
             continue
         body.append(stripped)
@@ -948,14 +966,28 @@ def _is_boilerplate_line(line: str, title: str) -> bool:
         "fons: corpus corporum",
         "monitum ad lectore",
         "saeculo ix",
+        "quaerere",
     }
     if low in exact_noise:
+        return True
+    if low.startswith("- opera omnia"):
+        return True
+    if low.startswith("- novissima mutatio"):
+        return True
+    if low.startswith("- consilium de secreto"):
         return True
     if low.startswith("iohannes scotus eriugena") and _norm_title(title) in _norm_title(low):
         return True
     if low.startswith("migne patrologia latina tomus"):
         return True
     return False
+
+
+def _is_wikisource_footer_line(line: str) -> bool:
+    normalized = _normalize_front_matter_candidate(line).casefold()
+    if not normalized:
+        return False
+    return any(normalized.startswith(prefix) for prefix in WIKISOURCE_FOOTER_PREFIXES)
 
 
 def _paragraphs(lines: list[str]) -> list[str]:

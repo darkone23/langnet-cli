@@ -71,7 +71,7 @@ Acquisition priority:
 For every acquisition source, record:
 
 - Source homepage.
-- Source license or terms note when available.
+- Source-use/source-role note when available.
 - Retrieval date.
 - Retrieval method: mirror, scrape, direct download, PDF parse, or manual flatfile.
 - Raw source path.
@@ -90,7 +90,7 @@ Source posture from the Latin Library notice:
 - The site states the texts are not intended as substitutes for critical editions.
 - Scanner artifacts and typographical errors may remain.
 - The site presents texts for online reading or downloading for personal or educational use.
-- The site attempts to avoid copyright-protected texts and asks to be notified if a copyright claim exists.
+- The site attempts to maintain an open reader corpus and asks to be notified if a source attribution or corpus-status claim needs correction.
 
 LangNet treatment:
 
@@ -371,7 +371,7 @@ Scope:
 
 - Keep scorecard TSV/JSON files under `data/reference/ogl_import_audit/`.
 - Add curated watchlist rows for high-value absent targets such as Eriugena, Pseudo-Dionysius, Aquinas, and PG pilot authors.
-- Add a lightweight source status vocabulary: `present`, `missing_local_source`, `staged`, `imported`, `needs_rights_review`, `needs_ocr`, `needs_segmentation`, `needs_identity_review`.
+- Add a lightweight source status vocabulary: `present`, `missing_local_source`, `staged`, `imported`, `needs_source_role_review`, `needs_ocr`, `needs_segmentation`, `needs_identity_review`.
 - Show acquisition targets in empty states without confusing them for imported works.
 
 Acceptance:
@@ -564,7 +564,7 @@ Scope:
 
 - Evaluate Open Patrologia Graeca / OGL-PatrologiaGraecaDev availability for one volume.
 - Compare one overlapping Calfa PG volume when possible.
-- Record whether the source offers raw text, hOCR, page images, column labels, author/work metadata, and rights notes.
+- Record whether the source offers raw text, hOCR, page images, column labels, author/work metadata, and source-use/source-role notes.
 - Stage one small Greek text sample from the chosen source.
 - Record OCR quality and segmentation risk explicitly.
 - Do not import broad PG until the pilot path is proven.

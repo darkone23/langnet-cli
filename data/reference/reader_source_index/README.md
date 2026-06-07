@@ -19,7 +19,7 @@ Generated from `data/build/reader/catalog.duckdb`. These files are flat, grep-fr
 | `opengreekandlatin_latin` | 7 | 7 | 1828 | 137779 | `opengreekandlatin_latin.tsv` |
 | `opengreekandlatin_patrologia` | 1275 | 1275 | 210395 | 25203407 | `opengreekandlatin_patrologia.tsv` |
 | `patrologia_graeca_pilot` | 1 | 1 | 14 | 3059 | `patrologia_graeca_pilot.tsv` |
-| `patrologia_latina_wikisource` | 14 | 14 | 3796 | 432042 | `patrologia_latina_wikisource.tsv` |
+| `patrologia_latina_wikisource` | 14 | 14 | 3744 | 431555 | `patrologia_latina_wikisource.tsv` |
 | `perseus` | 1102 | 1102 | 555289 | 15929305 | `perseus.tsv` |
 | `phi` | 784 | 784 | 528855 | 4150071 | `phi.tsv` |
 | `sanskrit_dcs` | 268 | 268 | 1070138 | 5898557 | `sanskrit_dcs.tsv` |

@@ -252,6 +252,26 @@ Previously completed PL122 artifacts:
 - Segmentation/front-matter quality for PL122 and OCR noise in PG are in watch mode, both intentionally tagged `machine_text_needs_segmentation`.
 - CSEL gap item moved into active execution (volume 61 manifest created, discovery-first work pending).
 
+## Close-Out Checkpoint
+
+The current master driver is `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md`. The working parity goal is provenance-and-reader-quality parity, not raw corpus-count parity.
+
+Before starting a new broad expansion batch, confirm:
+
+- New source family has a manifest before import.
+- At least one representative sample is staged/imported and inspected.
+- Source-index, `/library`, and CLI/API views expose the work with provenance and quality status.
+- Known issues are logged in `data/reference/reader_quality_audit/current_known_issues.tsv`.
+- Expansion queues separate source gaps, local checkout gaps, importer gaps, and UI/search gaps.
+
+Current close-out state:
+
+- PL122/Eriugena: acceptable to move forward after fourteen imported works; keep segmentation watch open.
+- PG pilot: do not broaden until OCR/segmentation calibration is recorded.
+- CSEL61: source-candidate gate is now recorded; do not import until a Google Books/OeAW PDF/OCR witness is parsed and sample quality/work-boundaries are checked.
+- Library: browser interaction QA remains open after CLI/API/server-rendered verification.
+- Search index: rebuild remains deferred until the next approved expansion or quality gate.
+
 ## Remaining Work
 
 Priority 1:
@@ -267,7 +287,7 @@ Priority 2:
 
 Priority 3:
 
-- Finalize CSEL Volume 61 discovery in the first pass: collect a rights-reviewed source candidate, stage only after source quality pass, and then map high-value works for importer handoff.
+- Continue CSEL Volume 61 from the verified source-candidate state: parse a Google Books/OeAW PDF/OCR witness, stage only after source quality and work-boundary checks, and then map high-value Prudentius works for importer handoff.
 
 Acceptance:
 - These continuation works are planned and will be visible through `reader works --query "Eriugena"` and `reader source-index --collection patrologia_latina_wikisource` after import.

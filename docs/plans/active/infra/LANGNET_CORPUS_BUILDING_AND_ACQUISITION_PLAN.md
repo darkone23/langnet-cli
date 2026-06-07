@@ -4,13 +4,35 @@
 
 **Goal:** Define what it means for LangNet to build a corpus, how we acquire and stage texts, how we preserve provenance and quality status, and how we prepare for larger-disk server migration.
 
+## Open Knowledgebase Policy
+
+LangNet treats its classical corpora and source trees as open scholarly knowledgebase data. The working assumption for CSEL, Patrologia, Church Fathers, and similar legacy corpora in this project is that the source material is free to use without restriction, and that derived databases produced by LangNet may publish the content they contain without restriction.
+
+The acquisition process is therefore not a permission gate. It is a provenance, source-role, and quality-control process:
+
+- Preserve where a reading witness, bibliographic fact, scan locator, or OCR output came from.
+- Distinguish copied/source text from derived facts, normalized metadata, segmentation, collation, and parser output.
+- Prefer public-domain and scholarly source traditions over restricted modern editions.
+- Avoid treating a catalog, search page, scan locator, or database UI as clean reader text when it is only evidence for source discovery.
+- Build a higher-quality derived knowledgebase by normalizing, collating, checking, and documenting imperfect upstream material.
+
+Facts such as author names, work titles, volume ids, document ids, column ranges, source relationships, and coverage gaps are first-class derived knowledgebase data.
+
+Subscription-only databases are not acquisition targets. They may be useful for
+publicly visible bibliography, naming, or comparison context, but LangNet should
+not depend on them for reader text. Prefer sources that support an open-access,
+run-your-own-mirror posture: public source trees, stable site mirrors,
+downloadable PDF/OCR witnesses, open bibliographic lists, or local reproducible
+checkouts. The Library of Latin Texts is therefore tracked only as comparison
+context, not as a text-import source.
+
 ## Definition: What It Means To Build A Corpus
 
 For LangNet, building a corpus means moving a text through a controlled lifecycle:
 
 - Identify a target author/work/source.
 - Locate one or more electronic witnesses.
-- Record source provenance and rights/usage posture.
+- Record source provenance and source-use role.
 - Acquire raw source files or a reproducible retrieval manifest.
 - Extract readable text into staging.
 - Segment the text into reader-friendly units.
@@ -112,7 +134,7 @@ retrieved_at: 2026-06-07
 retrieval_method: archive_metadata_derivative
 raw_storage: data/sources_external/archive_org/jordanibruninola11brun/raw
 selected_derivative: jordanibruninola11brun_djvu.txt
-rights_note: Public-domain / Archive item metadata to verify.
+source_use_note: Open source witness; preserve Archive item metadata and derivative provenance.
 quality_status: ocr_usable_with_artifacts
 language: lat
 authors:
@@ -126,6 +148,67 @@ checksums: []
 ```
 
 ## Acquisition Lanes
+
+### Lane 0: Popular classical Latin canon
+
+The reader should not only expand by series such as PL, PG, and CSEL. Those are
+valuable depth lanes, but many users first look for the common Latin works used
+in classrooms, reading groups, and self-study.
+
+Priority targets:
+
+- Caesar, `De bello Gallico`
+- Vergil, `Aeneid`
+- Ovid, `Metamorphoses`
+- Cicero, `In Catilinam`
+- Catullus, `Carmina`
+- Horace, `Odes`
+- Sallust, `Bellum Catilinae` and `Bellum Iugurthinum`
+- Tacitus, starting with `Agricola` and `Germania`
+
+Policy:
+
+- Prefer open/mirrorable witnesses, not subscription databases.
+- Check existing reader catalog coverage before staging; if a work exists but is hard to find, fix aliases/search before importing duplicates.
+- Stage one high-demand prose work first, preferably Caesar or Sallust, because book/chapter segmentation is simpler than poetry lineation.
+- Preserve canonical citation shape: book/chapter, speech/section, poem number, or book/line as appropriate.
+- Treat this lane as the learner-facing acquisition lane; PL/PG/CSEL remain high-value specialist/depth lanes.
+
+Tracking artifact:
+
+- `data/reference/ogl_import_audit/popular_latin_acquisition_scorecard.tsv`
+
+### Lane 0b: Humanist, scholastic, and mystical source library
+
+This is the Project Orion humanist-library lane: a curated library of Latin and
+Greek source works around Platonism, scholastic natural philosophy, occult
+philosophy, medicine, memory, etymology, and Christian/mystical transmission.
+
+Priority targets:
+
+- Agrippa, `De occulta philosophia libri tres`
+- Ficino, `De vita libri tres` and Plotinus-related prefaces/commentary context
+- Bruno, Latin memory/magic/philosophy works
+- Albertus Magnus, natural philosophy works with attribution controls
+- Paracelsus, Latin-only works and clearly marked pseudo-Paracelsian witnesses
+- Llull, `Ars brevis` and Latin combinatorial/logical works
+- Pico, `Oratio`, `Conclusiones`, and related Latin works
+- Plethon, Greek works/reference witnesses and relationship metadata
+- Suda, author/person bios as a structured reference substrate
+- Orion of Thebes and Greek etymologica for lookup/reference enrichment
+
+Policy:
+
+- Stay within supported source languages: Latin, Greek, and Sanskrit.
+- Do not import translations as source works unless they are explicitly modeled as translations or metadata.
+- Prefer open/mirrorable witnesses and local reproducible checkouts.
+- Make attribution status visible for pseudo-Albertine, pseudo-Paracelsian, Hermetic, Dionysian, and other contested corpora.
+- Treat Suda and etymologica as reference works as well as reader works; they should support author bios, term lookups, and UI cast coverage.
+- Record relationship edges as curated metadata when source-backed: patron, teacher, translator, dedicatee, manuscript supplier, influence, opponent, school, or reception link.
+
+Tracking artifact:
+
+- `data/reference/ogl_import_audit/orion_humanist_mystical_acquisition_scorecard.tsv`
 
 ### Lane A: Direct electronic text
 
@@ -197,7 +280,7 @@ Strengths:
 Risks:
 
 - Page completeness and proofreading status vary.
-- Wikimedia page/license/source metadata must be reviewed before bulk import.
+- Wikimedia page/source metadata should be preserved before bulk import.
 - Some pages may contain only an index, not full text.
 - Markup/transclusion may require a Wikisource-specific extractor.
 

@@ -4,10 +4,34 @@
 
 **Goal:** Keep LangNet's reader work moving toward a coherent library: trustworthy imports, visible provenance, useful discovery, reproducible acquisition, and learner-facing access to Latin, Greek, and Sanskrit texts.
 
+## Current Parity Target
+
+The active target is not raw corpus-count parity. It is **provenance-and-reader-quality parity** across every expansion lane before broad import.
+
+For each new corpus family or source family, LangNet should reach this minimum bar before scaling:
+
+- A source manifest exists before text enters the reader catalog.
+- The source-index can answer what was imported, from where, with language, author/title, source path, segment count, token count, and quality status.
+- One representative staged/imported sample has been inspected for readable text, work boundaries, and front-matter/OCR noise.
+- Known defects are tracked in `data/reference/reader_quality_audit/current_known_issues.tsv`.
+- Expansion queues distinguish external source gaps, local checkout gaps, importer gaps, and UI/discovery gaps.
+- `/library`, CLI `reader works`, and CLI/API source-index views expose the import without making wanted/acquisition targets look like already-readable works.
+
+Current concrete parity gates:
+
+- PL122/Eriugena: pilot-slice parity met for fourteen works; keep segmentation as a watch item, not a blocker to choosing the next source family.
+- Popular classical Latin: parity is not met until the reader has a source-reviewed open/mirrorable path for the highest-demand classroom works, starting with Caesar or Sallust.
+- Humanist/mystical source library: Agrippa now has a manifest-backed source candidate and candidate Book I DjVu OCR sample, but import is deferred because cleanup likely needs lexeme-level correction; Ficino and Cusanus now have manifest-backed candidates for cleaner-source comparison; parity is not met until one pilot passes readability/boundary review and the Suda/Orion reference lane has an explicit inventory path.
+- Patrologia Graeca: sample-import parity met, but reader-quality parity is not met until OCR noise and segmentation are calibrated against a second witness such as Calfa overlap.
+- CSEL: CSEL61 now has a verified source candidate and manifest-backed decision; acquisition parity is not met until one PDF/OCR witness is parsed and a readable sample is staged with work-boundary metadata.
+- Library: CLI/API/server-rendered parity exists; browser interaction parity remains pending.
+- Search: reader catalog/source-index parity exists; `search.lance` rebuild remains deferred until the next approved expansion or reader-quality gate.
+
 ## Related Plans And Artifacts
 
 - `docs/technical/rebuilding-reader-sources.md`: reader rebuild model, source-index exports, generated/curated metadata loop, server migration notes.
 - `docs/plans/active/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`: acquisition lanes, source manifests, corpus-building policy, target author/work register.
+- `docs/plans/active/infra/READER_COLLECTION_EXPANSION_MASTER_TRACKER_2026-06-07.md`: master tracker for expansion lanes, status, cost tiers, and current work order.
 - `docs/plans/active/infra/LANGNET_LIBRARY_EXPLORER_PLAN.md`: `/library`, search, watchlist, provenance, and acquisition-gap UX.
 - `docs/plans/active/infra/OPEN_GREEK_LATIN_IMPORTER_AUDIT_AND_FIX_PLAN.md`: OGL importer audit, Patrologia/CSEL completeness, source-view quality policy.
 - `data/reference/reader_source_index/`: checked-in source-index snapshots.
@@ -78,6 +102,7 @@ Next actions:
 - Generate/import metadata for newly imported works only when they enter the reader catalog.
 - Full reader search-index rebuild was attempted on 2026-06-07 but was stopped after running too long for the synchronous pass; this is deferred until after segmentation is signed off.
 - Inspect Archive.org PL122 or PL 1-221 derivatives for OCR fallback.
+- Use the University of Chicago Patrologia Latina Database bibliography as a PL worklist/identity-control source when selecting future PL gaps; classify it as bibliographic knowledgebase evidence rather than clean reader text unless a separate text witness is identified.
 - Preserve PL column markers as address/provenance metadata.
 - Import additional PL122 works only after the selected-work reader experience is acceptable.
 
@@ -126,13 +151,61 @@ Next actions:
 - Search for reliable electronic/OCR sources for the first missing range.
 - Continue open-web legitimacy checks for weak or suspicious OGL rows.
 - Compare Patrologia `data`, `corrected`, `split`, and `volumes` source views before changing importer precedence.
-- Treat `data/reference/ogl_import_audit/pl_pg_acquisition_next_steps.tsv` row 8 as discovery-first and keep CSEL:volume-61 provenance-first until a source path is verified.
+- Treat `data/reference/ogl_import_audit/pl_pg_acquisition_next_steps.tsv` row 8 as source-candidate-verified; keep CSEL:volume-61 provenance-first until a local PDF/OCR witness is parsed and sampled.
 
 Acceptance:
 
 - Missing CSEL ranges have source-acquisition status, not just "absent" notes.
 - Patrologia source-view precedence is evidence-based.
 - High-value questionable rows either have curated overlays, importer fixes, or acquisition targets.
+
+### 4a. Popular classical Latin coverage
+
+Status:
+
+- Current watchlist coverage was biased toward patristic, scholastic, and early-modern philosophical Latin.
+- A popular Latin acquisition scorecard now tracks common classroom/self-study targets under `data/reference/ogl_import_audit/popular_latin_acquisition_scorecard.tsv`.
+- Initial catalog probing for common Latin queries did not expose visible matches for Vergil, Aeneid, Ovid, Metamorphoses, Caesar, Cicero, Horace, Livy, Tacitus, Sallust, Plautus, Terence, or Catullus.
+
+Next actions:
+
+- Verify existing local/OGL/Perseus coverage before importing duplicates.
+- Pick one prose-first measured import target, preferably Caesar `De bello Gallico` or Sallust `Bellum Catilinae`.
+- Use only open/mirrorable witnesses: public source trees, Latin Library-style mirrors, Wikisource, Project Gutenberg, Archive derivatives, or reproducible local checkouts.
+- Preserve canonical citation shapes before broad import: book/chapter for Caesar and Sallust, speech/section for Cicero, poem number for Catullus, and book/line for Vergil/Ovid.
+
+Acceptance:
+
+- `/library` and `reader works` surface the first imported popular Latin target by common English and Latin aliases.
+- Source-index rows show source path, witness role, segment count, token count, and quality status.
+- The popular Latin lane remains distinct from PL/PG/CSEL specialist expansion.
+
+### 4b. Humanist, scholastic, mystical, and reference coverage
+
+Status:
+
+- The project direction now distinguishes bulk ecclesiastical series expansion from a curated humanist library lane.
+- A seeded scorecard exists at `data/reference/ogl_import_audit/orion_humanist_mystical_acquisition_scorecard.tsv`.
+- The watchlist now includes Agrippa, Albertus Magnus, Paracelsus, Pico, Plethon, Suda reference bios, and Orion/etymologica targets alongside existing Ficino, Bruno, Llull, Aquinas, and Duns Scotus rows.
+- Suda is already imported as a First1KGreek reader work, but it is not yet structured as an author-bio/person/reference lookup layer.
+
+Next actions:
+
+- Pick Agrippa `De occulta philosophia` or Ficino `De vita libri tres` as the first manifest-backed pilot.
+- Keep Agrippa deferred in `data/sources_external/agrippa/de-occulta-philosophia/manifest.yaml` until lexeme-level OCR cleanup policy is ready.
+- Continue Ficino from `data/sources_external/ficino/de-vita-libri-tres/manifest.yaml`: compare 1489, 1529, and 1549 OCR/text derivatives and pick the cleanest opening sample for staging.
+- Continue Cusanus from `data/sources_external/cusanus/de-docta-ignorantia/manifest.yaml`: Wikisource Dedicatio/Liber primus sample is staged; cross-check against the Archive.org 1913 witness before import.
+- Track Newton, Kepler, and Euler as scientific Latin expansion targets; defer staging until a diagram/formula/proposition-aware source policy is defined.
+- Inventory current Greek lexicographic coverage for Suda, Orion of Thebes, Etymologicum-style works, Pseudo-Zonaras, Stephanus Byzantius, and related sources.
+- Create source-backed relationship metadata for the Ficino/Plethon/Cosimo/Pico/Plotinus transmission cluster only where evidence is explicit.
+- Ensure every UI cast-of-characters figure resolves to reader works, Suda/reference entries, or an acquisition watchlist target.
+
+Acceptance:
+
+- At least one humanist/mystical Latin pilot has a source manifest, staged sample, source-index row, and quality status. Agrippa manifest and candidate sample are complete; import/source-index remains pending readability review.
+- Suda/reference entries can be used for author/person context without treating generated summaries as evidence.
+- Orion of Thebes and Greek etymologica have explicit inventory status and next actions.
+- Cast-of-characters coverage is auditable from curated data or acquisition scorecards.
 
 ### 5. Library experience
 
@@ -149,7 +222,7 @@ Status:
 
 Next actions:
 
-- Add acquisition status labels such as `missing_local_source`, `planned`, `staged`, `imported`, `needs_ocr`, `needs_segmentation`, and `needs_rights_review`.
+- Add acquisition status labels such as `missing_local_source`, `planned`, `staged`, `imported`, `needs_ocr`, `needs_segmentation`, and `needs_source_role_review`.
 - Keep imported works visually distinct from wanted/acquisition targets.
 - Add browser QA coverage for `/library` filters and searches.
 - Improve how imported watchlist targets are shown as acquisition history/context instead of "wanted" items.
@@ -223,7 +296,7 @@ Acceptance:
 
 Pause and ask for review if:
 
-- A source has unclear or restrictive reuse terms.
+- A source role is unclear: for example, it may be a bibliography, scan locator, database UI, OCR witness, or clean text witness.
 - A staged text is mostly OCR noise.
 - Work boundaries cannot be inferred without human judgment.
 - A proposed importer change would change source-view precedence for many existing Patrologia/CSEL rows.

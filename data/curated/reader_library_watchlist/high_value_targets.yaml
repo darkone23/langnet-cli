@@ -38,6 +38,126 @@ targets:
     local_artifacts:
       - data/reference/ogl_import_audit/pl_pg_acquisition_source_scorecard.tsv
       - data/reference/reader_source_index/patrologia_latina_wikisource.tsv
+  - id: core-latin-vergil-aeneid
+    display_name: Vergil, Aeneid
+    aliases:
+      - Virgil
+      - Vergilius
+      - Publius Vergilius Maro
+      - Aeneid
+      - Aeneis
+    languages:
+      - lat
+    period: Classical Latin
+    tradition: Epic poetry, Augustan literature
+    status: needs_source_review
+    source_plan: Open/mirrorable source comparison across Perseus/OGL, Latin Library, Wikisource, and Project Gutenberg where available.
+    note: Popular learner-facing Latin target; prioritize work-level readable text, stable book/line segmentation, and vocabulary/morphology usefulness.
+  - id: core-latin-caesar-bellum-gallicum
+    display_name: Caesar, De bello Gallico
+    aliases:
+      - Caesar
+      - Julius Caesar
+      - Gaius Julius Caesar
+      - De Bello Gallico
+      - Bellum Gallicum
+      - Gallic War
+    languages:
+      - lat
+    period: Classical Latin
+    tradition: Prose, historiography, first-year Latin reader canon
+    status: needs_source_review
+    source_plan: Open/mirrorable source comparison across Perseus/OGL, Latin Library, Wikisource, and Project Gutenberg where available.
+    note: Highest-value classroom Latin target; prioritize book/chapter segmentation and clean prose for learner lookup.
+  - id: core-latin-ovid-metamorphoses
+    display_name: Ovid, Metamorphoses
+    aliases:
+      - Ovid
+      - Ovidius
+      - Publius Ovidius Naso
+      - Metamorphoses
+    languages:
+      - lat
+    period: Classical Latin
+    tradition: Epic poetry, mythology, Augustan literature
+    status: needs_source_review
+    source_plan: Open/mirrorable source comparison across Perseus/OGL, Latin Library, Wikisource, and Project Gutenberg where available.
+    note: Popular Latin target for mythological reading paths; prioritize book/line segmentation and alias coverage.
+  - id: core-latin-cicero-catilinarians
+    display_name: Cicero, In Catilinam
+    aliases:
+      - Cicero
+      - Marcus Tullius Cicero
+      - Catiline Orations
+      - In Catilinam
+      - Catilinarians
+    languages:
+      - lat
+    period: Classical Latin
+    tradition: Oratory, Republican prose
+    status: needs_source_review
+    source_plan: Open/mirrorable source comparison across Perseus/OGL, Latin Library, Wikisource, and Project Gutenberg where available.
+    note: High-demand student prose target; prioritize speech boundaries and section numbering.
+  - id: core-latin-catullus-carmina
+    display_name: Catullus, Carmina
+    aliases:
+      - Catullus
+      - Gaius Valerius Catullus
+      - Carmina
+      - Catullus poems
+    languages:
+      - lat
+    period: Classical Latin
+    tradition: Lyric and elegiac poetry
+    status: needs_source_review
+    source_plan: Open/mirrorable source comparison across Perseus/OGL, Latin Library, Wikisource, and Project Gutenberg where available.
+    note: Popular short-poem target; prioritize poem-number segmentation and stable citation ids.
+  - id: core-latin-horace-odes
+    display_name: Horace, Odes
+    aliases:
+      - Horace
+      - Horatius
+      - Quintus Horatius Flaccus
+      - Odes
+      - Carmina
+    languages:
+      - lat
+    period: Classical Latin
+    tradition: Lyric poetry, Augustan literature
+    status: needs_source_review
+    source_plan: Open/mirrorable source comparison across Perseus/OGL, Latin Library, Wikisource, and Project Gutenberg where available.
+    note: High-value poetry target; prioritize book/poem segmentation and title aliases.
+  - id: core-latin-sallust
+    display_name: Sallust, Catiline and Jugurtha
+    aliases:
+      - Sallust
+      - Sallustius
+      - Bellum Catilinae
+      - Bellum Iugurthinum
+      - Jugurtha
+    languages:
+      - lat
+    period: Classical Latin
+    tradition: Historiography, Republican prose
+    status: needs_source_review
+    source_plan: Open/mirrorable source comparison across Perseus/OGL, Latin Library, Wikisource, and Project Gutenberg where available.
+    note: Compact high-value prose target; good candidate for an early measured import slice.
+  - id: core-latin-tacitus-selections
+    display_name: Tacitus, Agricola, Germania, and Annals selections
+    aliases:
+      - Tacitus
+      - Cornelius Tacitus
+      - Agricola
+      - Germania
+      - Annales
+      - Annals
+    languages:
+      - lat
+    period: Classical Latin
+    tradition: Imperial prose, historiography
+    status: needs_source_review
+    source_plan: Open/mirrorable source comparison across Perseus/OGL, Latin Library, Wikisource, and Project Gutenberg where available.
+    note: Popular intermediate/advanced Latin target; start with shorter works before large annalistic imports.
   - id: pg-pseudo-dionysius
     display_name: Pseudo-Dionysius the Areopagite
     aliases:
@@ -145,6 +265,171 @@ targets:
     status: needs_source_review
     source_plan: Renaissance Latin source discovery across Archive.org, Wikisource, and specialist editions.
     note: Valuable for Renaissance Latin and Platonic reception; likely needs source-by-source acquisition planning.
+  - id: latin-agrippa-occulta-philosophia
+    display_name: Heinrich Cornelius Agrippa
+    aliases:
+      - Agrippa
+      - Cornelius Agrippa
+      - Henricus Cornelius Agrippa
+      - De occulta philosophia
+      - Occult Philosophy
+    languages:
+      - lat
+    period: Renaissance Latin
+    tradition: Occult philosophy, natural magic, humanist encyclopedism
+    status: needs_source_review
+    source_plan: Open/mirrorable Latin witness comparison before staging De occulta philosophia libri tres.
+    note: First-choice pilot for the humanist/mystical Latin lane because it is iconic, Latin, and likely segmentable by book/chapter.
+  - id: latin-albertus-magnus
+    display_name: Albertus Magnus
+    aliases:
+      - Albert the Great
+      - Albertus
+      - Albertus Magnus
+      - De mineralibus
+      - De vegetabilibus
+    languages:
+      - lat
+    period: Scholastic Latin
+    tradition: Natural philosophy, scholastic science, medieval reception of Aristotle
+    status: needs_source_review
+    source_plan: Open/mirrorable Latin witness discovery with explicit attribution controls for genuine versus pseudo-Albertine works.
+    note: High-value scholastic/natural-philosophy target; attribution status must be visible before importing magical or pseudo-Albertine material.
+  - id: latin-paracelsus
+    display_name: Paracelsus
+    aliases:
+      - Theophrastus Bombastus von Hohenheim
+      - Paracelsus
+      - Pseudo-Paracelsus
+    languages:
+      - lat
+    period: Early Modern Latin
+    tradition: Medicine, alchemy, mystical natural philosophy
+    status: needs_source_review
+    source_plan: Latin-only source discovery; exclude German/non-supported-language witnesses from reader import unless represented as metadata.
+    note: Valuable but risky target because much of the corpus is German or later pseudo-Paracelsian; begin with a Latin-candidate manifest, not import.
+  - id: latin-pico
+    display_name: Giovanni Pico della Mirandola
+    aliases:
+      - Pico
+      - Picus Mirandulanus
+      - Oratio de hominis dignitate
+      - Conclusiones
+    languages:
+      - lat
+    period: Renaissance Latin
+    tradition: Humanist syncretism, Platonism, cabala, scholastic disputation
+    status: needs_source_review
+    source_plan: Open/mirrorable Latin source comparison for Oratio, Conclusiones, and related works.
+    note: Important bridge between Ficino, Plotinus, cabala, and Renaissance philosophical reception.
+  - id: latin-cusanus
+    display_name: Nicolaus Cusanus
+    aliases:
+      - Nicholas of Cusa
+      - Nicolas of Cusa
+      - Nicolaus de Cusa
+      - Nicolai Cusani
+      - Cusanus
+      - De docta ignorantia
+      - Learned Ignorance
+    languages:
+      - lat
+    period: Late Medieval / Renaissance Latin
+    tradition: Christian mystical philosophy, learned ignorance, Platonism, theology
+    status: source_candidate_verified
+    source_plan: Latin Wikisource first, cross-checked against Archive.org McGill 1913 Latin witness.
+    note: Strong candidate for a lower-cost reader expansion because Wikisource has Dedicatio and three book pages, while Archive provides source-control OCR and page derivatives.
+  - id: latin-newton
+    display_name: Isaac Newton
+    aliases:
+      - Newton
+      - Isaacus Newtonus
+      - Philosophiae naturalis principia mathematica
+      - Principia Mathematica
+      - Principia
+    languages:
+      - lat
+    period: Early Modern Scientific Latin
+    tradition: Natural philosophy, mathematics, astronomy, mechanics
+    status: source_candidate_identified
+    source_plan: Archive.org Latin Principia witness discovery followed by manifest-backed derivative inspection.
+    note: High-value scientific Latin target, but segmentation is more expensive because propositions, scholia, diagrams, and formulas need special handling.
+  - id: latin-kepler
+    display_name: Johannes Kepler
+    aliases:
+      - Kepler
+      - Ioannes Keplerus
+      - Johannes Kepler
+      - Astronomia nova
+      - Harmonices mundi
+      - Mysterium cosmographicum
+    languages:
+      - lat
+    period: Early Modern Scientific Latin
+    tradition: Astronomy, mathematics, harmonics, natural philosophy
+    status: source_candidate_identified
+    source_plan: Archive.org Latin Astronomia nova / Harmonices mundi witness discovery followed by manifest-backed derivative inspection.
+    note: High-value scientific Latin target, but diagrams, tables, and astronomical notation make staging more expensive than Cusanus-style prose.
+  - id: latin-euler
+    display_name: Leonhard Euler
+    aliases:
+      - Euler
+      - Leonhardus Eulerus
+      - Leonhardi Euleri
+      - Mechanica
+      - Institutiones calculi differentialis
+      - Institutiones calculi integralis
+      - Dioptricae
+    languages:
+      - lat
+    period: Early Modern Scientific Latin
+    tradition: Mathematics, mechanics, physics, analysis, optics
+    status: source_candidate_verified
+    source_plan: Archive.org Mechanica 1736 plus Euler Archive worklist/identity-control; defer staging until scientific notation policy is defined.
+    note: Euler wrote extensively in Latin and is a major target, but formulas, diagrams, and proposition/scholium structure make him a high-cost scientific Latin lane rather than a quick prose import.
+  - id: greek-plethon
+    display_name: George Gemistos Plethon
+    aliases:
+      - Georgios Gemistos Plethon
+      - Gemistus Pletho
+      - Plethon
+      - George Gemistus
+    languages:
+      - grc
+    period: Byzantine / Renaissance transmission
+    tradition: Platonism, Byzantine philosophy, Greek-to-Italian humanist transmission
+    status: needs_source_review
+    source_plan: Greek source/reference discovery plus relationship metadata linking Plethon to Cosimo and Ficino.
+    note: Treat as the likely "Greek Georg" behind the Ficino/Cosimo Platonic-library story; avoid claiming direct book transfer unless source-backed.
+  - id: greek-suda-reference-bios
+    display_name: Suda reference bios
+    aliases:
+      - Suda
+      - Suidae lexicon
+      - Byzantine encyclopedia
+      - author bios
+    languages:
+      - grc
+    period: Byzantine reference
+    tradition: Lexicography, encyclopedia, author biography
+    status: imported_needs_reference_index
+    source_plan: Use existing First1KGreek Suda import as substrate for author/person entry linking and UI cast coverage.
+    note: Suda is already imported as a reader work; the missing platform work is structured reference lookup for bios and named entities.
+  - id: greek-orion-etymologica
+    display_name: Orion of Thebes and Greek etymologica
+    aliases:
+      - Orion of Thebes
+      - Orion grammaticus
+      - Etymologicum
+      - Etymologica
+      - Greek etymologies
+    languages:
+      - grc
+    period: Byzantine lexicography
+    tradition: Greek grammar, etymology, lexicography
+    status: needs_inventory
+    source_plan: Inventory current Greek lexicographic imports and identify Orion-specific works or etymological witnesses.
+    note: Project Orion should have visible Orion-of-Thebes and etymological reference coverage in reader/lookup workflows.
   - id: latin-bacon
     display_name: Francis Bacon
     aliases:

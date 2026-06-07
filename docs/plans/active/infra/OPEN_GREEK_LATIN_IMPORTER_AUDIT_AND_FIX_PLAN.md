@@ -94,10 +94,10 @@ Current scorecard findings:
 Current PL/PG acquisition-source reading:
 
 - Existing OGL Patrologia Latina is a partial, already-integrated source and should remain under audit rather than be discarded.
-- Latin Wikisource is a strong Patrologia Latina table-of-contents and legitimacy source, and may be a practical text source for selected missing works after rights/format review.
+- Latin Wikisource is a strong Patrologia Latina table-of-contents and legitimacy source, and may be a practical text source for selected missing works after source-role and format review.
 - Internet Archive's PL 1-221 item is the strongest bulk fallback for missing PL volumes, especially when a specific externally attested volume such as PL122 is absent locally.
-- Corpus Corporum may be the highest-quality machine-text source for Latin/medieval material if access and reuse constraints permit import.
-- Documenta Catholica Omnia is useful for corroboration and selective investigation, but rights and formatting notices require caution before bulk ingestion.
+- Corpus Corporum may be a high-quality machine-text/source-control lead for Latin/medieval material; classify whether it is a reader text witness, bibliographic control source, or comparison source before ingestion.
+- Documenta Catholica Omnia is useful for corroboration and selective investigation, but formatting, provenance, and database-shape notes require caution before bulk ingestion.
 - Open Patrologia Graeca / OGL-PatrologiaGraecaDev is the strongest full-coverage Patrologia Graeca acquisition lead because no local PG checkout is currently present.
 - The Calfa Patrologia-Graeca GitHub repository is a recent, useful OCR benchmark/pilot source for selected PG volumes, not yet a proven complete PG replacement.
 - Local TLG CD D/E author listings under `~/Classics-Data/tlg_e/` are identity-control evidence for Greek author mapping and disputed attribution conventions, not raw text sources.
@@ -179,7 +179,7 @@ Evidence sources to prefer:
 - Latin Wikisource volume/work pages.
 - Archive.org metadata and volume tables of contents.
 - Documenta Catholica Omnia author/work pages.
-- Corpus Christianorum/Brepols pages for bibliographic context, not raw text import.
+- Corpus Christianorum/Brepols and Library of Latin Texts pages for bibliographic/comparison context only, not raw text import; the reader expansion path should stay open-access or mirrorable.
 - Library/catalog records when they identify the exact volume/work.
 - Existing OGL CTS inventories and TEI headers.
 - Scholarly reference pages when corpus pages are missing.
@@ -234,13 +234,13 @@ Score every source on:
 - Machine text availability.
 - Coverage.
 - Provenance strength.
-- Rights/reuse risk.
+- Source-use posture.
 - Import effort.
 - Recommended role in the pipeline.
 
 Use roles deliberately:
 
-- `primary_text_source`: preferred import source when rights and quality are acceptable.
+- `primary_text_source`: preferred import source when source role and quality are acceptable.
 - `primary_pg_ocr_corpus_candidate`: likely first PG source to prototype.
 - `bulk_ocr_fallback_and_missing_volume_acquisition`: useful for missing volumes when no clean text source exists.
 - `toc_and_legitimacy`: evidence source for author/work/volume confirmation.

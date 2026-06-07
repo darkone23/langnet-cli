@@ -135,14 +135,14 @@ Title:
 What it provides:
 
 - Digitized manuscript object.
-- Public Domain rights mark.
+- Public Domain mark.
 - Downloadable PDF and image files.
 - It appears to be image/PDF-oriented rather than clean electronic text.
 
 Importability:
 
 - Medium-low for immediate text import.
-- Good provenance and public-domain posture.
+- Good provenance and open-source-use posture.
 - Would likely require OCR/PDF/image extraction.
 
 Recommended use:
@@ -193,7 +193,7 @@ Importability:
 Recommended use:
 
 - Use as a bibliographic authority for work lists and desired coverage.
-- Do not depend on it for raw text unless we have licensed access or another open electronic form.
+- Do not depend on it for raw text unless we identify a source-role-compatible electronic form.
 
 ### Source: University of Barcelona Ramon Llull Documentation Center
 
