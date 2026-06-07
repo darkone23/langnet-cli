@@ -17,10 +17,19 @@ Feature areas should be subdirectories such as `infra`, `skt`, `pedagogy`,
 
 ## Active Plans
 
-Only these plans are active after the 2026-05 documentation overhaul:
+Active reader/corpus/library plans:
 
+- `docs/plans/active/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`
+- `docs/plans/active/infra/LANGNET_LIBRARY_EXPLORER_PLAN.md`
+- `docs/plans/active/infra/OPEN_GREEK_LATIN_IMPORTER_AUDIT_AND_FIX_PLAN.md`
+- `docs/plans/active/infra/BRUNO_LLULL_ELECTRONIC_TEXT_ACQUISITION.md`
+- `docs/plans/active/infra/LANGNET_CANONICAL_CATALOG_EXPORT_PLAN.md`
+- `docs/plans/active/infra/OPEN_GREEK_LATIN_AND_GEORGES_IMPORT_PLAN.md`
 - `docs/plans/active/infra/reader-source-backed-enrichment.md`
 - `docs/plans/active/infra/reader-traditional-structure-overhaul.md`
+
+Other active plans:
+
 - `docs/plans/active/pedagogy/learner-encounter-roadmap.md`
 - `docs/plans/active/pedagogy/real-input-fuzzing-roadmap.md`
 - `docs/plans/active/skt/cdsl-entry-grammar-plan.md`

@@ -33,6 +33,7 @@
 		</div>
 		<nav class="hidden gap-2 md:flex">
 			<a class="btn btn-sm btn-ghost" href="/learn">{nav.learn}</a>
+			<a class="btn btn-sm btn-ghost" href="/library">Library</a>
 			<a class="btn btn-sm btn-ghost" href="/evidence">{nav.evidence}</a>
 			<a class="btn btn-sm btn-ghost" href="/languages/latin">{nav.latin}</a>
 			<a class="btn btn-sm btn-ghost" href="/languages/greek">{nav.greek}</a>
@@ -127,6 +128,7 @@
 					Study a word
 				</a>
 				<a class="btn btn-outline" href="/learn">{nav.learn}</a>
+				<a class="btn btn-ghost" href="/library">Library</a>
 				<a class="btn btn-ghost" href="/evidence">{nav.evidence}</a>
 			</div>
 		</div>

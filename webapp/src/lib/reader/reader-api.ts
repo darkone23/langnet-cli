@@ -1,9 +1,9 @@
 import { fetchPayload } from '../msgpack';
 import type { EncounterBriefingFlow } from '../encounter-briefing';
 import type { LanguageMode } from '../search-data';
-import type { ReaderSearchMode } from './index';
+import type { ReaderCatalogLanguage, ReaderSearchMode } from './index';
 
-type ReaderCatalogLanguage = {
+type ReaderCatalogLanguageParams = {
 	catalogId: string;
 	language: LanguageMode;
 };
@@ -19,6 +19,12 @@ function setIfPresent(params: URLSearchParams, key: string, value?: string | nul
 
 export function readerCatalogsUrl() {
 	return '/api/reader?mode=catalogs';
+}
+
+export function readerCollectionsUrl({ catalogId }: { catalogId?: string | null } = {}) {
+	const params = new URLSearchParams({ mode: 'collections' });
+	setIfPresent(params, 'catalog', catalogId);
+	return readerApiUrl(params);
 }
 
 export async function fetchReaderApi<T>(url: string) {
@@ -61,7 +67,7 @@ export async function fetchReaderEncounterBriefing({
 	);
 }
 
-export function readerFacetsUrl({ catalogId, language }: ReaderCatalogLanguage) {
+export function readerFacetsUrl({ catalogId, language }: ReaderCatalogLanguageParams) {
 	return readerApiUrl(
 		new URLSearchParams({
 			mode: 'facets',
@@ -77,7 +83,7 @@ export function readerShelvesUrl({
 	limit = 12,
 	sampleLimit = 2,
 	timeoutMs = 300000
-}: ReaderCatalogLanguage & {
+}: ReaderCatalogLanguageParams & {
 	limit?: number;
 	sampleLimit?: number;
 	timeoutMs?: number;
@@ -94,7 +100,7 @@ export function readerShelvesUrl({
 	);
 }
 
-export function readerAuthorSectionsUrl({ catalogId, language }: ReaderCatalogLanguage) {
+export function readerAuthorSectionsUrl({ catalogId, language }: ReaderCatalogLanguageParams) {
 	return readerApiUrl(
 		new URLSearchParams({
 			mode: 'author-sections',
@@ -114,7 +120,7 @@ export function readerAuthorsUrl({
 	historicity,
 	sort,
 	cursor
-}: ReaderCatalogLanguage & {
+}: ReaderCatalogLanguageParams & {
 	limit?: number;
 	section?: string | null;
 	query?: string | null;
@@ -150,7 +156,7 @@ export function readerWorksUrl({
 	sort,
 	collection,
 	cursor
-}: ReaderCatalogLanguage & {
+}: ReaderCatalogLanguageParams & {
 	limit?: number;
 	authorId?: string | null;
 	authorName?: string | null;
@@ -178,6 +184,57 @@ export function readerWorksUrl({
 	return readerApiUrl(params);
 }
 
+export function readerSourceIndexUrl({
+	catalogId,
+	language,
+	collection,
+	query,
+	limit = 100,
+	timeoutMs = 300000
+}: {
+	catalogId?: string | null;
+	language?: ReaderCatalogLanguage | null;
+	collection?: string | null;
+	query?: string | null;
+	limit?: number;
+	timeoutMs?: number;
+}) {
+	const params = new URLSearchParams({
+		mode: 'source-index',
+		limit: String(limit),
+		timeout_ms: String(timeoutMs)
+	});
+	setIfPresent(params, 'catalog', catalogId);
+	setIfPresent(params, 'language', language);
+	if (collection && collection !== 'all') params.set('collection', collection);
+	setIfPresent(params, 'q', query);
+	return readerApiUrl(params);
+}
+
+export function readerLibraryWatchlistUrl({
+	query,
+	language,
+	status,
+	limit = 100,
+	timeoutMs = 120000
+}: {
+	query?: string | null;
+	language?: ReaderCatalogLanguage | null;
+	status?: string | null;
+	limit?: number;
+	timeoutMs?: number;
+} = {}) {
+	const params = new URLSearchParams({
+		mode: 'library-watchlist',
+		limit: String(limit),
+		timeout_ms: String(timeoutMs)
+	});
+	setIfPresent(params, 'q', query);
+	setIfPresent(params, 'language', language);
+	setIfPresent(params, 'status', status);
+	return readerApiUrl(params);
+}
+
 export function readerTextSearchUrl({
 	catalogId,
 	language,
@@ -185,7 +242,7 @@ export function readerTextSearchUrl({
 	searchMode,
 	collection,
 	cursor
-}: ReaderCatalogLanguage & {
+}: ReaderCatalogLanguageParams & {
 	query: string;
 	searchMode: ReaderSearchMode;
 	collection?: string | null;
@@ -210,7 +267,7 @@ export function readerStructureUrl({
 	catalogId,
 	language,
 	work
-}: ReaderCatalogLanguage & { work: string }) {
+}: ReaderCatalogLanguageParams & { work: string }) {
 	return readerApiUrl(
 		new URLSearchParams({
 			mode: 'structure',
@@ -226,7 +283,7 @@ export function readerWorkDossierUrl({
 	catalogId,
 	language,
 	work
-}: ReaderCatalogLanguage & { work: string }) {
+}: ReaderCatalogLanguageParams & { work: string }) {
 	return readerApiUrl(
 		new URLSearchParams({
 			mode: 'about',
@@ -247,7 +304,7 @@ export function readerContentsUrl({
 	cursor,
 	around,
 	radius
-}: ReaderCatalogLanguage & {
+}: ReaderCatalogLanguageParams & {
 	work: string;
 	limit: number;
 	charBudget: number;
@@ -275,7 +332,7 @@ export function readerShowUrl({
 	work,
 	segment,
 	address
-}: ReaderCatalogLanguage & {
+}: ReaderCatalogLanguageParams & {
 	work?: string | null;
 	segment?: string | null;
 	address?: string | null;
@@ -295,7 +352,7 @@ export function readerResolveAddressUrl({
 	catalogId,
 	language,
 	address
-}: ReaderCatalogLanguage & { address: string }) {
+}: ReaderCatalogLanguageParams & { address: string }) {
 	return readerApiUrl(
 		new URLSearchParams({
 			mode: 'resolve-address',
@@ -310,7 +367,7 @@ export function readerWorkMetadataUrl({
 	catalogId,
 	language,
 	work
-}: ReaderCatalogLanguage & { work: string }) {
+}: ReaderCatalogLanguageParams & { work: string }) {
 	return readerApiUrl(
 		new URLSearchParams({
 			mode: 'work',

@@ -23,6 +23,7 @@
 		<nav class="hidden gap-2 md:flex">
 			<a class="btn btn-sm btn-ghost" href="/about">About</a>
 			<a class="btn btn-sm btn-ghost" href="/learn">{nav.learn}</a>
+			<a class="btn btn-sm btn-ghost" href="/library">Library</a>
 			<a class="btn btn-sm btn-ghost" href="/languages/latin">{nav.latin}</a>
 			<a class="btn btn-sm btn-ghost" href="/languages/greek">{nav.greek}</a>
 			<a class="btn btn-sm btn-ghost" href="/languages/sanskrit">{nav.sanskrit}</a>
@@ -64,6 +65,7 @@
 					{nav.openLookup}
 				</a>
 				<a class="btn btn-outline" href="/learn">{nav.learn}</a>
+				<a class="btn btn-ghost" href="/library">Library</a>
 			</div>
 		</div>
 	</section>

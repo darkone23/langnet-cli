@@ -14,6 +14,7 @@ import type {
 	ReaderWorkDossierResponse,
 	ReaderWorksResponse
 } from '$lib/reader';
+import type { ReaderWatchlistResponse, ReaderWatchlistTarget } from '$lib/reader/library-watchlist';
 import {
 	readerCatalogDefaults,
 	readerDiscoverySortValue,
@@ -363,6 +364,32 @@ export async function readerSourceIndex({
 	};
 }
 
+export async function readerLibraryWatchlist({
+	query,
+	language,
+	status,
+	limit,
+	options = {}
+}: {
+	query?: string;
+	language?: LanguageMode;
+	status?: string;
+	limit: number;
+	options?: ReaderCliOptions;
+}): Promise<ReaderWatchlistResponse> {
+	const args = ['library-watchlist'];
+	if (query) args.push('--query', query);
+	if (language) args.push('--language', language);
+	if (status) args.push('--status', status);
+	args.push('--limit', String(limit));
+	args.push('--output', 'json');
+	const rawPayload = await runReaderJsonCommandWithoutCatalog(args, options);
+	return {
+		...(rawPayload as Omit<ReaderWatchlistResponse, 'items'>),
+		items: arrayOfObjects(rawPayload.items).map(mapReaderWatchlistTarget)
+	};
+}
+
 export async function readerAuthorSections({
 	catalogId,
 	language,
@@ -590,6 +617,22 @@ async function resolveReaderCatalog(
 	if (!catalog) throw new Error('No reader catalog is available.');
 	if (!catalog.available) throw new Error(`Reader catalog is not available: ${catalog.label}`);
 	return catalog;
+}
+
+function mapReaderWatchlistTarget(item: JsonObject): ReaderWatchlistTarget {
+	return {
+		id: stringValue(item.id),
+		displayName: stringValue(item.display_name),
+		aliases: arrayOfStrings(item.aliases),
+		languages: arrayOfStrings(item.languages) as ReaderWatchlistTarget['languages'],
+		period: stringValue(item.period),
+		tradition: stringValue(item.tradition),
+		status: stringValue(item.status) as ReaderWatchlistTarget['status'],
+		sourcePlan: stringValue(item.source_plan),
+		note: stringValue(item.note),
+		evidence: arrayOfObjects(item.evidence) as ReaderWatchlistTarget['evidence'],
+		localArtifacts: arrayOfStrings(item.local_artifacts)
+	};
 }
 
 async function loadReaderCatalogs(options: ReaderCliOptions = {}) {

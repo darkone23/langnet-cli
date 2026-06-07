@@ -312,6 +312,67 @@ def test_reader_cli_source_index_lists_work_source_provenance() -> None:
         assert item["segment_count"] == 0
 
 
+def test_reader_cli_source_index_export_writes_flatfiles() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        export_dir = root / "source-index-export"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="urn:cts:latinLit:fixture.work",
+            collection_id="opengreekandlatin_csel",
+            language="lat",
+            title="Fixture Work",
+            author="Fixture Author",
+            author_id="urn:cts:latinLit:fixture",
+            source_id="fixture.work",
+        )
+        register_source_files(
+            catalog_path,
+            [
+                ReaderSourceFile(
+                    collection_id="opengreekandlatin_csel",
+                    source_path=root / "fixture_work.xml",
+                    file_role="opengreekandlatin_csel_tei",
+                    file_status="text",
+                    source_id="fixture.work",
+                    source_hash="abc123",
+                    size_bytes=1234,
+                )
+            ],
+        )
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "reader",
+                "--catalog",
+                str(catalog_path),
+                "source-index-export",
+                "--output-dir",
+                str(export_dir),
+                "--output",
+                "json",
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert payload["mode"] == "source-index-export"
+        assert payload["summary"]["row_count"] == 1
+        collection_path = export_dir / "opengreekandlatin_csel.tsv"
+        assert collection_path.exists()
+        assert (export_dir / "all_collections.tsv").exists()
+        assert (export_dir / "duplicate_canonical_text_ids.tsv").exists()
+        assert (export_dir / "README.md").exists()
+        with collection_path.open(newline="", encoding="utf-8") as handle:
+            rows = list(csv.DictReader(handle, delimiter="\t"))
+        assert rows[0]["title"] == "Fixture Work"
+        assert rows[0]["source_id"] == "fixture.work"
+
+
 def test_reader_cli_structure_returns_ui_ready_nodes() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)

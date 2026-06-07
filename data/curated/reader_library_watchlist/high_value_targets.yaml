@@ -1,0 +1,215 @@
+targets:
+  - id: pl122-eriugena
+    display_name: Joannes Scotus Eriugena
+    aliases:
+      - John Scotus Eriugena
+      - Johannes Scotus Erigena
+      - Ioannes Scotus Eriugena
+      - Eriugena
+      - Erigena
+    languages:
+      - lat
+    period: Medieval Latin
+    tradition: Christian, philosophical, Dionysian translation tradition
+    status: imported
+    source_plan: Patrologia Latina PL122 via Latin Wikisource and Archive.org fallback
+    note: PL122 is absent from the current local OGL checkout, but selected works have now been imported from Latin Wikisource staging. This is a pilot slice, not full Patrologia Latina coverage.
+    evidence:
+      - source_type: web_source
+        citation: https://la.wikisource.org/wiki/Patrologia_Latina/122
+        label: Latin Wikisource PL122 table of contents lists Joannes Scotus Eriugena works and PL column ranges.
+        retrieved_at: 2026-06-07
+    local_artifacts:
+      - data/sources_external/patrologia_latina/pl122/manifest.yaml
+      - data/build/reader_import_staging/patrologia_latina/pl122/works.tsv
+  - id: patrologia-latina-series
+    display_name: Patrologia Latina (series expansion)
+    aliases:
+      - Patrologia Latina
+      - PL
+      - Corpus Patrologia Latina
+    languages:
+      - lat
+    period: Medieval and early modern
+    tradition: Patristic Latin theology and biblical commentary
+    status: planned
+    source_plan: Expand beyond PL122 by selecting remaining volume candidates from source scorecards and local/OGL/Archive fallback sources.
+    note: Patrologia Latina has 217 volumes (+indices 218-221); PL122 is one of the many pilot points, not the complete series.
+    local_artifacts:
+      - data/reference/ogl_import_audit/pl_pg_acquisition_source_scorecard.tsv
+      - data/reference/reader_source_index/patrologia_latina_wikisource.tsv
+  - id: pg-pseudo-dionysius
+    display_name: Pseudo-Dionysius the Areopagite
+    aliases:
+      - Pseudo-Dionysius
+      - Dionysius Areopagita
+      - Dionysian corpus
+    languages:
+      - grc
+      - lat
+    period: Late Antique / Byzantine reception
+    tradition: Christian Neoplatonic
+    status: planned
+    source_plan: Patrologia Graeca pilot plus Latin translation witnesses
+    note: Distinguish Greek source expectations from Latin translation/import targets.
+  - id: latin-aquinas
+    display_name: Thomas Aquinas
+    aliases:
+      - Aquinas
+      - Thomas de Aquino
+      - Thomae Aquinatis
+    languages:
+      - lat
+    period: Medieval Latin
+    tradition: Scholastic theology and philosophy
+    status: needs_source_review
+    source_plan: Corpus Thomisticum / AquinasOperaOmnia source decision
+    note: High-value corpus target; source and parser choice should be decided before acquisition.
+  - id: latin-anselm
+    display_name: Anselm of Canterbury
+    aliases:
+      - Anselm
+      - Anselmus
+      - Proslogion
+    languages:
+      - lat
+    period: Medieval Latin
+    tradition: Scholastic theology
+    status: planned
+    source_plan: Latin Library acquisition spike
+    note: Initial targets are Proslogion and Epistula ad Urbanum Papam.
+  - id: latin-descartes
+    display_name: Rene Descartes
+    aliases:
+      - Descartes
+      - Renatus Cartesius
+      - Meditationes
+    languages:
+      - lat
+    period: Early Modern Latin
+    tradition: Philosophy
+    status: planned
+    source_plan: Latin Library and Project Gutenberg direct text
+    note: Initial target is Meditationes de prima philosophia.
+  - id: latin-bruno
+    display_name: Giordano Bruno
+    aliases:
+      - Jordanus Brunus
+      - Bruno
+    languages:
+      - lat
+    period: Renaissance Latin
+    tradition: Philosophy, memory, magic, cosmology
+    status: planned
+    source_plan: Esoteric Archives HTML and Archive.org derivatives
+    note: Initial targets include De umbris idearum, Ars memoriae, Cantus Circaeus, De magia, and De vinculis in genere.
+  - id: latin-llull
+    display_name: Ramon Llull
+    aliases:
+      - Raimundus Lullus
+      - Lullus
+      - Ars brevis
+    languages:
+      - lat
+    period: Medieval Latin
+    tradition: Logic, theology, combinatorial method
+    status: needs_ocr
+    source_plan: OCR/PDF path plus Llull bibliography/source research
+    note: Likely requires OCR and review unless a clean electronic Latin text source is found.
+  - id: latin-duns-scotus
+    display_name: John Duns Scotus
+    aliases:
+      - Duns Scotus
+      - Ioannes Duns Scotus
+      - Johannes Duns Scotus
+      - Doctor Subtilis
+      - Ordinatio
+    languages:
+      - lat
+    period: Medieval Latin
+    tradition: Scholastic theology and metaphysics
+    status: needs_source_review
+    source_plan: Scholastic text source discovery; likely PDF/OCR or specialist corpus acquisition.
+    note: High-value scholastic target; requires careful work/edition selection before import.
+  - id: latin-ficino
+    display_name: Marsilio Ficino
+    aliases:
+      - Marsilius Ficinus
+      - Ficino
+      - Theologia Platonica
+      - De vita
+    languages:
+      - lat
+    period: Renaissance Latin
+    tradition: Platonism, medicine, theology, translation
+    status: needs_source_review
+    source_plan: Renaissance Latin source discovery across Archive.org, Wikisource, and specialist editions.
+    note: Valuable for Renaissance Latin and Platonic reception; likely needs source-by-source acquisition planning.
+  - id: latin-bacon
+    display_name: Francis Bacon
+    aliases:
+      - Franciscus Baconus
+      - Bacon
+      - Novum Organum
+      - De augmentis scientiarum
+    languages:
+      - lat
+    period: Early Modern Latin
+    tradition: Philosophy, science, method
+    status: planned
+    source_plan: Latin Library / Project Gutenberg / Archive.org source comparison.
+    note: Initial targets are Novum Organum and De augmentis scientiarum if clean Latin electronic texts are available.
+  - id: latin-thomas-more
+    display_name: Thomas More
+    aliases:
+      - Thomas Morus
+      - More
+      - Utopia
+    languages:
+      - lat
+    period: Early Modern Latin
+    tradition: Humanism, political thought
+    status: planned
+    source_plan: Latin Library, Project Gutenberg, or Archive.org source comparison for Utopia and related Latin works.
+    note: Useful for humanist Latin and political-philosophical reading paths.
+  - id: latin-spinoza
+    display_name: Baruch Spinoza
+    aliases:
+      - Benedictus de Spinoza
+      - Spinoza
+      - Ethica
+      - Tractatus Theologico-Politicus
+    languages:
+      - lat
+    period: Early Modern Latin
+    tradition: Philosophy
+    status: planned
+    source_plan: Project Gutenberg / Wikisource / Archive.org source comparison.
+    note: High-value early modern Latin philosophy target; needs work-level source and segmentation plan.
+  - id: greek-axiochus
+    display_name: Axiochus
+    aliases:
+      - Axiochos
+      - Pseudo-Plato
+    languages:
+      - grc
+    period: Ancient Greek
+    tradition: Pseudo-Platonic dialogue
+    status: planned
+    source_plan: Greek electronic text discovery and pseudo-Platonic attribution mapping
+    note: Needs importable Greek source and clear pseudo-Platonic classification.
+  - id: greek-john-damascene
+    display_name: John of Damascus
+    aliases:
+      - Joannes Damascenus
+      - Ioannes Damaskenos
+      - John Damascene
+      - De fide orthodoxa
+    languages:
+      - grc
+      - lat
+    period: Byzantine / Medieval reception
+    tradition: Christian theology
+    status: planned
+    source_plan: Patrologia Graeca pilot plus Latin translation witness review.
+    note: Useful PG target for testing Greek theological prose, translation witnesses, and source provenance.

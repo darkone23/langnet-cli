@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import re
 from pathlib import Path
 from typing import Any
@@ -84,6 +85,32 @@ from langnet.reader.validation import validate_reader_catalog
 from langnet.reader.work_map import accepted_work_map_nodes, load_work_map_nodes
 
 READER_SCHEMA_VERSION = "langnet.reader.v1"
+SOURCE_INDEX_EXPORT_COLUMNS = (
+    "collection_id",
+    "language",
+    "work_id",
+    "title",
+    "author",
+    "author_id",
+    "source_id",
+    "cts_work_urn",
+    "canonical_text_id",
+    "edition_id",
+    "edition_label",
+    "source_path",
+    "cts_edition_urn",
+    "file_role",
+    "file_status",
+    "source_hash",
+    "size_bytes",
+    "artifact_count",
+    "segment_count",
+    "token_count",
+    "adapters",
+    "artifact_paths",
+    "source_witness_count",
+    "source_witness_collections",
+)
 _DOTTED_CITATION_RE = re.compile(r"[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)+")
 _CITATION_LABEL_RE = re.compile(r"\b(?:book|bk|line|ln|l)\.?\b", re.IGNORECASE)
 _CITATION_PART_RE = re.compile(r"[0-9]+[A-Za-z]?|[ivxlcdm]+", re.IGNORECASE)
@@ -1157,6 +1184,74 @@ class ReaderService:
             limit=limit,
         )
 
+    def source_index_export(self, output_dir: Path) -> dict[str, Any]:
+        rows = list_source_index(self.catalog_path, limit=10_000_000)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        files: list[dict[str, Any]] = []
+        all_path = output_dir / "all_collections.tsv"
+        _write_source_index_tsv(all_path, rows)
+        files.append({"path": str(all_path), "row_count": len(rows), "kind": "all_collections"})
+
+        collection_rows: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            collection_id = str(row.get("collection_id") or "unknown")
+            collection_rows.setdefault(collection_id, []).append(row)
+
+        for collection_id in sorted(collection_rows):
+            collection_path = output_dir / f"{_safe_source_index_filename(collection_id)}.tsv"
+            _write_source_index_tsv(collection_path, collection_rows[collection_id])
+            files.append(
+                {
+                    "path": str(collection_path),
+                    "row_count": len(collection_rows[collection_id]),
+                    "kind": "collection",
+                    "collection_id": collection_id,
+                }
+            )
+
+        duplicate_rows = _source_index_duplicate_rows(rows)
+        duplicate_path = output_dir / "duplicate_canonical_text_ids.tsv"
+        _write_dict_tsv(
+            duplicate_path,
+            duplicate_rows,
+            (
+                "canonical_text_id",
+                "work_count",
+                "collections",
+                "authors",
+                "titles",
+                "work_ids",
+            ),
+        )
+        files.append(
+            {
+                "path": str(duplicate_path),
+                "row_count": len(duplicate_rows),
+                "kind": "duplicate_canonical_text_ids",
+            }
+        )
+
+        readme_path = output_dir / "README.md"
+        readme_path.write_text(
+            _source_index_readme(collection_rows, output_dir=output_dir),
+            encoding="utf-8",
+        )
+        files.append({"path": str(readme_path), "row_count": 0, "kind": "readme"})
+
+        return {
+            "schema_version": READER_SCHEMA_VERSION,
+            "mode": "source-index-export",
+            "catalog_path": str(self.catalog_path),
+            "request": {"output_dir": str(output_dir)},
+            "summary": {
+                "row_count": len(rows),
+                "collection_count": len(collection_rows),
+                "duplicate_canonical_text_id_count": len(duplicate_rows),
+            },
+            "items": files,
+        }
+
     def alias_conflicts(self) -> dict[str, Any]:
         return self._payload("alias-check", list_alias_conflicts(self.catalog_path))
 
@@ -1500,3 +1595,107 @@ def _work_language(work: dict[str, Any] | None) -> str | None:
         return None
     language = work.get("language")
     return str(language) if language else None
+
+
+def _write_source_index_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
+    _write_dict_tsv(path, rows, SOURCE_INDEX_EXPORT_COLUMNS)
+
+
+def _write_dict_tsv(
+    path: Path,
+    rows: list[dict[str, Any]],
+    columns: tuple[str, ...],
+) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=columns, delimiter="\t", extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({column: _tsv_value(row.get(column)) for column in columns})
+
+
+def _tsv_value(value: Any) -> str | int | float:
+    if value is None:
+        return ""
+    if isinstance(value, (int, float)):
+        return value
+    return str(value)
+
+
+def _safe_source_index_filename(collection_id: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", collection_id.strip())
+    return safe or "unknown"
+
+
+def _source_index_duplicate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        canonical = str(row.get("canonical_text_id") or "").strip()
+        if canonical:
+            grouped.setdefault(canonical, []).append(row)
+
+    duplicates: list[dict[str, Any]] = []
+    for canonical, canonical_rows in grouped.items():
+        work_ids = sorted({str(row.get("work_id") or "") for row in canonical_rows})
+        if len(work_ids) <= 1:
+            continue
+        duplicates.append(
+            {
+                "canonical_text_id": canonical,
+                "work_count": len(work_ids),
+                "collections": ", ".join(
+                    sorted({str(row.get("collection_id") or "") for row in canonical_rows})
+                ),
+                "authors": " | ".join(sorted({str(row.get("author") or "") for row in canonical_rows})),
+                "titles": " | ".join(sorted({str(row.get("title") or "") for row in canonical_rows})),
+                "work_ids": " | ".join(work_ids),
+            }
+        )
+    return sorted(duplicates, key=lambda row: str(row["canonical_text_id"]))
+
+
+def _source_index_readme(
+    collection_rows: dict[str, list[dict[str, Any]]],
+    *,
+    output_dir: Path,
+) -> str:
+    lines = [
+        "# Reader Source Index Flat Files",
+        "",
+        "Generated from `data/build/reader/catalog.duckdb`. These files are flat, grep-friendly snapshots of imported reader works by source collection.",
+        "",
+        "## Files",
+        "",
+        "- `all_collections.tsv`: every imported work/edition/artifact provenance row.",
+        "- `<collection_id>.tsv`: the same rows split by source collection.",
+        "- `duplicate_canonical_text_ids.tsv`: canonical text ids currently attached to more than one visible work.",
+        "",
+        "## Collection summary",
+        "",
+        "| Collection | Works | Editions | Segments | Words | File |",
+        "| --- | ---: | ---: | ---: | ---: | --- |",
+    ]
+    for collection_id in sorted(collection_rows):
+        rows = collection_rows[collection_id]
+        works = len({str(row.get("work_id") or "") for row in rows})
+        editions = len({str(row.get("edition_id") or "") for row in rows})
+        segments = sum(int(row.get("segment_count") or 0) for row in rows)
+        words = sum(int(row.get("token_count") or 0) for row in rows)
+        filename = f"{_safe_source_index_filename(collection_id)}.tsv"
+        lines.append(
+            f"| `{collection_id}` | {works} | {editions} | {segments} | {words} | `{filename}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Columns",
+            "",
+            *[f"- `{column}`" for column in SOURCE_INDEX_EXPORT_COLUMNS],
+            "",
+            "## Regeneration",
+            "",
+            "```bash",
+            f"just cli reader source-index-export --output-dir {output_dir} --output json",
+            "```",
+        ]
+    )
+    return "\n".join(lines) + "\n"

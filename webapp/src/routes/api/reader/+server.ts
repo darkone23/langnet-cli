@@ -19,6 +19,7 @@ import {
 	readerSearch,
 	readerShow,
 	readerShelves,
+	readerLibraryWatchlist,
 	readerSourceIndex,
 	readerStructure,
 	readerSummary,
@@ -39,6 +40,7 @@ const validModes = new Set([
 	'tags',
 	'author-facets',
 	'source-index',
+	'library-watchlist',
 	'shelves',
 	'search',
 	'author-sections',
@@ -149,6 +151,17 @@ export async function GET({ url, request }) {
 					workId: url.searchParams.get('work_id') ?? url.searchParams.get('workId') ?? undefined,
 					query: url.searchParams.get('q') ?? url.searchParams.get('query') ?? undefined,
 					limit: readInteger(url.searchParams.get('limit'), 100, 1, 1000),
+					options
+				})
+			);
+		}
+		if (mode === 'library-watchlist') {
+			return cachedRespond(
+				await readerLibraryWatchlist({
+					query: url.searchParams.get('q') ?? url.searchParams.get('query') ?? undefined,
+					language,
+					status: url.searchParams.get('status') ?? undefined,
+					limit: readInteger(url.searchParams.get('limit'), 100, 1, 500),
 					options
 				})
 			);

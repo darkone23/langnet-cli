@@ -98,6 +98,8 @@ CTS_URN_MIN_PARTS = 4
 NUMBERED_SANSKRIT_CODE_LENGTH = 8
 NUMBERED_SANSKRIT_MIN_LINE_LENGTH = NUMBERED_SANSKRIT_CODE_LENGTH + 1
 NUMBERED_SANSKRIT_MIN_MATCHES = 3
+PRIMARY_READER_LANGUAGES = {"lat", "grc", "san"}
+SANSKRIT_TRANSLATION_PATH_PARTS = {"translation", "translations"}
 
 
 @dataclass(frozen=True)
@@ -600,6 +602,8 @@ class ReaderBuilder:
         for path in sorted(self.config.sanskrit_dir.rglob("*.json")):
             files.append(_source_file("sanskrit_json", path, "sanskrit_json"))
         for path in self._sanskrit_plain_text_paths():
+            if _is_sanskrit_translation_path(path):
+                continue
             role = (
                 "sanskrit_numbered_plain"
                 if _looks_numbered_sanskrit_safe(path)
@@ -629,6 +633,8 @@ class ReaderBuilder:
         register_source_files(self.catalog_path, files)
         metadata: list[ReaderSourceMetadata] = []
         for path in self._sanskrit_plain_text_paths():
+            if _is_sanskrit_translation_path(path):
+                continue
             metadata.extend(_sanskrit_plain_text_source_metadata(path))
         if metadata:
             register_source_metadata(self.catalog_path, metadata)
@@ -817,16 +823,18 @@ class ReaderBuilder:
                         collection_id=collection_id,
                         language=language,
                     ):
+                        if not _is_primary_legacy_reader_book(parsed):
+                            continue
                         yield _ParsedSource(parsed, f"{collection_id}_idt_legacy")
                 else:
-                    yield _ParsedSource(
-                        parse_legacy_text_dump(
-                            path,
-                            collection_id=collection_id,
-                            language=language,
-                        ),
-                        adapter,
+                    parsed = parse_legacy_text_dump(
+                        path,
+                        collection_id=collection_id,
+                        language=language,
                     )
+                    if not _is_primary_legacy_reader_book(parsed):
+                        continue
+                    yield _ParsedSource(parsed, adapter)
             except Exception as exc:  # noqa: BLE001
                 self._record_source_error(path, collection_id, exc)
 
@@ -856,6 +864,8 @@ class ReaderBuilder:
         grouped_paths = self._sanskrit_grouped_plain_text_paths()
         grouped_path_set = {path for paths in grouped_paths for path in paths}
         for paths in grouped_paths:
+            if any(_is_sanskrit_translation_path(path) for path in paths):
+                continue
             if not self._any_path_selected(paths):
                 continue
             try:
@@ -872,6 +882,8 @@ class ReaderBuilder:
 
         for path in self._sanskrit_plain_text_paths():
             if path in grouped_path_set:
+                continue
+            if _is_sanskrit_translation_path(path):
                 continue
             if not self._path_selected(path):
                 continue
@@ -913,6 +925,8 @@ class ReaderBuilder:
             return []
         paths: list[Path] = []
         for path in sorted(self.config.sanskrit_dir.rglob("*.txt")):
+            if _is_sanskrit_translation_path(path):
+                continue
             if _is_raw_sanskrit_ocr_chunk_with_split(path):
                 continue
             paths.append(path)
@@ -1738,6 +1752,16 @@ def _looks_numbered_sanskrit_safe(path: Path) -> bool:
         ):
             matches += 1
     return matches >= NUMBERED_SANSKRIT_MIN_MATCHES
+
+
+def _is_sanskrit_translation_path(path: Path) -> bool:
+    return any(part.casefold() in SANSKRIT_TRANSLATION_PATH_PARTS for part in path.parts)
+
+
+def _is_primary_legacy_reader_book(parsed: ParsedBook) -> bool:
+    if parsed.work.collection_id not in {"phi", "tlg"}:
+        return True
+    return parsed.work.language in PRIMARY_READER_LANGUAGES
 
 
 def _is_sanskrit_split_chunk(path: Path) -> bool:

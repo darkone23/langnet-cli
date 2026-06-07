@@ -1,0 +1,230 @@
+# Reader Goals Coordination Plan
+
+> **For agentic workers:** Use this as the coordination layer. The detailed plans remain the source of truth for implementation details, but this file defines the current reader work order, acceptance gates, and handoff boundaries.
+
+**Goal:** Keep LangNet's reader work moving toward a coherent library: trustworthy imports, visible provenance, useful discovery, reproducible acquisition, and learner-facing access to Latin, Greek, and Sanskrit texts.
+
+## Related Plans And Artifacts
+
+- `docs/technical/rebuilding-reader-sources.md`: reader rebuild model, source-index exports, generated/curated metadata loop, server migration notes.
+- `docs/plans/active/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`: acquisition lanes, source manifests, corpus-building policy, target author/work register.
+- `docs/plans/active/infra/LANGNET_LIBRARY_EXPLORER_PLAN.md`: `/library`, search, watchlist, provenance, and acquisition-gap UX.
+- `docs/plans/active/infra/OPEN_GREEK_LATIN_IMPORTER_AUDIT_AND_FIX_PLAN.md`: OGL importer audit, Patrologia/CSEL completeness, source-view quality policy.
+- `data/reference/reader_source_index/`: checked-in source-index snapshots.
+- `data/reference/ogl_import_audit/`: OGL, CSEL, Patrologia, PL/PG acquisition scorecards.
+- `data/reference/reader_quality_audit/current_known_issues.tsv`: current corpus-quality blockers found in the live reader catalog.
+- `data/sources_external/patrologia_latina/pl122/manifest.yaml`: planned PL122/Eriugena acquisition manifest.
+- `data/sources_external/patrologia_graeca/pilot/manifest.yaml`: planned PG pilot acquisition manifest.
+- `data/curated/reader_library_watchlist/high_value_targets.yaml`: high-value absent or staged acquisition targets for Library empty states.
+- `docs/plans/active/infra/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md`: latest verified state, command outcomes, running-service notes, and safe handoff prompt.
+
+## Current Reader Workstreams
+
+### 1. Provenance and audit visibility
+
+Status:
+
+- Source-index export exists and writes checked-in flatfiles.
+- OGL audit artifacts exist under `data/reference/ogl_import_audit/`.
+- PL/PG acquisition scorecards and next-step queue exist.
+- Current live-catalog corpus quality defects are tracked under `data/reference/reader_quality_audit/current_known_issues.tsv`.
+
+Next actions:
+
+- Keep high-priority corpus defects fixed before broadening imports. Sanskrit translations imported as Sanskrit works and PHI Coptic/Sahidic rows visible in primary classical surfaces were fixed in importer guards and current catalog on 2026-06-07.
+- Keep source-index TSVs regenerated after each catalog import/rebuild.
+- Latest post-cleanup source-index export on 2026-06-07 reported `10592` rows, with `patrologia_graeca_pilot.tsv` at `1`, `sanskrit_texts.tsv` at `320`, and `phi.tsv` at `784` rows.
+- Keep `current_ogl_audit.json` regenerated after OGL importer changes.
+- Make every skipped OGL file explainable as alternate view, duplicate, zero-segment, missing source, or parse/import issue.
+
+Acceptance:
+
+- A human can answer "what did we import from this source?" from TSVs or `/library`.
+- A human can distinguish external corpus gaps from local checkout gaps and importer gaps.
+- Every future acquisition target has a manifest before raw text enters the reader catalog.
+- Translation-only or unsupported-language rows are not silently presented as primary Greek, Latin, or Sanskrit reader works.
+
+### 2. Patrologia Latina PL122 / Eriugena
+
+Status:
+
+- PL122 is externally attested and now imported as a pilot slice; local OGL coverage remains partial for Patrologia.
+- A PL122 source manifest exists.
+- Raw Latin Wikisource markdown and staged samples exist for the fourteen imported PL122 works:
+  - `De divisione naturae`
+  - `De praedestinatione`
+  - `Expositiones super Ierarchiam caelestem S. Dionysii`
+  - `Versio operum S. Dionysii`
+  - `Homilia in prologum Evangelii secundum Joannem`
+  - `Commentarius in Evangelium secundum Joannem`
+  - `De egressu et regressu animae ad Deum`
+  - `Expositiones super Ierarchiam ecclesiasticam S. Dionysii`
+  - `Expositiones in Mysticam theologiam S. Dionysii`
+  - `Versio Ambiguorum S. Maximi`
+  - `Versus`
+  - `Epistola et Decreta`
+- `reader stage-pl-wikisource` now emits segmented JSONL for staged PL122 works.
+- `reader import-pl-wikisource` imported all fourteen above works into the reader catalog.
+- Source-index snapshots now include collection `patrologia_latina_wikisource`.
+- Reviewed generated work classifications and author classification have been synced for the selected PL122 import.
+- This is acquisition work, not currently an importer bug.
+
+Next actions:
+
+- Spot-check imported PL122 works in `/reader` and `/library` was completed for representative samples.
+- Segmentation/front-matter handling for PL122 is implemented in code; full selected-slice re-stage/import verification is now complete and shows text-first first segments.
+- Add curated aliases and metadata for Eriugena where useful.
+- PL122 is now fully staged and imported across the 14-toC works; next priority is the next planned volume from the PL scorecards after reader QA.
+- Generate/import metadata for newly imported works only when they enter the reader catalog.
+- Full reader search-index rebuild was attempted on 2026-06-07 but was stopped after running too long for the synchronous pass; this is deferred until after segmentation is signed off.
+- Inspect Archive.org PL122 or PL 1-221 derivatives for OCR fallback.
+- Preserve PL column markers as address/provenance metadata.
+- Import additional PL122 works only after the selected-work reader experience is acceptable.
+
+Acceptance:
+
+- Multiple staged Latin samples exist with explicit PL122 provenance. Completed for fourteen samples.
+- The staged samples are actual Latin content, not navigation or index boilerplate. Completed for fourteen samples.
+- Segmented JSONL exists for fourteen selected PL122 works. Completed.
+- PL122 is one of Patrologia Latina’s 217-volume series baseline and is a pilot, not a series-complete acquisition.
+- After import, Eriugena appears in `reader works`, `reader source-index`, `/library`, and source-index TSVs. CLI/source-index TSV portion completed.
+- The Library acquisition watchlist is served from `data/curated/reader_library_watchlist/high_value_targets.yaml` through `reader library-watchlist` and `/api/reader?mode=library-watchlist`, avoiding duplicated frontend-only acquisition target data.
+- Verified on 2026-06-07: `reader works --query eriugena`, `reader source-index --collection patrologia_latina_wikisource`, `/api/reader?mode=source-index&q=eriugena`, and server-rendered `/library` all expose all fourteen imported Eriugena works.
+
+### 3. Patrologia Graeca pilot
+
+Status:
+
+- A pilot checkout was selected from OGL-PatrologiaGraecaDev Vol.-1 and raw OCR pages were staged locally.
+- A one-work Patrologia Graeca sample has been staged and imported (Clement to the Corinthians).
+- A PG pilot manifest exists and now includes this staged sample context.
+
+Next actions:
+
+- Calibrate the Vol.-1 pilot against Calfa overlap where available.
+- Compare OCR quality, coverage, and metadata fidelity of pilot rows before any broad PG expansion.
+- Update `data/reference/reader_quality_audit/current_known_issues.tsv` with pilot OCR and segmentation risks.
+- Record a scale-up/rejection decision and only then schedule PG-series expansion work.
+
+Acceptance:
+
+- One PG pilot sample is staged and imported (and appears in `reader source-index --collection patrologia_graeca_pilot`).
+- Unicode Greek text quality and segmentation risks are documented in the audit table.
+- A clear recommendation for scale-up exists before broad PG acquisition/import.
+
+### 4. CSEL and Patrologia completeness
+
+Status:
+
+- CSEL external scorecard exists.
+- Patrologia local/source/catalog scorecards exist.
+- Current CSEL appears more internally consistent than PL, but external coverage remains incomplete.
+
+Next actions:
+
+- Pick missing CSEL base volume ids from `csel_external_scorecard.tsv`.
+- Search for reliable electronic/OCR sources for the first missing range.
+- Continue open-web legitimacy checks for weak or suspicious OGL rows.
+- Compare Patrologia `data`, `corrected`, `split`, and `volumes` source views before changing importer precedence.
+- Treat `data/reference/ogl_import_audit/pl_pg_acquisition_next_steps.tsv` row 8 as discovery-first and keep CSEL:volume-61 provenance-first until a source path is verified.
+
+Acceptance:
+
+- Missing CSEL ranges have source-acquisition status, not just "absent" notes.
+- Patrologia source-view precedence is evidence-based.
+- High-value questionable rows either have curated overlays, importer fixes, or acquisition targets.
+
+### 5. Library experience
+
+Status:
+
+- `/library` exists and server-renders initial source-index rows, collections, and acquisition watchlist data.
+- Source-index API support exists.
+- The Library plan includes acquisition target visibility and watchlist behavior.
+- `/library` uses CLI/API-backed curated watchlist data from `data/curated/reader_library_watchlist/high_value_targets.yaml`, not frontend-only constants.
+- `/library` now uses compact expandable rows for source-index results instead of a large card for every work.
+- Curated watchlist targets include Eriugena, Pseudo-Dionysius, Aquinas, Anselm, Descartes, Bruno, Llull, Duns Scotus, Ficino, Bacon, More, Spinoza, John of Damascus, and Axiochus.
+- Verified on 2026-06-07: server-rendered `/library` contains catalog row content (`Ars maior`) and acquisition/provenance content (`Joannes Scotus Eriugena`).
+- Verified on 2026-06-07: the compact expandable row layout is deployed in the live `/library` HTML.
+
+Next actions:
+
+- Add acquisition status labels such as `missing_local_source`, `planned`, `staged`, `imported`, `needs_ocr`, `needs_segmentation`, and `needs_rights_review`.
+- Keep imported works visually distinct from wanted/acquisition targets.
+- Add browser QA coverage for `/library` filters and searches.
+- Improve how imported watchlist targets are shown as acquisition history/context instead of "wanted" items.
+
+Acceptance:
+
+- Searching `eriugena` after import shows catalog results first and provenance/acquisition context second. Verified via CLI/API and server-rendered Library content on 2026-06-07; browser interaction QA remains.
+- Searching planned targets such as `ficino` returns curated acquisition context through `reader library-watchlist` and `/api/reader?mode=library-watchlist`. Verified on 2026-06-07.
+- Searching source names or collection ids makes it clear what is present, staged, or still wanted. Partially complete; browser QA remains.
+
+### 6. Metadata enrichment loop
+
+Status:
+
+- Curated and generated metadata roles are documented.
+- Source-backed research artifacts and generated classifications are separated by policy.
+
+Next actions:
+
+- Use source-backed curated records for identity, attribution, aliases, work maps, contained works, and citation boundaries.
+- Use generated metadata for shelves, tags, periods, popularity, and discovery notes.
+- After importing new works, run classification only for new/changed rows where practical.
+- Rebuild or update the search index after source text changes.
+
+Acceptance:
+
+- Generated model output never becomes evidence for authorship or work identity.
+- Curated overlays survive rebuilds.
+- New reader imports are discoverable by source, author, title, shelf, period, and acquisition provenance.
+
+## Current Priority Order
+
+1. Completed: PL122 reader-quality gate is verified with full selected-slice re-stage/import and sampled content output; keep segmentation quality as a watch point on future PL imports.
+2. Continue corpus-quality audit; the known Sanskrit translation and PHI Coptic/Sahidic primary-surface bugs are fixed, but new source-family defects should be added to `data/reference/reader_quality_audit/current_known_issues.tsv`.
+3. Plan and execute the next high-value series expansion sequence (PL122 is now complete as a 14-text slice) and sync source-index artifacts.
+4. Plan PL122+next PL expansion sequence from scorecards after quality signoff.
+5. Compare PG pilot row quality against Calfa overlap and finalize the PG expansion recommendation.
+6. Browser-QA the now CLI/API-backed Library watchlist and compact source-index explorer.
+7. Continue OGL source-view quality audit.
+8. Pick first missing CSEL acquisition target.
+9. Refresh source-index and audit scorecards after any import/rebuild.
+
+## Agent Handoff Template
+
+Use this when assigning implementation work:
+
+```text
+Work from docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md.
+
+Target workstream: <PL122 / PG pilot / Library watchlist / OGL audit / CSEL acquisition>
+
+Do:
+- Create or update source manifests before importing source text.
+- Keep raw source, staged text, curated metadata, generated metadata, and catalog output separate.
+- Preserve provenance: URL, retrieval date, source witness, source path, quality status, and work-boundary confidence.
+- Regenerate source-index/audit artifacts only after a catalog import or importer change.
+
+Do not:
+- Treat missing local volumes as importer bugs.
+- Bulk-import a whole series before staging and inspecting one representative sample.
+- Use generated classifications as evidence for authorship or identity.
+- Mix wanted/acquisition targets with imported reader works in UI payloads.
+
+Acceptance:
+- <specific command or UI flow>
+- <specific staged file or manifest>
+- <specific source-index/library expectation>
+```
+
+## Stop Conditions
+
+Pause and ask for review if:
+
+- A source has unclear or restrictive reuse terms.
+- A staged text is mostly OCR noise.
+- Work boundaries cannot be inferred without human judgment.
+- A proposed importer change would change source-view precedence for many existing Patrologia/CSEL rows.
+- A UI change would make wanted/acquisition targets look like imported works.

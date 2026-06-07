@@ -2741,6 +2741,19 @@ def _emit_reader_item(  # noqa: C901, PLR0912, PLR0915
             click.echo(
                 f"  canonical={canonical or ''}  witnesses={witnesses or 'none'}"
             )
+    elif mode == "source-index-export":
+        click.echo(
+            f"{item.get('kind')}  rows={item.get('row_count')}  {item.get('path')}"
+        )
+    elif mode == "ogl-audit":
+        click.echo(
+            f"{item.get('collection_id')}  candidates={item.get('candidate_count')}  "
+            f"selected={item.get('selected_count')}  catalog={item.get('catalog_row_count')}  "
+            f"missing_selected={item.get('catalog_missing_selected_count')}"
+        )
+        click.echo(f"  statuses={item.get('status_counts')}")
+        click.echo(f"  views={item.get('view_counts')}")
+        click.echo(f"  skip_reasons={item.get('skip_reason_counts')}")
     elif mode == "metadata":
         click.echo(
             f"{item.get('collection_id')}  {item.get('subject_kind')}  "
@@ -4842,6 +4855,53 @@ def reader_sources(
     )
 
 
+@reader_cli.command("library-watchlist")
+@click.option("--query", "-q", default=None, help="Filter targets by name, alias, period, plan, or note.")
+@click.option("--language", default=None, help="Filter targets by language code.")
+@click.option("--status", default=None, help="Filter targets by acquisition status.")
+@click.option("--limit", default=100, show_default=True, type=click.IntRange(1, 5000))
+@click.option(
+    "--watchlist-path",
+    type=click.Path(path_type=Path),
+    default=Path("data/curated/reader_library_watchlist/high_value_targets.yaml"),
+    show_default=True,
+    help="Curated reader acquisition watchlist YAML.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_library_watchlist(
+    query: str | None,
+    language: str | None,
+    status: str | None,
+    limit: int,
+    watchlist_path: Path,
+    output: str,
+) -> None:
+    """List curated high-value reader acquisition targets."""
+    from langnet.reader.library_watchlist import library_watchlist_payload  # noqa: PLC0415
+
+    payload = library_watchlist_payload(
+        watchlist_path=watchlist_path,
+        query=query,
+        language=language,
+        status=status,
+        limit=limit,
+    )
+    if output == "json":
+        click.echo(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
+        return
+    for item in payload["items"]:
+        click.echo(
+            f"{item['id']}\t{item['status']}\t{','.join(item['languages'])}\t"
+            f"{item['display_name']}\t{item['source_plan']}"
+        )
+
+
 @reader_cli.command("source-index")
 @click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
 @click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
@@ -4879,6 +4939,377 @@ def reader_source_index(  # noqa: PLR0913
         ),
         output,
     )
+
+
+@reader_cli.command("stage-pl-wikisource")
+@click.option(
+    "--manifest",
+    "manifest_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path("data/sources_external/patrologia_latina/pl122/manifest.yaml"),
+    show_default=True,
+    help="Patrologia Latina Wikisource source manifest.",
+)
+@click.option(
+    "--works-tsv",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Work table TSV. Defaults to <staging>/works.tsv from the manifest.",
+)
+@click.option(
+    "--raw-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Directory containing raw Wikisource markdown.",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Directory for segmented staging JSONL output.",
+)
+@click.option(
+    "--title",
+    "titles",
+    multiple=True,
+    help="Specific work title to stage. Repeatable. Defaults to rows marked staged_sample.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_stage_pl_wikisource(
+    manifest_path: Path,
+    works_tsv: Path | None,
+    raw_dir: Path | None,
+    output_dir: Path | None,
+    titles: tuple[str, ...],
+    output: str,
+) -> None:
+    """Stage selected Patrologia Latina Wikisource work pages as segmented JSONL."""
+    from langnet.reader.source_acquisition import (  # noqa: PLC0415
+        PlWikisourceStageConfig,
+        stage_pl_wikisource,
+    )
+
+    payload = stage_pl_wikisource(
+        PlWikisourceStageConfig(
+            manifest_path=manifest_path,
+            works_tsv_path=works_tsv,
+            raw_dir=raw_dir,
+            output_dir=output_dir,
+            titles=titles,
+        )
+    )
+    _emit_reader_payload(payload, output)
+
+
+@reader_cli.command("import-pl-wikisource")
+@click.option(
+    "--summary",
+    "summary_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path(
+        "data/build/reader_import_staging/patrologia_latina/pl122/"
+        "stage-pl-wikisource-summary.json"
+    ),
+    show_default=True,
+    help="Summary JSON produced by reader stage-pl-wikisource.",
+)
+@click.option(
+    "--data-root",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Optional data root for generated reader book DuckDB files.",
+)
+@click.option(
+    "--collection-id",
+    default="patrologia_latina_wikisource",
+    show_default=True,
+    help="Reader collection id for imported PL Wikisource works.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_import_pl_wikisource(
+    ctx: click.Context,
+    summary_path: Path,
+    data_root: Path | None,
+    collection_id: str,
+    output: str,
+) -> None:
+    """Import selected staged Patrologia Latina Wikisource JSONL into the reader catalog."""
+    from langnet.reader.source_acquisition import (  # noqa: PLC0415
+        PlWikisourceCatalogImportConfig,
+        import_pl_wikisource_catalog,
+    )
+
+    service = _reader_service_from_context(ctx)
+    payload = import_pl_wikisource_catalog(
+        PlWikisourceCatalogImportConfig(
+            catalog_path=service.catalog_path,
+            summary_path=summary_path,
+            data_root=data_root,
+            collection_id=collection_id,
+        )
+    )
+    _emit_reader_payload(payload, output)
+
+
+@reader_cli.command("stage-pg-pilot")
+@click.option(
+    "--manifest",
+    "manifest_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path("data/sources_external/patrologia_graeca/pilot/manifest.yaml"),
+    show_default=True,
+    help="Patrologia Graeca pilot manifest.",
+)
+@click.option(
+    "--raw-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Directory containing raw OGL PG .txt pages.",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Directory for segmented staging JSONL output.",
+)
+@click.option(
+    "--raw-page",
+    "raw_pages",
+    multiple=True,
+    help="Optional specific raw .txt file(s). Values may be bare file names under --raw-dir.",
+)
+@click.option(
+    "--title",
+    "title",
+    help="Optional work title used in Reader work metadata.",
+)
+@click.option(
+    "--author",
+    "author",
+    help="Optional author string used in Reader work metadata.",
+)
+@click.option(
+    "--language",
+    default="grc",
+    show_default=True,
+    help="Language tag for segmentation and segment indexing.",
+)
+@click.option(
+    "--max-pages",
+    type=click.IntRange(1, 3000),
+    help="Optional cap when staging from all available pages.",
+)
+@click.option(
+    "--quality-status",
+    default="machine_text_needs_segmentation",
+    show_default=True,
+    help="Quality status used in source metadata.",
+)
+@click.option(
+    "--boundary-confidence",
+    default="low_medium",
+    show_default=True,
+    help="Boundary confidence used in source metadata.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_stage_pg_pilot(
+    manifest_path: Path,
+    raw_dir: Path | None,
+    output_dir: Path | None,
+    raw_pages: tuple[str, ...],
+    title: str | None,
+    author: str | None,
+    language: str,
+    max_pages: int | None,
+    quality_status: str,
+    boundary_confidence: str,
+    output: str,
+) -> None:
+    """Stage selected Patrologia Graeca pilot OCR pages as segmented JSONL."""
+    from langnet.reader.source_acquisition import (  # noqa: PLC0415
+        PgPilotStageConfig,
+        stage_pg_pilot,
+    )
+
+    payload = stage_pg_pilot(
+        PgPilotStageConfig(
+            manifest_path=manifest_path,
+            raw_dir=raw_dir,
+            output_dir=output_dir,
+            raw_pages=raw_pages,
+            title=title,
+            author=author,
+            language=language,
+            max_pages=max_pages,
+            quality_status=quality_status,
+            boundary_confidence=boundary_confidence,
+        )
+    )
+    _emit_reader_payload(payload, output)
+
+
+@reader_cli.command("import-pg-pilot")
+@click.option(
+    "--summary",
+    "summary_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path(
+        "data/build/reader_import_staging/patrologia_graeca/pilot/"
+        "stage-pg-pilot-summary.json"
+    ),
+    show_default=True,
+    help="Summary JSON produced by reader stage-pg-pilot.",
+)
+@click.option(
+    "--data-root",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Optional data root for generated reader book DuckDB files.",
+)
+@click.option(
+    "--collection-id",
+    default="patrologia_graeca_pilot",
+    show_default=True,
+    help="Reader collection id for imported PG pilot works.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_import_pg_pilot(
+    ctx: click.Context,
+    summary_path: Path,
+    data_root: Path | None,
+    collection_id: str,
+    output: str,
+) -> None:
+    """Import selected staged Patrologia Graeca pilot JSONL into the reader catalog."""
+    from langnet.reader.source_acquisition import (  # noqa: PLC0415
+        PgPilotCatalogImportConfig,
+        import_pg_pilot_catalog,
+    )
+
+    service = _reader_service_from_context(ctx)
+    payload = import_pg_pilot_catalog(
+        PgPilotCatalogImportConfig(
+            catalog_path=service.catalog_path,
+            summary_path=summary_path,
+            data_root=data_root,
+            collection_id=collection_id,
+        )
+    )
+    _emit_reader_payload(payload, output)
+
+
+@reader_cli.command("source-index-export")
+@click.option(
+    "--output-dir",
+    type=click.Path(path_type=Path, file_okay=False, dir_okay=True),
+    default=Path("data/reference/reader_source_index"),
+    show_default=True,
+    help="Directory for regenerated source-index TSV snapshots.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_source_index_export(
+    ctx: click.Context,
+    output_dir: Path,
+    output: str,
+) -> None:
+    """Regenerate flat source-index TSV snapshots and README."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).source_index_export(output_dir),
+        output,
+    )
+
+
+@reader_cli.command("ogl-audit")
+@click.option(
+    "--collection",
+    "collections",
+    multiple=True,
+    help="Optional OGL collection id to audit. May be repeated.",
+)
+@click.option(
+    "--opengreekandlatin-latin-dir",
+    type=click.Path(path_type=Path),
+    default=Path.home() / "opengreekandlatin" / "Latin",
+    show_default=True,
+)
+@click.option(
+    "--opengreekandlatin-csel-dir",
+    type=click.Path(path_type=Path),
+    default=Path.home() / "opengreekandlatin" / "csel-dev",
+    show_default=True,
+)
+@click.option(
+    "--opengreekandlatin-patrologia-dir",
+    type=click.Path(path_type=Path),
+    default=Path.home() / "opengreekandlatin" / "patrologia_latina-dev",
+    show_default=True,
+)
+@click.option(
+    "--opengreekandlatin-church-fathers-dir",
+    type=click.Path(path_type=Path),
+    default=Path.home() / "opengreekandlatin" / "church_fathers-dev",
+    show_default=True,
+)
+@click.option("--sample-limit", default=8, show_default=True, type=click.IntRange(0, 100))
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_ogl_audit(
+    ctx: click.Context,
+    collections: tuple[str, ...],
+    opengreekandlatin_latin_dir: Path,
+    opengreekandlatin_csel_dir: Path,
+    opengreekandlatin_patrologia_dir: Path,
+    opengreekandlatin_church_fathers_dir: Path,
+    sample_limit: int,
+    output: str,
+) -> None:
+    """Audit OpenGreekAndLatin source selection and catalog coverage."""
+    from langnet.reader.ogl_audit import audit_ogl_imports  # noqa: PLC0415
+
+    payload = audit_ogl_imports(
+        catalog_path=_reader_service_from_context(ctx).catalog_path,
+        roots={
+            "opengreekandlatin_latin": opengreekandlatin_latin_dir.expanduser(),
+            "opengreekandlatin_csel": opengreekandlatin_csel_dir.expanduser(),
+            "opengreekandlatin_patrologia": opengreekandlatin_patrologia_dir.expanduser(),
+            "opengreekandlatin_church_fathers": opengreekandlatin_church_fathers_dir.expanduser(),
+        },
+        collections=set(collections) if collections else None,
+        sample_limit=sample_limit,
+    )
+    _emit_reader_payload(payload, output)
 
 
 @reader_cli.command("metadata")

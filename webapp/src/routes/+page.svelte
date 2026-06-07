@@ -47,6 +47,7 @@
 						{copy.secondaryCta}
 					</a>
 					<a class="btn btn-ghost btn-lg" href="/about">{copy.aboutCta}</a>
+					<a class="btn btn-ghost btn-lg" href="/library">Library</a>
 					<a class="btn btn-ghost btn-lg" href="/evidence">{uiCopy.publicSite.nav.evidence}</a>
 				</div>
 			</div>
