@@ -53,6 +53,8 @@ Design principle:
 
 - The Library is an audit and discovery surface over the reader catalog, not a separate reading surface. Selecting a work should route into the existing Reader experience.
 - Corpus acquisition is tracked separately in `docs/plans/active/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`; the Library should expose acquisition/provenance status but should not perform acquisition work at request time.
+- The Library should feel like the entrance hall to a humanist reader desk: shelves, witnesses, provenance, and acquisition gaps are presented as scholarly orientation, not as generic search results.
+- The reader experience tone and typography policy lives in `docs/plans/active/infra/READER_EXPERIENCE_MODALITY_AND_TYPOGRAPHY_PLAN.md`.
 
 ## Data Model Additions
 
@@ -602,3 +604,66 @@ Reason:
 - Eriugena is a confirmed high-value miss caused by absent local PL122 source material.
 - PG is a major corpus gap, and a pilot prevents us from designing a broad importer around untested OCR assumptions.
 - The Library should make missing-known targets visible instead of silently returning empty search results.
+
+## Pagination And Portal UX Correction - 2026-06-07
+
+The Library source-index view should not rely on loading 20,000 rows as a product interaction. That value remains only as a defensive API cap for audit calls. The product UX now requires real source-index pagination with visible controls.
+
+Implemented direction:
+
+- Source-index CLI/API supports offset cursor pagination.
+- `/library` requests 100 source-index rows per page.
+- `/library` renders First, Previous, page number, and Next controls rather than a bulk "load next" pattern.
+
+Additional correction:
+
+- Library row primary navigation should target dedicated work/author portal pages, not jump straight into the reading desk as the only action.
+- The portal page should expose title, author, source collection, language, canonical ids, edition/source path, citation shape, segment/word counts, quality status, aliases, related works, and author context.
+- Once portal routes exist, the Library row action should read as `Open work` or `Inspect work`; direct `Read` should remain available as a secondary action.
+
+Language mapping correction:
+
+- The web adapter previously mapped non-primary language values to `san`; this made Perseus English editions display as Sanskrit in the Library/API source-index view.
+- The adapter now preserves `eng` and uses explicit `und` for unknown catalog-language values.
+
+## Verified Library Pagination And Language Mapping - 2026-06-07
+
+Verified behavior:
+
+- CLI source-index pagination works: `--limit 100` returns `next_cursor: 100`; `--cursor 100` returns `prev_cursor: 0`.
+- Live API source-index pagination works for PHI with the same cursor behavior.
+- Server-rendered `/library` contains First, Previous, numbered page, and Next controls.
+- Reported Perseus English examples now return `eng` through live `/api/reader?mode=source-index`:
+  - `tlg0551.tlg001` Appian, `The Roman History: Author's Preface`
+  - `tlg0557.tlg003a` Epictetus, `Fragments`
+  - `tlg0527.tlg030` Old Testament, `Ecclesiastes`
+
+## Verified Work And Author Portals - 2026-06-08
+
+Implemented behavior:
+
+- Added `/library/work/[work]` as a dedicated work threshold page.
+- Added `/library/author/[author]` as a dedicated author shelf page.
+- Added `/api/reader?mode=author` backed by `reader author <author_ref>`.
+- Changed `/library` source rows so the primary action is `Work portal`; direct `Enter reader desk` remains available as a secondary action.
+- Author names in Library rows now link to author portals when an author key or display name is available.
+
+Design alignment:
+
+- Work pages expose title, author, language, collection, source id, CTS/canonical keys, source-index witnesses, division headings, and a deliberate `Enter reader desk` action.
+- Author pages expose display name, names/authority keys, indexed work count, and representative works with `Work portal` before direct reading.
+- Copy uses the reader modality vocabulary: `work portal`, `author portal`, `witnesses`, `canonical keys`, `reader desk`, `division`, and `source-index`.
+
+Verified behavior:
+
+- `bun run check` returns 0 errors and 0 warnings.
+- `bun run build` completes successfully.
+- Web preview was restarted on port `43210`.
+- Live `/api/reader?mode=author&language=lat&author=Vergilius&representative_limit=2` returns `P. Vergilius Maro (Virgil)` and two representative works.
+- Live `/library/work/urn%3Acts%3AlatinLit%3Aphi0690.phi003` renders `Aeneid`, `Enter reader desk`, and `Witnesses`.
+- Live `/library/author/Vergilius?language=lat` renders `P. Vergilius Maro`, `Works in the reader`, and `Work portal`.
+- Live `/library` renders `Work portal`, `Author portal`, and `Enter reader desk`.
+
+Remaining UX task:
+
+- Add richer source-quality and acquisition-status badges to portal pages once the source-index and watchlist status models are unified.

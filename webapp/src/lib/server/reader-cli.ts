@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import type { LanguageMode } from '$lib/search-data';
 import type {
 	ReaderAuthorSectionsResponse,
+	ReaderAuthorResponse,
 	ReaderAuthorsResponse,
 	ReaderCatalog,
 	ReaderCatalogsResponse,
@@ -11,6 +12,7 @@ import type {
 	ReaderShelvesResponse,
 	ReaderSourceIndexResponse,
 	ReaderStructureResponse,
+	ReaderWordContextResponse,
 	ReaderWorkDossierResponse,
 	ReaderWorksResponse
 } from '$lib/reader';
@@ -335,6 +337,7 @@ export async function readerSourceIndex({
 	workId,
 	query,
 	limit,
+	cursor,
 	options = {}
 }: {
 	catalogId: string | null;
@@ -344,6 +347,7 @@ export async function readerSourceIndex({
 	workId?: string;
 	query?: string;
 	limit: number;
+	cursor?: string;
 	options?: ReaderCliOptions;
 }): Promise<ReaderSourceIndexResponse & { catalog: ReaderCatalog }> {
 	const catalog = await resolveReaderCatalog(catalogId, language, options);
@@ -354,14 +358,61 @@ export async function readerSourceIndex({
 	if (workId) args.push('--work-id', workId);
 	if (query) args.push('--query', query);
 	args.push('--limit', String(limit));
+	if (cursor) args.push('--cursor', cursor);
 	args.push('--output', 'json');
 	const rawPayload = await runReaderJsonCommand(catalog, args, options);
+	const pagination = objectValue(rawPayload.pagination);
 	return {
 		...(withCatalog(rawPayload, catalog) as Omit<ReaderSourceIndexResponse, 'items'> & {
 			catalog: ReaderCatalog;
 		}),
-		items: arrayOfObjects(rawPayload.items).map(mapReaderSourceIndexItem)
+		items: arrayOfObjects(rawPayload.items).map(mapReaderSourceIndexItem),
+		pagination: {
+			limit: numberValue(pagination?.limit) || limit,
+			next_cursor: nullableString(pagination?.next_cursor),
+			prev_cursor: nullableString(pagination?.prev_cursor)
+		}
 	};
+}
+
+export async function readerWordContext({
+	catalogId,
+	language,
+	query,
+	work,
+	segment,
+	limit,
+	context,
+	options = {}
+}: {
+	catalogId: string | null;
+	language: LanguageMode;
+	query: string;
+	work?: string;
+	segment?: string;
+	limit: number;
+	context: number;
+	options?: ReaderCliOptions;
+}): Promise<ReaderWordContextResponse & { catalog: ReaderCatalog }> {
+	const catalog = await resolveReaderCatalog(catalogId, language, options);
+	const args = [
+		'word-context',
+		query,
+		'--language',
+		language,
+		'--reader-search-limit',
+		String(limit),
+		'--reader-search-context',
+		String(context),
+		'--output',
+		'json'
+	];
+	if (work) args.push('--work', work);
+	if (segment) args.push('--segment', segment);
+	return withCatalog(
+		await runReaderJsonCommand(catalog, args, options),
+		catalog
+	) as ReaderWordContextResponse & { catalog: ReaderCatalog };
 }
 
 export async function readerLibraryWatchlist({
@@ -508,6 +559,39 @@ export async function readerAuthors({
 			next_cursor: nullableString(pagination?.next_cursor),
 			prev_cursor: nullableString(pagination?.prev_cursor)
 		}
+	};
+}
+
+export async function readerAuthor({
+	catalogId,
+	language,
+	author,
+	representativeLimit,
+	options = {}
+}: {
+	catalogId: string | null;
+	language?: LanguageMode;
+	author: string;
+	representativeLimit: number;
+	options?: ReaderCliOptions;
+}): Promise<ReaderAuthorResponse & { catalog: ReaderCatalog }> {
+	const catalog = await resolveReaderCatalog(catalogId, language, options);
+	const args = ['author', author, '--representative-limit', String(representativeLimit)];
+	if (language) args.push('--language', language);
+	args.push('--output', 'json');
+	const rawPayload = await runReaderJsonCommand(catalog, args, options);
+	return {
+		...(withCatalog(rawPayload, catalog) as Omit<
+			ReaderAuthorResponse,
+			'item' | 'representative_works' | 'works'
+		> & {
+			catalog: ReaderCatalog;
+		}),
+		item: objectValue(rawPayload.item)
+			? mapReaderAuthor(objectValue(rawPayload.item) as JsonObject)
+			: null,
+		representative_works: arrayOfObjects(rawPayload.representative_works).map(mapReaderWork),
+		works: arrayOfObjects(rawPayload.works).map(mapReaderWork)
 	};
 }
 
@@ -846,7 +930,7 @@ function mapReaderWork(item: JsonObject) {
 function mapReaderSourceIndexItem(item: JsonObject) {
 	return {
 		collection_id: stringValue(item.collection_id),
-		language: normalizeLanguage(stringValue(item.language)),
+		language: normalizeCatalogLanguage(stringValue(item.language)),
 		work_id: stringValue(item.work_id),
 		title: stringValue(item.title),
 		author: stringValue(item.author),
@@ -1033,6 +1117,12 @@ function mapReaderAuthor(item: JsonObject) {
 function normalizeLanguage(value: string): LanguageMode {
 	if (value === 'grc' || value === 'lat' || value === 'san') return value;
 	return 'san';
+}
+
+function normalizeCatalogLanguage(value: string): LanguageMode | 'eng' | 'und' {
+	if (value === 'grc' || value === 'lat' || value === 'san') return value;
+	if (value === 'eng') return 'eng';
+	return 'und';
 }
 
 function nullableLanguage(value: JsonValue | undefined): LanguageMode | null {

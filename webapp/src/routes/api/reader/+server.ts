@@ -7,6 +7,7 @@ import {
 import { languageModes, type LanguageMode } from '$lib/search-data';
 import {
 	readerAliases,
+	readerAuthor,
 	readerAuthorFacets,
 	readerAuthorSections,
 	readerAuthors,
@@ -21,6 +22,7 @@ import {
 	readerShelves,
 	readerLibraryWatchlist,
 	readerSourceIndex,
+	readerWordContext,
 	readerStructure,
 	readerSummary,
 	readerTags,
@@ -40,11 +42,13 @@ const validModes = new Set([
 	'tags',
 	'author-facets',
 	'source-index',
+	'word-context',
 	'library-watchlist',
 	'shelves',
 	'search',
 	'author-sections',
 	'authors',
+	'author',
 	'work',
 	'about',
 	'works',
@@ -151,6 +155,28 @@ export async function GET({ url, request }) {
 					workId: url.searchParams.get('work_id') ?? url.searchParams.get('workId') ?? undefined,
 					query: url.searchParams.get('q') ?? url.searchParams.get('query') ?? undefined,
 					limit: readInteger(url.searchParams.get('limit'), 100, 1, 20000),
+					cursor: url.searchParams.get('cursor') ?? undefined,
+					options
+				})
+			);
+		}
+		if (mode === 'word-context') {
+			const query = (url.searchParams.get('q') ?? url.searchParams.get('query') ?? '').trim();
+			if (!language) {
+				return respond({ error: 'Reader word context requires a language.' }, { status: 400 });
+			}
+			if (!query) {
+				return respond({ error: 'Reader word context requires a query.' }, { status: 400 });
+			}
+			return cachedRespond(
+				await readerWordContext({
+					catalogId,
+					language,
+					query,
+					work: url.searchParams.get('work') ?? undefined,
+					segment: url.searchParams.get('segment') ?? undefined,
+					limit: readInteger(url.searchParams.get('limit'), 8, 0, 50),
+					context: readInteger(url.searchParams.get('context'), 1, 0, 10),
 					options
 				})
 			);
@@ -185,6 +211,33 @@ export async function GET({ url, request }) {
 					sort: readAuthorSort(url.searchParams.get('sort')),
 					limit: readInteger(url.searchParams.get('limit'), 50, 1, 200),
 					cursor: url.searchParams.get('cursor') ?? undefined,
+					options
+				})
+			);
+		}
+		if (mode === 'author') {
+			const author = (
+				url.searchParams.get('author') ??
+				url.searchParams.get('author_id') ??
+				url.searchParams.get('authorId') ??
+				url.searchParams.get('ref') ??
+				''
+			).trim();
+			if (!author) {
+				return respond({ error: 'Reader author lookup requires an author parameter.' }, { status: 400 });
+			}
+			return cachedRespond(
+				await readerAuthor({
+					catalogId,
+					language,
+					author,
+					representativeLimit: readInteger(
+						url.searchParams.get('representative_limit') ??
+							url.searchParams.get('representativeLimit'),
+						8,
+						1,
+						50
+					),
 					options
 				})
 			);

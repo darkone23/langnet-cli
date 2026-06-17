@@ -7,7 +7,7 @@
 	import ReaderLoadingRows from './ReaderLoadingRows.svelte';
 	import ReaderLoadingStrip from './ReaderLoadingStrip.svelte';
 	import ReaderSelectedWordPanel from './ReaderSelectedWordPanel.svelte';
-	import type { ReaderSegment, ReaderStructureNode } from '$lib/reader';
+	import type { ReaderSegment, ReaderStructureNode, ReaderWordContextResponse } from '$lib/reader';
 	import { uiCopy } from '../ui-copy';
 
 	type Romanization = { label: string; value: string } | null;
@@ -33,6 +33,9 @@
 		selectedWordBriefingLoading: boolean;
 		selectedWordBriefingGenerating: boolean;
 		selectedWordBriefingError: string;
+		selectedWordContext: ReaderWordContextResponse | null;
+		selectedWordContextLoading: boolean;
+		selectedWordContextError: string;
 		segmentIsActive: (segment: ReaderSegment) => boolean;
 		onRetryStructure: () => void;
 		onRetryContents: () => void;
@@ -62,6 +65,9 @@
 		selectedWordBriefingLoading,
 		selectedWordBriefingGenerating,
 		selectedWordBriefingError,
+		selectedWordContext,
+		selectedWordContextLoading,
+		selectedWordContextError,
 		segmentIsActive,
 		onRetryStructure,
 		onRetryContents,
@@ -146,6 +152,9 @@
 			{selectedWordBriefingLoading}
 			{selectedWordBriefingGenerating}
 			{selectedWordBriefingError}
+			{selectedWordContext}
+			{selectedWordContextLoading}
+			{selectedWordContextError}
 			{onGenerateBriefing}
 		/>
 	</section>

@@ -197,7 +197,7 @@ assertIncludes(
 	[
 		'let structure = $state<ReaderStructureNode[]>([])',
 		'readerStructureUrl({ catalogId: stateBag.catalogId, language: stateBag.language, work })',
-		'await loadStructure(readerWorkRef(work))',
+		'void Promise.allSettled([loadStructure(readerWorkRef(work)), loadWorkDossier(readerWorkRef(work))])',
 		'ReaderContextSidebar',
 		'ReaderApparatusTabs',
 		"readerLoadingElapsedSeconds('structure')"
@@ -215,6 +215,20 @@ assertIncludes(
 		'readerLoadingStatus(uiCopy.workDossier.loading,'
 	],
 	'reader page Work Dossier'
+);
+assertIncludes(
+	readerContentLoadersSource,
+	[
+		'inferReaderLanguageFromWorkRef',
+		"work.startsWith('urn:ctsv2:lat:')",
+		'applyInferredWorkLanguage(work)',
+		'applyResolvedWorkLanguage',
+		'stateBag.language = work.language',
+		'void Promise.allSettled([loadStructure(readerWorkRef(work)), loadWorkDossier(readerWorkRef(work))])',
+		'const showRequest = fetchReaderApi<ReaderShowResponse>',
+		'const pageWindowRequest = loadPageWindow(selectedWorkRef, segment)'
+	],
+	'reader route content loader performance path'
 );
 assertIncludes(
 	workDossierSource,

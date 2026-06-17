@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Feather, FileSearch, Telescope } from 'lucide-svelte';
+	import IlluminatedSprite from '$lib/ornament/IlluminatedSprite.svelte';
 
 	type EmptyIcon = 'feather' | 'file-search' | 'telescope';
 
@@ -12,6 +13,7 @@
 </script>
 
 <div class="orion-reader-desk-empty">
+	<IlluminatedSprite variant="beast" scale="md" label="Kells-style marginal book pet" />
 	{#if icon === 'file-search'}
 		<FileSearch size={24} />
 	{:else if icon === 'telescope'}

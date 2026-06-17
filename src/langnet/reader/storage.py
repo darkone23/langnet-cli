@@ -4730,6 +4730,7 @@ def list_source_index(  # noqa: PLR0913
     work_id: str | None = None,
     query: str | None = None,
     limit: int = 500,
+    offset: int = 0,
 ) -> list[dict[str, Any]]:
     if not catalog_path.exists():
         return []
@@ -4774,7 +4775,7 @@ def list_source_index(  # noqa: PLR0913
         )
         params.extend([query_like] * 8)
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-    params.append(limit)
+    params.extend([limit, offset])
     with duckdb.connect(str(catalog_path), read_only=True) as conn:
         return _dict_rows(
             conn,
@@ -4834,7 +4835,7 @@ def list_source_index(  # noqa: PLR0913
             LEFT JOIN witness_counts wc ON wc.canonical_text_id = w.canonical_text_id
             {where}
             ORDER BY w.collection_id, w.language, w.author, w.title, e.label, w.work_id
-            LIMIT ?
+            LIMIT ? OFFSET ?
             """,
             params,
         )

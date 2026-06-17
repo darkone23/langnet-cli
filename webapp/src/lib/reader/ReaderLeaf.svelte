@@ -1,4 +1,5 @@
 <script lang="ts">
+	import IlluminatedSprite from '$lib/ornament/IlluminatedSprite.svelte';
 	import type { LanguageMode } from '../search-data';
 	import type { ReaderSegment, ReaderTokenPart } from '$lib/reader';
 
@@ -25,7 +26,10 @@
 	const langAttribute = $derived(language === 'grc' ? 'grc' : language === 'san' ? 'sa' : 'la');
 </script>
 
-<div class="orion-reader-leaf" lang={langAttribute}>
+<div class="orion-reader-leaf orion-reader-page-enter" lang={langAttribute}>
+	<div class="orion-reader-book-pet">
+		<IlluminatedSprite variant="beast" scale="sm" label="Kells-style marginal book pet" />
+	</div>
 	{#each pageSegments as segment}
 		<section class="orion-reader-leaf-line">
 			<button type="button" class="orion-reader-leaf-ref" onclick={() => onOpenSegment(segment)}>
@@ -57,11 +61,17 @@
 
 <style>
 	.orion-reader-leaf {
+		position: relative;
 		display: grid;
-		gap: 0.2rem;
+		gap: 0.42rem;
 		min-height: 28rem;
-		padding: clamp(1.35rem, 3.4vw, 3rem) clamp(1rem, 3vw, 2.4rem);
+		padding: clamp(1.8rem, 4vw, 3.6rem) clamp(1rem, 3.4vw, 2.8rem);
 		background:
+			radial-gradient(
+				circle at 9% 4%,
+				color-mix(in oklab, var(--reader-ornament-gold) 18%, transparent),
+				transparent 14rem
+			),
 			linear-gradient(
 				90deg,
 				color-mix(in oklab, var(--color-accent) 8%, transparent),
@@ -75,15 +85,33 @@
 			inset -0.9rem 0 1.2rem -1.2rem color-mix(in oklab, var(--color-neutral) 16%, transparent);
 	}
 
+	.orion-reader-leaf::before {
+		content: '';
+		position: absolute;
+		inset: 0.72rem;
+		pointer-events: none;
+		border: 1px solid color-mix(in oklab, var(--reader-ornament-gold) 28%, transparent);
+		border-radius: 0.28rem;
+		box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-base-100) 58%, transparent);
+	}
+
+	.orion-reader-book-pet {
+		position: absolute;
+		top: clamp(0.85rem, 2vw, 1.25rem);
+		left: clamp(0.9rem, 2vw, 1.4rem);
+		pointer-events: none;
+		opacity: 0.94;
+	}
+
 	.orion-reader-leaf-line {
 		display: grid;
-		grid-template-columns: minmax(3.5rem, 4.5rem) minmax(0, 58rem);
+		grid-template-columns: var(--reader-citation-gutter) minmax(0, var(--reader-measure));
 		align-items: baseline;
-		gap: 0.9rem;
+		gap: clamp(0.7rem, 2vw, 1.15rem);
 		justify-content: center;
 		border-left: 0.2rem solid transparent;
 		border-radius: 0.18rem;
-		padding: 0.18rem 0.4rem 0.18rem 0.2rem;
+		padding: 0.18rem 0.4rem 0.28rem 0.2rem;
 	}
 
 	.orion-reader-leaf-ref {
@@ -92,9 +120,11 @@
 		color: color-mix(in oklab, var(--color-base-content) 32%, transparent);
 		cursor: pointer;
 		font-family: var(--font-serif);
-		font-size: 0.72rem;
+		font-size: 0.7rem;
+		font-variant-caps: small-caps;
 		font-weight: 700;
-		line-height: 1.2;
+		letter-spacing: 0.035em;
+		line-height: 1.15;
 		opacity: 0.72;
 		text-align: right;
 	}
@@ -109,12 +139,25 @@
 
 	.orion-reader-desk-text {
 		margin: 0;
-		max-width: 58rem;
+		max-width: var(--reader-measure);
 		color: color-mix(in oklab, var(--color-base-content) 88%, var(--color-primary));
 		font-family: var(--font-reader);
-		font-size: clamp(1.12rem, 1.55vw, 1.45rem);
+		font-size: clamp(1.14rem, 1.48vw, 1.38rem);
 		font-kerning: normal;
-		line-height: 1.9;
+		hyphens: none;
+		letter-spacing: 0.002em;
+		line-height: var(--reader-line-height);
+		text-wrap: pretty;
+	}
+
+	.orion-reader-leaf[lang='grc'] .orion-reader-desk-text {
+		font-size: clamp(1.18rem, 1.55vw, 1.43rem);
+		line-height: calc(var(--reader-line-height) + 0.06);
+	}
+
+	.orion-reader-leaf[lang='sa'] .orion-reader-desk-text {
+		font-size: clamp(1.2rem, 1.62vw, 1.48rem);
+		line-height: calc(var(--reader-line-height) + 0.14);
 	}
 
 	.orion-reader-desk-text.interlinear {
@@ -126,7 +169,7 @@
 		border: 0;
 		border-radius: 0.16rem;
 		background: transparent;
-		padding: 0.02rem 0.08rem;
+		padding: 0.015rem 0.075rem;
 		color: inherit;
 		cursor: pointer;
 		font: inherit;
@@ -174,8 +217,13 @@
 
 	@media (max-width: 48rem) {
 		.orion-reader-leaf-line {
-			grid-template-columns: 3.25rem minmax(0, 1fr);
+			grid-template-columns: 3rem minmax(0, 1fr);
 			gap: 0.55rem;
+		}
+
+		.orion-reader-book-pet {
+			opacity: 0.52;
+			transform: scale(0.82);
 		}
 
 		.orion-reader-leaf-ref {

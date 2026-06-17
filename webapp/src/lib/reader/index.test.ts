@@ -24,7 +24,10 @@ import {
 	readerWorkListDiscriminator,
 	readerWorkLabel,
 	readerWorkListLabel,
+	readerWorkPublicKey,
 	readerWorkRef,
+	readerIsDeprecatedWorkRef,
+	readerSourceIndexPublicKey,
 	readerCatalogDefaults,
 	readerHasIndexStats,
 	readerIndexStatsKey,
@@ -280,6 +283,9 @@ const work = {
 };
 
 assert.equal(readerWorkRef(work), 'urn:ctsv2:grc:odyssey-andra-moi-ennepe');
+assert.equal(readerIsDeprecatedWorkRef('urn:cts:greekLit:tlg0012.tlg002'), true);
+assert.equal(readerIsDeprecatedWorkRef('urn:ctsv2:grc:odyssey-andra-moi-ennepe'), false);
+assert.match(readerWorkPublicKey(work), /^homer-odyssea--[a-z0-9]{1,6}$/u);
 assert.equal(readerWorkLabel(work), 'Homer, Odyssea');
 assert.equal(readerWorkListLabel(work, [work]), 'Odyssea');
 assert.equal(readerWorkDisplayAuthor(work), 'Homer');
@@ -367,12 +373,41 @@ const hesiodFragmentB = {
 assert.equal(readerWorkListLabel(hesiodFragmentA, [hesiodFragmentA, hesiodFragmentB]), 'Fragmenta');
 assert.equal(
 	readerWorkListDiscriminator(hesiodFragmentA, [hesiodFragmentA, hesiodFragmentB]),
-	'tlg0020.004'
+	readerWorkPublicKey(hesiodFragmentA)
 );
 assert.equal(readerWorkListLabel(hesiodFragmentB, [hesiodFragmentA, hesiodFragmentB]), 'Fragmenta');
 assert.equal(
 	readerWorkListDiscriminator(hesiodFragmentB, [hesiodFragmentA, hesiodFragmentB]),
-	'tlg0020.007'
+	readerWorkPublicKey(hesiodFragmentB)
+);
+
+assert.match(
+	readerSourceIndexPublicKey({
+		work_id: 'langnet:reader:tlg:tlg0012.002',
+		edition_id: 'perseus-grc2',
+		collection_id: 'tlg',
+		language: 'grc',
+		title: 'Odyssea',
+		author: 'Homer',
+		author_id: 'urn:cts:greekLit:tlg0012',
+		source_id: 'tlg0012.002',
+		cts_work_urn: null,
+		cts_edition_urn: null,
+		canonical_text_id: 'urn:ctsv2:grc:odyssey-andra-moi-ennepe',
+		source_path: '/tmp/odyssey.xml',
+		source_hash: 'abc123',
+		file_role: 'text',
+		file_status: 'available',
+		segment_count: 12,
+		token_count: 120,
+		edition_label: 'Odyssey',
+		artifact_count: 1,
+		adapters: '',
+		artifact_paths: '',
+		source_witness_count: 1,
+		source_witness_collections: 'tlg'
+	}),
+	/^homer-odyssea--[a-z0-9]{1,6}$/u
 );
 
 assert.equal(

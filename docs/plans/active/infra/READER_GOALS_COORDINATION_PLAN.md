@@ -33,6 +33,8 @@ Current concrete parity gates:
 - `docs/plans/active/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`: acquisition lanes, source manifests, corpus-building policy, target author/work register.
 - `docs/plans/active/infra/READER_COLLECTION_EXPANSION_MASTER_TRACKER_2026-06-07.md`: master tracker for expansion lanes, status, cost tiers, and current work order.
 - `docs/plans/active/infra/LANGNET_LIBRARY_EXPLORER_PLAN.md`: `/library`, search, watchlist, provenance, and acquisition-gap UX.
+- `docs/plans/active/infra/READER_EXPERIENCE_MODALITY_AND_TYPOGRAPHY_PLAN.md`: reader modality, typography, tone, ornament, and keyed-work experience policy.
+- `docs/plans/active/infra/READER_WORD_CONTEXT_RETRIEVAL_QUALITY_PLAN.md`: selected-word sidebar, CLI/API word-context payload, retrieval correctness, index health, and performance gates.
 - `docs/plans/active/infra/OPEN_GREEK_LATIN_IMPORTER_AUDIT_AND_FIX_PLAN.md`: OGL importer audit, Patrologia/CSEL completeness, source-view quality policy.
 - `data/reference/reader_source_index/`: checked-in source-index snapshots.
 - `data/reference/ogl_import_audit/`: OGL, CSEL, Patrologia, PL/PG acquisition scorecards.
@@ -225,6 +227,7 @@ Status:
 - Curated watchlist targets include Eriugena, Pseudo-Dionysius, Aquinas, Anselm, Descartes, Bruno, Llull, Duns Scotus, Ficino, Bacon, More, Spinoza, John of Damascus, and Axiochus.
 - Verified on 2026-06-07: server-rendered `/library` contains catalog row content (`Ars maior`) and acquisition/provenance content (`Joannes Scotus Eriugena`).
 - Verified on 2026-06-07: the compact expandable row layout is deployed in the live `/library` HTML.
+- Reader experience policy now has a dedicated modality/typography plan: the UI should feel like a keyed humanist memory theatre, not a generic lexicon.
 
 Next actions:
 
@@ -232,6 +235,7 @@ Next actions:
 - Keep imported works visually distinct from wanted/acquisition targets.
 - Add browser QA coverage for `/library` filters and searches.
 - Improve how imported watchlist targets are shown as acquisition history/context instead of "wanted" items.
+- Continue typography/tone work according to the reader modality plan: primary text, citation gutter, apparatus, witness labels, and memory-key affordances should all reinforce the scholarly reader-desk experience.
 
 Acceptance:
 
@@ -254,6 +258,30 @@ Next actions:
 - Rebuild or update the search index after source text changes.
 
 Acceptance:
+
+### 7. Word-context retrieval quality
+
+Status:
+
+- Selected-word marginalia exists in the reader UI, and encounter briefing can provide learner-facing generated summaries.
+- Reader text search, source-index provenance, work contents, work dossiers, and API response caching exist as separate primitives.
+- A dedicated implementation plan now exists for unifying those primitives into a CLI/API/UI word-context payload.
+
+Next actions:
+
+- Implement `reader word-context` in the CLI and reader service.
+- Expose `/api/reader?mode=word-context` through the web adapter.
+- Make the selected-word sidebar render deterministic evidence before generated prose.
+- Add golden-query fixtures for common Latin forms such as `corpore`, `arma`, and `virum`.
+- Surface search-index availability and timing so no-hit, unavailable-index, and slow-retrieval cases are distinguishable.
+- Track retrieval-quality defects in `data/reference/reader_quality_audit/current_known_issues.tsv` before broad corpus expansion resumes.
+
+Acceptance:
+
+- A reader can click a word such as `corpore` and receive a fast, evidence-backed sidebar with form normalization, lexical/morphological evidence where available, reader hits, passage context, provenance, caveats, and timing/index status.
+- The same word-context payload is available through CLI JSON and `/api/reader`.
+- Generated interpretation remains secondary and does not block deterministic evidence rendering.
+- Project quality gates remain explicit: correctness fixtures, source/index status, and retrieval-performance telemetry must be present before this stack is marked complete.
 
 - Generated model output never becomes evidence for authorship or work identity.
 - Curated overlays survive rebuilds.

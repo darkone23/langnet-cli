@@ -52,6 +52,7 @@
 				workTitle={props.selectedWorkLabels.title}
 				workSubtitle={props.selectedWorkLabels.contributorLine || props.selectedWorkLabels.discriminator}
 				classificationConfidence={props.selectedWork.classification_confidence}
+				selectedWork={props.selectedWork}
 				dossier={props.topSection}
 				dossierLoading={props.dossierLoading}
 				dossierLoadingLabel={props.dossierLoadingLabel}
@@ -69,6 +70,7 @@
 				workTitle={props.selectedWork ? props.selectedWorkLabels.title : null}
 				workDiscriminator={props.selectedWorkLabels.discriminator}
 				workContributorLine={props.selectedWorkLabels.contributorLine}
+				selectedWork={props.selectedWork}
 				canOpenAuthor={Boolean(props.canOpenWorkAuthor)}
 				segmentWorkId={props.selectedSegment?.work_id}
 				hasSelectedSegment={Boolean(props.selectedSegment)}
@@ -245,6 +247,9 @@
 				selectedWordBriefingLoading={props.selectedWordBriefingLoading}
 				selectedWordBriefingGenerating={props.selectedWordBriefingGenerating}
 				selectedWordBriefingError={props.selectedWordBriefingError}
+				selectedWordContext={props.selectedWordContext}
+				selectedWordContextLoading={props.selectedWordContextLoading}
+				selectedWordContextError={props.selectedWordContextError}
 				segmentIsActive={props.segmentIsActive}
 				onRetryStructure={props.onRetryStructure}
 				onRetryContents={props.onRetryContents}

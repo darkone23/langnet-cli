@@ -33,6 +33,7 @@
 			type="button"
 			class="btn join-item btn-sm"
 			class:btn-neutral={activeView === 'authors'}
+			aria-label="Top authors"
 			aria-pressed={activeView === 'authors'}
 			onclick={() => onSelectView('authors')}
 		>

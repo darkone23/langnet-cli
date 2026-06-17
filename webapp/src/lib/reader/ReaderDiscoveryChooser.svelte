@@ -10,29 +10,46 @@
 </script>
 
 <div class="orion-reader-shelf-grid">
-	<button type="button" class="orion-reader-shelf-card" onclick={() => onSelectView('shelves')}>
-		<span>Browse</span>
-		<strong>Shelves</strong>
-		<small>{languageLabel} works by art, subject, and genre</small>
+	<button
+		type="button"
+		class="orion-reader-shelf-card"
+		aria-label="Shelves"
+		onclick={() => onSelectView('shelves')}
+	>
+		<span>Enter</span>
+		<strong>Shelves of memory</strong>
+		<small>{languageLabel} works by art, discipline, and tradition</small>
 		<p>
-			Enter the library by discipline and use, then narrow from broad learning to a particular work.
+			Move by ordered places: poetry, theology, grammar, history, philosophy, and the
+			other rooms where a work keeps company.
 		</p>
 	</button>
-	<button type="button" class="orion-reader-shelf-card" onclick={() => onSelectView('authors')}>
-		<span>Browse</span>
-		<strong>Authors</strong>
-		<small>{languageLabel} author index</small>
+	<button
+		type="button"
+		class="orion-reader-shelf-card"
+		aria-label="Authors"
+		onclick={() => onSelectView('authors')}
+	>
+		<span>Consult</span>
+		<strong>Names and attributions</strong>
+		<small>{languageLabel} authors, personae, and witnesses</small>
 		<p>
-			Find names and attributions, then open the works attached to them.
+			Find the named figure, the uncertain hand, the attributed corpus, and the works
+			that gather around them.
 		</p>
 	</button>
-	<button type="button" class="orion-reader-shelf-card" onclick={() => onSelectView('search')}>
-		<span>Search</span>
-		<strong>Text search</strong>
-		<small>Trace words and phrases inside {languageLabel} texts</small>
+	<button
+		type="button"
+		class="orion-reader-shelf-card"
+		aria-label="Text search"
+		onclick={() => onSelectView('search')}
+	>
+		<span>Trace</span>
+		<strong>Words through passages</strong>
+		<small>Follow forms and phrases inside {languageLabel} texts</small>
 		<p>
-			Search passage contents rather than catalog names, with enough context to turn a match into
-			a lesson.
+			Let a word become a thread: from form to passage, from passage to witness, from
+			witness back to memory.
 		</p>
 	</button>
 </div>
@@ -56,18 +73,25 @@
 		color: inherit;
 		cursor: pointer;
 		text-align: left;
+		transition:
+			border-color 160ms ease,
+			background-color 160ms ease,
+			transform 160ms ease,
+			box-shadow 160ms ease;
 	}
 
 	.orion-reader-shelf-card:hover {
 		border-color: color-mix(in oklab, var(--color-primary) 34%, var(--color-base-300));
 		background: color-mix(in oklab, var(--color-base-100) 84%, var(--color-primary) 9%);
+		box-shadow: 0 0.7rem 1.4rem color-mix(in oklab, var(--color-neutral) 9%, transparent);
+		transform: translateY(-0.08rem);
 	}
 
 	.orion-reader-shelf-card > span {
 		color: color-mix(in oklab, var(--color-base-content) 46%, transparent);
 		font-size: 0.68rem;
 		font-weight: 800;
-		letter-spacing: 0;
+		letter-spacing: 0.14em;
 		text-transform: uppercase;
 	}
 

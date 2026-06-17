@@ -5,7 +5,8 @@
 		fetchReaderApi,
 		fetchReaderEncounterBriefing,
 		readerAuthorSectionsUrl,
-		readerCatalogsUrl
+		readerCatalogsUrl,
+		readerWordContextUrl
 	} from '$lib/reader/reader-api';
 	import ReaderRouteControllerView from './ReaderRouteControllerView.svelte';
 	import type { ReaderIndexView } from '$lib/reader/index-storage';
@@ -81,6 +82,7 @@ import { createReaderLoadingTimers, type ReaderLoadingKey } from '$lib/reader/lo
 		type ReaderTokenPart,
 		type ReaderWork,
 		type ReaderWorkDossierResponse,
+		type ReaderWordContextResponse,
 		type ReaderStructureNode
 	} from '$lib/reader';
 import { defaultReaderAddressForLanguage, formatReaderAddress } from '$lib/reader/page-routing';
@@ -138,6 +140,9 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 	let selectedWordBriefingLoading = $state(false);
 	let selectedWordBriefingGenerating = $state(false);
 	let selectedWordBriefingError = $state('');
+	let selectedWordContext = $state<ReaderWordContextResponse | null>(null);
+	let selectedWordContextLoading = $state(false);
+	let selectedWordContextError = $state('');
 	let activeApparatusPanel = $state<'structure' | 'word' | 'oracle' | 'evidence' | ''>('');
 	let shelvesLoading = $state(false);
 	let libraryLoading = $state(false);
@@ -170,9 +175,9 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 	let textSearchNextCursor = $state<string | null>(null);
 	let textSearchPrevCursor = $state<string | null>(null);
 	let activeCollection = $state<'all' | 'work' | 'author'>('all');
-	let pageRadius = $state(4);
+	let pageRadius = $state(2);
 	let pageLimit = $state(14);
-	let pageTextBudget = $state(7_500);
+	let pageTextBudget = $state(4_500);
 	let pageNextCursor = $state<string | null>(null);
 	let pagePrevCursor = $state<string | null>(null);
 	let activeAuthorSection = $state('');
@@ -188,6 +193,7 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 	const readerLoadingTimers = createReaderLoadingTimers(setReaderLoadingElapsedSeconds);
 	const readerIndexStatsInFlight = new Set<string>();
 	let selectedWordBriefingController: AbortController | null = null;
+	let selectedWordContextController: AbortController | null = null;
 
 	let selectedWordRomanization = $derived(
 		selectedWord ? romanizeSearchTerm(language, selectedWord) : null
@@ -390,6 +396,18 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		),
 		selectedWordBriefingError: readerRouteWorkspaceBinding(() => selectedWordBriefingError, (value) => {
 			selectedWordBriefingError = value;
+		}),
+		selectedWordContext: readerRouteWorkspaceBinding(() => selectedWordContext, (value) => {
+			selectedWordContext = value;
+		}),
+		selectedWordContextLoading: readerRouteWorkspaceBinding(
+			() => selectedWordContextLoading,
+			(value) => {
+				selectedWordContextLoading = value;
+			}
+		),
+		selectedWordContextError: readerRouteWorkspaceBinding(() => selectedWordContextError, (value) => {
+			selectedWordContextError = value;
 		}),
 		activeApparatusPanel: readerRouteWorkspaceBinding(() => activeApparatusPanel, (value) => {
 			activeApparatusPanel = value;
@@ -836,6 +854,11 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		selectedWordBriefingError = '';
 		selectedWordBriefingLoading = false;
 		selectedWordBriefingGenerating = false;
+		selectedWordContextController?.abort();
+		selectedWordContextController = null;
+		selectedWordContext = null;
+		selectedWordContextError = '';
+		selectedWordContextLoading = false;
 		activeCollection = 'all';
 		activeAuthorSection = '';
 		routeAuthorId = '';
@@ -889,6 +912,44 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		}
 	}
 
+	async function fetchWordContext(word: string) {
+		const token = cleanReaderToken(word);
+		if (!token || !catalogId) return;
+		selectedWordContextController?.abort();
+		const controller = new AbortController();
+		selectedWordContextController = controller;
+		selectedWordContextLoading = true;
+		selectedWordContextError = '';
+		const work =
+			selectedSegment?.work_id ||
+			(selectedWork ? readerWorkRef(selectedWork) : readerCurrentReadingWorkRef(selectedWork, selectedSegment));
+		const segment = selectedSegment?.citation_path ?? null;
+		try {
+			const { response, data } = await fetchReaderApi<ReaderWordContextResponse>(
+				readerWordContextUrl({
+					catalogId,
+					language,
+					query: token,
+					work,
+					segment
+				})
+			);
+			if (!response.ok) throw new Error(data.error || 'Reader word context failed.');
+			if (selectedWord === token) selectedWordContext = data;
+		} catch (error) {
+			if (error instanceof DOMException && error.name === 'AbortError') return;
+			if (selectedWord === token) {
+				selectedWordContextError =
+					error instanceof Error ? error.message : 'Reader word context failed.';
+			}
+		} finally {
+			if (selectedWordContextController === controller) {
+				selectedWordContextController = null;
+				selectedWordContextLoading = false;
+			}
+		}
+	}
+
 
 	function showLibrary() {
 		selectedWork = null;
@@ -901,6 +962,11 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		pageNextCursor = null;
 		pagePrevCursor = null;
 		selectedWord = '';
+		selectedWordContextController?.abort();
+		selectedWordContextController = null;
+		selectedWordContext = null;
+		selectedWordContextError = '';
+		selectedWordContextLoading = false;
 		contentsCursorParam = null;
 		pageCursorParam = null;
 		showAddressLookup = false;
@@ -917,7 +983,10 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		selectedWordBriefing = null;
 		selectedWordBriefingError = '';
 		selectedWordBriefingGenerating = false;
+		selectedWordContext = null;
+		selectedWordContextError = '';
 		updateReaderUrl({ selectedWord: token }, 'replace');
+		void fetchWordContext(token);
 		void fetchEncounterBriefing(token);
 	}
 
@@ -1429,6 +1498,9 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		selectedWordBriefingLoading,
 		selectedWordBriefingGenerating,
 		selectedWordBriefingError,
+		selectedWordContext,
+		selectedWordContextLoading,
+		selectedWordContextError,
 		segmentIsActive,
 		onRetryStructure: () => selectedWork && void loadStructure(readerWorkRef(selectedWork)),
 		onRetryContents: retryContentsLoad,

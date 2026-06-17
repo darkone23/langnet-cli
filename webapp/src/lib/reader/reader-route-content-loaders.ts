@@ -11,6 +11,7 @@ import {
 	readerWorkMetadataUrl
 } from '$lib/reader/reader-api';
 import { readerWorkRef } from '$lib/reader';
+import type { LanguageMode } from '$lib/search-data';
 import type {
 	ReaderContentsResponse,
 	ReaderSegment,
@@ -68,8 +69,29 @@ export function createReaderRouteContentLoaders(
 ): ReaderRouteContentLoaders {
 	const stateBag = state as Record<string, any>;
 
-	async function openWork(work: ReaderWork) {
+	function inferReaderLanguageFromWorkRef(work: string): LanguageMode | undefined {
+		if (work.startsWith('urn:ctsv2:lat:')) return 'lat';
+		if (work.startsWith('urn:ctsv2:grc:')) return 'grc';
+		if (work.startsWith('urn:ctsv2:san:')) return 'san';
+		return undefined;
+	}
+
+	function applyInferredWorkLanguage(work: string) {
+		const inferredLanguage = inferReaderLanguageFromWorkRef(work);
+		if (inferredLanguage && inferredLanguage !== stateBag.language) {
+			stateBag.language = inferredLanguage;
+		}
+	}
+
+	function applyResolvedWorkLanguage(work: ReaderWork) {
 		stateBag.selectedWork = work;
+		if (work.language && work.language !== stateBag.language) {
+			stateBag.language = work.language;
+		}
+	}
+
+	async function openWork(work: ReaderWork) {
+		applyResolvedWorkLanguage(work);
 		stateBag.selectedSegment = null;
 		stateBag.selectedWord = '';
 		stateBag.contents = [];
@@ -80,8 +102,7 @@ export function createReaderRouteContentLoaders(
 		stateBag.dossierError = '';
 		stateBag.contentsCursorParam = null;
 		stateBag.pageCursorParam = null;
-		await loadStructure(readerWorkRef(work));
-		await loadWorkDossier(readerWorkRef(work));
+		void Promise.allSettled([loadStructure(readerWorkRef(work)), loadWorkDossier(readerWorkRef(work))]);
 		await loadContentsPage(readerWorkRef(work), null, 'push');
 	}
 
@@ -202,25 +223,28 @@ export function createReaderRouteContentLoaders(
 		segment: string,
 		historyMode: ReaderHistoryMode = 'replace'
 	) {
+		applyInferredWorkLanguage(work);
 		stateBag.segmentLoading = true;
 		deps.readerLoadingTimers.start('segment');
 		stateBag.segmentError = '';
 		stateBag.selectedWord = '';
 		try {
 			await ensureSelectedWork(work);
+			const selectedWorkRef = stateBag.selectedWork ? readerWorkRef(stateBag.selectedWork) : work;
+			const chromeLoads: Promise<void>[] = [];
 			if (
 				stateBag.selectedWork &&
 				!stateBag.structure.some((node: ReaderStructureNode) => node.work_id === stateBag.selectedWork?.work_id)
 			) {
-				await loadStructure(readerWorkRef(stateBag.selectedWork));
+				chromeLoads.push(loadStructure(selectedWorkRef));
 			}
 			if (
 				stateBag.selectedWork &&
 				stateBag.workDossier?.work?.work_id !== stateBag.selectedWork.work_id
 			) {
-				await loadWorkDossier(readerWorkRef(stateBag.selectedWork));
+				chromeLoads.push(loadWorkDossier(selectedWorkRef));
 			}
-			const { response, data } = await fetchReaderApi<ReaderShowResponse>(
+			const showRequest = fetchReaderApi<ReaderShowResponse>(
 				readerShowUrl({
 					catalogId: stateBag.catalogId,
 					language: stateBag.language,
@@ -228,15 +252,16 @@ export function createReaderRouteContentLoaders(
 					segment
 				})
 			);
+			const pageWindowRequest = loadPageWindow(selectedWorkRef, segment);
+			const { response, data } = await showRequest;
 			if (!response.ok) throw new Error(data.error || 'Reader segment failed.');
 			stateBag.selectedSegment = data.segment;
 			stateBag.navigation = data.navigation ?? { previous: null, next: null };
-			if (data.segment) {
-				await loadPageWindow(data.segment.work_id || work, data.segment.citation_path);
-			}
+			await pageWindowRequest;
 			stateBag.contentsCursorParam = null;
 			stateBag.pageCursorParam = null;
 			deps.syncAddressUrl(work, segment, historyMode);
+			void Promise.allSettled(chromeLoads);
 		} catch (error) {
 			stateBag.segmentError = error instanceof Error ? error.message : 'Reader segment failed.';
 		} finally {
@@ -345,6 +370,7 @@ export function createReaderRouteContentLoaders(
 	}
 
 	async function ensureSelectedWork(work: string) {
+		applyInferredWorkLanguage(work);
 		if (
 			stateBag.selectedWork &&
 			(stateBag.selectedWork.work_id === work ||
@@ -363,7 +389,7 @@ export function createReaderRouteContentLoaders(
 					work
 				})
 			);
-			if (response.ok && data.item) stateBag.selectedWork = data.item;
+			if (response.ok && data.item) applyResolvedWorkLanguage(data.item);
 		} catch {
 			// Work metadata is useful chrome; failure should not block reading.
 		}

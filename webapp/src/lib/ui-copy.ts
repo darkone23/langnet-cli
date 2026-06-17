@@ -411,6 +411,13 @@ const resources = {
 				pending: 'English pending',
 				closePassage: 'Close this passage'
 			},
+			readerNavigation: {
+				workEntry: 'Work entry',
+				authorEntry: 'Author entry',
+				inspectWorkEntry: 'Inspect work entry',
+				enterReaderDesk: 'Enter reader desk',
+				readerDesk: 'Reader desk'
+			},
 			encounterBriefing: {
 				title: 'Encounter',
 				subtitle: 'Word study',
@@ -824,6 +831,13 @@ export const uiCopy = {
 		label: text('readerText.label'),
 		pending: text('readerText.pending'),
 		closePassage: text('readerText.closePassage')
+	},
+	readerNavigation: {
+		workEntry: text('readerNavigation.workEntry'),
+		authorEntry: text('readerNavigation.authorEntry'),
+		inspectWorkEntry: text('readerNavigation.inspectWorkEntry'),
+		enterReaderDesk: text('readerNavigation.enterReaderDesk'),
+		readerDesk: text('readerNavigation.readerDesk')
 	},
 	encounterBriefing: {
 		title: text('encounterBriefing.title'),

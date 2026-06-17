@@ -45,6 +45,7 @@
 	{/if}
 	{#each works as work}
 		<article class:selected={selectedWorkId === work.work_id} class="orion-reader-work-row">
+			<div class="orion-reader-work-key" aria-hidden="true"></div>
 			<div class="orion-reader-work-row-main">
 				<button type="button" class="orion-reader-work-open" onclick={() => void onOpenWork(work)}>
 					<strong>
@@ -94,6 +95,7 @@
 	}
 
 	.orion-reader-work-row {
+		position: relative;
 		display: grid;
 		gap: 0.22rem;
 		width: 100%;
@@ -106,6 +108,21 @@
 		transition:
 			border-color 120ms ease,
 			background-color 120ms ease;
+	}
+
+	.orion-reader-work-key {
+		position: absolute;
+		top: 0.62rem;
+		right: 0.62rem;
+		width: 0.52rem;
+		height: 0.52rem;
+		border: 1px solid color-mix(in oklab, var(--reader-ornament-gold) 54%, transparent);
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--reader-ornament-ink) 34%, var(--reader-ornament-gold));
+		opacity: 0.42;
+		box-shadow:
+			-0.46rem 0.48rem 0 -0.22rem color-mix(in oklab, var(--reader-ornament-gold) 60%, transparent),
+			-0.9rem 0.88rem 0 -0.24rem color-mix(in oklab, var(--reader-ornament-ink) 48%, transparent);
 	}
 
 	.orion-reader-work-open,
@@ -153,6 +170,11 @@
 		border-color: color-mix(in oklab, var(--color-secondary) 30%, var(--color-base-300));
 		border-left-color: color-mix(in oklab, var(--color-primary) 54%, var(--color-accent));
 		background: color-mix(in oklab, var(--color-base-100) 86%, var(--color-secondary) 6%);
+	}
+
+	.orion-reader-work-row:hover .orion-reader-work-key,
+	.orion-reader-work-row.selected .orion-reader-work-key {
+		opacity: 0.78;
 	}
 
 	.orion-reader-work-row strong {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Database, Feather } from 'lucide-svelte';
+	import type { ReaderWork } from '$lib/reader';
 
 	type Props = {
 		languageLabel: string;
@@ -7,6 +8,7 @@
 		workTitle?: string | null;
 		workDiscriminator?: string | null;
 		workContributorLine?: string | null;
+		selectedWork?: ReaderWork | null;
 		canOpenAuthor: boolean;
 		segmentWorkId?: string | null;
 		hasSelectedSegment: boolean;
@@ -23,6 +25,7 @@
 		workTitle = null,
 		workDiscriminator = null,
 		workContributorLine = null,
+		selectedWork = null,
 		canOpenAuthor,
 		segmentWorkId = null,
 		hasSelectedSegment,
@@ -32,11 +35,28 @@
 		onToggleTransliteration,
 		onShowLibrary
 	}: Props = $props();
+
+	const sourceQualityBadges = $derived(
+		[
+			selectedWork?.collection_id,
+			selectedWork?.classification_period,
+			selectedWork?.classification_authorship_status,
+			selectedWork?.classification_confidence
+		]
+			.filter((value): value is string => Boolean(value?.trim()))
+			.slice(0, 4)
+	);
 </script>
 
 <div class="orion-reader-desk-head">
 	<div class="min-w-0">
-		<div class="orion-reader-desk-kicker">{languageLabel} index</div>
+		<div class="orion-reader-desk-kicker">
+			{#if workTitle}
+				keyed work
+			{:else}
+				{languageLabel} memory index
+			{/if}
+		</div>
 		<h2>
 			{#if workTitle}
 				<span class="orion-reader-work-heading">
@@ -62,6 +82,13 @@
 				Library
 			{/if}
 		</h2>
+		{#if sourceQualityBadges.length}
+			<div class="orion-reader-source-badges" aria-label="Source and work quality">
+				{#each sourceQualityBadges as badge}
+					<span>{badge.replaceAll('_', ' ')}</span>
+				{/each}
+			</div>
+		{/if}
 	</div>
 	{#if hasSelectedSegment}
 		<div class="orion-reader-desk-actions">
@@ -79,7 +106,7 @@
 				Library
 			</button>
 			<div class="orion-reader-desk-citation">
-				<span>page</span>
+				<span>citation key</span>
 				<strong>{pageRangeLabel}</strong>
 			</div>
 		</div>
@@ -110,7 +137,7 @@
 		font-size: 0.72rem;
 		font-variant-caps: small-caps;
 		font-weight: 700;
-		letter-spacing: 0;
+		letter-spacing: 0.12em;
 	}
 
 	.orion-reader-work-heading {
@@ -127,6 +154,26 @@
 		font-size: 0.68em;
 		font-weight: 600;
 		line-height: 1;
+	}
+
+	.orion-reader-source-badges {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.28rem;
+		margin-top: 0.48rem;
+	}
+
+	.orion-reader-source-badges span {
+		border: 1px solid color-mix(in oklab, var(--reader-ornament-gold) 32%, var(--color-base-300));
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 82%, var(--reader-ornament-gold) 8%);
+		padding: 0.13rem 0.42rem;
+		color: color-mix(in oklab, var(--color-base-content) 62%, var(--color-secondary));
+		font-family: var(--font-serif);
+		font-size: 0.68rem;
+		font-variant-caps: small-caps;
+		font-weight: 700;
+		line-height: 1.15;
 	}
 
 	.orion-reader-desk-author {

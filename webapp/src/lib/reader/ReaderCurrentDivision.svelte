@@ -30,7 +30,7 @@
 {#if currentDivisionTrail.length}
 	<aside class="orion-reader-current-division" aria-label={uiCopy.readerStructure.current}>
 		<div>
-			<span>{uiCopy.readerStructure.current}</span>
+			<span>current memory place</span>
 			<strong>{structureNodeTitle(currentDivisionNode ?? currentDivisionTrail[0])}</strong>
 			<small>{structureNodeSubtitle(currentDivisionNode ?? currentDivisionTrail[0])}</small>
 		</div>
@@ -53,6 +53,7 @@
 
 <style>
 	.orion-reader-current-division {
+		position: relative;
 		display: grid;
 		gap: 0.45rem;
 		margin: 0.75rem 1rem 0;
@@ -61,6 +62,23 @@
 		border-radius: var(--radius-box);
 		background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-base-200));
 		padding: 0.62rem 0.72rem;
+	}
+
+	.orion-reader-current-division::before {
+		content: '✦';
+		position: absolute;
+		top: -0.55rem;
+		left: 0.7rem;
+		display: grid;
+		width: 1.05rem;
+		height: 1.05rem;
+		place-items: center;
+		border: 1px solid color-mix(in oklab, var(--reader-ornament-gold) 38%, var(--color-base-300));
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-base-100) 88%, var(--reader-ornament-gold) 12%);
+		color: color-mix(in oklab, var(--reader-ornament-ink) 82%, var(--reader-ornament-gold));
+		font-size: 0.68rem;
+		line-height: 1;
 	}
 
 	.orion-reader-current-division > div:first-child {
@@ -72,7 +90,9 @@
 	.orion-reader-current-division small {
 		color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 		font-size: 0.72rem;
+		font-variant-caps: small-caps;
 		font-weight: 750;
+		letter-spacing: 0.08em;
 		line-height: 1.25;
 	}
 

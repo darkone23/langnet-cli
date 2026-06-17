@@ -1,0 +1,37 @@
+[
+  {
+    "language": "lat",
+    "query": "corpore",
+    "expected_normalized_candidates": ["corpore"],
+    "expected_caveat_policy": "ambiguity_allowed",
+    "reader_hits_policy": "index_dependent"
+  },
+  {
+    "language": "lat",
+    "query": "arma",
+    "expected_normalized_candidates": ["arma"],
+    "expected_caveat_policy": "ambiguity_allowed",
+    "reader_hits_policy": "index_dependent"
+  },
+  {
+    "language": "lat",
+    "query": "virum",
+    "expected_normalized_candidates": ["virum"],
+    "expected_caveat_policy": "ambiguity_allowed",
+    "reader_hits_policy": "index_dependent"
+  },
+  {
+    "language": "lat",
+    "query": "est",
+    "expected_normalized_candidates": ["est"],
+    "expected_caveat_policy": "ambiguity_allowed",
+    "reader_hits_policy": "index_dependent"
+  },
+  {
+    "language": "lat",
+    "query": "dixit",
+    "expected_normalized_candidates": ["dixit"],
+    "expected_caveat_policy": "ambiguity_allowed",
+    "reader_hits_policy": "index_dependent"
+  }
+]

@@ -1,0 +1,82 @@
+import type { LanguageMode } from '../search-data';
+
+const sanskritSpecificTags = new Set([
+	'ayurveda',
+	'dharmashastra',
+	'dharmasutra',
+	'arthashastra',
+	'kamashastra',
+	'rasashastra',
+	'ratnashastra',
+	'vyakarana',
+	'paniniya',
+	'nirukta',
+	'kosha',
+	'nighantu',
+	'kavya',
+	'katha',
+	'natya',
+	'alamkarashastra',
+	'sahityashastra',
+	'itihasa',
+	'mahabharata',
+	'ramayana',
+	'purana',
+	'vedic',
+	'veda',
+	'rgveda',
+	'yajurveda',
+	'samaveda',
+	'atharvaveda',
+	'brahmana',
+	'aranyaka',
+	'upanishad',
+	'kalpa',
+	'grhyasutra',
+	'shrautasutra',
+	'samhita',
+	'smriti',
+	'sutra',
+	'bhashya',
+	'vedanta',
+	'nyaya',
+	'samkhya',
+	'yoga',
+	'mimamsa',
+	'vaisheshika',
+	'buddhist',
+	'buddhist_sutra',
+	'buddhist_abhidharma',
+	'buddhist_tantra',
+	'jain',
+	'tantra',
+	'shaiva',
+	'bhakti',
+	'stotra',
+	'jyotisha'
+]);
+
+const greekLatinSpecificTags = new Set([
+	'patristics',
+	'hippocratic_galenic_medicine',
+	'oratory',
+	'speech',
+	'tragedy',
+	'comedy',
+	'satire',
+	'elegy',
+	'lyric',
+	'epigram',
+	'didactic',
+	'pastoral',
+	'hagiography',
+	'homily',
+	'apology',
+	'scholia'
+]);
+
+export function tagIsRelevantForLanguage(id: string, language: LanguageMode) {
+	if (language === 'san') return !greekLatinSpecificTags.has(id) && id !== 'roman_law';
+	if (language === 'lat') return !sanskritSpecificTags.has(id);
+	return !sanskritSpecificTags.has(id) && id !== 'roman_law';
+}

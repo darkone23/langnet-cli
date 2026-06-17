@@ -3,8 +3,13 @@ from __future__ import annotations
 import csv
 import re
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
+import duckdb
+from query_spec import LanguageHint
+
+from langnet.normalizer.core import _hash_query
 from langnet.reader.author_classification import (
     author_agent_kind_allowed_values,
     author_historicity_status_allowed_values,
@@ -83,8 +88,11 @@ from langnet.reader.storage import (
 )
 from langnet.reader.validation import validate_reader_catalog
 from langnet.reader.work_map import accepted_work_map_nodes, load_work_map_nodes
+from langnet.storage.normalization_index import NormalizationIndex
+from langnet.storage.paths import normalization_db_path
 
 READER_SCHEMA_VERSION = "langnet.reader.v1"
+WORD_CONTEXT_SCHEMA_VERSION = "langnet.reader.word_context.v1"
 SOURCE_INDEX_EXPORT_COLUMNS = (
     "collection_id",
     "language",
@@ -669,6 +677,202 @@ class ReaderService:
             offset=_cursor_offset(cursor),
         )
 
+    def word_context_payload(  # noqa: PLR0913
+        self,
+        *,
+        query: str,
+        language: str,
+        index_path: Path,
+        work_ref: str | None = None,
+        segment_ref: str | None = None,
+        search_limit: int = 8,
+        search_context: int = 1,
+    ) -> dict[str, Any]:
+        started_at = perf_counter()
+        steps: list[dict[str, Any]] = []
+        caveats: list[str] = []
+
+        def timed_step(name: str, started: float, **extra: Any) -> None:
+            steps.append(
+                {
+                    "name": name,
+                    "duration_ms": round((perf_counter() - started) * 1000, 2),
+                    **extra,
+                }
+            )
+
+        step_started = perf_counter()
+        normalized_query = normalize_query_for_search(language, query)
+        cached_normalization = _cached_normalization_evidence(query, language)
+        normalized_query_text = str(
+            getattr(normalized_query, "search_text", "")
+            or getattr(normalized_query, "token_text", "")
+            or getattr(normalized_query, "search_text_folded", "")
+            or ""
+        )
+        normalization = {
+            "surface": query,
+            "normalized": normalized_query,
+            "candidates": [
+                candidate
+                for candidate in [
+                    query,
+                    normalized_query_text,
+                    *[str(item.get("lemma") or "") for item in cached_normalization["items"]],
+                ]
+                if candidate
+            ],
+        }
+        normalization["candidates"] = list(dict.fromkeys(normalization["candidates"]))
+        timed_step("normalization", step_started)
+
+        work: dict[str, Any] | None = None
+        segment: dict[str, Any] | None = None
+        source_index_rows: list[dict[str, Any]] = []
+        resolved_work_id: str | None = None
+        step_started = perf_counter()
+        if work_ref:
+            work = get_work(self.catalog_path, work_ref)
+            resolved_work_id = str(work.get("work_id") or "") if work else None
+            if segment_ref:
+                segment = lookup_segment_by_work_and_citation(
+                    self.catalog_path,
+                    work_ref,
+                    segment_ref,
+                )
+                if segment is not None:
+                    segment = decorate_segment_display(segment, language=language)
+                    segment["current_divisions"] = current_divisions_for_segment(
+                        self.catalog_path,
+                        str(segment.get("work_id") or resolved_work_id or work_ref),
+                        str(segment.get("citation_path") or segment_ref),
+                    )
+                    resolved_work_id = str(segment.get("work_id") or resolved_work_id or "")
+            if resolved_work_id:
+                source_index_rows = list_source_index(
+                    self.catalog_path,
+                    work_id=resolved_work_id,
+                    limit=3,
+                )
+        timed_step(
+            "passage_context",
+            step_started,
+            work_found=bool(work),
+            segment_found=bool(segment),
+            source_index_rows=len(source_index_rows),
+        )
+
+        step_started = perf_counter()
+        try:
+            index_status = reader_search_index_status(index_path)
+        except Exception as exc:  # noqa: BLE001
+            index_status = {
+                "exists": False,
+                "backend": "duckdb-lance",
+                "dataset_path": str(index_path),
+                "error": str(exc),
+            }
+            caveats.append("Reader search index status could not be inspected.")
+        timed_step("search_index_status", step_started, exists=bool(index_status.get("exists")))
+
+        reader_hits_status = "index_unavailable"
+        reader_hit_items: list[dict[str, Any]] = []
+        language_counts = index_status.get("language_counts")
+        index_has_language = (
+            not isinstance(language_counts, dict)
+            or language in {str(key) for key in language_counts.keys()}
+        )
+        if index_status.get("exists") and not index_has_language:
+            caveats.append(
+                f"Reader search index has no {language} slice; corpus hits are unavailable for this language."
+            )
+        elif index_status.get("exists"):
+            step_started = perf_counter()
+            try:
+                search_payload = search_reader_segments(
+                    self.catalog_path,
+                    index_path,
+                    query,
+                    language=language,
+                    work_id=resolved_work_id,
+                    mode="fuzzy",
+                    field="auto",
+                    context=search_context,
+                    limit=search_limit,
+                )
+                reader_hit_items = list(search_payload.get("items") or [])
+                reader_hits_status = "available" if reader_hit_items else "no_hits"
+            except Exception as exc:  # noqa: BLE001
+                reader_hits_status = "error"
+                caveats.append(f"Reader corpus search failed: {exc}")
+            timed_step(
+                "reader_search",
+                step_started,
+                status=reader_hits_status,
+                hit_count=len(reader_hit_items),
+            )
+        else:
+            caveats.append("Reader search index is unavailable; corpus hits are not zero-proof.")
+
+        source_row = source_index_rows[0] if source_index_rows else {}
+        return {
+            "schema_version": WORD_CONTEXT_SCHEMA_VERSION,
+            "mode": "word-context",
+            "catalog_path": str(self.catalog_path),
+            "request": {
+                "language": language,
+                "query": query,
+                "work_ref": work_ref,
+                "segment_ref": segment_ref,
+                "search_limit": search_limit,
+                "search_context": search_context,
+                "index_path": str(index_path),
+            },
+            "normalization": normalization,
+            "lexical_evidence": {
+                "status": cached_normalization["status"],
+                "items": cached_normalization["items"],
+                "note": cached_normalization["note"],
+            },
+            "morphology": {
+                "status": cached_normalization["status"],
+                "items": cached_normalization["items"],
+                "note": (
+                    "Cached normalizer lemma candidates are available; full morphology features still require the heavier lookup/paradigm path."
+                    if cached_normalization["items"]
+                    else cached_normalization["note"]
+                ),
+            },
+            "reader_hits": {
+                "status": reader_hits_status,
+                "index_status": index_status,
+                "items": reader_hit_items,
+            },
+            "passage_context": {
+                "status": "available" if segment or work else "not_requested",
+                "work": work,
+                "segment": segment,
+                "source_index": source_index_rows,
+            },
+            "provenance": {
+                "work_id": resolved_work_id or source_row.get("work_id"),
+                "collection_id": source_row.get("collection_id") or (work or {}).get("collection_id"),
+                "source_id": source_row.get("source_id") or (work or {}).get("source_id"),
+                "source_path": source_row.get("source_path"),
+                "file_status": source_row.get("file_status"),
+                "quality_status": source_row.get("file_status"),
+                "edition_label": source_row.get("edition_label"),
+                "canonical_text_id": source_row.get("canonical_text_id")
+                or (work or {}).get("canonical_text_id"),
+                "cts_work_urn": source_row.get("cts_work_urn") or (work or {}).get("cts_work_urn"),
+            },
+            "caveats": caveats,
+            "timing": {
+                "total_ms": round((perf_counter() - started_at) * 1000, 2),
+                "steps": steps,
+            },
+        }
+
     def contents_payload(  # noqa: PLR0913
         self,
         work_id: str,
@@ -1164,24 +1368,38 @@ class ReaderService:
         work_id: str | None = None,
         query: str | None = None,
         limit: int = 500,
+        cursor: str | None = None,
     ) -> dict[str, Any]:
+        offset = _cursor_offset(cursor)
+        fetch_limit = limit + 1
+        items = list_source_index(
+            self.catalog_path,
+            collection_id=collection_id,
+            language=language,
+            source_id=source_id,
+            work_id=work_id,
+            query=query,
+            limit=fetch_limit,
+            offset=offset,
+        )
+        has_more = len(items) > limit
+        items = items[:limit]
         return self._payload(
             "source-index",
-            list_source_index(
-                self.catalog_path,
-                collection_id=collection_id,
-                language=language,
-                source_id=source_id,
-                work_id=work_id,
-                query=query,
-                limit=limit,
-            ),
+            items,
             collection_id=collection_id,
             language=language,
             source_id=source_id,
             work_id=work_id,
             query=query,
             limit=limit,
+            cursor=cursor,
+            pagination=_pagination(
+                limit=limit,
+                offset=offset,
+                has_more=has_more,
+                next_offset=offset + len(items),
+            ),
         )
 
     def source_index_export(self, output_dir: Path) -> dict[str, Any]:
@@ -1443,6 +1661,76 @@ def _cursor_offset(cursor: str | None) -> int:
         return max(0, int(cursor))
     except ValueError:
         return 0
+
+
+def _cached_normalization_evidence(query: str, language: str) -> dict[str, Any]:
+    language_hint = _reader_language_hint(language)
+    if language_hint is None:
+        return {
+            "status": "unavailable",
+            "items": [],
+            "note": f"Unsupported normalization language for word context: {language}",
+        }
+    db_path = normalization_db_path()
+    if not db_path.exists():
+        return {
+            "status": "unavailable",
+            "items": [],
+            "note": f"Normalization cache is unavailable: {db_path}",
+        }
+    try:
+        with duckdb.connect(str(db_path), read_only=True) as conn:
+            table_exists = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM information_schema.tables
+                WHERE table_name = 'query_normalization_index'
+                """
+            ).fetchone()
+            if not table_exists or int(table_exists[0]) == 0:
+                return {
+                    "status": "unavailable",
+                    "items": [],
+                    "note": "Normalization cache table is unavailable.",
+                }
+            normalized = NormalizationIndex(conn).get(_hash_query(query, language_hint))
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "status": "error",
+            "items": [],
+            "note": f"Normalization cache lookup failed: {exc}",
+        }
+    if normalized is None:
+        return {
+            "status": "unavailable",
+            "items": [],
+            "note": "No cached lexical or morphology candidates for this form.",
+        }
+    items = [
+        {
+            "lemma": candidate.lemma,
+            "sources": list(candidate.sources),
+            "encodings": dict(candidate.encodings),
+        }
+        for candidate in normalized.candidates
+        if candidate.lemma
+    ]
+    return {
+        "status": "available" if items else "no_hits",
+        "items": items,
+        "note": "Cache-only normalizer candidates; no external lookup was performed.",
+    }
+
+
+def _reader_language_hint(language: str) -> LanguageHint.ValueType | None:
+    normalized = language.strip().lower()
+    if normalized == "lat":
+        return LanguageHint.LANGUAGE_HINT_LAT
+    if normalized == "grc":
+        return LanguageHint.LANGUAGE_HINT_GRC
+    if normalized in {"san", "skt"}:
+        return LanguageHint.LANGUAGE_HINT_SAN
+    return None
 
 
 def _pagination(

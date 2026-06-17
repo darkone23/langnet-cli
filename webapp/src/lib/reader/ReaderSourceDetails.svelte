@@ -10,35 +10,45 @@
 </script>
 
 {#if hasDetails}
-	<details class="orion-reader-desk-source">
-		<summary>Source / transliteration</summary>
+	<details class="orion-reader-desk-source" aria-label="Source / transliteration">
+		<summary>
+			<span class="orion-reader-liturgical-label">Apparatus</span>
+			<strong>Source witness and transliteration</strong>
+		</summary>
 		{#if transliteration}
-			<p>{transliteration}</p>
+			<p class="orion-reader-apparatus-note">{transliteration}</p>
 		{/if}
 		{#if sourceText}
-			<p>{sourceText}</p>
+			<p class="orion-reader-apparatus-note">{sourceText}</p>
 		{/if}
 	</details>
 {/if}
 
 <style>
 	.orion-reader-desk-source {
-		margin: 0 1.15rem 1rem;
-		border-top: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent);
-		padding-top: 0.75rem;
+		margin: 0 1.15rem 1.15rem;
+		border-top: 1px solid color-mix(in oklab, var(--reader-ornament-gold) 28%, transparent);
+		padding-top: 0.95rem;
 		color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
-		font-size: 0.82rem;
 	}
 
 	.orion-reader-desk-source summary {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.55rem;
 		cursor: pointer;
 		font-family: var(--font-serif);
 		font-weight: 700;
 	}
 
+	.orion-reader-desk-source summary strong {
+		color: color-mix(in oklab, var(--color-base-content) 72%, var(--color-secondary));
+		font-size: 0.92rem;
+	}
+
 	.orion-reader-desk-source p {
-		margin-top: 0.45rem;
-		font-family: var(--font-reader);
-		line-height: 1.6;
+		margin-top: 0.58rem;
+		max-width: 76ch;
 	}
 </style>

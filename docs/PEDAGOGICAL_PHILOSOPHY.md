@@ -2,6 +2,23 @@
 
 LangNet should teach by making evidence intelligible. Its job is not only to return data; it should help readers understand how a form, meaning, and source fit together.
 
+## Reader Experience Policy
+
+The reader should not feel like a basic lexicon wrapped around texts. It should
+feel like a serious, poetic study desk where works, witnesses, citations,
+forms, and memory cues are keyed together.
+
+This means:
+
+- typography is part of pedagogy
+- provenance is visible without overwhelming the passage
+- citations and divisions help memory and navigation
+- lexical lookup serves the work, not the other way around
+- ornament and motion may be used when they improve attention, recall, or delight
+
+The current detailed UI policy lives in
+`docs/plans/active/infra/READER_EXPERIENCE_MODALITY_AND_TYPOGRAPHY_PLAN.md`.
+
 ## Learning Model
 
 Classical-language reading usually involves three linked questions:

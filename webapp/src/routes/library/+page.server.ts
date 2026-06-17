@@ -4,7 +4,7 @@ import {
 	readerSourceIndex
 } from '$lib/server/reader-cli';
 
-const INITIAL_SOURCE_INDEX_LIMIT = 20000;
+const INITIAL_SOURCE_INDEX_LIMIT = 100;
 
 export async function load() {
 	try {
@@ -21,6 +21,7 @@ export async function load() {
 			collections: (collections as { items?: unknown[] }).items ?? [],
 			sourceRows: sourceIndex.items ?? [],
 			sourceRowLimit: INITIAL_SOURCE_INDEX_LIMIT,
+			sourcePagination: sourceIndex.pagination,
 			watchlistTargets: watchlist.items ?? [],
 			loadError: ''
 		};
@@ -29,6 +30,7 @@ export async function load() {
 			collections: [],
 			sourceRows: [],
 			sourceRowLimit: INITIAL_SOURCE_INDEX_LIMIT,
+			sourcePagination: undefined,
 			watchlistTargets: [],
 			loadError: cause instanceof Error ? cause.message : 'Unable to load the library index.'
 		};

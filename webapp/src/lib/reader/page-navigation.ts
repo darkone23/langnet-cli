@@ -37,5 +37,5 @@ export function readerCurrentReadingWorkRef(
 }
 
 export function readerSearchResultWorkRef(result: ReaderSearchResult) {
-	return result.target?.work_ref || result.cts_work_urn || result.work_id;
+	return result.target?.work_ref || result.work_id;
 }

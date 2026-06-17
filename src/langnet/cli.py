@@ -4068,6 +4068,60 @@ def reader_search(  # noqa: PLR0913
     )
 
 
+@reader_cli.command("word-context")
+@click.argument("query")
+@click.option("--index", "index_path", type=click.Path(), default=None, help="Search index path.")
+@click.option("--language", required=True, help="Language code, e.g. grc, lat, san.")
+@click.option("--work", "work_ref", default=None, help="Optional current work ref.")
+@click.option("--segment", "segment_ref", default=None, help="Optional current citation/segment ref.")
+@click.option(
+    "--reader-search-limit",
+    default=8,
+    type=click.IntRange(0, 50),
+    show_default=True,
+    help="Maximum inline reader corpus hits.",
+)
+@click.option(
+    "--reader-search-context",
+    default=1,
+    type=click.IntRange(0, 10),
+    show_default=True,
+    help="Context radius for inline corpus hits.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_word_context(  # noqa: PLR0913
+    ctx: click.Context,
+    query: str,
+    index_path: str | None,
+    language: str,
+    work_ref: str | None,
+    segment_ref: str | None,
+    reader_search_limit: int,
+    reader_search_context: int,
+    output: str,
+) -> None:
+    """Build selected-word reader context for marginalia sidebars."""
+    _emit_reader_payload(
+        _reader_service_from_context(ctx).word_context_payload(
+            query=query,
+            language=language,
+            index_path=_reader_search_index_path(index_path),
+            work_ref=work_ref,
+            segment_ref=segment_ref,
+            search_limit=reader_search_limit,
+            search_context=reader_search_context,
+        ),
+        output,
+    )
+
+
 @reader_cli.command("work")
 @click.argument("work_ref")
 @click.option(
@@ -4621,7 +4675,7 @@ def reader_alias_check(ctx: click.Context, output: str) -> None:
 @click.option("--status", default=None, help="Optional overlay status filter.")
 @click.option("--field", default=None, help="Optional metadata field filter.")
 @click.option("--match-value", default=None, help="Optional match value filter.")
-@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 5000))
+@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 20000))
 @click.option(
     "--output",
     type=click.Choice(["pretty", "json"]),
@@ -4908,7 +4962,8 @@ def reader_library_watchlist(
 @click.option("--source-id", default=None, help="Optional source id, CTS URN, or work id substring.")
 @click.option("--work-id", default=None, help="Optional exact work id filter.")
 @click.option("--query", default=None, help="Optional title/author/source/path substring filter.")
-@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 5000))
+@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 20000))
+@click.option("--cursor", default=None, help="Offset cursor returned by prior JSON response.")
 @click.option(
     "--output",
     type=click.Choice(["pretty", "json"]),
@@ -4925,6 +4980,7 @@ def reader_source_index(  # noqa: PLR0913
     work_id: str | None,
     query: str | None,
     limit: int,
+    cursor: str | None,
     output: str,
 ) -> None:
     """List imported works with source file, edition, artifact, and witness provenance."""
@@ -4936,6 +4992,7 @@ def reader_source_index(  # noqa: PLR0913
             work_id=work_id,
             query=query,
             limit=limit,
+            cursor=cursor,
         ),
         output,
     )

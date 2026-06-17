@@ -189,6 +189,7 @@ export function readerSourceIndexUrl({
 	language,
 	collection,
 	query,
+	cursor,
 	limit = 100,
 	timeoutMs = 300000
 }: {
@@ -196,6 +197,7 @@ export function readerSourceIndexUrl({
 	language?: ReaderCatalogLanguage | null;
 	collection?: string | null;
 	query?: string | null;
+	cursor?: string | null;
 	limit?: number;
 	timeoutMs?: number;
 }) {
@@ -208,6 +210,7 @@ export function readerSourceIndexUrl({
 	setIfPresent(params, 'language', language);
 	if (collection && collection !== 'all') params.set('collection', collection);
 	setIfPresent(params, 'q', query);
+	setIfPresent(params, 'cursor', cursor);
 	return readerApiUrl(params);
 }
 
@@ -260,6 +263,37 @@ export function readerTextSearchUrl({
 	});
 	if (collection && collection !== 'all') params.set('collection', collection);
 	setIfPresent(params, 'cursor', cursor);
+	return readerApiUrl(params);
+}
+
+export function readerWordContextUrl({
+	catalogId,
+	language,
+	query,
+	work,
+	segment,
+	limit = 3,
+	context = 0,
+	timeoutMs = 30000
+}: ReaderCatalogLanguageParams & {
+	query: string;
+	work?: string | null;
+	segment?: string | null;
+	limit?: number;
+	context?: number;
+	timeoutMs?: number;
+}) {
+	const params = new URLSearchParams({
+		mode: 'word-context',
+		catalog: catalogId,
+		language,
+		q: query.trim(),
+		limit: String(limit),
+		context: String(context),
+		timeout_ms: String(timeoutMs)
+	});
+	setIfPresent(params, 'work', work);
+	setIfPresent(params, 'segment', segment);
 	return readerApiUrl(params);
 }
 

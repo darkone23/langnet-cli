@@ -75,7 +75,7 @@ const result: ReaderSearchResult = {
 assert.equal(readerSearchResultWorkRef(result), 'target-work');
 assert.equal(
 	readerSearchResultWorkRef({ ...result, target: undefined, cts_work_urn: 'cts-work' }),
-	'cts-work'
+	'fallback-work'
 );
 assert.equal(
 	readerSearchResultWorkRef({ ...result, target: undefined, cts_work_urn: null }),

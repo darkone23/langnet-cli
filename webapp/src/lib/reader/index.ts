@@ -1,8 +1,15 @@
 import type { LanguageMode } from '../search-data';
+import { tagIsRelevantForLanguage } from './reader-discovery-tags';
+import { readerWorkPublicKey } from './reader-public-keys';
 
 export * from './text';
+export {
+	readerIsDeprecatedWorkRef,
+	readerSourceIndexPublicKey,
+	readerWorkPublicKey
+} from './reader-public-keys';
 
-export type ReaderCatalogLanguage = LanguageMode | 'eng';
+export type ReaderCatalogLanguage = LanguageMode | 'eng' | 'und';
 
 export type ReaderCatalog = {
 	id: string;
@@ -305,6 +312,11 @@ export type ReaderSourceIndexResponse = {
 	catalog_path: string;
 	request: Record<string, unknown>;
 	items: ReaderSourceIndexItem[];
+	pagination?: {
+		limit: number;
+		next_cursor: string | null;
+		prev_cursor: string | null;
+	};
 	catalog?: ReaderCatalog;
 };
 
@@ -376,6 +388,53 @@ export type ReaderSearchResponse = {
 		limit: number;
 		next_cursor: string | null;
 		prev_cursor: string | null;
+	};
+};
+
+export type ReaderWordContextResponse = {
+	schema_version: string;
+	mode: 'word-context';
+	catalog_path: string;
+	request: {
+		language: LanguageMode;
+		query: string;
+		work_ref?: string | null;
+		segment_ref?: string | null;
+		search_limit?: number;
+		search_context?: number;
+		index_path?: string;
+	};
+	normalization: {
+		surface: string;
+		normalized?: string;
+		candidates: string[];
+	};
+	lexical_evidence: {
+		status: string;
+		items: unknown[];
+		note?: string;
+	};
+	morphology: {
+		status: string;
+		items: unknown[];
+		note?: string;
+	};
+	reader_hits: {
+		status: string;
+		index_status: Record<string, unknown>;
+		items: ReaderSearchResult[];
+	};
+	passage_context: {
+		status: string;
+		work?: ReaderWork | null;
+		segment?: ReaderSegment | null;
+		source_index?: ReaderSourceIndexItem[];
+	};
+	provenance: Record<string, unknown>;
+	caveats: string[];
+	timing: {
+		total_ms: number;
+		steps: { name: string; duration_ms: number; [key: string]: unknown }[];
 	};
 };
 
@@ -462,6 +521,17 @@ export type ReaderAuthorsResponse = {
 		next_cursor: string | null;
 		prev_cursor: string | null;
 	};
+};
+
+export type ReaderAuthorResponse = {
+	schema_version: string;
+	mode: 'author';
+	catalog_path: string;
+	request: Record<string, unknown>;
+	item: ReaderAuthor | null;
+	representative_works?: ReaderWork[];
+	works?: ReaderWork[];
+	summary?: Record<string, unknown>;
 };
 
 export type ReaderWorkResponse = {
@@ -579,7 +649,7 @@ export function buildReaderRouteSearch(state: Partial<ReaderRouteState>) {
 }
 
 export function readerWorkRef(work: ReaderWork) {
-	return work.canonical_text_id || work.canonical_address || work.cts_work_urn || work.work_id;
+	return work.canonical_text_id || work.canonical_address || work.work_id;
 }
 
 function meaningfulAuthorName(value: string | null | undefined) {
@@ -606,12 +676,12 @@ export function readerWorkDisplayAuthor(work: ReaderWork) {
 
 export function readerWorkLabel(work: ReaderWork) {
 	const author = readerWorkDisplayAuthor(work);
-	const title = work.title?.trim() || work.source_id || work.work_id;
+	const title = work.title?.trim() || 'Untitled work';
 	return `${author}, ${title}`;
 }
 
 export function readerWorkListLabel(work: ReaderWork, peers: ReaderWork[] = []) {
-	const title = work.title?.trim() || work.source_id || work.work_id;
+	const title = work.title?.trim() || 'Untitled work';
 	return title;
 }
 
@@ -620,10 +690,10 @@ export function readerWorkListDiscriminator(work: ReaderWork, peers: ReaderWork[
 	const duplicateTitle = peers.some(
 		(peer) =>
 			peer.work_id !== work.work_id &&
-			(peer.title?.trim() || peer.source_id || peer.work_id) === title &&
+			(peer.title?.trim() || 'Untitled work') === title &&
 			readerWorkDisplayAuthor(peer) === readerWorkDisplayAuthor(work)
 	);
-	return duplicateTitle ? work.source_id || work.cts_work_urn || work.work_id : '';
+	return duplicateTitle ? readerWorkPublicKey(work) : '';
 }
 
 export function readerAuthorRouteStateFromWork(work: ReaderWork): Partial<ReaderRouteState> | null {
@@ -830,87 +900,6 @@ function readReaderLanguage(params: URLSearchParams): LanguageMode | undefined {
 function readReaderTheme(value: string | null): ReaderRouteState['theme'] | undefined {
 	if (value === 'manuscript' || value === 'vespers') return value;
 	return undefined;
-}
-
-const sanskritSpecificTags = new Set([
-	'ayurveda',
-	'dharmashastra',
-	'dharmasutra',
-	'arthashastra',
-	'kamashastra',
-	'rasashastra',
-	'ratnashastra',
-	'vyakarana',
-	'paniniya',
-	'nirukta',
-	'kosha',
-	'nighantu',
-	'kavya',
-	'katha',
-	'natya',
-	'alamkarashastra',
-	'sahityashastra',
-	'itihasa',
-	'mahabharata',
-	'ramayana',
-	'purana',
-	'vedic',
-	'veda',
-	'rgveda',
-	'yajurveda',
-	'samaveda',
-	'atharvaveda',
-	'brahmana',
-	'aranyaka',
-	'upanishad',
-	'kalpa',
-	'grhyasutra',
-	'shrautasutra',
-	'samhita',
-	'smriti',
-	'sutra',
-	'bhashya',
-	'vedanta',
-	'nyaya',
-	'samkhya',
-	'yoga',
-	'mimamsa',
-	'vaisheshika',
-	'buddhist',
-	'buddhist_sutra',
-	'buddhist_abhidharma',
-	'buddhist_tantra',
-	'jain',
-	'tantra',
-	'shaiva',
-	'bhakti',
-	'stotra',
-	'jyotisha'
-]);
-
-const greekLatinSpecificTags = new Set([
-	'patristics',
-	'hippocratic_galenic_medicine',
-	'oratory',
-	'speech',
-	'tragedy',
-	'comedy',
-	'satire',
-	'elegy',
-	'lyric',
-	'epigram',
-	'didactic',
-	'pastoral',
-	'hagiography',
-	'homily',
-	'apology',
-	'scholia'
-]);
-
-function tagIsRelevantForLanguage(id: string, language: LanguageMode) {
-	if (language === 'san') return !greekLatinSpecificTags.has(id) && id !== 'roman_law';
-	if (language === 'lat') return !sanskritSpecificTags.has(id);
-	return !sanskritSpecificTags.has(id) && id !== 'roman_law';
 }
 
 function readReaderView(value: string | null): ReaderRouteState['readerView'] | undefined {

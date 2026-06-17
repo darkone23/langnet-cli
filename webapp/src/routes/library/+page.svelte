@@ -15,6 +15,7 @@
 		readerSourceIndexUrl
 	} from '$lib/reader/reader-api';
 	import type { ReaderCatalogLanguage, ReaderSourceIndexResponse } from '$lib/reader';
+	import { readerIsDeprecatedWorkRef, readerSourceIndexPublicKey } from '$lib/reader';
 	import {
 		findReaderWatchlistMatches,
 		type ReaderWatchlistResponse,
@@ -44,20 +45,29 @@
 	const initialCollections = (initialData().collections ?? []) as ReaderCollection[];
 	const initialSourceRows = (initialData().sourceRows ?? []) as ReaderSourceIndexResponse['items'];
 	const initialSourceRowLimit = Number(initialData().sourceRowLimit ?? 20000);
+	const initialSourcePagination = initialData().sourcePagination as
+		| ReaderSourceIndexResponse['pagination']
+		| undefined;
 	const initialWatchlistTargets = (initialData().watchlistTargets ?? []) as ReaderWatchlistTarget[];
 	const initialLoadError = initialData().loadError ?? '';
-	const SOURCE_INDEX_AUDIT_LIMIT = 20000;
+	const SOURCE_INDEX_PAGE_SIZE = 100;
 	const languageOptions: { value: '' | ReaderCatalogLanguage; label: string }[] = [
 		{ value: '', label: 'All languages' },
 		{ value: 'lat', label: 'Latin' },
 		{ value: 'grc', label: 'Greek' },
 		{ value: 'san', label: 'Sanskrit' },
-		{ value: 'eng', label: 'English' }
+		{ value: 'eng', label: 'English' },
+		{ value: 'und', label: 'Unknown language' }
 	];
 
 	let collections = $state<ReaderCollection[]>(initialCollections);
 	let rows = $state<ReaderSourceIndexResponse['items']>(initialSourceRows);
 	let sourceRowLimit = $state(initialSourceRowLimit);
+	let sourcePagination = $state<ReaderSourceIndexResponse['pagination'] | undefined>(
+		initialSourcePagination
+	);
+	let sourcePageCursor = $state<string | null>(null);
+	let sourcePageNumber = $state(1);
 	let watchlistTargets = $state<ReaderWatchlistTarget[]>(initialWatchlistTargets);
 	let selectedCollection = $state('all');
 	let selectedLanguage = $state<'' | ReaderCatalogLanguage>('');
@@ -76,7 +86,17 @@
 	let watchlistPreview = $derived(
 		watchlistMatches.length > 0 ? watchlistMatches : watchlistTargets.slice(0, 6)
 	);
-	let sourceRowsMayBeCapped = $derived(rows.length >= sourceRowLimit);
+	let hasPreviousSourcePage = $derived(sourcePageNumber > 1);
+	let hasNextSourcePage = $derived(Boolean(sourcePagination?.next_cursor));
+	let sourcePageNumbers = $derived(
+		Array.from(
+			new Set(
+				[1, sourcePageNumber - 1, sourcePageNumber, sourcePageNumber + 1].filter(
+					(page) => page >= 1 && (page <= sourcePageNumber || hasNextSourcePage)
+				)
+			)
+		)
+	);
 
 	async function loadInitial() {
 		loading = true;
@@ -85,7 +105,7 @@
 			const [collectionPayload, sourcePayload, watchlistPayload] = await Promise.all([
 				fetchReaderApi<ReaderCollectionsResponse>(readerCollectionsUrl()),
 				fetchReaderApi<ReaderSourceIndexResponse>(
-					readerSourceIndexUrl({ limit: SOURCE_INDEX_AUDIT_LIMIT })
+					readerSourceIndexUrl({ limit: SOURCE_INDEX_PAGE_SIZE })
 				),
 				fetchReaderApi<ReaderWatchlistResponse>(readerLibraryWatchlistUrl({ limit: 100 }))
 			]);
@@ -94,7 +114,10 @@
 			if (watchlistPayload.data.error) throw new Error(watchlistPayload.data.error);
 			collections = collectionPayload.data.items ?? [];
 			rows = sourcePayload.data.items ?? [];
-			sourceRowLimit = SOURCE_INDEX_AUDIT_LIMIT;
+			sourceRowLimit = SOURCE_INDEX_PAGE_SIZE;
+			sourcePagination = sourcePayload.data.pagination;
+			sourcePageCursor = null;
+			sourcePageNumber = 1;
 			watchlistTargets = watchlistPayload.data.items ?? [];
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Unable to load the library index.';
@@ -103,7 +126,7 @@
 		}
 	}
 
-	async function loadSourceIndex() {
+	async function loadSourceIndex(cursor: string | null = null, pageNumber = 1) {
 		loading = true;
 		error = '';
 		searched = Boolean(query.trim() || selectedCollection !== 'all' || selectedLanguage);
@@ -113,12 +136,16 @@
 					collection: selectedCollection,
 					language: (selectedLanguage || null) as ReaderCatalogLanguage | null,
 					query,
-					limit: SOURCE_INDEX_AUDIT_LIMIT
+					cursor,
+					limit: SOURCE_INDEX_PAGE_SIZE
 				})
 			);
 			if (payload.data.error) throw new Error(payload.data.error);
 			rows = payload.data.items ?? [];
-			sourceRowLimit = SOURCE_INDEX_AUDIT_LIMIT;
+			sourceRowLimit = SOURCE_INDEX_PAGE_SIZE;
+			sourcePagination = payload.data.pagination;
+			sourcePageCursor = cursor;
+			sourcePageNumber = pageNumber;
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Unable to search the library index.';
 			rows = [];
@@ -129,12 +156,12 @@
 
 	function selectCollection(collectionId: string) {
 		selectedCollection = collectionId;
-		void loadSourceIndex();
+		void loadSourceIndex(null, 1);
 	}
 
 	function submitSearch() {
 		query = pendingQuery.trim();
-		void loadSourceIndex();
+		void loadSourceIndex(null, 1);
 	}
 
 	function clearSearch() {
@@ -142,7 +169,37 @@
 		query = '';
 		selectedCollection = 'all';
 		selectedLanguage = '';
-		void loadSourceIndex();
+		void loadSourceIndex(null, 1);
+	}
+
+	function openSourcePage(pageNumber: number) {
+		if (pageNumber === sourcePageNumber) return;
+		if (pageNumber === 1) {
+			void loadSourceIndex(null, 1);
+			return;
+		}
+		const currentOffset = Number.parseInt(sourcePageCursor ?? '0', 10) || 0;
+		const targetOffset = Math.max(0, (pageNumber - 1) * SOURCE_INDEX_PAGE_SIZE);
+		if (pageNumber === sourcePageNumber + 1 && sourcePagination?.next_cursor) {
+			void loadSourceIndex(sourcePagination.next_cursor, pageNumber);
+			return;
+		}
+		if (pageNumber === sourcePageNumber - 1) {
+			const previousOffset = Math.max(0, currentOffset - SOURCE_INDEX_PAGE_SIZE);
+			void loadSourceIndex(previousOffset ? String(previousOffset) : null, pageNumber);
+			return;
+		}
+		void loadSourceIndex(targetOffset ? String(targetOffset) : null, pageNumber);
+	}
+
+	function openPreviousSourcePage() {
+		if (!hasPreviousSourcePage) return;
+		openSourcePage(sourcePageNumber - 1);
+	}
+
+	function openNextSourcePage() {
+		if (!sourcePagination?.next_cursor) return;
+		void loadSourceIndex(sourcePagination.next_cursor, sourcePageNumber + 1);
 	}
 
 	function formatNumber(value?: number) {
@@ -151,6 +208,23 @@
 
 	function readerHref(workId: string) {
 		return `/reader?work=${encodeURIComponent(workId)}`;
+	}
+
+	function workPortalHref(workId: string) {
+		return `/library/work/${encodeURIComponent(workId)}`;
+	}
+
+	function authorPortalHref(authorId: string | null, author: string) {
+		const ref = authorId || author;
+		return ref ? `/library/author/${encodeURIComponent(ref)}` : '';
+	}
+
+	function rowWorkRef(row: ReaderSourceIndexResponse['items'][number]) {
+		return row.canonical_text_id || row.work_id;
+	}
+
+	function visibleCanonicalRef(value: string | null | undefined) {
+		return value && !readerIsDeprecatedWorkRef(value) ? value : '';
 	}
 </script>
 
@@ -333,12 +407,9 @@
 								Showing the first provenance rows from the current reader catalog
 							{/if}
 						</p>
-						{#if sourceRowsMayBeCapped}
-							<p class="text-warning mt-2 text-sm font-semibold">
-								Showing the first {formatNumber(sourceRowLimit)} source-index rows. Narrow by
-								collection, language, or search to see the complete matching set.
-							</p>
-						{/if}
+						<p class="text-base-content/55 mt-2 text-sm">
+							Page {sourcePageNumber}; showing up to {formatNumber(sourceRowLimit)} rows per page.
+						</p>
 					</div>
 					<a class="btn btn-outline btn-sm" href="/reader">
 						<BookOpen size={17} />
@@ -392,6 +463,50 @@
 					{/if}
 				</div>
 			{:else}
+				<div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+					<div class="join">
+						<button
+							class="btn btn-sm join-item"
+							type="button"
+							disabled={!hasPreviousSourcePage || loading}
+							onclick={() => openSourcePage(1)}
+						>
+							First
+						</button>
+						<button
+							class="btn btn-sm join-item"
+							type="button"
+							disabled={!hasPreviousSourcePage || loading}
+							onclick={openPreviousSourcePage}
+						>
+							Previous
+						</button>
+						{#each sourcePageNumbers as page}
+							<button
+								class:btn-primary={page === sourcePageNumber}
+								class="btn btn-sm join-item"
+								type="button"
+								disabled={loading}
+								onclick={() => openSourcePage(page)}
+							>
+								{page}
+							</button>
+						{/each}
+						<button
+							class="btn btn-sm join-item"
+							type="button"
+							disabled={!hasNextSourcePage || loading}
+							onclick={openNextSourcePage}
+						>
+							Next
+						</button>
+					</div>
+					<p class="text-base-content/55 text-sm">
+						{hasNextSourcePage
+							? 'More source-index rows are available.'
+							: 'End of the current source-index result set.'}
+					</p>
+				</div>
 				<div class="bg-base-100 border-base-300 overflow-hidden rounded-[1.5rem] border shadow-sm">
 					{#each rows as row}
 						<details class="group border-base-300 border-b last:border-b-0">
@@ -401,7 +516,6 @@
 								<div class="min-w-0">
 									<div class="mb-1 flex flex-wrap gap-2">
 										<span class="badge badge-info">{row.language}</span>
-										<span class="badge badge-outline">{row.collection_id}</span>
 										{#if row.file_status}
 											<span class="badge badge-ghost">{row.file_status}</span>
 										{/if}
@@ -410,11 +524,21 @@
 										{/if}
 									</div>
 									<h3 class="truncate text-base font-black md:text-lg">{row.title}</h3>
-									<p class="text-base-content/65 truncate text-sm">{row.author}</p>
+									{#if authorPortalHref(row.author_id, row.author)}
+										<a
+											class="link-hover link text-base-content/65 block truncate text-sm"
+											href={authorPortalHref(row.author_id, row.author)}
+											onclick={(event) => event.stopPropagation()}
+										>
+											{row.author}
+										</a>
+									{:else}
+										<p class="text-base-content/65 truncate text-sm">{row.author}</p>
+									{/if}
 								</div>
 								<div class="text-sm">
-									<p class="text-base-content/45 uppercase">Source</p>
-									<p class="truncate font-semibold">{row.source_id}</p>
+									<p class="text-base-content/45 uppercase">Reader key</p>
+									<p class="truncate font-semibold">{readerSourceIndexPublicKey(row)}</p>
 								</div>
 								<div class="text-sm">
 									<p class="text-base-content/45 uppercase">Size</p>
@@ -427,11 +551,11 @@
 									<span class="text-base-content/45 hidden text-xs group-open:inline">Collapse</span>
 									<a
 										class="btn btn-primary btn-xs"
-										href={readerHref(row.work_id)}
+										href={workPortalHref(rowWorkRef(row))}
 										onclick={(event) => event.stopPropagation()}
 									>
-										<BookOpen size={15} />
-										Read
+										<LibraryBig size={15} />
+										{uiCopy.readerNavigation.workEntry}
 									</a>
 								</div>
 							</summary>
@@ -442,17 +566,32 @@
 										<p class="mt-1 font-semibold">{row.edition_label}</p>
 									</div>
 									<div class="bg-base-100 rounded-2xl p-3">
-										<p class="text-base-content/50 uppercase">Work id</p>
-										<p class="mt-1 break-all font-semibold">{row.work_id}</p>
+										<p class="text-base-content/50 uppercase">Reader key</p>
+										<p class="mt-1 break-all font-semibold">{readerSourceIndexPublicKey(row)}</p>
 									</div>
 									<div class="bg-base-100 rounded-2xl p-3">
 										<p class="text-base-content/50 uppercase">Artifact count</p>
 										<p class="mt-1 font-semibold">{formatNumber(row.artifact_count)}</p>
 									</div>
 								</div>
+								<div class="mt-4 flex flex-wrap gap-2">
+									<a class="btn btn-primary btn-sm" href={workPortalHref(rowWorkRef(row))}>
+										<LibraryBig size={16} />
+										{uiCopy.readerNavigation.inspectWorkEntry}
+									</a>
+									<a class="btn btn-outline btn-sm" href={readerHref(rowWorkRef(row))}>
+										<BookOpen size={16} />
+										{uiCopy.readerNavigation.enterReaderDesk}
+									</a>
+									{#if authorPortalHref(row.author_id, row.author)}
+										<a class="btn btn-ghost btn-sm" href={authorPortalHref(row.author_id, row.author)}>
+											{uiCopy.readerNavigation.authorEntry}
+										</a>
+									{/if}
+								</div>
 								<div class="text-base-content/55 mt-4 space-y-1 text-xs">
 									<p class="break-all">Path: {row.source_path}</p>
-									{#if row.canonical_text_id}
+									{#if visibleCanonicalRef(row.canonical_text_id)}
 										<p class="break-all">Canonical: {row.canonical_text_id}</p>
 									{/if}
 									{#if row.source_witness_collections}
@@ -462,6 +601,35 @@
 							</div>
 						</details>
 					{/each}
+				</div>
+				<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+					<div class="join">
+						<button
+							class="btn btn-sm join-item"
+							type="button"
+							disabled={!hasPreviousSourcePage || loading}
+							onclick={() => openSourcePage(1)}
+						>
+							First
+						</button>
+						<button
+							class="btn btn-sm join-item"
+							type="button"
+							disabled={!hasPreviousSourcePage || loading}
+							onclick={openPreviousSourcePage}
+						>
+							Previous
+						</button>
+						<button
+							class="btn btn-sm join-item"
+							type="button"
+							disabled={!hasNextSourcePage || loading}
+							onclick={openNextSourcePage}
+						>
+							Next
+						</button>
+					</div>
+					<p class="text-base-content/55 text-sm">Page {sourcePageNumber}</p>
 				</div>
 			{/if}
 		</section>
