@@ -2,6 +2,16 @@
 
 > **For agentic workers:** This is the umbrella plan for building LangNet's reader corpus from disparate electronic sources. Work from source manifests and staging outputs first; do not import raw web/OCR output directly into the reader catalog.
 
+> **Closeout:** The acquisition framework is now implemented and documented.
+> Durable operating guidance lives in
+> `docs/technical/reader-source-acquisition.md`,
+> `docs/technical/rebuilding-reader-sources.md`,
+> `docs/EXECUTION_PLAN.md`, and
+> `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md`. Remaining
+> concrete work is split into todo plans for Archive.org derivative helpers,
+> popular Latin prose acquisition, and Project Orion humanist/mystical source
+> follow-through.
+
 **Goal:** Define what it means for LangNet to build a corpus, how we acquire and stage texts, how we preserve provenance and quality status, and how we prepare for larger-disk server migration.
 
 ## Open Knowledgebase Policy

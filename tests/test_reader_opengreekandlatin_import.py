@@ -112,7 +112,11 @@ class OpenGreekAndLatinImportTest(unittest.TestCase):
                 all(item.work.work_id.startswith("urn:langnet:ogl:") for item in parsed)
             )
             self.assertTrue(
-                all(item.work.cts_work_urn.startswith("urn:cts:langnet:") for item in parsed)
+                all(
+                    item.work.cts_work_urn is not None
+                    and item.work.cts_work_urn.startswith("urn:cts:langnet:")
+                    for item in parsed
+                )
             )
 
     def test_ogl_discovery_marks_zero_segment_files(self) -> None:

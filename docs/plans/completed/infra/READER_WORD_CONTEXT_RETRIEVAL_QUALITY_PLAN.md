@@ -407,8 +407,8 @@ Acceptance:
 Files:
 
 - Modify: `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md`
-- Modify: `docs/plans/active/infra/READER_EXPANSION_QUALITY_CLOSEOUT_2026-06-07.md`
-- Modify: `docs/plans/active/infra/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md` if handing off mid-stack
+- Modify: `data/reference/reader_quality_audit/current_known_issues.tsv`
+- If a dated handoff is needed, create it under `docs/archive/2026-06-reader-expansion/` or a newer dated archive folder rather than under `docs/plans/active/`.
 
 Acceptance:
 
@@ -492,9 +492,11 @@ Completed in the first implementation slice:
 
 Still open:
 
-- Wire lexical evidence into the word-context payload from the existing dictionary lookup path.
-- Wire morphology evidence into the word-context payload from the existing parser/lookup path.
-- Add structural tests around the golden-query fixture.
+- Validate lexical and morphology evidence against live Latin/Greek/Sanskrit
+  cache/read-only lookup data and expand fixtures only where source evidence is
+  stable.
+- Add structural tests around the golden-query fixture. Completed on 2026-06-17
+  with `tests/test_reader_word_context_golden.py`.
 - Add UI polish for source/index health display after validation.
 - Run CLI/API/web verification once explicit validation is approved for this stack.
 
@@ -529,3 +531,126 @@ Completed after the initial word-context endpoint work:
 Remaining limitation:
 
 - Lexical and morphology evidence still rely only on cache-only normalizer evidence in this endpoint. Full dictionary/paradigm integration remains the next word-context task.
+
+## Next Implementation Slice - 2026-06-17
+
+The next slice should stay narrow: make `lexical_evidence` useful before
+attempting full morphology. Do not make generated briefing compensate for weak
+deterministic evidence.
+
+Recommended order:
+
+1. Add a focused service test for `ReaderService.word_context_payload(...)` using
+   one Latin golden row such as `corpore` or `arma`.
+2. Reuse the existing encounter/lookup evidence path in read-only/cache mode to
+   populate `lexical_evidence.items` with source labels, lemmas/headwords, short
+   gloss text where available, and source refs.
+3. Keep lexical lookup independently timed and independently failed. If lookup is
+   unavailable, return `lexical_evidence.status = "unavailable"` or `"error"`
+   with a caveat; do not block reader hits.
+4. Add CLI verification for:
+
+   ```bash
+   just cli reader word-context corpore --language lat --reader-search-limit 3 --output json
+   ```
+
+   Expected: `schema_version = langnet.reader.word_context.v1`,
+   `reader_hits.status` remains truthful, and `lexical_evidence.status` is no
+   longer just the cache-only normalizer status when dictionary evidence is
+   available.
+
+5. After lexical evidence is stable, add morphology evidence from the parser or
+   paradigm path as a separate slice with its own tests and timing step.
+
+Current guardrails:
+
+- The golden starter fixture is now structurally tested.
+- `amor` is included in the Latin starter set alongside `corpore`, `arma`,
+  `virum`, `est`, and `dixit`.
+- The selected-word sidebar must keep deterministic word context above generated
+  briefing.
+
+## Implementation Update - 2026-06-18
+
+Completed the next deterministic evidence slice:
+
+- `ReaderService.word_context_payload(...)` now accepts independent optional
+  providers for lexical evidence and morphology evidence.
+- `reader word-context` wires both providers from the CLI layer.
+- Lexical evidence reuses encounter reduction in read-only/cache mode and
+  formats source-backed rows with lemma, source, gloss, source ref, bucket, and
+  witness metadata.
+- Morphology evidence reuses `_encounter_morphology_rows(...)` in read-only/cache
+  mode and returns compact parser-derived rows when `has_morphology` claims are
+  available.
+- Lexical and morphology lookup failures remain non-fatal and independently
+  timed; reader hits and passage context still return with explicit caveats.
+- Added focused service and CLI tests for provider wiring and provider output.
+
+Remaining work:
+
+- None for this plan. Future reader-side refinements should open narrower
+  follow-up plans instead of extending this retrieval-quality slice.
+
+## Live Validation Update - 2026-06-18
+
+Ran live CLI checks with:
+
+```bash
+just cli reader word-context <query> --language <language> --reader-search-limit 3 --output json
+```
+
+Latin starter forms validated:
+
+- `corpore`, `amor`, `arma`, `virum`, `est`, and `dixit` all returned
+  `schema_version = langnet.reader.word_context.v1`.
+- Each Latin starter returned `lexical_evidence.status = available`,
+  `morphology.status = available`, `reader_hits.status = available`, and no
+  caveats in the current local cache/index state.
+- Stable lexical and morphology expectations were promoted into
+  `tests/fixtures/reader_word_context_golden/latin.json` as conservative policy
+  fields: status, minimum item counts, accepted lemma sets, and accepted source
+  sets. The fixture intentionally does not assert exact first-row order for
+  ambiguous forms.
+
+Cross-language spot checks:
+
+- Greek `λόγος` returned available lexical evidence, available morphology, and
+  available reader hits.
+- Sanskrit `agni` returned available lexical evidence and morphology, but
+  `reader_hits.status = index_unavailable` because the current reader search
+  index has no `san` slice. Keep Sanskrit out of strict golden-hit expectations
+  until the Sanskrit reader index state is deliberate.
+- Added `greek.json` and `sanskrit.json` golden fixtures with conservative
+  lexical, morphology, caveat, and reader-hit policies. Greek rows require
+  available reader hits; Sanskrit rows explicitly expect the current
+  `index_unavailable` reader-hit policy.
+
+## UI Evidence Display Update - 2026-06-18
+
+Completed reader-sidebar display polish for the validated deterministic payload:
+
+- Added concrete web types for lexical evidence rows and morphology rows.
+- Added shared display helpers for word-context status labels, evidence row
+  labels, morphology row labels, and source labels.
+- Updated the selected-word marginalia panel to show top lexical and morphology
+  rows before generated briefing, including compact sources and notes when rows
+  are unavailable.
+- Kept corpus-hit status, timing, provenance chips, caveats, and generated
+  briefing visually separate so deterministic evidence remains first.
+
+## Closeout - 2026-06-18
+
+This plan is complete.
+
+Verified:
+
+- `reader word-context` has deterministic CLI/API payload support for
+  normalization, lexical evidence, morphology, reader hits, passage context,
+  caveats, and timing.
+- Latin, Greek, and Sanskrit golden fixture files define source-backed policy
+  expectations without overfitting row order for ambiguous forms.
+- The selected-word reader sidebar renders deterministic lexical and morphology
+  evidence before optional generated briefing.
+- Remaining Sanskrit reader-hit work is an index/acquisition decision, not a
+  word-context retrieval-quality blocker.

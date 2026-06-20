@@ -4,15 +4,18 @@ import re
 from collections.abc import Mapping
 from typing import cast
 
+from langnet.execution.handlers.cdsl import (
+    cdsl_learner_gloss,
+    cdsl_source_segments,
+    cdsl_text_to_iast_display,
+)
 from langnet.parsing.source_entry_analysis import parse_source_entry
 
 _SEGMENT_SPLIT_RE = re.compile(r"\s+\|\|+\s+|[;\n¶]+")
 _COMPACT_ENTRY_BREAK_RE = re.compile(r"\s+\|+\s+|\s+—\s+")
 _COMPACT_HEADWORD_NUMBER_RE = re.compile(r"\b1\s+([^:;|]{2,120})(?=[:;|])")
 _COMPACT_STEM_LABEL_RE = re.compile(r"^[A-Z][A-ZĀĒĪŌŪȲÆŒ-]{1,24}$")
-_COMPACT_STEM_LABEL_PREFIX_RE = re.compile(
-    r"^(?:[A-Z][A-ZĀĒĪŌŪȲÆŒ-]{1,24}\s*[,;]\s*)+"
-)
+_COMPACT_STEM_LABEL_PREFIX_RE = re.compile(r"^(?:[A-Z][A-ZĀĒĪŌŪȲÆŒ-]{1,24}\s*[,;]\s*)+")
 _COMPACT_INFLECTION_TAG_RE = re.compile(r"\b(?:sg|pl|nom|acc|gen|dat|abl)\.")
 _COMPACT_LEXICAL_PREAMBLE_RE = re.compile(
     r"^(?:[^\s\[]+(?:\s+\[[^\]]+\])?,\s*|"
@@ -21,6 +24,10 @@ _COMPACT_LEXICAL_PREAMBLE_RE = re.compile(
     re.IGNORECASE,
 )
 _COMPACT_SECTION_PREFIX_RE = re.compile(r"^(?:[IVX]+|[A-Z])\.\s")
+_DIOGENES_SENSE_MARKER_RE = re.compile(r"^(?:[IVX]+|[A-Z]|[0-9]+|[α-ω])\.\s+")
+_DIOGENES_HEADWORD_BEFORE_SENSE_RE = re.compile(r"^.*?(?=\b(?:[IVX]+|[A-Z]|[0-9]+|[α-ω])\.\s+)")
+_DIOGENES_TRAILING_CITATION_RE = re.compile(r",\s*[A-Z][A-Za-z]{1,12}\.$")
+_DIOGENES_TRAILING_CITATION_CAPTURE_RE = re.compile(r",\s*([A-Z][A-Za-z]{1,12}\.)$")
 COMPACT_GLOSS_DEFAULT_MAX_CHARS = 120
 DICO_COMPACT_GLOSS_DEFAULT_MAX_CHARS = 180
 COMPACT_GLOSS_DEFAULT_MAX_ITEMS = 4
@@ -118,6 +125,30 @@ def compact_dico_source_gloss(
     return _shorten_display(text, max_chars)
 
 
+def compact_diogenes_source_gloss(
+    raw_text: str,
+    *,
+    max_chars: int = COMPACT_GLOSS_DEFAULT_MAX_CHARS,
+    max_items: int = COMPACT_GLOSS_DEFAULT_MAX_ITEMS,
+) -> str:
+    """Return concise Diogenes/LSJ/Lewis sense heads before examples/citations."""
+    text = display_text(raw_text)
+    if not text:
+        return ""
+    text = _DIOGENES_HEADWORD_BEFORE_SENSE_RE.sub("", text, count=1).strip(" ,;")
+    parts: list[str] = []
+    for raw_part in _SEGMENT_SPLIT_RE.split(text):
+        part = _DIOGENES_SENSE_MARKER_RE.sub("", raw_part.strip(), count=1)
+        part = _DIOGENES_TRAILING_CITATION_RE.sub("", part).strip(" ,;")
+        if part:
+            parts.append(part)
+        if len(parts) >= max_items:
+            break
+    if parts:
+        return _shorten_display("; ".join(parts), max_chars)
+    return compact_source_gloss(raw_text, max_chars=max_chars, max_items=max_items)
+
+
 def _looks_like_stem_label(text: str) -> bool:
     return bool(_COMPACT_STEM_LABEL_RE.fullmatch(text.strip()))
 
@@ -131,11 +162,13 @@ def learner_segments_from_text(
     """Build typed learner-summary segments while preserving full source text elsewhere."""
     if source_tool.strip().lower() == "dico" and max_chars == COMPACT_GLOSS_DEFAULT_MAX_CHARS:
         max_chars = DICO_COMPACT_GLOSS_DEFAULT_MAX_CHARS
-    learner_gloss = (
-        compact_dico_source_gloss(raw_text, max_chars=max_chars)
-        if source_tool.strip().lower() == "dico"
-        else compact_source_gloss(raw_text, max_chars=max_chars)
-    )
+    normalized_source_tool = source_tool.strip().lower()
+    if normalized_source_tool == "dico":
+        learner_gloss = compact_dico_source_gloss(raw_text, max_chars=max_chars)
+    elif normalized_source_tool == "diogenes":
+        learner_gloss = compact_diogenes_source_gloss(raw_text, max_chars=max_chars)
+    else:
+        learner_gloss = compact_source_gloss(raw_text, max_chars=max_chars)
     if not learner_gloss:
         return []
     return [
@@ -196,6 +229,34 @@ def source_segments_from_text(
             "labels": classified_labels,
         }
     ]
+
+
+def diogenes_source_segments_from_text(raw_text: str) -> list[dict[str, object]]:
+    """Build Diogenes/Lewis/LSJ sense-head segments while preserving raw text."""
+    segments: list[dict[str, object]] = []
+    for raw_segment in _SEGMENT_SPLIT_RE.split(raw_text):
+        segment = raw_segment.strip()
+        if not segment:
+            continue
+        display = _DIOGENES_HEADWORD_BEFORE_SENSE_RE.sub("", display_text(segment), count=1)
+        display = _DIOGENES_SENSE_MARKER_RE.sub("", display.strip(" ,;"), count=1)
+        source_reference = ""
+        citation_match = _DIOGENES_TRAILING_CITATION_CAPTURE_RE.search(display)
+        if citation_match:
+            source_reference = citation_match.group(1)
+            display = display[: citation_match.start()].strip(" ,;")
+        item: dict[str, object] = {
+            "index": len(segments),
+            "raw_text": segment,
+            "display_text": display_text(display),
+            "segment_type": "definition_segment",
+            "labels": ["definition"],
+        }
+        if source_reference:
+            item["source_reference"] = source_reference
+            item["labels"] = ["definition", "citation", "source_reference"]
+        segments.append(item)
+    return segments
 
 
 def _classify_source_segment(
@@ -276,16 +337,47 @@ def analyze_source_entry(
     display = display_text(raw_text)
     grammar_parse = parse_source_entry(source_tool, raw_text)
     grammar_definition = _grammar_definition_text(grammar_parse)
-    if source_tool.strip().lower() == "dico":
+    normalized_source_tool = source_tool.strip().lower()
+    if normalized_source_tool == "dico":
         learner_gloss = compact_dico_source_gloss(raw_text)
+    elif normalized_source_tool == "diogenes":
+        learner_gloss = compact_diogenes_source_gloss(raw_text)
+    elif normalized_source_tool == "cdsl":
+        cdsl_headword = _cdsl_entry_headword(raw_text)
+        learner_gloss = cdsl_learner_gloss(
+            raw_text,
+            source_slp1=cdsl_headword,
+            display_iast=cdsl_text_to_iast_display(cdsl_headword, source_slp1=cdsl_headword),
+        )
     else:
         learner_gloss = (
             _shorten_display(grammar_definition, COMPACT_GLOSS_DEFAULT_MAX_CHARS)
             if grammar_definition
             else compact_source_gloss(raw_text)
         )
-    learner_segments = learner_segments_from_text(raw_text, source_tool=source_tool)
-    source_segments = source_segments_from_text(raw_text)
+    if normalized_source_tool == "cdsl" and learner_gloss:
+        learner_segments = [
+            {
+                "index": 0,
+                "raw_text": learner_gloss,
+                "display_text": learner_gloss,
+                "segment_type": "learner_gloss",
+                "labels": ["definition", "learner_summary"],
+            }
+        ]
+    else:
+        learner_segments = learner_segments_from_text(raw_text, source_tool=source_tool)
+    if normalized_source_tool == "diogenes":
+        source_segments = diogenes_source_segments_from_text(raw_text)
+    elif normalized_source_tool == "cdsl":
+        cdsl_headword = _cdsl_entry_headword(raw_text)
+        source_segments = cdsl_source_segments(
+            raw_text,
+            source_slp1=cdsl_headword,
+            display_iast=cdsl_text_to_iast_display(cdsl_headword, source_slp1=cdsl_headword),
+        )
+    else:
+        source_segments = source_segments_from_text(raw_text)
     citations = _citation_items(display, max_items=max_items)
     source_references = _source_reference_items(display, source_segments, max_items=max_items)
     examples = _example_items(
@@ -327,6 +419,11 @@ def analyze_source_entry(
 
 def _trim_lexical_preamble(text: str) -> str:
     return _COMPACT_LEXICAL_PREAMBLE_RE.sub("", text, count=1).strip(" ,;")
+
+
+def _cdsl_entry_headword(raw_text: str) -> str:
+    match = re.match(r"^\s*(?:\d+\.\s*)?([^\s,;()]+)", raw_text)
+    return match.group(1).strip(".,") if match else ""
 
 
 def _looks_like_lexical_header(text: str) -> bool:
@@ -441,13 +538,16 @@ def _append_segment_references(
 ) -> None:
     for segment in source_segments:
         display = str(segment.get("display_text") or "")
+        reference_display = str(segment.get("source_reference") or display)
         segment_index = _segment_index(segment, len(items))
         labels = _segment_labels(segment)
         if "source_reference" in labels:
             _append_unique_item(
-                (items, seen), display, "typed_source_segment", labels, segment_index
+                (items, seen), reference_display, "typed_source_segment", labels, segment_index
             )
-        elif _SOURCE_ABBREVIATION_RE.match(display):
+        elif segment.get("segment_type") != "unclassified" and _SOURCE_ABBREVIATION_RE.match(
+            display
+        ):
             _append_unique_item(
                 (items, seen),
                 display,

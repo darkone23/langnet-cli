@@ -8,6 +8,7 @@
 		readerWorkPublicKey,
 		readerWorkRef
 	} from '$lib/reader';
+	import { readerWorkAvailabilityLabel } from '$lib/reader/library-watchlist';
 	import { uiCopy } from '$lib/ui-copy';
 
 	type ReaderAuthorPayload = {
@@ -125,6 +126,7 @@
 									<div class="min-w-0">
 										<div class="mb-2 flex flex-wrap gap-2">
 											<span class="badge badge-info">{work.language}</span>
+											<span class="badge badge-success">{readerWorkAvailabilityLabel(work)}</span>
 											<span class="badge badge-outline">{work.collection_id}</span>
 										</div>
 										<h3 class="text-xl font-black">{work.title}</h3>

@@ -2,6 +2,11 @@
 
 > **For agentic workers:** Start with audit outputs. Do not change source-view precedence until `data`, `corrected`, `split`, and `volumes` have been compared on real source quality.
 
+**Status:** COMPLETED 2026-06-19 for the active audit-surface and direct
+source-view comparison slice. Broader PL filename/volume mapping and attribution
+review continue in
+`docs/plans/todo/infra/ogl-patrologia-source-view-mapping-and-attribution-review.md`.
+
 **Goal:** Make the OpenGreekAndLatin reader imports trustworthy: no silent file loss, no unjustified source-view preference, no avoidable misattribution, and clear reports for skipped or alternate source files.
 
 ## Current Findings
@@ -251,19 +256,49 @@ Use roles deliberately:
 
 ### Phase 1: Audit surfaces
 
-- Add and use `reader ogl-audit`.
-- Save audit outputs under `data/reference/reader_source_index/` or a new `data/reference/ogl_import_audit/`.
-- Document current counts.
-- Maintain CSEL/Patrologia completeness scorecards.
-- Maintain an open-web legitimacy queue for suspicious rows.
+- Completed: add and use `reader ogl-audit`.
+- Completed: save audit outputs under `data/reference/ogl_import_audit/`.
+- Completed: document current counts.
+- Completed: maintain CSEL/Patrologia completeness scorecards.
+- Completed: maintain an open-web legitimacy queue for suspicious rows.
 
 ### Phase 2: View comparison samples
 
-- Select 10 Patrologia works where `data` and `corrected` both exist.
-- Select 10 Patrologia works where `data` and `split` overlap.
-- Compare extracted text and metadata.
-- For each sampled work, run an open-web legitimacy check for author/title/volume identity.
-- Decide whether current precedence should change.
+- Completed: `reader ogl-audit` now emits `view_comparison_samples` for
+  selected-vs-alternate OGL source views that share the same CTS work key.
+- Completed: `reader ogl-view-comparison` writes bounded JSON/TSV artifacts
+  under `data/reference/ogl_import_audit/`.
+- Completed: generated
+  `opengreekandlatin_patrologia_source_view_comparison.{json,tsv}`. The current
+  direct CTS-key artifact found two Patrologia overlaps: one `data`/`corrected`
+  row and one `data`/`split` row for `urn:cts:latinLit:stoa0114b.stoa001`.
+- Completed: reviewed both direct-overlap rows in
+  `opengreekandlatin_patrologia_view_comparison_review.{json,tsv}` with
+  Firecrawl search artifacts under `.firecrawl/`.
+- In progress: the original target of 10 `data`/`corrected` plus 10
+  `data`/`split` rows needs additional PL filename/volume mapping or open-web
+  corroboration; do not infer source-view policy from broad author-level
+  matches.
+- Completed for direct CTS-key overlaps: compare extracted text and metadata
+  through segment count, token count, title, and author deltas.
+- Completed for direct CTS-key overlaps: run an open-web legitimacy check for
+  title/volume identity. Current result is ambiguous for author attribution:
+  web snippets support the title/PL73-74 association but not the selected
+  Ephraem Syrus attribution strongly enough for an overlay.
+- Completed for direct CTS-key overlaps: do not change source-view precedence.
+  Keep the selected `data` view for now and preserve alternate views as witness
+  evidence.
+
+Verification so far:
+
+- `just test test_reader_ogl_audit test_reader_opengreekandlatin_import` covers
+  fixture view-comparison payloads, artifact writing, CLI command behavior, and
+  unchanged OGL source selection behavior.
+- `just cli reader ogl-view-comparison --collection opengreekandlatin_patrologia --root /home/nixos/opengreekandlatin/patrologia_latina-dev --output-dir data/reference/ogl_import_audit --limit-per-view 10 --output json`
+  generated the bounded Patrologia artifact with 4,241 candidates, 1,279
+  selected `data` candidates, and two direct CTS-key comparisons.
+- Firecrawl searches saved under `.firecrawl/` corroborated the
+  `Vitae Patrum` PL73/74 association but left author attribution ambiguous.
 
 ### Phase 3: Policy fix
 

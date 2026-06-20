@@ -52,7 +52,9 @@ const {
 	orionObjectCardSource,
 	orionProvenanceChipsSource,
 	readerCanonTableSource,
-	readerContentsListSource
+	readerContentsListSource,
+	libraryWorkPortalSource,
+	libraryAuthorPortalSource
 } = fixtures;
 
 for (const selectedWordPanelToken of [
@@ -63,11 +65,28 @@ for (const selectedWordPanelToken of [
 	'selectedWordBriefingCanGenerate',
 	'onGenerateBriefing',
 	'encounterBriefingCompactText',
+	'readerWordContextEvidenceItemLabel',
+	'readerWordContextMorphologyItemLabel',
+	'orion-reader-word-evidence',
 	'<style>'
 ]) {
 	assert.ok(
 		readerSelectedWordPanelSource.includes(selectedWordPanelToken),
 		`Reader Selected Word Panel component should expose token: ${selectedWordPanelToken}`
+	);
+}
+
+for (const libraryPortalToken of ['readerWorkAvailabilityLabel', 'readerSourceFileStatusLabel']) {
+	assert.ok(
+		libraryWorkPortalSource.includes(libraryPortalToken),
+		`Library Work Portal should expose source-quality token: ${libraryPortalToken}`
+	);
+}
+
+for (const libraryAuthorPortalToken of ['readerWorkAvailabilityLabel']) {
+	assert.ok(
+		libraryAuthorPortalSource.includes(libraryAuthorPortalToken),
+		`Library Author Portal should expose acquisition badge token: ${libraryAuthorPortalToken}`
 	);
 }
 

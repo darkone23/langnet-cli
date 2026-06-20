@@ -7,6 +7,7 @@
 		deskActivityItems,
 		type DeskActivityKey
 	} from '$lib/desk/desk-activity';
+	import { createDeskMotdController } from '$lib/desk/desk-motd-controller';
 	import {
 		branchToggleLabel as branchToggleLabelForState,
 		componentAwaitsReaderTranslation as componentAwaitsReaderTranslationForState,
@@ -118,7 +119,6 @@
 		deskWordIndexSectionHref,
 		type DeskTheme
 	} from '$lib/desk/desk-route';
-	import { motdItemKeys } from '$lib/motd-cache';
 	import { normalizeParadigmPayload, type ParadigmPayload } from '$lib/paradigm';
 	import {
 		curateParadigmCandidates,
@@ -208,7 +208,6 @@
 	let motdRefreshing = $state(false);
 	let motdError = $state('');
 	let motdLinksLoad = $state(true);
-	let motdAbortController: AbortController | null = null;
 	let wordIndex = $state<WordIndexResponse | null>(null);
 	let wordIndexSections = $state<WordIndexSectionsResponse | null>(null);
 	let wordIndexLoading = $state(false);
@@ -236,7 +235,6 @@
 	let pendingExpandedSectionsFromRoute: string[] = [];
 	let pendingCollapsedBranchesFromRoute: string[] = [];
 	let pendingQueryFromRoute = '';
-	let motdRequestId = 0;
 	let wordIndexRequestId = 0;
 	let dictionaryWitnessesSection: HTMLElement | null = null;
 	let translationArrivalTimer: ReturnType<typeof setTimeout> | null = null;
@@ -305,6 +303,48 @@
 			}
 		},
 		{ wordIndexRadius }
+	);
+
+	const motdController = createDeskMotdController(
+		{
+			get motd() {
+				return motd;
+			},
+			set motd(value) {
+				motd = value;
+			},
+			get motdStale() {
+				return motdStale;
+			},
+			set motdStale(value) {
+				motdStale = value;
+			},
+			get motdLoading() {
+				return motdLoading;
+			},
+			set motdLoading(value) {
+				motdLoading = value;
+			},
+			get motdRefreshing() {
+				return motdRefreshing;
+			},
+			set motdRefreshing(value) {
+				motdRefreshing = value;
+			},
+			get motdError() {
+				return motdError;
+			},
+			set motdError(value) {
+				motdError = value;
+			}
+		},
+		{
+			fetchPayload,
+			saveMotd: (result) => {
+				writeDeskMotdToBrowserStorage(browser ? localStorage : null, result);
+			},
+			recommendationsFailedMessage: uiCopy.errors.recommendationsFailed
+		}
 	);
 
 	let availableTools = $derived(toolsForLanguage(language));
@@ -487,8 +527,8 @@
 	$effect(() => {
 		if (!browser || !routeStateReady) return;
 		if (motdLoading || motdRefreshing || motdError) return;
-		if (motdStale && motdItems.length) void loadMotd(false);
-		if (!motdItems.length) void loadMotd(false);
+		if (motdStale && motdItems.length) void motdController.load(false);
+		if (!motdItems.length) void motdController.load(false);
 	});
 
 	function endpointUrl(translationOverride: TranslationMode = translationMode) {
@@ -500,79 +540,6 @@
 			lookupTools,
 			allLookupSelected: isAllLookupSelected
 		});
-	}
-
-	async function loadMotd(refresh = false) {
-		const requestId = ++motdRequestId;
-		const showRefreshState = Boolean(motd);
-		motdAbortController?.abort();
-		const controller = new AbortController();
-		motdAbortController = controller;
-		motdLoading = !showRefreshState;
-		motdRefreshing = showRefreshState;
-		motdError = '';
-
-		try {
-			const params = new URLSearchParams({
-				language: 'all',
-				count: '1',
-				translation: 'cache',
-				candidate_source: 'pool',
-				timeout_ms: '3000'
-			});
-			if (refresh || motdStale) {
-				params.set('refresh', '1');
-				const avoid = motdItemKeys(motd);
-				if (avoid.length) params.set('avoid', avoid.join(','));
-			}
-			const { response, data: motdPayload } = await fetchPayload<WordRecommendationResult>(
-				`/api/motd?${params.toString()}`,
-				{
-					signal: controller.signal
-				}
-			);
-			const data = normalizeMotdResult(motdPayload);
-
-			if (!response.ok) {
-				throw new Error(data.error ?? uiCopy.errors.recommendationsFailed);
-			}
-			if (!data.items.length) {
-				throw new Error(data.error ?? uiCopy.errors.recommendationsFailed);
-			}
-
-			if (requestId !== motdRequestId) return;
-			motd = data;
-			motdStale = false;
-			saveMotdToLocalStorage(data);
-		} catch (error) {
-			if (requestId !== motdRequestId) return;
-			if (isAbortError(error)) return;
-			motdError = error instanceof Error ? error.message : uiCopy.errors.recommendationsFailed;
-		} finally {
-			if (requestId === motdRequestId) {
-				motdLoading = false;
-				motdRefreshing = false;
-				if (motdAbortController === controller) motdAbortController = null;
-			}
-		}
-	}
-
-	function abortMotdRequest() {
-		motdRequestId += 1;
-		motdAbortController?.abort();
-		motdAbortController = null;
-		motdLoading = false;
-		motdRefreshing = false;
-	}
-
-	function isAbortError(error: unknown) {
-		return error instanceof DOMException
-			? error.name === 'AbortError'
-			: error instanceof Error && error.name === 'AbortError';
-	}
-
-	function saveMotdToLocalStorage(result: WordRecommendationResult) {
-		writeDeskMotdToBrowserStorage(browser ? localStorage : null, result);
 	}
 
 	function saveWordIndexEarmarks() {
@@ -914,7 +881,7 @@
 	}
 
 	async function runSearch() {
-		abortMotdRequest();
+		motdController.abort();
 		clearTranslationArrival();
 		routePrefillOnly = false;
 		const lookupValidation = validateDeskLookupWord(query);
@@ -1145,7 +1112,7 @@
 	}
 
 	function resetAppState() {
-		abortMotdRequest();
+		motdController.reset();
 		clearTranslationArrival();
 		routeLoadRequested = false;
 		routePrefillOnly = false;
@@ -1155,11 +1122,6 @@
 		translationMode = 'auto';
 		theme = 'manuscript';
 		lookupTools = toolsForLanguage('san').map(({ id }) => id);
-		motd = null;
-		motdStale = false;
-		motdError = '';
-		motdLoading = false;
-		motdRefreshing = false;
 		wordIndexEarmarks = [];
 		clearEncounterState();
 		clearPendingRouteState();
@@ -1368,7 +1330,7 @@
 		window.addEventListener('popstate', hydrateRouteStateFromUrl);
 
 		return () => {
-			abortMotdRequest();
+			motdController.abort();
 			clearTranslationArrival();
 			deskLoadingTimers.stopAll();
 			window.removeEventListener('scroll', syncSidebarHeight);
@@ -1419,7 +1381,7 @@
 		onToggleLinksLoad={() => {
 			motdLinksLoad = !motdLinksLoad;
 		}}
-		onRefresh={() => void loadMotd(true)}
+		onRefresh={() => void motdController.load(true)}
 		onNavigate={handleMotdNavigation}
 	/>
 

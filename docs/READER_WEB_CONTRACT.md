@@ -443,6 +443,18 @@ came from the wrong language batch. Discovery shelves and prominence-sorted
 author surfaces are not ready after a full catalog rebuild until this generated
 work and author metadata layer has been restored.
 
+`sync-source-enrichment` imports source-backed DCS and Perseus evidence into
+`source_metadata`. Its `candidate_metadata_overlays` output is intentionally
+separate: Perseus subject membership, publication year, editors, translators,
+and catalog URLs stay source evidence, while candidate overlays are emitted only
+for direct display corrections such as `author`, `language`, or `cts_work_urn`.
+Clients may show those candidates for review, but should not treat them as
+accepted catalog changes until the overlay review/sync path accepts them.
+When `--dcs-chapter-info` is provided, the same command also emits
+`candidate_work_map_nodes` for complete DCS chapter rows that match current
+Sanskrit DCS catalog works. These nodes are review candidates, not applied
+`work_map_nodes`; the curated work-map sync remains the applying boundary.
+
 `reader authors --sort prominence` ranks by generated prominence score, then
 prominence tier, then catalog evidence (`work_count`, `word_count`) before
 falling back to catalog order. This prevents score ties from turning into an

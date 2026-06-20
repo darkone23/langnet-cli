@@ -15,6 +15,10 @@ import {
 	readerIndexSummaryLabel,
 	readerLanguageLabel,
 	readerLoadingStatusLabel,
+	readerWordContextEvidenceItemLabel,
+	readerWordContextItemSourceLabel,
+	readerWordContextMorphologyItemLabel,
+	readerWordContextStatusLabel,
 	readerPopularityLabel,
 	readerSegmentDisplayText,
 	readerSegmentTransliterationText,
@@ -51,6 +55,38 @@ assert.equal(readerLanguageLabel('lat'), 'Latin');
 assert.equal(readerLoadingStatusLabel('Searching texts', 0), 'Searching texts');
 assert.equal(readerLoadingStatusLabel('Searching texts', 4), 'Searching texts... 4s');
 assert.equal(readerLoadingStatusLabel('Searching texts', 65), 'Searching texts... 1m 5s');
+assert.equal(readerWordContextStatusLabel('Lexicon', 'available', 3), 'Lexicon: 3 rows');
+assert.equal(readerWordContextStatusLabel('Morphology', 'no_hits', 0), 'Morphology: no rows');
+assert.equal(readerWordContextStatusLabel('Lexicon', 'error', 0), 'Lexicon: error');
+assert.equal(
+	readerWordContextEvidenceItemLabel({
+		lemma: 'corpus#noun',
+		gloss: 'body'
+	}),
+	'corpus#noun — body'
+);
+assert.equal(
+	readerWordContextEvidenceItemLabel({
+		lemma: 'corpus#noun',
+		gloss: ''
+	}),
+	'corpus#noun'
+);
+assert.equal(
+	readerWordContextMorphologyItemLabel({
+		form: 'corpore',
+		lemma: 'corpus',
+		analysis: 'noun; declension 3; ablative; singular'
+	}),
+	'corpore → corpus · noun; declension 3; ablative; singular'
+);
+assert.equal(
+	readerWordContextItemSourceLabel({
+		source_label: 'Lewis 1890',
+		source_tool: 'lewis_1890'
+	}),
+	'Lewis 1890'
+);
 
 const structurePayload: ReaderStructureResponse = {
 	schema_version: 'langnet.reader.v1',

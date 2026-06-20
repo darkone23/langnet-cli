@@ -218,7 +218,7 @@ Curated data and planning:
 
 - `data/curated/reader_library_watchlist/high_value_targets.yaml`
 - `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md`
-- `docs/plans/active/infra/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md`
+- `docs/archive/2026-06-reader-expansion/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md`
 - `data/reference/ogl_import_audit/pl_pg_acquisition_next_steps.tsv`
 
 Previously completed PL122 artifacts:
@@ -323,7 +323,7 @@ Priority 5:
 ## Safe Handoff Prompt
 
 ```text
-Work from docs/plans/active/infra/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md and docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md.
+Work from docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md. Use docs/archive/2026-06-reader-expansion/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md only as the dated 2026-06-07 verification record.
 
 Current verified state:
 - /library server-renders source-index rows and YAML-backed acquisition watchlist entries.

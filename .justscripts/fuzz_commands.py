@@ -11,7 +11,7 @@ console = Console()
 
 @click.group()
 def fuzz():
-    """Fuzz backend tool outputs and/or unified queries."""
+    """Fuzz backend parser outputs and legacy query diagnostics."""
     pass
 
 
@@ -33,7 +33,7 @@ def list_targets():
     "--mode",
     type=click.Choice(["tool", "query", "compare"]),
     default="tool",
-    help="tool: /api/tool only; query: /api/q only; compare: both",
+    help="tool: maintained parser CLI; query/compare: legacy diagnostic placeholders",
 )
 @click.option(
     "--save",

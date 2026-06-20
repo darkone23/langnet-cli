@@ -22,8 +22,9 @@ LangNet has a working CLI-first word-level evidence engine:
   browsing, paradigms, MOTD, and translation-cache inspection.
 
 The project remains in stabilization. The next work is learner-quality
-refinement, source structuring, and reader/web contract discipline, not broad
-semantic inference or opaque generated answers.
+refinement, reader provenance quality, source structuring, acquisition QA, and
+reader/web contract discipline, not broad semantic inference or opaque generated
+answers.
 
 ## Milestone 0: Stabilization Baseline
 
@@ -38,12 +39,14 @@ Current state:
   machine-readable readiness, catalog, index, and cache-maintenance surfaces.
 - SvelteKit web routes adapt CLI/data contracts rather than defining a separate
   semantic runtime.
+- `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md` is the reader
+  coordination layer; dated status handoffs live in `docs/archive/`.
 
 Remaining:
 
 - keep `just lint-all` and `just test-fast` passing before larger changes land;
 - keep active docs aligned with implemented commands and translation modes;
-- keep completed plans out of `docs/plans/active/`;
+- keep completed plans and dated handoffs out of `docs/plans/active/`;
 - avoid new roadmap/status documents unless an older one is retired or clearly
   linked as historical.
 
@@ -94,6 +97,8 @@ Implemented:
   ranking, and translation-cache helpers;
 - compact learner glosses over source-backed or cache-backed entries while
   preserving full evidence below;
+- CDSL plain-text entry grammar diagnostics for source references, cross
+  references, grammar markers, and first definition text;
 - JSON metadata suitable for downstream renderers.
 
 Remaining:
@@ -107,7 +112,7 @@ Remaining:
 ## Milestone 4: Reader And Web Adapter
 
 **Goal:** keep web behavior thin, inspectable, and aligned with CLI/data
-contracts.
+contracts while making reader provenance visible enough for real use.
 
 Implemented:
 
@@ -115,6 +120,12 @@ Implemented:
 - routes for `/api/search`, `/api/reader`, `/api/word-index`,
   `/api/paradigm`, `/api/motd`, and `/api/translation-cache`;
 - reader/web contract documentation for current API modes.
+- `/library` source-index and acquisition-watchlist browsing over existing
+  catalog/source-index data.
+- selected-word reader context as a CLI/API/UI payload with deterministic
+  lexical evidence, morphology evidence, reader hits, caveats, and route tests.
+- checked-in source-index snapshots and reader quality-audit rows for corpus
+  expansion.
 
 Remaining:
 
@@ -123,6 +134,10 @@ Remaining:
 - treat `encounter --output json`, reader catalog/search outputs, word-index
   JSON, and paradigm JSON as the backend contracts;
 - keep live translation population explicit and out of ordinary page loads.
+- keep selected-word reader context grounded in deterministic lexical,
+  morphology, reader-hit, and caveat fields before any generated sidebar text.
+- keep imported works visually and structurally distinct from wanted, staged,
+  planned, or deferred acquisition targets.
 
 ## Milestone 5: Translation Cache Operations
 

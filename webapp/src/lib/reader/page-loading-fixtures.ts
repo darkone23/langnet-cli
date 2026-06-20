@@ -210,3 +210,11 @@ export const readerContentsListSource = readFileSync(
 	new URL('./ReaderContentsList.svelte', import.meta.url),
 	'utf8'
 );
+export const libraryWorkPortalSource = readFileSync(
+	new URL('../../routes/library/work/[work]/+page.svelte', import.meta.url),
+	'utf8'
+);
+export const libraryAuthorPortalSource = readFileSync(
+	new URL('../../routes/library/author/[author]/+page.svelte', import.meta.url),
+	'utf8'
+);

@@ -2738,13 +2738,9 @@ def _emit_reader_item(  # noqa: C901, PLR0912, PLR0915
         canonical = item.get("canonical_text_id")
         witnesses = item.get("source_witness_collections")
         if canonical or witnesses:
-            click.echo(
-                f"  canonical={canonical or ''}  witnesses={witnesses or 'none'}"
-            )
+            click.echo(f"  canonical={canonical or ''}  witnesses={witnesses or 'none'}")
     elif mode == "source-index-export":
-        click.echo(
-            f"{item.get('kind')}  rows={item.get('row_count')}  {item.get('path')}"
-        )
+        click.echo(f"{item.get('kind')}  rows={item.get('row_count')}  {item.get('path')}")
     elif mode == "ogl-audit":
         click.echo(
             f"{item.get('collection_id')}  candidates={item.get('candidate_count')}  "
@@ -4073,7 +4069,9 @@ def reader_search(  # noqa: PLR0913
 @click.option("--index", "index_path", type=click.Path(), default=None, help="Search index path.")
 @click.option("--language", required=True, help="Language code, e.g. grc, lat, san.")
 @click.option("--work", "work_ref", default=None, help="Optional current work ref.")
-@click.option("--segment", "segment_ref", default=None, help="Optional current citation/segment ref.")
+@click.option(
+    "--segment", "segment_ref", default=None, help="Optional current citation/segment ref."
+)
 @click.option(
     "--reader-search-limit",
     default=8,
@@ -4117,6 +4115,8 @@ def reader_word_context(  # noqa: PLR0913
             segment_ref=segment_ref,
             search_limit=reader_search_limit,
             search_context=reader_search_context,
+            lexical_evidence_provider=_reader_word_context_lexical_evidence_provider(),
+            morphology_provider=_reader_word_context_morphology_provider(),
         ),
         output,
     )
@@ -4910,7 +4910,9 @@ def reader_sources(
 
 
 @reader_cli.command("library-watchlist")
-@click.option("--query", "-q", default=None, help="Filter targets by name, alias, period, plan, or note.")
+@click.option(
+    "--query", "-q", default=None, help="Filter targets by name, alias, period, plan, or note."
+)
 @click.option("--language", default=None, help="Filter targets by language code.")
 @click.option("--status", default=None, help="Filter targets by acquisition status.")
 @click.option("--limit", default=100, show_default=True, type=click.IntRange(1, 5000))
@@ -4959,7 +4961,9 @@ def reader_library_watchlist(
 @reader_cli.command("source-index")
 @click.option("--collection", "collection_id", default=None, help="Optional collection filter.")
 @click.option("--language", default=None, help="Optional language filter, e.g. grc, lat, san.")
-@click.option("--source-id", default=None, help="Optional source id, CTS URN, or work id substring.")
+@click.option(
+    "--source-id", default=None, help="Optional source id, CTS URN, or work id substring."
+)
 @click.option("--work-id", default=None, help="Optional exact work id filter.")
 @click.option("--query", default=None, help="Optional title/author/source/path substring filter.")
 @click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 20000))
@@ -5067,8 +5071,7 @@ def reader_stage_pl_wikisource(
     "summary_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     default=Path(
-        "data/build/reader_import_staging/patrologia_latina/pl122/"
-        "stage-pl-wikisource-summary.json"
+        "data/build/reader_import_staging/patrologia_latina/pl122/stage-pl-wikisource-summary.json"
     ),
     show_default=True,
     help="Summary JSON produced by reader stage-pl-wikisource.",
@@ -5224,8 +5227,7 @@ def reader_stage_pg_pilot(
     "summary_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     default=Path(
-        "data/build/reader_import_staging/patrologia_graeca/pilot/"
-        "stage-pg-pilot-summary.json"
+        "data/build/reader_import_staging/patrologia_graeca/pilot/stage-pg-pilot-summary.json"
     ),
     show_default=True,
     help="Summary JSON produced by reader stage-pg-pilot.",
@@ -5269,6 +5271,62 @@ def reader_import_pg_pilot(
             summary_path=summary_path,
             data_root=data_root,
             collection_id=collection_id,
+        )
+    )
+    _emit_reader_payload(payload, output)
+
+
+@reader_cli.command("stage-bruno-esoteric")
+@click.option(
+    "--manifest",
+    "manifest_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path("data/sources_external/bruno/esotericarchives/manifest.yaml"),
+    show_default=True,
+    help="Bruno Esoteric Archives source manifest.",
+)
+@click.option(
+    "--raw-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Directory containing raw Esoteric Archives markdown.",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Directory for segmented staging JSONL output.",
+)
+@click.option(
+    "--title",
+    "titles",
+    multiple=True,
+    help="Specific work title to stage. Repeatable. Defaults to candidate/staged rows.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_stage_bruno_esoteric(
+    manifest_path: Path,
+    raw_dir: Path | None,
+    output_dir: Path | None,
+    titles: tuple[str, ...],
+    output: str,
+) -> None:
+    """Stage Bruno Esoteric Archives markdown pages as segmented JSONL."""
+    from langnet.reader.source_acquisition import (  # noqa: PLC0415
+        BrunoEsotericStageConfig,
+        stage_bruno_esoteric,
+    )
+
+    payload = stage_bruno_esoteric(
+        BrunoEsotericStageConfig(
+            manifest_path=manifest_path,
+            raw_dir=raw_dir,
+            output_dir=output_dir,
+            titles=titles,
         )
     )
     _emit_reader_payload(payload, output)
@@ -5353,6 +5411,119 @@ def reader_import_staged_jsonl(
         )
     )
     _emit_reader_payload(payload, output)
+
+
+@reader_cli.group("export")
+def reader_export() -> None:
+    """Export canonical reader catalog bundles."""
+
+
+@reader_export.command("work")
+@click.argument("work_ref")
+@click.option(
+    "--output-path",
+    type=click.Path(path_type=Path, file_okay=False, dir_okay=True),
+    required=True,
+    help="Directory for the canonical work bundle.",
+)
+@click.option(
+    "--replace/--no-replace",
+    default=True,
+    show_default=True,
+    help="Replace an existing output directory.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_export_work(
+    ctx: click.Context,
+    work_ref: str,
+    output_path: Path,
+    replace: bool,
+    output: str,
+) -> None:
+    """Export one reader work as a canonical LangNet bundle."""
+    from langnet.reader.catalog_export import export_work_bundle  # noqa: PLC0415
+
+    catalog_path = _reader_service_from_context(ctx).catalog_path
+    _emit_reader_payload(
+        export_work_bundle(catalog_path, work_ref, output_path, replace=replace),
+        output,
+    )
+
+
+@reader_export.command("bundle")
+@click.option(
+    "--output-path",
+    type=click.Path(path_type=Path, file_okay=False, dir_okay=True),
+    required=True,
+    help="Directory for the canonical catalog bundle.",
+)
+@click.option("--collection", "collection_id", help="Optional collection id filter.")
+@click.option("--language", help="Optional language filter.")
+@click.option(
+    "--replace/--no-replace",
+    default=True,
+    show_default=True,
+    help="Replace an existing output directory.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+@click.pass_context
+def reader_export_bundle(
+    ctx: click.Context,
+    output_path: Path,
+    collection_id: str | None,
+    language: str | None,
+    replace: bool,
+    output: str,
+) -> None:
+    """Export reader catalog works as a canonical LangNet bundle."""
+    from langnet.reader.catalog_export import export_catalog_bundle  # noqa: PLC0415
+
+    catalog_path = _reader_service_from_context(ctx).catalog_path
+    _emit_reader_payload(
+        export_catalog_bundle(
+            catalog_path,
+            output_path,
+            collection_id=collection_id,
+            language=language,
+            replace=replace,
+        ),
+        output,
+    )
+
+
+@reader_export.command("validate")
+@click.argument(
+    "export_path",
+    type=click.Path(path_type=Path, file_okay=False, dir_okay=True),
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_export_validate(export_path: Path, output: str) -> None:
+    """Validate a canonical reader catalog export bundle."""
+    from langnet.reader.catalog_export import validate_catalog_export  # noqa: PLC0415
+
+    payload = validate_catalog_export(export_path)
+    _emit_reader_payload(payload, output)
+    if not payload["ok"]:
+        raise click.exceptions.Exit(1)
 
 
 @reader_cli.command("source-index-export")
@@ -5446,6 +5617,71 @@ def reader_ogl_audit(
         },
         collections=set(collections) if collections else None,
         sample_limit=sample_limit,
+    )
+    _emit_reader_payload(payload, output)
+
+
+@reader_cli.command("ogl-view-comparison")
+@click.option(
+    "--collection",
+    "collection_id",
+    default="opengreekandlatin_patrologia",
+    show_default=True,
+    help="OGL collection id to compare.",
+)
+@click.option(
+    "--root",
+    type=click.Path(path_type=Path),
+    default=Path.home() / "opengreekandlatin" / "patrologia_latina-dev",
+    show_default=True,
+    help="OGL source checkout root.",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(path_type=Path, file_okay=False, dir_okay=True),
+    default=Path("data/reference/ogl_import_audit"),
+    show_default=True,
+    help="Directory for JSON and TSV comparison artifacts.",
+)
+@click.option(
+    "--limit-per-view",
+    default=10,
+    show_default=True,
+    type=click.IntRange(0, 100),
+    help="Maximum comparisons to write for each alternate source view.",
+)
+@click.option(
+    "--alternate-view",
+    "alternate_views",
+    multiple=True,
+    default=("alternate_view_corrected", "alternate_view_split"),
+    show_default=True,
+    help="Alternate source view to sample. May be repeated.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["pretty", "json"]),
+    default="pretty",
+    show_default=True,
+    help="Output format.",
+)
+def reader_ogl_view_comparison(
+    collection_id: str,
+    root: Path,
+    output_dir: Path,
+    limit_per_view: int,
+    alternate_views: tuple[str, ...],
+    output: str,
+) -> None:
+    """Write bounded OGL selected-vs-alternate source-view comparison artifacts."""
+    from langnet.reader.ogl_audit import write_ogl_view_comparison_artifact  # noqa: PLC0415
+
+    payload = write_ogl_view_comparison_artifact(
+        root=root.expanduser(),
+        collection_id=collection_id,
+        output_dir=output_dir.expanduser(),
+        limit_per_view=limit_per_view,
+        alternate_views=alternate_views,
     )
     _emit_reader_payload(payload, output)
 
@@ -8956,6 +9192,173 @@ def _encounter_bucket_learner_gloss(
     return _encounter_compact_gloss(_encounter_bucket_gloss(bucket), max_chars=max_chars)
 
 
+def _reader_word_context_lexical_evidence_from_reduction(
+    reduction,
+    *,
+    max_items: int = 4,
+    max_gloss_chars: int = ENCOUNTER_LEARNER_GLOSS_MAX_CHARS,
+) -> dict[str, object]:
+    items: list[dict[str, object]] = []
+    for bucket in getattr(reduction, "buckets", []) or []:
+        witnesses = list(getattr(bucket, "witnesses", []) or [])
+        witness = witnesses[0] if witnesses else None
+        evidence = getattr(witness, "evidence", {}) if witness is not None else {}
+        evidence_map = evidence if isinstance(evidence, Mapping) else {}
+        source_entry = evidence_map.get("source_entry")
+        source_entry_map = source_entry if isinstance(source_entry, Mapping) else {}
+        source_tool = _encounter_witness_source_tool(witness) if witness is not None else ""
+        source_label = evidence_map.get("source_label") or source_entry_map.get("source_label")
+        source_ref = evidence_map.get("source_ref") or source_entry_map.get("source_ref")
+        lemmas = _encounter_bucket_lemma_values(bucket)
+        lemma = lemmas[0] if lemmas else str(getattr(reduction, "query", "") or "")
+        items.append(
+            {
+                "lemma": lemma,
+                "source_tool": source_tool,
+                "source_label": str(source_label or source_tool),
+                "gloss": _encounter_bucket_learner_gloss(bucket, max_chars=max_gloss_chars),
+                "evidence_gloss": _encounter_bucket_gloss(bucket),
+                "source_ref": str(source_ref or ""),
+                "bucket_id": str(getattr(bucket, "bucket_id", "")),
+                "witness_id": str(getattr(witness, "wsu_id", "") if witness is not None else ""),
+                "confidence_label": str(getattr(bucket, "confidence_label", "")),
+            }
+        )
+        if len(items) >= max_items:
+            break
+
+    if not items:
+        return {
+            "status": "no_hits",
+            "items": [],
+            "note": "No source-backed lexical evidence found.",
+        }
+    return {
+        "status": "available",
+        "items": items,
+        "note": "Encounter-derived lexical evidence.",
+    }
+
+
+def _reader_word_context_lexical_evidence_provider(
+    *,
+    max_terms: int = 4,
+) -> Callable[..., dict[str, object]]:
+    def provider(
+        *,
+        query: str,
+        language: str,
+        candidates: list[str],
+    ) -> dict[str, object]:
+        terms = _dedupe_preserve_order([query, *[str(candidate) for candidate in candidates]])[
+            :max_terms
+        ]
+        last_error = ""
+        for term in terms:
+            try:
+                result = _execute_lookup_plan(
+                    language=language,
+                    text=term,
+                    tool_filter="all",
+                    normalize=True,
+                    diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                    diogenes_parse_endpoint=None,
+                    heritage_base="http://localhost:48080",
+                    db_path=None,
+                    no_cache=False,
+                    include_cltk=False,
+                    cache_policy="read-only",
+                )
+                claims = _claims_as_mappings(result)
+                reduction = reduce_claims(query=term, language=language, claims=claims)
+                preferred = _encounter_preferred_lemmas_for_sorting(reduction, [], [term])
+                reduction.buckets = sorted(
+                    reduction.buckets,
+                    key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred),
+                )
+                payload = _reader_word_context_lexical_evidence_from_reduction(reduction)
+            except Exception as exc:  # noqa: BLE001
+                last_error = f"{type(exc).__name__}: {exc}"
+                continue
+            if payload.get("items"):
+                return payload
+
+        if last_error:
+            return {
+                "status": "error",
+                "items": [],
+                "note": f"Lexical evidence lookup failed: {last_error}",
+            }
+        return {
+            "status": "no_hits",
+            "items": [],
+            "note": "No source-backed lexical evidence found.",
+        }
+
+    return provider
+
+
+def _reader_word_context_morphology_provider(
+    *,
+    max_terms: int = 4,
+) -> Callable[..., dict[str, object]]:
+    def provider(
+        *,
+        query: str,
+        language: str,
+        candidates: list[str],
+    ) -> dict[str, object]:
+        terms = _dedupe_preserve_order([query, *[str(candidate) for candidate in candidates]])[
+            :max_terms
+        ]
+        last_error = ""
+        for term in terms:
+            try:
+                result = _execute_lookup_plan(
+                    language=language,
+                    text=term,
+                    tool_filter="all",
+                    normalize=True,
+                    diogenes_endpoint="http://localhost:8888/Diogenes.cgi",
+                    diogenes_parse_endpoint=None,
+                    heritage_base="http://localhost:48080",
+                    db_path=None,
+                    no_cache=False,
+                    include_cltk=False,
+                    cache_policy="read-only",
+                )
+                claims = _claims_as_mappings(result)
+                rows = _encounter_morphology_rows(
+                    claims,
+                    language=language,
+                    original=term,
+                    max_rows=4,
+                )
+            except Exception as exc:  # noqa: BLE001
+                last_error = f"{type(exc).__name__}: {exc}"
+                continue
+            if rows:
+                return {
+                    "status": "available",
+                    "items": rows,
+                    "note": "Encounter-derived morphology evidence.",
+                }
+
+        if last_error:
+            return {
+                "status": "error",
+                "items": [],
+                "note": f"Morphology lookup failed: {last_error}",
+            }
+        return {
+            "status": "no_hits",
+            "items": [],
+            "note": "No source-backed morphology evidence found.",
+        }
+
+    return provider
+
+
 def _encounter_witness_source_tool(witness) -> str:
     source_tool = getattr(witness, "source_tool", "")
     if isinstance(source_tool, str) and source_tool:
@@ -9899,15 +10302,21 @@ def _encounter_morphology_fallback_terms(
         return []
 
     morphology_rows = _encounter_morphology_rows(claims, max_rows=8)
-    if any(_is_sanskrit_compound_component(row["analysis"]) for row in morphology_rows):
-        return []
-
     candidates = _encounter_sanskrit_morphology_fallback_candidates(
         morphology_rows,
         original=original,
     )
     if not candidates:
         return []
+    if any(_is_sanskrit_compound_component(row["analysis"]) for row in morphology_rows):
+        solution_sizes: dict[int | None, int] = {}
+        for solution_number, _index, _term in candidates:
+            solution_sizes[solution_number] = solution_sizes.get(solution_number, 0) + 1
+        candidates = [
+            candidate for candidate in candidates if solution_sizes.get(candidate[0]) == 1
+        ]
+        if not candidates:
+            return []
     selected_candidates = _encounter_preferred_sanskrit_morphology_candidates(candidates)
     return _encounter_candidate_terms(selected_candidates, max_terms=max_terms)
 
@@ -9998,7 +10407,10 @@ def _encounter_preferred_sanskrit_morphology_candidates(
         for solution_number, size in solution_sizes.items()
         if size == smallest_solution_size
     }
-    return [candidate for candidate in candidates if candidate[0] in preferred_solutions]
+    return sorted(
+        (candidate for candidate in candidates if candidate[0] in preferred_solutions),
+        key=lambda candidate: (len(candidate[2]), candidate[1]),
+    )
 
 
 def _is_sanskrit_compound_component(analysis: str) -> bool:
@@ -12594,6 +13006,26 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     help="Show compact typed source notes from dictionary source segments.",
 )
 @click.option(
+    "--debug",
+    is_flag=True,
+    help="Show candidate, source, and ranking diagnostic sections in pretty output.",
+)
+@click.option(
+    "--show-candidates",
+    is_flag=True,
+    help="Show normalized lexeme candidates in pretty output for debugging.",
+)
+@click.option(
+    "--show-ranking",
+    is_flag=True,
+    help="Show bucket ranking factors in pretty output for debugging.",
+)
+@click.option(
+    "--show-source",
+    is_flag=True,
+    help="Show source-layer text and source-entry identity in pretty output.",
+)
+@click.option(
     "--include-paradigm-resolution/--no-include-paradigm-resolution",
     default=False,
     show_default=True,
@@ -12674,6 +13106,10 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     translation_model: str,
     foster_labels: bool,
     source_details: bool,
+    debug: bool,
+    show_candidates: bool,
+    show_ranking: bool,
+    show_source: bool,
     include_paradigm_resolution: bool,
     include_learning: bool,
     include_reader_search: bool,
@@ -12688,6 +13124,11 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     Show a compact, source-backed learner encounter for one word.
     """
     cache_policy = "off" if no_cache else cache_policy
+    if debug:
+        show_candidates = True
+        show_ranking = True
+        show_source = True
+        source_details = True
     translation_cache: _PathTranslationCache | None = None
     try:
         result = _execute_lookup_plan(
@@ -13004,6 +13445,10 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 "include_cltk": include_cltk,
                 "translation_mode": resolved_translation_mode,
                 "translation_cache_writes": populate_translations,
+                "debug": debug,
+                "show_candidates": show_candidates,
+                "show_ranking": show_ranking,
+                "show_source": show_source,
                 "include_paradigm_resolution": include_paradigm_resolution,
                 "include_learning": include_learning,
             }
@@ -13114,6 +13559,10 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             click.echo("Forms: " + ", ".join(header_view.forms[:4]))
         if header_view.source_keys and header_view.source_keys != header_view.forms:
             click.echo("Source keys: " + ", ".join(header_view.source_keys[:4]))
+        if show_candidates and reduction.lexeme_anchors:
+            click.echo("\nCandidates")
+            for lexeme_anchor in reduction.lexeme_anchors[:12]:
+                click.echo(f"- {lexeme_anchor.removeprefix('lex:')}")
         if reduction.warnings:
             for warning in reduction.warnings:
                 if (
@@ -13172,6 +13621,24 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 click.echo(f"   source language: {', '.join(meaning_view.source_langs)}")
         if len(reduction.buckets) > max_buckets:
             click.echo(f"\n({len(reduction.buckets) - max_buckets} more bucket(s) hidden)")
+        if show_source:
+            _encounter_echo_source_section(reduction.buckets[:max_buckets])
+        if show_ranking:
+            click.echo("\nRanking")
+            for idx, bucket in enumerate(reduction.buckets[:max_buckets], start=1):
+                explanation = bucket_ranking_explanation(
+                    bucket,
+                    preferred_lemmas,
+                    bucket_gloss=_encounter_bucket_gloss,
+                )
+                click.echo(f"- {idx}. {explanation.display_gloss}")
+                click.echo(f"  preferred lemma rank: {explanation.preferred_lemma_rank}")
+                click.echo(f"  effective lemma rank: {explanation.effective_preferred_lemma_rank}")
+                click.echo(f"  learner quality order: {explanation.learner_quality_order}")
+                click.echo(f"  source order: {explanation.source_order}")
+                click.echo(f"  source tools: {', '.join(explanation.source_tools) or '-'}")
+                if explanation.reasons:
+                    click.echo(f"  reasons: {'; '.join(explanation.reasons)}")
     except Exception as exc:
         if output == "json":
             resolved_error_mode = _resolve_translation_mode(
@@ -13196,6 +13663,30 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             )
             raise click.exceptions.Exit(1) from exc
         raise
+
+
+def _encounter_echo_source_section(buckets: Sequence[object]) -> None:
+    entries: list[dict[str, object]] = []
+    for bucket in buckets:
+        for witness in getattr(bucket, "witnesses", []) or []:
+            summary = entry_summary_payload(witness)
+            if summary.get("source_layer_text") or summary.get("source_ref"):
+                entries.append(summary)
+    if not entries:
+        return
+
+    click.echo("\nSource")
+    for idx, entry in enumerate(entries, start=1):
+        source_tool = str(entry.get("source_tool") or "unknown")
+        source_ref = str(entry.get("source_ref") or "-")
+        headword = str(entry.get("headword") or entry.get("display_form") or "-")
+        entry_id = str(entry.get("entry_id") or "-")
+        raw_blob_ref = str(entry.get("raw_blob_ref") or "-")
+        source_text = shorten_text(str(entry.get("source_layer_text") or ""), 240)
+        click.echo(f"- {idx}. {source_tool} {source_ref}")
+        click.echo(f"  headword: {headword}; entry: {entry_id}; raw: {raw_blob_ref}")
+        if source_text:
+            click.echo(f"  source: {source_text}")
 
 
 def _encounter_briefing_options(fn):
@@ -13817,6 +14308,61 @@ def reader_eval(  # noqa: PLR0913, PLR0915
                     if len(fallback_reduction.buckets) > original_bucket_count:
                         claims = fallback_claims
                         reduction = fallback_reduction
+            norm_cfg = NormalizeConfig(
+                diogenes_endpoint=diogenes_endpoint,
+                heritage_base=heritage_base,
+                db_path=db_path,
+                no_cache=no_cache,
+                output="pretty",
+                cache_policy="read-write",
+            )
+            normalization_fallback_terms, normalization_fallback_warning = (
+                _encounter_sanskrit_normalization_fallback_terms(
+                    language=language,
+                    text=surface,
+                    tool_filter=tool_filter,
+                    normalize=normalize,
+                    norm_config=norm_cfg,
+                    no_cache=no_cache,
+                    reduction=reduction,
+                )
+            )
+            if normalization_fallback_terms:
+                original_bucket_count = len(reduction.buckets)
+                fallback_claims = list(claims)
+                for fallback_term in normalization_fallback_terms:
+                    fallback_result = _execute_lookup_plan(
+                        language=language,
+                        text=fallback_term,
+                        tool_filter=tool_filter,
+                        normalize=normalize,
+                        diogenes_endpoint=diogenes_endpoint,
+                        diogenes_parse_endpoint=diogenes_parse_endpoint,
+                        heritage_base=heritage_base,
+                        db_path=db_path,
+                        no_cache=True,
+                        include_cltk=include_cltk,
+                    )
+                    fallback_claims.extend(
+                        _reader_eval_translation_claims(
+                            claims=_claims_as_mappings(fallback_result),
+                            language=language,
+                            translation_mode=translation_mode,
+                            translation_cache_db=translation_cache_db,
+                            translation_model=translation_model,
+                        )
+                    )
+                if len(fallback_claims) > len(claims):
+                    fallback_reduction = reduce_claims(
+                        query=surface,
+                        language=language,
+                        claims=fallback_claims,
+                    )
+                    if len(fallback_reduction.buckets) > original_bucket_count:
+                        claims = fallback_claims
+                        reduction = fallback_reduction
+                        if normalization_fallback_warning:
+                            reduction.warnings.append(normalization_fallback_warning)
             morphology_rows = _encounter_morphology_rows(
                 morphology_claims,
                 language=language,
@@ -13827,16 +14373,38 @@ def reader_eval(  # noqa: PLR0913, PLR0915
             preferred_lemmas = _encounter_preferred_lemmas_for_sorting(
                 reduction,
                 morphology_rows,
-                fallback_terms,
+                [*normalization_fallback_terms, *fallback_terms],
             )
             reduction.buckets = sorted(
                 reduction.buckets,
                 key=lambda bucket: _encounter_bucket_sort_key(bucket, preferred_lemmas),
             )
+            component_links = _encounter_component_links(
+                language=language,
+                original=surface,
+                tool_filter=tool_filter,
+                normalize=normalize,
+                diogenes_endpoint=diogenes_endpoint,
+                diogenes_parse_endpoint=diogenes_parse_endpoint,
+                heritage_base=heritage_base,
+                db_path=db_path,
+                include_cltk=include_cltk,
+                morphology_rows=morphology_rows,
+                reduction=reduction,
+                max_gloss_chars=ENCOUNTER_LEARNER_GLOSS_MAX_CHARS,
+                translation_cache=None,
+                populate_translations=False,
+                translation_model=translation_model,
+                translation_callback=None,
+                translation_diagnostics=None,
+            )
+            reduction_payload = asdict(reduction)
+            if component_links:
+                reduction_payload["components"] = component_links
             results.append(
                 evaluate_reader_token(
                     token,
-                    asdict(reduction),
+                    reduction_payload,
                     morphology_rows=morphology_rows,
                 )
             )

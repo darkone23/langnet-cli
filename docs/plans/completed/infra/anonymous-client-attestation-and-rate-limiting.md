@@ -1,10 +1,12 @@
 # Anonymous Client Attestation And Rate Limiting
 
-**Status:** active design plan
+**Status:** completed observe-mode implementation plan
 
 **Feature area:** infra
 
 **Primary handoffs:** @architect, @coder, @auditor
+
+**Completed:** 2026-06-20
 
 ## Goal
 
@@ -901,3 +903,47 @@ anonymous educational use. The safest path is:
 
 This preserves open access while creating enough structure to detect and slow
 dictionary traversal.
+
+## Closeout - 2026-06-20
+
+The implementation exists and is no longer an active planning blocker.
+
+Completed surfaces:
+
+- `webapp/src/lib/server/request-identity.ts` extracts Cloudflare-aware client
+  identity and preserves `CF-Ray`, country, user-agent, and referer metadata.
+- `webapp/src/lib/server/anonymous-session.ts` issues and validates anonymous
+  `ln_anon` sessions.
+- `webapp/src/lib/server/client-attestation.ts` signs and verifies scoped
+  attestation tokens, with legacy query-bound payload compatibility.
+- `webapp/src/routes/api/auth/request-token/+server.ts` issues same-origin API
+  attestation tokens.
+- `webapp/src/lib/msgpack.ts` attaches client attestation headers to
+  same-origin API calls and falls back to unattested requests if token
+  acquisition fails.
+- `webapp/src/lib/server/client-classification.ts`,
+  `webapp/src/lib/server/request-cost.ts`, and
+  `webapp/src/lib/server/rate-limit.ts` classify clients, score request cost,
+  and compute observe-mode rate-limit decisions.
+- `webapp/src/hooks.server.ts` stores identity/session/attestation/class/cost
+  and rate-limit metadata in `event.locals`, appends response headers, and logs
+  enriched request metadata.
+- `webapp/src/lib/server/rate-limit-rollup*.ts` stores traffic observations for
+  later tuning.
+- `webapp/src/lib/server/crawler-route-policy.ts` blocks crawler-disallowed API
+  access while preserving normal anonymous browsing.
+- Parent process-compose log rotation exists through
+  `../process-compose.logrotate` and `logrotate_process_compose`.
+
+Current mode:
+
+- The system remains observe-first. It computes `wouldLimit` and emits/logs
+  metadata, but route-level 429 enforcement is not enabled for normal API
+  traffic.
+- The implemented token model is route-scope based. If production traffic shows
+  the need for exact method/path/query binding, that should be added as part of
+  enforcement tuning rather than reopening this observe-mode plan.
+
+Future work moved to:
+
+- `docs/plans/todo/infra/public-traffic-enforcement-and-cloudflare-tuning.md`

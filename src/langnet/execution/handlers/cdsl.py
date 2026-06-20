@@ -70,6 +70,7 @@ _CDSL_SOURCE_ABBREVIATIONS: frozenset[str] = frozenset(
     {
         "AV",
         "Bhag",
+        "BhP",
         "Bhāṣāp",
         "Bhartṛ",
         "Bg",
@@ -443,6 +444,16 @@ def _source_segments(
         segment.update(_segment_structure(raw_text))
         segments.append(segment)
     return segments
+
+
+def cdsl_source_segments(
+    text: str,
+    *,
+    source_slp1: str = "",
+    display_iast: str = "",
+) -> list[dict[str, object]]:
+    """Return typed CDSL source segments for diagnostics and display metadata."""
+    return _source_segments(text, source_slp1=source_slp1, display_iast=display_iast)
 
 
 def _source_notes_from_segments(segments: Sequence[Mapping[str, object]]) -> dict[str, object]:

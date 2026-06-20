@@ -11,6 +11,10 @@ from langnet.normalizer.utils import strip_accents
 
 RANKING_MISSING = 10**12
 BARE_CROSS_REFERENCE_MAX_CHARS = 240
+SHORT_LEARNER_GLOSS_MAX_CHARS = 160
+CITATION_HEAVY_FRAGMENT_MIN_CHARS = 180
+CITATION_HEAVY_FRAGMENT_MIN_MARKERS = 3
+CITATION_HEAVY_FRAGMENT_STRONG_MARKERS = 6
 BucketGlossFn = Callable[[object], str]
 
 
@@ -108,9 +112,23 @@ def preferred_lemmas_from_morphology(
     morphology_rows: Sequence[Mapping[str, str]],
 ) -> list[str]:
     lemmas: list[str] = []
+    oblique_nominal_forms = {
+        row.get("form", "").strip().casefold()
+        for row in morphology_rows
+        if row.get("form", "").strip()
+        and row.get("lemma", "").strip()
+        and row.get("form", "").strip().casefold() != row.get("lemma", "").strip().casefold()
+        and _is_oblique_nominal_analysis(row.get("analysis", ""))
+    }
     ordered_rows = sorted(
         enumerate(morphology_rows),
-        key=lambda item: morphology_lemma_preference_key(item[1], item[0]),
+        key=lambda item: morphology_lemma_preference_key(
+            item[1],
+            item[0],
+            demote_exact_finite=(
+                item[1].get("form", "").strip().casefold() in oblique_nominal_forms
+            ),
+        ),
     )
     for _idx, row in ordered_rows:
         lemma = row.get("lemma")
@@ -138,13 +156,20 @@ def preferred_lemmas_for_sorting(
 def morphology_lemma_preference_key(
     row: Mapping[str, str],
     idx: int,
+    *,
+    demote_exact_finite: bool = False,
 ) -> tuple[int, int]:
     analysis = row.get("analysis", "").casefold()
     if "tackon" in analysis:
         return (2, idx)
     form = row.get("form", "").strip().casefold()
     lemma = row.get("lemma", "").strip().casefold()
-    if form and form == lemma and _is_exact_finite_verb_lemma_form(analysis):
+    if (
+        not demote_exact_finite
+        and form
+        and form == lemma
+        and _is_exact_finite_verb_lemma_form(analysis)
+    ):
         return (-1, idx)
     if (
         form
@@ -153,6 +178,27 @@ def morphology_lemma_preference_key(
     ):
         return (1, idx)
     return (0, idx)
+
+
+def _is_oblique_nominal_analysis(analysis: str) -> bool:
+    tokens = set(re.split(r"[^a-z0-9]+", analysis.casefold()))
+    return bool({"noun", "adjective", "adj"} & tokens) and bool(
+        {
+            "accusative",
+            "acc",
+            "genitive",
+            "gen",
+            "dative",
+            "dat",
+            "ablative",
+            "abl",
+            "locative",
+            "loc",
+            "instrumental",
+            "instr",
+        }
+        & tokens
+    )
 
 
 def _is_exact_finite_verb_lemma_form(analysis: str) -> bool:
@@ -351,7 +397,7 @@ def _generic_quality_adjustment(text: str) -> int:
         score += 30
     if _looks_like_bare_cross_reference(text):
         score += 40
-    if len(text) < 160 and any(
+    if len(text) < SHORT_LEARNER_GLOSS_MAX_CHARS and any(
         term in text for term in ("sing of", " to sing", " chant", "celebrate")
     ):
         score -= 250
@@ -370,13 +416,11 @@ def _looks_like_dictionary_header_fragment(text: str) -> bool:
 
 def _looks_like_section_label_only(text: str) -> bool:
     compact = " ".join(text.strip().split()).casefold()
-    return bool(
-        re.fullmatch(r"(?:[ivxlcdm]+|[a-z]|\d+)\.\s*(?:lit\.?|fig\.?|transf\.?)?", compact)
-    )
+    return bool(re.fullmatch(r"(?:[ivxlcdm]+|[a-z]|\d+)\.\s*(?:lit\.?|fig\.?|transf\.?)?", compact))
 
 
 def _looks_like_citation_heavy_example_fragment(text: str) -> bool:
-    if len(text) < 180:
+    if len(text) < CITATION_HEAVY_FRAGMENT_MIN_CHARS:
         return False
     citation_markers = len(
         re.findall(
@@ -385,14 +429,18 @@ def _looks_like_citation_heavy_example_fragment(text: str) -> bool:
             flags=re.IGNORECASE,
         )
     )
-    if citation_markers < 3:
+    if citation_markers < CITATION_HEAVY_FRAGMENT_MIN_MARKERS:
         return False
     definitional_markers = (" to ", " of ", " a ", " an ", " the ", " = ", ";")
-    return not any(marker in text for marker in definitional_markers[:3]) or citation_markers >= 6
+    return (
+        not any(marker in text for marker in definitional_markers[:3])
+        or citation_markers >= CITATION_HEAVY_FRAGMENT_STRONG_MARKERS
+    )
 
 
 def _looks_like_bare_cross_reference(text: str) -> bool:
-    return (
+    compact = " ".join(text.strip().split()).casefold()
+    return bool(re.search(r"\bsee\s+p{1,2}\.", compact)) or (
         "(see " in text
         and len(text) < BARE_CROSS_REFERENCE_MAX_CHARS
         and not any(

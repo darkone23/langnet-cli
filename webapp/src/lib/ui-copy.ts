@@ -6,7 +6,7 @@ const resources = {
 		translation: {
 			app: {
 				title: 'Project Orion Lexicon',
-				description: 'A source-aware reading desk for Sanskrit, Greek, and Latin.',
+				description: 'A word lookup and reader for Sanskrit, Greek, and Latin with visible source support.',
 				name: 'Project Orion',
 				motto: 'Every day is a good day for learning.'
 			},
@@ -21,25 +21,25 @@ const resources = {
 				},
 				home: {
 					metaDescription:
-						'A source-aware reading desk for Latin, Greek, and Sanskrit: word forms, meanings, morphology, and the evidence behind them.',
+						'Look up Latin, Greek, and Sanskrit words; inspect forms, meanings, morphology, source witnesses, and reader texts.',
 					eyebrow: 'Project Orion',
-					title: 'Move from a classical word to accountable evidence.',
+					title: 'Read the word, then check the sources.',
 					intro:
-						'Project Orion is the public reading desk for LangNet: a local evidence engine that connects Latin, Greek, and Sanskrit forms to dictionary witnesses, morphology, source claims, and learner-facing explanations.',
+						'Project Orion connects Latin, Greek, and Sanskrit words to possible headwords, morphology, dictionary witnesses, reader texts, compact glosses, and the caveats behind them.',
 					primaryCta: 'Study a word',
-					secondaryCta: 'Learn form and function',
+					secondaryCta: 'Learn the forms',
 					aboutCta: 'About Orion',
 					principles: [
 						{
-							title: 'Evidence before fluency',
+							title: 'Sources stay visible',
 							body:
-								'Every useful claim should point back to a dictionary, analyzer, citation, or explicit derivation.',
+								'Dictionary entries, analyzer output, cache rows, and reader references remain part of the answer.',
 							tone: 'primary'
 						},
 						{
-							title: 'Clarity before completeness',
+							title: 'Start with the reading task',
 							body:
-								'Beginners get a reading path first; teachers, researchers, and builders can inspect provenance below it.',
+								'The first screen should help a reader choose a form and meaning; deeper provenance remains close by.',
 							tone: 'secondary'
 						}
 					],
@@ -48,14 +48,14 @@ const resources = {
 							href: '/languages/latin',
 							label: 'Latin',
 							body:
-								'Connect inflected forms to headwords, morphology, and source-backed glosses.',
+								'Move from forms such as arma or cano to headwords, morphology, and dictionary witnesses.',
 							tone: 'warning',
 							icon: 'latin'
 						},
 						{
 							href: '/languages/greek',
 							label: 'Greek',
-							body: 'Keep script, form, lexeme, and dictionary witness visible together.',
+							body: 'Keep Greek script, transliteration, form analysis, lexeme, and witness together.',
 							tone: 'info',
 							icon: 'greek'
 						},
@@ -63,7 +63,7 @@ const resources = {
 							href: '/languages/sanskrit',
 							label: 'Sanskrit',
 							body:
-								'Study forms, compounds, and grammar gateways without hiding source caveats.',
+								'Compare dictionary and analyzer evidence across scripts, compounds, and grammar traditions.',
 							tone: 'success',
 							icon: 'sanskrit'
 						}
@@ -71,19 +71,19 @@ const resources = {
 				},
 				about: {
 					metaDescription:
-						"Project Orion is LangNet's source-aware reading desk for Latin, Greek, and Sanskrit: useful first, auditable second.",
+						'Project Orion is a public lookup and reader for Latin, Greek, and Sanskrit: useful first, source-visible throughout.',
 					eyebrow: 'About the project',
-					title: 'Useful first. Auditable second. Never an oracle.',
+					title: 'A classical word should not become a black box.',
 					intro:
-						'Project Orion is the web reading desk for LangNet. It helps a reader move from an inflected word in a classical text to an accountable explanation of what the word can mean, what form it may be, and which sources support that answer.',
+						'Project Orion helps a reader move from an inflected word in a classical text to possible headwords, grammatical forms, supported meanings, and source notes.',
 					productPromiseTitle: 'The product promise',
 					productPromise:
-						'For a Latin, Greek, or Sanskrit word, Orion should help answer five questions: what headword it may belong to, what grammatical form it may be, what meanings are source-supported, where each claim came from, and where the sources agree, disagree, or remain incomplete.',
+						'For a Latin, Greek, or Sanskrit word, Orion should answer five practical questions: what headword it may belong to, what grammatical form it may be, which meanings are source-supported, where each claim came from, and where support is incomplete.',
 					principles: [
 						{
 							title: 'Evidence first',
 							body:
-								'Displayed lexical, morphological, and semantic facts should trace back to a tool response, dictionary entry, citation, cache row, or explicit derivation.'
+								'Displayed lexical, morphological, and semantic facts should trace back to a tool response, dictionary entry, reader citation, cache row, or explicit derivation.'
 						},
 						{
 							title: 'Tradition with function',
@@ -93,7 +93,7 @@ const resources = {
 						{
 							title: 'Determinism before inference',
 							body:
-								'Stable rules, repeatable IDs, fixture-backed tests, and exact reductions come before embeddings, broad inference, or fluent-looking generated interpretation.'
+								'Stable rules, repeatable IDs, fixture-backed tests, and exact reductions come before embeddings, broad inference, or fluent generated interpretation.'
 						}
 					],
 					audiencesTitle: 'Who it serves',
@@ -105,10 +105,10 @@ const resources = {
 					],
 					startTitle: 'Start with a word',
 					startBody:
-						'The reliable surface is word-level evidence: form, meaning, source support, and caveats. Passage interpretation and generated prose should not outrun that evidence.',
+						'The reliable surface is still word-level work: form, meaning, source support, and caveats. Passage interpretation and generated prose should wait for that layer.',
 					provenanceTitle: 'What we take as input',
 					provenanceIntro:
-						'LangNet is a databuild system over many source traditions. We normalize them into local reader, lexicon, morphology, and pedagogy artifacts while keeping provenance visible instead of pretending everything came from one canonical format.',
+						'Orion works from local reader, lexicon, morphology, and pedagogy artifacts built from many source traditions. It normalizes them for use while keeping source role, import status, and provenance visible.',
 					sourceGroups: [
 						{
 							title: 'Reader corpora',
@@ -143,7 +143,7 @@ const resources = {
 						{
 							title: 'External engines and references',
 							body:
-								'Programs, services, and extracted reference works that LangNet leans on during lookup, parsing, or pedagogy builds.',
+								'Programs, services, and extracted reference works used during lookup, parsing, or pedagogy builds.',
 							items: [
 								'Diogenes for Greek and Latin lexical/index access',
 								'Sanskrit Heritage tooling and data for Sanskrit analysis paths',
@@ -154,7 +154,7 @@ const resources = {
 							]
 						},
 						{
-							title: 'Curated LangNet layers',
+							title: 'Curated Orion layers',
 							body:
 								'Small reviewed files that correct, enrich, or organize imported source data.',
 							items: [
@@ -174,21 +174,21 @@ const resources = {
 								'Reader search Lance index',
 								'Translation cache rows',
 								'Word indexes, MOTD pool databases, and local runtime caches',
-								'Future LangNet canonical catalog exports and EPUB/static presentation bundles'
+								'Future Orion catalog exports and EPUB/static presentation bundles'
 							]
 						}
 					],
-					provenanceNoteTitle: 'Canonical for LangNet does not mean source-original',
+					provenanceNoteTitle: 'Canonical for Orion does not mean source-original',
 					provenanceNote:
-						'CTS and TEI remain important source/provenance formats, but LangNet’s internal contract is source-aware and normalized. Reader-facing addresses prefer CTSv2; raw CTS URNs, file paths, hashes, and import statuses remain provenance.'
+						'CTS and TEI remain important source/provenance formats, but Orion normalizes data for lookup and reading. Reader-facing addresses prefer CTSv2; raw CTS URNs, file paths, hashes, source roles, and import statuses remain provenance.'
 				},
 				evidence: {
 					metaDescription:
 						"How Project Orion treats source evidence, dictionary witnesses, generated prose, and learner-facing explanations.",
 					eyebrow: 'Evidence model',
-					title: 'Orion explains what it can support, and where support stops.',
+					title: 'The interface should show support and limits.',
 					intro:
-						'The reading desk is designed around accountable word-level evidence. A fluent answer is useful only when a reader can inspect the dictionary witness, analyzer output, citation, cache row, or explicit derivation behind it.',
+						'Orion is designed around word-level evidence. A smooth answer is useful only when a reader can inspect the dictionary witness, analyzer output, citation, cache row, or explicit derivation behind it.',
 					sections: [
 						{
 							title: 'Dictionary witnesses',
@@ -213,7 +213,7 @@ const resources = {
 					],
 					ctaTitle: 'Use evidence in the lookup desk',
 					ctaBody:
-						'Start with one word, then inspect source groups, morphology, provenance chips, and cache notes before trusting a gloss.'
+						'Start with one word, then inspect source groups, morphology, provenance chips, reader references, and cache notes before trusting a gloss.'
 				},
 				learn: {
 					metaDescription:

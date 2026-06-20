@@ -1,8 +1,9 @@
 # LangNet Canonical Catalog Export Plan
 
-Status: active
+Status: completed
 Owner: @architect, @coder, @auditor
 Created: 2026-06-05
+Completed: 2026-06-20
 
 ## Goal
 
@@ -242,6 +243,14 @@ silently deleting source material.
 - Include manifest, work metadata, segments, provenance, checksums.
 - Add focused unit tests with temp catalogs/artifacts.
 
+Completed on 2026-06-20:
+
+- Added `src/langnet/reader/catalog_export.py`.
+- Added deterministic directory bundles with `manifest.json`,
+  `works/<work-key>/work.json`, `segments.jsonl`, `provenance.json`,
+  `indexes/catalog-summary.json`, and `checksums/SHA256SUMS`.
+- Added focused tests in `tests/test_reader_catalog_export.py`.
+
 ### Phase 2: Full catalog export
 
 @coder
@@ -251,6 +260,19 @@ silently deleting source material.
 - Keep memory bounded.
 - Write deterministic paths.
 - Add validation command.
+
+Completed on 2026-06-20:
+
+- Added CLI commands:
+  - `reader export work <work-id> --output-path <dir>`
+  - `reader export bundle --output-path <dir> [--collection <id>] [--language <lang>]`
+  - `reader export validate <dir>`
+- Segment JSONL export streams chunked reader segment rows.
+- Bundle validation checks required work fields, segment rows, provenance, and
+  checksums.
+- Re-exporting unchanged catalog data preserves stable checksum rows.
+- Smoke-verified `bruno:esotericarchives:de-magia` into
+  `examples/debug/catalog-export-bruno-de-magia`.
 
 ### Phase 3: EPUB export
 
@@ -263,6 +285,8 @@ silently deleting source material.
 - Preserve CTSv2 canonical ID in metadata.
 - Keep source CTS URNs in provenance, not primary UI title/address.
 
+Moved to `docs/plans/todo/infra/canonical-catalog-presentation-exports.md`.
+
 ### Phase 4: Migration/server portability
 
 @architect / @auditor
@@ -271,6 +295,9 @@ silently deleting source material.
 - Decide whether exports are artifacts to transfer or rebuild outputs.
 - Add size estimates.
 - Add smoke validation commands for restored bundles.
+
+Moved to
+`docs/plans/todo/infra/canonical-catalog-portability-and-archive-packaging.md`.
 
 ## Immediate next tasks
 

@@ -3461,9 +3461,7 @@ def _georges_1913_status(
 ) -> dict[str, object] | None:
     if "lat" not in languages:
         return None
-    return _duckdb_status(
-        "georges_1913", "lat", "georges_1913", paths.georges_1913, "entries_fr"
-    )
+    return _duckdb_status("georges_1913", "lat", "georges_1913", paths.georges_1913, "entries_fr")
 
 
 def _whitakers_status(

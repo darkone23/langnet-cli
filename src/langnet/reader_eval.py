@@ -284,6 +284,7 @@ def _lemma_match_keys(value: str) -> set[str]:
     normalized = _normalize(value)
     base = normalized.split("#", 1)[0]
     keys = {normalized, base}
+    keys.update({key[:-1] for key in list(keys) if key.endswith(("h", "ḥ")) and len(key) > 1})
     keys.update(_latin_inflectional_match_keys(base))
     greekish = normalize_greekish_token(value)
     if greekish:

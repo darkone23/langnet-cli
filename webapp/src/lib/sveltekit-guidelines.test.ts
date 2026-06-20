@@ -42,7 +42,11 @@ const readerRouteDiscoveryLoadersSource = readFileSync(
 	new URL('./reader/reader-route-discovery-loaders.ts', import.meta.url),
 	'utf8'
 );
-const readerRouteImplementationSource = `${readerRoutePageSource}\n${readerRouteContentLoadersSource}\n${readerRouteDiscoveryLoadersSource}`;
+const readerSelectedWordControllerSource = readFileSync(
+	new URL('./reader/reader-selected-word-controller.ts', import.meta.url),
+	'utf8'
+);
+const readerRouteImplementationSource = `${readerRoutePageSource}\n${readerRouteContentLoadersSource}\n${readerRouteDiscoveryLoadersSource}\n${readerSelectedWordControllerSource}`;
 const readerDirectoryUrl = new URL('./reader/', import.meta.url);
 const readerApiSource = readFileSync(new URL('./reader-api.ts', readerDirectoryUrl), 'utf8');
 const deskEntryCssSource = readFileSync(new URL('./desk-entry.css', deskDirectoryUrl), 'utf8');
@@ -52,6 +56,10 @@ const deskWordIndexSource = readFileSync(new URL('./desk-word-index.ts', deskDir
 const deskLookupSource = readFileSync(new URL('./desk-lookup.ts', deskDirectoryUrl), 'utf8');
 const deskWorkflowsSource = readFileSync(new URL('./desk-workflows.ts', deskDirectoryUrl), 'utf8');
 const deskMotdSource = readFileSync(new URL('./desk-motd.ts', deskDirectoryUrl), 'utf8');
+const deskMotdControllerSource = readFileSync(
+	new URL('./desk-motd-controller.ts', deskDirectoryUrl),
+	'utf8'
+);
 const deskRouteHelperSource = readFileSync(new URL('./desk-route.ts', deskDirectoryUrl), 'utf8');
 const deskSessionSource = readFileSync(new URL('./desk-session.ts', deskDirectoryUrl), 'utf8');
 const deskStatusSource = readFileSync(new URL('./desk-status.ts', deskDirectoryUrl), 'utf8');
@@ -315,8 +323,8 @@ assert.ok(
 		readerApiSource.includes('export async function fetchReaderEncounterBriefing') &&
 		readerApiSource.includes('export function readerWorksUrl') &&
 		readerApiSource.includes('export function readerContentsUrl') &&
+		readerRouteImplementationSource.includes('createReaderSelectedWordController(') &&
 		readerRouteImplementationSource.includes('readerCatalogsUrl(') &&
-		readerRouteImplementationSource.includes('fetchReaderEncounterBriefing({') &&
 		readerRouteImplementationSource.includes('readerWorksUrl(') &&
 		readerRouteImplementationSource.includes('readerContentsUrl(') &&
 		!readerRouteImplementationSource.includes('new URLSearchParams({') &&
@@ -367,10 +375,17 @@ for (const localWordIndexFunction of [
 
 assert.ok(
 	deskRouteSource.includes("from '$lib/desk/desk-motd'") &&
+		deskRouteSource.includes("from '$lib/desk/desk-motd-controller'") &&
 		deskRouteSource.includes('motdVisibleWarningsForResult(motd)') &&
+		deskRouteSource.includes('motdController.load(false)') &&
+		deskRouteSource.includes('motdController.abort()') &&
+		deskRouteSource.includes('motdController.reset()') &&
 		deskMotdSource.includes('export function normalizeMotdResult') &&
-		deskMotdSource.includes('export function motdDisplayWord'),
-	'Word Desk route should delegate MOTD normalization and display helpers to desk-motd.ts'
+		deskMotdSource.includes('export function motdDisplayWord') &&
+		deskMotdControllerSource.includes('export function createDeskMotdController') &&
+		deskMotdControllerSource.includes("params.set('refresh', '1')") &&
+		deskMotdControllerSource.includes('motdItemKeys(state.motd)'),
+	'Word Desk route should delegate MOTD display helpers to desk-motd.ts and request orchestration to desk-motd-controller.ts'
 );
 
 for (const localMotdFunction of [
@@ -388,12 +403,27 @@ for (const localMotdFunction of [
 	'function motdDisplayGloss',
 	'function motdDisplayNote',
 	'function shouldShowMotdWarning',
-	'function isRecoverableMotdWarning'
+	'function isRecoverableMotdWarning',
+	'function loadMotd',
+	'function abortMotdRequest',
+	'function saveMotdToLocalStorage'
 ]) {
 	assert.equal(
 		deskRouteSource.includes(localMotdFunction),
 		false,
 		`Word Desk route should not keep local MOTD helper ${localMotdFunction}`
+	);
+}
+
+for (const localMotdRequestToken of [
+	"new URLSearchParams({\n\t\t\t\tlanguage: 'all'",
+	"params.set('refresh', '1')",
+	'motdItemKeys(motd)'
+]) {
+	assert.equal(
+		deskRouteSource.includes(localMotdRequestToken),
+		false,
+		`Word Desk route should not keep local MOTD request token ${localMotdRequestToken}`
 	);
 }
 

@@ -1,9 +1,8 @@
 """Backend tool fuzzing harness (CLI-driven).
 
-This utility enumerates supported backend tools/actions and exercises them by
-shelling out to the langnet CLI (`langnet-cli tool ...`). It can also fuzz the
-unified `/api/q` endpoint (`langnet-cli query ...`) or run both paths for a
-side-by-side comparison.
+This utility enumerates supported backend tools/actions and exercises the
+maintained parser CLI surface. Query and compare modes are retained as explicit
+diagnostic placeholders until a maintained unified query CLI exists again.
 """
 
 from __future__ import annotations
@@ -137,7 +136,10 @@ class FuzzResult:
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Fuzz backend tool or unified query outputs via API endpoints"
+        description=(
+            "Fuzz maintained backend parser outputs; query/compare modes are "
+            "diagnostic placeholders until a unified query CLI exists."
+        )
     )
     parser.add_argument(
         "--tool", help="Tool to exercise (diogenes, whitakers, heritage, cdsl, cltk)"
@@ -155,8 +157,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         choices=["tool", "query", "compare"],
         default="tool",
         help=(
-            "Fuzz mode: tool (only /api/tool/*), query (only /api/q), "
-            "compare (tool plus unified comparison)"
+            "Fuzz mode: tool (maintained parser CLI), query (legacy diagnostic "
+            "placeholder), compare (tool plus legacy diagnostic query)"
         ),
     )
     parser.add_argument("--list", action="store_true", help="List available tool/actions and exit")

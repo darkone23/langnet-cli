@@ -1,6 +1,9 @@
 # Orion copy system
 
-Project Orion copy should make the product feel like a source-aware reading desk, not a generic chatbot or a marketing page.
+Project Orion copy should make the product feel like a source-aware reading
+desk, not a generic chatbot or a marketing page. Public copy uses **Project
+Orion** or **Orion**. The internal name **LangNet** belongs in developer docs,
+CLI/runtime descriptions, schemas, and adapter notes.
 
 ## Source of truth
 

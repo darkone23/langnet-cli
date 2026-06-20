@@ -31,12 +31,39 @@
     },
     {
       "source_lexicon": "dico",
+      "entry_id": "agni",
+      "occurrence": 0,
+      "headword_norm": "agni",
+      "source_ref": "dico:1.html#agni:0",
+      "source_text": "feu, feu sacré ; dieu du feu",
+      "translated_text": "fire, sacred fire; god of fire"
+    },
+    {
+      "source_lexicon": "dico",
       "entry_id": "yoga",
       "occurrence": 0,
       "headword_norm": "yoga",
       "source_ref": "dico:81.html#yoga:0",
       "source_text": "union, discipline spirituelle",
       "translated_text": "union, spiritual discipline"
+    },
+    {
+      "source_lexicon": "dico",
+      "entry_id": "aatman",
+      "occurrence": 0,
+      "headword_norm": "ātman",
+      "source_ref": "dico:6.html#aatman:0",
+      "source_text": "souffle, âme, soi",
+      "translated_text": "breath, soul, self"
+    },
+    {
+      "source_lexicon": "dico",
+      "entry_id": "j~naana",
+      "occurrence": 0,
+      "headword_norm": "jñāna",
+      "source_ref": "dico:43.html#j~naana:0",
+      "source_text": "connaissance, savoir, science",
+      "translated_text": "knowledge, knowing, science"
     }
   ]
 }

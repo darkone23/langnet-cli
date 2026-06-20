@@ -6,6 +6,32 @@ This ledger tracks the documentation overhaul. It distinguishes current docs
 from retained history so useful information is preserved without leaving stale
 material in the maintained reading path.
 
+## 2026-06-17 Follow-Up
+
+The root docs and public copy have been tightened around the current product
+state: CLI JSON is the reliable contract, the webapp is a SvelteKit adapter, and
+the main forward work is reader quality, learner encounter quality, source
+structuring, acquisition QA, translation-cache discipline, and public route
+boundaries. Selected-word context is now treated as a completed shared
+CLI/API/UI payload that still needs normal regression coverage as surrounding
+reader work changes.
+
+Plan hygiene was refreshed:
+
+- dated reader status and close-out records were moved to
+  `docs/archive/2026-06-reader-expansion/`;
+- `local-lexicon-witness-handoff.md` was moved out of `docs/plans/active/`;
+- `docs/plans/README.md` now distinguishes active drivers from supporting
+  active implementation plans;
+- `docs/EXECUTION_PLAN.md` now carries the compact "what is good / what is
+  risky / what comes next" overview.
+
+The active plan tree is still larger than the original 3-5 target because the
+reader/library/source-acquisition stack now has several scoped implementation
+plans. The coordination rule is: use `docs/EXECUTION_PLAN.md` and
+`docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md` to choose work; use
+the remaining active files only as supporting plans.
+
 ## Targets
 
 - Current maintained reading path: about 30-40 Markdown files, excluding
@@ -123,11 +149,11 @@ Reader/web/data slice completed:
 | `docs/plans/active/dico/bailly-structural-extraction-iteration.md` | Completed implementation | Move to completed | Parser/extract/databuild tests exist. |
 | `docs/plans/active/dico/lewis-1890-provider-integration-plan.md` | Completed implementation | Move to completed | Provider/databuild/word-index tests exist. |
 | `docs/plans/active/infra/CLI_CONCURRENCY_STABILIZATION.md` | Completed implementation | Move to completed | Busy errors/cache policy/web adapter tests exist. |
-| `docs/plans/active/infra/citation-resolution-plan.md` | Future work | Move to todo/update | First resolver slice done; staged hydration remains. |
+| `docs/plans/todo/infra/citation-resolution-plan.md` | Future work | Todo/update | First resolver slice done; staged CTS hydration remains. |
 | `docs/plans/active/infra/ctsv2-first1k-implementation.md` | Completed implementation | Move to completed | CTSv2/First1K work exists. |
 | `docs/plans/active/infra/ctsv2-reader-addressing.md` | Design/status | Archive/merge | Successor: roadmap/status plus CTS todo. |
 | `docs/plans/active/infra/design-to-runtime-roadmap.md` | Broad roadmap | Archive/merge | Successor: `docs/ROADMAP.md`. |
-| `docs/plans/active/infra/local-lexicon-witness-handoff.md` | Handoff/status | Archive/merge | Successor: roadmap/status. |
+| `docs/archive/2026-06-reader-expansion/local-lexicon-witness-handoff.md` | Handoff/status | Archived | Successor: roadmap/status. |
 | `docs/plans/active/infra/reader-attribution-claims-implementation.md` | Completed implementation | Move to completed | Core implementation exists. |
 | `docs/plans/active/infra/reader-author-classification.md` | Completed implementation | Move to completed | CLI/tests exist. |
 | `docs/plans/active/infra/reader-corpus-index-implementation.md` | Completed implementation | Move to completed | Foundational reader corpus code/tests exist. |
@@ -138,12 +164,13 @@ Reader/web/data slice completed:
 | `docs/plans/active/infra/reader-global-text-search.md` | Completed implementation | Move to completed | Search index and encounter integration exist. |
 | `docs/plans/active/infra/reader-library-discovery-work-stack.md` | Completed implementation | Move to completed | Priority stack is checked off. |
 | `docs/plans/active/infra/reader-metadata-overlay-plan.md` | Completed implementation | Move to completed | Overlay loader/review/tests exist. |
-| `docs/plans/active/infra/reader-source-backed-enrichment.md` | Active implementation | Keep/update | Remaining overlay/work-map/classifier sync work. |
+| `docs/plans/completed/infra/reader-source-backed-enrichment.md` | Completed implementation | Completed | Overlay candidates, DCS chapter candidates, catalog sync, and spot checks closed for the deterministic slice. |
 | `docs/plans/active/infra/stabilization-planning-session.md` | Planning session | Archive/merge | Successor: execution plan. |
 | `docs/plans/active/pedagogy/foster-display-vocabulary.md` | Completed implementation | Move to completed | Foster labels wired and tested. |
-| `docs/plans/active/pedagogy/learner-encounter-roadmap.md` | Active roadmap | Keep/update | Drop completed translation/Foster/source-text work. |
-| `docs/plans/active/pedagogy/real-input-fuzzing-roadmap.md` | Active evaluation loop | Keep/update | Refresh checkpoint. |
-| `docs/plans/active/skt/cdsl-entry-grammar-plan.md` | Active Sanskrit parser work | Keep/update | Core exists; real-entry fuzz/body grammar remains. |
+| `docs/plans/completed/pedagogy/learner-encounter-roadmap.md` | Completed roadmap | Completed | Current learner encounter stabilization loop closed. |
+| `docs/plans/completed/pedagogy/real-input-fuzzing-roadmap.md` | Completed evaluation loop | Completed | Live corpus checkpoint and entry grammar fuzzing closed. |
+| `docs/plans/completed/skt/cdsl-entry-grammar-plan.md` | Completed Sanskrit parser work | Completed | CDSL fuzz rows, body grammar, and learner-display snapshots accepted. |
+| `docs/plans/completed/infra/reader-citation-reference-resolution.md` | Completed implementation | Completed | Citation reference model, DCS generation, catalog lookup, builder wiring, and resolve-address payload verified. |
 | `docs/plans/todo/dico/DICO_ACTION_PLAN.md` | Future DICO refinement | Update | Remove done items and fix status. |
 | `docs/plans/todo/dico/cltk-latin-lexicon-integration.md` | Superseded future idea | Archive | Superseded by Lewis 1890 provider. |
 | `docs/plans/todo/infra/fixing-types.md` | Placeholder | Archive | Not actionable while lint/typecheck pass. |
@@ -160,10 +187,11 @@ Plan triage slice completed:
 | Path | Final action | Notes |
 | --- | --- | --- |
 | `docs/plans/README.md` | Updated | Lists four active plans, scoped todo categories, completed-record policy, and archive rule. |
-| `docs/plans/active/infra/reader-source-backed-enrichment.md` | Kept active | Trimmed to remaining enrichment work. |
-| `docs/plans/active/pedagogy/learner-encounter-roadmap.md` | Kept active | Completed translation/Foster/source-text claims reduced. |
-| `docs/plans/active/pedagogy/real-input-fuzzing-roadmap.md` | Kept active | Refocused on current evaluation loop. |
-| `docs/plans/active/skt/cdsl-entry-grammar-plan.md` | Kept active | Retains real-entry fuzz/body grammar work. |
+| `docs/plans/completed/infra/reader-source-backed-enrichment.md` | Moved to completed | Deterministic enrichment and catalog sync slice closed; provider-backed rerun split to todo. |
+| `docs/plans/completed/infra/reader-citation-reference-resolution.md` | Moved to completed | Multi-segment citation reference lookup and compact Latin alias resolution verified. |
+| `docs/plans/completed/pedagogy/learner-encounter-roadmap.md` | Moved to completed | Current learner encounter stabilization loop closed. |
+| `docs/plans/completed/pedagogy/real-input-fuzzing-roadmap.md` | Moved to completed | Live/fixture quality loop closed for the current slice. |
+| `docs/plans/completed/skt/cdsl-entry-grammar-plan.md` | Moved to completed | CDSL body grammar and learner-display snapshot slice closed. |
 | `docs/plans/completed/dico/bailly-provider-integration-plan.md` | Moved to completed | Completed implementation record. |
 | `docs/plans/completed/dico/bailly-structural-extraction-iteration.md` | Moved to completed | Completed implementation record. |
 | `docs/plans/completed/dico/lewis-1890-provider-integration-plan.md` | Moved to completed | Completed implementation record. |

@@ -1801,6 +1801,123 @@ def test_encounter_json_includes_ranking_explanations() -> None:
     assert "has DICO/Gaffiot bilingual source evidence" in ranking["reasons"]
 
 
+def test_encounter_pretty_show_candidates_discloses_lexeme_anchors() -> None:
+    triples = [
+        {
+            "subject": "lex:lupus",
+            "predicate": "has_sense",
+            "object": "sense:lex:lupus#wolf",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+        {
+            "subject": "sense:lex:lupus#wolf",
+            "predicate": "gloss",
+            "object": "wolf",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+        {
+            "subject": "lex:virus",
+            "predicate": "has_sense",
+            "object": "sense:lex:virus#poison",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+        {
+            "subject": "sense:lex:virus#poison",
+            "predicate": "gloss",
+            "object": "poison",
+            "metadata": {"evidence": {"source_tool": "whitaker"}},
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="whitaker", subject="lex:lupus", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        default_result = CliRunner().invoke(
+            main,
+            ["encounter", "lat", "lupus", "whitaker", "--max-buckets", "1"],
+        )
+        disclosed_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "lupus",
+                "whitaker",
+                "--max-buckets",
+                "1",
+                "--show-candidates",
+            ],
+        )
+
+    assert default_result.exit_code == 0, default_result.output
+    assert "Candidates" not in default_result.output
+    assert disclosed_result.exit_code == 0, disclosed_result.output
+    assert "\nCandidates\n- lupus\n- virus\n" in disclosed_result.output
+
+
+def test_encounter_pretty_show_ranking_discloses_sort_factors() -> None:
+    triples = [
+        {
+            "subject": "lex:lupus",
+            "predicate": "has_sense",
+            "object": "sense:lex:lupus#wolf",
+            "metadata": {
+                "evidence": {"source_tool": "gaffiot", "source_ref": "gaffiot:gaffiot_38776"}
+            },
+        },
+        {
+            "subject": "sense:lex:lupus#wolf",
+            "predicate": "gloss",
+            "object": "wolf",
+            "metadata": {
+                "display_gloss": "wolf",
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_38776",
+                },
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="gaffiot", subject="lex:lupus", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        default_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "lupus",
+                "gaffiot",
+                "--translation-mode",
+                "off",
+            ],
+        )
+        disclosed_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "lupus",
+                "gaffiot",
+                "--translation-mode",
+                "off",
+                "--show-ranking",
+            ],
+        )
+
+    assert default_result.exit_code == 0, default_result.output
+    assert "\nRanking\n" not in default_result.output
+    assert disclosed_result.exit_code == 0, disclosed_result.output
+    assert "\nRanking\n" in disclosed_result.output
+    assert "- 1. wolf" in disclosed_result.output
+    assert "preferred lemma rank: 0" in disclosed_result.output
+    assert f"source order: {GAFFIOT_LUPUS_SOURCE_ORDER}" in disclosed_result.output
+    assert "has DICO/Gaffiot bilingual source evidence" in disclosed_result.output
+
+
 def test_encounter_word_index_context_projects_anchor_handles_without_inline_window() -> None:
     payload = {
         "warnings": [],
@@ -2298,6 +2415,10 @@ def test_encounter_json_includes_public_contract_display_views() -> None:
         "include_cltk": False,
         "translation_mode": "off",
         "translation_cache_writes": False,
+        "debug": False,
+        "show_candidates": False,
+        "show_ranking": False,
+        "show_source": False,
         "include_paradigm_resolution": False,
         "include_learning": False,
     }
@@ -3133,6 +3254,129 @@ def test_encounter_source_details_toggle_hides_typed_source_segment_summary() ->
 
     assert cli_result.exit_code == 0, cli_result.output
     assert "source notes:" not in cli_result.output
+
+
+def test_encounter_pretty_show_source_discloses_source_layer_text() -> None:
+    triples = [
+        {
+            "subject": "lex:arma",
+            "predicate": "has_sense",
+            "object": "sense:lex:arma#gaffiot",
+            "metadata": {
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_123",
+                }
+            },
+        },
+        {
+            "subject": "sense:lex:arma#gaffiot",
+            "predicate": "gloss",
+            "object": "weapons; arms; cf. armum",
+            "metadata": {
+                "display_gloss": "weapons; arms",
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_123",
+                    "raw_blob_ref": "tei_xml",
+                    "source_entry": {
+                        "dict": "gaffiot",
+                        "entry_id": "gaffiot_123",
+                        "headword_norm": "arma",
+                        "source_ref": "gaffiot:gaffiot_123",
+                        "source_text": "weapons; arms; cf. armum",
+                    },
+                },
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="gaffiot", subject="lex:arma", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        default_result = CliRunner().invoke(
+            main,
+            ["encounter", "lat", "arma", "gaffiot", "--max-buckets", "1"],
+        )
+        disclosed_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "arma",
+                "gaffiot",
+                "--max-buckets",
+                "1",
+                "--show-source",
+            ],
+        )
+
+    assert default_result.exit_code == 0, default_result.output
+    assert "\nSource\n" not in default_result.output
+    assert disclosed_result.exit_code == 0, disclosed_result.output
+    assert "\nSource\n" in disclosed_result.output
+    assert "- 1. gaffiot gaffiot:gaffiot_123" in disclosed_result.output
+    assert "  headword: arma; entry: gaffiot_123; raw: tei_xml" in disclosed_result.output
+    assert "  source: weapons; arms; cf. armum" in disclosed_result.output
+
+
+def test_encounter_pretty_debug_enables_diagnostic_sections() -> None:
+    triples = [
+        {
+            "subject": "lex:arma",
+            "predicate": "has_sense",
+            "object": "sense:lex:arma#gaffiot",
+            "metadata": {
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_123",
+                }
+            },
+        },
+        {
+            "subject": "sense:lex:arma#gaffiot",
+            "predicate": "gloss",
+            "object": "weapons; arms; cf. armum",
+            "metadata": {
+                "display_gloss": "weapons; arms",
+                "evidence": {
+                    "source_tool": "gaffiot",
+                    "source_ref": "gaffiot:gaffiot_123",
+                    "raw_blob_ref": "tei_xml",
+                    "source_entry": {
+                        "dict": "gaffiot",
+                        "entry_id": "gaffiot_123",
+                        "headword_norm": "arma",
+                        "source_ref": "gaffiot:gaffiot_123",
+                        "source_text": "weapons; arms; cf. armum",
+                    },
+                },
+            },
+        },
+    ]
+    result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="gaffiot", subject="lex:arma", triples=triples)]
+    )
+
+    with patch("langnet.cli._execute_lookup_plan", return_value=result):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "encounter",
+                "lat",
+                "arma",
+                "gaffiot",
+                "--max-buckets",
+                "1",
+                "--debug",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    assert "\nCandidates\n- arma\n" in cli_result.output
+    assert "\nSource\n" in cli_result.output
+    assert "\nRanking\n" in cli_result.output
 
 
 def test_encounter_sorts_cdsl_buckets_by_source_order_before_gloss_text() -> None:

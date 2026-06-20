@@ -44,8 +44,8 @@ Every expansion target must move through:
 - `data/reference/reader_quality_audit/current_known_issues.tsv`
 - `data/curated/reader_library_watchlist/high_value_targets.yaml`
 - `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md`
-- `docs/plans/active/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`
-- `docs/plans/active/infra/READER_EXPANSION_QUALITY_CLOSEOUT_2026-06-07.md`
+- `docs/plans/completed/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`
+- `docs/archive/2026-06-reader-expansion/READER_EXPANSION_QUALITY_CLOSEOUT_2026-06-07.md`
 
 ## Operational Skill
 

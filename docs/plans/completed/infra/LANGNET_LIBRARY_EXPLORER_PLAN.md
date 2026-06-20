@@ -664,6 +664,20 @@ Verified behavior:
 - Live `/library/author/Vergilius?language=lat` renders `P. Vergilius Maro`, `Works in the reader`, and `Work portal`.
 - Live `/library` renders `Work portal`, `Author portal`, and `Enter reader desk`.
 
-Remaining UX task:
+## Source Quality And Acquisition Badge Closeout - 2026-06-18
 
-- Add richer source-quality and acquisition-status badges to portal pages once the source-index and watchlist status models are unified.
+Implemented behavior:
+
+- Added shared Library/watchlist label helpers for acquisition status, source-file status, and work availability.
+- Work portal pages now show a readable/catalog-shell availability badge from work counts.
+- Work portal witness rows now show normalized source-file status labels instead of raw status keys.
+- Author portal work cards now show the same availability badge before the reader desk handoff.
+
+Verified behavior:
+
+- `cd webapp && bun test src/lib/reader/library-watchlist.test.ts src/lib/reader/page-loading-components.test.ts` exits 0.
+- `cd webapp && bun run check` returns 0 errors and 0 warnings.
+
+Plan status:
+
+- Complete. Future acquisition/import spikes now belong under the corpus acquisition and reader expansion plans rather than this Library Explorer surface plan.

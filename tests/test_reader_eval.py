@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -83,6 +84,135 @@ def test_sanskrit_fallback_prefers_numbered_heritage_lemma_solution() -> None:
     )
 
     assert terms == ["bhū"]
+
+
+def test_sanskrit_fallback_prefers_short_inflected_base_over_generated_forms() -> None:
+    claims = [
+        {
+            "tool": "claim.heritage.morph",
+            "value": {
+                "triples": [
+                    {
+                        "subject": "form:āgnima",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "form": "āgnima",
+                            "lemma": "āgnima",
+                            "analysis": "nom. sg. f.",
+                            "solution_number": 1,
+                        },
+                    },
+                    {
+                        "subject": "form:āgnimā",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "form": "āgnimā",
+                            "lemma": "āgnimā",
+                            "analysis": "nom. sg. f.",
+                            "solution_number": 1,
+                        },
+                    },
+                    {
+                        "subject": "form:agni",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "form": "agni",
+                            "lemma": "agni",
+                            "analysis": "m. sg. acc.",
+                            "solution_number": 1,
+                        },
+                    },
+                ]
+            },
+        }
+    ]
+
+    terms = _encounter_morphology_fallback_terms(
+        claims,
+        language="san",
+        original="agnim",
+    )
+
+    assert terms[0] == "agni"
+
+
+def test_sanskrit_fallback_allows_singleton_solution_despite_component_candidates() -> None:
+    claims = [
+        {
+            "tool": "claim.heritage.morph",
+            "value": {
+                "triples": [
+                    {
+                        "subject": "form:yoga",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "form": "yoga",
+                            "lemma": "yoga",
+                            "analysis": "iic.",
+                            "solution_number": 1,
+                        },
+                    },
+                    {
+                        "subject": "form:ina",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "form": "ina",
+                            "lemma": "ina",
+                            "analysis": "m. sg. voc.",
+                            "solution_number": 1,
+                        },
+                    },
+                    {
+                        "subject": "form:yoga",
+                        "predicate": "has_morphology",
+                        "object": {
+                            "form": "yoga",
+                            "lemma": "yoga",
+                            "analysis": "m. sg. i.",
+                            "solution_number": 2,
+                        },
+                    },
+                ]
+            },
+        }
+    ]
+
+    assert _encounter_morphology_fallback_terms(
+        claims,
+        language="san",
+        original="yogena",
+    ) == ["yoga"]
+
+
+def test_reader_eval_matches_sanskrit_final_visarga_lemma_variants() -> None:
+    result = evaluate_reader_token(
+        {
+            "passage_id": "seed",
+            "language": "san",
+            "surface": "agnim",
+            "expected_lemmas": ["agni"],
+            "expected_gloss_terms": ["fire"],
+            "expect_morphology": True,
+        },
+        {
+            "lexeme_anchors": ["lex:agnih"],
+            "buckets": [
+                {
+                    "display_gloss": "fire",
+                    "witnesses": [
+                        {
+                            "lexeme_anchor": "lex:agnih",
+                            "gloss": "fire",
+                            "evidence": {"display_iast": "agniḥ"},
+                        }
+                    ],
+                }
+            ],
+        },
+        morphology_rows=[{"source_tool": "heritage", "form": "agni", "lemma": "agni"}],
+    )
+
+    assert result["checks"]["top_lemma_hit"] is True
 
 
 def test_reader_eval_scores_expected_lemma_gloss_and_morphology() -> None:
@@ -484,3 +614,79 @@ def test_reader_eval_command_reports_json_with_patched_lookup(tmp_path: Path) ->
         "top_hit_rate": 1.0,
     }
     assert payload["results"][0]["surface"] == "lupus"
+
+
+def test_reader_eval_command_includes_sanskrit_normalization_fallback_components() -> None:
+    tmp_path = Path(tempfile.mkdtemp())
+    fixture_path = tmp_path / "reader_eval.json"
+    fixture_path.write_text(
+        json.dumps(
+            {
+                "passages": [
+                    {
+                        "id": "fixture",
+                        "language": "san",
+                        "work": "Fixture",
+                        "citation": "1",
+                        "tokens": [
+                            {
+                                "surface": "agnikṣetre",
+                                "expected_lemmas": ["agnikṣetra"],
+                                "expected_components": ["agni", "kṣetra"],
+                                "expected_gloss_terms": ["field"],
+                                "expect_morphology": False,
+                            }
+                        ],
+                    }
+                ]
+            }
+        )
+    )
+    surface_result = SimpleNamespace(claims=[])
+    triples = [
+        {
+            "subject": "lex:agnikzetra",
+            "predicate": "has_sense",
+            "object": "sense:lex:agnikzetra#field",
+            "metadata": {"evidence": {"source_tool": "fixture"}},
+        },
+        {
+            "subject": "sense:lex:agnikzetra#field",
+            "predicate": "gloss",
+            "object": "fire field",
+            "metadata": {"evidence": {"source_tool": "fixture"}},
+        },
+    ]
+    fallback_result = SimpleNamespace(
+        claims=[_claim_with_triples(tool="fixture", subject="lex:agnikzetra", triples=triples)]
+    )
+    component_links = [
+        {"display": "agni", "evidence": {"meanings": [{"display_gloss": "fire"}]}},
+        {"display": "kṣetra", "evidence": {"meanings": [{"display_gloss": "field"}]}},
+    ]
+
+    with (
+        patch("langnet.cli._execute_lookup_plan", side_effect=[surface_result, fallback_result]),
+        patch(
+            "langnet.cli._encounter_sanskrit_normalization_fallback_terms",
+            return_value=(["agnikṣetra"], "followed normalization"),
+        ),
+        patch("langnet.cli._encounter_component_links", return_value=component_links),
+    ):
+        cli_result = CliRunner().invoke(
+            main,
+            [
+                "reader-eval",
+                "--fixture",
+                str(fixture_path),
+                "--output",
+                "json",
+                "--translation-mode",
+                "off",
+            ],
+        )
+
+    assert cli_result.exit_code == 0, cli_result.output
+    payload = json.loads(cli_result.output)
+    assert payload["summary"]["passed"] == 1
+    assert payload["results"][0]["checks"]["component_hit"] is True

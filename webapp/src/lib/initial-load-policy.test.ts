@@ -8,6 +8,7 @@ const compactPageSource = fullPageSource.replace(/\s+/g, ' ');
 const deskEndpointsSource = readFileSync('src/lib/desk/desk-endpoints.ts', 'utf8');
 const deskWorkspaceSource = readFileSync('src/lib/desk/desk-route-workspace.ts', 'utf8');
 const deskSessionSource = readFileSync('src/lib/desk/desk-session.ts', 'utf8');
+const deskMotdControllerSource = readFileSync('src/lib/desk/desk-motd-controller.ts', 'utf8');
 const componentLedgerSource = readFileSync('src/lib/desk/DeskComponentLedger.svelte', 'utf8');
 const compactComponentLedgerSource = componentLedgerSource.replace(/\s+/g, ' ');
 const dictionaryGroupCardSource = readFileSync(
@@ -28,7 +29,7 @@ const motdSource = readFileSync('src/routes/api/motd/+server.ts', 'utf8');
 const wordIndexSource = readFileSync('src/routes/api/word-index/+server.ts', 'utf8');
 
 assert.equal(
-	fullPageSource.includes('if (!motdItems.length) void loadMotd(false);'),
+	fullPageSource.includes('if (!motdItems.length) void motdController.load(false);'),
 	true,
 	'initial page load should prepare the learner folio when no usable cached item exists'
 );
@@ -38,7 +39,9 @@ assert.equal(
 	'learner folio should not render an empty no-word content state'
 );
 assert.equal(
-	fullPageSource.includes('throw new Error(data.error ?? uiCopy.errors.recommendationsFailed);'),
+	deskMotdControllerSource.includes(
+		'throw new Error(data.error ?? deps.recommendationsFailedMessage);'
+	),
 	true,
 	'empty MOTD responses should be treated as errors instead of visible empty content'
 );
@@ -104,7 +107,7 @@ assert.equal(
 	'MOTD loading should not start true before the initial API request is actually scheduled'
 );
 assert.equal(
-	fullPageSource.includes('if (motdStale && motdItems.length) void loadMotd(false);'),
+	fullPageSource.includes('if (motdStale && motdItems.length) void motdController.load(false);'),
 	true,
 	'stale local MOTD should remain visible while a refresh starts in the background'
 );
@@ -114,9 +117,9 @@ assert.equal(
 	'MOTD should display a stale/refreshing indicator while old cards stay visible'
 );
 assert.equal(
-	fullPageSource.includes("candidate_source: 'pool'") &&
-		fullPageSource.includes("timeout_ms: '3000'") &&
-		fullPageSource.includes("language: 'all'"),
+	deskMotdControllerSource.includes("candidate_source: 'pool'") &&
+		deskMotdControllerSource.includes("timeout_ms: '3000'") &&
+		deskMotdControllerSource.includes("language: 'all'"),
 	true,
 	'MOTD page requests should use all-language precomputed pool recommendations with a tight timeout'
 );

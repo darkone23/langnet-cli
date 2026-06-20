@@ -132,6 +132,61 @@
           "notes": "The morphology fallback should expose the pronoun lemma even when tva dictionary material also appears."
         }
       ]
+    },
+    {
+      "id": "sanskrit_seed_forms",
+      "language": "san",
+      "work": "Sanskrit reader seed forms",
+      "citation": "common reader probes",
+      "tokens": [
+        {
+          "surface": "agnim",
+          "expected_lemmas": ["agni"],
+          "expected_gloss_terms": ["fire", "Agni"],
+          "expect_morphology": true,
+          "notes": "Accusative reader form should route to agni for both deity and fire evidence."
+        },
+        {
+          "surface": "jñānam",
+          "expected_lemmas": ["jñāna"],
+          "expected_gloss_terms": ["knowledge", "knowing", "science"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "dharmasya",
+          "expected_lemmas": ["dharma"],
+          "expected_gloss_terms": ["law", "duty", "virtue", "devoir", "vertu"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "ātman",
+          "expected_lemmas": ["ātman", "atman"],
+          "expected_gloss_terms": ["self", "soul", "breath"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "yogena",
+          "expected_lemmas": ["yoga"],
+          "expected_gloss_terms": ["yoke", "yoking", "discipline", "union"],
+          "expect_morphology": true
+        },
+        {
+          "surface": "agnikṣetre",
+          "expected_lemmas": ["agnikṣetra"],
+          "expected_components": ["agni", "kṣetra"],
+          "expected_gloss_terms": ["fire", "field", "place"],
+          "expect_morphology": true,
+          "notes": "Transparent compound probe should expose component evidence without treating either component as the whole-token meaning."
+        },
+        {
+          "surface": "jñānayogena",
+          "expected_lemmas": ["jñānayoga"],
+          "expected_components": ["jñāna", "yoga"],
+          "expected_gloss_terms": ["knowledge", "discipline", "yoga"],
+          "expect_morphology": true,
+          "notes": "Transparent instrumental compound probe should keep jñāna and yoga component evidence visible below the whole compound."
+        }
+      ]
     }
   ]
 }

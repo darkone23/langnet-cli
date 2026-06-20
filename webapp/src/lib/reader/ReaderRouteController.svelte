@@ -93,6 +93,7 @@ import {
 	readerRouteWorkspaceBinding
 } from '$lib/reader/reader-route-workspace-state';
 import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/reader-route-workspace';
+import { createReaderSelectedWordController } from '$lib/reader/reader-selected-word-controller';
 	import { romanizeSearchTerm } from '$lib/search-romanization';
 	import { languageModes, type LanguageMode } from '$lib/search-data';
 	import { uiCopy } from '$lib/ui-copy';
@@ -192,8 +193,6 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 	let readerResultsRegion = $state<HTMLElement | null>(null);
 	const readerLoadingTimers = createReaderLoadingTimers(setReaderLoadingElapsedSeconds);
 	const readerIndexStatsInFlight = new Set<string>();
-	let selectedWordBriefingController: AbortController | null = null;
-	let selectedWordContextController: AbortController | null = null;
 
 	let selectedWordRomanization = $derived(
 		selectedWord ? romanizeSearchTerm(language, selectedWord) : null
@@ -573,7 +572,7 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		applyReaderRouteContent: applyReaderRouteContentInternal,
 		loadAllReaderIndexStats,
 		onHydrateSelectedWord: (word) => {
-			void fetchEncounterBriefing(word);
+			void selectedWordController.fetchEncounterBriefing(word);
 		}
 	});
 	const {
@@ -646,6 +645,25 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		searchWorks,
 		searchReaderText
 	} = readerRouteDiscoveryLoaders;
+	const selectedWordController = createReaderSelectedWordController(readerRouteWorkspaceState, {
+		updateReaderUrl,
+		currentWorkRef: () =>
+			selectedSegment?.work_id ||
+			(selectedWork
+				? readerWorkRef(selectedWork)
+				: readerCurrentReadingWorkRef(selectedWork, selectedSegment)),
+		fetchEncounterBriefing: fetchReaderEncounterBriefing,
+		fetchWordContext: (input) =>
+			fetchReaderApi<ReaderWordContextResponse>(
+				readerWordContextUrl({
+					catalogId: input.catalogId,
+					language: input.language,
+					query: input.query,
+					work: input.work,
+					segment: input.segment
+				})
+			)
+	});
 
 	onMount(() => {
 		const savedTheme = localStorage.getItem('orion-theme');
@@ -848,17 +866,7 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		pageNextCursor = null;
 		pagePrevCursor = null;
 		selectedWord = '';
-		selectedWordBriefingController?.abort();
-		selectedWordBriefingController = null;
-		selectedWordBriefing = null;
-		selectedWordBriefingError = '';
-		selectedWordBriefingLoading = false;
-		selectedWordBriefingGenerating = false;
-		selectedWordContextController?.abort();
-		selectedWordContextController = null;
-		selectedWordContext = null;
-		selectedWordContextError = '';
-		selectedWordContextLoading = false;
+		selectedWordController.reset();
 		activeCollection = 'all';
 		activeAuthorSection = '';
 		routeAuthorId = '';
@@ -878,79 +886,6 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		void loadFacets();
 	}
 
-	async function fetchEncounterBriefing(word: string, generate = false) {
-		const token = cleanReaderToken(word);
-		if (!token) return;
-		selectedWordBriefingController?.abort();
-		const controller = new AbortController();
-		selectedWordBriefingController = controller;
-		selectedWordBriefingLoading = true;
-		selectedWordBriefingGenerating = generate;
-		selectedWordBriefingError = '';
-		if (!generate) selectedWordBriefing = null;
-		try {
-			const { response, data } = await fetchReaderEncounterBriefing({
-				language,
-				token,
-				generate,
-				signal: controller.signal
-			});
-			if (!response.ok) throw new Error(data.error || 'Encounter briefing failed.');
-			if (selectedWord === token) selectedWordBriefing = data;
-		} catch (error) {
-			if (error instanceof DOMException && error.name === 'AbortError') return;
-			if (selectedWord === token) {
-				selectedWordBriefingError =
-					error instanceof Error ? error.message : 'Encounter briefing failed.';
-			}
-		} finally {
-			if (selectedWordBriefingController === controller) {
-				selectedWordBriefingController = null;
-				selectedWordBriefingLoading = false;
-				selectedWordBriefingGenerating = false;
-			}
-		}
-	}
-
-	async function fetchWordContext(word: string) {
-		const token = cleanReaderToken(word);
-		if (!token || !catalogId) return;
-		selectedWordContextController?.abort();
-		const controller = new AbortController();
-		selectedWordContextController = controller;
-		selectedWordContextLoading = true;
-		selectedWordContextError = '';
-		const work =
-			selectedSegment?.work_id ||
-			(selectedWork ? readerWorkRef(selectedWork) : readerCurrentReadingWorkRef(selectedWork, selectedSegment));
-		const segment = selectedSegment?.citation_path ?? null;
-		try {
-			const { response, data } = await fetchReaderApi<ReaderWordContextResponse>(
-				readerWordContextUrl({
-					catalogId,
-					language,
-					query: token,
-					work,
-					segment
-				})
-			);
-			if (!response.ok) throw new Error(data.error || 'Reader word context failed.');
-			if (selectedWord === token) selectedWordContext = data;
-		} catch (error) {
-			if (error instanceof DOMException && error.name === 'AbortError') return;
-			if (selectedWord === token) {
-				selectedWordContextError =
-					error instanceof Error ? error.message : 'Reader word context failed.';
-			}
-		} finally {
-			if (selectedWordContextController === controller) {
-				selectedWordContextController = null;
-				selectedWordContextLoading = false;
-			}
-		}
-	}
-
-
 	function showLibrary() {
 		selectedWork = null;
 		selectedSegment = null;
@@ -962,11 +897,7 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		pageNextCursor = null;
 		pagePrevCursor = null;
 		selectedWord = '';
-		selectedWordContextController?.abort();
-		selectedWordContextController = null;
-		selectedWordContext = null;
-		selectedWordContextError = '';
-		selectedWordContextLoading = false;
+		selectedWordController.reset();
 		contentsCursorParam = null;
 		pageCursorParam = null;
 		showAddressLookup = false;
@@ -977,17 +908,7 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 	}
 
 	function selectToken(text: string) {
-		const token = cleanReaderToken(text);
-		if (!token) return;
-		selectedWord = token;
-		selectedWordBriefing = null;
-		selectedWordBriefingError = '';
-		selectedWordBriefingGenerating = false;
-		selectedWordContext = null;
-		selectedWordContextError = '';
-		updateReaderUrl({ selectedWord: token }, 'replace');
-		void fetchWordContext(token);
-		void fetchEncounterBriefing(token);
+		void selectedWordController.selectToken(text);
 	}
 
 	function segmentIsActive(segment: ReaderSegment) {
@@ -1505,13 +1426,15 @@ import { createReaderRouteWorkspace, type ReaderHistoryMode } from '$lib/reader/
 		onRetryStructure: () => selectedWork && void loadStructure(readerWorkRef(selectedWork)),
 		onRetryContents: retryContentsLoad,
 		onOpenDivision: showSegment,
-		onGenerateBriefing: () => selectedWord && void fetchEncounterBriefing(selectedWord, true),
+		onGenerateBriefing: () =>
+			selectedWord && void selectedWordController.fetchEncounterBriefing(selectedWord, true),
 		activeApparatusPanel,
 		onCloseApparatus: () => {
 			activeApparatusPanel = '';
 		},
 		onOpenDivisionFromSheet: showSegment,
-		onGenerateBriefingFromSheet: () => selectedWord && void fetchEncounterBriefing(selectedWord, true),
+		onGenerateBriefingFromSheet: () =>
+			selectedWord && void selectedWordController.fetchEncounterBriefing(selectedWord, true),
 		selectedWordBriefingOutput,
 		onOpenPanel: (panel: '' | 'structure' | 'word' | 'oracle' | 'evidence') => {
 			activeApparatusPanel = panel;

@@ -131,6 +131,32 @@ def test_preferred_lemmas_for_sorting_uses_morphology_before_reduction_order() -
     ]
 
 
+def test_preferred_lemmas_for_sorting_keeps_oblique_noun_before_finite_homograph() -> None:
+    reduction = SimpleNamespace(
+        lexeme_anchors=["lex:principio", "lex:principium"],
+        buckets=[],
+    )
+    morphology_rows = [
+        {
+            "source_tool": "whitaker",
+            "form": "principio",
+            "lemma": "principium",
+            "analysis": "noun; declension 2; dative; singular; neuter; ablative",
+        },
+        {
+            "source_tool": "whitaker",
+            "form": "principio",
+            "lemma": "principio",
+            "analysis": "verb; singular; conjugation 1; present; active; indicative; 1",
+        },
+    ]
+
+    assert preferred_lemmas_for_sorting(reduction, morphology_rows) == [
+        "principium",
+        "principio",
+    ]
+
+
 def test_preferred_lemma_rank_matches_sanskrit_transliteration_variants() -> None:
     bucket = SimpleNamespace(
         display_gloss="CDSL Varuna material",
@@ -419,6 +445,34 @@ def test_bucket_sort_key_demotes_bare_cross_reference_senses() -> None:
         [cross_ref, definition],
         key=lambda bucket: bucket_sort_key(bucket, ["iṣa"]),
     ) == [definition, cross_ref]
+
+
+def test_bucket_sort_key_demotes_cdsl_bare_see_page_reference() -> None:
+    reference = SimpleNamespace(
+        display_gloss="yoga &c. See pp. 856, 858.",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                lexeme_anchor="lex:yoga",
+                evidence={"source_tool": "cdsl", "source_ref": "mw:172360.0"},
+            )
+        ],
+    )
+    definition = SimpleNamespace(
+        display_gloss="the act of yoking, joining, attaching, harnessing",
+        witnesses=[
+            SimpleNamespace(
+                source_tool="cdsl",
+                lexeme_anchor="lex:yoga",
+                evidence={"source_tool": "cdsl", "source_ref": "mw:172361.0"},
+            )
+        ],
+    )
+
+    assert sorted(
+        [reference, definition],
+        key=lambda bucket: bucket_sort_key(bucket, ["yoga"]),
+    ) == [definition, reference]
 
 
 def test_bucket_ranking_explanation_reports_sort_factors_and_reasons() -> None:

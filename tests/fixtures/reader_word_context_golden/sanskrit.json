@@ -1,0 +1,47 @@
+[
+  {
+    "language": "san",
+    "query": "agni",
+    "expected_normalized_candidates": ["agni"],
+    "expected_caveat_policy": "index_unavailable_caveat",
+    "reader_hits_policy": "index_unavailable",
+    "expected_lexical_status": "available",
+    "expected_min_lexical_items": 1,
+    "expected_lexical_lemmas_any": ["agnih", "agni"],
+    "expected_lexical_sources_any": ["cdsl"],
+    "expected_morphology_status": "available",
+    "expected_min_morphology_items": 1,
+    "expected_morphology_lemmas_any": ["agn", "agan"],
+    "expected_morphology_sources_any": ["heritage"]
+  },
+  {
+    "language": "san",
+    "query": "dharma",
+    "expected_normalized_candidates": ["dharma"],
+    "expected_caveat_policy": "index_unavailable_caveat",
+    "reader_hits_policy": "index_unavailable",
+    "expected_lexical_status": "available",
+    "expected_min_lexical_items": 1,
+    "expected_lexical_lemmas_any": ["darmah", "darma"],
+    "expected_lexical_sources_any": ["cdsl"],
+    "expected_morphology_status": "available",
+    "expected_min_morphology_items": 1,
+    "expected_morphology_lemmas_any": ["dharman", "dharma"],
+    "expected_morphology_sources_any": ["heritage"]
+  },
+  {
+    "language": "san",
+    "query": "karman",
+    "expected_normalized_candidates": ["karman"],
+    "expected_caveat_policy": "index_unavailable_caveat",
+    "reader_hits_policy": "index_unavailable",
+    "expected_lexical_status": "available",
+    "expected_min_lexical_items": 1,
+    "expected_lexical_lemmas_any": ["karman"],
+    "expected_lexical_sources_any": ["cdsl"],
+    "expected_morphology_status": "available",
+    "expected_min_morphology_items": 1,
+    "expected_morphology_lemmas_any": ["karman"],
+    "expected_morphology_sources_any": ["heritage"]
+  }
+]

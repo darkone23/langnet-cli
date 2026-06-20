@@ -2,6 +2,7 @@
   {
     "id": "dico-dharma-basic",
     "source_tool": "dico",
+    "headword": "dharma",
     "entry": "dharma [ dharman ] m. n. loi, condition, nature propre | devoir religieux [ Mah. ] ; cf. svadharma",
     "expect": {
       "parsed": true,
@@ -13,12 +14,48 @@
   {
     "id": "dico-agni-reference",
     "source_tool": "dico",
+    "headword": "agni",
     "entry": "agni [ agni ] m. feu, feu sacré | dieu du feu [ RV. ]",
     "expect": {
       "parsed": true,
       "parser": "lark:dico_entry",
       "learner_gloss_contains": "feu",
       "source_reference_contains": "RV."
+    }
+  },
+  {
+    "id": "dico-yoga-basic",
+    "source_tool": "dico",
+    "headword": "yoga",
+    "entry": "yoga [ yoga ] m. union, discipline spirituelle | pratiques du rājayoga ; cf. aṣṭāṅgayoga",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:dico_entry",
+      "learner_gloss_contains": "union"
+    }
+  },
+  {
+    "id": "dico-atman-basic",
+    "source_tool": "dico",
+    "headword": "ātman",
+    "entry": "ātman [ ātman ] m. souffle, âme, soi | principe intérieur [ Up. ]",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:dico_entry",
+      "learner_gloss_contains": "souffle",
+      "source_reference_contains": "Up."
+    }
+  },
+  {
+    "id": "dico-jnana-basic",
+    "source_tool": "dico",
+    "headword": "jñāna",
+    "entry": "jñāna [ jñāna ] n. connaissance, savoir, science | connaissance spirituelle [ BhG. ]",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:dico_entry",
+      "learner_gloss_contains": "connaissance",
+      "source_reference_contains": "BhG."
     }
   },
   {
@@ -55,11 +92,107 @@
   {
     "id": "cdsl-mw-source-notes",
     "source_tool": "cdsl",
+    "headword": "mokṣa",
     "entry": "1. mokza m. moksha, liberation; release from worldly existence; cf. MBh. ; PadmaP. ; RV.",
     "expect": {
-      "parsed": false,
+      "parsed": true,
+      "parser": "lark:cdsl_entry",
       "learner_gloss_contains": "moksha",
       "source_reference_contains": "RV."
+    }
+  },
+  {
+    "id": "cdsl-agni-basic",
+    "source_tool": "cdsl",
+    "headword": "agni",
+    "entry": "1. agni m. fire; the god of fire; sacrificial fire; RV.",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:cdsl_entry",
+      "learner_gloss_contains": "fire",
+      "source_reference_contains": "RV."
+    }
+  },
+  {
+    "id": "cdsl-yoga-basic",
+    "source_tool": "cdsl",
+    "headword": "yoga",
+    "entry": "1. yoga m. yoking; union; discipline; concentration; cf. Yogas.",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:cdsl_entry",
+      "learner_gloss_contains": "union"
+    }
+  },
+  {
+    "id": "cdsl-dharma-basic",
+    "source_tool": "cdsl",
+    "headword": "dharma",
+    "entry": "1. Darma m. law; duty; religious merit; usage; Mn. ; MBh.",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:cdsl_entry",
+      "learner_gloss_contains": "law",
+      "source_reference_contains": "MBh."
+    }
+  },
+  {
+    "id": "cdsl-karman-basic",
+    "source_tool": "cdsl",
+    "headword": "karman",
+    "entry": "1. karman n. act; action; work; rite; business; ŚBr. ; Mn.",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:cdsl_entry",
+      "learner_gloss_contains": "act",
+      "source_reference_contains": "ŚBr."
+    }
+  },
+  {
+    "id": "cdsl-atman-basic",
+    "source_tool": "cdsl",
+    "headword": "ātman",
+    "entry": "1. Atman m. breath; soul; self; individual principle; Up.",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:cdsl_entry",
+      "learner_gloss_contains": "soul",
+      "source_reference_contains": "Up."
+    }
+  },
+  {
+    "id": "cdsl-brahman-basic",
+    "source_tool": "cdsl",
+    "headword": "brahman",
+    "entry": "1. brahman n. sacred word; prayer; holy knowledge; the absolute; Up.",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:cdsl_entry",
+      "learner_gloss_contains": "sacred word",
+      "source_reference_contains": "Up."
+    }
+  },
+  {
+    "id": "cdsl-soma-basic",
+    "source_tool": "cdsl",
+    "headword": "soma",
+    "entry": "1. soma m. Soma plant; Soma juice; the moon; RV.",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:cdsl_entry",
+      "learner_gloss_contains": "Soma plant",
+      "source_reference_contains": "RV."
+    }
+  },
+  {
+    "id": "cdsl-jnana-basic",
+    "source_tool": "cdsl",
+    "headword": "jñāna",
+    "entry": "1. jYAna n. knowledge; knowing; science; wisdom.",
+    "expect": {
+      "parsed": true,
+      "parser": "lark:cdsl_entry",
+      "learner_gloss_contains": "knowledge"
     }
   }
 ]

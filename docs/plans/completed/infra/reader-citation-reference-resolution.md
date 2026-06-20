@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python dataclasses, DuckDB catalog/book databases, existing reader adapters/storage/service, pytest via `just test`.
 
+**Status:** COMPLETED 2026-06-19.
+
 ---
 
 ## Design Notes
@@ -31,11 +33,34 @@
 
 ## Tasks
 
-- [ ] Add failing tests for DCS references, including `BhG 9.2` resolving to two segments.
-- [ ] Add failing tests for compact Latin references using a `Lucr.` alias and `2, 391` punctuation normalization.
-- [ ] Add citation-reference normalization and DCS native reference generation.
-- [ ] Add catalog schema, registration, deletion, and lookup helpers.
-- [ ] Wire parsed references through the builder.
-- [ ] Update `ReaderService.resolve_address` to return `segments`, `resolution_status`, and backward-compatible `segment`.
-- [ ] Verify targeted tests and at least one real catalog lookup when the built catalog is available.
+- [x] Add failing tests for DCS references, including `BhG 9.2` resolving to two segments.
+- [x] Add failing tests for compact Latin references using a `Lucr.` alias and `2, 391` punctuation normalization.
+- [x] Add citation-reference normalization and DCS native reference generation.
+- [x] Add catalog schema, registration, deletion, and lookup helpers.
+- [x] Wire parsed references through the builder.
+- [x] Update `ReaderService.resolve_address` to return `segments`, `resolution_status`, and backward-compatible `segment`.
+- [x] Verify targeted tests and at least one real catalog lookup when the built catalog is available.
 
+## Closeout Evidence
+
+- `tests/test_reader_adapters.py` covers DCS native reference generation,
+  including `Aṣṭādhyāyī 2.2.10`, `Pāṇ. 2.2.10`, and grouped
+  `BhG 9.2` references.
+- `tests/test_reader_storage.py` covers the catalog-level
+  `citation_references` table, multi-segment lookup, older catalogs without
+  the table, and partial registration clearing.
+- `tests/test_reader_enumeration.py` covers `ReaderService.resolve_address`
+  returning `segment` plus `segments`, builder registration of DCS citation
+  references, and compact Latin alias resolution for `Lucr. 2, 391`.
+- Targeted verification:
+  `just test test_reader_adapters test_reader_storage test_reader_enumeration`
+  ran 131 tests successfully on 2026-06-19.
+- Real-data smoke build:
+  `just cli-databuild reader --sanskrit-dir /home/nixos/Classics-Data/sanskrit/dcs/data/conllu/files --source-path '/home/nixos/Classics-Data/sanskrit/dcs/data/conllu/files/Mahābhārata/Mahābhārata-0891-MBh, 6, BhaGī 9-7697.conllu' --output-root examples/debug/reader-citation-reference-smoke --progress-every 1`
+  completed successfully with one grouped Mahābhārata artifact, 356,968
+  segments, and 365,689 citation-reference rows.
+- Real-data smoke lookup:
+  `just cli reader --catalog examples/debug/reader-citation-reference-smoke/catalog.duckdb resolve-address "BhG 9.2" --output json`
+  returned `resolution_status=resolved`,
+  `resolution_kind=citation_reference`, and four local DCS segments for the
+  reference.

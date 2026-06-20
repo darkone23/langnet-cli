@@ -2,6 +2,13 @@
 
 > **For agentic workers:** Use `docs/research/electronic-text-acquisition-bruno-llull.md` as the research basis before implementing. Preserve source provenance and quality labels for every staged text.
 
+> **Closeout:** Bruno Phase 1-3 are complete for a bounded Esoteric Archives
+> HTML slice. Three Latin Bruno works are staged and imported into collection
+> `bruno_esotericarchives`, with source-index export at
+> `data/reference/reader_source_index/bruno_esotericarchives.tsv`. Llull remains
+> a scoped todo continuation in
+> `docs/plans/todo/infra/llull-latin-source-research-continuation.md`.
+
 **Goal:** Add a practical acquisition path for Giordano Bruno and Ramon Llull/Raimundus Lullus to the LangNet reader library.
 
 ## Findings Summary

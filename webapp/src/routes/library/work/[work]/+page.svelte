@@ -8,6 +8,10 @@
 		readerWorkPublicKey,
 		readerWorkRef
 	} from '$lib/reader';
+	import {
+		readerSourceFileStatusLabel,
+		readerWorkAvailabilityLabel
+	} from '$lib/reader/library-watchlist';
 	import { uiCopy } from '$lib/ui-copy';
 
 	let { data } = $props();
@@ -85,6 +89,7 @@
 				<div class="bg-base-100 border-base-300 rounded-[2rem] border p-5 shadow-sm">
 					<div class="flex flex-wrap gap-2">
 						<span class="badge badge-info">{work.language}</span>
+						<span class="badge badge-success">{readerWorkAvailabilityLabel(work)}</span>
 						{#if work.work_kind}<span class="badge badge-ghost">{work.work_kind}</span>{/if}
 					</div>
 					<div class="mt-5 grid grid-cols-2 gap-3 text-center">
@@ -152,7 +157,8 @@
 								<div class="bg-base-200 rounded-2xl p-4 text-sm">
 									<div class="flex flex-wrap gap-2">
 										<span class="badge badge-outline">{row.language}</span>
-										{#if row.file_status}<span class="badge badge-ghost">{row.file_status}</span>{/if}
+										<span class="badge badge-ghost">{readerSourceFileStatusLabel(row.file_status)}</span>
+										{#if row.file_role}<span class="badge badge-outline">{row.file_role}</span>{/if}
 									</div>
 									<p class="mt-3 font-black">{row.edition_label || row.title || 'Witness'}</p>
 									<p class="text-base-content/55 mt-2 break-all text-xs">{row.source_path}</p>

@@ -1,14 +1,41 @@
 # langnet-cli
 
 LangNet is a local evidence engine for reading Latin, Greek, and Sanskrit. It
-connects inflected words to dictionary meanings, morphological analyses, source
-claims, and reader-oriented explanations so students, teachers, and researchers
-can see both the answer and the evidence behind it.
+connects words in texts to possible headwords, morphology, dictionary witnesses,
+reader references, compact glosses, and source caveats.
 
-The reliable backend contract today is CLI JSON. The webapp is a SvelteKit
-adapter over that contract, with API routes for search, reader texts, word
-index browsing, paradigms, message-of-the-day data, and translation-cache
+The reliable backend contract is CLI JSON. The SvelteKit webapp adapts that
+contract through routes for lookup, reader texts, library/source-index browsing,
+word indexes, paradigms, message-of-the-day data, and translation-cache
 inspection.
+
+## Naming
+
+**Project Orion** is the public product name: the hosted site, web UI, public
+copy, and learner-facing experience.
+
+**LangNet** is the internal/runtime name: this repository, Python package,
+`langnet-cli`, data builders, schemas, and developer contracts. Public Orion
+surfaces may be powered by LangNet, but they should not require users to learn
+that internal name.
+
+## Current State
+
+LangNet is useful but still in stabilization:
+
+- word-level `encounter` output is the core learner surface;
+- reader catalog, source-index export, `/library`, word-index, paradigm, and
+  translation-cache routes exist;
+- DICO, Gaffiot, and Bailly French entries can project cache-backed English
+  learner glosses without replacing the source witness;
+- reader expansion now uses source manifests, staged samples, quality flags,
+  and checked-in source-index snapshots instead of raw corpus-count goals;
+- broad passage interpretation, embeddings, and opaque generated answers remain
+  deferred until word-level evidence and reader provenance are reliable.
+
+The main forward work is to keep reader quality gates tight, improve selected
+word context in the reader, broaden compact learner glosses, and continue source
+structuring only where fixtures justify typed fields.
 
 ## Quick Start
 

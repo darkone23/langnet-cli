@@ -78,6 +78,10 @@
         "include_cltk": { "type": "boolean" },
         "translation_mode": { "type": "string" },
         "translation_cache_writes": { "type": "boolean" },
+        "debug": { "type": "boolean" },
+        "show_candidates": { "type": "boolean" },
+        "show_ranking": { "type": "boolean" },
+        "show_source": { "type": "boolean" },
         "include_paradigm_resolution": { "type": "boolean" },
         "include_learning": { "type": "boolean" }
       },

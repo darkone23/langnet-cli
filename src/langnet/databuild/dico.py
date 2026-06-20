@@ -422,7 +422,7 @@ class DicoBuilder:
         if marker_idx == -1:
             raise ValueError(f"invalid DICO .col source: marker {COL_FIN_MARKER!r} not found")
         idx = marker_idx + len(COL_FIN_MARKER)
-        if raw[idx:idx + 1] == b"\n":
+        if raw[idx : idx + 1] == b"\n":
             idx += 1
 
         chunks_yielded = 0
@@ -473,11 +473,17 @@ class DicoBuilder:
             yield chunk
 
     def _parse_col_entries(self, seen_bodies: dict[str, set[str]]):
-        full_text = "".join(chunk.decode("utf-8", errors="replace") for chunk in self._iter_col_chunks())
+        full_text = "".join(
+            chunk.decode("utf-8", errors="replace") for chunk in self._iter_col_chunks()
+        )
         if not full_text.strip():
             return
 
-        matches = [match for match in COL_BOLD_RE.finditer(full_text) if _is_col_entry_boundary(full_text, match)]
+        matches = [
+            match
+            for match in COL_BOLD_RE.finditer(full_text)
+            if _is_col_entry_boundary(full_text, match)
+        ]
         if not matches:
             logger.warning("No <b>...</b> entries detected in %s", self.source_dir)
             return

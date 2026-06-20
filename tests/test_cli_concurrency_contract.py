@@ -7,8 +7,8 @@ DOCS_WITH_CURRENT_CLI_EXAMPLES = [
     Path("docs/GETTING_STARTED.md"),
     Path("docs/JUST_RECIPE_HEALTH.md"),
     Path("docs/OUTPUT_GUIDE.md"),
-    Path("docs/plans/active/infra/local-lexicon-witness-handoff.md"),
-    Path("docs/plans/active/pedagogy/learner-encounter-roadmap.md"),
+    Path("docs/archive/2026-06-reader-expansion/local-lexicon-witness-handoff.md"),
+    Path("docs/plans/completed/pedagogy/learner-encounter-roadmap.md"),
 ]
 
 

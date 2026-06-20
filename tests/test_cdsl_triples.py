@@ -520,7 +520,7 @@ def test_cdsl_source_notes_do_not_reclassify_meaning_segments() -> None:
         params={"lemma": "Darma", "dict": "mw"},
         endpoint="duckdb://cdsl/mw",
     )
-    raw_gloss = "law, duty; see Mn. ; MBh. ; religious merit"
+    raw_gloss = "law, duty; see Mn. ; MBh. ; BhP. ; religious merit"
     rows = [
         {
             "key": "Darma",
@@ -600,6 +600,14 @@ def test_cdsl_source_notes_do_not_reclassify_meaning_segments() -> None:
         },
         {
             "index": 3,
+            "raw_text": "BhP.",
+            "display_text": "BhP.",
+            "segment_type": "source_reference",
+            "labels": ["source_reference"],
+            "recognized_abbreviations": ["BhP"],
+        },
+        {
+            "index": 4,
             "raw_text": "religious merit",
             "display_text": "religious merit",
             "segment_type": "unclassified",
@@ -608,8 +616,8 @@ def test_cdsl_source_notes_do_not_reclassify_meaning_segments() -> None:
     ]
     assert gloss["metadata"]["source_notes"] == {
         "cross_reference_segments": ["see Mn."],
-        "source_reference_segments": ["MBh."],
-        "recognized_abbreviations": ["Mn", "MBh"],
+        "source_reference_segments": ["MBh.", "BhP."],
+        "recognized_abbreviations": ["Mn", "MBh", "BhP"],
     }
 
 

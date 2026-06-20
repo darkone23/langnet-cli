@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task.
 
+**Status:** COMPLETED 2026-06-19
+
 **Goal:** Integrate Perseus Catalog subject metadata and Sanskrit DCS corpus metadata into the reader catalog so generated classification/popularity metadata is grounded in source-backed evidence.
 
 **Recommendation:** Keep three layers separate:
@@ -101,14 +103,48 @@ work.
 ## Remaining Work
 
 1. Emit candidate metadata overlays only when Perseus provides a display-field
-   correction.
+   correction. Completed 2026-06-19.
+   - `sync-source-enrichment` now reports candidate overlays for direct display
+     corrections such as `author`, `language`, or `cts_work_urn`.
+   - Perseus subject membership, dates, editors, translators, and catalog URLs
+     remain source metadata, not overlays.
 2. Feed DCS chapter structure into work-map sync where it is reliable.
+   Completed 2026-06-19 as candidate emission.
+   - `sync-source-enrichment --dcs-chapter-info` now reports candidate native
+     work-map chapter nodes for complete DCS chapter rows that match current
+     `sanskrit_dcs` catalog works.
+   - The command does not write those candidates into `work_map_nodes`, because
+     the current work-map storage sync is replacement-oriented and curated
+     review should remain the applying step.
 3. Re-run classification for affected languages using the enriched context.
-4. Sync generated classifications into the catalog.
-5. Spot-check:
+   Completed up to the provider boundary 2026-06-19.
+   - Fresh source-enriched classification input CSVs were exported for Greek,
+     Latin, and Sanskrit under `examples/debug/`.
+   - A fresh paid/provider model generation run was deliberately split to
+     `docs/plans/todo/infra/reader-source-enrichment-provider-classification-rerun.md`.
+4. Sync generated classifications into the catalog. Completed 2026-06-19.
+   - Existing normalized generated classification CSVs for Greek, Latin, and
+     Sanskrit were merged into `data/build/reader/catalog.duckdb`.
+5. Spot-check. Completed 2026-06-19:
    - popular Greek medical texts;
    - Latin grammar texts by scope popularity;
    - Sanskrit Ayurveda/Kosha/Paniniya/Vedic works.
+
+## Closeout Evidence
+
+- `sync-source-enrichment --dcs-chapter-info` imported 78,665 DCS chapter
+  metadata rows and emitted 15,733 candidate work-map nodes.
+- Source-enriched classification inputs were exported:
+  - `examples/debug/reader-classification-export-grc-source-enriched-2026-06-19.csv`
+  - `examples/debug/reader-classification-export-lat-source-enriched-2026-06-19.csv`
+  - `examples/debug/reader-classification-export-san-source-enriched-2026-06-19.csv`
+- Existing generated classification rows were merged:
+  - Greek: 100 rows
+  - Latin: 100 rows
+  - Sanskrit: 100 rows
+- Spot checks returned expected rows for Greek Medicine, Latin Grammar,
+  Sanskrit Ayurveda, Sanskrit Grammar/Paniniya, Sanskrit Vedic Texts, and
+  Sanskrit Lexicography/Kosha.
 
 ## Self-Review
 

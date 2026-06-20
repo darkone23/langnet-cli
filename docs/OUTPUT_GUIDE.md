@@ -762,6 +762,10 @@ The JSON shape keeps claim metadata separate from triple metadata so tools can i
 just cli encounter san dharma cdsl --max-buckets 5
 just cli encounter san agni heritage --no-cache
 just cli encounter lat lupus gaffiot
+just cli encounter lat lupus all --show-candidates
+just cli encounter lat lupus all --show-ranking
+just cli encounter lat lupus all --show-source
+just cli encounter lat lupus all --debug
 ```
 
 Pretty output should be treated as a prototype learner interface. It is the
@@ -769,6 +773,27 @@ right surface for examples and snapshots, but not the machine contract. Use
 `encounter --output json` for downstream renderers.
 
 The accepted-output gallery currently covers representative Sanskrit, Latin, and Greek snapshots in `tests/test_cli_encounter_output.py`. Add new examples there when display ranking or source transforms change.
+
+Default pretty output keeps normalized candidate noise hidden. Use
+`--show-candidates` when debugging candidate selection; it prints a short
+`Candidates` section from the reduction lexeme anchors without changing meaning
+ranking or JSON evidence.
+
+Default pretty output also keeps ranking mechanics hidden. Use `--show-ranking`
+when auditing why one meaning bucket sorted before another; it prints a compact
+`Ranking` section with preferred-lemma rank, effective rank, learner-quality
+order, source order, source tools, and the same explanation reasons available
+in JSON. This is a debugging surface, not learner copy.
+
+Use `--show-source` when auditing source evidence from pretty output. It prints
+a compact `Source` section with source tool, source ref, headword, entry id, raw
+blob key, and source-layer text for visible buckets. This keeps long source
+entries out of the default learner screen while preserving a terminal-readable
+inspection path.
+
+Use `--debug` as a convenience switch when inspecting a difficult encounter in
+the terminal. It enables the candidate, source, and ranking sections together.
+Use the individual flags when a narrower audit surface is enough.
 
 Long source entries are expected. The compact display line is a learner summary,
 not a replacement for source evidence. JSON consumers should inspect
@@ -795,7 +820,8 @@ New renderer-facing fields are additive:
 
 - `schema_version`: currently `langnet.encounter.v1`;
 - `request`: normalized request metadata such as language, text, tool filter,
-  cache mode, and translation mode;
+  cache mode, translation mode, and debug/display switches such as
+  `debug`, `show_candidates`, `show_ranking`, and `show_source`;
 - `display.header`: forms and source keys ready for a first-screen header;
 - `display.analysis`: morphology rows with `display_text` and Foster labels;
 - `display.meanings`: display-ready meaning rows aligned by `bucket_id` to

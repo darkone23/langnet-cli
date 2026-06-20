@@ -10,6 +10,8 @@ from langnet.cli import main
 from langnet.execution.source_text import analyze_source_entry
 
 FUZZ_FIXTURE_PATH = Path("tests/fixtures/source_entry_analysis_fuzz.json")
+SANSKRIT_SOURCE_ENTRY_TERMS = {"agni", "yoga", "ātman", "jñāna"}
+CDSL_COMMON_SOURCE_ENTRY_TERMS = {"agni", "dharma", "karman", "ātman", "brahman", "soma"}
 
 
 def test_analyze_source_entry_extracts_dico_gloss_and_references() -> None:
@@ -92,6 +94,73 @@ def test_analyze_source_entry_extracts_gaffiot_citations_and_examples() -> None:
     }
 
 
+def test_analyze_source_entry_extracts_diogenes_sense_heads_before_citations() -> None:
+    analysis = analyze_source_entry(
+        "λόγος, ὁ, I. the word or that by which the inward thought is expressed, Hom.; "
+        "II. account, tale, story, Hdt.; III. reason, argument, Plat.",
+        source_tool="diogenes",
+    )
+
+    learner_gloss = str(analysis["learner_gloss"])
+    assert "the word" in learner_gloss
+    assert "account, tale, story" in learner_gloss
+    assert "reason, argument" in learner_gloss
+    assert "λόγος" not in learner_gloss
+    assert "I." not in learner_gloss
+    assert "Hom." not in learner_gloss
+
+
+def test_analyze_source_entry_structures_diogenes_sense_segments_and_refs() -> None:
+    analysis = analyze_source_entry(
+        "λόγος, ὁ, I. the word or that by which the inward thought is expressed, Hom.; "
+        "II. account, tale, story, Hdt.; III. reason, argument, Plat.",
+        source_tool="diogenes",
+    )
+
+    source_segments = cast(list[dict[str, object]], analysis["source_segments"])
+    source_references = cast(list[dict[str, object]], analysis["source_references"])
+    assert str(source_segments[0]["raw_text"]).startswith("λόγος, ὁ, I.")
+    assert source_segments[0]["display_text"] == (
+        "the word or that by which the inward thought is expressed"
+    )
+    assert source_segments[0]["segment_type"] == "definition_segment"
+    assert source_segments[0]["labels"] == ["definition", "citation", "source_reference"]
+    assert source_segments[0]["source_reference"] == "Hom."
+    assert [item["text"] for item in source_references] == ["Hom.", "Hdt.", "Plat."]
+
+
+def test_analyze_source_entry_uses_cdsl_learner_gloss_and_segments() -> None:
+    analysis = analyze_source_entry(
+        "karman n. ( A m. , L. ), (√ kṛ , Uṇ. iv, 144 ), "
+        "act, action, performance, business, RV. ; AV. ; ŚBr. ; MBh. &c.",
+        source_tool="cdsl",
+    )
+
+    assert analysis["learner_gloss"] == "act, action, performance, business"
+    source_segments = cast(list[dict[str, object]], analysis["source_segments"])
+    source_references = cast(list[dict[str, object]], analysis["source_references"])
+    assert str(source_segments[0]["display_text"]).startswith("karman n.")
+    assert source_segments[1]["segment_type"] == "source_reference"
+    assert source_segments[1]["labels"] == ["source_reference"]
+    assert [item["text"] for item in source_references[:2]] == ["AV.", "ŚBr."]
+
+
+def test_analyze_source_entry_exposes_cdsl_body_grammar_parse() -> None:
+    analysis = analyze_source_entry(
+        "1. mokza m. moksha, liberation; release from worldly existence; cf. MBh. ; PadmaP. ; RV.",
+        source_tool="cdsl",
+    )
+
+    grammar_parse = cast(dict[str, object], analysis["grammar_parse"])
+    assert grammar_parse["parser"] == "lark:cdsl_entry"
+    assert grammar_parse["parsed"] is True
+    assert grammar_parse["headword"] == "mokza"
+    assert grammar_parse["grammar_markers"] == ["m."]
+    assert grammar_parse["definition_text"] == "moksha, liberation"
+    assert grammar_parse["cross_references"] == ["cf. MBh."]
+    assert grammar_parse["source_references"] == ["PadmaP.", "RV."]
+
+
 def test_entry_analyze_cli_outputs_json() -> None:
     result = CliRunner().invoke(
         main,
@@ -163,3 +232,28 @@ def test_source_entry_analysis_fuzz_fixture_minimum_invariants() -> None:
         if expected_reference:
             refs = cast(list[dict[str, object]], analysis.get("source_references", []))
             assert expected_reference in [item["text"] for item in refs], case["id"]
+
+
+def test_source_entry_analysis_fuzz_fixture_covers_sanskrit_seed_terms() -> None:
+    cases = json.loads(FUZZ_FIXTURE_PATH.read_text(encoding="utf-8"))
+    covered_by_tool: dict[str, set[str]] = {"dico": set(), "cdsl": set()}
+
+    for case in cases:
+        source_tool = str(case["source_tool"])
+        if source_tool not in covered_by_tool:
+            continue
+        term = str(case.get("headword") or "").strip()
+        if term:
+            covered_by_tool[source_tool].add(term)
+
+    for source_tool, terms in covered_by_tool.items():
+        assert SANSKRIT_SOURCE_ENTRY_TERMS.issubset(terms), source_tool
+
+
+def test_source_entry_analysis_fuzz_fixture_covers_cdsl_common_terms() -> None:
+    cases = json.loads(FUZZ_FIXTURE_PATH.read_text(encoding="utf-8"))
+    cdsl_terms = {
+        str(case.get("headword") or "").strip() for case in cases if case["source_tool"] == "cdsl"
+    }
+
+    assert CDSL_COMMON_SOURCE_ENTRY_TERMS.issubset(cdsl_terms)

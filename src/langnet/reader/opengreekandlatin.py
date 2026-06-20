@@ -101,6 +101,24 @@ def discover_ogl_sources(root: Path, collection_id: str) -> list[OglSourceCandid
     return _apply_default_import_policy(candidates)
 
 
+def discover_ogl_source_view_candidates(root: Path, collection_id: str) -> list[OglSourceCandidate]:
+    """Return OGL source candidates across all source views for audit comparison."""
+    if collection_id not in OGL_COLLECTIONS:
+        msg = f"unsupported OpenGreek+Latin collection: {collection_id}"
+        raise ValueError(msg)
+    if not root.exists():
+        return []
+    return [
+        _path_candidate(root, collection_id, path)
+        for path in sorted(root.rglob("*.xml"))
+        if is_ogl_source_xml(path)
+    ]
+
+
+def parsed_ogl_source_candidate(candidate: OglSourceCandidate) -> OglSourceCandidate:
+    return _parsed_candidate(candidate)
+
+
 def selected_ogl_sources(root: Path, collection_id: str) -> list[OglSourceCandidate]:
     return [
         candidate
@@ -296,7 +314,7 @@ def _replace_catalog_id_prefix(value: str, old_prefix: str, new_prefix: str) -> 
         return new_prefix
     old_with_sep = f"{old_prefix}:"
     if value.startswith(old_with_sep):
-        return f"{new_prefix}:{value[len(old_with_sep):]}"
+        return f"{new_prefix}:{value[len(old_with_sep) :]}"
     return f"{new_prefix}:{value}"
 
 
@@ -357,9 +375,7 @@ def _parsed_candidate(candidate: OglSourceCandidate) -> OglSourceCandidate:
 
     inventory = _cts_inventory_metadata(candidate.source_path)
     cts_edition_urn = parsed.edition.cts_edition_urn
-    has_real_cts_urn = bool(
-        cts_edition_urn and not cts_edition_urn.startswith("urn:cts:langnet:")
-    )
+    has_real_cts_urn = bool(cts_edition_urn and not cts_edition_urn.startswith("urn:cts:langnet:"))
     synthetic_work_id = (
         parsed.work.work_id if parsed.work.work_id.startswith("urn:cts:langnet:") else None
     )
@@ -473,7 +489,9 @@ def _apply_ogl_cts_inventory_metadata(
     ):
         return parsed
     return ParsedBook(
-        work=replace(parsed.work, title=title, author=author, author_id=author_id, language=language),
+        work=replace(
+            parsed.work, title=title, author=author, author_id=author_id, language=language
+        ),
         edition=replace(parsed.edition, label=edition_label, language=language),
         segments=parsed.segments,
         addresses=parsed.addresses,

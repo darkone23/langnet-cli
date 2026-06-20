@@ -281,11 +281,7 @@ def _build_georges_1913_impl(config: BuildGeorges1913Config) -> None:
     from langnet.databuild.dico import DicoBuildConfig, DicoBuilder  # noqa: PLC0415
     from langnet.databuild.paths import default_georges_1913_path  # noqa: PLC0415
 
-    output_path = (
-        Path(config.output).expanduser()
-        if config.output
-        else default_georges_1913_path()
-    )
+    output_path = Path(config.output).expanduser() if config.output else default_georges_1913_path()
     builder_config = DicoBuildConfig(
         source_dir=Path(config.source_dir).expanduser() if config.source_dir else None,
         output_path=output_path,
@@ -1684,30 +1680,26 @@ def _motd_pool_log(*, json_output: bool, message: str) -> None:
 @click.option(
     "--opengreekandlatin-latin-dir",
     type=click.Path(),
-    default=str(Path.home() / "opengreekandlatin" / "Latin"),
-    show_default=True,
-    help="Open Greek and Latin Latin-text TEI directory.",
+    default=None,
+    help="Open Greek and Latin Latin-text TEI directory. Pass explicitly for full OGL builds.",
 )
 @click.option(
     "--opengreekandlatin-csel-dir",
     type=click.Path(),
-    default=str(Path.home() / "opengreekandlatin" / "csel-dev"),
-    show_default=True,
-    help="Open Greek and Latin CSEL corpus root.",
+    default=None,
+    help="Open Greek and Latin CSEL corpus root. Pass explicitly for full OGL builds.",
 )
 @click.option(
     "--opengreekandlatin-patrologia-dir",
     type=click.Path(),
-    default=str(Path.home() / "opengreekandlatin" / "patrologia_latina-dev"),
-    show_default=True,
-    help="Open Greek and Latin Patrologia Latina corpus root.",
+    default=None,
+    help="Open Greek and Latin Patrologia Latina corpus root. Pass explicitly for full OGL builds.",
 )
 @click.option(
     "--opengreekandlatin-church-fathers-dir",
     type=click.Path(),
-    default=str(Path.home() / "opengreekandlatin" / "church_fathers-dev"),
-    show_default=True,
-    help="Open Greek and Latin Church Fathers corpus root.",
+    default=None,
+    help="Open Greek and Latin Church Fathers corpus root. Pass explicitly for full OGL builds.",
 )
 @click.option(
     "--alias-dir",

@@ -425,9 +425,9 @@ for (const token of [
 }
 
 const selectLanguageMatch = readerPageSource.match(
-	/function selectLanguage[\s\S]*?\n\t}\n\n\tasync function fetchEncounterBriefing/
+	/function selectLanguage[\s\S]*?\n\t}\n\n\tfunction showLibrary/
 );
-assert.ok(selectLanguageMatch, 'reader page should define selectLanguage before fetch helpers');
+assert.ok(selectLanguageMatch, 'reader page should define selectLanguage before library actions');
 assert.ok(
 	!selectLanguageMatch[0].includes('loadAllReaderIndexStats'),
 	'language changes should not refetch stats for every language'

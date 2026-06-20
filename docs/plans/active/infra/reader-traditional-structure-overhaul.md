@@ -226,6 +226,10 @@ Implemented slices:
 - Word Desk browser storage helpers now live in `desk-storage.ts`, covering
   MOTD local cache, word-index earmarks, desk session state, and versioned
   storage cleanup with focused tests.
+- Word Desk MOTD request orchestration now lives in
+  `webapp/src/lib/desk/desk-motd-controller.ts`, covering initial/stale loads,
+  refresh avoids, abort/reset lifecycle, normalization, errors, and cache writes
+  outside `DeskRouteController.svelte`.
 - `reader structure` and `/api/reader?mode=structure`.
 - Division metadata overlay storage, sync, builder integration, and reviewed
   traditional mappings across all targeted texts (Bhagavadgītā chapters 1-18 and
@@ -515,6 +519,19 @@ feature slice is the traditional-division layer:
   defaults, restoration, URL state hydration, and cursor/statestore persistence
   plumbing. `ReaderRouteController.svelte` now delegates these lifecycle seams to
   the workspace module while preserving in-route data loading and selection actions.
+- Extracted Reader selected-word context label helpers into
+  `src/lib/reader/reader-word-context.ts`, keeping the public
+  `src/lib/reader/index.ts` exports stable while reducing the Reader domain
+  index below the 1000-line guard.
+- Extracted Reader selected-word fetch/reset orchestration into
+  `src/lib/reader/reader-selected-word-controller.ts`, covering word-context
+  fetches, encounter briefing fetches, token selection, request aborts, and
+  reset behavior with focused tests while reducing `ReaderRouteController.svelte`
+  to 1446 lines.
+- Extracted Word Desk MOTD request orchestration into
+  `src/lib/desk/desk-motd-controller.ts`, covering initial/stale loads, refresh
+  avoid lists, abort/reset lifecycle, normalization, errors, and cache writes
+  with focused tests while reducing `DeskRouteController.svelte` to 1501 lines.
 
 ## Immediate Next Step
 
@@ -524,8 +541,9 @@ Continue the UI overhaul in this order:
    ceiling by extracting the remaining stateful lookup orchestration seams:
    first-pass search sequencing remains in-route; enrichment refresh sequencing
    and retry refresh sequencing now flow through `desk-workflows.ts`, and word-index
-   orchestration now flows through `desk-word-index.ts`. Status/cache copy has
-   already moved to `desk-status.ts`.
+   orchestration now flows through `desk-word-index.ts`. MOTD request orchestration
+   now flows through `desk-motd-controller.ts`, and status/cache copy has already
+   moved to `desk-status.ts`.
 2. Move the remaining Word Desk orchestration boundaries out of the route:
    storage synchronization and async activity coordination should stay under
    the `src/lib/desk/` surface label when they are desk-specific.
@@ -537,9 +555,9 @@ Continue the UI overhaul in this order:
    `routes/reader/+page.svelte` and `ReaderRouteController.svelte` by extracting
    the remaining discovery/search orchestration (author sections, shelves, works,
    and text search loaders) into focused `src/lib/reader/` helpers.
-5. Continue moving focused Reader helpers out of `src/lib/reader/index.ts`
-   where they form clearer concept modules, while keeping the public Reader
-   domain export stable.
+5. Keep `src/lib/reader/index.ts` below the 1000-line guard; continue moving
+   focused Reader helpers out only where they form clearer concept modules,
+   while keeping the public Reader domain export stable.
 6. Normalize async surfaces across the Word Desk so adding content uses
    skeletons, replacing content uses one spinner/badge/loading strip, and
    visible waits expose elapsed seconds.

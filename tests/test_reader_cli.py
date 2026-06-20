@@ -50,6 +50,7 @@ ODYSSEY_FIXTURE_SEGMENT_COUNT = 2
 LEGACY_LANGUAGE_REPAIR_EXPECTED_COUNT = 5
 VULGATE_METADATA_OVERLAY_EXPECTED_COUNT = 2
 GOSPEL_METADATA_OVERLAY_EXPECTED_COUNT = 2
+DCS_CHAPTER_INFO_METADATA_COUNT = 4
 
 
 def _write_fixture_reader_catalog(root: Path) -> Path:
@@ -2535,7 +2536,7 @@ def test_reader_cli_sync_source_enrichment_imports_perseus_catalog_results() -> 
             collection_id="perseus",
             language="lat",
             title="Grammatica",
-            author="Orbilius Pupillus",
+            author="Unknown",
             author_id="urn:cts:latinLit:phi0419",
             source_id="phi0419.phi001",
         )
@@ -2577,9 +2578,67 @@ Year Published:1907Language:Latin
 
     assert result.exit_code == 0, result.output
     assert payload["summary"]["perseus_metadata_count"] == PERSEUS_GRAMMAR_METADATA_COUNT
+    assert payload["summary"]["candidate_metadata_overlay_count"] == 1
+    assert payload["candidate_metadata_overlays"][0]["field"] == "author"
+    assert payload["candidate_metadata_overlays"][0]["value"] == "Orbilius Pupillus"
     metadata_by_key = {row["key"]: row["value"] for row in metadata}
     assert metadata_by_key["perseus_subject"] == ("Latin language--Grammar--Early works to 1500")
     assert metadata_by_key["perseus_year_published"] == "1907"
+
+
+def test_reader_cli_sync_source_enrichment_emits_dcs_work_map_candidates() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        create_catalog_db(catalog_path)
+        _register_fixture_work(
+            catalog_path,
+            root,
+            work_id="langnet:reader:sanskrit_dcs:dcs_378",
+            collection_id="sanskrit_dcs",
+            language="san",
+            title="Abhidharmakośa",
+            author="Unknown",
+            author_id=None,
+            source_id="dcs_378",
+        )
+        chapter_info = root / "chapter-info.xml"
+        chapter_info.write_text(
+            """
+<info>
+  <chapter>
+    <path>Abhidharmakośa/Abhidharmakośa-0000-AbhidhKo, 1-7024.conllu</path>
+    <textName>Abhidharmakośa</textName>
+    <textId>378</textId>
+    <chapterName>AbhidhKo, 1</chapterName>
+    <chapterId>7024</chapterId>
+    <chapterPosition>1</chapterPosition>
+  </chapter>
+</info>
+""",
+            encoding="utf-8",
+        )
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "reader",
+                "--catalog",
+                str(catalog_path),
+                "sync-source-enrichment",
+                "--dcs-chapter-info",
+                str(chapter_info),
+                "--output",
+                "json",
+            ],
+        )
+        payload = json.loads(result.output)
+
+    assert result.exit_code == 0, result.output
+    assert payload["summary"]["dcs_chapter_metadata_count"] == DCS_CHAPTER_INFO_METADATA_COUNT
+    assert payload["summary"]["candidate_work_map_node_count"] == 1
+    assert payload["candidate_work_map_nodes"][0]["node_id"] == "dcs_378:chapter:7024"
+    assert payload["candidate_work_map_nodes"][0]["status"] == "candidate"
 
 
 def test_work_classifier_retry_helper_retries_transient_exception() -> None:

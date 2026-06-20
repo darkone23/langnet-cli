@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Callable
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -28,6 +29,7 @@ from langnet.reader.division_metadata import (
 )
 from langnet.reader.metadata_attribution import load_metadata_attributions
 from langnet.reader.metadata_overlay import load_metadata_overlays
+from langnet.reader.models import ReaderMetadataOverlay, ReaderWorkMapNode
 from langnet.reader.search_index import (
     build_reader_search_index,
     inspect_reader_search_query,
@@ -40,8 +42,10 @@ from langnet.reader.search_normalization import (
     normalize_segment_for_search,
 )
 from langnet.reader.source_enrichment import (
+    dcs_chapter_info_work_map_candidates,
     parse_dcs_chapter_info_metadata,
     parse_perseus_catalog_results,
+    perseus_candidate_metadata_overlays,
     sync_dcs_corpus_metadata,
 )
 from langnet.reader.storage import (
@@ -61,8 +65,8 @@ from langnet.reader.storage import (
     list_metadata_attributions,
     list_metadata_overlays,
     list_segments_for_work,
-    list_source_index,
     list_source_files,
+    list_source_index,
     list_source_metadata,
     list_works,
     lookup_segment_by_address,
@@ -677,7 +681,7 @@ class ReaderService:
             offset=_cursor_offset(cursor),
         )
 
-    def word_context_payload(  # noqa: PLR0913
+    def word_context_payload(  # noqa: PLR0913, PLR0915
         self,
         *,
         query: str,
@@ -687,6 +691,8 @@ class ReaderService:
         segment_ref: str | None = None,
         search_limit: int = 8,
         search_context: int = 1,
+        lexical_evidence_provider: Callable[..., dict[str, Any]] | None = None,
+        morphology_provider: Callable[..., dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         started_at = perf_counter()
         steps: list[dict[str, Any]] = []
@@ -710,21 +716,54 @@ class ReaderService:
             or getattr(normalized_query, "search_text_folded", "")
             or ""
         )
+        candidates = [
+            candidate
+            for candidate in [
+                query,
+                normalized_query_text,
+                *[str(item.get("lemma") or "") for item in cached_normalization["items"]],
+            ]
+            if candidate
+        ]
+        normalized_candidates = list(dict.fromkeys(candidates))
         normalization = {
             "surface": query,
             "normalized": normalized_query,
-            "candidates": [
-                candidate
-                for candidate in [
-                    query,
-                    normalized_query_text,
-                    *[str(item.get("lemma") or "") for item in cached_normalization["items"]],
-                ]
-                if candidate
-            ],
+            "candidates": normalized_candidates,
         }
-        normalization["candidates"] = list(dict.fromkeys(normalization["candidates"]))
         timed_step("normalization", step_started)
+
+        step_started = perf_counter()
+        lexical_evidence, lexical_evidence_caveats = _word_context_lexical_evidence(
+            query=query,
+            language=language,
+            candidates=normalized_candidates,
+            fallback=cached_normalization,
+            lexical_evidence_provider=lexical_evidence_provider,
+        )
+        caveats.extend(lexical_evidence_caveats)
+        timed_step(
+            "lexical_evidence",
+            step_started,
+            status=str(lexical_evidence.get("status") or "unknown"),
+            item_count=len(list(lexical_evidence.get("items") or [])),
+        )
+
+        step_started = perf_counter()
+        morphology, morphology_caveats = _word_context_morphology(
+            query=query,
+            language=language,
+            candidates=normalized_candidates,
+            fallback=cached_normalization,
+            morphology_provider=morphology_provider,
+        )
+        caveats.extend(morphology_caveats)
+        timed_step(
+            "morphology",
+            step_started,
+            status=str(morphology.get("status") or "unknown"),
+            item_count=len(list(morphology.get("items") or [])),
+        )
 
         work: dict[str, Any] | None = None
         segment: dict[str, Any] | None = None
@@ -778,13 +817,13 @@ class ReaderService:
         reader_hits_status = "index_unavailable"
         reader_hit_items: list[dict[str, Any]] = []
         language_counts = index_status.get("language_counts")
-        index_has_language = (
-            not isinstance(language_counts, dict)
-            or language in {str(key) for key in language_counts.keys()}
-        )
+        index_has_language = not isinstance(language_counts, dict) or language in {
+            str(key) for key in language_counts
+        }
         if index_status.get("exists") and not index_has_language:
             caveats.append(
-                f"Reader search index has no {language} slice; corpus hits are unavailable for this language."
+                f"Reader search index has no {language} slice; corpus hits are unavailable "
+                "for this language."
             )
         elif index_status.get("exists"):
             step_started = perf_counter()
@@ -830,18 +869,14 @@ class ReaderService:
             },
             "normalization": normalization,
             "lexical_evidence": {
-                "status": cached_normalization["status"],
-                "items": cached_normalization["items"],
-                "note": cached_normalization["note"],
+                "status": lexical_evidence.get("status", "unavailable"),
+                "items": list(lexical_evidence.get("items") or []),
+                "note": lexical_evidence.get("note", ""),
             },
             "morphology": {
-                "status": cached_normalization["status"],
-                "items": cached_normalization["items"],
-                "note": (
-                    "Cached normalizer lemma candidates are available; full morphology features still require the heavier lookup/paradigm path."
-                    if cached_normalization["items"]
-                    else cached_normalization["note"]
-                ),
+                "status": morphology.get("status", "unavailable"),
+                "items": list(morphology.get("items") or []),
+                "note": morphology.get("note", ""),
             },
             "reader_hits": {
                 "status": reader_hits_status,
@@ -856,7 +891,8 @@ class ReaderService:
             },
             "provenance": {
                 "work_id": resolved_work_id or source_row.get("work_id"),
-                "collection_id": source_row.get("collection_id") or (work or {}).get("collection_id"),
+                "collection_id": source_row.get("collection_id")
+                or (work or {}).get("collection_id"),
                 "source_id": source_row.get("source_id") or (work or {}).get("source_id"),
                 "source_path": source_row.get("source_path"),
                 "file_status": source_row.get("file_status"),
@@ -1221,14 +1257,21 @@ class ReaderService:
     ) -> dict[str, Any]:
         dcs_chapter_metadata_count = 0
         dcs_corpus_summary: dict[str, Any] | None = None
+        candidate_work_map_nodes = []
         perseus_metadata_count = 0
         if dcs_chapter_info is not None:
+            dcs_chapter_info_text = dcs_chapter_info.read_text(encoding="utf-8")
             rows = parse_dcs_chapter_info_metadata(
-                dcs_chapter_info.read_text(encoding="utf-8"),
+                dcs_chapter_info_text,
                 source_path=dcs_chapter_info,
             )
             register_source_metadata(self.catalog_path, rows)
             dcs_chapter_metadata_count = len(rows)
+            candidate_work_map_nodes = dcs_chapter_info_work_map_candidates(
+                self.catalog_path,
+                dcs_chapter_info_text,
+                source_path=dcs_chapter_info,
+            )
         if dcs_corpus_table is not None:
             dcs_corpus_summary = sync_dcs_corpus_metadata(
                 self.catalog_path,
@@ -1246,6 +1289,7 @@ class ReaderService:
                 )
                 register_source_metadata(self.catalog_path, rows)
                 perseus_metadata_count += len(rows)
+        candidate_overlays = perseus_candidate_metadata_overlays(self.catalog_path)
         return {
             "schema_version": READER_SCHEMA_VERSION,
             "mode": "sync-source-enrichment",
@@ -1253,10 +1297,18 @@ class ReaderService:
             "summary": {
                 "dcs_chapter_metadata_count": dcs_chapter_metadata_count,
                 "dcs_corpus": dcs_corpus_summary,
+                "candidate_work_map_node_count": len(candidate_work_map_nodes),
                 "perseus_metadata_count": perseus_metadata_count,
                 "perseus_catalog_result_count": len(perseus_catalog_results),
+                "candidate_metadata_overlay_count": len(candidate_overlays),
                 "metadata_status": "source-backed",
             },
+            "candidate_work_map_nodes": [
+                _work_map_node_payload(node) for node in candidate_work_map_nodes
+            ],
+            "candidate_metadata_overlays": [
+                _metadata_overlay_payload(overlay) for overlay in candidate_overlays
+            ],
         }
 
     def resolve_address(self, address: str) -> dict[str, Any]:  # noqa: C901, PLR0912
@@ -1591,6 +1643,58 @@ class ReaderService:
         return payload
 
 
+def _metadata_overlay_payload(overlay: ReaderMetadataOverlay) -> dict[str, Any]:
+    return {
+        "collection_id": overlay.collection_id,
+        "match_field": overlay.match_field,
+        "match_value": overlay.match_value,
+        "field": overlay.field,
+        "value": overlay.value,
+        "status": overlay.status,
+        "confidence": overlay.confidence,
+        "note": overlay.note,
+        "source_file": overlay.source_file,
+        "evidence": [
+            {
+                "source_type": evidence.source_type,
+                "citation": evidence.citation,
+                "label": evidence.label,
+                "retrieved_at": evidence.retrieved_at,
+            }
+            for evidence in overlay.evidence
+        ],
+    }
+
+
+def _work_map_node_payload(node: ReaderWorkMapNode) -> dict[str, Any]:
+    return {
+        "work_id": node.work_id,
+        "node_id": node.node_id,
+        "parent_node_id": node.parent_node_id,
+        "level": node.level,
+        "kind": node.kind,
+        "label": node.label,
+        "native_label": node.native_label,
+        "ordinal": node.ordinal,
+        "start_citation": node.start_citation,
+        "end_citation": node.end_citation,
+        "provenance": node.provenance,
+        "confidence": node.confidence,
+        "status": node.status,
+        "note": node.note,
+        "source_file": node.source_file,
+        "evidence": [
+            {
+                "source_type": evidence.source_type,
+                "citation": evidence.citation,
+                "label": evidence.label,
+                "retrieved_at": evidence.retrieved_at,
+            }
+            for evidence in node.evidence
+        ],
+    }
+
+
 def _find_author_detail_item(
     items: list[dict[str, Any]],
     author_ref: str,
@@ -1661,6 +1765,80 @@ def _cursor_offset(cursor: str | None) -> int:
         return max(0, int(cursor))
     except ValueError:
         return 0
+
+
+def _word_context_lexical_evidence(
+    *,
+    query: str,
+    language: str,
+    candidates: list[str],
+    fallback: dict[str, Any],
+    lexical_evidence_provider: Callable[..., dict[str, Any]] | None,
+) -> tuple[dict[str, Any], list[str]]:
+    if lexical_evidence_provider is None:
+        return fallback, []
+    try:
+        return (
+            lexical_evidence_provider(
+                query=query,
+                language=language,
+                candidates=candidates,
+            ),
+            [],
+        )
+    except Exception as exc:  # noqa: BLE001
+        return (
+            {
+                "status": "error",
+                "items": [],
+                "note": f"Lexical evidence lookup failed: {exc}",
+            },
+            ["Lexical evidence lookup failed."],
+        )
+
+
+def _word_context_morphology(
+    *,
+    query: str,
+    language: str,
+    candidates: list[str],
+    fallback: dict[str, Any],
+    morphology_provider: Callable[..., dict[str, Any]] | None,
+) -> tuple[dict[str, Any], list[str]]:
+    if morphology_provider is None:
+        return _word_context_cached_morphology(fallback), []
+    try:
+        return (
+            morphology_provider(
+                query=query,
+                language=language,
+                candidates=candidates,
+            ),
+            [],
+        )
+    except Exception as exc:  # noqa: BLE001
+        return (
+            {
+                "status": "error",
+                "items": [],
+                "note": f"Morphology lookup failed: {exc}",
+            },
+            ["Morphology lookup failed."],
+        )
+
+
+def _word_context_cached_morphology(fallback: dict[str, Any]) -> dict[str, Any]:
+    items = list(fallback.get("items") or [])
+    return {
+        "status": fallback.get("status", "unavailable"),
+        "items": items,
+        "note": (
+            "Cached normalizer lemma candidates are available; full morphology "
+            "features still require the heavier lookup/paradigm path."
+            if items
+            else fallback.get("note", "")
+        ),
+    }
 
 
 def _cached_normalization_evidence(query: str, language: str) -> dict[str, Any]:
@@ -1933,8 +2111,12 @@ def _source_index_duplicate_rows(rows: list[dict[str, Any]]) -> list[dict[str, A
                 "collections": ", ".join(
                     sorted({str(row.get("collection_id") or "") for row in canonical_rows})
                 ),
-                "authors": " | ".join(sorted({str(row.get("author") or "") for row in canonical_rows})),
-                "titles": " | ".join(sorted({str(row.get("title") or "") for row in canonical_rows})),
+                "authors": " | ".join(
+                    sorted({str(row.get("author") or "") for row in canonical_rows})
+                ),
+                "titles": " | ".join(
+                    sorted({str(row.get("title") or "") for row in canonical_rows})
+                ),
                 "work_ids": " | ".join(work_ids),
             }
         )
@@ -1949,13 +2131,15 @@ def _source_index_readme(
     lines = [
         "# Reader Source Index Flat Files",
         "",
-        "Generated from `data/build/reader/catalog.duckdb`. These files are flat, grep-friendly snapshots of imported reader works by source collection.",
+        "Generated from `data/build/reader/catalog.duckdb`. These files are flat, "
+        "grep-friendly snapshots of imported reader works by source collection.",
         "",
         "## Files",
         "",
         "- `all_collections.tsv`: every imported work/edition/artifact provenance row.",
         "- `<collection_id>.tsv`: the same rows split by source collection.",
-        "- `duplicate_canonical_text_ids.tsv`: canonical text ids currently attached to more than one visible work.",
+        "- `duplicate_canonical_text_ids.tsv`: canonical text ids currently attached "
+        "to more than one visible work.",
         "",
         "## Collection summary",
         "",

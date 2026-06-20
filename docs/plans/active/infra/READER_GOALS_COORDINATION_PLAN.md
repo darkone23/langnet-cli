@@ -24,25 +24,32 @@ Current concrete parity gates:
 - Humanist/mystical source library: Agrippa now has a manifest-backed source candidate and candidate Book I DjVu OCR sample, but import is deferred because cleanup likely needs lexeme-level correction; Ficino and Cusanus now have manifest-backed candidates for cleaner-source comparison; parity is not met until one pilot passes readability/boundary review and the Suda/Orion reference lane has an explicit inventory path.
 - Patrologia Graeca: sample-import parity met, but reader-quality parity is not met until OCR noise and segmentation are calibrated against a second witness such as Calfa overlap.
 - CSEL: CSEL61 now has a verified source candidate and manifest-backed decision; acquisition parity is not met until one PDF/OCR witness is parsed and a readable sample is staged with work-boundary metadata.
-- Library: CLI/API/server-rendered parity exists; browser interaction parity remains pending.
+- Library: CLI/API/server-rendered parity exists; browser interaction, work/author portals, and source/acquisition badges are complete for the current Library surface.
 - Search: reader catalog/source-index parity exists; `search.lance` rebuild remains deferred until the next approved expansion or reader-quality gate.
 
 ## Related Plans And Artifacts
 
 - `docs/technical/rebuilding-reader-sources.md`: reader rebuild model, source-index exports, generated/curated metadata loop, server migration notes.
-- `docs/plans/active/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`: acquisition lanes, source manifests, corpus-building policy, target author/work register.
-- `docs/plans/active/infra/READER_COLLECTION_EXPANSION_MASTER_TRACKER_2026-06-07.md`: master tracker for expansion lanes, status, cost tiers, and current work order.
-- `docs/plans/active/infra/LANGNET_LIBRARY_EXPLORER_PLAN.md`: `/library`, search, watchlist, provenance, and acquisition-gap UX.
+- `docs/plans/completed/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`: completed acquisition framework, lanes, source manifests, corpus-building policy, and target author/work register.
+- `docs/technical/reader-source-acquisition.md`: current source-acquisition operating guide for manifests, staging, source roles, quality status, and verification.
+- `docs/plans/active/infra/READER_COLLECTION_EXPANSION_MASTER_TRACKER_2026-06-07.md`: expansion-lane register, status, cost tiers, and target order.
+- `docs/plans/completed/infra/LANGNET_LIBRARY_EXPLORER_PLAN.md`: completed `/library`, search, watchlist, provenance, work/author portal, and acquisition-gap UX surface.
+- `docs/plans/completed/infra/LANGNET_CANONICAL_CATALOG_EXPORT_PLAN.md`: completed canonical directory bundle export, work/catalog export CLI, validation command, deterministic checksum rows, and Bruno smoke bundle.
+- `docs/plans/todo/infra/canonical-catalog-presentation-exports.md`: future EPUB/static presentation exports from canonical bundles.
+- `docs/plans/todo/infra/canonical-catalog-portability-and-archive-packaging.md`: future archive packaging, restore docs, and retention policy.
 - `docs/plans/active/infra/READER_EXPERIENCE_MODALITY_AND_TYPOGRAPHY_PLAN.md`: reader modality, typography, tone, ornament, and keyed-work experience policy.
-- `docs/plans/active/infra/READER_WORD_CONTEXT_RETRIEVAL_QUALITY_PLAN.md`: selected-word sidebar, CLI/API word-context payload, retrieval correctness, index health, and performance gates.
-- `docs/plans/active/infra/OPEN_GREEK_LATIN_IMPORTER_AUDIT_AND_FIX_PLAN.md`: OGL importer audit, Patrologia/CSEL completeness, source-view quality policy.
+- `docs/plans/completed/infra/READER_WORD_CONTEXT_RETRIEVAL_QUALITY_PLAN.md`: completed selected-word sidebar, CLI/API word-context payload, retrieval correctness, index health, and performance gates.
+- `docs/plans/completed/infra/OPEN_GREEK_LATIN_IMPORTER_AUDIT_AND_FIX_PLAN.md`: completed OGL importer audit surfaces and direct source-view comparison slice.
+- `docs/plans/completed/infra/BRUNO_LLULL_ELECTRONIC_TEXT_ACQUISITION.md`: completed bounded Bruno HTML acquisition slice and Llull research handoff.
+- `docs/plans/todo/infra/llull-latin-source-research-continuation.md`: future Llull source-witness research before staging/import.
+- `docs/plans/todo/infra/ogl-patrologia-source-view-mapping-and-attribution-review.md`: future PL filename/volume mapping, broader source-view samples, and attribution review.
 - `data/reference/reader_source_index/`: checked-in source-index snapshots.
 - `data/reference/ogl_import_audit/`: OGL, CSEL, Patrologia, PL/PG acquisition scorecards.
 - `data/reference/reader_quality_audit/current_known_issues.tsv`: current corpus-quality blockers found in the live reader catalog.
-- `data/sources_external/patrologia_latina/pl122/manifest.yaml`: planned PL122/Eriugena acquisition manifest.
-- `data/sources_external/patrologia_graeca/pilot/manifest.yaml`: planned PG pilot acquisition manifest.
+- `data/sources_external/patrologia_latina/pl122/manifest.yaml`: imported PL122/Eriugena pilot acquisition manifest.
+- `data/sources_external/patrologia_graeca/pilot/manifest.yaml`: PG pilot acquisition manifest.
 - `data/curated/reader_library_watchlist/high_value_targets.yaml`: high-value absent or staged acquisition targets for Library empty states.
-- `docs/plans/active/infra/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md`: latest verified state, command outcomes, running-service notes, and safe handoff prompt.
+- `docs/archive/2026-06-reader-expansion/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md`: dated verified state, command outcomes, running-service notes, and safe handoff prompt from the 2026-06-07 reader pass.
 
 ## Current Reader Workstreams
 
@@ -194,10 +201,17 @@ Status:
 
 Next actions:
 
-- Pause broad expansion until current staged/source-decision quality gates are closed in `data/reference/reader_quality_audit/current_known_issues.tsv` and `docs/plans/active/infra/READER_EXPANSION_QUALITY_CLOSEOUT_2026-06-07.md`.
+- Pause broad expansion until current staged/source-decision quality gates are closed in `data/reference/reader_quality_audit/current_known_issues.tsv`; the dated close-out record is archived at `docs/archive/2026-06-reader-expansion/READER_EXPANSION_QUALITY_CLOSEOUT_2026-06-07.md`.
 - QA the `/library` source-index truncation fix after web restart; PHI should no longer appear to stop early under the audit-sized source-index limit.
 - QA Cusanus reader and Library provenance after its import into `cusanus_latin_wikisource`.
 - Continue the reusable manifest-backed ingestion path rather than an author-specific pipeline; current candidates are Cusanus, Ficino, and deferred Agrippa.
+- Bruno now proves the direct Latin HTML ingestion path for Project Orion:
+  `De Umbris Idearum`, `De Magia`, and `De vinculis in genere` are imported in
+  `bruno_esotericarchives` with source-index export.
+- Canonical bundle export now proves the normalized runtime contract for
+  imported reader works: `reader export work bruno:esotericarchives:de-magia`
+  writes a validated directory bundle with manifest, work metadata, segments,
+  provenance, catalog summary, and checksums.
 - Keep Agrippa deferred in `data/sources_external/agrippa/de-occulta-philosophia/manifest.yaml` until lexeme-level OCR cleanup policy is ready.
 - Continue Ficino from `data/sources_external/ficino/de-vita-libri-tres/manifest.yaml`: compare 1489, 1529, and 1549 OCR/text derivatives and pick the cleanest opening sample for staging.
 - Cusanus now proves the reusable clean-electronic-text plus control-witness ingestion path: full De docta ignorantia staging imported as 104 paragraph-level segments in `cusanus_latin_wikisource`, with source-index export generated. Next work is post-import reader/Library provenance QA.

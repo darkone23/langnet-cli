@@ -93,7 +93,26 @@ def test_whitaker_triples_projection() -> None:
 
     has_sense = find_triple(triples, lex_anchor, "has_sense", sense_anchor)
     assert has_sense is not None
-    assert find_triple(triples, sense_anchor, "gloss", sense_txt) is not None
+    gloss_triple = find_triple(triples, sense_anchor, "gloss", sense_txt)
+    assert gloss_triple is not None
+    gloss_metadata = gloss_triple["metadata"]  # type: ignore[index]
+    assert gloss_metadata["display_gloss"] == "love, like"
+    assert gloss_metadata["learner_gloss"] == "love, like"
+    assert gloss_metadata["source_segments"] == [
+        {
+            "index": 0,
+            "raw_text": "love, like",
+            "display_text": "love, like",
+            "segment_type": "definition_segment",
+            "labels": ["definition"],
+        }
+    ]
+    assert gloss_metadata["source_entry"] == {
+        "dictionary": "whitaker",
+        "headword": "amo",
+        "pos": "verb",
+        "source_order": 0,
+    }
 
     ev = has_interp["metadata"]["evidence"]  # type: ignore[index]
     assert ev["source_tool"] == "whitaker"

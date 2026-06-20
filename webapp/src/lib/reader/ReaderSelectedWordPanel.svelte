@@ -4,7 +4,13 @@
 		encounterBriefingCompactText,
 		type EncounterBriefingSummary
 	} from '../encounter-briefing';
-	import type { ReaderWordContextResponse } from '$lib/reader';
+	import {
+		readerWordContextEvidenceItemLabel,
+		readerWordContextItemSourceLabel,
+		readerWordContextMorphologyItemLabel,
+		readerWordContextStatusLabel,
+		type ReaderWordContextResponse
+	} from '$lib/reader';
 	import { uiCopy } from '../ui-copy';
 
 	type Romanization = { label: string; value: string } | null;
@@ -61,6 +67,22 @@
 		if (status === 'error') return 'Corpus search error';
 		return 'Corpus status pending';
 	}
+
+	function lexiconStatus(context: ReaderWordContextResponse) {
+		return readerWordContextStatusLabel(
+			'Lexicon',
+			context.lexical_evidence.status,
+			context.lexical_evidence.items.length
+		);
+	}
+
+	function morphologyStatus(context: ReaderWordContextResponse) {
+		return readerWordContextStatusLabel(
+			'Morphology',
+			context.morphology.status,
+			context.morphology.items.length
+		);
+	}
 </script>
 
 {#if selectedWord}
@@ -95,15 +117,45 @@
 						Forms: {selectedWordContext.normalization.candidates.join(', ')}
 					</div>
 				{/if}
-				<div class="grid gap-1 text-xs">
-					<div>
-						<span class="text-base-content/50">Lexicon:</span>
-						<span>{selectedWordContext.lexical_evidence.status}</span>
-					</div>
-					<div>
-						<span class="text-base-content/50">Morphology:</span>
-						<span>{selectedWordContext.morphology.status}</span>
-					</div>
+				<div class="orion-reader-word-evidence">
+					<section>
+						<div class="orion-reader-word-evidence-heading">
+							<span>{lexiconStatus(selectedWordContext)}</span>
+						</div>
+						{#if selectedWordContext.lexical_evidence.items.length}
+							<ul>
+								{#each selectedWordContext.lexical_evidence.items.slice(0, 3) as item}
+									<li>
+										<span>{readerWordContextEvidenceItemLabel(item)}</span>
+										{#if readerWordContextItemSourceLabel(item)}
+											<small>{readerWordContextItemSourceLabel(item)}</small>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{:else if selectedWordContext.lexical_evidence.note}
+							<p>{selectedWordContext.lexical_evidence.note}</p>
+						{/if}
+					</section>
+					<section>
+						<div class="orion-reader-word-evidence-heading">
+							<span>{morphologyStatus(selectedWordContext)}</span>
+						</div>
+						{#if selectedWordContext.morphology.items.length}
+							<ul>
+								{#each selectedWordContext.morphology.items.slice(0, 3) as item}
+									<li>
+										<span>{readerWordContextMorphologyItemLabel(item)}</span>
+										{#if readerWordContextItemSourceLabel(item)}
+											<small>{readerWordContextItemSourceLabel(item)}</small>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{:else if selectedWordContext.morphology.note}
+							<p>{selectedWordContext.morphology.note}</p>
+						{/if}
+					</section>
 				</div>
 				{#if readerHitCount(selectedWordContext)}
 					<ul class="orion-reader-word-hits">
@@ -264,6 +316,58 @@
 		border: 1px solid color-mix(in oklab, var(--reader-ornament-gold) 20%, transparent);
 		border-radius: 0.85rem;
 		background: color-mix(in oklab, var(--color-base-100) 82%, var(--reader-ornament-gold) 8%);
+	}
+
+	.orion-reader-word-evidence {
+		display: grid;
+		gap: 0.6rem;
+	}
+
+	.orion-reader-word-evidence section {
+		display: grid;
+		gap: 0.32rem;
+	}
+
+	.orion-reader-word-evidence-heading span {
+		color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+		font-family: var(--font-sans);
+		font-size: 0.72rem;
+		font-weight: 650;
+		text-transform: uppercase;
+	}
+
+	.orion-reader-word-evidence ul {
+		display: grid;
+		gap: 0.34rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.orion-reader-word-evidence li {
+		display: grid;
+		gap: 0.12rem;
+		min-width: 0;
+	}
+
+	.orion-reader-word-evidence li > span {
+		color: color-mix(in oklab, var(--color-base-content) 86%, var(--reader-ornament-ink));
+		font-family: var(--font-reader);
+		font-size: 0.82rem;
+		line-height: 1.35;
+		overflow-wrap: anywhere;
+	}
+
+	.orion-reader-word-evidence small,
+	.orion-reader-word-evidence p {
+		color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+		font-family: var(--font-sans);
+		font-size: 0.72rem;
+		line-height: 1.35;
+	}
+
+	.orion-reader-word-evidence p {
+		margin: 0;
 	}
 
 	.orion-reader-word-hits {

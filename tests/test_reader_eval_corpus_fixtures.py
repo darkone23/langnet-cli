@@ -10,8 +10,18 @@ REQUIRED_PASSAGES = {
     "greek_nt_john_1_1": "grc",
     "taittiriya_upanishad_invocation": "san",
     "taittiriya_samhita_1_1_1": "san",
+    "sanskrit_seed_forms": "san",
 }
 MIN_PASSAGE_TOKENS = 3
+REQUIRED_SANSKRIT_SEED_SURFACES = {
+    "agnim",
+    "jñānam",
+    "dharmasya",
+    "ātman",
+    "yogena",
+    "agnikṣetre",
+    "jñānayogena",
+}
 
 
 def _fixture() -> dict[str, Any]:
@@ -48,3 +58,14 @@ def test_corpus_expansion_tokens_have_reader_expectations() -> None:
         assert isinstance(token["expect_morphology"], bool)
         assert all(isinstance(value, str) and value for value in token["expected_lemmas"])
         assert all(isinstance(value, str) and value for value in token["expected_gloss_terms"])
+
+
+def test_corpus_expansion_fixture_includes_sanskrit_seed_forms() -> None:
+    tokens = [token for token in _tokens() if token["language"] == "san"]
+    by_surface = {token["surface"]: token for token in tokens}
+
+    assert REQUIRED_SANSKRIT_SEED_SURFACES.issubset(by_surface)
+    for surface in ("agnikṣetre", "jñānayogena"):
+        token = by_surface[surface]
+        assert len(token.get("expected_components", [])) >= 2
+        assert token["notes"]

@@ -639,7 +639,7 @@ Jesus ben Sira -> Ecclesiasticus: The Greek Text of Codex 248
 
 Related future plan:
 
-- `docs/plans/active/infra/LANGNET_CANONICAL_CATALOG_EXPORT_PLAN.md`
+- `docs/plans/completed/infra/LANGNET_CANONICAL_CATALOG_EXPORT_PLAN.md`
 
 ## Final integration update - 2026-06-05
 
@@ -716,8 +716,9 @@ Remaining follow-up candidates:
 
 - Move this plan to `docs/plans/completed/infra/` once Georges is also signed
   off as first-class in the same release branch.
-- Add a canonical catalog export format as described in
-  `docs/plans/active/infra/LANGNET_CANONICAL_CATALOG_EXPORT_PLAN.md`.
+- Canonical catalog directory export is now implemented as described in
+  `docs/plans/completed/infra/LANGNET_CANONICAL_CATALOG_EXPORT_PLAN.md`;
+  presentation exports and archive packaging remain separate todo plans.
 - Add deeper per-source licensing/attribution notes if the public provenance page
   needs to become a formal credits page rather than an input-inventory page.
 

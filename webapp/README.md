@@ -1,7 +1,8 @@
-# LangNet Web UI
+# Project Orion Web UI
 
-LangNet Web UI is a SvelteKit reader interface for live one-word dictionary
-encounters in Sanskrit, Greek, and Latin.
+Project Orion is the public SvelteKit reader interface for live one-word
+dictionary encounters in Sanskrit, Greek, and Latin. It is backed by the
+internal `langnet-cli` runtime and data contracts.
 
 The application is intentionally reader-first: the main column groups returned
 dictionary evidence by source and lexeme, presents contiguous entries in source

@@ -8,6 +8,12 @@ export {
 	readerSourceIndexPublicKey,
 	readerWorkPublicKey
 } from './reader-public-keys';
+export {
+	readerWordContextEvidenceItemLabel,
+	readerWordContextItemSourceLabel,
+	readerWordContextMorphologyItemLabel,
+	readerWordContextStatusLabel
+} from './reader-word-context';
 
 export type ReaderCatalogLanguage = LanguageMode | 'eng' | 'und';
 
@@ -391,6 +397,26 @@ export type ReaderSearchResponse = {
 	};
 };
 
+export type ReaderWordContextEvidenceItem = {
+	lemma?: string;
+	source_tool?: string;
+	source_label?: string;
+	gloss?: string;
+	evidence_gloss?: string;
+	source_ref?: string;
+	bucket_id?: string;
+	witness_id?: string;
+	confidence_label?: string;
+};
+
+export type ReaderWordContextMorphologyItem = {
+	source_tool?: string;
+	form?: string;
+	lemma?: string;
+	analysis?: string;
+	solution_number?: string;
+};
+
 export type ReaderWordContextResponse = {
 	schema_version: string;
 	mode: 'word-context';
@@ -411,12 +437,12 @@ export type ReaderWordContextResponse = {
 	};
 	lexical_evidence: {
 		status: string;
-		items: unknown[];
+		items: ReaderWordContextEvidenceItem[];
 		note?: string;
 	};
 	morphology: {
 		status: string;
-		items: unknown[];
+		items: ReaderWordContextMorphologyItem[];
 		note?: string;
 	};
 	reader_hits: {

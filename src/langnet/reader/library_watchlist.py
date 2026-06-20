@@ -38,7 +38,9 @@ def library_watchlist_payload(
         items = [
             item
             for item in items
-            if _target_matches_query(item, normalized_query=normalized_query, query_parts=query_parts)
+            if _target_matches_query(
+                item, normalized_query=normalized_query, query_parts=query_parts
+            )
         ]
     if limit is not None:
         items = items[:limit]

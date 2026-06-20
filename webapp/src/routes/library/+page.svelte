@@ -232,7 +232,7 @@
 	<title>Library | {uiCopy.app.title}</title>
 	<meta
 		name="description"
-		content="Explore the LangNet reader catalog by source collection, author, title, language, and provenance."
+		content="Explore the Orion reader catalog by source collection, author, title, language, and provenance."
 	/>
 </svelte:head>
 

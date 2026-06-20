@@ -16,6 +16,11 @@ from langnet.execution.effects import (
     ProvenanceLink,
     stable_effect_id,
 )
+from langnet.execution.source_text import (
+    compact_source_gloss,
+    display_text,
+    source_segments_from_text,
+)
 from langnet.execution.versioning import versioned
 from langnet.parsing.whitakers import CodesReducer, FactsReducer, SensesReducer
 
@@ -594,6 +599,9 @@ def _build_sense_triples(
     lex_anchor: str,
     senses: Sequence[str],
     base_evidence: Mapping[str, object],
+    *,
+    codeline: WhitakerCodeline | None = None,
+    pos: str = "",
 ) -> list[dict[str, object]]:
     """Build triples for word senses."""
     triples: list[dict[str, object]] = []
@@ -601,10 +609,41 @@ def _build_sense_triples(
         sense_txt = sense.strip()
         if not sense_txt:
             continue
-        sense_evidence = {**base_evidence, "source_order": index}
+        source_entry = {
+            "dictionary": "whitaker",
+            "headword": _normalize_lemma(codeline.get("term") if codeline else "") or "",
+            "pos": pos,
+            "source_order": index,
+        }
+        sense_evidence = {
+            **base_evidence,
+            "source_order": index,
+            "source_entry": source_entry,
+        }
+        display_gloss = display_text(sense_txt)
+        learner_gloss = compact_source_gloss(sense_txt)
+        source_segments = source_segments_from_text(
+            sense_txt,
+            segment_type="definition_segment",
+            labels=["definition"],
+        )
+        gloss_metadata = {
+            "display_gloss": display_gloss,
+            "learner_gloss": learner_gloss,
+            "source_entry": source_entry,
+            "source_segments": source_segments,
+            "evidence": _trim_evidence(dict(sense_evidence)),
+        }
         sense_anchor = _sense_anchor(lex_anchor, sense_txt)
         triples.append(_make_triple(lex_anchor, predicates.HAS_SENSE, sense_anchor, sense_evidence))
-        triples.append(_make_triple(sense_anchor, predicates.GLOSS, sense_txt, sense_evidence))
+        triples.append(
+            {
+                "subject": sense_anchor,
+                "predicate": predicates.GLOSS,
+                "object": sense_txt,
+                "metadata": gloss_metadata,
+            }
+        )
     return triples
 
 
@@ -709,7 +748,15 @@ def _build_triples(
                     _make_triple(lex_anchor, predicates.VARIANT_FORM, variant, base_evidence)
                 )
 
-            triples.extend(_build_sense_triples(lex_anchor, senses, base_evidence))
+            triples.extend(
+                _build_sense_triples(
+                    lex_anchor,
+                    senses,
+                    base_evidence,
+                    codeline=codeline,
+                    pos=pos or "",
+                )
+            )
 
         if lex_anchor:
             triples.extend(_build_term_triples(terms, lex_anchor, codeline, base_evidence))

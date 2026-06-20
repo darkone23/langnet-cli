@@ -38,7 +38,9 @@ try:
 except Exception:  # pragma: no cover - optional dependency guard
     yaml = None  # type: ignore[assignment]
 
-PL_COLUMN_RE = re.compile(r"\b\d{3}\.\d{4}[A-D]?\b|\b\d{3}\.\d{4}[A-D]?\\\|\b|\b\d{3}\.\d{4}[A-D]?\|")
+PL_COLUMN_RE = re.compile(
+    r"\b\d{3}\.\d{4}[A-D]?\b|\b\d{3}\.\d{4}[A-D]?\\\|\b|\b\d{3}\.\d{4}[A-D]?\|"
+)
 GREEK_SCRIPT_RE = re.compile(r"[\u0370-\u03FF]")
 EXPORT_NOISE_RE = re.compile(r"\b(?:EPUB|MOBI|PDF|RTF|TXT|Download|E Wikisource)\b", re.IGNORECASE)
 IMAGE_LINK_RE = re.compile(r"!\[.*?\]\(.*?\)")
@@ -150,6 +152,14 @@ class PgPilotCatalogImportConfig:
 
 
 @dataclass(frozen=True)
+class BrunoEsotericStageConfig:
+    manifest_path: Path
+    raw_dir: Path | None = None
+    output_dir: Path | None = None
+    titles: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class StagedJsonlCatalogImportConfig:
     catalog_path: Path
     segments_path: Path
@@ -164,7 +174,9 @@ class StagedJsonlCatalogImportConfig:
 
 def stage_pl_wikisource(config: PlWikisourceStageConfig) -> dict[str, Any]:
     manifest = _load_manifest(config.manifest_path)
-    raw_dir = config.raw_dir or _manifest_path(manifest, "raw_storage", config.manifest_path.parent / "raw")
+    raw_dir = config.raw_dir or _manifest_path(
+        manifest, "raw_storage", config.manifest_path.parent / "raw"
+    )
     output_dir = config.output_dir or _manifest_path(
         manifest,
         "staging_storage",
@@ -250,7 +262,9 @@ def import_pl_wikisource_catalog(config: PlWikisourceCatalogImportConfig) -> dic
         language = str(first.get("language") or "lat")
         source_id = f"pl122.{_safe_slug(title)}"
         source_url = str(first.get("source_url") or item.get("source_url") or "")
-        canonical_text_id = ctsv2_text_id(language, title, _incipit_for_title(title, staged_segments))
+        canonical_text_id = ctsv2_text_id(
+            language, title, _incipit_for_title(title, staged_segments)
+        )
         work_id = canonical_text_id
         author_id = "patrologia-latina-wikisource:joannes-scotus-eriugena"
         edition_id = f"{work_id}:wikisource-pl122"
@@ -272,7 +286,9 @@ def import_pl_wikisource_catalog(config: PlWikisourceCatalogImportConfig) -> dic
             canonical_text_id=canonical_text_id,
         )
         token_count = sum(_token_count(segment.text) for segment in reader_segments)
-        source_path = Path(str(first.get("source_path") or item.get("source_path") or segments_path))
+        source_path = Path(
+            str(first.get("source_path") or item.get("source_path") or segments_path)
+        )
         source_hash = _hash_paths([segments_path, source_path])
         register_segment_rows(book_path, segments=reader_segments, addresses=addresses)
         work = ReaderWork(
@@ -313,7 +329,9 @@ def import_pl_wikisource_catalog(config: PlWikisourceCatalogImportConfig) -> dic
                     collection_id=config.collection_id,
                     source_path=source_path,
                     file_role="source_text",
-                    file_status=str(first.get("quality_status") or "machine_text_needs_segmentation"),
+                    file_status=str(
+                        first.get("quality_status") or "machine_text_needs_segmentation"
+                    ),
                     source_id=source_id,
                     source_hash=source_hash,
                     size_bytes=source_path.stat().st_size if source_path.exists() else None,
@@ -389,7 +407,9 @@ def import_pl_wikisource_catalog(config: PlWikisourceCatalogImportConfig) -> dic
 
 def stage_pg_pilot(config: PgPilotStageConfig) -> dict[str, Any]:
     manifest = _load_manifest(config.manifest_path)
-    raw_dir = config.raw_dir or _manifest_path(manifest, "raw_storage", config.manifest_path.parent / "raw")
+    raw_dir = config.raw_dir or _manifest_path(
+        manifest, "raw_storage", config.manifest_path.parent / "raw"
+    )
     output_dir = config.output_dir or _manifest_path(
         manifest,
         "staging_storage",
@@ -496,14 +516,20 @@ def import_pg_pilot_catalog(config: PgPilotCatalogImportConfig) -> dict[str, Any
         title = str(first.get("title") or item.get("title") or "")
         author = str(first.get("author") or item.get("author") or "Unknown author")
         language = str(first.get("language") or item.get("language") or "grc")
-        source_id = str(first.get("source_id") or item.get("source_id") or "patrologia_graeca:pilot")
+        source_id = str(
+            first.get("source_id") or item.get("source_id") or "patrologia_graeca:pilot"
+        )
         item_work_id = str(item.get("work_id") or "")
-        canonical_text_id = ctsv2_text_id(language, title, _incipit_for_title(title, staged_segments))
+        canonical_text_id = ctsv2_text_id(
+            language, title, _incipit_for_title(title, staged_segments)
+        )
         work_id = item_work_id or canonical_text_id
         source_url = str(first.get("source_url") or item.get("source_url") or "")
         source_paths = [Path(path) for path in item.get("source_paths", []) if path]
         source_path = (
-            source_paths[0] if source_paths else Path(str(first.get("source_path") or segments_path))
+            source_paths[0]
+            if source_paths
+            else Path(str(first.get("source_path") or segments_path))
         )
         book_path = reader_book_path(
             ReaderBookPathParts(
@@ -585,10 +611,14 @@ def import_pg_pilot_catalog(config: PgPilotCatalogImportConfig) -> dict[str, Any
                     collection_id=config.collection_id,
                     source_path=source_path_value,
                     file_role="source_text",
-                    file_status=str(first.get("quality_status") or "machine_text_needs_segmentation"),
+                    file_status=str(
+                        first.get("quality_status") or "machine_text_needs_segmentation"
+                    ),
                     source_id=source_id_for_rows,
                     source_hash=source_hash,
-                    size_bytes=source_path_value.stat().st_size if source_path_value.exists() else None,
+                    size_bytes=source_path_value.stat().st_size
+                    if source_path_value.exists()
+                    else None,
                 )
             )
         register_source_files(config.catalog_path, source_files)
@@ -649,6 +679,77 @@ def import_pg_pilot_catalog(config: PgPilotCatalogImportConfig) -> dict[str, Any
         "token_count": sum(int(item["token_count"]) for item in imported),
         "items": imported,
     }
+
+
+def stage_bruno_esoteric(config: BrunoEsotericStageConfig) -> dict[str, Any]:
+    manifest = _load_manifest(config.manifest_path)
+    raw_dir = config.raw_dir or _manifest_path(
+        manifest, "raw_storage", config.manifest_path.parent / "raw"
+    )
+    output_dir = config.output_dir or _manifest_path(
+        manifest,
+        "staging_storage",
+        Path("data/build/reader_import_staging/bruno/esotericarchives"),
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    requested_titles = {_norm_title(title) for title in config.titles}
+    work_rows = [
+        row
+        for row in manifest.get("works", [])
+        if isinstance(row, dict)
+        and (
+            _norm_title(str(row.get("title") or "")) in requested_titles
+            if requested_titles
+            else row.get("status") in {None, "staged_sample", "candidate"}
+        )
+    ]
+    staged: list[dict[str, Any]] = []
+    for row in work_rows:
+        title = str(row.get("title") or "").strip()
+        if not title:
+            continue
+        raw_file = str(row.get("raw_file") or f"{_safe_slug(title)}.md")
+        raw_path = raw_dir / raw_file
+        markdown = raw_path.read_text(encoding="utf-8")
+        segments = _bruno_esoteric_segments(row, raw_path, markdown)
+        safe_title = _safe_slug(title)
+        jsonl_path = output_dir / f"{safe_title}.segments.jsonl"
+        with jsonl_path.open("w", encoding="utf-8") as handle:
+            for segment in segments:
+                handle.write(json.dumps(segment, ensure_ascii=False, sort_keys=True) + "\n")
+        staged.append(
+            {
+                "title": title,
+                "author": str(row.get("author") or "Giordano Bruno"),
+                "source_url": str(row.get("work_url") or row.get("source_url") or ""),
+                "source_path": str(raw_path),
+                "segments_path": str(jsonl_path),
+                "segment_count": len(segments),
+                "token_count": sum(
+                    _token_count(str(segment.get("text") or "")) for segment in segments
+                ),
+                "quality_status": str(row.get("quality_status") or "html_needs_boilerplate_strip"),
+                "boundary_confidence": str(row.get("boundary_confidence") or "medium"),
+            }
+        )
+
+    payload = {
+        "schema_version": "langnet.reader.source_acquisition.bruno_esoteric.v1",
+        "mode": "stage-bruno-esoteric",
+        "manifest_path": str(config.manifest_path),
+        "raw_dir": str(raw_dir),
+        "output_dir": str(output_dir),
+        "work_count": len(staged),
+        "segment_count": sum(int(item["segment_count"]) for item in staged),
+        "token_count": sum(int(item["token_count"]) for item in staged),
+        "items": staged,
+    }
+    (output_dir / "stage-bruno-esoteric-summary.json").write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return payload
 
 
 def import_staged_jsonl_catalog(config: StagedJsonlCatalogImportConfig) -> dict[str, Any]:
@@ -766,7 +867,9 @@ def import_staged_jsonl_catalog(config: StagedJsonlCatalogImportConfig) -> dict[
                 file_status=str(first.get("quality_status") or "source_control"),
                 source_id=str(first.get("control_source_id") or source_id),
                 source_hash=source_hash,
-                size_bytes=control_source_path.stat().st_size if control_source_path.exists() else None,
+                size_bytes=control_source_path.stat().st_size
+                if control_source_path.exists()
+                else None,
             )
         )
     register_source_files(config.catalog_path, source_files)
@@ -869,6 +972,121 @@ def _minimal_yaml_mapping(text: str) -> dict[str, Any]:
     return data
 
 
+def _bruno_esoteric_segments(
+    row: dict[str, Any], raw_path: Path, markdown: str
+) -> list[dict[str, Any]]:
+    title = str(row.get("title") or "").strip()
+    author = str(row.get("author") or "Giordano Bruno").strip() or "Giordano Bruno"
+    language = str(row.get("language") or "lat").strip() or "lat"
+    start_heading = str(row.get("start_heading") or title).strip()
+    source_url = str(row.get("work_url") or row.get("source_url") or "").strip()
+    source_id = str(row.get("source_id") or f"bruno:esotericarchives:{_safe_slug(title)}")
+    quality_status = str(row.get("quality_status") or "html_needs_boilerplate_strip")
+    review_status = str(row.get("status") or "staged_sample")
+    boundary_confidence = str(row.get("boundary_confidence") or "medium")
+
+    lines = _bruno_body_lines(markdown, start_heading=start_heading)
+    paragraphs = _bruno_paragraphs(lines)
+    segments: list[dict[str, Any]] = []
+    for paragraph in paragraphs:
+        if not _useful_paragraph(paragraph):
+            continue
+        for chunk in _split_long_paragraph(paragraph):
+            segment_index = len(segments) + 1
+            segments.append(
+                {
+                    "segment_id": f"{source_id}:{segment_index:05d}",
+                    "work_id": source_id,
+                    "title": title,
+                    "author": author,
+                    "language": language,
+                    "citation_path": f"p{segment_index}",
+                    "segment_kind": "paragraph",
+                    "text": chunk.strip(),
+                    "source_id": source_id,
+                    "source_url": source_url,
+                    "source_path": str(raw_path),
+                    "quality_status": quality_status,
+                    "review_status": review_status,
+                    "boundary_confidence": boundary_confidence,
+                }
+            )
+    return segments
+
+
+def _bruno_body_lines(markdown: str, *, start_heading: str) -> list[str]:
+    lines = markdown.splitlines()
+    start_key = _norm_title(start_heading)
+    started = not start_key
+    body: list[str] = []
+    for raw_line in lines:
+        line = _clean_markdown_line(raw_line)
+        if not line:
+            if started:
+                body.append("")
+            continue
+        heading_text = _clean_markdown_line(raw_line.lstrip("#").strip())
+        heading_key = _norm_title(heading_text)
+        if not started:
+            if heading_key == start_key:
+                started = True
+            continue
+        if _is_bruno_nav_or_footer_line(raw_line, line):
+            continue
+        if line.startswith("#"):
+            continue
+        if _is_bruno_heading_or_credit(line):
+            continue
+        body.append(line)
+    return body
+
+
+def _bruno_paragraphs(lines: list[str]) -> list[str]:
+    paragraphs: list[str] = []
+    current: list[str] = []
+    for line in lines:
+        if not line:
+            if current:
+                paragraphs.append(_join_paragraph(current))
+                current = []
+            continue
+        current.append(line)
+    if current:
+        paragraphs.append(_join_paragraph(current))
+    return paragraphs
+
+
+def _is_bruno_nav_or_footer_line(raw_line: str, line: str) -> bool:
+    stripped = line.strip()
+    raw_stripped = raw_line.strip()
+    if raw_stripped.startswith("- [") and re.search(
+        r"\[(Home|Contents|Prev|Next|timeline)\]", raw_stripped, re.IGNORECASE
+    ):
+        return True
+    if stripped in {"magia", "umbris", "vinculis", "bruno/"}:
+        return True
+    return stripped == "* * *"
+
+
+def _is_bruno_heading_or_credit(line: str) -> bool:
+    lowered = line.lower()
+    if lowered.startswith("giordano bruno:"):
+        return True
+    if "digital edition" in lowered or "html edition" in lowered:
+        return True
+    if lowered.startswith("license ") or "creativecommons.org/licenses" in lowered:
+        return True
+    if lowered.startswith("for a translation"):
+        return True
+    if lowered.startswith("this is bruno") or lowered.startswith("bruno wrote"):
+        return True
+    if lowered.startswith("this is giordano bruno"):
+        return True
+    if lowered == "iordani bruni nolani":
+        return True
+    return lowered in {"de magia", "de vincvlis in genere", "de vmbris idearvm."}
+
+
 def _manifest_path(manifest: dict[str, Any], key: str, fallback: Path) -> Path:
     value = manifest.get(key)
     if isinstance(value, str) and value.strip():
@@ -891,7 +1109,9 @@ def _find_raw_markdown(raw_dir: Path, row: dict[str, str]) -> Path:
         head = path.read_text(encoding="utf-8", errors="ignore")[:2000]
         if title_norm and title_norm in _norm_title(head):
             return path
-    raise FileNotFoundError(f"no raw markdown found for {row.get('title', '<untitled>')} in {raw_dir}")
+    raise FileNotFoundError(
+        f"no raw markdown found for {row.get('title', '<untitled>')} in {raw_dir}"
+    )
 
 
 def _collect_pg_raw_pages(
@@ -926,7 +1146,9 @@ def _resolve_pg_raw_page(raw_dir: Path, raw_page: str) -> Path:
     if not matches:
         raise FileNotFoundError(f"pg raw page {raw_page!r} not found under {raw_dir}")
     if len(matches) > 1:
-        raise ValueError(f"pg raw page {raw_page!r} matches multiple files under {raw_dir}: {matches}")
+        raise ValueError(
+            f"pg raw page {raw_page!r} matches multiple files under {raw_dir}: {matches}"
+        )
     return matches[0]
 
 
@@ -949,9 +1171,7 @@ def _segments_for_pg_pages(
     for page_path in sorted(raw_pages):
         text = page_path.read_text(encoding="utf-8", errors="ignore")
         body_lines = [
-            _normalize_pg_line(line)
-            for line in text.splitlines()
-            if _normalize_pg_line(line)
+            _normalize_pg_line(line) for line in text.splitlines() if _normalize_pg_line(line)
         ]
         page_started = False
         paragraphs = []
@@ -1015,7 +1235,9 @@ def _starts_pg_segment(line: str) -> bool:
     return False
 
 
-def _segments_for_row(row: dict[str, str], raw_path: Path, markdown: str) -> list[PlWikisourceSegment]:
+def _segments_for_row(
+    row: dict[str, str], raw_path: Path, markdown: str
+) -> list[PlWikisourceSegment]:
     work_id = f"pl122:{_safe_slug(row.get('title', 'work'))}"
     body_lines = _body_lines(markdown, row.get("title", ""))
     paragraphs = _paragraphs(body_lines)
@@ -1107,6 +1329,9 @@ def _is_front_matter_line(line: str, title: str) -> bool:
     if marker_match:
         without_marker = PL_COLUMN_RE.sub("", normalized)
         without_marker = _clean_pl_markers(without_marker).strip()
+        without_marker_low = without_marker.casefold()
+        if without_marker_low.startswith("monitum ad lectore"):
+            return True
         if _norm_title(without_marker) == normalized_title:
             return True
     return False
@@ -1131,7 +1356,12 @@ def _body_lines(markdown: str, title: str) -> list[str]:
             if body_started:
                 body.append("")
             continue
-        if not body_started and (_is_front_matter_line(stripped, title) or _is_marker_only_chunk(stripped)):
+        if not body_started and _is_front_matter_line(stripped, title):
+            markers = " ".join(_clean_marker(marker) for marker in PL_COLUMN_RE.findall(stripped))
+            if markers:
+                body.append(markers)
+            continue
+        if not body_started and _is_marker_only_chunk(stripped):
             continue
         body_started = True
         if _is_wikisource_footer_line(stripped):
@@ -1148,7 +1378,7 @@ def _clean_markdown_line(line: str) -> str:
     line = IMAGE_LINK_RE.sub("", line)
     line = MARKDOWN_LINK_RE.sub(r"\1", line)
     line = line.replace("\\|", "|")
-    line = line.replace("«", "\"").replace("»", "\"")
+    line = line.replace("«", '"').replace("»", '"')
     return SPACE_RE.sub(" ", line).strip()
 
 

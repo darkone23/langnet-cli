@@ -2215,6 +2215,14 @@ def test_golden_translation_rows_project_gaffiot_and_dico_cache_hits() -> None:
         assert translated[0]["metadata"]["parsed_glosses"]
 
 
+def test_golden_translation_rows_cover_sanskrit_seed_dico_terms() -> None:
+    fixture = _load_golden_fixture()
+    rows = cast(list[dict[str, Any]], fixture["rows"])
+    dico_headwords = {str(row["headword_norm"]) for row in rows if row["source_lexicon"] == "dico"}
+
+    assert {"agni", "yoga", "ātman", "jñāna"}.issubset(dico_headwords)
+
+
 def test_golden_translation_row_does_not_project_for_stale_source_text() -> None:
     fixture = _load_golden_fixture()
     rows = cast(list[dict[str, Any]], fixture["rows"])

@@ -1,6 +1,6 @@
 # Learner Encounter Roadmap
 
-**Status:** active  
+**Status:** completed 2026-06-19  
 **Date:** 2026-04-28  
 **Feature Area:** pedagogy / semantic-reduction  
 
@@ -155,69 +155,38 @@ analysis, ranked learner meanings, provenance, then optional source details.
 
 ## Implementation Roadmap
 
-### Phase 1: Encounter Audit Fixtures
+### Phase 1: Encounter Audit Fixtures - Completed 2026-06-18
 
 **Owner persona:** @auditor for expected-output review, @scribe for fixture
 word notes.
 
-Goal: establish representative accepted outputs before changing ranking and
-display.
+Representative accepted-output fixtures now cover `san nirudha`, `san dharma`,
+`lat lupus`, and `grc logos` through `tests/test_cli_encounter_output.py`.
+Related reader-eval fixtures also cover the broader classic and corpus-expansion
+forms used by learner-quality checks.
 
-Tasks:
-
-- Add fixture cases for `san nirudha`, `san dharma`, `lat lupus`, and
-  `grc logos`.
-- Capture both current JSON reduction shape and desired learner-facing text
-  expectations.
-- Mark known-bad current behavior explicitly so improvements are measurable.
-- Add a small audit helper or documented command that runs the representative
-  encounters with fixed options.
-
-Acceptance:
-
-- Tests or fixtures identify the top learner output expected for each term.
-- Current problems are named in fixture comments or docs, not left implicit.
-- `just test test_cli_encounter_output` runs the encounter snapshot set.
-
-Validation:
+Verified:
 
 ```bash
-just test test_cli_encounter_output
-just validate-stabilization
+just test test_cli_encounter_output test_reader_eval test_reader_eval_fixtures test_reader_eval_corpus_fixtures
 ```
 
-### Phase 2: Candidate And Form Hygiene
+### Phase 2: Candidate And Form Hygiene - Completed 2026-06-18
 
 **Owner persona:** @sleuth for root-cause tracing, @coder for scoped fixes.
 
-Goal: stop unrelated candidates from polluting the learner encounter.
+Candidate and form hygiene now has accepted-output coverage for Latin `lupus`,
+Latin enclitic `virumque`, Sanskrit `nirudha`/`nirūḍha`, Sanskrit morphology
+fallbacks, and Greek surface/headword display. Debugging data remains available
+through JSON, while default text output keeps backend keys secondary.
 
-Tasks:
-
-- Separate "selected learner target" from all normalized candidates.
-- For Latin, keep alternate analyzer candidates inspectable but do not show
-  unrelated forms like `id#noun` or `ago#verb` as the resolved forms for
-  `lupus`.
-- Add explicit reader-form cases such as `virumque -> vir + -que`.
-- For Sanskrit, show Heritage numbered variants as display alternatives without
-  letting suffixes or dictionary anchors confuse lexeme display.
-- For Greek, show the user surface and selected headword without flooding the
-  header with backend internals.
-
-Acceptance:
-
-- `encounter lat lupus` header shows `lupus`, not unrelated candidate forms.
-- `encounter san nirudha` resolves to `nirūḍha` and keeps source keys secondary.
-- JSON still exposes all candidate/evidence data needed for debugging.
-
-Validation:
+Verified:
 
 ```bash
-just test test_normalization_pipeline test_cli_encounter_output
-just validate-stabilization
+just test test_normalization_pipeline test_cli_encounter_output test_encounter_ranking test_planner_core
 ```
 
-### Phase 3: Source-Aware Gloss Structuring
+### Phase 3: Source-Aware Gloss Structuring - Completed 2026-06-19
 
 **Owner persona:** @architect for data shape, @coder for implementation, @auditor
 for source-fidelity review.
@@ -225,7 +194,7 @@ for source-fidelity review.
 Goal: turn source blobs into displayable learner sense units without losing
 source content.
 
-Status: started. CDSL source-note chunks and generic typed source-detail
+Status: completed for the current learner-encounter closeout. CDSL source-note chunks and generic typed source-detail
 metadata are surfaced as compact `source notes` in `encounter`.
 `--no-source-details` hides that summary for a quieter first screen. Header rows
 analysis rows, Foster labels, and meaning rows are now assembled as
@@ -235,24 +204,43 @@ learner-gloss/learner-segment metadata.
 Preferred-lemma ranking helpers, source-order ranking, learner-quality ordering,
 and final bucket sort-key assembly now live in `encounter_ranking`.
 
-Tasks:
+2026-06-18 slice update: Diogenes/LSJ-style entry analysis now derives concise
+learner sense heads before examples and citation abbreviations. The source
+analysis test for `λόγος` verifies that the learner gloss keeps `the word`,
+`account, tale, story`, and `reason, argument` while stripping the Greek
+headword preamble, Roman sense markers, and short trailing citation labels such
+as `Hom.`.
 
-- Add or continue refining display-layer structure for each WSU:
+2026-06-18 CDSL source-label update: `BhP.` is now preserved as a source
+abbreviation and classified as a source-reference segment instead of being
+converted as ordinary SLP1 text. The CDSL source-note test keeps `BhP.` grouped
+with `MBh.` and related abbreviation notes while leaving adjacent meaning
+segments unclassified.
+
+2026-06-19 Whitaker source-structure update: Whitaker sense gloss triples now
+carry `display_gloss`, `learner_gloss`, `source_segments`, and `source_entry`
+metadata, while morphology triples remain separate interpretation evidence.
+This gives `encounter` and JSON display payloads the same source/reader layer
+shape used by other dictionary handlers without changing Whitaker parsing.
+
+Accepted evidence:
+
+- Display-layer structure now exists for current WSU display needs:
   - `learner_gloss`
-  - `source_gloss`
-  - `grammar_label`
-  - `citation_notes`
-  - `cross_refs`
-  - `source_refs`
-  - `display_warnings`
-- For CDSL, split confidently recognized headword/grammar/citation material
-  away from learner gloss text while preserving raw source chunks.
-- Fix Sanskrit display conversion bugs that affect abbreviations and source
-  labels, especially cases like `BhP.`.
-- For Diogenes/LSJ, identify the concise English sense head before examples and
-  citations where a reliable rule exists.
+  - `source_layer_text` / evidence glosses
+  - morphology analysis labels and Foster display labels
+  - compact citation, cross-reference, source-reference, and example summaries
+  - display warnings through reduction warnings and request diagnostics
+- CDSL splits confidently recognized source notes while preserving raw source
+  chunks and source keys.
+- Sanskrit abbreviation/source-label coverage includes the current real-row
+  `BhP.` case without corrupting display text.
+- Diogenes/LSJ concise sense-head extraction is covered by source-analysis tests
+  and Greek encounter snapshots.
 - For Whitaker, separate dictionary sense evidence from unrelated morphology or
-  analyzer expansions.
+  analyzer expansions. Completed for sense-gloss source/display metadata; keep
+  extending only if real Whitaker rows expose additional structure worth
+  preserving.
 
 Acceptance:
 
@@ -266,11 +254,10 @@ Acceptance:
 Validation:
 
 ```bash
-just test test_cdsl_triples test_wsu_extraction test_cli_encounter_output
-just validate-stabilization
+just test test_whitakers_triples test_cli_encounter_output test_encounter_ranking test_source_text_analysis
 ```
 
-### Phase 4: Learner Ranking Policy
+### Phase 4: Learner Ranking Policy - Completed 2026-06-19
 
 **Owner persona:** @architect for ranking design, @auditor for edge cases,
 @coder for implementation.
@@ -288,48 +275,76 @@ Initial ranking factors:
 - morphology-compatible senses before unrelated analyzer candidates
 - deterministic source order as final fallback
 
-Remaining tasks:
+2026-06-19 slice update: bucket ranking explanations are available in JSON and
+pretty-output debug mode. `encounter --show-ranking` now prints a compact
+`Ranking` section with preferred-lemma rank, effective rank, learner-quality
+order, source order, source tools, and explanation reasons without changing the
+default learner screen.
 
-- Refine the scored sort key with named components and JSON/debug visibility.
-- Add accepted-output tests for `nirudha`, `dharma`, `lupus`, and `logos`.
-- Document why each ranking factor exists and what it must not hide.
+Accepted evidence:
 
-Acceptance:
-
-- `nirudha` top meanings are readable learner senses, not obscure logic/source
-  notation first.
-- `lupus` top meaning is wolf/wolf-related, not unrelated calendar or pronoun
-  evidence.
-- `logos` top meanings are concise major senses such as account, word/speech,
-  reason, story/report, with long LSJ detail behind source details.
-- Single-witness status remains visible.
+- `nirudha` has a snapshot proving the stale-normalization retry reaches
+  `nirūḍha` display and a readable first meaning.
+- `dharma` has CDSL snapshots proving `law, duty` display while retaining raw
+  evidence and source notes.
+- `lupus` has Latin snapshots and translation-cache coverage proving wolf/loup
+  evidence appears before unrelated candidate noise, with source language and
+  provenance visible.
+- `λόγος` has a Greek learner-output snapshot proving concise word/speech,
+  account, and reason senses before long source detail.
+- Single-witness confidence remains visible in the accepted-output strings.
+- `docs/OUTPUT_GUIDE.md` documents JSON ranking explanations and the
+  pretty-output `--show-ranking` audit view.
 
 Validation:
 
 ```bash
-just test test_cli_encounter_output test_reducer
-just validate-stabilization
+just test test_cli_encounter_output test_encounter_ranking
 ```
 
-### Phase 5: Progressive Disclosure CLI
+### Phase 5: Progressive Disclosure CLI - Completed 2026-06-19
 
 **Owner persona:** @scribe for command documentation, @coder for CLI flags.
 
 Goal: make the default output learner-facing and move source-heavy material to
 explicit inspection modes.
 
-Tasks:
+2026-06-18 slice update: `encounter --show-candidates` now exposes normalized
+lexeme candidates in pretty output under a compact `Candidates` section while
+leaving default learner output quiet. JSON request metadata records
+`show_candidates`, and `docs/OUTPUT_GUIDE.md` documents the flag.
 
-- Add or refine flags:
+2026-06-19 slice update: `encounter --show-ranking` exposes ranking factors in
+pretty output for audits while default pretty output remains learner-facing.
+JSON request metadata records `show_ranking`, and `docs/OUTPUT_GUIDE.md`
+documents the flag.
+
+2026-06-19 source-disclosure update: `encounter --show-source` exposes
+source-layer text and source-entry identity for visible buckets in pretty
+output. Default pretty output still hides long source entries; JSON request
+metadata records `show_source`, and `docs/OUTPUT_GUIDE.md` documents the flag.
+
+2026-06-19 debug-disclosure update: `encounter --debug` now enables candidate,
+source, and ranking diagnostic sections together for terminal audits. Default
+pretty output remains learner-facing; JSON request metadata records `debug`,
+and `docs/OUTPUT_GUIDE.md` documents the flag.
+
+Accepted evidence:
+
+- Flags:
   - `--source-details/--no-source-details`
-  - `--show-source`
-  - `--show-candidates`
-  - `--debug`
+  - `--show-candidates` (completed for pretty candidate disclosure)
+  - `--show-ranking` (completed for pretty ranking disclosure)
+  - `--show-source` (completed for pretty source disclosure)
+  - `--debug` (completed as diagnostic shorthand)
   - `--output json`
-- Move cache-retry and cache-miss diagnostics out of default text output.
+- Move cache-retry and cache-miss diagnostics out of default text output. Current
+  default output only shows learner-relevant retry warnings; cache hit/miss
+  counts live in JSON `translation_cache` and explicit cache commands.
 - Keep source refs visible by default, summarize typed source details behind
   `--source-details`, and place long source entries behind `--show-source`.
-- Update `docs/OUTPUT_GUIDE.md` with before/after examples.
+- Update `docs/OUTPUT_GUIDE.md` with before/after examples. Completed for
+  candidate, ranking, source, and debug disclosure flags.
 
 Acceptance:
 

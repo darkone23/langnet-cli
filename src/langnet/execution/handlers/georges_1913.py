@@ -5,7 +5,7 @@ import re
 import time
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import orjson
 from query_spec import ToolCallSpec
@@ -114,7 +114,7 @@ def georges_1913_entry_triples(entry: Mapping[str, object]) -> list[dict[str, ob
     display_gloss = display_text(gloss)
     lex_anchor = f"lex:{headword}"
     source_ref = f"georges_1913:{source_page}#{entry_id}:{occurrence or 0}"
-    digest = hashlib.sha256(f"{source_ref}:{gloss}".encode("utf-8")).hexdigest()[:8]
+    digest = hashlib.sha256(f"{source_ref}:{gloss}".encode()).hexdigest()[:8]
     sense_anchor = f"sense:{lex_anchor}#{digest}"
     evidence = trim_empty(
         {

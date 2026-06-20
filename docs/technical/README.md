@@ -12,6 +12,8 @@ translation cache.
 - `reader-full-text-search.md` — current derived Lance reader search index,
   build lifecycle, normalization, fuzzy candidates, concept aliases, and the
   morphology-search boundary.
+- `reader-source-acquisition.md` — current manifest-backed reader acquisition
+  path, source roles, quality statuses, staging commands, and verification.
 - `backend/README.md` — backend and local data-source map for Diogenes,
   Whitaker's Words, CDSL, DICO, Gaffiot, Bailly, Lewis 1890, CTS indexes,
   reader stores, word-index stores, and the translation cache.

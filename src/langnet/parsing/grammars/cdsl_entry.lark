@@ -1,0 +1,23 @@
+// Lark grammar for CDSL Sanskrit dictionary entry shells.
+//
+// CDSL bodies can preserve XML-derived source structure elsewhere. This grammar
+// only captures the stable plain-text shell: optional sense number, headword,
+// compact grammar markers, and the remaining body for conservative
+// classification.
+
+?start: entry
+
+entry: entry_number? headword grammar_marker* body
+
+entry_number: ENTRY_NUMBER
+headword: WORD
+grammar_marker: GRAMMAR_MARKER
+body: BODY
+
+ENTRY_NUMBER.4: /\d+\./
+GRAMMAR_MARKER.3: /(mfn|adj|adv|pron|part|pn|m|f|n|v|ind)\./
+WORD.2: /[A-Za-zĀ-žŚśṚṛṄṅÑñṆṇṬṭḌḍṢṣḤḥḶḷḹṃṁṃ#._-]+/
+BODY.1: /.+/s
+
+%import common.WS
+%ignore WS

@@ -22,9 +22,9 @@ LangNet now has a small runtime semantic path: claim triples become Witness Sens
 - `triples-dump --output json` exposes structured claims and triples for reducer debugging.
 - A 50-word diagnostic audit now distinguishes gloss hits from Heritage morphology/evidence hits.
 - Accepted `encounter` snapshots now cover translated DICO/Gaffiot cache hits and multi-witness ranking.
-- A dedicated learner encounter roadmap now tracks current failures and validation
-  tasks for Sanskrit, Latin, and Greek:
-  `docs/plans/active/pedagogy/learner-encounter-roadmap.md`.
+- The learner encounter roadmap closed the current Sanskrit, Latin, and Greek
+  terminal-output stabilization loop:
+  `docs/plans/completed/pedagogy/learner-encounter-roadmap.md`.
 
 ## Blocking Gaps
 

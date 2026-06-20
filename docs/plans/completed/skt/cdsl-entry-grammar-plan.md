@@ -1,6 +1,6 @@
 # CDSL Entry Grammar And Sanskrit Source Structure
 
-**Status:** ACTIVE  
+**Status:** COMPLETED 2026-06-19  
 **Date:** 2026-04-28  
 **Feature Area:** skt  
 **Owner Roles:** @architect for source model, @coder for parser/tests, @sleuth for real-entry fuzzing, @auditor for Sanskrit grammar correctness
@@ -15,7 +15,7 @@ CDSL is one of the most important Sanskrit meaning sources. The project should
 not treat long CDSL lines as a single opaque English gloss when a reader is
 asking, "what does this word mean?"
 
-## Current Slice
+## Completed Slice
 
 Implemented:
 
@@ -34,6 +34,14 @@ Implemented:
 - Explicit body XML structure now captures `ab` abbreviations, compound hints,
   declension markers from `info lex`, root/etymology markers, `ls` lexicon
   references, and `s1` cross references in grammar metadata.
+- A tolerant `lark:cdsl_entry` plain-text shell parser now exposes entry parse
+  status, headword, grammar markers, first definition text, cross references,
+  and source references through `entry-analyze`.
+- The source-entry fuzz fixture now requires parsed CDSL diagnostics for common
+  Sanskrit terms while preserving raw source text.
+- Learner-display snapshots keep compact CDSL learner glosses and structured
+  source notes visible without promoting citation-only material above meaning
+  buckets.
 
 Earlier prototype notes already captured for the maintained parser:
 
@@ -57,28 +65,30 @@ navigation:
 - `example`: explicit quoted or example material where detectable;
 - `unclassified`: preserved source text that should not be silently discarded.
 
-## Next Steps
+## Completed Steps
 
-1. Add a CDSL source-entry fuzz fixture set.
+1. Add a CDSL source-entry fuzz fixture set. Completed for the current common-term slice.
    - Include `key1`, `key2`, `lex`, `info`, `s`, `ls`, `s1`, root markers,
      page refs, and source abbreviations.
    - Include common Sanskrit terms: `agni`, `dharma`, `karman`, `ātman`,
      `brahman`, `soma`.
    - Status: representative synthetic coverage exists in
-     `tests/test_cdsl_triples.py`; the remaining work is real-entry fuzz
-     expansion.
+     `tests/test_cdsl_triples.py`; no-network source-entry fuzz rows in
+     `tests/fixtures/source_entry_analysis_fuzz.json` now cover the common-term
+     set above and additional seed terms such as `yoga` and `jñāna`.
 
-2. Introduce a small CDSL body grammar.
+2. Introduce a small CDSL body grammar. Completed for the plain-text shell.
    - Keep it tolerant and classifier-oriented.
    - Use Lark for body fragments after XML tags have been converted into
      structured tokens.
 
-3. Add learner-display snapshots.
+3. Add learner-display snapshots. Completed for compact CDSL learner glosses,
+   source notes, and source-segment display.
    - Ensure long CDSL lines do not flood the first few encounter buckets with
      citation-only material.
    - Ensure raw source text remains inspectable.
 
-4. Extend real-input fuzzing.
+4. Extend real-input fuzzing. Completed through the corpus-expansion checkpoint.
    - Use corpus Sanskrit examples from Taittiriya material and common Vedic
      terms.
    - Track retrieval hit, meaningful gloss hit, and grammatical feature hit
@@ -93,3 +103,6 @@ LANGNET_DATA_DIR=examples/debug/validation-data just validate-stabilization
 
 The feature is ready when CDSL improves Sanskrit learner display without hiding
 citations, source abbreviations, or raw dictionary text.
+
+Accepted 2026-06-19 with focused parser/display tests and the live
+corpus-expansion reader-eval checkpoint.

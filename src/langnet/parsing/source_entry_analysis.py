@@ -24,6 +24,8 @@ class ParsedSourceEntry(TypedDict, total=False):
     gender: str
     bracketed_form: str
     grammar_markers: list[str]
+    source_references: list[str]
+    cross_references: list[str]
     preamble: str
     sense_number: str
     definition_text: str
@@ -34,7 +36,7 @@ class ParsedSourceEntry(TypedDict, total=False):
     error: str
 
 
-ParserKind = Literal["dico", "gaffiot"]
+ParserKind = Literal["cdsl", "dico", "gaffiot"]
 
 
 def parse_source_entry(source_tool: str, raw_text: str) -> ParsedSourceEntry | None:
@@ -42,9 +44,14 @@ def parse_source_entry(source_tool: str, raw_text: str) -> ParsedSourceEntry | N
     normalized_tool = source_tool.strip().lower()
     if normalized_tool in {"diogenes", "cltk", "lewis", "lewis_short"}:
         return _parse_diogenes_like(source_tool, raw_text)
-    if normalized_tool not in {"dico", "gaffiot"}:
+    if normalized_tool not in {"cdsl", "dico", "gaffiot"}:
         return None
-    parser_kind = "dico" if normalized_tool == "dico" else "gaffiot"
+    if normalized_tool == "cdsl":
+        parser_kind = "cdsl"
+    elif normalized_tool == "dico":
+        parser_kind = "dico"
+    else:
+        parser_kind = "gaffiot"
     parser = _parser(parser_kind)
     try:
         tree = parser.parse(raw_text)
@@ -57,6 +64,8 @@ def parse_source_entry(source_tool: str, raw_text: str) -> ParsedSourceEntry | N
             "raw_text": raw_text,
             "error": exc.__class__.__name__,
         }
+    if parser_kind == "cdsl":
+        return _cdsl_parse_result(source_tool, raw_text, tree)
     if parser_kind == "dico":
         return _dico_parse_result(source_tool, raw_text, tree)
     return _gaffiot_parse_result(source_tool, raw_text, tree)
@@ -136,6 +145,36 @@ def _dico_parse_result(source_tool: str, raw_text: str, tree: Tree) -> ParsedSou
     )
 
 
+def _cdsl_parse_result(source_tool: str, raw_text: str, tree: Tree) -> ParsedSourceEntry:
+    words = _tokens(tree, "WORD")
+    grammar_markers = [token.value for token in _tokens(tree, "GRAMMAR_MARKER")]
+    body = _first_token_value(tree, "BODY").strip()
+    body_parts = [part.strip() for part in body.split(";") if part.strip()]
+    definition_text = _first_cdsl_definition_part(body_parts)
+    source_references = [
+        part
+        for part in body_parts
+        if part != definition_text
+        and not _looks_like_cdsl_cross_reference(part)
+        and _looks_like_cdsl_source_reference(part)
+    ]
+    cross_references = [part for part in body_parts if _looks_like_cdsl_cross_reference(part)]
+    return _trim_empty(
+        {
+            "source_tool": source_tool,
+            "parser": "lark:cdsl_entry",
+            "parsed": True,
+            "format": "cdsl",
+            "headword": words[0].value if words else "",
+            "grammar_markers": grammar_markers,
+            "definition_text": definition_text,
+            "source_references": source_references,
+            "cross_references": cross_references,
+            "raw_text": raw_text,
+        }
+    )
+
+
 def _gaffiot_parse_result(source_tool: str, raw_text: str, tree: Tree) -> ParsedSourceEntry:
     preamble = _first_token_value(tree, "PREAMBLE")
     sense_number = _first_token_value(tree, "NUMBER")
@@ -156,6 +195,36 @@ def _gaffiot_parse_result(source_tool: str, raw_text: str, tree: Tree) -> Parsed
             "example_text": example_text,
             "raw_text": raw_text,
         }
+    )
+
+
+def _first_cdsl_definition_part(body_parts: list[str]) -> str:
+    for part in body_parts:
+        if _looks_like_cdsl_cross_reference(part) or _looks_like_cdsl_source_reference(part):
+            continue
+        stripped = part.strip(" ,")
+        if stripped.startswith("("):
+            suffix = stripped
+            while suffix.startswith("("):
+                suffix = suffix[suffix.find(")") + 1 :].strip(" ,") if ")" in suffix else ""
+            if suffix:
+                return suffix
+            continue
+        return stripped
+    return ""
+
+
+def _looks_like_cdsl_cross_reference(text: str) -> bool:
+    return text.strip().lower().startswith(("cf. ", "see "))
+
+
+def _looks_like_cdsl_source_reference(text: str) -> bool:
+    clean = text.strip()
+    if not clean:
+        return False
+    return bool(
+        clean == "&c."
+        or all(token == "&c." or token.endswith(".") for token in clean.replace(",", " ").split())
     )
 
 

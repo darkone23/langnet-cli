@@ -1,0 +1,47 @@
+[
+  {
+    "language": "grc",
+    "query": "λόγος",
+    "expected_normalized_candidates": ["λόγος"],
+    "expected_caveat_policy": "no_caveats",
+    "reader_hits_policy": "must_have_hits",
+    "expected_lexical_status": "available",
+    "expected_min_lexical_items": 1,
+    "expected_lexical_lemmas_any": ["logos"],
+    "expected_lexical_sources_any": ["diogenes"],
+    "expected_morphology_status": "available",
+    "expected_min_morphology_items": 1,
+    "expected_morphology_lemmas_any": ["logos"],
+    "expected_morphology_sources_any": ["diogenes"]
+  },
+  {
+    "language": "grc",
+    "query": "μῆνιν",
+    "expected_normalized_candidates": ["μῆνιν"],
+    "expected_caveat_policy": "no_caveats",
+    "reader_hits_policy": "must_have_hits",
+    "expected_lexical_status": "available",
+    "expected_min_lexical_items": 1,
+    "expected_lexical_lemmas_any": ["mhnis"],
+    "expected_lexical_sources_any": ["bailly", "diogenes"],
+    "expected_morphology_status": "available",
+    "expected_min_morphology_items": 1,
+    "expected_morphology_lemmas_any": ["mhnis"],
+    "expected_morphology_sources_any": ["diogenes"]
+  },
+  {
+    "language": "grc",
+    "query": "θεὰ",
+    "expected_normalized_candidates": ["θεὰ"],
+    "expected_caveat_policy": "no_caveats",
+    "reader_hits_policy": "must_have_hits",
+    "expected_lexical_status": "available",
+    "expected_min_lexical_items": 1,
+    "expected_lexical_lemmas_any": ["qea"],
+    "expected_lexical_sources_any": ["bailly", "diogenes"],
+    "expected_morphology_status": "available",
+    "expected_min_morphology_items": 1,
+    "expected_morphology_lemmas_any": ["qea"],
+    "expected_morphology_sources_any": ["diogenes"]
+  }
+]

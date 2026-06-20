@@ -10,7 +10,13 @@ from xml.etree import ElementTree as ET
 
 import duckdb
 
-from langnet.reader.models import ReaderSourceMetadata
+from langnet.reader.author_normalization import normalize_reader_author
+from langnet.reader.models import (
+    ReaderMetadataOverlay,
+    ReaderMetadataOverlayEvidence,
+    ReaderSourceMetadata,
+    ReaderWorkMapNode,
+)
 from langnet.reader.storage import register_source_metadata
 
 
@@ -74,6 +80,11 @@ _PERSEUS_SUBJECT_FACET_RE = re.compile(
 )
 MIN_COMPACT_PERSEUS_FIELD_COUNT = 2
 CTS_WORK_TAIL_PARTS = 2
+_PERSEUS_LANGUAGE_CODES = {
+    "greek": "grc",
+    "ancient greek": "grc",
+    "latin": "lat",
+}
 
 
 def parse_dcs_corpus_table(text: str, *, source_path: Path) -> list[DcsCorpusRow]:
@@ -218,6 +229,219 @@ def sync_dcs_corpus_metadata(
     }
 
 
+def perseus_candidate_metadata_overlays(catalog_path: Path) -> list[ReaderMetadataOverlay]:
+    """
+    Emit candidate display overlays from Perseus source metadata.
+
+    Subject membership, dates, editors, and other enrichment fields remain
+    source metadata. This helper only proposes corrections for fields that the
+    reader catalog displays directly.
+    """
+    if not catalog_path.exists():
+        return []
+    metadata_by_subject = _perseus_metadata_by_subject(catalog_path)
+    if not metadata_by_subject:
+        return []
+    overlays: list[ReaderMetadataOverlay] = []
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        work_rows = conn.execute(
+            """
+            SELECT collection_id, source_id, author, language, cts_work_urn
+            FROM works
+            WHERE collection_id = 'perseus'
+            ORDER BY source_id
+            """
+        ).fetchall()
+    for collection_id, source_id, author, language, cts_work_urn in work_rows:
+        subject_id = str(source_id or "")
+        metadata = metadata_by_subject.get(subject_id)
+        if not metadata:
+            continue
+        overlays.extend(
+            _perseus_candidate_overlays_for_work(
+                collection_id=str(collection_id or ""),
+                source_id=subject_id,
+                author=str(author or ""),
+                language=str(language or ""),
+                cts_work_urn=str(cts_work_urn or ""),
+                metadata=metadata,
+            )
+        )
+    return overlays
+
+
+def dcs_chapter_info_work_map_candidates(
+    catalog_path: Path,
+    xml_text: str,
+    *,
+    source_path: Path,
+) -> list[ReaderWorkMapNode]:
+    """Return candidate work-map chapter nodes from reliable DCS chapter-info rows."""
+    if not catalog_path.exists():
+        return []
+    work_ids_by_source_id = _sanskrit_dcs_work_ids_by_source_id(catalog_path)
+    if not work_ids_by_source_id:
+        return []
+    root = ET.fromstring(xml_text)
+    nodes: list[ReaderWorkMapNode] = []
+    for chapter in root.findall(".//chapter"):
+        text_id = _xml_text(chapter, "textId")
+        chapter_name = _xml_text(chapter, "chapterName")
+        chapter_id = _xml_text(chapter, "chapterId")
+        chapter_position = _xml_text(chapter, "chapterPosition")
+        chapter_path = _xml_text(chapter, "path")
+        source_id = f"dcs_{text_id}" if text_id else ""
+        work_id = work_ids_by_source_id.get(source_id)
+        if not (work_id and chapter_name and chapter_id and chapter_position and chapter_path):
+            continue
+        try:
+            ordinal = int(chapter_position)
+        except ValueError:
+            continue
+        nodes.append(
+            ReaderWorkMapNode(
+                work_id=work_id,
+                node_id=f"{source_id}:chapter:{chapter_id}",
+                level=1,
+                kind="chapter",
+                label=chapter_name,
+                native_label=chapter_name,
+                ordinal=ordinal,
+                start_citation=chapter_name,
+                end_citation=chapter_name,
+                provenance="native",
+                confidence="medium",
+                status="candidate",
+                note="Candidate chapter node generated from DCS chapter-info.xml.",
+                source_file=str(source_path),
+                evidence=(
+                    ReaderMetadataOverlayEvidence(
+                        source_type="dcs_chapter_info",
+                        citation=chapter_path,
+                        label="DCS chapter-info.xml",
+                    ),
+                ),
+            )
+        )
+    return nodes
+
+
+def _perseus_candidate_overlays_for_work(  # noqa: PLR0913
+    *,
+    collection_id: str,
+    source_id: str,
+    author: str,
+    language: str,
+    cts_work_urn: str,
+    metadata: dict[str, str],
+) -> list[ReaderMetadataOverlay]:
+    overlays: list[ReaderMetadataOverlay] = []
+    evidence = _perseus_overlay_evidence(metadata)
+    source_file = metadata.get("__source_path", "")
+    perseus_author = metadata.get("perseus_author", "")
+    if perseus_author and normalize_reader_author(author) != normalize_reader_author(
+        perseus_author
+    ):
+        overlays.append(
+            _perseus_overlay(
+                collection_id=collection_id,
+                source_id=source_id,
+                field="author",
+                value=perseus_author,
+                source_file=source_file,
+                evidence=evidence,
+            )
+        )
+    perseus_language = _PERSEUS_LANGUAGE_CODES.get(metadata.get("perseus_language", "").casefold())
+    if perseus_language and language != perseus_language:
+        overlays.append(
+            _perseus_overlay(
+                collection_id=collection_id,
+                source_id=source_id,
+                field="language",
+                value=perseus_language,
+                source_file=source_file,
+                evidence=evidence,
+            )
+        )
+    perseus_work_urn = _work_urn_from_edition_urn(metadata.get("perseus_edition_urn", ""))
+    if perseus_work_urn and cts_work_urn != perseus_work_urn:
+        overlays.append(
+            _perseus_overlay(
+                collection_id=collection_id,
+                source_id=source_id,
+                field="cts_work_urn",
+                value=perseus_work_urn,
+                source_file=source_file,
+                evidence=evidence,
+            )
+        )
+    return overlays
+
+
+def _perseus_overlay(  # noqa: PLR0913
+    *,
+    collection_id: str,
+    source_id: str,
+    field: str,
+    value: str,
+    source_file: str,
+    evidence: ReaderMetadataOverlayEvidence,
+) -> ReaderMetadataOverlay:
+    return ReaderMetadataOverlay(
+        collection_id=collection_id,
+        match_field="source_id",
+        match_value=source_id,
+        field=field,
+        value=value,
+        status="candidate",
+        confidence="medium",
+        note="Candidate display correction from Perseus Catalog source metadata.",
+        source_file=source_file,
+        evidence=(evidence,),
+    )
+
+
+def _perseus_overlay_evidence(metadata: dict[str, str]) -> ReaderMetadataOverlayEvidence:
+    citation = metadata.get("perseus_catalog_url") or metadata.get("__source_path", "")
+    return ReaderMetadataOverlayEvidence(
+        source_type="perseus_catalog",
+        citation=citation,
+        label="Perseus Catalog source metadata",
+    )
+
+
+def _perseus_metadata_by_subject(catalog_path: Path) -> dict[str, dict[str, str]]:
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        rows = conn.execute(
+            """
+            SELECT subject_id, key, value, source_path
+            FROM source_metadata
+            WHERE collection_id = 'perseus'
+              AND subject_kind = 'work'
+              AND key LIKE 'perseus_%'
+            ORDER BY subject_id, key
+            """
+        ).fetchall()
+    metadata_by_subject: dict[str, dict[str, str]] = {}
+    for subject_id, key, value, source_path in rows:
+        metadata = metadata_by_subject.setdefault(str(subject_id), {})
+        metadata[str(key)] = str(value or "")
+        if source_path and "__source_path" not in metadata:
+            metadata["__source_path"] = str(source_path)
+    return metadata_by_subject
+
+
+def _work_urn_from_edition_urn(urn: str) -> str:
+    if not urn.startswith("urn:cts:"):
+        return ""
+    namespace, _, work_tail = urn.rpartition(":")
+    parts = work_tail.split(".")
+    if len(parts) < CTS_WORK_TAIL_PARTS:
+        return ""
+    return f"{namespace}:{'.'.join(parts[:CTS_WORK_TAIL_PARTS])}"
+
+
 def _dcs_corpus_metadata_rows(
     source_id: str,
     row: DcsCorpusRow,
@@ -260,6 +484,18 @@ def _sanskrit_dcs_source_ids_by_title(catalog_path: Path) -> dict[str, str]:
             """
         ).fetchall()
     return {_normalized_title(str(title)): str(source_id) for title, source_id in rows}
+
+
+def _sanskrit_dcs_work_ids_by_source_id(catalog_path: Path) -> dict[str, str]:
+    with duckdb.connect(str(catalog_path), read_only=True) as conn:
+        rows = conn.execute(
+            """
+            SELECT source_id, work_id
+            FROM works
+            WHERE collection_id = 'sanskrit_dcs'
+            """
+        ).fetchall()
+    return {str(source_id): str(work_id) for source_id, work_id in rows}
 
 
 def _source_metadata_row(

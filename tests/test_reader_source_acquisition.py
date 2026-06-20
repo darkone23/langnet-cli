@@ -3,7 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from langnet.reader.source_acquisition import PlWikisourceStageConfig, stage_pl_wikisource
+from langnet.reader.source_acquisition import (
+    BrunoEsotericStageConfig,
+    PlWikisourceStageConfig,
+    stage_bruno_esoteric,
+    stage_pl_wikisource,
+)
 
 
 def test_stage_pl_wikisource_preserves_column_markers_and_segments(tmp_path: Path) -> None:
@@ -250,3 +255,79 @@ Something went wrong
     assert not any("Categoriae" in text for text in texts)
     assert not any("Novissima mutatio" in text for text in texts)
     assert not any("Something went wrong" in text for text in texts)
+
+
+def test_stage_bruno_esoteric_strips_navigation_and_preserves_source_metadata(
+    tmp_path: Path,
+) -> None:
+    raw_dir = tmp_path / "raw"
+    staging = tmp_path / "staging"
+    raw_dir.mkdir()
+    staging.mkdir()
+    manifest = tmp_path / "manifest.yaml"
+    manifest.write_text(
+        "\n".join(
+            [
+                "source_id: bruno:esotericarchives",
+                "raw_storage: " + str(raw_dir),
+                "staging_storage: " + str(staging),
+                "works:",
+                "  - title: De Magia",
+                "    author: Giordano Bruno",
+                "    language: lat",
+                "    raw_file: de-magia.md",
+                "    work_url: https://www.esotericarchives.com/bruno/magia.htm",
+                "    start_heading: DE MAGIA",
+                "    status: staged_sample",
+                "    quality_status: html_needs_boilerplate_strip",
+                "    boundary_confidence: high",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (raw_dir / "de-magia.md").write_text(
+        """- [Home](https://www.esotericarchives.com/index.html)
+- [Contents](https://www.esotericarchives.com/bruno/home.htm)
+- magia
+
+## Giordano Bruno: _De Magia_
+
+This digital edition by Joseph H. Peterson, 1996.
+
+* * *
+
+# DE MAGIA
+
+## Iordani Bruni Nolani
+
+Antequam De magia, sicut antequam de quocunque
+subiecto disseratur, nomen in sua significata est dividendum;
+totidem autem sunt significata magiae, quot et magi.
+
+Secundo sumitur magus pro faciente mirabilia sola applicatione
+activorum et passivorum.
+
+- [Home](https://www.esotericarchives.com/index.html)
+- [Contents](https://www.esotericarchives.com/bruno/home.htm)
+""",
+        encoding="utf-8",
+    )
+
+    payload = stage_bruno_esoteric(BrunoEsotericStageConfig(manifest_path=manifest))
+
+    assert payload["mode"] == "stage-bruno-esoteric"
+    assert payload["work_count"] == 1
+    assert payload["segment_count"] == 2
+    output_path = Path(payload["items"][0]["segments_path"])
+    rows = [json.loads(line) for line in output_path.read_text(encoding="utf-8").splitlines()]
+    assert rows[0]["title"] == "De Magia"
+    assert rows[0]["author"] == "Giordano Bruno"
+    assert rows[0]["source_id"] == "bruno:esotericarchives:de-magia"
+    assert rows[0]["source_url"] == "https://www.esotericarchives.com/bruno/magia.htm"
+    assert rows[0]["source_path"].endswith("de-magia.md")
+    assert rows[0]["quality_status"] == "html_needs_boilerplate_strip"
+    assert rows[0]["review_status"] == "staged_sample"
+    assert rows[0]["citation_path"] == "p1"
+    assert "Antequam De magia" in rows[0]["text"]
+    assert not any("Home" in row["text"] for row in rows)
+    assert not any("Joseph H. Peterson" in row["text"] for row in rows)

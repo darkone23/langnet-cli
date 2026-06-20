@@ -9,16 +9,19 @@ from langnet.reader.models import (
     ReaderWork,
 )
 from langnet.reader.source_enrichment import (
+    dcs_chapter_info_work_map_candidates,
     parse_dcs_chapter_info_metadata,
     parse_dcs_corpus_table,
     parse_perseus_catalog_results,
     parse_perseus_subject_facets,
+    perseus_candidate_metadata_overlays,
     sync_dcs_corpus_metadata,
 )
 from langnet.reader.storage import (
     create_catalog_db,
     list_source_metadata,
     register_book,
+    register_source_metadata,
 )
 
 
@@ -277,3 +280,140 @@ Abhidharmakośa\tVasubandhu\tclassical\tBuddhist\t\tS\tB\tD\tF
     assert metadata_by_key["dcs_time_slot"] == "classical"
     assert metadata_by_key["dcs_subject"] == "Buddhist"
     assert metadata_by_key["dcs_scope_hint"] == "Buddhist Scripture"
+
+
+def test_perseus_candidate_metadata_overlays_emit_only_display_corrections() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "book.duckdb"
+        source_path = root / "stoa0085b.stoa001.xml"
+        source_path.write_text("", encoding="utf-8")
+        create_catalog_db(catalog_path)
+        register_book(
+            catalog_path,
+            ReaderWork(
+                work_id="urn:cts:latinLit:stoa0085b.stoa001",
+                collection_id="perseus",
+                language="lat",
+                title="Ars grammatica",
+                author="Unknown",
+                source_id="stoa0085b.stoa001",
+            ),
+            ReaderEdition(
+                edition_id="edition",
+                work_id="urn:cts:latinLit:stoa0085b.stoa001",
+                label="Perseus Latin edition",
+                language="lat",
+                source_path=source_path,
+            ),
+            ReaderBookArtifact(
+                artifact_id="artifact",
+                work_id="urn:cts:latinLit:stoa0085b.stoa001",
+                edition_id="edition",
+                artifact_path=book_path,
+                source_path=source_path,
+                adapter="perseus_tei",
+                source_hash="hash",
+            ),
+        )
+        metadata_rows = parse_perseus_catalog_results(
+            """
+##### 1. Ars grammatica
+
+URN:
+    urn:cts:latinLit:stoa0085b.stoa001.opp-lat2
+Author:
+    Charisius, Flavius Sosipater
+Language:
+    Latin
+""",
+            collection_id="perseus",
+            subject="Latin language--Grammar--Early works to 1500",
+            source_url="https://catalog.perseus.org/example",
+            source_path=Path("perseus-grammar.md"),
+        )
+        register_source_metadata(catalog_path, metadata_rows)
+
+        overlays = perseus_candidate_metadata_overlays(catalog_path)
+
+    assert [(overlay.field, overlay.value, overlay.status) for overlay in overlays] == [
+        ("author", "Charisius, Flavius Sosipater", "candidate"),
+        ("cts_work_urn", "urn:cts:latinLit:stoa0085b.stoa001", "candidate"),
+    ]
+    overlay = overlays[0]
+    assert overlay.collection_id == "perseus"
+    assert overlay.match_field == "source_id"
+    assert overlay.match_value == "stoa0085b.stoa001"
+    assert overlay.evidence[0].source_type == "perseus_catalog"
+    assert overlay.evidence[0].citation == "https://catalog.perseus.org/example"
+    assert "perseus_subject" not in {item.field for item in overlays}
+
+
+def test_dcs_chapter_info_work_map_candidates_match_catalog_source_id() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        catalog_path = root / "catalog.duckdb"
+        book_path = root / "book.duckdb"
+        source_path = root / "Abhidharmakośa.conllu"
+        source_path.write_text("", encoding="utf-8")
+        create_catalog_db(catalog_path)
+        register_book(
+            catalog_path,
+            ReaderWork(
+                work_id="langnet:reader:sanskrit_dcs:dcs_378",
+                collection_id="sanskrit_dcs",
+                language="san",
+                title="Abhidharmakośa",
+                author="Unknown",
+                source_id="dcs_378",
+            ),
+            ReaderEdition(
+                edition_id="edition",
+                work_id="langnet:reader:sanskrit_dcs:dcs_378",
+                label="DCS edition",
+                language="san",
+                source_path=source_path,
+            ),
+            ReaderBookArtifact(
+                artifact_id="artifact",
+                work_id="langnet:reader:sanskrit_dcs:dcs_378",
+                edition_id="edition",
+                artifact_path=book_path,
+                source_path=source_path,
+                adapter="sanskrit_dcs_conllu",
+                source_hash="hash",
+            ),
+        )
+        xml = """
+<info>
+  <chapter>
+    <path>Abhidharmakośa/Abhidharmakośa-0000-AbhidhKo, 1-7024.conllu</path>
+    <textName>Abhidharmakośa</textName>
+    <textId>378</textId>
+    <chapterName>AbhidhKo, 1</chapterName>
+    <chapterId>7024</chapterId>
+    <chapterPosition>1</chapterPosition>
+    <dcsTimeSlot>4</dcsTimeSlot>
+  </chapter>
+</info>
+"""
+
+        nodes = dcs_chapter_info_work_map_candidates(
+            catalog_path,
+            xml,
+            source_path=Path("chapter-info.xml"),
+        )
+
+    assert len(nodes) == 1
+    node = nodes[0]
+    assert node.work_id == "langnet:reader:sanskrit_dcs:dcs_378"
+    assert node.node_id == "dcs_378:chapter:7024"
+    assert node.kind == "chapter"
+    assert node.label == "AbhidhKo, 1"
+    assert node.ordinal == 1
+    assert node.start_citation == "AbhidhKo, 1"
+    assert node.end_citation == "AbhidhKo, 1"
+    assert node.provenance == "native"
+    assert node.status == "candidate"
+    assert node.evidence[0].source_type == "dcs_chapter_info"

@@ -9,6 +9,7 @@ import duckdb
 from click.testing import CliRunner
 
 from langnet.cli import main
+from langnet.reader.adapters import parse_perseus_tei_with_fallback_urn
 from langnet.reader.builder import (
     ReaderBuildConfig,
     ReaderBuilder,
@@ -18,7 +19,6 @@ from langnet.reader.builder import (
     _looks_like_opengreekandlatin_tei,
     _registrations_for_work_ids,
 )
-from langnet.reader.adapters import parse_perseus_tei_with_fallback_urn
 from langnet.reader.metadata_overlay import load_metadata_overlays
 from langnet.reader.models import ReaderAlias, ReaderBookArtifact, ReaderEdition, ReaderWork
 from langnet.reader.storage import ReaderBookRegistration, lookup_segment_by_address, register_book

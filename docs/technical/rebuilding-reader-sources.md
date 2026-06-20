@@ -250,7 +250,7 @@ After importing or changing reader source data:
 The latest handoff is:
 
 ```text
-docs/plans/active/infra/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md
+docs/archive/2026-06-reader-expansion/READER_CURRENT_STATUS_HANDOFF_2026-06-07.md
 ```
 
 Verified in the current stack:
@@ -306,7 +306,22 @@ Audit OpenGreekAndLatin source selection:
 
 ```bash
 just cli reader ogl-audit --output json
+just cli reader ogl-view-comparison --collection opengreekandlatin_patrologia \
+  --root /home/nixos/opengreekandlatin/patrologia_latina-dev \
+  --output-dir data/reference/ogl_import_audit \
+  --limit-per-view 10 \
+  --output json
 ```
+
+The audit payload includes `items[].view_comparison_samples[]` for sampled
+selected-vs-alternate OGL source views. Use those samples to inspect segment
+count, token count, and title/author differences before changing `data`,
+`corrected`, `split`, or `volumes` precedence.
+
+`ogl-view-comparison` writes JSON and TSV artifacts for bounded direct CTS-key
+overlaps. If it returns fewer than the requested limit, treat that as evidence
+that the remaining alternate-view files need PL filename/volume mapping or
+external corroboration rather than automatic source-view policy changes.
 
 Reference audit artifacts live under:
 

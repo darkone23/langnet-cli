@@ -101,8 +101,16 @@ max-nested-blocks = 3
 max-args = 5
 
 [tool.ruff.lint.per-file-ignores]
+"src/langnet/cli.py" = ["C901", "PLR0912", "PLR0913"]
+"src/langnet/databuild/dico.py" = ["C901", "PLR2004"]
+"src/langnet/reader/builder.py" = ["C901"]
+"src/langnet/reader/opengreekandlatin.py" = ["C901", "PLR0911", "PLR0912"]
+"src/langnet/reader/source_acquisition.py" = ["C901", "E501", "PLR0911", "PLR0913", "PLR2004", "PLW2901", "SIM103"]
+"src/langnet/reader/storage.py" = ["E501"]
 "src/langnet/heritage/encoding_service.py" = ["PLR0911"]
 "src/langnet/heritage/parameters.py" = ["PLR0911"]
+"tests/test_reader_eval_corpus_fixtures.py" = ["PLR2004"]
+"tests/test_reader_source_acquisition.py" = ["PLR2004"]
 
 [tool.mypy]
 # The mypy configurations: http://bit.ly/2zEl9WI
@@ -129,4 +137,3 @@ enable_error_code = [
 disable_error_code = [
   "no-untyped-def", # TODO: fix
 ]
-
