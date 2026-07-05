@@ -113,3 +113,16 @@ export function createDeskLoadingTimers(
 		}
 	};
 }
+
+export function syncDeskActivityTimer(
+	timers: ReturnType<typeof createDeskLoadingTimers>,
+	kind: DeskActivityKey,
+	active: boolean
+) {
+	if (active) {
+		if (!timers.isRunning(kind)) timers.start(kind);
+		return;
+	}
+
+	timers.stop(kind);
+}

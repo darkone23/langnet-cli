@@ -126,6 +126,8 @@ Important paths:
 
 Web design docs:
 
+- `../docs/technical/frontend-architecture.md`: route, module, API adapter, and
+  browser-to-CLI request-flow diagrams.
 - `docs/UI.md`: current page layout, reader principles, result grouping, Forms,
   and visual direction.
 - `docs/SVELTEKIT_GUIDELINES.md`: SvelteKit and Svelte 5 implementation

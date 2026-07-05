@@ -27,6 +27,8 @@ Start here:
   quality statuses, source roles, and acquisition verification.
 - `docs/technical/reader-full-text-search.md` - derived Lance reader full-text
   search index, build lifecycle, query expansion, and morphology boundary.
+- `docs/technical/frontend-architecture.md` - Project Orion frontend route,
+  module, API adapter, and browser-to-CLI request-flow diagrams.
 - `docs/READER_METADATA_ENRICHMENT_LOOP.md` - Firecrawl-backed curated metadata and generated discovery metadata workflow.
 - `docs/READER_WEB_CONTRACT.md` - reader/web integration contract.
 - `webapp/README.md` - webapp setup and operational notes.
@@ -55,6 +57,7 @@ Start here:
 
 - `docs/technical/README.md` - technical documentation map.
 - `docs/technical/ARCHITECTURE.md` - current runtime architecture.
+- `docs/technical/frontend-architecture.md` - current Project Orion frontend architecture.
 - `docs/technical/backend/` - backend-specific notes.
 - `docs/technical/design/` - design notes for planning, reduction, hydration, and witness contracts.
 - `docs/technical/predicates_evidence.md` - canonical predicates and evidence fields.

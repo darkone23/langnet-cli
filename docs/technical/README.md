@@ -9,6 +9,8 @@ translation cache.
 
 - `ARCHITECTURE.md` — current CLI/runtime architecture, SvelteKit adapter
   routes, storage boundary, and implemented/future surfaces.
+- `frontend-architecture.md` — Project Orion frontend route, module, API
+  adapter, and browser-to-CLI request-flow diagrams.
 - `reader-full-text-search.md` — current derived Lance reader search index,
   build lifecycle, normalization, fuzzy candidates, concept aliases, and the
   morphology-search boundary.

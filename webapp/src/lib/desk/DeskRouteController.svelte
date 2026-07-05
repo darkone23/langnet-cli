@@ -5,9 +5,12 @@
 	import {
 		createDeskLoadingTimers,
 		deskActivityItems,
+		syncDeskActivityTimer,
 		type DeskActivityKey
 	} from '$lib/desk/desk-activity';
 	import { createDeskMotdController } from '$lib/desk/desk-motd-controller';
+	import { createDeskParadigmController } from '$lib/desk/desk-paradigm-controller';
+	import { createDeskTranslationArrivalController } from '$lib/desk/desk-translation-arrival-controller';
 	import {
 		branchToggleLabel as branchToggleLabelForState,
 		componentAwaitsReaderTranslation as componentAwaitsReaderTranslationForState,
@@ -62,6 +65,7 @@
 		type BucketGroup
 	} from '$lib/desk/desk-entry';
 	import { createDeskWordIndexController } from '$lib/desk/desk-word-index';
+	import { createDeskRouteStorageController } from '$lib/desk/desk-route-storage-controller';
 	import {
 		deskEncounterViewState,
 		fetchDeskEncounter,
@@ -77,6 +81,19 @@
 		deskCurrentStatusLabel,
 		deskReaderLayerStatus
 	} from '$lib/desk/desk-status';
+	import {
+		allAvailableToolIds,
+		liveVisibleToolsForLookupTools,
+		nextLookupTools,
+		nextVisibleTools
+	} from '$lib/desk/desk-tool-filters';
+	import {
+		nextBranchCollapseState,
+		nextComponentMeaningExpansionState,
+		nextComponentTextLayerState,
+		nextGroupTextLayerState,
+		nextSectionExpansionState
+	} from '$lib/desk/desk-view-state';
 	import {
 		refreshDeskSearchTranslations,
 		retryDeskGroupTranslation
@@ -99,19 +116,11 @@
 		returnedToolsForEncounter
 	} from '$lib/desk/desk-session';
 	import {
-		clearDeskBrowserStorage,
 		readDeskMotdFromBrowserStorage,
-		readDeskStateFromBrowserStorage,
 		readDeskWordIndexEarmarksFromBrowserStorage,
-		restoreDeskStateFromStorage,
-		writeDeskMotdToBrowserStorage,
-		writeDeskStateToBrowserStorage,
-		writeDeskWordIndexEarmarksToBrowserStorage,
-		clearDeskStateStorage,
-		clearDeskThemeStorage
+		writeDeskMotdToBrowserStorage
 	} from '$lib/desk/desk-route-workspace';
 	import {
-		currentDeskRouteKey,
 		deskAppRouteUrl,
 		deskMotdHref,
 		deskRouteHydration,
@@ -119,14 +128,16 @@
 		deskWordIndexSectionHref,
 		type DeskTheme
 	} from '$lib/desk/desk-route';
-	import { normalizeParadigmPayload, type ParadigmPayload } from '$lib/paradigm';
 	import {
-		curateParadigmCandidates,
-		paradigmPayloadHasForms,
-		paradigmUnavailableMessage
-	} from '$lib/paradigm-ui';
-	import type { ParadigmResolutionCandidate } from '$lib/paradigm-resolution';
-	import { paradigmCandidateKey, paradigmRequestUrl } from '$lib/desk/desk-paradigm';
+		clearDeskEncounterPatch,
+		clearDeskSearchPatch,
+		clearPendingDeskRouteStatePatch,
+		resetDeskAppPatch,
+		selectDeskLanguagePatch,
+		type DeskRouteStatePatch
+	} from '$lib/desk/desk-route-state-actions';
+	import type { ParadigmPayload } from '$lib/paradigm';
+	import { curateParadigmCandidates } from '$lib/paradigm-ui';
 	import {
 		searchEndpointUrl,
 	} from '$lib/desk/desk-endpoints';
@@ -241,6 +252,23 @@
 	const deskLoadingTimers = createDeskLoadingTimers((kind, seconds) => {
 		deskActivityElapsed = { ...deskActivityElapsed, [kind]: seconds };
 	});
+	const translationArrivalController = createDeskTranslationArrivalController(
+		{
+			get translationArrived() {
+				return translationArrived;
+			},
+			set translationArrived(value) {
+				translationArrived = value;
+			},
+			get translationArrivalTimer() {
+				return translationArrivalTimer;
+			},
+			set translationArrivalTimer(value) {
+				translationArrivalTimer = value;
+			}
+		},
+		{ browser }
+	);
 
 	const wordIndexController = createDeskWordIndexController(
 		{
@@ -344,6 +372,82 @@
 				writeDeskMotdToBrowserStorage(browser ? localStorage : null, result);
 			},
 			recommendationsFailedMessage: uiCopy.errors.recommendationsFailed
+		}
+	);
+
+	const paradigmController = createDeskParadigmController(
+		{
+			get paradigmPayloads() {
+				return paradigmPayloads;
+			},
+			set paradigmPayloads(value) {
+				paradigmPayloads = value;
+			},
+			get paradigmLoading() {
+				return paradigmLoading;
+			},
+			set paradigmLoading(value) {
+				paradigmLoading = value;
+			},
+			get paradigmErrors() {
+				return paradigmErrors;
+			},
+			set paradigmErrors(value) {
+				paradigmErrors = value;
+			}
+		},
+		{
+			fetchPayload,
+			indexFailedMessage: uiCopy.errors.indexFailed
+		}
+	);
+
+	const storageController = createDeskRouteStorageController(
+		{
+			get language() { return language; },
+			set language(value) { language = value; },
+			get query() { return query; },
+			set query(value) { query = value; },
+			get backendMode() { return backendMode; },
+			set backendMode(value) { backendMode = value; },
+			get translationMode() { return translationMode; },
+			set translationMode(value) { translationMode = value; },
+			get theme() { return theme; },
+			set theme(value) { theme = value; },
+			get lookupTools() { return lookupTools; },
+			set lookupTools(value) { lookupTools = value; },
+			get visibleTools() { return visibleTools; },
+			set visibleTools(value) { visibleTools = value; },
+			get encounter() { return encounter; },
+			set encounter(value) { encounter = value; },
+			get textLayers() { return textLayers; },
+			set textLayers(value) { textLayers = value; },
+			get expandedSections() { return expandedSections; },
+			set expandedSections(value) { expandedSections = value; },
+			get collapsedBranches() { return collapsedBranches; },
+			set collapsedBranches(value) { collapsedBranches = value; },
+			get wordIndex() { return wordIndex; },
+			set wordIndex(value) { wordIndex = value; },
+			get wordIndexSections() { return wordIndexSections; },
+			set wordIndexSections(value) { wordIndexSections = value; },
+			get wordIndexEarmarks() { return wordIndexEarmarks; },
+			set wordIndexEarmarks(value) { wordIndexEarmarks = value; },
+			get loading() { return loading; },
+			set loading(value) { loading = value; },
+			get enrichingTranslations() { return enrichingTranslations; },
+			set enrichingTranslations(value) { enrichingTranslations = value; },
+			get errorMessage() { return errorMessage; },
+			set errorMessage(value) { errorMessage = value; },
+			get enrichmentError() { return enrichmentError; },
+			set enrichmentError(value) { enrichmentError = value; }
+		},
+		{
+			browser,
+			localStorage: browser ? localStorage : null,
+			sessionStorage: browser ? sessionStorage : null,
+			setDocumentTheme: (nextTheme) => {
+				document.documentElement.dataset.theme = nextTheme;
+			}
 		}
 	);
 
@@ -511,12 +615,12 @@
 		routePrefillOnly;
 
 		queueRouteStateSync();
-		saveDeskStateToSessionStorage();
+		storageController.saveDeskState();
 	});
 
 	$effect(() => {
 		wordIndexEarmarks;
-		saveWordIndexEarmarks();
+		storageController.saveWordIndexEarmarks();
 	});
 
 	$effect(() => {
@@ -540,94 +644,6 @@
 			lookupTools,
 			allLookupSelected: isAllLookupSelected
 		});
-	}
-
-	function saveWordIndexEarmarks() {
-		writeDeskWordIndexEarmarksToBrowserStorage(browser ? localStorage : null, wordIndexEarmarks);
-	}
-
-	function saveDeskStateToSessionStorage() {
-		if (!browser) return;
-
-		if (!query.trim() && !encounter) {
-			clearDeskStateStorage(sessionStorage);
-			return;
-		}
-
-		writeDeskStateToBrowserStorage(sessionStorage, {
-			language,
-			query,
-			backendMode,
-			translationMode,
-			theme,
-			lookupTools,
-			visibleTools,
-			encounter,
-			textLayers,
-			expandedSections,
-			collapsedBranches,
-			wordIndex,
-			wordIndexSections
-		});
-	}
-
-	function clearStoredThemeState() {
-		if (!browser) return;
-
-		try {
-			clearDeskThemeStorage(localStorage);
-			document.documentElement.dataset.theme = 'manuscript';
-		} catch {
-			// Ignore storage failures.
-		}
-	}
-
-	function clearAppBrowserStorage() {
-		if (!browser) return;
-		clearDeskBrowserStorage({
-			localStorage,
-			sessionStorage
-		});
-		clearStoredThemeState();
-	}
-
-	function currentRouteKey() {
-		return currentDeskRouteKey({
-			language,
-			query,
-			backendMode,
-			translationMode,
-			lookupTools
-		});
-	}
-
-	function restoreDeskStateFromSessionStorage(params: URLSearchParams) {
-		const stored = readDeskStateFromBrowserStorage(browser ? sessionStorage : null);
-		const restored = restoreDeskStateFromStorage({
-			params,
-			stored,
-			language,
-			query,
-			backendMode,
-			translationMode,
-			lookupTools
-		});
-		if (!restored) return false;
-
-		theme = restored.theme ?? theme;
-		lookupTools = restored.lookupTools;
-		encounter = restored.encounter;
-		visibleTools = restored.visibleTools;
-		textLayers = restored.textLayers;
-		expandedSections = restored.expandedSections;
-		collapsedBranches = restored.collapsedBranches;
-		loading = false;
-		enrichingTranslations = false;
-		errorMessage = '';
-		enrichmentError = '';
-		wordIndex = restored.wordIndex;
-		wordIndexSections = restored.wordIndexSections;
-		return Boolean(encounter);
 	}
 
 	function motdHref(item: WordRecommendationItem) {
@@ -680,32 +696,6 @@
 		const anchor = section.anchor;
 		if (!anchor?.query) return;
 		void wordIndexController.loadBrowseWordIndex(anchor.query, anchor.language);
-	}
-
-	async function loadParadigm(candidate: ParadigmResolutionCandidate) {
-		const key = paradigmCandidateKey(candidate);
-		if (!candidate.paradigm_request || paradigmPayloads[key] || paradigmLoading[key]) return;
-
-		paradigmLoading = { ...paradigmLoading, [key]: true };
-		paradigmErrors = { ...paradigmErrors, [key]: '' };
-
-		try {
-			const { response, data } = await fetchPayload<ParadigmPayload>(paradigmRequestUrl(candidate));
-			const payload = normalizeParadigmPayload(data);
-			if (!response.ok || payload?.error) {
-				throw new Error(payload?.error ?? uiCopy.errors.indexFailed);
-			}
-			if (!payload) throw new Error('Paradigm lookup did not return a table.');
-			if (!paradigmPayloadHasForms(payload)) throw new Error(paradigmUnavailableMessage(payload));
-			paradigmPayloads = { ...paradigmPayloads, [key]: payload };
-		} catch (error) {
-			paradigmErrors = {
-				...paradigmErrors,
-				[key]: error instanceof Error ? error.message : 'Paradigm lookup failed.'
-			};
-		} finally {
-			paradigmLoading = { ...paradigmLoading, [key]: false };
-		}
 	}
 
 	function wordIndexRowMatched(row: WordIndexMergedRow) {
@@ -834,7 +824,7 @@
 		}
 
 		const restoredFromSession =
-			routeIntent.shouldRestoreFromSession && restoreDeskStateFromSessionStorage(params);
+			routeIntent.shouldRestoreFromSession && storageController.restoreDeskState(params);
 		if (restoredFromSession) routeLoadRequested = false;
 
 		routeStateReady = true;
@@ -847,42 +837,60 @@
 	}
 
 	function clearPendingRouteState() {
-		pendingVisibleToolsFromRoute = null;
-		pendingSourceLayersFromRoute = [];
-		pendingExpandedSectionsFromRoute = [];
-		pendingCollapsedBranchesFromRoute = [];
-		pendingQueryFromRoute = '';
+		applyDeskRouteStatePatch(clearPendingDeskRouteStatePatch());
+	}
+
+	function applyDeskRouteStatePatch(patch: DeskRouteStatePatch) {
+		if (patch.activeSearchIdDelta) activeSearchId += patch.activeSearchIdDelta;
+		if (patch.routeLoadRequested !== undefined) routeLoadRequested = patch.routeLoadRequested;
+		if (patch.routePrefillOnly !== undefined) routePrefillOnly = patch.routePrefillOnly;
+		if (patch.language !== undefined) language = patch.language;
+		if (patch.query !== undefined) query = patch.query;
+		if (patch.backendMode !== undefined) backendMode = patch.backendMode;
+		if (patch.translationMode !== undefined) translationMode = patch.translationMode;
+		if (patch.theme !== undefined) theme = patch.theme;
+		if (patch.lookupTools !== undefined) lookupTools = patch.lookupTools;
+		if (patch.wordIndexEarmarks !== undefined) wordIndexEarmarks = patch.wordIndexEarmarks;
+		if (patch.encounter !== undefined) encounter = patch.encounter;
+		if (patch.visibleTools !== undefined) visibleTools = patch.visibleTools;
+		if (patch.loading !== undefined) loading = patch.loading;
+		if (patch.enrichingTranslations !== undefined) {
+			enrichingTranslations = patch.enrichingTranslations;
+		}
+		if (patch.errorMessage !== undefined) errorMessage = patch.errorMessage;
+		if (patch.enrichmentError !== undefined) enrichmentError = patch.enrichmentError;
+		if (patch.textLayers !== undefined) textLayers = patch.textLayers;
+		if (patch.expandedSections !== undefined) expandedSections = patch.expandedSections;
+		if (patch.collapsedBranches !== undefined) collapsedBranches = patch.collapsedBranches;
+		if (patch.pendingVisibleToolsFromRoute !== undefined) {
+			pendingVisibleToolsFromRoute = patch.pendingVisibleToolsFromRoute;
+		}
+		if (patch.pendingSourceLayersFromRoute !== undefined) {
+			pendingSourceLayersFromRoute = patch.pendingSourceLayersFromRoute;
+		}
+		if (patch.pendingExpandedSectionsFromRoute !== undefined) {
+			pendingExpandedSectionsFromRoute = patch.pendingExpandedSectionsFromRoute;
+		}
+		if (patch.pendingCollapsedBranchesFromRoute !== undefined) {
+			pendingCollapsedBranchesFromRoute = patch.pendingCollapsedBranchesFromRoute;
+		}
+		if (patch.pendingQueryFromRoute !== undefined) pendingQueryFromRoute = patch.pendingQueryFromRoute;
 	}
 
 	function clearEncounterState() {
-		activeSearchId += 1;
-		clearTranslationArrival();
-		encounter = null;
-		visibleTools = [];
-		loading = false;
-		enrichingTranslations = false;
-		errorMessage = '';
-		enrichmentError = '';
-		textLayers = {};
-		expandedSections = {};
-		collapsedBranches = {};
+		translationArrivalController.clear();
+		applyDeskRouteStatePatch(clearDeskEncounterPatch());
 		clearWordIndexState();
-		clearParadigmState();
+		paradigmController.clear();
 	}
 
 	function clearWordIndexState() {
 		wordIndexController.clearSearchState();
 	}
 
-	function clearParadigmState() {
-		paradigmPayloads = {};
-		paradigmLoading = {};
-		paradigmErrors = {};
-	}
-
 	async function runSearch() {
 		motdController.abort();
-		clearTranslationArrival();
+		translationArrivalController.clear();
 		routePrefillOnly = false;
 		const lookupValidation = validateDeskLookupWord(query);
 		let renderedSearch = false;
@@ -989,7 +997,7 @@
 		});
 
 		encounter = data;
-		clearParadigmState();
+		paradigmController.clear();
 		visibleTools = viewState.visibleTools;
 
 		if (viewState.shouldClearPendingRouteState) {
@@ -1017,7 +1025,7 @@
 				enrichmentError = message;
 			},
 			tick,
-			triggerTranslationArrival,
+			triggerTranslationArrival: translationArrivalController.trigger,
 			translationFailedMessage: uiCopy.errors.translationFailed,
 			enrichmentMode: mode
 		});
@@ -1045,7 +1053,7 @@
 			tick,
 			fetchEncounter,
 			applyEncounter,
-			triggerTranslationArrival,
+			triggerTranslationArrival: translationArrivalController.trigger,
 			retryDeskTranslation,
 			translationFailedMessage: uiCopy.errors.translationFailed
 		});
@@ -1059,24 +1067,6 @@
 			behavior: prefersReducedMotion ? 'auto' : 'smooth',
 			block: 'start'
 		});
-	}
-
-	function triggerTranslationArrival() {
-		if (!browser) return;
-		clearTranslationArrival();
-		translationArrived = true;
-		translationArrivalTimer = setTimeout(() => {
-			translationArrived = false;
-			translationArrivalTimer = null;
-		}, 1800);
-	}
-
-	function clearTranslationArrival() {
-		translationArrived = false;
-		if (translationArrivalTimer) {
-			clearTimeout(translationArrivalTimer);
-			translationArrivalTimer = null;
-		}
 	}
 
 	function handleSubmit(event: SubmitEvent) {
@@ -1098,34 +1088,16 @@
 	}
 
 	function clearSearchDesk() {
-		activeSearchId += 1;
-		query = '';
-		encounter = null;
-		visibleTools = [];
-		errorMessage = '';
-		enrichmentError = '';
-		enrichingTranslations = false;
-		textLayers = {};
-		expandedSections = {};
-		collapsedBranches = {};
-		clearPendingRouteState();
+		applyDeskRouteStatePatch(clearDeskSearchPatch());
 	}
 
 	function resetAppState() {
 		motdController.reset();
-		clearTranslationArrival();
-		routeLoadRequested = false;
-		routePrefillOnly = false;
-		language = 'san';
-		query = '';
-		backendMode = 'cli';
-		translationMode = 'auto';
-		theme = 'manuscript';
-		lookupTools = toolsForLanguage('san').map(({ id }) => id);
-		wordIndexEarmarks = [];
-		clearEncounterState();
-		clearPendingRouteState();
-		clearAppBrowserStorage();
+		translationArrivalController.clear();
+		applyDeskRouteStatePatch(resetDeskAppPatch());
+		clearWordIndexState();
+		paradigmController.clear();
+		storageController.clearAppStorage();
 	}
 
 	function clearRouteState() {
@@ -1144,57 +1116,30 @@
 	}
 
 	function selectLanguage(nextLanguage: LanguageMode) {
-		routeLoadRequested = false;
-		routePrefillOnly = false;
-		language = nextLanguage;
-		query = '';
-		lookupTools = toolsForLanguage(nextLanguage).map(({ id }) => id);
-		visibleTools = [];
-		encounter = null;
-		errorMessage = '';
-		enrichmentError = '';
-		enrichingTranslations = false;
-		activeSearchId += 1;
-		textLayers = {};
-		expandedSections = {};
-		collapsedBranches = {};
-		clearPendingRouteState();
+		applyDeskRouteStatePatch(selectDeskLanguagePatch(nextLanguage));
 	}
 
 	function applyLiveResultFilter(nextTools: ToolId[]) {
 		if (!encounter) return;
-		visibleTools = returnedToolIds.filter((tool) => nextTools.includes(tool));
+		visibleTools = liveVisibleToolsForLookupTools(nextTools, returnedToolIds);
 	}
 
 	function toggleLookupTool(tool: ToolId) {
 		routeLoadRequested = false;
 		routePrefillOnly = false;
-		let nextTools: ToolId[];
-
-		if (lookupTools.includes(tool)) {
-			if (lookupTools.length === 1) return;
-			nextTools = lookupTools.filter((candidate) => candidate !== tool);
-		} else {
-			nextTools = [...lookupTools, tool];
-		}
-
+		const nextTools = nextLookupTools(lookupTools, tool);
 		lookupTools = nextTools;
 		applyLiveResultFilter(nextTools);
 	}
 
 	function toggleVisibleTool(tool: ToolId) {
-		if (visibleTools.includes(tool)) {
-			if (visibleTools.length === 1) return;
-			visibleTools = visibleTools.filter((candidate) => candidate !== tool);
-		} else {
-			visibleTools = [...visibleTools, tool];
-		}
+		visibleTools = nextVisibleTools(visibleTools, tool);
 	}
 
 	function showAllLookupTools() {
 		routeLoadRequested = false;
 		routePrefillOnly = false;
-		lookupTools = availableTools.map(({ id }) => id);
+		lookupTools = allAvailableToolIds(availableTools);
 		visibleTools = returnedToolIds;
 	}
 
@@ -1203,43 +1148,23 @@
 	}
 
 	function toggleSectionExpansion(bucket: EncounterBucket) {
-		const key = sectionExpansionKey(bucket);
-		expandedSections = {
-			...expandedSections,
-			[key]: !expandedSections[key]
-		};
+		expandedSections = nextSectionExpansionState(expandedSections, bucket);
 	}
 
 	function toggleBranchCollapse(bucket: EncounterBucket) {
-		const key = sectionExpansionKey(bucket);
-		collapsedBranches = {
-			...collapsedBranches,
-			[key]: !collapsedBranches[key]
-		};
+		collapsedBranches = nextBranchCollapseState(collapsedBranches, bucket);
 	}
 
 	function setComponentTextLayer(component: EncounterComponent, layer: 'reader' | 'source') {
-		textLayers = {
-			...textLayers,
-			...Object.fromEntries(
-				component.evidence.meanings.map((meaning) => [componentMeaningKey(meaning), layer])
-			)
-		};
+		textLayers = nextComponentTextLayerState(textLayers, component, layer);
 	}
 
 	function toggleComponentMeaning(meaning: EncounterComponentMeaning) {
-		const key = componentMeaningKey(meaning);
-		expandedSections = {
-			...expandedSections,
-			[key]: !expandedSections[key]
-		};
+		expandedSections = nextComponentMeaningExpansionState(expandedSections, meaning);
 	}
 
 	function setGroupTextLayer(group: BucketGroup, layer: 'reader' | 'source') {
-		textLayers = {
-			...textLayers,
-			...Object.fromEntries(group.buckets.map((bucket) => [bucket.bucket_id, layer]))
-		};
+		textLayers = nextGroupTextLayerState(textLayers, group, layer);
 	}
 
 	function currentStatusLabel() {
@@ -1293,22 +1218,13 @@
 		dictionaryWitnessesSection = element;
 	}
 
-	function syncDeskActivityTimer(kind: DeskActivityKey, active: boolean) {
-		if (active) {
-			if (!deskLoadingTimers.isRunning(kind)) deskLoadingTimers.start(kind);
-			return;
-		}
-
-		deskLoadingTimers.stop(kind);
-	}
-
 	$effect(() => {
-		syncDeskActivityTimer('lookup', loading);
-		syncDeskActivityTimer('translation', hasTranslationActivity);
-		syncDeskActivityTimer('wordIndex', wordIndexLoading);
-		syncDeskActivityTimer('wordIndexSections', wordIndexSectionsLoading);
-		syncDeskActivityTimer('motd', motdLoading || motdRefreshing);
-		syncDeskActivityTimer('paradigm', hasParadigmActivity);
+		syncDeskActivityTimer(deskLoadingTimers, 'lookup', loading);
+		syncDeskActivityTimer(deskLoadingTimers, 'translation', hasTranslationActivity);
+		syncDeskActivityTimer(deskLoadingTimers, 'wordIndex', wordIndexLoading);
+		syncDeskActivityTimer(deskLoadingTimers, 'wordIndexSections', wordIndexSectionsLoading);
+		syncDeskActivityTimer(deskLoadingTimers, 'motd', motdLoading || motdRefreshing);
+		syncDeskActivityTimer(deskLoadingTimers, 'paradigm', hasParadigmActivity);
 	});
 
 	onMount(() => {
@@ -1331,7 +1247,7 @@
 
 		return () => {
 			motdController.abort();
-			clearTranslationArrival();
+			translationArrivalController.clear();
 			deskLoadingTimers.stopAll();
 			window.removeEventListener('scroll', syncSidebarHeight);
 			window.removeEventListener('popstate', hydrateRouteStateFromUrl);
@@ -1411,7 +1327,7 @@
 		{paradigmErrors}
 		{countLabel}
 		onShowAllReturnedTools={showAllReturnedTools}
-		onLoadParadigm={loadParadigm}
+		onLoadParadigm={paradigmController.load}
 		onWitnessesElement={setDictionaryWitnessesSection}
 	/>
 

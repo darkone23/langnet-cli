@@ -1,6 +1,11 @@
 import { strict as assert } from 'node:assert';
 
-import { createDeskLoadingTimers, deskActivityItems, type DeskActivityKey } from './desk-activity';
+import {
+	createDeskLoadingTimers,
+	deskActivityItems,
+	syncDeskActivityTimer,
+	type DeskActivityKey
+} from './desk-activity';
 
 type IntervalHandle = ReturnType<typeof globalThis.setInterval>;
 
@@ -91,4 +96,21 @@ function createFakeScheduler() {
 	assert.deepEqual(fake.cleared, [1, 2, 3]);
 	assert.equal(timers.isRunning('lookup'), false);
 	assert.equal(timers.isRunning('translation'), false);
+}
+
+{
+	const emissions: Array<[DeskActivityKey, number]> = [];
+	const fake = createFakeScheduler();
+	const timers = createDeskLoadingTimers((kind, seconds) => {
+		emissions.push([kind, seconds]);
+	}, fake.scheduler);
+
+	syncDeskActivityTimer(timers, 'motd', true);
+	syncDeskActivityTimer(timers, 'motd', true);
+	assert.deepEqual(emissions, [['motd', 0]]);
+	assert.equal(timers.isRunning('motd'), true);
+
+	syncDeskActivityTimer(timers, 'motd', false);
+	assert.equal(timers.isRunning('motd'), false);
+	assert.deepEqual(fake.cleared, [1]);
 }

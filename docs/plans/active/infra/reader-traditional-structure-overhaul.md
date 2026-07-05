@@ -206,6 +206,10 @@ Implemented slices:
   component and `desk-activity.ts` timer helper, so lookup, translation,
   word-index, section-browse, MOTD, and paradigm waits can surface elapsed
   seconds through one stable visualization.
+- Word Desk async activity timer synchronization now lives in
+  `webapp/src/lib/desk/desk-activity.ts`, keeping the start/stop/is-running
+  policy for lookup, translation, word-index, section-browse, MOTD, and paradigm
+  waits outside `DeskRouteController.svelte`.
 - Word Desk lookup waiting markup now lives in `DeskLookupLoadingPanel.svelte`,
   with the elapsed timer visible in the large lookup panel instead of hidden in
   route-local state.
@@ -226,10 +230,38 @@ Implemented slices:
 - Word Desk browser storage helpers now live in `desk-storage.ts`, covering
   MOTD local cache, word-index earmarks, desk session state, and versioned
   storage cleanup with focused tests.
+- Word Desk browser storage synchronization now lives in
+  `webapp/src/lib/desk/desk-route-storage-controller.ts`, covering current desk
+  state saves, word-index earmark saves, session restore application, and full
+  app storage clear behavior outside `DeskRouteController.svelte`.
+- Word Desk lookup and visible-tool filter policy now lives in
+  `webapp/src/lib/desk/desk-tool-filters.ts`, keeping "do not remove the last
+  selected tool", live-result filtering, and show-all tool id derivation out of
+  `DeskRouteController.svelte`.
+- Word Desk expansion and reader/source layer state transforms now live in
+  `webapp/src/lib/desk/desk-view-state.ts`, covering section expansion, branch
+  collapse, component meaning expansion, component layer selection, and group
+  layer selection outside `DeskRouteController.svelte`.
 - Word Desk MOTD request orchestration now lives in
   `webapp/src/lib/desk/desk-motd-controller.ts`, covering initial/stale loads,
   refresh avoids, abort/reset lifecycle, normalization, errors, and cache writes
   outside `DeskRouteController.svelte`.
+- Word Desk paradigm request orchestration now lives in
+  `webapp/src/lib/desk/desk-paradigm-controller.ts`, covering table request
+  loading state, payload normalization, unavailable-table errors, duplicate
+  request suppression, and clear/reset behavior outside `DeskRouteController.svelte`.
+- Word Desk translation-arrival pulse lifecycle now lives in
+  `webapp/src/lib/desk/desk-translation-arrival-controller.ts`, covering the
+  browser-only arrival flag, timeout scheduling, and cleanup outside
+  `DeskRouteController.svelte`.
+- Word Desk route state action policy now lives in
+  `webapp/src/lib/desk/desk-route-state-actions.ts`, covering pending-route
+  reset, encounter clear, search clear, app reset, and language-select patches
+  outside `DeskRouteController.svelte`.
+- Project Orion frontend architecture diagrams now live in
+  `docs/technical/frontend-architecture.md`, covering route ownership, Word
+  Desk modules, Reader modules, API adapter boundaries, and browser-to-CLI
+  request flow.
 - `reader structure` and `/api/reader?mode=structure`.
 - Division metadata overlay storage, sync, builder integration, and reviewed
   traditional mappings across all targeted texts (Bhagavadgītā chapters 1-18 and
@@ -498,6 +530,9 @@ feature slice is the traditional-division layer:
 - Added SvelteKit guideline guards requiring Reader endpoint construction and
   encounter briefing fetches to remain under the `src/lib/reader/` surface
   cluster instead of returning to `routes/reader/+page.svelte`.
+- Added `docs/technical/frontend-architecture.md` with GitHub-safe Mermaid
+  diagrams for the current Project Orion frontend, and linked it from the
+  technical docs map, main docs map, and webapp README.
 - Clustered Reader TypeScript domain helpers and tests under
   `webapp/src/lib/reader/`, including the Reader domain index, page formatting,
   page authors, page routing, page navigation, index stats, index storage,
@@ -532,6 +567,38 @@ feature slice is the traditional-division layer:
   `src/lib/desk/desk-motd-controller.ts`, covering initial/stale loads, refresh
   avoid lists, abort/reset lifecycle, normalization, errors, and cache writes
   with focused tests while reducing `DeskRouteController.svelte` to 1501 lines.
+- Extracted Word Desk paradigm request orchestration into
+  `src/lib/desk/desk-paradigm-controller.ts`, covering table request loading
+  state, normalized payload storage, unavailable-table errors, duplicate request
+  suppression, and clear/reset behavior with focused tests while reducing
+  `DeskRouteController.svelte` to 1491 lines.
+- Extracted Word Desk async activity timer synchronization into
+  `src/lib/desk/desk-activity.ts`, covering start/stop decisions for active
+  waits with focused tests while reducing `DeskRouteController.svelte` to 1483
+  lines.
+- Extracted Word Desk browser storage synchronization into
+  `src/lib/desk/desk-route-storage-controller.ts`, covering desk-state saves,
+  word-index earmark saves, session restore application, and full storage clear
+  behavior with focused tests while reducing `DeskRouteController.svelte` to
+  1437 lines.
+- Extracted Word Desk lookup and visible-tool filter policy into
+  `src/lib/desk/desk-tool-filters.ts`, covering last-tool protection,
+  live-result filtering, and show-all tool id derivation with focused tests
+  while reducing `DeskRouteController.svelte` to 1430 lines.
+- Extracted Word Desk expansion and reader/source layer state transforms into
+  `src/lib/desk/desk-view-state.ts`, covering section expansion, branch
+  collapse, component meaning expansion, component layer selection, and group
+  layer selection with focused tests while reducing `DeskRouteController.svelte`
+  to 1417 lines.
+- Extracted Word Desk translation-arrival pulse lifecycle into
+  `src/lib/desk/desk-translation-arrival-controller.ts`, covering browser-only
+  pulse triggering, repeated-trigger timeout cleanup, and explicit clear
+  behavior with focused tests while keeping `DeskRouteController.svelte` at
+  1417 lines.
+- Extracted Word Desk route state action policy into
+  `src/lib/desk/desk-route-state-actions.ts`, covering pending-route reset,
+  encounter clear, search clear, app reset, and language-select patches with
+  focused tests while keeping `DeskRouteController.svelte` at 1417 lines.
 
 ## Immediate Next Step
 
@@ -541,8 +608,10 @@ Continue the UI overhaul in this order:
    ceiling by extracting the remaining stateful lookup orchestration seams:
    first-pass search sequencing remains in-route; enrichment refresh sequencing
    and retry refresh sequencing now flow through `desk-workflows.ts`, and word-index
-   orchestration now flows through `desk-word-index.ts`. MOTD request orchestration
-   now flows through `desk-motd-controller.ts`, and status/cache copy has already
+   orchestration now flows through `desk-word-index.ts`. MOTD and paradigm request
+   orchestration now flow through focused controllers, activity timer sync now
+   flows through `desk-activity.ts`, browser storage synchronization now flows
+   through `desk-route-storage-controller.ts`, and status/cache copy has already
    moved to `desk-status.ts`.
 2. Move the remaining Word Desk orchestration boundaries out of the route:
    storage synchronization and async activity coordination should stay under

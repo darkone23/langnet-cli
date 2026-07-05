@@ -9,6 +9,10 @@ const deskEndpointsSource = readFileSync('src/lib/desk/desk-endpoints.ts', 'utf8
 const deskWorkspaceSource = readFileSync('src/lib/desk/desk-route-workspace.ts', 'utf8');
 const deskSessionSource = readFileSync('src/lib/desk/desk-session.ts', 'utf8');
 const deskMotdControllerSource = readFileSync('src/lib/desk/desk-motd-controller.ts', 'utf8');
+const deskRouteStorageControllerSource = readFileSync(
+	'src/lib/desk/desk-route-storage-controller.ts',
+	'utf8'
+);
 const componentLedgerSource = readFileSync('src/lib/desk/DeskComponentLedger.svelte', 'utf8');
 const compactComponentLedgerSource = componentLedgerSource.replace(/\s+/g, ' ');
 const dictionaryGroupCardSource = readFileSync(
@@ -55,7 +59,7 @@ assert.equal(
 	'desk session storage version should invalidate stale pre-translation/source-layer state'
 );
 assert.equal(
-	fullPageSource.includes('restoreDeskStateFromStorage(') &&
+	deskRouteStorageControllerSource.includes('restoreDeskStateFromStorage(') &&
 		fullPageSource.includes("from '$lib/desk/desk-session'") &&
 		deskWorkspaceSource.includes('encounterNeedsFreshReaderLayer(stored.encounter') &&
 		deskSessionSource.includes('hasMissingSourceReaderTranslations(result)') &&

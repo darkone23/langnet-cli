@@ -50,14 +50,28 @@ const readerRouteImplementationSource = `${readerRoutePageSource}\n${readerRoute
 const readerDirectoryUrl = new URL('./reader/', import.meta.url);
 const readerApiSource = readFileSync(new URL('./reader-api.ts', readerDirectoryUrl), 'utf8');
 const deskEntryCssSource = readFileSync(new URL('./desk-entry.css', deskDirectoryUrl), 'utf8');
+const deskActivitySource = readFileSync(new URL('./desk-activity.ts', deskDirectoryUrl), 'utf8');
 const deskEntrySource = readFileSync(new URL('./desk-entry.ts', deskDirectoryUrl), 'utf8');
 const deskEndpointsSource = readFileSync(new URL('./desk-endpoints.ts', deskDirectoryUrl), 'utf8');
+const deskToolFiltersSource = readFileSync(
+	new URL('./desk-tool-filters.ts', deskDirectoryUrl),
+	'utf8'
+);
+const deskViewStateSource = readFileSync(new URL('./desk-view-state.ts', deskDirectoryUrl), 'utf8');
 const deskWordIndexSource = readFileSync(new URL('./desk-word-index.ts', deskDirectoryUrl), 'utf8');
 const deskLookupSource = readFileSync(new URL('./desk-lookup.ts', deskDirectoryUrl), 'utf8');
 const deskWorkflowsSource = readFileSync(new URL('./desk-workflows.ts', deskDirectoryUrl), 'utf8');
 const deskMotdSource = readFileSync(new URL('./desk-motd.ts', deskDirectoryUrl), 'utf8');
 const deskMotdControllerSource = readFileSync(
 	new URL('./desk-motd-controller.ts', deskDirectoryUrl),
+	'utf8'
+);
+const deskParadigmControllerSource = readFileSync(
+	new URL('./desk-paradigm-controller.ts', deskDirectoryUrl),
+	'utf8'
+);
+const deskRouteStorageControllerSource = readFileSync(
+	new URL('./desk-route-storage-controller.ts', deskDirectoryUrl),
 	'utf8'
 );
 const deskRouteHelperSource = readFileSync(new URL('./desk-route.ts', deskDirectoryUrl), 'utf8');
@@ -300,6 +314,121 @@ assert.ok(
 );
 
 assert.ok(
+	deskRouteSource.includes("from '$lib/desk/desk-paradigm-controller'") &&
+		deskRouteSource.includes('createDeskParadigmController(') &&
+		deskRouteSource.includes('onLoadParadigm={paradigmController.load}') &&
+		deskRouteSource.includes('paradigmController.clear()') &&
+		deskParadigmControllerSource.includes('export function createDeskParadigmController') &&
+		deskParadigmControllerSource.includes('normalizeParadigmPayload(data)') &&
+		deskParadigmControllerSource.includes('paradigmPayloadHasForms(payload)') &&
+		deskParadigmControllerSource.includes('paradigmRequestUrl(candidate)'),
+	'Word Desk route should delegate paradigm request orchestration to desk-paradigm-controller.ts'
+);
+
+for (const localParadigmRequestToken of [
+	'async function loadParadigm',
+	'function clearParadigmState',
+	'normalizeParadigmPayload(data)',
+	'paradigmPayloadHasForms(payload)',
+	'paradigmUnavailableMessage(payload)',
+	'paradigmRequestUrl(candidate)'
+]) {
+	assert.equal(
+		deskRouteSource.includes(localParadigmRequestToken),
+		false,
+		`Word Desk route should not keep local paradigm request token ${localParadigmRequestToken}`
+	);
+}
+
+assert.ok(
+	deskRouteSource.includes("from '$lib/desk/desk-activity'") &&
+		deskRouteSource.includes('syncDeskActivityTimer(deskLoadingTimers') &&
+		deskActivitySource.includes('export function syncDeskActivityTimer') &&
+		deskActivitySource.includes('timers.isRunning(kind)') &&
+		!deskRouteSource.includes('function syncDeskActivityTimer'),
+	'Word Desk route should delegate async activity timer synchronization to desk-activity.ts'
+);
+
+assert.ok(
+	deskRouteSource.includes("from '$lib/desk/desk-route-storage-controller'") &&
+		deskRouteSource.includes('createDeskRouteStorageController(') &&
+		deskRouteSource.includes('storageController.saveDeskState()') &&
+		deskRouteSource.includes('storageController.saveWordIndexEarmarks()') &&
+		deskRouteSource.includes('storageController.restoreDeskState(params)') &&
+		deskRouteSource.includes('storageController.clearAppStorage()') &&
+		deskRouteStorageControllerSource.includes('export function createDeskRouteStorageController') &&
+		deskRouteStorageControllerSource.includes('writeDeskStateToBrowserStorage') &&
+		deskRouteStorageControllerSource.includes('restoreDeskStateFromStorage') &&
+		deskRouteStorageControllerSource.includes('clearDeskBrowserStorage'),
+	'Word Desk route should delegate browser storage synchronization to desk-route-storage-controller.ts'
+);
+
+for (const localStorageSyncToken of [
+	'function saveDeskStateToSessionStorage',
+	'function saveWordIndexEarmarks',
+	'function restoreDeskStateFromSessionStorage',
+	'function clearAppBrowserStorage',
+	'function clearStoredThemeState',
+	'writeDeskStateToBrowserStorage',
+	'clearDeskStateStorage(sessionStorage)',
+	'readDeskStateFromBrowserStorage'
+]) {
+	assert.equal(
+		deskRouteSource.includes(localStorageSyncToken),
+		false,
+		`Word Desk route should not keep local storage sync token ${localStorageSyncToken}`
+	);
+}
+
+assert.ok(
+	deskRouteSource.includes("from '$lib/desk/desk-tool-filters'") &&
+		deskRouteSource.includes('nextLookupTools(lookupTools, tool)') &&
+		deskRouteSource.includes('nextVisibleTools(visibleTools, tool)') &&
+		deskRouteSource.includes('liveVisibleToolsForLookupTools(nextTools, returnedToolIds)') &&
+		deskToolFiltersSource.includes('export function nextLookupTools') &&
+		deskToolFiltersSource.includes('export function nextVisibleTools'),
+	'Word Desk route should delegate lookup and visible-tool filter policy to desk-tool-filters.ts'
+);
+
+for (const localToolFilterToken of [
+	'lookupTools.filter((candidate) => candidate !== tool)',
+	'visibleTools.filter((candidate) => candidate !== tool)',
+	'returnedToolIds.filter((tool) => nextTools.includes(tool))',
+	'availableTools.map(({ id }) => id)'
+]) {
+	assert.equal(
+		deskRouteSource.includes(localToolFilterToken),
+		false,
+		`Word Desk route should not keep local tool filter token ${localToolFilterToken}`
+	);
+}
+
+assert.ok(
+	deskRouteSource.includes("from '$lib/desk/desk-view-state'") &&
+		deskRouteSource.includes('nextSectionExpansionState(expandedSections, bucket)') &&
+		deskRouteSource.includes('nextBranchCollapseState(collapsedBranches, bucket)') &&
+		deskRouteSource.includes('nextComponentTextLayerState(textLayers, component, layer)') &&
+		deskRouteSource.includes('nextComponentMeaningExpansionState(expandedSections, meaning)') &&
+		deskRouteSource.includes('nextGroupTextLayerState(textLayers, group, layer)') &&
+		deskViewStateSource.includes('export function nextSectionExpansionState') &&
+		deskViewStateSource.includes('export function nextComponentTextLayerState'),
+	'Word Desk route should delegate expansion and reader/source layer state transforms to desk-view-state.ts'
+);
+
+for (const localViewStateToken of [
+	'component.evidence.meanings.map((meaning) => [componentMeaningKey(meaning), layer])',
+	'group.buckets.map((bucket) => [bucket.bucket_id, layer])',
+	'[key]: !expandedSections[key]',
+	'[key]: !collapsedBranches[key]'
+]) {
+	assert.equal(
+		deskRouteSource.includes(localViewStateToken),
+		false,
+		`Word Desk route should not keep local view-state token ${localViewStateToken}`
+	);
+}
+
+assert.ok(
 	deskStatusSource.includes('export function deskCacheSummary') &&
 		deskStatusSource.includes('export function deskCurrentStatusLabel') &&
 		deskStatusSource.includes('export function deskCurrentStatusDetail') &&
@@ -429,7 +558,7 @@ for (const localMotdRequestToken of [
 
 assert.ok(
 	deskRouteSource.includes("from '$lib/desk/desk-session'") &&
-		deskRouteSource.includes('restoreDeskStateFromStorage(') &&
+		deskRouteStorageControllerSource.includes('restoreDeskStateFromStorage(') &&
 		deskSessionSource.includes('export function encounterNeedsFreshReaderLayer') &&
 		deskSessionSource.includes('export function validStoredTools') &&
 		deskRouteSource.includes("from '$lib/desk/desk-route-workspace'"),
