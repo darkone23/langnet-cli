@@ -13,8 +13,8 @@
 ## Source Documents
 
 - Design spec: `docs/superpowers/specs/2026-06-02-orion-reader-structure-design.md`
-- Active handoff: `docs/plans/active/infra/reader-traditional-structure-overhaul.md`
-- Existing related plan: `docs/plans/active/infra/reader-citation-reference-resolution.md`
+- Completed plan: `docs/plans/completed/infra/reader-traditional-structure-overhaul.md`
+- Existing related plan: `docs/plans/completed/infra/reader-citation-reference-resolution.md`
 - Reader web contract: `docs/READER_WEB_CONTRACT.md`
 - UI guide: `webapp/docs/UI.md`
 - Metadata enrichment loop: `docs/READER_METADATA_ENRICHMENT_LOOP.md`

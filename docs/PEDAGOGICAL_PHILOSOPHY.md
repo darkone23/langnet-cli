@@ -16,8 +16,8 @@ This means:
 - lexical lookup serves the work, not the other way around
 - ornament and motion may be used when they improve attention, recall, or delight
 
-The current detailed UI policy lives in
-`docs/plans/active/infra/READER_EXPERIENCE_MODALITY_AND_TYPOGRAPHY_PLAN.md`.
+The current detailed UI policy lives in `webapp/docs/UI.md` (Reader Modality
+And Typography Policy section).
 
 ## Learning Model
 
@@ -87,8 +87,9 @@ Foster-derived tooling should prefer terms and examples that can point back to
 the local Ossa Latinitatis Sola artifact. The first source of truth is the page
 JSONL extracted from the local PDF, then the DuckDB index derived from those
 page rows. Search results, concept mentions, encounter spans, and summary plans
-should carry concrete source references such as `page:49` or `encounter:1.1`
-where available.
+should carry concrete source references such as `page:49`, `encounter:1.1`,
+or `experience:1` where available. Essentials carry `toc:*` and `experience:*`
+summary refs linking them to validated TOC-entry and experience-level rollups.
 
 LLM summaries are allowed as generated study aids only when they are explicit
 artifacts. They should use a recorded prompt version, model name, input hash,

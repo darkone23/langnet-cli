@@ -10,7 +10,7 @@ const webappReadmeSource = readFileSync(new URL('../../README.md', import.meta.u
 const docsReadmeSource = readFileSync(new URL('../../../docs/README.md', import.meta.url), 'utf8');
 const activeOverhaulPlanSource = readFileSync(
 	new URL(
-		'../../../docs/plans/active/infra/reader-traditional-structure-overhaul.md',
+		'../../../docs/plans/completed/infra/reader-traditional-structure-overhaul.md',
 		import.meta.url
 	),
 	'utf8'

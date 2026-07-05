@@ -39,8 +39,8 @@ Current state:
   machine-readable readiness, catalog, index, and cache-maintenance surfaces.
 - SvelteKit web routes adapt CLI/data contracts rather than defining a separate
   semantic runtime.
-- `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md` is the reader
-  coordination layer; dated status handoffs live in `docs/archive/`.
+- The reader coordination layer lives in `docs/EXECUTION_PLAN.md` (Reader And
+  Library section); dated status handoffs live in `docs/archive/`.
 
 Remaining:
 
@@ -99,7 +99,10 @@ Implemented:
   preserving full evidence below;
 - CDSL plain-text entry grammar diagnostics for source references, cross
   references, grammar markers, and first definition text;
-- JSON metadata suitable for downstream renderers.
+- JSON metadata suitable for downstream renderers;
+- Foster TOC summary pipeline: 105-entry run with experience rollups,
+  `experience:*` refs in essentials, `--retry-only` CLI for invalid-row
+  regeneration, and `foster_bridge` field in reader word-context payload.
 
 Remaining:
 

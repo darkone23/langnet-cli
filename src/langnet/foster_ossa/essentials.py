@@ -43,7 +43,14 @@ def default_foster_essentials() -> list[FosterEssential]:
             ),
             concept_ids=("case.genitive",),
             source_refs=("page:69", "page:125", "page:140", "page:522", "page:618"),
-            summary_refs=("toc:1.6", "toc:1.22", "toc:1.25", "toc:4.30"),
+            summary_refs=(
+                "toc:1.6",
+                "toc:1.22",
+                "toc:1.25",
+                "toc:4.30",
+                "experience:1",
+                "experience:4",
+            ),
             learner_action=(
                 "Ask what relation, possession, belonging, source, or description the form marks."
             ),
@@ -58,7 +65,14 @@ def default_foster_essentials() -> list[FosterEssential]:
             foster_terms=("function to-for-from", "form to-for-from", "to-for-from function"),
             concept_ids=("case.dative",),
             source_refs=("page:69", "page:133", "page:179", "page:505"),
-            summary_refs=("toc:1.6", "toc:1.33", "toc:4.21", "toc:4.27"),
+            summary_refs=(
+                "toc:1.6",
+                "toc:1.33",
+                "toc:4.21",
+                "toc:4.27",
+                "experience:1",
+                "experience:4",
+            ),
             learner_action="Ask who receives, benefits, is approached, or is the reference point.",
             product_use="Show a recipient/benefit/reference gateway beside dative evidence.",
             morphology_predicates=("case=dative",),
@@ -71,7 +85,14 @@ def default_foster_essentials() -> list[FosterEssential]:
             foster_terms=("object form", "object forms"),
             concept_ids=("case.accusative",),
             source_refs=("page:56", "page:69", "page:86", "page:448", "page:522"),
-            summary_refs=("toc:1.2", "toc:1.6", "toc:1.11", "toc:4.3"),
+            summary_refs=(
+                "toc:1.2",
+                "toc:1.6",
+                "toc:1.11",
+                "toc:4.3",
+                "experience:1",
+                "experience:4",
+            ),
             learner_action=(
                 "Ask what receives the action or functions as the object or motion goal."
             ),
@@ -86,7 +107,7 @@ def default_foster_essentials() -> list[FosterEssential]:
             foster_terms=("function of address", "direct address"),
             concept_ids=("case.vocative",),
             source_refs=("page:69", "page:311"),
-            summary_refs=("toc:1.6", "toc:3.11"),
+            summary_refs=("toc:1.6", "toc:3.11", "experience:1", "experience:3"),
             learner_action=(
                 "Ask whether the word names the person or thing being directly addressed."
             ),
@@ -105,7 +126,7 @@ def default_foster_essentials() -> list[FosterEssential]:
             foster_terms=("location function", "place where"),
             concept_ids=("case.locative",),
             source_refs=("page:69", "page:301", "page:311"),
-            summary_refs=("toc:1.6", "toc:3.1", "toc:3.11"),
+            summary_refs=("toc:1.6", "toc:3.1", "toc:3.11", "experience:1", "experience:3"),
             learner_action="Ask where, when, or in what setting the form locates the expression.",
             product_use="Show location/setting function where the platform has locative evidence.",
             morphology_predicates=("case=locative",),
@@ -118,7 +139,7 @@ def default_foster_essentials() -> list[FosterEssential]:
             foster_terms=("subject form", "subject forms"),
             concept_ids=("case.nominative",),
             source_refs=("page:56", "page:86", "page:149"),
-            summary_refs=("toc:1.2", "toc:1.11", "toc:1.27"),
+            summary_refs=("toc:1.2", "toc:1.11", "toc:1.27", "experience:1"),
             learner_action="Ask what names the subject or topic whose function is being asserted.",
             product_use="Show naming/subject function where the platform has nominative evidence.",
             morphology_predicates=("case=nominative",),
@@ -136,7 +157,15 @@ def default_foster_essentials() -> list[FosterEssential]:
             ),
             concept_ids=("case.ablative", "case.instrumental", "case.locative"),
             source_refs=("page:69", "page:103", "page:108", "page:149", "page:611"),
-            summary_refs=("toc:1.6", "toc:1.27", "toc:1.28", "toc:4.26", "toc:4.27"),
+            summary_refs=(
+                "toc:1.6",
+                "toc:1.27",
+                "toc:1.28",
+                "toc:4.26",
+                "toc:4.27",
+                "experience:1",
+                "experience:4",
+            ),
             learner_action=(
                 "Ask whether the expression marks source, means, accompaniment, "
                 "cause, place, or setting."

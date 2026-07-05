@@ -186,6 +186,13 @@ promoted concept. The bridge is also cross-linked back into `learn concept`,
 didactic surfaces do not need a second lookup to show reviewed Foster/Ossa
 labels.
 
+The Foster bridge is also wired into the reader word-context payload: when
+`reader word-context` morphology analysis features match an essential's
+`morphology_predicates`, the `foster_bridge` field in the output surfaces the
+matching Foster bridge summary. This gives the reader selected-word sidebar
+access to Foster gateway labels, learner actions, and source refs alongside
+the existing `encounter --include-learning` and `learn foster-bridge` paths.
+
 Use `--view compact` for UI planning and server integration. The compact view
 keeps stable concept IDs, Foster gateways, traditional terms, source-evidence
 counts, native gateway rows, bridge IDs, bridge summaries, learner actions,

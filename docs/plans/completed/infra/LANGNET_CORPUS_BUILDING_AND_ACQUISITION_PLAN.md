@@ -7,7 +7,7 @@
 > `docs/technical/reader-source-acquisition.md`,
 > `docs/technical/rebuilding-reader-sources.md`,
 > `docs/EXECUTION_PLAN.md`, and
-> `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md`. Remaining
+> `docs/EXECUTION_PLAN.md`. Remaining
 > concrete work is split into todo plans for Archive.org derivative helpers,
 > popular Latin prose acquisition, and Project Orion humanist/mystical source
 > follow-through.

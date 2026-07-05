@@ -35,7 +35,12 @@ inference until the active queue below is stable.
   derived evidence.
 - Word-level evidence architecture is coherent: tool output becomes claims and
   triples, Witness Sense Units, exact buckets, learner-facing summaries, and a
-  selected-word reader context payload with lexical/morphology evidence.
+  selected-word reader context payload with lexical/morphology evidence and
+  Foster bridge overlays from morphology analysis.
+- Foster TOC summary pipeline is complete: 105-entry full run with experience
+  rollups, essentials carry `experience:*` refs, `--retry-only` CLI option for
+  targeted regeneration of invalid rows, and `foster_bridge` field in the
+  reader word-context payload.
 - Public/static pages, crawler boundaries, and SvelteKit route policy now have a
   documented product boundary.
 - Public traffic controls are observe-mode ready: anonymous sessions, scoped
@@ -45,9 +50,8 @@ inference until the active queue below is stable.
 
 ## Main Risks
 
-- Active reader work can still sprawl across too many detailed plans. Use
-  `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md` as the reader
-  coordination layer.
+- Active reader work should stay focused. Use the Reader And Library section
+  below as the reader coordination layer.
 - Source acquisition is easy to overrun. The framework is documented in
   `docs/technical/reader-source-acquisition.md`; do not import broad series until a
   manifest, staged sample, source role, boundary policy, and known-issues row
@@ -168,9 +172,27 @@ challenge/rate-limit rules without updating
 
 ### Reader And Library
 
-Treat reader/library expansion as a quality-controlled acquisition pipeline:
+Treat reader/library expansion as a quality-controlled acquisition pipeline.
 
-- keep `READER_GOALS_COORDINATION_PLAN.md` as the reader work-order document;
+**Parity target:** the goal is not raw corpus-count parity. It is
+provenance-and-reader-quality parity across every expansion lane before broad
+import. For each new corpus family or source family:
+
+- a source manifest exists before text enters the reader catalog;
+- the source-index can answer what was imported, from where, with language,
+  author/title, source path, segment count, token count, and quality status;
+- one representative staged/imported sample has been inspected for readable
+  text, work boundaries, and front-matter/OCR noise;
+- known defects are tracked in
+  `data/reference/reader_quality_audit/current_known_issues.tsv`;
+- expansion queues distinguish external source gaps, local checkout gaps,
+  importer gaps, and UI/discovery gaps;
+- `/library`, CLI `reader works`, and CLI/API source-index views expose the
+  import without making wanted/acquisition targets look like already-readable
+  works.
+
+**Acquisition framework:**
+
 - create or update source manifests before importing text;
 - stage and inspect a bounded sample before series-scale import;
 - keep raw sources, staged text, curated metadata, generated metadata, and
@@ -178,20 +200,51 @@ Treat reader/library expansion as a quality-controlled acquisition pipeline:
 - update `data/reference/reader_quality_audit/current_known_issues.tsv` before
   changing a risky target to imported/import-ready;
 - make `/library` distinguish imported works from staged, planned, wanted, or
-  deferred acquisition targets.
+  deferred acquisition targets;
 - use `docs/technical/reader-source-acquisition.md` for source roles, quality
-  statuses, staging commands, and verification.
+  statuses, staging commands, and verification;
+- use the reader-work ingestion skill at
+  `/home/nixos/.agents/skills/langnet-reader-work-ingestion/SKILL.md` as the
+  process guardrail for reusable ingestion across many authors and corpora.
 
-Immediate reader priority is QA and targeted follow-through, not another broad
-import batch:
+**Current lane status:**
+
+- PL122/Eriugena: pilot-slice parity met for fourteen works; keep segmentation
+  as a watch item.
+- Popular classical Latin: parity not met until a source-reviewed open/mirrorable
+  path exists for the highest-demand classroom works (Caesar or Sallust first).
+- Humanist/mystical source library: Cusanus imported; Bruno imported; Agrippa
+  deferred (lexeme-level OCR cleanup needed); Ficino has manifest-backed
+  candidates; Aquinas q.50 preserved as non-importable evidence; Duns Scotus
+  source-decision deferred.
+- Patrologia Graeca: sample-import parity met; reader-quality parity not met
+  until OCR noise and segmentation are calibrated against a second witness.
+- CSEL: CSEL61 has a verified source candidate; acquisition parity not met until
+  one PDF/OCR witness is parsed and a readable sample is staged.
+- Library: CLI/API/server-rendered parity exists; browser interaction QA remains.
+- Search: reader catalog/source-index parity exists; `search.lance` rebuild
+  deferred until the next approved expansion or reader-quality gate.
+
+**Acquisition stop conditions.** Pause and ask for review if:
+
+- a source role is unclear (bibliography, scan locator, database UI, OCR
+  witness, or clean text witness);
+- a staged text is mostly OCR noise;
+- work boundaries cannot be inferred without human judgment;
+- a proposed importer change would change source-view precedence for many
+  existing Patrologia/CSEL rows;
+- a UI change would make wanted/acquisition targets look like imported works.
+
+**Immediate reader priority** is QA and targeted follow-through, not another
+broad import batch:
 
 - confirm Cusanus reader/Library provenance display;
 - keep PL122 segmentation as a watch item for future PL imports;
 - calibrate the PG pilot before broad PG expansion;
 - select one popular Latin prose target only after source review;
 - keep Agrippa, Aquinas q.50, and Duns Scotus deferred until their source
-  quality decisions are explicit.
-- keep Bruno as a completed bounded acquisition slice for now:
+  quality decisions are explicit;
+- keep Bruno as a completed bounded acquisition slice:
   `bruno_esotericarchives` has three imported Latin works and source-index rows;
   the canonical export smoke bundle for `De Magia` validates under
   `examples/debug/catalog-export-bruno-de-magia`;

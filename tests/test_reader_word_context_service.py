@@ -92,3 +92,48 @@ def test_word_context_uses_morphology_provider() -> None:
         "note": "Encounter-derived morphology evidence.",
     }
     assert any(step["name"] == "morphology" for step in payload["timing"]["steps"])
+    assert payload["foster_bridge"]["status"] == "available"
+    foster_ids = [match["id"] for match in payload["foster_bridge"]["matches"]]
+    assert "object-form" in foster_ids or "subject-form" in foster_ids
+
+
+def test_word_context_foster_bridge_no_matches_when_morphology_absent() -> None:
+    payload = ReaderService(Path("missing-catalog.duckdb")).word_context_payload(
+        query="arma",
+        language="lat",
+        index_path=Path("missing-search-index.lance"),
+    )
+
+    assert payload["foster_bridge"]["status"] == "no_matches"
+    assert payload["foster_bridge"]["matches"] == []
+
+
+def test_word_context_foster_bridge_no_matches_for_irrelevant_analysis() -> None:
+    def morphology_provider(
+        *,
+        query: str,
+        language: str,
+        candidates: list[str],
+    ) -> dict[str, object]:
+        return {
+            "status": "available",
+            "items": [
+                {
+                    "source_tool": "whitaker",
+                    "form": "amat",
+                    "lemma": "amo",
+                    "analysis": "verb; 3rd sg. pres. act. indic.",
+                }
+            ],
+            "note": "No case features.",
+        }
+
+    payload = ReaderService(Path("missing-catalog.duckdb")).word_context_payload(
+        query="amat",
+        language="lat",
+        index_path=Path("missing-search-index.lance"),
+        morphology_provider=morphology_provider,
+    )
+
+    assert payload["foster_bridge"]["status"] == "no_matches"
+    assert payload["foster_bridge"]["matches"] == []

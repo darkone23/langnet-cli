@@ -530,6 +530,81 @@ source text without Reader EN, and only then display a small enrichment status
 while the slow translation pass runs in the background. The main reading column
 should remain usable during that pass.
 
+## Reader Modality And Typography Policy
+
+### Experience Thesis
+
+Project Orion should feel like a humanist memory theatre for classical texts:
+serious, academic, poetic, source-grounded, and visually alive. The reader is
+not merely a lookup tool. It is a keyed encounter with works, witnesses,
+citations, forms, names, and traditions.
+
+Useful reference points: Virgilian gravity, Austenian precision, Rabelaisian
+abundance, `Hypnerotomachia Poliphili` ceremony, Bruno's `ars memoriae`, Mary
+Carruthers on memory craft, and Tufte on dense evidence.
+
+### Tone Policy
+
+Use language that is academic but not sterile, serious but not lifeless,
+poetic but not vague, source-grounded before interpretive, and classical in
+register without fake archaism.
+
+Preferred terms: `work`, `witness`, `passage`, `apparatus`, `source`,
+`division`, `citation`, `shelf`, `memory key`, `provenance`, `reader desk`.
+
+Avoid generic SaaS labels (`item`, `result`, `data card`, `content`,
+`resource`), over-promising generated interpretation, and hiding uncertainty
+behind polished copy.
+
+### Typography Policy
+
+Primary text:
+
+- serif reader face
+- narrow measure, roughly 58-66 characters
+- generous leading for Greek, Sanskrit, and dense scholastic Latin
+- visible but quiet citation gutter
+- no paragraph-sized wall of UI chrome around the text
+
+Citation and structure: small-caps or inscriptional labels, enough contrast to
+scan but not dominate, stable citation strings over decorative titles.
+
+Apparatus: compact, source-first, clear distinction between source text,
+transliteration, generated notes, and provenance.
+
+OCR and uncertain sources: never present machine text as clean text without
+quality labels. Provenance and uncertainty belong in the visual hierarchy, not
+buried in raw IDs.
+
+### Ornament Design Rubric
+
+Judge the ornament system against a medieval draughtsman standard, not a
+generic icon standard.
+
+Primary reference logic: Villard de Honnecourt (model-book geometry, visible
+construction), French Arthurian manuscript illumination (lively marginal
+creatures), Eusebian canon tables (proportional columns, arches, bounded
+frames), and inhabited initials (letters as constructed spaces).
+
+Quality criteria: `construction` (visible axes, arcs, grids), `silhouette`
+(reads at thumbnail size), `register` (manuscript drawing feel, not SaaS
+illustration), `integration` (ornament grows from geometry), `boundedness`
+(architecturally contained), and `delight` (book pets may be cute, strange, or
+monster-like but must remain legible).
+
+If an ornament reads as a rounded vector icon with manuscript decoration pasted
+onto it, stop incremental tweaking and reset the visual grammar: ink-first
+contour, subordinate construction lines, sparse wash, thinner detail strokes,
+and smaller bounded presentation.
+
+### Modality Non-Goals
+
+- Do not add decorative motion that obscures text or slows reading.
+- Do not make the reader depend on a canvas/SVG library until a concrete
+  interaction needs it.
+- Do not let the UI imply acquisition or source certainty that the manifest
+  does not support.
+
 ## Visual Direction
 
 The current direction is "classic manuscript meets Tufte CSS meets DaisyUI":

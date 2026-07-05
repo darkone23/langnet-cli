@@ -165,6 +165,20 @@ def experience_rows_from_toc_summary_jsonl(
     return rows
 
 
+def invalid_source_refs_from_summary_jsonl(path: Path) -> list[str]:
+    """Return source_refs for rows with validation_status == 'generated_invalid'."""
+    refs: list[str] = []
+    for line in path.expanduser().read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if row.get("validation_status") == "generated_invalid":
+            ref = str(row.get("source_ref") or "")
+            if ref:
+                refs.append(ref)
+    return refs
+
+
 def write_summary_markdown_docs(*, input_path: Path, output_dir: Path) -> list[Path]:
     summaries = _valid_toc_summaries_from_jsonl(input_path)
     grouped: dict[int, list[dict[str, Any]]] = {}

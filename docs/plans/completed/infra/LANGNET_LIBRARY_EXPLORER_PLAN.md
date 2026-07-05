@@ -52,9 +52,9 @@ Primary page regions:
 Design principle:
 
 - The Library is an audit and discovery surface over the reader catalog, not a separate reading surface. Selecting a work should route into the existing Reader experience.
-- Corpus acquisition is tracked separately in `docs/plans/active/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`; the Library should expose acquisition/provenance status but should not perform acquisition work at request time.
+- Corpus acquisition is tracked separately in `docs/plans/completed/infra/LANGNET_CORPUS_BUILDING_AND_ACQUISITION_PLAN.md`; the Library should expose acquisition/provenance status but should not perform acquisition work at request time.
 - The Library should feel like the entrance hall to a humanist reader desk: shelves, witnesses, provenance, and acquisition gaps are presented as scholarly orientation, not as generic search results.
-- The reader experience tone and typography policy lives in `docs/plans/active/infra/READER_EXPERIENCE_MODALITY_AND_TYPOGRAPHY_PLAN.md`.
+- The reader experience tone and typography policy lives in `webapp/docs/UI.md` (Reader Modality And Typography Policy section).
 
 ## Data Model Additions
 

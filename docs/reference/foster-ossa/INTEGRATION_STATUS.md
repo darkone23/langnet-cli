@@ -92,7 +92,14 @@ labels:
 These mappings are now available as a structured starter pack in
 `data/build/foster_essentials.json` and a readable review document in
 `docs/reference/foster-ossa/FOSTER_ESSENTIALS.md`. The review rationale is in
-`CORE_FUNCTION_BRIDGE.md`.
+`CORE_FUNCTION_BRIDGE.md`. Essentials now carry `experience:*` summary refs
+alongside `toc:*` refs, linking each essential to its experience-level rollup.
+
+The essentials pack is consumed by the reader word-context payload: when
+morphology analysis features match an essential's `morphology_predicates`, the
+`foster_bridge` field in `reader word-context` output surfaces the matching
+Foster bridge summary (id, terms, concept_ids, source_refs, summary_refs,
+learner_action, product_use).
 
 ## Not Yet Product-Ready
 
@@ -132,7 +139,7 @@ deponent verbs, indirect discourse, and participial time relationships.
 Before a generated item becomes product instruction:
 
 - it must come from a `generated_valid` summary row;
-- it must carry `toc:*` and/or `page:*` refs;
+- it must carry `toc:*`, `experience:*`, and/or `page:*` refs;
 - it should be spot-checked against the local page extraction;
 - it should map to a stable LangNet concept or be explicitly marked as a new
   Foster-specific candidate;
@@ -154,13 +161,15 @@ just cli foster-ossa-taxonomy-audit \
 
 ## Recommended Next Slice
 
-Use the first codified Foster essentials pack as a product substrate:
+The Foster bridge is now wired into the reader word-context payload. Remaining
+work to make it a practical "Foster essentials" substrate:
 
-1. Attach reader examples from the indexed classics libraries.
+1. Attach reader examples from the indexed classics libraries to each essential.
 2. Attach dictionary and morphology evidence from the existing LangNet
-   analyzers.
+   analyzers to each essential.
 3. Add a stable aggregate concept design for `by-with-from-in`.
-4. Decide which essentials are ready to appear in the learner-facing UI.
+4. Decide which essentials are ready to appear in the learner-facing UI beyond
+   the word-context sidebar.
 
 That gives the application a practical "Foster essentials" substrate without
 pretending the generated summaries are themselves the final curriculum.

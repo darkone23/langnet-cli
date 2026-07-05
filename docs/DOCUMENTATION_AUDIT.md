@@ -28,9 +28,7 @@ Plan hygiene was refreshed:
 
 The active plan tree is still larger than the original 3-5 target because the
 reader/library/source-acquisition stack now has several scoped implementation
-plans. The coordination rule is: use `docs/EXECUTION_PLAN.md` and
-`docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md` to choose work; use
-the remaining active files only as supporting plans.
+plans. The coordination rule is: use `docs/EXECUTION_PLAN.md` to choose work.
 
 ## Targets
 

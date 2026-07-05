@@ -406,7 +406,7 @@ Acceptance:
 
 Files:
 
-- Modify: `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md`
+- Modify: `docs/EXECUTION_PLAN.md`
 - Modify: `data/reference/reader_quality_audit/current_known_issues.tsv`
 - If a dated handoff is needed, create it under `docs/archive/2026-06-reader-expansion/` or a newer dated archive folder rather than under `docs/plans/active/`.
 

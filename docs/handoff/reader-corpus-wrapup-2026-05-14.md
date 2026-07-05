@@ -138,9 +138,9 @@ Start by reading these files:
 - `docs/READER_CLI_HANDOFF.md`
 - `docs/READER_CLI_BEGINNER_GUIDE.md`
 - `docs/READER_WEB_CONTRACT.md`
-- `docs/plans/active/infra/reader-corpus-quality-roadmap.md`
-- `docs/plans/active/infra/reader-metadata-overlay-plan.md`
-- `docs/plans/active/infra/reader-attribution-claims-implementation.md`
+- `docs/archive/2026-05-doc-overhaul/plans/reader-corpus-quality-roadmap.md`
+- `docs/plans/completed/infra/reader-metadata-overlay-plan.md`
+- `docs/plans/completed/infra/reader-attribution-claims-implementation.md`
 
 Then run a quick smoke check:
 

@@ -30,11 +30,11 @@ Completed across the retirement pass:
   `codesketch/`.
 - Captured the first Foster display-label slice in
   `src/langnet/pedagogy/foster.py` and
-  `docs/plans/active/pedagogy/foster-display-vocabulary.md`.
+  `docs/plans/completed/pedagogy/foster-display-vocabulary.md`.
 - Deleted `codesketch/src/langnet/foster/` after capturing label maps and
   planning the remaining display work.
 - Opened the CDSL source-structure plan in
-  `docs/plans/active/skt/cdsl-entry-grammar-plan.md`.
+  `docs/plans/completed/skt/cdsl-entry-grammar-plan.md`.
 - Captured Heritage morphology parser expectations in
   `tests/test_heritage_salvage.py`.
 - Captured Sanskrit normalization edge cases for Harvard-Kyoto vs. SLP1
@@ -48,7 +48,7 @@ Completed across the retirement pass:
   default; similarity clustering is opt-in.
 - Captured citation preservation and Perseus-to-CTS conversion in
   `tests/test_citation_preservation.py`, with follow-up hydration work tracked
-  in `docs/plans/active/infra/citation-resolution-plan.md`.
+  in   `docs/plans/todo/infra/citation-resolution-plan.md`.
 - Added `src/langnet/citation/resolver.py` as the maintained read-only CTS
   DuckDB resolver. It finds `LANGNET_CTS_DB`, `data/build/cts_urn.duckdb`, or
   `~/.local/share/langnet/cts_urn.duckdb` and keeps unresolved citations
@@ -56,7 +56,7 @@ Completed across the retirement pass:
 - Captured the remaining Cologne/CDSL XML lessons in
   `src/langnet/execution/handlers/cdsl.py`,
   `tests/test_cdsl_triples.py`, and
-  `docs/plans/active/skt/cdsl-entry-grammar-plan.md`: page refs, `ab`
+  `docs/plans/completed/skt/cdsl-entry-grammar-plan.md`: page refs, `ab`
   abbreviations, compound hints, declension markers, explicit root markers,
   `ls` references, and `s1` cross references.
 
@@ -144,7 +144,7 @@ Plans to create or update:
   The useful output is optional citation hydration that preserves raw source
   citation strings when no resolver match exists. First preservation slice is
   covered in `tests/test_citation_preservation.py`; deeper hydration is tracked
-  in `docs/plans/active/infra/citation-resolution-plan.md`.
+  in   `docs/plans/todo/infra/citation-resolution-plan.md`.
 - Heritage and Sanskrit normalization capture plan.
   This should explicitly keep Sanskrit parity with Latin and Greek by making
   Heritage/CDSL normalization fixtures part of the same verification loop.

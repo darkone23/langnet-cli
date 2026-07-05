@@ -586,7 +586,22 @@ aids; the page rows and TOC spans remain the inspectable source-backed artifact.
 Valid generated summaries also include a normalized `generated_json` field so
 later rollups do not need to handle markdown fences or provider-specific text
 wrapping. Invalid rows keep `validation_issues` and should be regenerated or
-reviewed before they feed higher-level summaries.
+reviewed before they feed higher-level summaries. Use `--retry-only` to
+regenerate only the invalid rows from a prior JSONL:
+
+```bash
+just cli foster-ossa-summarize \
+  --db data/build/foster_ossa.duckdb \
+  --scope toc-entry \
+  --retry-only examples/debug/foster-ossa-summaries.jsonl \
+  --output examples/debug/foster-ossa-retries.jsonl \
+  --dry-run
+```
+
+When `--retry-only` is passed, the command reads the prior JSONL, extracts
+rows with `validation_status: "generated_invalid"`, and generates only those
+source refs. If no invalid rows are found, it reports `retry-only: no invalid
+rows found` and exits.
 
 Experience-level rollups read generated TOC-entry JSONL and skip invalid rows:
 
@@ -1149,6 +1164,37 @@ Triples use this shape:
   }
 }
 ```
+
+## `reader word-context`
+
+The `reader word-context` command returns a deterministic word-level evidence
+payload for a selected word in a reader passage. It is the backend for the
+reader selected-word sidebar.
+
+```bash
+just cli reader word-context corpore --language lat --output json
+just cli reader word-context corpore --language lat --reader-search-limit 3 --output json
+```
+
+The payload includes:
+
+- `normalization`: surface form, normalized query, and candidates.
+- `lexical_evidence`: encounter-derived dictionary buckets for the word.
+- `morphology`: encounter-derived morphology items (form, lemma, analysis).
+- `foster_bridge`: Foster essentials whose `morphology_predicates` match the
+  morphology analysis features. Each match is a Foster bridge summary with
+  `id`, `foster_terms`, `concept_ids`, `source_refs`, `summary_refs` (including
+  `experience:*` refs), `learner_action`, and `product_use`. `status` is
+  `available` when matches exist, `no_matches` otherwise.
+- `reader_hits`: corpus search hits from the reader search index, with index
+  status.
+- `passage_context`: work and segment metadata when `--work` and `--segment`
+  are provided.
+- `provenance`: source-index fields for the resolved work.
+- `caveats`: issues encountered during evidence gathering.
+- `timing`: per-step and total durations in milliseconds.
+
+The web adapter exposes this at `/api/reader?mode=word-context`.
 
 ## Reading Triples
 

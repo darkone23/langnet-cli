@@ -60,10 +60,10 @@ Additional capture completed after the first cleanup:
 - Foster mappings now live in `src/langnet/pedagogy/foster.py`, with tests in
   `tests/test_foster_pedagogy.py`.
 - The Foster plan lives in
-  `docs/plans/active/pedagogy/foster-display-vocabulary.md`.
+  `docs/plans/completed/pedagogy/foster-display-vocabulary.md`.
 - `codesketch/src/langnet/foster/` has been deleted after the mapping capture.
 - The CDSL source-structure plan lives in
-  `docs/plans/active/skt/cdsl-entry-grammar-plan.md`.
+  `docs/plans/completed/skt/cdsl-entry-grammar-plan.md`.
 - CDSL body parsing now uses standard Sanskrit case numbering and tests
   compound `info lex` gender sets.
 - Heritage morphology parser behavior and Heritage semicolon query planning are
@@ -77,7 +77,7 @@ Additional capture completed after the first cleanup:
   `tests/test_semantic_similarity.py`.
 - Citation preservation and direct Perseus-to-CTS conversion are captured in
   `tests/test_citation_preservation.py`; deeper hydration is tracked in
-  `docs/plans/active/infra/citation-resolution-plan.md`.
+  `docs/plans/todo/infra/citation-resolution-plan.md`.
 - The maintained CTS resolver now lives in `src/langnet/citation/resolver.py`
   and reads the local DuckDB index in read-only mode.
 - Cologne/CDSL XML lessons are captured in current CDSL code and tests: page
@@ -150,7 +150,7 @@ deleting `codesketch/`:
      author/work hint extraction, DB-backed author/work lookup, and betacode
      conversion.
    - Status: preservation plan created in
-     `docs/plans/active/infra/citation-resolution-plan.md`.
+     `docs/plans/todo/infra/citation-resolution-plan.md`.
    - Acceptance: source citation strings remain preserved even when resolver
      cannot map them to CTS.
 

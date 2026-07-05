@@ -12,60 +12,22 @@
 	import { createDeskParadigmController } from '$lib/desk/desk-paradigm-controller';
 	import { createDeskTranslationArrivalController } from '$lib/desk/desk-translation-arrival-controller';
 	import {
-		branchToggleLabel as branchToggleLabelForState,
-		componentAwaitsReaderTranslation as componentAwaitsReaderTranslationForState,
-		componentCanSwitchTextLayer,
-		componentHasTranslationToggle,
-		componentHeadwordDisplay as componentHeadwordDisplayForLanguage,
-		componentLayerIsSource,
-		componentLookupLine,
-		componentMeaningCanToggle,
-		componentMeaningKey,
-		componentMeaningSegments,
-		componentMeaningSourceLabel,
-		componentMeaningToggleLabel,
-		componentPrimaryTool,
-		componentSourceLayerLabel,
 		componentToolIds,
-		componentTranslationModel,
 		countLabel,
 		dedupeStrings,
-		groupAwaitsReaderTranslation as groupAwaitsReaderTranslationForState,
 		groupBuckets,
-		groupCanSwitchTextLayer,
-		groupHasReaderTranslation,
-		groupHasTranslationToggle,
-		groupHeadwordDisplay as groupHeadwordDisplayForLanguage,
-		groupLayerIsSource,
-		groupLead,
-		groupSourceLayerLabel,
-		groupToolIds,
-		groupTranslationModel,
-		groupTranslationRetrying as groupTranslationRetryingForState,
 		groupTranslationRetryKey,
-		groupWitnesses,
 		languageLabel,
 		primaryTool,
-		readerEntryLabel,
-		readerSectionClass,
-		readerSectionStyle,
 		retryableGroupTranslation,
-		sectionCanToggle,
-		sectionExpansionKey,
-		sectionHasTreeChildren,
-		sectionId,
-		sectionSegments,
-		sectionShowsReturnedEndingNote,
-		sectionToggleLabel,
 		toolMeta,
 		toolMnemonic,
 		toolStyle,
-		translationModelLabel,
-		visibleGroupBuckets as visibleGroupBucketsForState,
 		type BucketGroup
 	} from '$lib/desk/desk-entry';
 	import { createDeskWordIndexController } from '$lib/desk/desk-word-index';
 	import { createDeskRouteStorageController } from '$lib/desk/desk-route-storage-controller';
+	import { createDeskEntryHelpers } from '$lib/desk/desk-entry-helpers';
 	import {
 		deskEncounterViewState,
 		fetchDeskEncounter,
@@ -526,76 +488,21 @@
 	);
 	let paradigmCandidates = $derived(paradigmCandidateCuration.visible);
 
-	const componentLedgerHelpers = {
-		countLabel,
-		componentPrimaryTool,
-		componentToolIds,
-		componentHeadwordDisplay: (component: EncounterComponent) =>
-			componentHeadwordDisplayForLanguage(component, encounter?.language ?? language),
-		componentLookupLine,
-		componentCanSwitchTextLayer,
-		componentLayerIsSource,
-		setComponentTextLayer,
-		componentSourceLayerLabel,
-		componentHasTranslationToggle,
-		componentAwaitsReaderTranslation: (component: EncounterComponent) =>
-			componentAwaitsReaderTranslationForState(component, enrichingTranslations),
-		componentTranslationModel,
-		componentMeaningSegments,
-		componentMeaningCanToggle,
-		componentMeaningToggleLabel,
-		componentMeaningKey,
-		componentMeaningSourceLabel,
-		toggleComponentMeaning,
-		toolMeta,
-		toolMnemonic,
-		translationModelLabel
-	};
-
-	const dictionaryGroupHelpers = {
-		countLabel,
-		groupHeadwordDisplay: (group: BucketGroup) =>
-			groupHeadwordDisplayForLanguage(
-				group,
-				encounter?.language ?? language,
-				encounter?.word_index?.anchors ?? []
-			),
-		groupLead,
-		groupToolIds,
-		groupWitnesses,
-		readerEntryLabel,
-		groupCanSwitchTextLayer,
-		groupLayerIsSource,
-		groupHasReaderTranslation,
-		setGroupTextLayer,
-		groupSourceLayerLabel,
-		groupTranslationModel,
-		groupHasTranslationToggle,
-		groupAwaitsReaderTranslation: (group: BucketGroup) =>
-			groupAwaitsReaderTranslationForState(group, enrichingTranslations),
-		retryableGroupTranslation,
-		groupTranslationRetrying: (group: BucketGroup) =>
-			groupTranslationRetryingForState(group, translationRetrying),
-		retryGroupTranslation,
-		visibleGroupBuckets: (group: BucketGroup) =>
-			visibleGroupBucketsForState(group, collapsedBranches),
-		sectionSegments,
-		sectionHasTreeChildren,
-		sectionId,
-		readerSectionClass,
-		readerSectionStyle,
-		branchToggleLabel: (bucket: EncounterBucket) =>
-			branchToggleLabelForState(bucket, collapsedBranches),
-		toggleBranchCollapse,
-		sectionExpansionKey,
-		sectionCanToggle,
-		sectionToggleLabel,
-		toggleSectionExpansion,
-		sectionShowsReturnedEndingNote,
-		toolMeta,
-		toolMnemonic,
-		translationModelLabel
-	};
+	const deskEntryHelpers = $derived(
+		createDeskEntryHelpers(
+			{ language, encounter, enrichingTranslations, translationRetrying, collapsedBranches },
+			{
+				setComponentTextLayer,
+				toggleComponentMeaning,
+				setGroupTextLayer,
+				retryGroupTranslation,
+				toggleSectionExpansion,
+				toggleBranchCollapse
+			}
+		)
+	);
+	let componentLedgerHelpers = $derived(deskEntryHelpers.componentLedgerHelpers);
+	let dictionaryGroupHelpers = $derived(deskEntryHelpers.dictionaryGroupHelpers);
 
 	$effect(() => {
 		if (!browser || !routeStateReady) return;

@@ -38,6 +38,22 @@ def test_default_foster_essentials_include_codified_bridges_and_aggregate_candid
     )
 
 
+def test_foster_essentials_carry_experience_refs() -> None:
+    essentials = default_foster_essentials()
+    for essential in essentials:
+        experience_refs = [ref for ref in essential.summary_refs if ref.startswith("experience:")]
+        assert experience_refs, f"{essential.id} must carry at least one experience:* summary ref"
+        toc_refs = [ref for ref in essential.summary_refs if ref.startswith("toc:")]
+        expected_experiences = {
+            int(ref.split(".", maxsplit=1)[0].split(":")[1]) for ref in toc_refs
+        }
+        actual_experiences = {int(ref.split(":")[1]) for ref in experience_refs}
+        assert expected_experiences == actual_experiences, (
+            f"{essential.id} experience refs {actual_experiences}"
+            f" must match toc refs {expected_experiences}"
+        )
+
+
 def test_validate_foster_essentials_requires_sources_and_concept_or_candidate_status() -> None:
     validation = validate_foster_essentials(default_foster_essentials())
 
@@ -77,6 +93,7 @@ def test_render_foster_essentials_markdown_lists_status_and_refs() -> None:
     assert "`of-possession`" in markdown
     assert "`case.genitive`" in markdown
     assert "`toc:1.6`" in markdown
+    assert "`experience:1`" in markdown
     assert "by-with-from-in" in markdown
     assert "aggregate candidate" in markdown
 

@@ -515,7 +515,7 @@ Recommended agent handoff:
 
 ```text
 @auditor Review Phase 1/2 implementation from
-docs/plans/active/infra/OPEN_GREEK_LATIN_AND_GEORGES_IMPORT_PLAN.md:
+docs/plans/completed/infra/OPEN_GREEK_LATIN_AND_GEORGES_IMPORT_PLAN.md:
 src/langnet/reader/opengreekandlatin.py, ReaderBuilder wiring, OGL import
 outcome metadata, synthetic ID policy, and Georges lexicon_metadata changes.
 Focus on correctness, silent data-loss risks, and whether production OGL import

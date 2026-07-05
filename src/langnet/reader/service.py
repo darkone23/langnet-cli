@@ -10,6 +10,9 @@ from typing import Any
 import duckdb
 from query_spec import LanguageHint
 
+from langnet.encounter_display import foster_features_from_analysis
+from langnet.foster_ossa.essentials import default_foster_essentials
+from langnet.learning.foster_bridge import foster_bridge_summary_payload
 from langnet.normalizer.core import _hash_query
 from langnet.reader.author_classification import (
     author_agent_kind_allowed_values,
@@ -765,6 +768,14 @@ class ReaderService:
             item_count=len(list(morphology.get("items") or [])),
         )
 
+        step_started = perf_counter()
+        foster_bridge = _word_context_foster_bridge(morphology)
+        timed_step(
+            "foster_bridge",
+            step_started,
+            match_count=len(foster_bridge.get("matches") or []),
+        )
+
         work: dict[str, Any] | None = None
         segment: dict[str, Any] | None = None
         source_index_rows: list[dict[str, Any]] = []
@@ -878,6 +889,7 @@ class ReaderService:
                 "items": list(morphology.get("items") or []),
                 "note": morphology.get("note", ""),
             },
+            "foster_bridge": foster_bridge,
             "reader_hits": {
                 "status": reader_hits_status,
                 "index_status": index_status,
@@ -1795,6 +1807,55 @@ def _word_context_lexical_evidence(
             },
             ["Lexical evidence lookup failed."],
         )
+
+
+def _word_context_foster_bridge(morphology: dict[str, Any]) -> dict[str, Any]:
+    items = list(morphology.get("items") or [])
+    matches: list[dict[str, Any]] = []
+    seen_essential_ids: set[str] = set()
+    for item in items:
+        analysis = str(item.get("analysis") or item.get("features") or "")
+        if not analysis:
+            continue
+        features = foster_features_from_analysis(analysis)
+        if not features:
+            continue
+        for essential in default_foster_essentials():
+            if essential.id in seen_essential_ids:
+                continue
+            if _foster_essential_matches_features(essential, features):
+                seen_essential_ids.add(essential.id)
+                from langnet.learning.foster_bridge import (  # noqa: PLC0415
+                    get_foster_bridge,
+                )
+
+                try:
+                    bridge = get_foster_bridge(essential.id)
+                    matches.append(foster_bridge_summary_payload(bridge))
+                except KeyError:
+                    pass
+    return {
+        "status": "available" if matches else "no_matches",
+        "matches": matches,
+    }
+
+
+def _foster_essential_matches_features(
+    essential: Any,
+    features: dict[str, str],
+) -> bool:
+    for predicate in essential.morphology_predicates:
+        key, _, value = predicate.partition("=")
+        feature_value = features.get(key)
+        if feature_value is None:
+            continue
+        if (
+            feature_value == value
+            or feature_value.startswith(value[:3])
+            or value.startswith(feature_value[:3])
+        ):
+            return True
+    return False
 
 
 def _word_context_morphology(

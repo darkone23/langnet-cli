@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from langnet.cli import main
 from langnet.foster_ossa.extraction import iter_page_rows_from_pdftotext
+from langnet.foster_ossa.summaries import invalid_source_refs_from_summary_jsonl
 
 FIRST_EXPERIENCE_PAGE = 49
 
@@ -479,3 +480,87 @@ def test_foster_ossa_summary_docs_writes_markdown_documents() -> None:
         assert "wrote: 2" in result.output
         assert (output_dir / "README.md").exists()
         assert "Functions matter." in (output_dir / "experience-1.md").read_text(encoding="utf-8")
+
+
+def test_invalid_source_refs_from_summary_jsonl_returns_only_invalid_refs() -> None:
+    with TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir) / "summaries.jsonl"
+        path.write_text(
+            "\n".join(
+                [
+                    json.dumps({"source_ref": "toc:1.1", "validation_status": "generated_valid"}),
+                    json.dumps({"source_ref": "toc:1.2", "validation_status": "generated_invalid"}),
+                    json.dumps({"source_ref": "toc:1.3", "validation_status": "generated_invalid"}),
+                    json.dumps({"source_ref": "toc:1.4", "validation_status": "planned"}),
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        refs = invalid_source_refs_from_summary_jsonl(path)
+
+        assert refs == ["toc:1.2", "toc:1.3"]
+
+
+def test_foster_ossa_summarize_retry_only_filters_to_invalid_rows() -> None:
+    with TemporaryDirectory() as tmp_dir:
+        base = Path(tmp_dir)
+        source = base / "foster-ossa-pages.jsonl"
+        db_path = base / "foster_ossa.duckdb"
+        output = base / "summaries.jsonl"
+        prior = base / "prior-summaries.jsonl"
+        _write_page_jsonl(source)
+        _build_test_db(source, db_path)
+        prior.write_text(
+            json.dumps({"source_ref": "toc:1.1", "validation_status": "generated_invalid"}) + "\n",
+            encoding="utf-8",
+        )
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "foster-ossa-summarize",
+                "--db",
+                str(db_path),
+                "--scope",
+                "toc-entry",
+                "--output",
+                str(output),
+                "--retry-only",
+                str(prior),
+                "--dry-run",
+            ],
+            env={"OPENAI_API_KEY": ""},
+        )
+
+        assert result.exit_code == 0, result.output
+        assert "planned: 1" in result.output
+
+
+def test_foster_ossa_summarize_retry_only_reports_no_invalid_rows() -> None:
+    with TemporaryDirectory() as tmp_dir:
+        base = Path(tmp_dir)
+        prior = base / "prior-summaries.jsonl"
+        prior.write_text(
+            json.dumps({"source_ref": "toc:1.1", "validation_status": "generated_valid"}) + "\n",
+            encoding="utf-8",
+        )
+
+        result = CliRunner().invoke(
+            main,
+            [
+                "foster-ossa-summarize",
+                "--scope",
+                "toc-entry",
+                "--output",
+                str(base / "out.jsonl"),
+                "--retry-only",
+                str(prior),
+                "--dry-run",
+            ],
+            env={"OPENAI_API_KEY": ""},
+        )
+
+        assert result.exit_code == 0, result.output
+        assert "no invalid rows found" in result.output

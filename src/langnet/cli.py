@@ -1455,6 +1455,11 @@ def foster_ossa_encounter(encounter_id: str, db_path: Path | None, output: str) 
 )
 @click.option("--encounter", "encounter_id", help="Summarize pages in one encounter, e.g. 1.1.")
 @click.option("--dry-run", is_flag=True, help="Plan summaries without generating text.")
+@click.option(
+    "--retry-only",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Re-generate only rows marked generated_invalid in this JSONL.",
+)
 def foster_ossa_summarize(  # noqa: C901, PLR0913
     db_path: Path | None,
     scope: str,
@@ -1464,6 +1469,7 @@ def foster_ossa_summarize(  # noqa: C901, PLR0913
     input_summaries: Path | None,
     encounter_id: str | None,
     dry_run: bool,
+    retry_only: Path | None,
 ) -> None:
     """Generate or plan local Foster Ossa LLM summaries."""
     from langnet.databuild.foster_ossa import (  # noqa: PLC0415
@@ -1473,10 +1479,18 @@ def foster_ossa_summarize(  # noqa: C901, PLR0913
     from langnet.foster_ossa.summaries import (  # noqa: PLC0415
         experience_rows_from_toc_summary_jsonl,
         generated_summary_json,
+        invalid_source_refs_from_summary_jsonl,
         plan_summary_chunks,
         summarize_plan,
         validate_generated_summary,
     )
+
+    retry_source_refs: set[str] | None = None
+    if retry_only is not None:
+        retry_source_refs = set(invalid_source_refs_from_summary_jsonl(retry_only))
+        if not retry_source_refs:
+            click.echo("retry-only: no invalid rows found")
+            return
 
     if scope == "experience":
         if input_summaries is None:
@@ -1492,6 +1506,8 @@ def foster_ossa_summarize(  # noqa: C901, PLR0913
         )
     else:
         rows = page_rows_for_summary(db_path=db_path, limit=limit, encounter_id=encounter_id)
+    if retry_source_refs is not None:
+        rows = [row for row in rows if str(row.get("source_ref") or "") in retry_source_refs]
     plans = plan_summary_chunks(rows, scope=scope, model=model)
     output_path = output.expanduser()
     output_path.parent.mkdir(parents=True, exist_ok=True)

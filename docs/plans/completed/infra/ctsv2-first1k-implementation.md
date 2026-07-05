@@ -61,7 +61,7 @@ Changing `works.work_id` itself to CTSv2 is deliberately deferred. This changese
   - `docs/READER_DATA_BUILD.md`
   - `docs/READER_WEB_CONTRACT.md`
   - `docs/READER_CLI_HANDOFF.md`
-  - `docs/plans/active/infra/ctsv2-reader-addressing.md`
+   - `docs/archive/2026-05-doc-overhaul/plans/ctsv2-reader-addressing.md`
 
 ## Task 1: CTSv2 Utilities And Address Parser
 

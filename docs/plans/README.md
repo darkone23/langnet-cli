@@ -22,25 +22,25 @@ Feature areas should be subdirectories such as `infra`, `skt`, `pedagogy`,
 
 Start with these when choosing what to do next:
 
-- `docs/EXECUTION_PLAN.md` - compact operating queue.
+- `docs/EXECUTION_PLAN.md` - compact operating queue (includes reader parity
+  target, acquisition lane status, and stop conditions).
 - `docs/ROADMAP.md` - durable milestone sequence.
-- `docs/plans/active/infra/READER_GOALS_COORDINATION_PLAN.md` - reader, library,
-  source-acquisition, and provenance work order.
 
 ## Supporting Active Plans
 
-These are scoped implementation or design plans. They should be worked only
-when they support the active drivers above.
+No active plans. All five previous active plans have been completed:
 
-Reader, corpus, and library:
-
-- `infra/READER_COLLECTION_EXPANSION_MASTER_TRACKER_2026-06-07.md`
-- `infra/reader-traditional-structure-overhaul.md`
-- `infra/READER_EXPERIENCE_MODALITY_AND_TYPOGRAPHY_PLAN.md`
-
-Pedagogy:
-
-- `pedagogy/foster-learning-experience/TOC_SUMMARY_PIPELINE.md`
+- Foster TOC Summary Pipeline: all three planned slices implemented (experience
+  refs, retry command, reader word-context Foster bridge).
+- Reader Traditional Structure Overhaul: 30+ components extracted, all route
+  files under 1000 lines, `app.css` under 750 lines. Controller decomposition
+  continues as code quality work.
+- Reader Experience Modality And Typography: durable design policy moved to
+  `webapp/docs/UI.md`.
+- Reader Collection Expansion Master Tracker: durable content folded into
+  `docs/EXECUTION_PLAN.md`.
+- Reader Goals Coordination Plan: durable priorities folded into
+  `docs/EXECUTION_PLAN.md`.
 
 Do not add dated status files, running-service notes, or session handoffs under
 `active/`. Put them under `docs/archive/<date-or-topic>/`.
@@ -56,11 +56,11 @@ closeout matrix.
 
 | Order | Active file | Closeout class | Next action |
 | --- | --- | --- | --- |
-| 1 | `infra/reader-traditional-structure-overhaul.md` | UI overhaul implementation plan | Continue route/controller decomposition and visual QA; complete or split after route-size and global-CSS gates are below thresholds. |
-| 2 | `infra/READER_EXPERIENCE_MODALITY_AND_TYPOGRAPHY_PLAN.md` | Design policy plus UI follow-up | Move durable design policy into web/docs once remaining concrete UI tasks are represented elsewhere, then archive the plan. |
-| 3 | `pedagogy/foster-learning-experience/TOC_SUMMARY_PIPELINE.md` | Generated-artifact pipeline plan | Finish retry/rollup/taxonomy mapping or demote to todo if Foster work is paused. |
-| 4 | `infra/READER_COLLECTION_EXPANSION_MASTER_TRACKER_2026-06-07.md` | Tracker/coordination record | Collapse current work order into `READER_GOALS_COORDINATION_PLAN.md` and the completed corpus framework, then archive this dated tracker. |
-| 5 | `infra/READER_GOALS_COORDINATION_PLAN.md` | Temporary coordination driver | Keep until reader work has one surviving implementation plan per lane; then fold durable priorities into `docs/EXECUTION_PLAN.md` and archive. |
+| ~~1~~ | ~~`infra/reader-traditional-structure-overhaul.md`~~ | ~~UI overhaul implementation plan~~ | **Done (2026-07-05):** 30+ components extracted, all route files and CSS under thresholds, desk-entry-helpers extracted. Plan moved to `completed/`. |
+| ~~2~~ | ~~`infra/READER_EXPERIENCE_MODALITY_AND_TYPOGRAPHY_PLAN.md`~~ | ~~Design policy plus UI follow-up~~ | **Done (2026-07-05):** durable design policy moved to `webapp/docs/UI.md`. Plan moved to `completed/`. |
+| ~~3~~ | ~~`pedagogy/foster-learning-experience/TOC_SUMMARY_PIPELINE.md`~~ | ~~Generated-artifact pipeline plan~~ | **Done (2026-07-05):** all three slices implemented (experience:* refs, retry command, reader word-context Foster bridge). Plan moved to `completed/`. |
+| ~~4~~ | ~~`infra/READER_COLLECTION_EXPANSION_MASTER_TRACKER_2026-06-07.md`~~ | ~~Tracker/coordination record~~ | **Done (2026-07-05):** durable content folded into `docs/EXECUTION_PLAN.md`. Archived to `docs/archive/2026-07-active-plan-closeout/`. |
+| ~~5~~ | ~~`infra/READER_GOALS_COORDINATION_PLAN.md`~~ | ~~Temporary coordination driver~~ | **Done (2026-07-05):** durable priorities folded into `docs/EXECUTION_PLAN.md` Reader And Library section. Archived to `docs/archive/2026-07-active-plan-closeout/`. |
 
 Closeout rule for each file:
 
