@@ -73,7 +73,14 @@ def test_learn_concepts_compact_view_is_ui_friendly() -> None:
         ),
         "morphology_predicates": ["case=genitive"],
         "source_refs": ["page:69", "page:125", "page:140", "page:522", "page:618"],
-        "summary_refs": ["toc:1.6", "toc:1.22", "toc:1.25", "toc:4.30"],
+        "summary_refs": [
+            "toc:1.6",
+            "toc:1.22",
+            "toc:1.25",
+            "toc:4.30",
+            "experience:1",
+            "experience:4",
+        ],
     }
     assert genitive["native_gateways"] == [
         {
