@@ -561,6 +561,9 @@ def _lookup_value(headword: str, language: DiogenesLanguage) -> str:
 
 
 def _greek_to_betacode_ascii(headword: str) -> str:
+    # Archaic digamma (ϝ/Ϝ) sits outside the standard Greek alphabet order; LSJ-style
+    # lookup/sort keys drop it instead of sorting under TLG betacode's 'v' (HOL-136).
+    headword = headword.replace("ϝ", "").replace("Ϝ", "")
     try:
         import betacode  # type: ignore[import-untyped]  # noqa: PLC0415
 
