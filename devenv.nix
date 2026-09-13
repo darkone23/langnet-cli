@@ -66,6 +66,12 @@ in
   languages.python.package = pkgs.python311; # the version that currently works with CLTK
   languages.python.venv.enable = true;
   languages.python.venv.requirements = ./devenv.requirements.txt;
+
+  # The spec-generated modules (query_spec, heritage_spec, ...) live in the
+  # sibling langnet-spec clone (see langnet-tools clone.sh); the tests import
+  # them directly (HOL-121). The repo root is on the path so tests/ resolves
+  # as a namespace package (`from tests.claim_contract import ...`).
+  env.PYTHONPATH = "${config.devenv.root}/../langnet-spec/generated/python:${config.devenv.root}:${config.devenv.root}/src";
   
   # languages.python.poetry.package = (pkgs.poetry.override { python3 = pkgs.python311; });
   # languages.python.poetry.enable = true;

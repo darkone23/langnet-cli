@@ -1,2 +1,40 @@
+# Declarative deps for the devenv venv (python 3.11) — mirrors
+# pyproject.toml [tool.poetry.dependencies] (HOL-121: the file had drifted
+# to poetry+nose2 only, so devenv's auto-install produced an incomplete venv).
+# Keep in sync with pyproject when deps change; test group included here.
 poetry
-nose2
+nose2>=0.15.1,<0.16.0
+
+setuptools==75.1.0
+cltk>=1.4.0,<2.0.0
+beautifulsoup4>=4.13.3,<5.0.0
+requests>=2.32.3,<3.0.0
+sh>=2.2.1,<3.0.0
+html5lib>=1.1,<2.0
+betacode>=1.0,<2.0
+pygtrie>=2.5.0,<3.0.0
+lark>=1.2.2,<2.0.0
+rich>=13.9.4,<14.0.0
+click>=8.1.7,<9.0.0
+cattrs>=24.1.2,<25.0.0
+indic-transliteration>=2.3.69,<3.0.0
+lxml>=5.2.2,<6.0.0
+spacy==3.7.5
+starlette>=0.52.1,<0.53.0
+uvicorn>=0.40.0,<0.41.0
+orjson>=3.10.14,<4.0.0
+python-multipart>=0.0.20,<0.0.21
+structlog>=24.2.0,<25.0.0
+python-dotenv>=1.2.1,<2.0.0
+polars>=1.37.1,<2.0.0
+duckdb>=1.4.3,<1.5.0  # pyproject ^1.4.3; 1.5.x dropped the lance community ext (HOL-121)
+pyarrow>=23.0.0,<24.0.0
+filelock>=3.16.1,<4.0.0
+aisuite[openai]>=0.1.14,<0.2.0
+vulture>=2.14,<3.0
+jsonschema>=4.26.0,<5.0.0
+stanza>=1.11.0,<2.0.0
+protobuf>=6.33.5,<7.0.0
+returns[compatible-mypy]>=0.26.0,<0.27.0
+pylatexenc>=2.10,<3.0
+humanize>=4.11.0,<5.0.0
