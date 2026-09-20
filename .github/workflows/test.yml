@@ -64,11 +64,14 @@ jobs:
           echo "langnet-spec pin: ${sha}"
 
       - name: Check out langnet-spec as the sibling clone the suite imports (HOL-121)
-        uses: actions/checkout@v4
-        with:
-          repository: darkone23/langnet-spec
-          ref: ${{ steps.spec.outputs.sha }}
-          path: ../langnet-spec
+        # actions/checkout refuses paths outside $GITHUB_WORKSPACE, and the
+        # suite imports langnet-spec from a SIBLING directory — so clone by
+        # hand into ../ and pin the exact vendor submodule gitlink.
+        run: |
+          rm -rf ../langnet-spec
+          git clone --depth 1 https://github.com/darkone23/langnet-spec ../langnet-spec
+          git -C ../langnet-spec fetch --depth 1 origin "${{ steps.spec.outputs.sha }}"
+          git -C ../langnet-spec checkout --detach "${{ steps.spec.outputs.sha }}"
 
       - name: Run the test suite (just test-all)
         run: devenv shell -- just test-all
