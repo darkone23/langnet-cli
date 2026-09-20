@@ -3,8 +3,6 @@ from __future__ import annotations
 import os
 import unittest
 
-import unittest
-
 # ruff: noqa: E501, PLR2004
 from io import StringIO
 from pathlib import Path
