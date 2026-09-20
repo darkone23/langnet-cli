@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import unittest
+
 # ruff: noqa: E501, PLR2004
 from io import StringIO
 from pathlib import Path
@@ -368,6 +370,10 @@ def test_real_ei_pages_keep_entry_open_until_next_headword() -> None:
 
 def _real_entries_for_pages(page_numbers: list[int]) -> list[dict[str, object]]:
     base = Path("/home/nixos/digital-bailly-pdf/xml-pages")
+    if not base.is_dir():
+        # environment-dependent fixture (dev-box absolute path): skip rather
+        # than error when the real-Bailly-PDF corpus is absent (CI, HOL-149)
+        raise unittest.SkipTest("bailly pdf fixture not present on this host")
     paths = [base / f"bailly-2020-p{page_number:04d}.xml" for page_number in page_numbers]
     if not all(path.exists() for path in paths):
         return []
