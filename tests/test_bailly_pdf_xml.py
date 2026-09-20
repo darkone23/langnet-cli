@@ -371,7 +371,7 @@ def test_real_ei_pages_keep_entry_open_until_next_headword() -> None:
 
 def _real_entries_for_pages(page_numbers: list[int]) -> list[dict[str, object]]:
     base = Path("/home/nixos/digital-bailly-pdf/xml-pages")
-    if not (base.is_dir() and os.access(base, os.R_OK | os.X_OK)):
+    if not (os.path.isdir(base) and os.access(base, os.R_OK | os.X_OK)):
         # environment-dependent fixture (dev-box absolute path): skip rather
         # than error when the real-Bailly-PDF corpus is absent or unreadable
         # by the running user (CI, HOL-149)
