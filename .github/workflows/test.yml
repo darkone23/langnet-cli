@@ -1,0 +1,74 @@
+name: test
+
+# HOL-149: gate langnet-cli merges with the nose2 suite on the
+# self-hosted hetzner-edge runner registered to THIS repo (same
+# boundary-first pattern as the langnet-tools deploy runner, HOL-134 —
+# the runner lives inside the tailnet, no ephemeral cloud worker joins).
+# NOTE: repo-scoped — the existing `langnet-edge`-labeled runner is
+# registered to darkone23/langnet-tools and can never pick up jobs here;
+# this workflow targets the dedicated `langnet-cli-edge` label instead.
+#
+# Only the board (darkone23) pushes branches to this repo, so pull_request
+# runs are same-repo by construction; the foreign-PR guard below makes any
+# fork PR a hard failure before any code runs (self-hosted runners must
+# never execute untrusted code).
+#
+# Environment: devenv (devenv.nix, devenv.lock) builds the python 3.11
+# venv + profile tools on the runner. The checkout uses `clean: false` so
+# `.devenv/` (the venv) persists between runs — first run pays the build,
+# later runs reuse it. The suite imports spec-generated modules from the
+# SIBLING langnet-spec clone (HOL-121); it is checked out at the exact
+# revision pinned by the vendor/langnet-spec submodule gitlink, so spec
+# drift can never break the gate silently.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# least privilege: the suite needs no token; the spec checkout is a
+# public repo fetched over https
+permissions: {}
+
+concurrency:
+  group: test-${{ github.ref }}
+  # cancel superseded PR runs; every main push keeps its (merge-gate) run
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+jobs:
+  test:
+    runs-on: [self-hosted, langnet-cli-edge]
+    timeout-minutes: 90
+    steps:
+      - name: Refuse foreign pull_request heads (fork PRs never touch the edge runner)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "::error::fork PRs must not run on the self-hosted edge runner (head: ${{ github.event.pull_request.head.repo.full_name }})"
+          exit 1
+
+      - name: Allow submodule fetches over https (vendor/langnet-spec pins an ssh URL)
+        run: git config --global 'url.https://github.com/.insteadOf' 'git@github.com:'
+
+      - name: Check out langnet-cli (clean=false keeps .devenv/venv warm between runs)
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Resolve the pinned langnet-spec revision (vendor submodule gitlink)
+        id: spec
+        run: |
+          sha="$(git ls-tree HEAD vendor/langnet-spec | awk '{print $3}')"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "langnet-spec pin: ${sha}"
+
+      - name: Check out langnet-spec as the sibling clone the suite imports (HOL-121)
+        uses: actions/checkout@v4
+        with:
+          repository: darkone23/langnet-spec
+          ref: ${{ steps.spec.outputs.sha }}
+          path: ../langnet-spec
+
+      - name: Run the test suite (just test-all)
+        run: devenv shell -- just test-all
