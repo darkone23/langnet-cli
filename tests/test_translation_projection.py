@@ -26,6 +26,9 @@ from langnet.translation import (
 from langnet.translation.structured import structured_translation_user_content
 
 TRANSLATION_DURATION_MS = 7
+TRANSLATION_TIMEOUT_DEFAULT_S = 45.0
+TRANSLATION_TIMEOUT_ENV_S = 12.5
+TRANSLATION_TIMEOUT_EXPLICIT_S = 30
 ORIGINAL_TRIPLE_COUNT = 2
 EXPECTED_RETRY_CALL_COUNT = 2
 EXPECTED_DICO_SEGMENT_BATCH_LIMIT = 900
@@ -1687,6 +1690,7 @@ def test_openrouter_callback_sends_bailly_blocks_as_structured_json() -> None:
             messages: list[dict[str, str]],
             response_format: Mapping[str, str] | None = None,
             temperature: int | None = None,
+            timeout: float | None = None,
         ) -> object:
             captured["model"] = model
             captured["messages"] = messages
@@ -1754,6 +1758,7 @@ def test_openrouter_callback_falls_back_to_alternate_translation_model() -> None
             messages: list[dict[str, str]],
             response_format: Mapping[str, str] | None = None,
             temperature: int | None = None,
+            timeout: float | None = None,
         ) -> object:
             captured_models.append(model)
             if model == "test:primary":
@@ -1832,6 +1837,7 @@ def test_openrouter_callback_treats_empty_provider_response_as_retryable() -> No
             messages: list[dict[str, str]],
             response_format: Mapping[str, str] | None = None,
             temperature: int | None = None,
+            timeout: float | None = None,
         ) -> object:
             captured_models.append(model)
             content = "" if model == "test:primary" else "wolf"
@@ -1879,6 +1885,7 @@ def test_openrouter_callback_falls_back_when_token_rate_is_too_slow() -> None:
             messages: list[dict[str, str]],
             response_format: Mapping[str, str] | None = None,
             temperature: int | None = None,
+            timeout: float | None = None,
         ) -> object:
             captured_models.append(model)
             usage = SimpleNamespace(completion_tokens=40)
@@ -1937,6 +1944,7 @@ def test_openrouter_callback_rate_budget_estimates_compact_json_tokens() -> None
             messages: list[dict[str, str]],
             response_format: Mapping[str, str] | None = None,
             temperature: int | None = None,
+            timeout: float | None = None,
         ) -> object:
             captured_models.append(model)
             content = compact_json if model == "test:primary" else "wolf"
@@ -2260,3 +2268,123 @@ def test_golden_translation_row_does_not_project_for_stale_source_text() -> None
 
     assert len(triples) == ORIGINAL_TRIPLE_COUNT
     assert all(triple.get("object") != "wolf" for triple in triples)
+
+
+def _timeout_projection() -> SimpleNamespace:
+    return SimpleNamespace(
+        source=SimpleNamespace(source_lexicon="gaffiot"),
+        hint="Gaffiot hint",
+        source_text="loup",
+        source_blocks=[],
+    )
+
+
+def _timeout_capture_aisuite(captured: dict[str, Any]) -> SimpleNamespace:
+    class FakeCompletions:
+        def create(
+            self,
+            *,
+            model: str,
+            messages: list[dict[str, str]],
+            response_format: Mapping[str, str] | None = None,
+            temperature: int | None = None,
+            timeout: float | None = None,
+        ) -> object:
+            captured["model"] = model
+            captured["request_timeout"] = timeout
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="wolf"))],
+            )
+
+    class FakeClient:
+        def __init__(self, provider_configs: Mapping[str, Mapping[str, Any]]) -> None:
+            captured["provider_configs"] = {
+                key: dict(value) for key, value in provider_configs.items()
+            }
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    return SimpleNamespace(Client=FakeClient)
+
+
+def test_openrouter_callback_sends_default_provider_timeout() -> None:
+    captured: dict[str, Any] = {}
+    fake_aisuite = _timeout_capture_aisuite(captured)
+
+    with (
+        patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False),
+        patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+    ):
+        translated = _openrouter_translation_callback("test:model")(_timeout_projection())
+
+    assert translated == "wolf"
+    assert captured["provider_configs"]["openai"] == {
+        "api_key": "test-key",
+        "max_retries": 0,
+        "timeout": TRANSLATION_TIMEOUT_DEFAULT_S,
+    }
+    assert captured["request_timeout"] == TRANSLATION_TIMEOUT_DEFAULT_S
+
+
+def test_openrouter_callback_timeout_env_override() -> None:
+    captured: dict[str, Any] = {}
+    fake_aisuite = _timeout_capture_aisuite(captured)
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "LANGNET_TRANSLATION_TIMEOUT_SECONDS": "12.5",
+            },
+            clear=False,
+        ),
+        patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+    ):
+        _openrouter_translation_callback("test:model")(_timeout_projection())
+
+    assert captured["provider_configs"]["openai"]["timeout"] == TRANSLATION_TIMEOUT_ENV_S
+    assert captured["request_timeout"] == TRANSLATION_TIMEOUT_ENV_S
+
+
+def test_openrouter_callback_timeout_env_zero_disables() -> None:
+    captured: dict[str, Any] = {}
+    fake_aisuite = _timeout_capture_aisuite(captured)
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "LANGNET_TRANSLATION_TIMEOUT_SECONDS": "0",
+            },
+            clear=False,
+        ),
+        patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+    ):
+        _openrouter_translation_callback("test:model")(_timeout_projection())
+
+    assert "timeout" not in captured["provider_configs"]["openai"]
+    assert captured["request_timeout"] is None
+
+
+def test_openrouter_callback_explicit_timeout_overrides_env() -> None:
+    captured: dict[str, Any] = {}
+    fake_aisuite = _timeout_capture_aisuite(captured)
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "LANGNET_TRANSLATION_TIMEOUT_SECONDS": "12.5",
+            },
+            clear=False,
+        ),
+        patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+    ):
+        _openrouter_translation_callback(
+            "test:model", timeout_seconds=TRANSLATION_TIMEOUT_EXPLICIT_S
+        )(_timeout_projection())
+
+    assert captured["provider_configs"]["openai"]["timeout"] == TRANSLATION_TIMEOUT_EXPLICIT_S
+    assert captured["request_timeout"] == TRANSLATION_TIMEOUT_EXPLICIT_S
