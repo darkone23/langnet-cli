@@ -915,7 +915,10 @@ def test_encounter_paradigm_resolution_failure_is_non_fatal() -> None:
         patch(
             "langnet.cli._encounter_word_index_context", return_value=_empty_word_index_context()
         ),
-        patch("langnet.cli.resolve_paradigm_request", side_effect=ValueError("bad record")),
+        patch(
+            "langnet.paradigm.resolver.resolve_paradigm_request",
+            side_effect=ValueError("bad record"),
+        ),
     ):
         cli_result = CliRunner().invoke(
             main,
@@ -1965,7 +1968,9 @@ def test_encounter_word_index_context_projects_anchor_handles_without_inline_win
         },
     }
 
-    with patch("langnet.cli.word_index_neighborhood_payload", return_value=payload) as nearby:
+    with patch(
+        "langnet.word_index.word_index_neighborhood_payload", return_value=payload
+    ) as nearby:
         context = _encounter_word_index_context(
             language="lat",
             text="lupus",
@@ -2287,7 +2292,7 @@ def test_encounter_word_index_context_prefers_exact_anchor_over_raw_nearest() ->
             },
         }
 
-    with patch("langnet.cli.word_index_neighborhood_payload", side_effect=payload_for):
+    with patch("langnet.word_index.word_index_neighborhood_payload", side_effect=payload_for):
         context = _encounter_word_index_context(
             language="grc",
             text="thomas",

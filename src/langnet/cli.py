@@ -14,36 +14,21 @@ from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import click
 import duckdb
 import humanize
 import orjson
 import query_spec
-import requests
-from filelock import Timeout as FileLockTimeout
 from query_spec import ToolCallSpec, ToolStage
 
 from langnet.cli_databuild import databuild
-from langnet.cli_triples import (
-    build_triples_dump_payload,
-    display_claim_triples,
-    display_dico_resolutions,
-)
 from langnet.clients.base import ToolClient
-from langnet.clients.http import HttpToolClient
-from langnet.encounter_display import (
-    build_analysis_views,
-    build_display_payload,
-    build_header_view,
-    build_meaning_view,
-    entry_summary_payload,
-    foster_display_for_analysis,
-    foster_features_from_analysis,
-    shorten_text,
-    source_detail_summary_payload,
-)
+
+if TYPE_CHECKING:
+    from langnet.translation import TranslationCache
+    from langnet.word_of_day import WordCandidate
 from langnet.encounter_ranking import (
     bucket_learner_quality_order,
     bucket_lemma_values,
@@ -66,14 +51,6 @@ from langnet.encounter_ranking import (
     preferred_lemmas_from_reduction,
     reduction_lemma_values,
 )
-from langnet.encounter_translation import (
-    add_translation_counts,
-    apply_translation_cache,
-    empty_translation_counts,
-    encounter_translation_diagnostics,
-    merge_translation_counts,
-    resolve_translation_mode,
-)
 from langnet.execution import predicates
 from langnet.execution.clients import (
     StubToolClient,
@@ -82,13 +59,6 @@ from langnet.execution.clients import (
     get_cltk_fetch_client,
     get_spacy_fetch_client,
 )
-from langnet.execution.executor import execute_plan_staged
-from langnet.execution.handlers import cdsl as cdsl_handlers
-from langnet.execution.handlers import gaffiot as gaffiot_handlers
-from langnet.execution.handlers import heritage as heritage_handlers
-from langnet.execution.handlers.diogenes import _parse_diogenes_html
-from langnet.execution.handlers.whitakers import _parse_whitaker_output
-from langnet.execution.source_text import analyze_source_entry, compact_source_gloss
 from langnet.heritage.velthuis_converter import to_heritage_velthuis
 from langnet.learning.concept_mapper import (
     concept_ids_for_features,
@@ -115,40 +85,18 @@ from langnet.normalizer.core import NormalizationResult, _hash_query
 from langnet.normalizer.service import DiogenesConfig, NormalizationService
 from langnet.normalizer.utils import normalize_greek_compatibility, strip_accents
 from langnet.paradigm.grammar import LANGNET_PARADIGM_RESOLUTION_SCHEMA_VERSION, ParadigmRequest
-from langnet.paradigm.resolver import resolve_paradigm_request
-from langnet.paradigm.service import ParadigmService
-from langnet.parsing.integration import enrich_cltk_with_parsed_lewis
 from langnet.planner.core import PlannerConfig, ToolPlanner
-from langnet.reader.author_bulk_classification import (
-    AuthorClassificationRunConfig,
-    classify_author_csv,
-)
 from langnet.reader.author_classification import (
     AUTHOR_AGENT_KIND_VALUES,
     AUTHOR_CLASSIFICATION_OUTPUT_FIELDS,
     AUTHOR_HISTORICITY_STATUS_VALUES,
 )
 from langnet.reader.bulk_classification import (
-    CLASSIFICATION_OUTPUT_FIELDS,
     DEFAULT_CLASSIFICATION_ESCALATION_CONFIDENCES,
     DEFAULT_CLASSIFICATION_ESCALATION_MIN_GLOBAL_SCORE,
     DEFAULT_CLASSIFICATION_ESCALATION_MIN_GROUP_SCORE,
     DEFAULT_CLASSIFICATION_ESCALATION_TIERS,
     DEFAULT_CLASSIFICATION_SHUFFLE_SEED,
-    ClassificationEscalationConfig,
-    ClassificationRunConfig,
-    classify_work_csv,
-    export_classification_escalation_csv,
-)
-from langnet.reader.research_needs import (
-    ResearchNeedsConfig,
-    export_research_needs_csv,
-)
-from langnet.reader_eval import (
-    evaluate_reader_token,
-    iter_reader_eval_tokens,
-    load_reader_eval_fixture,
-    summarize_reader_eval,
 )
 from langnet.reduction import reduce_claims
 from langnet.storage.claim_index import ClaimIndex
@@ -168,35 +116,6 @@ from langnet.storage.path_indices import (
 from langnet.storage.paths import all_db_paths, normalization_db_path
 from langnet.storage.plan_index import PlanResponseIndex, apply_schema
 from langnet.tool_catalog import canonical_language, catalog_payload, language_payload
-from langnet.translation import (
-    BASE_SYSTEM,
-    TranslationCache,
-    apply_translation_schema,
-    populate_missing_translations,
-    project_cached_translations,
-    translation_cache_status_counts,
-)
-from langnet.translation.structured import (
-    requires_structured_translation,
-    structured_translation_system_hint,
-    structured_translation_user_content,
-)
-from langnet.word_index import (
-    WordIndexHomographs,
-    word_index_browse_payload,
-    word_index_list_payload,
-    word_index_neighborhood_payload,
-    word_index_sections_payload,
-    word_index_sources_payload,
-    word_index_wheel_payload,
-)
-from langnet.word_of_day import (
-    _CANDIDATE_POOLS,
-    WordCandidate,
-    WordOfDayOptions,
-    generate_word_of_day_payload,
-    resolve_word_of_day_languages,
-)
 
 
 def _default_registry(*, use_stubs: bool = False):
@@ -487,6 +406,8 @@ def _encounter_json_error_details(exc: Exception, message: str) -> dict[str, obj
 
 
 def _is_database_busy_exception(exc: BaseException) -> bool:
+    from filelock import Timeout as FileLockTimeout  # noqa: PLC0415
+
     current: BaseException | None = exc
     while current is not None:
         if isinstance(current, FileLockTimeout):
@@ -676,6 +597,8 @@ class _PathTranslationCache:
         self.read_only = read_only
 
     def get(self, key) -> object | None:
+        from langnet.translation import TranslationCache  # noqa: PLC0415
+
         if not self.path.exists():
             return None
         try:
@@ -685,6 +608,8 @@ class _PathTranslationCache:
             return None
 
     def upsert(self, record) -> str:
+        from langnet.translation import TranslationCache  # noqa: PLC0415
+
         if self.read_only:
             raise RuntimeError("translation cache is read-only")
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -3098,6 +3023,8 @@ def reader_classification_export(
     output_path: Path | None,
 ) -> None:
     """Export work rows for bulk chronology/status/popularity classification."""
+    from langnet.reader.bulk_classification import CLASSIFICATION_OUTPUT_FIELDS  # noqa: PLC0415
+
     payload = _reader_service_from_context(ctx).works_payload(language=language, limit=limit)
     items = payload.get("items")
     if not isinstance(items, Sequence):
@@ -3187,6 +3114,11 @@ def reader_classification_escalation_export(  # noqa: PLR0913
     output: str,
 ) -> None:
     """Export high-priority generated classifications for stronger-model audit."""
+    from langnet.reader.bulk_classification import (  # noqa: PLC0415
+        ClassificationEscalationConfig,
+        export_classification_escalation_csv,
+    )
+
     summary = export_classification_escalation_csv(
         config=ClassificationEscalationConfig(
             input_csv=input_csv.expanduser(),
@@ -3269,6 +3201,11 @@ def reader_research_needs_export(  # noqa: PLR0913
     output: str,
 ) -> None:
     """Export generated-classification rows that need source-backed research."""
+    from langnet.reader.research_needs import (  # noqa: PLC0415
+        ResearchNeedsConfig,
+        export_research_needs_csv,
+    )
+
     catalog_path = _reader_service_from_context(ctx).catalog_path
     summary = export_research_needs_csv(
         config=ResearchNeedsConfig(
@@ -3467,6 +3404,11 @@ def reader_classify_works(  # noqa: PLR0913
     output: str,
 ) -> None:
     """Generate classifier-filled reader work metadata CSV with a model."""
+    from langnet.reader.bulk_classification import (  # noqa: PLC0415
+        ClassificationRunConfig,
+        classify_work_csv,
+    )
+
     resolved_run_id = run_id or time.strftime("reader-classifier-%Y%m%d-%H%M%S")
     summary = classify_work_csv(
         config=ClassificationRunConfig(
@@ -3580,6 +3522,11 @@ def reader_classify_authors(  # noqa: PLR0913
     output: str,
 ) -> None:
     """Generate author/agent classification CSV with a model."""
+    from langnet.reader.author_bulk_classification import (  # noqa: PLC0415
+        AuthorClassificationRunConfig,
+        classify_author_csv,
+    )
+
     resolved_run_id = run_id or time.strftime("reader-author-classifier-%Y%m%d-%H%M%S")
     summary = classify_author_csv(
         config=AuthorClassificationRunConfig(
@@ -5998,6 +5945,8 @@ def word_index_cli() -> None:
 )
 def word_index_sources(language: str, output: str) -> None:
     """List available word-index sources."""
+    from langnet.word_index import word_index_sources_payload  # noqa: PLC0415
+
     try:
         payload = word_index_sources_payload(language)
     except ValueError as exc:
@@ -6022,6 +5971,8 @@ def word_index_sources(language: str, output: str) -> None:
 )
 def word_index_sections(language: str, source: str, output: str) -> None:
     """List native alphabet/section anchors for word-index browsing."""
+    from langnet.word_index import word_index_sections_payload  # noqa: PLC0415
+
     try:
         payload = word_index_sections_payload(language, source=source)
     except ValueError as exc:
@@ -6056,6 +6007,8 @@ def word_index_list(  # noqa: PLR0913
     output: str,
 ) -> None:
     """List indexed headwords."""
+    from langnet.word_index import word_index_list_payload  # noqa: PLC0415
+
     try:
         payload = word_index_list_payload(
             language,
@@ -6102,6 +6055,11 @@ def word_index_browse(  # noqa: PLR0913
     output: str,
 ) -> None:
     """Browse indexed headwords in grouped source-native order."""
+    from langnet.word_index import (  # noqa: PLC0415
+        WordIndexHomographs,
+        word_index_browse_payload,
+    )
+
     try:
         payload = word_index_browse_payload(
             language,
@@ -6149,6 +6107,8 @@ def word_index_neighborhood(  # noqa: PLR0913
 def _run_word_index_neighborhood(  # noqa: PLR0913
     language: str, query: str, source: str, radius: int, merge: str, output: str
 ) -> None:
+    from langnet.word_index import word_index_neighborhood_payload  # noqa: PLC0415
+
     try:
         payload = word_index_neighborhood_payload(
             language,
@@ -6225,6 +6185,8 @@ def word_index_wheel(  # noqa: PLR0913
     output: str,
 ) -> None:
     """Return a deterministic wheel of indexed study words."""
+    from langnet.word_index import word_index_wheel_payload  # noqa: PLC0415
+
     requested_language = language_option or language
     try:
         payload = word_index_wheel_payload(
@@ -6622,9 +6584,9 @@ def _word_of_day_synthesize_candidates(  # noqa: PLR0913
     rotation_key: str | None,
     model: str,
     timeout_seconds: float | None,
-) -> dict[str, list[WordCandidate]]:
+) -> dict[str, list["WordCandidate"]]:
     return cast(
-        dict[str, list[WordCandidate]],
+        "dict[str, list[WordCandidate]]",
         _word_of_day_llm_call(
             "synthesize",
             {
@@ -6652,7 +6614,7 @@ def _word_of_day_synthesize_candidates_direct(  # noqa: PLR0913
     rotation_key: str | None,
     model: str,
     timeout_seconds: float | None,
-) -> dict[str, list[WordCandidate]]:
+) -> dict[str, list["WordCandidate"]]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise click.ClickException("Set OPENAI_API_KEY before using LLM word recommendations.")
@@ -6702,6 +6664,8 @@ def _word_of_day_curated_prompt_seeds(
     level: str,
     per_language: int,
 ) -> dict[str, list[dict[str, str]]]:
+    from langnet.word_of_day import _CANDIDATE_POOLS  # noqa: PLC0415
+
     seeds: dict[str, list[dict[str, str]]] = {}
     for language in languages:
         candidates = [
@@ -6720,7 +6684,7 @@ def _word_of_day_curated_prompt_seeds(
     return seeds
 
 
-def _word_of_day_seed_matches_level(candidate: WordCandidate, level: str) -> bool:
+def _word_of_day_seed_matches_level(candidate: "WordCandidate", level: str) -> bool:
     if level == "deep":
         return True
     if level == "intermediate":
@@ -6913,6 +6877,8 @@ def _word_of_day_short_gloss(summary: str) -> str:
 
 
 def _word_of_day_terse_summary(summary: str) -> str:
+    from langnet.encounter_display import shorten_text  # noqa: PLC0415
+
     return shorten_text(summary.strip(), 48)
 
 
@@ -6920,7 +6886,9 @@ def _word_of_day_parse_synthesized_candidates(
     content: str,
     *,
     languages: Sequence[str],
-) -> dict[str, list[WordCandidate]]:
+) -> dict[str, list["WordCandidate"]]:
+    from langnet.word_of_day import WordCandidate  # noqa: PLC0415
+
     payload_text = content.strip()
     if payload_text.startswith("```"):
         payload_text = re.sub(r"^```(?:json)?\s*", "", payload_text)
@@ -7024,7 +6992,7 @@ def _word_of_day_candidate_pools(  # noqa: PLR0913
     started: float,
     timeout_ms: int,
     warnings: list[dict[str, str]],
-) -> dict[str, list[WordCandidate]] | None:
+) -> dict[str, list["WordCandidate"]] | None:
     if candidate_source == "curated":
         return None
     try:
@@ -7197,6 +7165,12 @@ def _emit_word_recommendations(  # noqa: PLR0913
     translation_model: str,
     output: str,
 ) -> None:
+    from langnet.word_of_day import (  # noqa: PLC0415
+        WordOfDayOptions,
+        generate_word_of_day_payload,
+        resolve_word_of_day_languages,
+    )
+
     started = time.monotonic()
     try:
         languages = resolve_word_of_day_languages(language)
@@ -8115,6 +8089,15 @@ def parse(  # noqa: PLR0913, PLR0915
     """
     Parse tool output (diogenes|whitakers|cltk|heritage|cdsl) with optional normalization.
     """
+    import requests  # noqa: PLC0415
+
+    from langnet.clients.http import HttpToolClient  # noqa: PLC0415
+    from langnet.execution.handlers import cdsl as cdsl_handlers  # noqa: PLC0415
+    from langnet.execution.handlers import heritage as heritage_handlers  # noqa: PLC0415
+    from langnet.execution.handlers.diogenes import _parse_diogenes_html  # noqa: PLC0415
+    from langnet.execution.handlers.whitakers import _parse_whitaker_output  # noqa: PLC0415
+    from langnet.parsing.integration import enrich_cltk_with_parsed_lewis  # noqa: PLC0415
+
     lang_hint = _parse_language(language)
     norm_cfg = NormalizeConfig(
         diogenes_endpoint=diogenes_endpoint,
@@ -8339,6 +8322,8 @@ def plan(  # noqa: PLR0913
 
 def _create_http_client(tool: str) -> ToolClient:
     """Create an HTTP client for the given tool."""
+    from langnet.clients.http import HttpToolClient  # noqa: PLC0415
+
     return HttpToolClient(tool=tool)
 
 
@@ -8616,6 +8601,8 @@ def _print_plan_exec_summary(plan, result, *, cache_enabled: bool) -> None:
 
 
 def _plan_exec_impl(config: PlanExecConfig, language: str, text: str) -> None:
+    from langnet.execution.executor import execute_plan_staged  # noqa: PLC0415
+
     lang_hint = _parse_language(language)
 
     norm_cfg = NormalizeConfig(
@@ -8884,6 +8871,8 @@ def entry_analyze(
     """
     Inspect one raw dictionary entry for glosses, citations, examples, and references.
     """
+    from langnet.execution.source_text import analyze_source_entry  # noqa: PLC0415
+
     raw_text = _entry_analyze_text(text, text_file)
     payload = analyze_source_entry(raw_text, source_tool=source_tool, max_items=max_items)
     if output_format == "json":
@@ -9028,6 +9017,13 @@ def triples_dump(  # noqa: PLR0913
     """
     Build a ToolPlan for the word and dump claims/triples for selected tools.
     """
+    from langnet.cli_triples import (  # noqa: PLC0415
+        build_triples_dump_payload,
+        display_claim_triples,
+        display_dico_resolutions,
+    )
+    from langnet.execution.executor import execute_plan_staged  # noqa: PLC0415
+
     lang_hint = _parse_language(language)
     norm_cfg = NormalizeConfig(
         diogenes_endpoint=diogenes_endpoint,
@@ -9148,6 +9144,8 @@ def _encounter_reduction_source_tools(reduction) -> set[str]:
 
 
 def _shorten(text: str, max_chars: int) -> str:
+    from langnet.encounter_display import shorten_text  # noqa: PLC0415
+
     return shorten_text(text, max_chars)
 
 
@@ -9162,6 +9160,8 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
 
 
 def _encounter_bucket_gloss(bucket) -> str:
+    from langnet.execution.handlers import cdsl as cdsl_handlers  # noqa: PLC0415
+
     witness = bucket.witnesses[0] if bucket.witnesses else None
     if witness is None:
         return bucket.display_gloss
@@ -9412,6 +9412,8 @@ def _encounter_compact_gloss(
     *,
     max_chars: int = ENCOUNTER_LEARNER_GLOSS_MAX_CHARS,
 ) -> str:
+    from langnet.execution.source_text import compact_source_gloss  # noqa: PLC0415
+
     return compact_source_gloss(gloss, max_chars=max_chars)
 
 
@@ -9485,6 +9487,8 @@ def _encounter_paradigm_resolution_payload(
     text: str,
     claims: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
+    from langnet.paradigm.resolver import resolve_paradigm_request  # noqa: PLC0415
+
     language_code = canonical_language(language)
     if language_code not in {"lat", "grc", "san"}:
         return _empty_encounter_paradigm_resolution(
@@ -10297,14 +10301,20 @@ def _encounter_morphology_analysis(features: Sequence[str]) -> str:
 
 
 def _encounter_foster_display(language: str, analysis: str) -> str:
+    from langnet.encounter_display import foster_display_for_analysis  # noqa: PLC0415
+
     return foster_display_for_analysis(language, analysis)
 
 
 def _encounter_foster_display_alternative(language: str, analysis: str) -> str:
+    from langnet.encounter_display import foster_display_for_analysis  # noqa: PLC0415
+
     return foster_display_for_analysis(language, analysis)
 
 
 def _encounter_foster_features_from_analysis(analysis: str) -> dict[str, str]:
+    from langnet.encounter_display import foster_features_from_analysis  # noqa: PLC0415
+
     return foster_features_from_analysis(analysis)
 
 
@@ -10974,6 +10984,12 @@ def _encounter_component_meaning_payload(
     *,
     max_gloss_chars: int,
 ) -> dict[str, object]:
+    from langnet.encounter_display import (  # noqa: PLC0415
+        build_meaning_view,
+        entry_summary_payload,
+        source_detail_summary_payload,
+    )
+
     view = build_meaning_view(
         bucket,
         learner_gloss=_encounter_bucket_learner_gloss(bucket, max_chars=max_gloss_chars),
@@ -11477,6 +11493,8 @@ def _encounter_word_index_context(
     tool_filter: str,
     query_candidates: Sequence[str] | None = None,
 ) -> dict[str, object]:
+    from langnet.word_index import word_index_neighborhood_payload  # noqa: PLC0415
+
     source = _encounter_word_index_source(tool_filter)
     candidates = _dedupe_preserve_order(
         [candidate for candidate in (query_candidates or [text]) if candidate]
@@ -11801,6 +11819,13 @@ def _encounter_bucket_sort_key(
 
 
 def _openrouter_translation_callback(model: str, *, timeout_seconds: float | None = None):
+    from langnet.translation import BASE_SYSTEM  # noqa: PLC0415
+    from langnet.translation.structured import (  # noqa: PLC0415
+        requires_structured_translation,
+        structured_translation_system_hint,
+        structured_translation_user_content,
+    )
+
     client = None
     timeout_seconds = _resolve_translation_timeout(timeout_seconds)
     model_candidates = _translation_model_candidates(model)
@@ -12154,6 +12179,8 @@ def _encounter_translation_callback(
 
 
 def _resolve_translation_mode(use_translation_cache: bool, translation_mode: str) -> str:
+    from langnet.encounter_translation import resolve_translation_mode  # noqa: PLC0415
+
     return resolve_translation_mode(use_translation_cache, translation_mode)
 
 
@@ -12164,6 +12191,8 @@ def _encounter_translation_diagnostics(
     model: str,
     populate: bool,
 ) -> dict[str, object]:
+    from langnet.encounter_translation import encounter_translation_diagnostics  # noqa: PLC0415
+
     return encounter_translation_diagnostics(
         mode=mode,
         cache_path=cache_path,
@@ -12177,12 +12206,14 @@ def _encounter_apply_translation_cache(  # noqa: PLR0913
     claims: Sequence[Mapping[str, object]],
     language: str,
     model: str,
-    cache: TranslationCache,
+    cache: "TranslationCache",
     populate: bool,
     translate,
     diagnostics: dict[str, object],
     context: str,
 ) -> list[Mapping[str, object]]:
+    from langnet.encounter_translation import apply_translation_cache  # noqa: PLC0415
+
     return apply_translation_cache(
         claims=claims,
         language=language,
@@ -12209,6 +12240,8 @@ def _execute_lookup_plan(  # noqa: PLR0913
     include_cltk: bool,
     cache_policy: str = "read-write",
 ):
+    from langnet.execution.executor import execute_plan_staged  # noqa: PLC0415
+
     lang_hint = _parse_language(language)
     norm_cfg = NormalizeConfig(
         diogenes_endpoint=diogenes_endpoint,
@@ -12309,14 +12342,20 @@ def _add_translation_counts(
     *,
     prefix: str = "",
 ) -> None:
+    from langnet.encounter_translation import add_translation_counts  # noqa: PLC0415
+
     add_translation_counts(total, counts, prefix=prefix)
 
 
 def _empty_translation_counts() -> dict[str, int]:
+    from langnet.encounter_translation import empty_translation_counts  # noqa: PLC0415
+
     return empty_translation_counts()
 
 
 def _merge_translation_counts(total: dict[str, int], counts: Mapping[str, int]) -> None:
+    from langnet.encounter_translation import merge_translation_counts  # noqa: PLC0415
+
     merge_translation_counts(total, counts)
 
 
@@ -12344,6 +12383,8 @@ def _translation_cache_group_counts(conn: duckdb.DuckDBPyConnection, column: str
 
 
 def _translation_cache_status_payload(cache_path: Path) -> dict[str, object]:
+    from filelock import Timeout as FileLockTimeout  # noqa: PLC0415
+
     payload: dict[str, object] = {
         "schema_version": TRANSLATION_CACHE_SCHEMA_VERSION,
         "cache_db": str(cache_path),
@@ -12467,6 +12508,8 @@ def _translation_cache_clear_payload(  # noqa: C901, PLR0912, PLR0913
     retry_reason: str | None = None,
     max_retries: int | None = None,
 ) -> dict[str, object]:
+    from langnet.translation import apply_translation_schema  # noqa: PLC0415
+
     filters_payload = {
         "translation_id": translation_id,
         "source_lexicon": source_lexicon,
@@ -12850,6 +12893,11 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     output: str,
 ) -> None:
     """Warm French lexicon translation cache rows for a word list."""
+    from langnet.translation import (  # noqa: PLC0415
+        populate_missing_translations,
+        translation_cache_status_counts,
+    )
+
     terms = _translation_warm_terms(wordlist, limit=limit)
     cache_path = Path(translation_cache_db)
     if not dry_run:
@@ -13191,6 +13239,13 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     """
     Show a compact, source-backed learner encounter for one word.
     """
+    from langnet.encounter_display import (  # noqa: PLC0415
+        build_analysis_views,
+        build_display_payload,
+        build_header_view,
+        build_meaning_view,
+    )
+
     cache_policy = "off" if no_cache else cache_policy
     if debug:
         show_candidates = True
@@ -13737,6 +13792,11 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
 
 def _encounter_echo_source_section(buckets: Sequence[object]) -> None:
+    from langnet.encounter_display import (  # noqa: PLC0415
+        entry_summary_payload,
+        shorten_text,
+    )
+
     entries: list[dict[str, object]] = []
     for bucket in buckets:
         for witness in getattr(bucket, "witnesses", []) or []:
@@ -14130,6 +14190,11 @@ def _reader_eval_translation_claims(
     translation_cache_db: str,
     translation_model: str,
 ) -> list[Mapping[str, object]]:
+    from langnet.translation import (  # noqa: PLC0415
+        populate_missing_translations,
+        project_cached_translations,
+    )
+
     resolved_translation_mode = _resolve_translation_mode(False, translation_mode)
     if resolved_translation_mode == "off":
         return claims
@@ -14338,6 +14403,13 @@ def reader_eval(  # noqa: PLR0913, PLR0915
     fail_on_miss: bool,
 ) -> None:
     """Run reader-oriented fixture checks against live encounter reductions."""
+    from langnet.reader_eval import (  # noqa: PLC0415
+        evaluate_reader_token,
+        iter_reader_eval_tokens,
+        load_reader_eval_fixture,
+        summarize_reader_eval,
+    )
+
     language_filter = set(languages) if languages else None
     fixture = load_reader_eval_fixture(fixture_path)
     tokens = iter_reader_eval_tokens(fixture, languages=language_filter, limit=limit)
@@ -14686,6 +14758,8 @@ def paradigm(  # noqa: PLR0913
 ) -> None:
     """Fetch a source-backed inflectional paradigm for a resolved lemma."""
     request = _paradigm_request_from_cli(language.lower(), text, kind, gender, present_class)
+    from langnet.paradigm.service import ParadigmService  # noqa: PLC0415
+
     service = ParadigmService(heritage_base=heritage_base, diogenes_endpoint=diogenes_endpoint)
     payload = service.fetch(request)
     data = asdict(payload)
@@ -14770,6 +14844,8 @@ def paradigm_resolve(
     it shows the resolver's native grammar, functional grammar, and request
     metadata before any Heritage or Diogenes paradigm table is fetched.
     """
+    from langnet.paradigm.resolver import resolve_paradigm_request  # noqa: PLC0415
+
     records: list[Mapping[str, object]] = []
     for raw_record in record_jsons:
         try:
@@ -14876,6 +14952,16 @@ def lookup(  # noqa: PLR0912, PLR0913, PLR0915, C901
 
     Returns aggregated results from all available sources.
     """
+    import requests  # noqa: PLC0415
+
+    from langnet.clients.http import HttpToolClient  # noqa: PLC0415
+    from langnet.execution.handlers import cdsl as cdsl_handlers  # noqa: PLC0415
+    from langnet.execution.handlers import gaffiot as gaffiot_handlers  # noqa: PLC0415
+    from langnet.execution.handlers import heritage as heritage_handlers  # noqa: PLC0415
+    from langnet.execution.handlers.diogenes import _parse_diogenes_html  # noqa: PLC0415
+    from langnet.execution.handlers.whitakers import _parse_whitaker_output  # noqa: PLC0415
+    from langnet.parsing.integration import enrich_cltk_with_parsed_lewis  # noqa: PLC0415
+
     # Map language to available tools
     tool_map = {
         "lat": ["whitakers", "diogenes", "cltk", "gaffiot"],
