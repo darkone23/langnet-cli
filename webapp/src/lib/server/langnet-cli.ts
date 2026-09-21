@@ -61,16 +61,79 @@ type ParadigmCliRequest = {
 };
 
 export type JsonValue =
-	| null
-	| boolean
-	| number
-	| string
-	| JsonValue[]
-	| { [key: string]: JsonValue };
+	null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
 
 const cliDirectory = resolveCliDirectory();
 let cliQueue: Promise<void> = Promise.resolve();
+
+// Warm-server transport (HOL-199 S4a): when LANGNET_SERVER_URL is set, these
+// CLI surfaces are POSTed to the langnet.asgi allowlisted /api/cli endpoint
+// instead of spawning `just cli ...`. Any failure falls back to subprocess.
+const LANGNET_SERVER_SURFACES = new Set([
+	'encounter',
+	'encounter-briefing',
+	'word-index',
+	'paradigm',
+	'word-of-day',
+	'motd-pool',
+	'translation-cache',
+	'lookup',
+	'reader',
+	'langs'
+]);
+
+const SERVER_FALLBACK_LOG_INTERVAL_MS = 60_000;
+let lastServerFallbackLogAt = 0;
+
+export function resolveLangnetServerUrl(env: NodeJS.ProcessEnv = process.env): string | undefined {
+	const url = env.LANGNET_SERVER_URL?.trim();
+	return url ? url.replace(/\/+$/, '') : undefined;
+}
+
+function argsInServerAllowlist(args: string[]): boolean {
+	return args.length >= 2 && args[0] === 'cli' && LANGNET_SERVER_SURFACES.has(args[1]);
+}
+
+function logServerFallback(reason: string): void {
+	const now = Date.now();
+	if (now - lastServerFallbackLogAt < SERVER_FALLBACK_LOG_INTERVAL_MS) return;
+	lastServerFallbackLogAt = now;
+	console.warn(
+		`[langnet-cli] warm server unavailable (${reason}); falling back to subprocess transport`
+	);
+}
+
+async function runJsonCommandViaServer(
+	baseUrl: string,
+	args: string[],
+	timeoutMs: number,
+	options: CliCommandOptions
+): Promise<JsonObject> {
+	const controller = new AbortController();
+	const onAbort = () => controller.abort();
+	options.signal?.addEventListener('abort', onAbort, { once: true });
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	try {
+		const response = await fetch(`${baseUrl}/api/cli`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ args, stdin: options.stdin ?? null, timeoutMs }),
+			signal: controller.signal
+		});
+		if (!response.ok) {
+			throw new Error(`langnet server returned HTTP ${response.status}`);
+		}
+		const payload = (await response.json()) as unknown;
+		if (!isObject(payload)) {
+			throw new Error('langnet server returned a non-object payload');
+		}
+		return payload;
+	} finally {
+		clearTimeout(timer);
+		options.signal?.removeEventListener('abort', onAbort);
+	}
+}
 
 type CliCommandOptions = {
 	signal?: AbortSignal;
@@ -368,7 +431,7 @@ async function runJsonCommand(
 ): Promise<JsonObject> {
 	if (options.queued === false) {
 		if (options.signal?.aborted) throw abortError();
-		return await runJsonCommandUnlocked(args, timeoutMs, options);
+		return await runJsonCommandRouted(args, timeoutMs, options);
 	}
 
 	const previous = cliQueue;
@@ -386,11 +449,30 @@ async function runJsonCommand(
 
 	try {
 		if (options.signal?.aborted) throw abortError();
-		return await runJsonCommandUnlocked(args, timeoutMs, options);
+		return await runJsonCommandRouted(args, timeoutMs, options);
 	} finally {
 		release();
 	}
 }
+
+async function runJsonCommandRouted(
+	args: string[],
+	timeoutMs: number,
+	options: CliCommandOptions
+): Promise<JsonObject> {
+	const serverUrl = resolveLangnetServerUrl();
+	if (serverUrl && argsInServerAllowlist(args)) {
+		try {
+			return await runJsonCommandViaServer(serverUrl, args, timeoutMs, options);
+		} catch (error) {
+			if (options.signal?.aborted) throw abortError();
+			logServerFallback(error instanceof Error ? error.message : String(error));
+		}
+	}
+	return await runJsonCommandUnlocked(args, timeoutMs, options);
+}
+
+export { runJsonCommand };
 
 function runJsonCommandUnlocked(
 	args: string[],

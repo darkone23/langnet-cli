@@ -134,3 +134,9 @@ translate-lex *opts:
 # Repeatable timing probe for the common learner surfaces (HOL-195). Read-only.
 perf-probe:
     bash ./.justscripts/perf-probe.sh
+
+# Warm-server timing probe: uvicorn langnet.asgi vs subprocess (HOL-199 S4a). Read-only.
+# Uses port 8010 by default (LANGNET_PROBE_PORT overrides) so it never
+# collides with the production slot on 8000.
+perf-probe-server *args:
+    bash ./.justscripts/perf-probe-server.sh "$@"

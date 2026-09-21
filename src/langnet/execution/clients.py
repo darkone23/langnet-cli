@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import threading
 import time
 from collections.abc import Mapping
 from pathlib import Path
@@ -155,17 +156,26 @@ def _ensure_cltk_data_dir() -> None:
     os.environ["CLTK_DATA"] = str(path.resolve())
 
 
+_CLIENT_SINGLETON_LOCK = threading.Lock()
 _CLTK_CLIENT_SINGLETON: CLTKFetchClient | None = None
 
 
 def get_cltk_fetch_client() -> CLTKFetchClient:
     """
     Lazy singleton to avoid repeatedly initializing CLTK resources.
+
+    Double-checked lock: the warm server runs CLI commands on worker threads,
+    so first-touch initialization must not race (HOL-199 concurrency guard).
     """
     global _CLTK_CLIENT_SINGLETON  # noqa: PLW0603
-    if _CLTK_CLIENT_SINGLETON is None:
-        _CLTK_CLIENT_SINGLETON = CLTKFetchClient()
-    return _CLTK_CLIENT_SINGLETON
+    client = _CLTK_CLIENT_SINGLETON
+    if client is None:
+        with _CLIENT_SINGLETON_LOCK:
+            client = _CLTK_CLIENT_SINGLETON
+            if client is None:
+                client = CLTKFetchClient()
+                _CLTK_CLIENT_SINGLETON = client
+    return client
 
 
 class SpacyFetchClient:
@@ -250,11 +260,18 @@ _SPACY_CLIENT_SINGLETON: SpacyFetchClient | None = None
 def get_spacy_fetch_client(model_name: str = "grc_odycy_joint_sm") -> SpacyFetchClient:
     """
     Lazy singleton to avoid repeatedly loading spaCy models.
+
+    Double-checked lock, same rationale as get_cltk_fetch_client.
     """
     global _SPACY_CLIENT_SINGLETON  # noqa: PLW0603
-    if _SPACY_CLIENT_SINGLETON is None:
-        _SPACY_CLIENT_SINGLETON = SpacyFetchClient(model_name=model_name)
-    return _SPACY_CLIENT_SINGLETON
+    client = _SPACY_CLIENT_SINGLETON
+    if client is None:
+        with _CLIENT_SINGLETON_LOCK:
+            client = _SPACY_CLIENT_SINGLETON
+            if client is None:
+                client = SpacyFetchClient(model_name=model_name)
+                _SPACY_CLIENT_SINGLETON = client
+    return client
 
 
 class WhitakerFetchClient:
