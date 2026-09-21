@@ -11,7 +11,7 @@
 		"test": "bun test src/lib",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test:infra-helpers": "bun src/lib/server/request-identity.test.ts && bun src/lib/server/anonymous-session.test.ts && bun src/lib/server/request-cost.test.ts && bun src/lib/server/client-classification.test.ts && bun src/lib/server/crawler-route-policy.test.ts && bun src/lib/attestation-scope.test.ts && bun src/lib/server/client-attestation.test.ts && bun src/lib/server/request-token-route.test.ts && bun src/lib/server/rate-limit-rollup-duckdb.test.ts && bun src/lib/server/rate-limit-rollup.test.ts && bun src/lib/server/rate-limit.test.ts",
+		"test:infra-helpers": "bun test src/lib/server src/lib/attestation-scope.test.ts",
 		"format": "prettier --write .",
 		"format:check": "prettier --check ."
 	},
