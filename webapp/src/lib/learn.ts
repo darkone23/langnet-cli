@@ -398,7 +398,7 @@ export function practiceHref(item: LearnPracticeWord) {
 		lang: item.language,
 		q: item.word,
 		backend: 'cli',
-		translation: 'auto',
+		translation: 'cache',
 		dictionary: 'all',
 		load: 'yes'
 	});
