@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 import unittest.mock
+from collections.abc import Mapping
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, cast
 
 from click.testing import CliRunner
 
-from langnet.cli import main
+from langnet.cli import _encounter_briefing_generate_response, main
 from langnet.encounter_briefing import (
     BRIEFING_SHORT_MAX_CHARS,
     BRIEFING_SUMMARY_SCHEMA_VERSION,
@@ -19,6 +24,9 @@ from langnet.encounter_briefing import (
     store_cached_briefing_flow,
     validate_briefing_summary,
 )
+
+BRIEFING_TIMEOUT_EXPLICIT_S = 9
+BRIEFING_TIMEOUT_ENV_S = 20
 
 
 def test_build_encounter_briefing_flow_extracts_reader_word_study_digest() -> None:
@@ -1440,3 +1448,69 @@ def test_validate_briefing_summary_rejects_unsupported_translation_metadata() ->
         "unsupported_source_gloss_language",
         "unsupported_translation_status",
     }
+
+
+def _briefing_timeout_aisuite(captured: dict[str, Any]) -> SimpleNamespace:
+    class FakeCompletions:
+        def create(self, *, model: str, messages: list[dict[str, str]], **kwargs: object) -> object:
+            captured["model"] = model
+            captured.update(kwargs)
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="briefing"))]
+            )
+
+    class FakeClient:
+        def __init__(self, provider_configs: dict[str, dict[str, object]]) -> None:
+            captured["provider_configs"] = provider_configs
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    return SimpleNamespace(Client=FakeClient)
+
+
+def _briefing_timeout_flow() -> Mapping[str, object]:
+    return {"prompt": {"system": "system prompt", "user": "user prompt"}}
+
+
+def test_briefing_generate_response_sends_explicit_timeout() -> None:
+    captured: dict[str, Any] = {}
+    fake_aisuite = _briefing_timeout_aisuite(captured)
+
+    with (
+        unittest.mock.patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False),
+        unittest.mock.patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+    ):
+        response_text = _encounter_briefing_generate_response(
+            _briefing_timeout_flow(),
+            model="openai:test-brief",
+            timeout_seconds=BRIEFING_TIMEOUT_EXPLICIT_S,
+        )
+
+    assert response_text == "briefing"
+    assert captured["provider_configs"]["openai"] == {
+        "api_key": "test-key",
+        "max_retries": 0,
+        "timeout": BRIEFING_TIMEOUT_EXPLICIT_S,
+    }
+    assert captured["timeout"] == BRIEFING_TIMEOUT_EXPLICIT_S
+
+
+def test_briefing_generate_response_timeout_env_default() -> None:
+    captured: dict[str, Any] = {}
+    fake_aisuite = _briefing_timeout_aisuite(captured)
+
+    with (
+        unittest.mock.patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "LANGNET_TRANSLATION_TIMEOUT_SECONDS": str(BRIEFING_TIMEOUT_ENV_S),
+            },
+            clear=False,
+        ),
+        unittest.mock.patch.dict(sys.modules, {"aisuite": fake_aisuite}),
+    ):
+        _encounter_briefing_generate_response(_briefing_timeout_flow(), model="openai:test-brief")
+
+    openai_config = cast(dict[str, Any], captured["provider_configs"]["openai"])
+    assert openai_config["timeout"] == BRIEFING_TIMEOUT_ENV_S
+    assert captured["timeout"] == BRIEFING_TIMEOUT_ENV_S

@@ -237,6 +237,8 @@ DEFAULT_CLASSIFICATION_TIMEOUT_SECONDS = 120.0
 DEFAULT_CLASSIFICATION_MAX_ATTEMPTS = 3
 TRANSLATION_FALLBACK_MODELS_ENV = "LANGNET_TRANSLATION_FALLBACK_MODELS"
 DEFAULT_TRANSLATION_FALLBACK_MODELS = ("openai:deepseek/deepseek-v4-flash",)
+TRANSLATION_TIMEOUT_SECONDS_ENV = "LANGNET_TRANSLATION_TIMEOUT_SECONDS"
+DEFAULT_TRANSLATION_TIMEOUT_SECONDS = 45.0
 TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND_ENV = "LANGNET_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND"
 TRANSLATION_MIN_RATE_TOKENS_ENV = "LANGNET_TRANSLATION_MIN_RATE_TOKENS"
 TRANSLATION_MIN_RATE_SECONDS_ENV = "LANGNET_TRANSLATION_MIN_RATE_SECONDS"
@@ -11796,8 +11798,9 @@ def _encounter_bucket_sort_key(
     )
 
 
-def _openrouter_translation_callback(model: str):
+def _openrouter_translation_callback(model: str, *, timeout_seconds: float | None = None):
     client = None
+    timeout_seconds = _resolve_translation_timeout(timeout_seconds)
     model_candidates = _translation_model_candidates(model)
 
     def translate(projection) -> str:
@@ -11815,7 +11818,10 @@ def _openrouter_translation_callback(model: str):
                 import aisuite as ai  # noqa: PLC0415
             except ImportError as exc:
                 raise click.ClickException("aisuite is required to populate translations.") from exc
-            client = ai.Client({"api_key": api_key})
+            client_config: dict[str, Any] = {"api_key": api_key, "max_retries": 0}
+            if timeout_seconds is not None:
+                client_config["timeout"] = timeout_seconds
+            client = ai.Client({"openai": client_config})
 
         messages = [
             {"role": "system", "content": BASE_SYSTEM},
@@ -11833,6 +11839,8 @@ def _openrouter_translation_callback(model: str):
         if requires_structured_translation(projection):
             kwargs["response_format"] = {"type": "json_object"}
             kwargs["temperature"] = 0
+        if timeout_seconds is not None:
+            kwargs["timeout"] = timeout_seconds
         response = _create_translation_completion_with_model_fallback(
             client.chat.completions,
             model_candidates=model_candidates,
@@ -11949,6 +11957,17 @@ def _int_env(name: str, default: int) -> int:
     with suppress(ValueError):
         return int(value)
     return default
+
+
+def _resolve_translation_timeout(timeout_seconds: float | None) -> float | None:
+    if timeout_seconds is None:
+        timeout_seconds = _float_env(
+            TRANSLATION_TIMEOUT_SECONDS_ENV,
+            DEFAULT_TRANSLATION_TIMEOUT_SECONDS,
+        )
+    if timeout_seconds is not None and timeout_seconds > 0:
+        return timeout_seconds
+    return None
 
 
 def _call_work_classifier_with_retries(
@@ -12100,8 +12119,12 @@ def _openrouter_author_classifier_callback(
     return classify
 
 
-def _encounter_translation_callback(model: str):
-    translate = _openrouter_translation_callback(model)
+def _encounter_translation_callback(
+    model: str,
+    *,
+    timeout_seconds: float | None = None,
+):
+    translate = _openrouter_translation_callback(model, timeout_seconds=timeout_seconds)
 
     def _translate_with_progress(projection) -> str:
         source = projection.source
@@ -12786,6 +12809,15 @@ main.add_command(translation_cache_cli)
     help="Model id used when computing translation cache keys.",
 )
 @click.option(
+    "--translation-timeout-seconds",
+    type=float,
+    default=None,
+    help=(
+        "OpenRouter provider call timeout in seconds "
+        "(default 45; 0 disables; env LANGNET_TRANSLATION_TIMEOUT_SECONDS)."
+    ),
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     help="Inspect cache hits/misses without calling the translation model or writing rows.",
@@ -12811,6 +12843,7 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     include_cltk: bool,
     translation_cache_db: str,
     translation_model: str,
+    translation_timeout_seconds: float | None,
     dry_run: bool,
     output: str,
 ) -> None:
@@ -12821,7 +12854,14 @@ def translation_warm(  # noqa: PLR0913, PLR0915
         cache_path.parent.mkdir(parents=True, exist_ok=True)
     translation_cache = _PathTranslationCache(cache_path, read_only=dry_run)
 
-    translate = None if dry_run else _encounter_translation_callback(translation_model)
+    translate = (
+        None
+        if dry_run
+        else _encounter_translation_callback(
+            translation_model,
+            timeout_seconds=translation_timeout_seconds,
+        )
+    )
     term_summaries: list[dict[str, object]] = []
     totals: dict[str, int] = {
         "terms": len(terms),
@@ -13010,6 +13050,15 @@ def translation_warm(  # noqa: PLR0913, PLR0915
     help="Model id used when computing translation cache keys.",
 )
 @click.option(
+    "--translation-timeout-seconds",
+    type=float,
+    default=None,
+    help=(
+        "OpenRouter provider call timeout in seconds for translation population "
+        "(default 45; 0 disables; env LANGNET_TRANSLATION_TIMEOUT_SECONDS)."
+    ),
+)
+@click.option(
     "--foster-labels/--no-foster-labels",
     default=True,
     show_default=True,
@@ -13120,6 +13169,7 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
     translation_mode: str,
     translation_cache_db: str,
     translation_model: str,
+    translation_timeout_seconds: float | None,
     foster_labels: bool,
     source_details: bool,
     debug: bool,
@@ -13173,7 +13223,10 @@ def encounter(  # noqa: C901, PLR0912, PLR0913, PLR0915
             model=translation_model,
             populate=populate_translations,
         )
-        translation_callback = _encounter_translation_callback(translation_model)
+        translation_callback = _encounter_translation_callback(
+            translation_model,
+            timeout_seconds=translation_timeout_seconds,
+        )
         if resolved_translation_mode != "off" and (cache_path.exists() or populate_translations):
             if populate_translations:
                 cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -13748,6 +13801,15 @@ def _encounter_briefing_options(fn):
         help="Target OpenRouter/aisuite model for later briefing generation.",
     )(fn)
     fn = click.option(
+        "--timeout-seconds",
+        type=float,
+        default=None,
+        help=(
+            "OpenRouter provider call timeout in seconds "
+            "(default 45; 0 disables; env LANGNET_TRANSLATION_TIMEOUT_SECONDS)."
+        ),
+    )(fn)
+    fn = click.option(
         "--max-source-refs",
         default=12,
         show_default=True,
@@ -13776,6 +13838,7 @@ def encounter_briefing(  # noqa: PLR0913
     max_reader_usages: int,
     max_source_refs: int,
     model: str,
+    timeout_seconds: float | None,
     output: str,
     model_response_json: str,
     generate: bool,
@@ -13790,6 +13853,7 @@ def encounter_briefing(  # noqa: PLR0913
         max_reader_usages=max_reader_usages,
         max_source_refs=max_source_refs,
         model=model,
+        timeout_seconds=timeout_seconds,
         output=output,
         model_response_json=model_response_json,
         generate=generate,
@@ -13807,6 +13871,7 @@ def encounter_briefing_spike(  # noqa: PLR0913
     max_reader_usages: int,
     max_source_refs: int,
     model: str,
+    timeout_seconds: float | None,
     output: str,
     model_response_json: str,
     generate: bool,
@@ -13821,6 +13886,7 @@ def encounter_briefing_spike(  # noqa: PLR0913
         max_reader_usages=max_reader_usages,
         max_source_refs=max_source_refs,
         model=model,
+        timeout_seconds=timeout_seconds,
         output=output,
         model_response_json=model_response_json,
         generate=generate,
@@ -13837,6 +13903,7 @@ def _encounter_briefing_command(  # noqa: C901, PLR0913
     max_reader_usages: int,
     max_source_refs: int,
     model: str,
+    timeout_seconds: float | None,
     output: str,
     model_response_json: str,
     generate: bool,
@@ -13890,7 +13957,11 @@ def _encounter_briefing_command(  # noqa: C901, PLR0913
             if cached is not None:
                 click.echo(orjson.dumps(cached, option=orjson.OPT_INDENT_2).decode("utf-8"))
                 return
-        response_text = _encounter_briefing_generate_response(flow, model=model)
+        response_text = _encounter_briefing_generate_response(
+            flow,
+            model=model,
+            timeout_seconds=timeout_seconds,
+        )
         flow = apply_briefing_model_response(flow, response_text)
         if cache_policy == "read-write":
             store_cached_briefing_flow(briefing_cache_dir, flow)
@@ -13906,7 +13977,12 @@ def _encounter_briefing_command(  # noqa: C901, PLR0913
     click.echo(orjson.dumps(flow, option=orjson.OPT_INDENT_2).decode("utf-8"))
 
 
-def _encounter_briefing_generate_response(flow: Mapping[str, object], *, model: str) -> str:
+def _encounter_briefing_generate_response(
+    flow: Mapping[str, object],
+    *,
+    model: str,
+    timeout_seconds: float | None = None,
+) -> str:
     import dotenv  # noqa: PLC0415
 
     dotenv.load_dotenv()
@@ -13923,16 +13999,23 @@ def _encounter_briefing_generate_response(flow: Mapping[str, object], *, model: 
     except ImportError as exc:
         raise click.ClickException("aisuite is required for --generate.") from exc
 
+    timeout_seconds = _resolve_translation_timeout(timeout_seconds)
     prompt = cast(Mapping[str, object], flow["prompt"])
-    client = ai.Client({"api_key": api_key})
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
+    client_config: dict[str, Any] = {"api_key": api_key, "max_retries": 0}
+    if timeout_seconds is not None:
+        client_config["timeout"] = timeout_seconds
+    client = ai.Client({"openai": client_config})
+    request_kwargs: dict[str, Any] = {
+        "model": model,
+        "messages": [
             {"role": "system", "content": str(prompt["system"])},
             {"role": "user", "content": str(prompt["user"])},
         ],
-        temperature=0.2,
-    )
+        "temperature": 0.2,
+    }
+    if timeout_seconds is not None:
+        request_kwargs["timeout"] = timeout_seconds
+    response = client.chat.completions.create(**request_kwargs)
     return str(response.choices[0].message.content or "")
 
 
