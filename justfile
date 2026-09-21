@@ -139,4 +139,4 @@ perf-probe:
 # Uses port 8010 by default (LANGNET_PROBE_PORT overrides) so it never
 # collides with the production slot on 8000.
 perf-probe-server *args:
-    bash ./.justscripts/perf-probe-server.sh {{ args }}
+    bash ./.justscripts/perf-probe-server.sh "$@"
