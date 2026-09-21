@@ -117,6 +117,15 @@ in
     export CODEGEN_PATH=$DEVENV_ROOT/vendor/langnet-spec/generated/python
     export PYTHONPATH=$DEVENV_ROOT/src:$DEVENV_ROOT/.justscripts:$CODEGEN_PATH:$PYTHONPATH
     export PATH=$PATH:$HOME/.local/bin
+    # HOL-217: devenv's profile puts nix-store python packages (pylsp, black,
+    # ... python3.13) on PYTHONPATH ahead of the venv's own site-packages, so
+    # a nix typing_extensions 4.15.0 shadows the venv's 4.16+ and anyio's
+    # PEP 661 `sentinel` import dies at suite time (PR #13 CI, run
+    # 35623655253). Prepend the venv site-packages so the venv always wins;
+    # the nix paths stay available for anything the venv does not carry.
+    if [ -n "''${VIRTUAL_ENV:-}" ]; then
+      export PYTHONPATH="$(python -c 'import sysconfig; print(sysconfig.get_path("purelib"))'):$PYTHONPATH"
+    fi
   '';
 
   # scripts.gunicorn-serve.exec = ''

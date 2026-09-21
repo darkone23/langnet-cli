@@ -73,6 +73,19 @@ jobs:
           git -C ../langnet-spec fetch --depth 1 origin "${{ steps.spec.outputs.sha }}"
           git -C ../langnet-spec checkout --detach "${{ steps.spec.outputs.sha }}"
 
+      - name: Ensure venv-owned typing_extensions >= 4.16 (devenv eval cache may skip requirements resync)
+        # HOL-217: with clean:false the persisted venv only resyncs when
+        # devenv's requirements marker changes, and the runner's eval cache
+        # did not invalidate on the typing_extensions>=4.16 floor (db4076b) —
+        # so the suite resolved 4.15.0 from the nix profile and anyio's PEP 661
+        # sentinel import died (run 35623655253). The print line records the
+        # before-state; the pip install is idempotent (~0.3 s) when the floor
+        # is already satisfied.
+        run: |
+          devenv shell -- python -c 'import typing_extensions as t, importlib.metadata as m; print("before:", m.version("typing_extensions"), t.__file__)'
+          devenv shell -- python -m pip install 'typing_extensions>=4.16,<5.0'
+          devenv shell -- python -c 'import typing_extensions as t, importlib.metadata as m; v = m.version("typing_extensions"); print("after:", v, t.__file__); assert tuple(int(x) for x in v.split(".")[:2]) >= (4, 16), f"typing_extensions {v} still resolves from {t.__file__} — venv copy shadowed (HOL-217)"'
+
       - name: Run the test suite (just test-all)
         run: devenv shell -- just test-all
 
