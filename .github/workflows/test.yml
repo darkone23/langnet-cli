@@ -75,3 +75,26 @@ jobs:
 
       - name: Run the test suite (just test-all)
         run: devenv shell -- just test-all
+
+  webapp-test:
+    # HOL-201: gate the webapp bun chain (unit/regression tests incl. desk +
+    # reader + server helpers). Same boundary rules as the nose2 job above;
+    # devenv supplies bun + duckdb (languages.javascript.bun.enable + the
+    # duckdb package), and `just ensure-deps` installs node_modules +
+    # svelte-kit sync state on first run (clean=false persists them).
+    runs-on: [self-hosted, langnet-cli-edge]
+    timeout-minutes: 30
+    steps:
+      - name: Refuse foreign pull_request heads (fork PRs never touch the edge runner)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "::error::fork PRs must not run on the self-hosted edge runner (head: ${{ github.event.pull_request.head.repo.full_name }})"
+          exit 1
+
+      - name: Check out langnet-cli (clean=false keeps node_modules warm between runs)
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Run the webapp bun test chain (just test)
+        run: devenv shell -- bash -c 'cd webapp && just test'
