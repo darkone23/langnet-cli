@@ -144,7 +144,6 @@ from langnet.reader.research_needs import (
     ResearchNeedsConfig,
     export_research_needs_csv,
 )
-from langnet.reader.search_index import search_reader_segments
 from langnet.reader_eval import (
     evaluate_reader_token,
     iter_reader_eval_tokens,
@@ -11140,6 +11139,9 @@ def _encounter_reader_search_items(  # noqa: PLR0913
     context: int,
     field: str,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    # Deferred: search_index pulls polars/numpy (~200ms); only reader search needs it.
+    from langnet.reader.search_index import search_reader_segments  # noqa: PLC0415
+
     items: list[dict[str, object]] = []
     warnings: list[dict[str, object]] = []
     seen_hits: set[tuple[str, str]] = set()
