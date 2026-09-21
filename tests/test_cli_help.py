@@ -140,7 +140,7 @@ def test_word_index_nearby_pretty_uses_integrated_neighborhood() -> None:
         "pagination": {"next_cursor": None, "prev_cursor": None},
         "warnings": [],
     }
-    with patch("langnet.cli.word_index_neighborhood_payload", return_value=payload):
+    with patch("langnet.word_index.word_index_neighborhood_payload", return_value=payload):
         result = CliRunner().invoke(main, ["word-index", "nearby", "san", "e"])
 
     assert result.exit_code == 0, result.output

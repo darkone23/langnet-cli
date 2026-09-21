@@ -7,13 +7,14 @@ import time
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 import orjson
 from returns.result import Failure, Success
 
-from langnet.word_of_day import WordCandidate
+if TYPE_CHECKING:
+    from langnet.word_of_day import WordCandidate
 
 
 def _ensure_logging(level: int = logging.INFO) -> None:

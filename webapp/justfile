@@ -16,6 +16,14 @@ default:
 install:
     bun install
 
+# Ensure install-time state exists so a bare checkout runs tests with real
+# output instead of a confusing "$lib/..." resolution error (HOL-201):
+# bun install populates node_modules; the package `prepare` script runs
+# `svelte-kit sync`, which generates .svelte-kit (the tsconfig that maps $lib).
+ensure-deps:
+    @test -d node_modules || (echo "webapp deps missing — running 'bun install' (recipe: just install)" && bun install)
+    @test -d .svelte-kit || (echo ".svelte-kit missing — running 'svelte-kit sync'" && bun --bun run prepare)
+
 # Check local tool and sibling CLI availability.
 doctor:
     @command -v bun >/dev/null || (echo "missing required command: bun" && exit 1)
@@ -48,8 +56,8 @@ check:
 check-watch:
     bun --bun run check:watch
 
-# Run fast unit/regression tests.
-test:
+# Run fast unit/regression tests (installs deps on a bare checkout).
+test: ensure-deps
     bun --bun run test
 
 # Format project files with Prettier.
