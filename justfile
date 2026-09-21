@@ -130,3 +130,7 @@ triples-dump lang word tool="all":
 # Translate sample lexicon rows (French -> English) using aisuite/OpenRouter.
 translate-lex *opts:
     bash ./.justscripts/run-dev-tool python3 ./.justscripts/lex_translation_demo.py "$@"
+
+# Repeatable timing probe for the common learner surfaces (HOL-195). Read-only.
+perf-probe:
+    bash ./.justscripts/perf-probe.sh
