@@ -19,6 +19,8 @@ profile_tool="${profile_bin}/${tool}"
 
 cd "${repo_root}"
 
+mkdir -p "${repo_root}/tmp"
+
 if [[ ! -x "${venv_tool}" && ! -x "${profile_tool}" ]]; then
   devenv shell -- true >/dev/null
 fi
