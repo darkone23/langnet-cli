@@ -792,7 +792,7 @@ def test_encounter_json_includes_inline_reader_search_hits_when_index_supplied()
         patch(
             "langnet.cli._encounter_word_index_context", return_value=_empty_word_index_context()
         ),
-        patch("langnet.cli.search_reader_segments") as search,
+        patch("langnet.reader.search_index.search_reader_segments") as search,
     ):
         search.return_value = {
             "items": [
@@ -861,7 +861,7 @@ def test_encounter_json_can_search_all_reader_candidates() -> None:
         patch(
             "langnet.cli._encounter_word_index_context", return_value=_empty_word_index_context()
         ),
-        patch("langnet.cli.search_reader_segments") as search,
+        patch("langnet.reader.search_index.search_reader_segments") as search,
     ):
         search.side_effect = [
             {"items": []},
@@ -2148,7 +2148,7 @@ def test_encounter_reader_search_context_projects_actions_without_index() -> Non
 def test_encounter_reader_search_context_uses_index_for_inline_hits() -> None:
     reduction = _reduction_with_bucket(query="logos", language="grc", form="λόγος")
 
-    with patch("langnet.cli.search_reader_segments") as search:
+    with patch("langnet.reader.search_index.search_reader_segments") as search:
         search.return_value = {
             "items": [
                 {
@@ -2183,7 +2183,7 @@ def test_encounter_reader_search_context_uses_index_for_inline_hits() -> None:
 def test_encounter_reader_search_context_can_search_all_candidates_and_dedupe() -> None:
     reduction = _reduction_with_bucket(query="logos", language="grc", form="λόγος")
 
-    with patch("langnet.cli.search_reader_segments") as search:
+    with patch("langnet.reader.search_index.search_reader_segments") as search:
         search.side_effect = [
             {
                 "items": [
