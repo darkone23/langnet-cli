@@ -111,6 +111,7 @@ in
   # '';
 
   enterShell = ''
+    mkdir -p "${config.devenv.root}/tmp";
     export TMP="${config.devenv.root}/tmp";
     export TMPDIR="${config.devenv.root}/tmp";
     export CODEGEN_PATH=$DEVENV_ROOT/vendor/langnet-spec/generated/python
