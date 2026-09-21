@@ -132,7 +132,10 @@ def test_triples_dump_json_cli_uses_structured_payload() -> None:
 
     with (
         patch("langnet.cli.ToolPlanner", FakePlanner),
-        patch("langnet.cli.execute_plan_staged", return_value=SimpleNamespace(claims=[_claim()])),
+        patch(
+            "langnet.execution.executor.execute_plan_staged",
+            return_value=SimpleNamespace(claims=[_claim()]),
+        ),
     ):
         result = CliRunner().invoke(
             main,

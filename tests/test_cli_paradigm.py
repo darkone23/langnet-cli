@@ -53,7 +53,7 @@ class FakeParadigmService:
 
 
 def test_paradigm_cli_returns_schema_valid_json() -> None:
-    with patch("langnet.cli.ParadigmService", FakeParadigmService):
+    with patch("langnet.paradigm.service.ParadigmService", FakeParadigmService):
         result = CliRunner().invoke(
             main,
             [
