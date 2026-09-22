@@ -41,12 +41,27 @@ dev:
 dev-open:
     bun --bun run dev -- --host {{host}} --port {{port}} --open
 
-# Reverse proxy public HTTP to the dev server. Use sudo for CADDY_FROM=:80.
+# Reverse proxy public HTTP to the dev server. Default mode renders the
+# repo-owned Caddyfile (HOL-229: tracing span + repo OTLP env from
+# caddy-otel.env, sourced here because the orion slot escalates via
+# `sudo -n`, which strips process-compose slot env). Set
+# CADDY_PROXY_MODE=cli for the pre-HOL-229 command-line fallback
+# (rollback), CADDY_OTEL_ENV="" to skip OTLP env sourcing, or
+# CADDY_CONFIG=/path to point at an alternate config. Use sudo for :80.
 caddy-proxy:
-    @caddy_bin="${CADDY_BIN:-$(command -v caddy || systemctl show -p ExecStart --value caddy 2>/dev/null | sed -n 's/^{ path=\([^ ;]*\).*/\1/p')}"; \
+    @caddy_dir="{{justfile_directory()}}"; \
+    caddy_bin="${CADDY_BIN:-$(command -v caddy || systemctl show -p ExecStart --value caddy 2>/dev/null | sed -n 's/^{ path=\([^ ;]*\).*/\1/p')}"; \
     test -n "$caddy_bin" || (echo "missing required command: caddy; set CADDY_BIN=/path/to/caddy" && exit 1); \
-    echo "proxying {{caddy_from}} -> 127.0.0.1:{{port}}"; \
-    exec "$caddy_bin" reverse-proxy --from "{{caddy_from}}" --to "127.0.0.1:{{port}}"
+    mode="${CADDY_PROXY_MODE:-caddyfile}"; \
+    if [ "$mode" = "cli" ]; then \
+        echo "proxying {{caddy_from}} -> 127.0.0.1:{{port}} (cli mode)"; \
+        exec "$caddy_bin" reverse-proxy --from "{{caddy_from}}" --to "127.0.0.1:{{port}}"; \
+    fi; \
+    otel_env="${CADDY_OTEL_ENV-$caddy_dir/caddy-otel.env}"; \
+    if [ -n "$otel_env" ] && [ -f "$otel_env" ]; then set -a; . "$otel_env"; set +a; fi; \
+    caddy_config="${CADDY_CONFIG-$caddy_dir/Caddyfile}"; \
+    echo "proxying (caddyfile mode) config=$caddy_config otel_env=${otel_env:-none}"; \
+    exec "$caddy_bin" run --config "$caddy_config"
 
 # Run SvelteKit type and accessibility checks.
 check:

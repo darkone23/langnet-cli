@@ -1,0 +1,16 @@
+# HOL-229: repo-owned front-caddy config for orion (langnet_web_caddy slot).
+# Replaces the `caddy reverse-proxy --from :80 --to 127.0.0.1:43210`
+# command-line invocation; the tracing module (standard build, caddy >= 2.5)
+# emits a server span per request and propagates traceparent upstream, so
+# webapp -> langnet_cli -> diogenes/heritage share the caddy trace.
+#
+# Export endpoint/protocol come from webapp/caddy-otel.env (sourced by the
+# caddy-proxy recipe): gRPC on :4317 — caddy's autoexport defaults to gRPC,
+# and :4318 is the OTLP/HTTP receiver (wrong protocol for caddy).
+# Rollback: CADDY_PROXY_MODE=cli restores the pre-HOL-229 command-line mode.
+:80 {
+	tracing {
+		span langnet-web-request
+	}
+	reverse_proxy 127.0.0.1:43210
+}

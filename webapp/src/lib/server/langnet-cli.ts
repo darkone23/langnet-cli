@@ -20,6 +20,7 @@ import {
 	type WordRecommendationResult
 } from '$lib/search-data';
 import { extractSourceOutlineSegments, type SourceOutlineSegment } from '$lib/source-outline';
+import { currentTraceContext } from '$lib/server/trace-context';
 import type {
 	WordIndexItem,
 	WordIndexMode,
@@ -115,9 +116,14 @@ async function runJsonCommandViaServer(
 	options.signal?.addEventListener('abort', onAbort, { once: true });
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
 	try {
+		// HOL-229: forward the captured W3C trace context so the warm-server
+		// span tree shares the inbound (caddy-propagated) trace id.
 		const response = await fetch(`${baseUrl}/api/cli`, {
 			method: 'POST',
-			headers: { 'content-type': 'application/json' },
+			headers: {
+				'content-type': 'application/json',
+				...(currentTraceContext() ?? {})
+			},
 			body: JSON.stringify({ args, stdin: options.stdin ?? null, timeoutMs }),
 			signal: controller.signal
 		});

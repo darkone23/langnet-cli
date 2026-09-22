@@ -49,6 +49,10 @@ protobuf = "^6.33.5"
 returns = {extras = ["compatible-mypy"], version = "^0.26.0"}
 pylatexenc = "^2.10"
 humanize = "^4.11.0"
+# HOL-229: tracing API in main deps — manual spans are no-ops until an SDK
+# is configured (opentelemetry-instrument / env-gated uvicorn-run); keeps
+# the whitakers subprocess span importable in every install shape.
+opentelemetry-api = ">=1.44.0,<2.0.0"
 # HOL-219 Phase 2: otel sdk + otlp-http exporter + distro (opentelemetry-
 # instrument CLI) + asgi instrumentor. Mirrored in devenv.requirements.txt;
 # inert until OTEL_EXPORTER_OTLP_ENDPOINT is set.
@@ -56,6 +60,10 @@ opentelemetry-sdk = ">=1.44.0,<2.0.0"
 opentelemetry-exporter-otlp-proto-http = ">=1.44.0,<2.0.0"
 opentelemetry-distro = ">=0.65b0,<1.0.0"
 opentelemetry-instrumentation-asgi = ">=0.65b0,<1.0.0"
+# HOL-229: starlette = server spans; requests = loopback client spans
+# (diogenes :8888, heritage :48080).
+opentelemetry-instrumentation-starlette = ">=0.65b0,<1.0.0"
+opentelemetry-instrumentation-requests = ">=0.65b0,<1.0.0"
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"

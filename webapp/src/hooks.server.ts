@@ -14,12 +14,17 @@ import { getRateLimitDecision, type RateLimitDecision } from '$lib/server/rate-l
 import { formatHttpRequestLog, httpRequestLoggingEnabled } from '$lib/server/http-log';
 import { observeRateLimitRequest } from '$lib/server/rate-limit-rollup';
 import { getCrawlerDisallowedRouteDecision } from '$lib/server/crawler-route-policy';
+import { runWithTraceContext } from '$lib/server/trace-context';
 
 const logHttpRequests = httpRequestLoggingEnabled();
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const startedAt = performance.now();
 	let status = 500;
+	// HOL-229: scope the inbound W3C trace context for the whole request so
+	// the warm-server transport can forward it (one trace id end to end).
+	const resolveWithTraceContext = () =>
+		runWithTraceContext(event.request.headers, () => resolve(event));
 	const requestIdentity = requestIdentityFromHeaders(
 		event.request.headers,
 		event.getClientAddress()
@@ -47,7 +52,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 							'x-robots-tag': 'noindex, nofollow'
 						}
 					})
-				: await resolve(event);
+				: await resolveWithTraceContext();
 			status = response.status;
 			return response;
 		} finally {
@@ -123,7 +128,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 						'x-robots-tag': 'noindex, nofollow'
 					}
 				})
-			: await resolve(event);
+			: await resolveWithTraceContext();
 		status = response.status;
 		appendRequestCostHeaders(response.headers, requestCost);
 		response.headers.set('LangNet-Client-Class', clientClassification.clientClass);
@@ -134,7 +139,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.set('LangNet-RateLimit-Bucket', rateLimitDecision.bucket);
 		response.headers.set('LangNet-RateLimit-Limit', String(rateLimitDecision.limit));
 		response.headers.set('LangNet-RateLimit-Remaining', String(rateLimitDecision.remaining));
-		response.headers.set('LangNet-RateLimit-Window-Seconds', String(rateLimitDecision.windowSeconds));
+		response.headers.set(
+			'LangNet-RateLimit-Window-Seconds',
+			String(rateLimitDecision.windowSeconds)
+		);
 		if (attestationScope) {
 			response.headers.set('LangNet-Attestation-Scope', attestationScope);
 		}
@@ -171,30 +179,34 @@ export const handle: Handle = async ({ event, resolve }) => {
 				})
 			);
 		}
-			try {
-				const principal =
-					rateLimitDecision.keyType === 'anonymous_session'
-						? anonymousSession.id
-						: requestIdentity.clientIp;
-				const rollupAttestationScope = attestationScope ?? requestScope;
-				observeRateLimitRequest({
-					observedAtEpochSeconds: Math.floor(Date.now() / 1000),
-					status,
-					requestCost: requestCost.score,
-					clientClass: clientClassification.clientClass,
-					attestationStatus: attestation.status,
-					attestationScope: rollupAttestationScope,
-					rateLimitDecision,
-					keyType: rateLimitDecision.keyType,
-					principal
-				});
+		try {
+			const principal =
+				rateLimitDecision.keyType === 'anonymous_session'
+					? anonymousSession.id
+					: requestIdentity.clientIp;
+			const rollupAttestationScope = attestationScope ?? requestScope;
+			observeRateLimitRequest({
+				observedAtEpochSeconds: Math.floor(Date.now() / 1000),
+				status,
+				requestCost: requestCost.score,
+				clientClass: clientClassification.clientClass,
+				attestationStatus: attestation.status,
+				attestationScope: rollupAttestationScope,
+				rateLimitDecision,
+				keyType: rateLimitDecision.keyType,
+				principal
+			});
 		} catch {
 			// Observation storage must never impact request handling.
 		}
 	}
 };
 
-function buildRequestMetadata(url: URL, attestationScope: string | undefined, requestScope: string) {
+function buildRequestMetadata(
+	url: URL,
+	attestationScope: string | undefined,
+	requestScope: string
+) {
 	const dictionary = readQueryValue(url, 'source', 'dictionary');
 	const language = readQueryValue(url, 'language', 'lang');
 	const translation = readQueryValue(url, 'translation');

@@ -4,10 +4,13 @@ import logging
 from collections.abc import Iterable, Mapping
 
 import sh
+from opentelemetry import trace
 
 from .base import RawResponseEffect, _new_response_id
 
 logger = logging.getLogger(__name__)
+
+tracer = trace.get_tracer("langnet.clients.subprocess")
 
 
 class SubprocessToolClient:
@@ -29,17 +32,24 @@ class SubprocessToolClient:
         for key, value in params.items():
             cmd.append(f"{key}={value}")
 
-        sh_cmd = sh.Command(cmd[0])
-        result = sh_cmd(
-            *cmd[1:], _ok_code=list(range(0, 256)), _encoding="utf-8", _decode_errors="ignore"
-        )
+        with tracer.start_as_current_span(f"{self.tool}.subprocess") as span:
+            span.set_attribute("langnet.tool", self.tool)
+            span.set_attribute("langnet.call_id", call_id)
+            span.set_attribute("langnet.command", " ".join(cmd))
+            sh_cmd = sh.Command(cmd[0])
+            result = sh_cmd(
+                *cmd[1:], _ok_code=list(range(0, 256)), _encoding="utf-8", _decode_errors="ignore"
+            )
+            if hasattr(result, "exit_code"):
+                span.set_attribute("langnet.exit_code", int(result.exit_code))
+
         raw_out = result.stdout if hasattr(result, "stdout") else result
         body = (
             bytes(raw_out)
             if isinstance(raw_out, (bytes, bytearray))
             else str(raw_out).encode("utf-8")
         )
-        status_code = int(result.exit_code) if hasattr(result, "exit_code") else 0  # type: ignore[attr-defined]
+        status_code = int(result.exit_code) if hasattr(result, "exit_code") else 0
 
         return RawResponseEffect(
             response_id=_new_response_id(),
