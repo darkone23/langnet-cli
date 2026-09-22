@@ -34,8 +34,12 @@ class SubprocessToolClient:
             *cmd[1:], _ok_code=list(range(0, 256)), _encoding="utf-8", _decode_errors="ignore"
         )
         raw_out = result.stdout if hasattr(result, "stdout") else result
-        body = raw_out if isinstance(raw_out, (bytes, bytearray)) else str(raw_out).encode("utf-8")
-        status_code = result.exit_code if hasattr(result, "exit_code") else 0  # type: ignore[attr-defined]
+        body = (
+            bytes(raw_out)
+            if isinstance(raw_out, (bytes, bytearray))
+            else str(raw_out).encode("utf-8")
+        )
+        status_code = int(result.exit_code) if hasattr(result, "exit_code") else 0  # type: ignore[attr-defined]
 
         return RawResponseEffect(
             response_id=_new_response_id(),
@@ -45,5 +49,5 @@ class SubprocessToolClient:
             status_code=status_code,
             content_type="text/plain",
             headers={},
-            body=body if isinstance(body, (bytes, bytearray)) else str(body).encode("utf-8"),
+            body=body,
         )
