@@ -2,7 +2,14 @@
 let
   uvicorn-run = pkgs.writeShellScriptBin "uvicorn-run" ''
     set -e
-    cd ${config.devenv.root} && uvicorn langnet.asgi:app "$@"
+    cd ${config.devenv.root}
+    # HOL-219 Phase 2: OTel auto-instrumentation is env-gated — the server
+    # boots unchanged unless OTEL_EXPORTER_OTLP_ENDPOINT is set (the
+    # process-compose slot env carries it on orion; nowhere else).
+    if [ -n "''${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ] && command -v opentelemetry-instrument >/dev/null 2>&1; then
+      exec opentelemetry-instrument uvicorn langnet.asgi:app "$@"
+    fi
+    exec uvicorn langnet.asgi:app "$@"
   '';
 in
 {
