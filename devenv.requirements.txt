@@ -43,10 +43,17 @@ protobuf>=6.33.5,<7.0.0
 returns[compatible-mypy]>=0.26.0,<0.27.0
 pylatexenc>=2.10,<3.0
 humanize>=4.11.0,<5.0.0
-# OTel (HOL-219 Phase 2): sdk+otlp http exporter + distro (the
-# opentelemetry-instrument CLI) + the ASGI instrumentor for the Starlette
-# server. Inert until OTEL_EXPORTER_OTLP_ENDPOINT is set (uvicorn-run gates).
+# HOL-229 server traces: API in every install shape (manual spans); sdk/
+# exporter/instrumentors pair with pyproject (sdk 1.44.0 <=> instr 0.65b0).
+# distro provides the default distro+configurator entry points so
+# `opentelemetry-instrument` actually builds the SDK provider/OTLP exporter
+# from env vars. starlette = server spans; requests = diogenes/heritage
+# client spans; asgi instrumentor is starlette's engine dep (explicit for
+# direct ASGI frameworks). Inert until OTEL_EXPORTER_OTLP_ENDPOINT is set.
+opentelemetry-api>=1.44.0,<2.0.0
 opentelemetry-sdk>=1.44.0,<2.0.0
 opentelemetry-exporter-otlp-proto-http>=1.44.0,<2.0.0
 opentelemetry-distro>=0.65b0,<1.0.0
 opentelemetry-instrumentation-asgi>=0.65b0,<1.0.0
+opentelemetry-instrumentation-starlette>=0.65b0,<1.0.0
+opentelemetry-instrumentation-requests>=0.65b0,<1.0.0

@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { runJsonCommand, resolveLangnetServerUrl } from './langnet-cli';
+import { runWithTraceContext } from './trace-context';
 
 type HttpServer = http.Server & { port: number };
 
@@ -113,6 +114,39 @@ async function main() {
 			assert.equal(seenStdin, '{"query":"arma"}');
 		} finally {
 			echo.close();
+		}
+
+		// 2c. HOL-229: captured W3C trace context rides the POST to the server
+		// so caddy -> webapp -> langnet_cli share one trace id.
+		const TRACEPARENT = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
+		const seenTraceHeaders: Record<string, string | string[] | undefined> = {};
+		const tracing = await startServer((req, res) => {
+			let body = '';
+			req.on('data', (chunk) => {
+				body += chunk;
+			});
+			req.on('end', () => {
+				seenTraceHeaders.traceparent = req.headers.traceparent;
+				seenTraceHeaders.baggage = req.headers.baggage;
+				res.writeHead(200, { 'content-type': 'application/json' });
+				res.end('{"source":"http"}');
+			});
+		});
+		try {
+			process.env.LANGNET_SERVER_URL = `http://127.0.0.1:${tracing.port}`;
+			await runWithTraceContext(
+				new Headers({ traceparent: TRACEPARENT, baggage: 'session=42' }),
+				() => runJsonCommand(['cli', 'langs', '--output', 'json'], 10_000, { queued: false })
+			);
+			assert.equal(seenTraceHeaders.traceparent, TRACEPARENT);
+			assert.equal(seenTraceHeaders.baggage, 'session=42');
+
+			// No captured context: no trace headers forwarded (clean root).
+			seenTraceHeaders.traceparent = undefined;
+			await runJsonCommand(['cli', 'langs', '--output', 'json'], 10_000, { queued: false });
+			assert.equal(seenTraceHeaders.traceparent, undefined);
+		} finally {
+			tracing.close();
 		}
 	} finally {
 		healthy.close();

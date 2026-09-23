@@ -1,5 +1,10 @@
 { pkgs, lib, config, inputs, ... }:
 let
+  # HOL-229: when an OTLP endpoint is present (process-compose renders it on
+  # orion; unset for local dev), run under `opentelemetry-instrument` so the
+  # starlette server + requests loopback clients emit spans to SigNoz.
+  # Without the env var the wrap is skipped — zero instrumentation overhead
+  # or exporter noise for local shells and CI.
   uvicorn-run = pkgs.writeShellScriptBin "uvicorn-run" ''
     set -e
     cd ${config.devenv.root}
