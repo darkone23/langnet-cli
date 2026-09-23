@@ -343,6 +343,40 @@ Example:
 curl 'http://127.0.0.1:43210/api/paradigm?language=lat&lemma=ratio&kind=declension&gender=feminine'
 ```
 
+## Browser RUM (SigNoz)
+
+The app ships browser real-user monitoring (HOL-219 Phase 3): page views, client
+timings, and Web Vitals stream into the self-hosted SigNoz on the tailnet.
+
+- Client: `@opentelemetry/sdk-trace-web` (document-load, fetch, user-interaction
+  instrumentations) + `web-vitals` (LCP, FCP, CLS, INP, TTFB). Spans: `page.view`
+  per SvelteKit navigation, `web.vital.<NAME>` per vital. Service name
+  `langnet_web`. Initialized off the critical path (idle callback, lazy chunks).
+- Transport: the browser posts OTLP/JSON to the same-origin proxy
+  `POST /api/otel/{v1/traces,v1/metrics}`, which forwards to the collector
+  (`src/lib/server/otlp-proxy.ts`). Same-origin posts only (host-matched,
+  scheme-tolerant behind TLS-terminating proxies), 2 MiB cap, no cookie or
+  credential forwarding.
+- Config: `OTEL_EXPORTER_OTLP_ENDPOINT` on the webapp server sets the upstream
+  (default `http://signoz.elf-lizard.ts.net:4318`; set it to empty to disable
+  both the proxy and client instrumentation via `rumEnabled` in page data).
+- Privacy: a span processor scrubs URL-carrying attributes (`http.url`,
+  `url.full`, ...) to origin + path before export, so search terms never leave
+  the browser. Page-view spans record path and route id only.
+
+Verify:
+
+```sh
+curl -X POST -H 'Content-Type: application/json' \
+  -H "Origin: http://127.0.0.1:43210" \
+  --data '{"resourceSpans":[]}' \
+  http://127.0.0.1:43210/api/otel/v1/traces
+```
+
+Expect `200` with `{"partialSuccess":{}}` when the collector is reachable.
+Search for service `langnet_web` in the SigNoz UI (traces + span metrics for
+`page.view` / `web.vital.*`).
+
 ## Page State URLs
 
 The UI state is encoded in the page URL so searches can be linked, reloaded, and

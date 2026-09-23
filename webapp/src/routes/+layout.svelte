@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { afterNavigate } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import { bootStateStorageKey, shouldFastBoot } from '$lib/boot-state';
 	import { installReloadDiagnostics } from '$lib/reload-diagnostics';
+	import { startRum, trackPageView } from '$lib/rum/rum';
 	import { uiCopy } from '$lib/ui-copy';
 	import '../app.css';
 
-	let { children } = $props();
+	let { children, data } = $props();
 	let booting = $state(true);
 	const hardBootTimeoutMs = 10000;
 	let bootDeadlineId: ReturnType<typeof setTimeout> | null = null;
@@ -19,6 +21,8 @@
 			finalizeBoot();
 		}, hardBootTimeoutMs);
 
+		if (data.rumEnabled) scheduleRumStart();
+
 		void revealWhenStable().finally(() => {
 			if (bootDeadlineId) clearTimeout(bootDeadlineId);
 		});
@@ -28,6 +32,23 @@
 			removeReloadDiagnostics();
 		};
 	});
+
+	afterNavigate((navigation) => {
+		if (browser && data.rumEnabled) {
+			trackPageView(navigation.to?.route.id ?? null, navigation.to?.url ?? null);
+		}
+	});
+
+	function scheduleRumStart() {
+		const idleStart = () => {
+			void startRum();
+		};
+		if (typeof window.requestIdleCallback === 'function') {
+			window.requestIdleCallback(idleStart, { timeout: 3000 });
+		} else {
+			window.setTimeout(idleStart, 1200);
+		}
+	}
 
 	function finalizeBoot() {
 		if (!booting) return;

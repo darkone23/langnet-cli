@@ -13,6 +13,9 @@ declare global {
 			rateLimitDecision?: import('$lib/server/rate-limit').RateLimitDecision;
 		}
 		// interface PageData {}
+		interface PageData {
+			rumEnabled?: boolean;
+		}
 		// interface PageState {}
 		// interface Platform {}
 	}
