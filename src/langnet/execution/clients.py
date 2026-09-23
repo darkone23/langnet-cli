@@ -8,8 +8,12 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from opentelemetry import trace
+
 from langnet.clients.base import RawResponseEffect, _new_response_id
 from langnet.clients.subprocess import SubprocessToolClient
+
+_cltk_tracer = trace.get_tracer("langnet.clients.cltk")
 
 
 class StubToolClient:
@@ -55,22 +59,26 @@ class CLTKFetchClient:
 
     def __init__(self) -> None:
         self.tool = "fetch.cltk"
-        _ensure_cltk_data_dir()
-        from cltk.lemmatize.lat import LatinBackoffLemmatizer  # noqa: PLC0415
-        from cltk.lexicon.lat import LatinLewisLexicon  # noqa: PLC0415
-        from cltk.phonology.lat.transcription import Transcriber  # noqa: PLC0415
+        with _cltk_tracer.start_as_current_span("cltk.lat_pipeline_load") as span:
+            span.set_attribute("langnet.cltk.stage", "latin_init")
+            _ensure_cltk_data_dir()
+            from cltk.lemmatize.lat import LatinBackoffLemmatizer  # noqa: PLC0415
+            from cltk.lexicon.lat import LatinLewisLexicon  # noqa: PLC0415
+            from cltk.phonology.lat.transcription import Transcriber  # noqa: PLC0415
 
-        self._latin_lemmatizer = LatinBackoffLemmatizer()
-        self._lexicon = LatinLewisLexicon()
-        self._transcriber = Transcriber("Classical", "Allen")
+            self._latin_lemmatizer = LatinBackoffLemmatizer()
+            self._lexicon = LatinLewisLexicon()
+            self._transcriber = Transcriber("Classical", "Allen")
         self._greek_nlp = None
 
     def _ensure_greek_nlp(self) -> None:
         """Lazy-load Greek NLP pipeline."""
         if self._greek_nlp is None:
-            from cltk import NLP  # noqa: PLC0415
+            with _cltk_tracer.start_as_current_span("cltk.grc_pipeline_load") as span:
+                span.set_attribute("langnet.cltk.stage", "greek_nlp_load")
+                from cltk import NLP  # noqa: PLC0415
 
-            self._greek_nlp = NLP(language="grc", suppress_banner=True)
+                self._greek_nlp = NLP(language="grc", suppress_banner=True)
 
     def _lemmatize_greek(self, word: str) -> str:
         """Lemmatize Greek word using CLTK NLP pipeline."""
@@ -95,34 +103,42 @@ class CLTKFetchClient:
         lang = (params or {}).get("language") or (params or {}).get("lang") or "lat"
         start = time.time()
 
-        # Choose lemmatizer based on language
-        if lang == "grc":
-            lemma = self._lemmatize_greek(word)
-        else:
-            lemma_pairs = self._latin_lemmatizer.lemmatize([word]) or []
-            lemma = lemma_pairs[0][1] if lemma_pairs and len(lemma_pairs[0]) > 1 else word
+        with _cltk_tracer.start_as_current_span("fetch.cltk.execute") as span:
+            span.set_attribute("langnet.cltk.lang", lang)
+            span.set_attribute("langnet.cltk.word", word)
 
-        lookup = self._lexicon.lookup(word) or self._lexicon.lookup(lemma) or ""
-        lines = lookup if isinstance(lookup, list) else [lookup] if isinstance(lookup, str) else []
-        ipa_list: list[str] = []
+            # Choose lemmatizer based on language
+            if lang == "grc":
+                lemma = self._lemmatize_greek(word)
+            else:
+                lemma_pairs = self._latin_lemmatizer.lemmatize([word]) or []
+                lemma = lemma_pairs[0][1] if lemma_pairs and len(lemma_pairs[0]) > 1 else word
 
-        # IPA transcription only for Latin
-        if lang == "lat":
-            try:
-                ipa_list = self._transcriber.transcribe(word)
-            except Exception:
+            lookup = self._lexicon.lookup(word) or self._lexicon.lookup(lemma) or ""
+            lines = (
+                lookup if isinstance(lookup, list) else [lookup] if isinstance(lookup, str) else []
+            )
+            ipa_list: list[str] = []
+
+            # IPA transcription only for Latin
+            if lang == "lat":
                 try:
-                    ipa_list = self._transcriber.transcribe(lemma)
+                    ipa_list = self._transcriber.transcribe(word)
                 except Exception:
-                    ipa_list = []
+                    try:
+                        ipa_list = self._transcriber.transcribe(lemma)
+                    except Exception:
+                        ipa_list = []
 
-        payload = {
-            "word": word,
-            "lemma": lemma,
-            "ipa": ipa_list,
-            "lewis_lines": lines,
-        }
-        duration_ms = int((time.time() - start) * 1000)
+            payload = {
+                "word": word,
+                "lemma": lemma,
+                "ipa": ipa_list,
+                "lewis_lines": lines,
+            }
+            duration_ms = int((time.time() - start) * 1000)
+            span.set_attribute("langnet.cltk.execute_ms", duration_ms)
+
         return RawResponseEffect(
             response_id=_new_response_id(),
             tool=self.tool,
