@@ -5,7 +5,11 @@ import logging
 from collections.abc import Callable, Iterable
 from typing import Protocol
 
+from opentelemetry import trace
+
 logger = logging.getLogger(__name__)
+
+_tracer = trace.get_tracer("langnet.clients.cltk")
 
 
 class CLTKPipeline(Protocol): ...
@@ -35,12 +39,16 @@ class CLTKService:
             self.get_pipeline(lang)
 
     def _default_loader(self, language: str) -> CLTKPipeline | None:
-        try:
-            cltk_module = importlib.import_module("cltk")
-            nlp_class = getattr(cltk_module, "NLP")
-            return nlp_class(language=language, suppress_banner=True)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "cltk_pipeline_unavailable", extra={"language": language, "error": str(exc)}
-            )
-            return None
+        with _tracer.start_as_current_span("cltk.pipeline_load") as span:
+            span.set_attribute("langnet.cltk.lang", language)
+            span.set_attribute("langnet.cltk.stage", "service_pipeline_load")
+            try:
+                cltk_module = importlib.import_module("cltk")
+                nlp_class = getattr(cltk_module, "NLP")
+                return nlp_class(language=language, suppress_banner=True)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "cltk_pipeline_unavailable", extra={"language": language, "error": str(exc)}
+                )
+                span.record_exception(exc)
+                return None

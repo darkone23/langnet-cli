@@ -21,6 +21,7 @@ import duckdb
 import humanize
 import orjson
 import query_spec
+from opentelemetry import trace
 from query_spec import ToolCallSpec, ToolStage
 
 from langnet.cli_databuild import databuild
@@ -160,6 +161,7 @@ DEFAULT_TRANSLATION_TIMEOUT_SECONDS = 45.0
 TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND_ENV = "LANGNET_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND"
 TRANSLATION_MIN_RATE_TOKENS_ENV = "LANGNET_TRANSLATION_MIN_RATE_TOKENS"
 TRANSLATION_MIN_RATE_SECONDS_ENV = "LANGNET_TRANSLATION_MIN_RATE_SECONDS"
+_LLM_TRACER = trace.get_tracer("langnet.translation.llm")
 LEARNING_OVERLAY_SCHEMA_VERSION = "langnet.learning_overlay.v1"
 DEFAULT_TRANSLATION_MIN_OUTPUT_TOKENS_PER_SECOND = 8.0
 DEFAULT_TRANSLATION_MIN_RATE_TOKENS = 24
@@ -11902,21 +11904,35 @@ def _create_translation_completion_with_model_fallback(
     request_kwargs: Mapping[str, Any],
 ):
     last_exception: Exception | None = None
-    for candidate in model_candidates:
-        try:
-            start = time.perf_counter()
-            response = completions.create(model=candidate, **request_kwargs)
-            elapsed_seconds = time.perf_counter() - start
-            if not _translation_response_content(response).strip():
-                raise ValueError("translation provider returned an empty response")
-            _validate_translation_response_latency_budget(
-                response,
-                elapsed_seconds=elapsed_seconds,
-                model=candidate,
-            )
-            return response
-        except Exception as exc:  # noqa: BLE001
-            last_exception = exc
+    timeout_seconds = request_kwargs.get("timeout")
+    with _LLM_TRACER.start_as_current_span("llm.translation") as span:
+        span.set_attribute("langnet.llm.model_candidates", ",".join(model_candidates))
+        if timeout_seconds is not None:
+            span.set_attribute("langnet.llm.timeout_seconds", float(timeout_seconds))
+        for candidate in model_candidates:
+            try:
+                start = time.perf_counter()
+                response = completions.create(model=candidate, **request_kwargs)
+                elapsed_seconds = time.perf_counter() - start
+                if not _translation_response_content(response).strip():
+                    raise ValueError("translation provider returned an empty response")
+                _validate_translation_response_latency_budget(
+                    response,
+                    elapsed_seconds=elapsed_seconds,
+                    model=candidate,
+                )
+                span.set_attribute("langnet.llm.model", candidate)
+                span.set_attribute("langnet.llm.attempt_elapsed_seconds", elapsed_seconds)
+                return response
+            except Exception as exc:  # noqa: BLE001
+                last_exception = exc
+                span.add_event(
+                    "langnet.llm.model_fallback",
+                    {"langnet.llm.model": candidate, "langnet.llm.error": str(exc)},
+                )
+        if last_exception is not None:
+            span.set_status(trace.Status(trace.StatusCode.ERROR, str(last_exception)))
+            span.record_exception(last_exception)
     assert last_exception is not None
     raise last_exception
 
