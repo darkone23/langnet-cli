@@ -40,6 +40,7 @@ tmp/
 playing_with_aisuite/
 .codex
 *.lock
+!webapp/bun.lock
 
 ruff-todo/
 vendor/
